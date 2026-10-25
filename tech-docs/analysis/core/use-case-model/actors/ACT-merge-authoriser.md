@@ -13,9 +13,6 @@ pkit:
     anchors:
       record:
         - COR-050#3
-    revalidated:
-      at: 2026-10-23T08:53:40Z
-      outcome: updated
 ---
 
 # ACT-merge-authoriser — Merge authoriser
@@ -25,4 +22,4 @@ The person who authorises a change's merge into the default branch. Where work i
 - **Human role:** they authorise the merge after they are told what the [change](../../glossary.md#term-change--change) updated and what it leaves out of date. The same person's review turns a record or [rule](../../glossary.md#term-rule--rule) an agent drafted into a binding one.
 - **Occasions:** at the end of each [change](../../glossary.md#term-change--change), and whenever a drafted record or [rule](../../glossary.md#term-rule--rule) waits for acceptance.
 - **Context:** the authority to land the [change](../../glossary.md#term-change--change).
-- **Core:** two core rules make this [role](../../glossary.md#term-role--role), and neither needs a work tracker. COR-050 [point](../../glossary.md#term-point--point) 3 covers being told what a [change](../../glossary.md#term-change--change) updated before its merge or direct commit. The [acceptance gate](../../glossary.md#term-acceptance-gate--acceptance-gate) covers accepting a record or [rule](../../glossary.md#term-rule--rule).
+- **Core:** two core rules make the merge authoriser, and neither needs a work tracker. COR-050 [point](../../glossary.md#term-point--point) 3 covers being told what a [change](../../glossary.md#term-change--change) updated before its merge or direct commit. The [acceptance gate](../../glossary.md#term-acceptance-gate--acceptance-gate) covers accepting a record or [rule](../../glossary.md#term-rule--rule).

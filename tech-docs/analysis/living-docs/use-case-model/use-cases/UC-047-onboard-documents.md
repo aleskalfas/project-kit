@@ -30,10 +30,6 @@ pkit:
         - COR-050#14
       artefact:
         - REQ-022
-    revalidated:
-      at: 2026-10-24T03:53:21Z
-      outcome: unchanged
-      unchanged-because: The agent and its storyboard changed only how reader-review falls back to a space's audience. Onboarding existing documents is as it was.
 ---
 
 # UC-047 — Bring my existing documents into documentation spaces
@@ -48,7 +44,7 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in [place](../../../core/glossary.md#term-place--place) where living-docs is developed, and the [adapter](../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) (COR-013, COR-017 and COR-031).
+- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed, and the [adapter](../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) (COR-013, COR-017 and COR-031).
 - The [backbone configuration](../../../core/glossary.md#term-backbone-configuration--backbone-configuration) names the [documentation roots](../../../core/glossary.md#term-documentation-root--documentation-root), and declares the places that hold the project's documents, as `core:UC-021` describes (COR-050 point 1).
 - The project declares the surface its documentation ought to cover, so the [whole-repository check](../../../core/glossary.md#term-whole-repository-check--whole-repository-check) measures what no [page](../../glossary.md#term-page--page) anchors (COR-050 points 8 and 14).
 - Where a work-tracking [capability](../../../core/glossary.md#term-capability--capability) keeps a mapping from code to documents, it gives the mapping through its documentation-check [data point](../../../core/glossary.md#term-data-point--data-point) (project-management DEC-053). Without one, the agent has no mapping to read.

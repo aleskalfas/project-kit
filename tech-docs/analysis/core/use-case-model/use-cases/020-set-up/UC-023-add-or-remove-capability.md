@@ -51,10 +51,6 @@ pkit:
         - REQ-009
         - REQ-010
         - REQ-012
-    revalidated:
-      at: 2026-10-24T19:00:49Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, an answer piped in never settles a collision, and the install refuses before any write, as variant 7d says. The uninstall's confirmations hold as written."
 ---
 
 # UC-023 — Add or remove a capability, and be told of a name collision
@@ -78,7 +74,7 @@ pkit:
 **Main path:**
 
 1. The adopter runs `pkit capabilities install <name>`.
-2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit capabilities install` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -86,12 +82,12 @@ pkit:
 3. The system refuses a name that is reserved, or that an [adapter](../../../glossary.md#term-adapter--adapter) holds. It finds the [capability](../../../glossary.md#term-capability--capability) in the [methodology](../../../glossary.md#term-methodology--methodology)'s tree, `.pkit/capabilities/<name>/`.
 4. The system checks the capability against the [backbone](../../../glossary.md#term-backbone--backbone) the [project](../../../glossary.md#term-project--project) records, and against the capabilities installed (COR-017 and COR-030). Its [range](../../../glossary.md#term-range--range) on the backbone, each capability it requires and each range an installed capability declares on it must hold.
 5. The system checks that no [rule set](../../../glossary.md#term-rule-set--rule-set) of the capability takes a name a project rule set declares (COR-051 point 3).
-6. The system finds that the project is the methodology's [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code, where the capability's subtree is its source (ADR-059). So it registers the capability in [place](../../../glossary.md#term-place--place), as UC-014's variant 2d does.
+6. The system finds that the project is the methodology's [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code, where the capability's subtree is its source (ADR-059). So it registers the capability in place, as UC-014's variant 2d does.
 7. The system checks that none of the capability's [skills](../../../glossary.md#term-skill--skill) or [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) collides with other content the project holds.
 8. The system records the capability in the [manifest](../../../glossary.md#term-manifest--manifest) with the [component origin](../../../glossary.md#term-component-origin--component-origin) `kit-shipped`, and copies nothing (COR-031). It prints `Registered capability '<name>' v<version> in place at .pkit/capabilities/<name>/: it is authored in this repository, the methodology's source, so nothing was copied (ADR-059).`
 9. The capability may declare a project rule set. Where no rule set of the project's own inherits its method set, the system creates that set (COR-017). Running [install](../../../glossary.md#term-install--install) is the [consent](../../../glossary.md#term-consent--consent). It prints `created the project rule set <set> at <path>, inheriting <pin> (COR-017): it is the project's own, to edit or remove`.
 10. The system runs each adapter's scripts, which deploy the capability's skills and agent definitions, and sets up each command the capability registers.
-11. Where a person can [answer](../../../glossary.md#term-answer--answer), the system runs in turn each question the capability's [data points](../../../glossary.md#term-data-point--data-point) declare (COR-061). It prints `<n> question(s) the data points declare (COR-061):`, then a line for each.
+11. Where a person can reply, the system runs in turn each question the capability's [data points](../../../glossary.md#term-data-point--data-point) declare (COR-061). It prints `<n> question(s) the data points declare (COR-061):`, then a line for each.
 12. Later, the adopter runs `pkit capabilities uninstall <name>`.
 13. At its entry, the uninstall checks the repository as step 2 does (REQ-012).
 
@@ -123,15 +119,15 @@ pkit:
 - **6a.** The project is not the methodology's source repository. The system takes the capability from the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI, and copies it, as variants 7b and 8a say (COR-017).
 - **7a.** In the source repository, a [skill](../../../glossary.md#term-skill--skill) or an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) of the capability collides with other content of the project. The system lists each, refuses with `rename the colliding artifact(s) in your capability tree, then retry.`, and writes nothing.
 - **7b.** The project is not the source repository (6a), and a skill or an agent definition of the capability collides with one the project holds. For each, the system prints `<kind> '<name>' collides with existing <path>`, and asks `[override / skip / inspect]` (COR-017):
-  - **override:** the capability's file replaces the project's once the copy is in [place](../../../glossary.md#term-place--place). Git holds the project's file, so the adopter can get it back.
+  - **override:** the capability's file replaces the project's once the copy is in place. Git holds the project's file, so the adopter can get it back.
   - **skip:** the project's file stays, and the rest of the capability installs without that [artefact](../../../glossary.md#term-artefact--artefact).
   - **inspect:** the system shows how the two files differ, and asks again.
 - **7c.** The adopter chooses override for a file git does not hold as it stands. The system refuses the override, since git could not give the file back, and asks again.
-- **7d.** Nobody can [answer](../../../glossary.md#term-answer--answer) the question of variant 7b, since standard input is no terminal. The install stops before anything is copied, and writes nothing.
+- **7d.** Nobody can reply to the question of variant 7b, since standard input is no terminal. The install stops before anything is copied, and writes nothing.
 - **8a.** The project is not the source repository (6a). The system copies the subtree into `.pkit/capabilities/<name>/`, and records the capability in the [manifest](../../../glossary.md#term-manifest--manifest) as `kit-shipped`, with each artefact skipped. It prints `Installed capability '<name>' v<version> at .pkit/capabilities/<name>/`, and removes each file the adopter overrode. The path goes on at step 9.
 - **9a.** A rule set of the project's own inherits the capability's method set already. The system creates none, and names the set that inherits it.
 - **9b.** The set's file exists, or another rule set declares its name. The system creates none, since install never writes over the project's content, and warns, saying why (COR-017). It names `pkit capabilities project-rule-set <name>`, which shows the set install declares.
-- **11a.** Nobody can answer, since standard input and standard output are not both terminals. The system runs no question, and records nothing. It prints each question's command, for a person to run later (COR-061).
+- **11a.** Nobody can reply, since standard input and standard output are not both terminals. The system runs no question, and records nothing. It prints each question's command, for a person to run later (COR-061).
 - **12a.** The capability is one the adopter authored in the project, registered as `incubated-in-repo`. Its uninstall keeps the subtree, as UC-016 says.
 - **12b.** The adopter passes `--plan`. The system lists what the uninstall would leave without a provider, and each entry of the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) that still names the capability. It writes nothing (COR-053 point 8).
 - **12c.** The adopter passes `--dry-run`. The system says what the uninstall would unregister or remove, and writes nothing (REQ-009).

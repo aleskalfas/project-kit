@@ -23,10 +23,6 @@ pkit:
       artefact:
         - ACT-component-author
         - REQ-005
-    revalidated:
-      at: 2026-10-24T19:01:32Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
 ---
 
 # UC-018 — Know my capability is ready to share

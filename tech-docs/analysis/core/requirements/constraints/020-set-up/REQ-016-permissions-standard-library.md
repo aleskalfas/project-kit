@@ -18,10 +18,6 @@ pkit:
         - ADR-014#1
       artefact:
         - ACT-operator
-    revalidated:
-      at: 2026-10-24T12:57:04Z
-      outcome: unchanged
-      unchanged-because: The permission code still runs on the standard library alone. The new recognisers are regular expressions in the catalog, and removing a redirection that writes no file uses the re module.
 ---
 
 # REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library

@@ -29,9 +29,6 @@ pkit:
         - COR-031
       artefact:
         - REQ-060
-    revalidated:
-      at: 2026-10-24T01:51:41Z
-      outcome: updated
 ---
 
 # UC-001 — Build my change under my project's conventions

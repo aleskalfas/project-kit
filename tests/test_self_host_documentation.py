@@ -27,6 +27,7 @@ realises, over the real repository:
 
 from __future__ import annotations
 
+import functools
 import importlib.util
 import json
 import subprocess
@@ -38,6 +39,7 @@ from click.testing import CliRunner
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
+from project_kit import answer_files
 from project_kit import config_validate as cv
 from project_kit import docs_roots as dr
 from project_kit import rule_sets as rs
@@ -107,6 +109,12 @@ def _project_places() -> list[str]:
     return [p.value for p in read_friction_settings(REPO).places if p.source == "project"]
 
 
+def _user_root_pages() -> list[str]:
+    """The pages inside the user root, `docs/`: the guides (ADR-069 point 1). The
+    root is living-docs' default place, so they are pages without being declared."""
+    return sorted(path.relative_to(REPO).as_posix() for path in (REPO / "docs").rglob("*.md"))
+
+
 def _living_docs_config() -> dict:
     return YAML(typ="safe").load(LIVING_DOCS_CONFIG.read_text(encoding="utf-8"))
 
@@ -120,8 +128,9 @@ def test_the_configuration_declares_both_roots_and_validates() -> None:
     assert (roots.internal, roots.internal_source) == (Path("tech-docs"), dr.Source.EXPLICIT)
     report = cv.run_configuration_pass(REPO)
     assert report.errors == ()
-    # `docs/` holds no user page yet: COR-049 point 7 makes that a warning only.
-    assert [f.path for f in report.findings] in ([], ["/docs/user"])
+    # `docs/` holds the guides (ADR-069 point 1), so the empty-root warning of
+    # COR-049 point 7 no longer shows.
+    assert [f.path for f in report.findings] == []
 
 
 def test_every_declared_place_is_a_file_outside_both_roots() -> None:
@@ -270,16 +279,17 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     summary = document["summary"]
     assert summary[1].endswith("definition tech-docs/living-docs/rule-sets/user.md.")
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
-    # Every place is a page (#1010), each reader resolved against the readers point.
-    # software-analysis contributes one reader per actor of pkit's own analysis
-    # (#1001), under the `act-` prefix: the eight core actors (#1344) and the
-    # planner (#1710), beside living-docs' own two.
+    # Every place is a page (#1010), and so is every guide in the user root, each
+    # reader resolved against the readers point. software-analysis contributes one
+    # reader per actor of pkit's own analysis (#1001), under the `act-` prefix: the
+    # eight core actors (#1344) and the planner (#1710), beside living-docs' own two.
+    assert "docs/permissions/README.md" in _user_root_pages()
     assert summary[4] == (
         "readers (pkit::documentation:readers): act-adopter, act-ai-agent, "
         "act-ci-pipeline, act-component-author, act-developer, "
         "act-merge-authoriser, act-methodology-maintainer, act-operator, "
         "act-planner, maintainer, user; "
-        f"{len(_project_places())} page reader(s) checked."
+        f"{len(_project_places()) + len(_user_root_pages())} page reader(s) checked."
     )
 
 
@@ -325,25 +335,42 @@ def _friction(front: dict) -> dict:
     return (front.get("pkit") or {}).get("friction") or {}
 
 
+@functools.cache
+def _revalidated() -> frozenset[str]:
+    """The artefacts a revalidation in this tree's answer files names (COR-062 point 1)."""
+    return frozenset(
+        entry.location
+        for found in answer_files.working_tree_files(REPO).values()
+        for entry in found.entries
+        if entry.revalidation is not None
+        and entry.revalidation.at is not None
+        and entry.revalidation.outcome in ("updated", "unchanged")
+    )
+
+
 # Asserts what this tree's answers hold, so the short check runs it (ADR-067).
 @pytest.mark.answers
 @pytest.mark.parametrize("place", _project_places())
 def test_every_declared_place_is_a_page_anchored_and_revalidated(place: str) -> None:
     """A place's document is a page (living-docs DEC-001 point 4): its reader —
     the one its space serves — and a kind whose template the capability ships
-    (RS-LDOC-004), then a friction block that anchors what the page describes
-    and records its revalidation (COR-050 points 2 and 3)."""
+    (RS-LDOC-004), then a friction block that anchors what the page describes,
+    and an answer file that records its revalidation (COR-050 points 2 and 3,
+    COR-062 point 1)."""
     front = _front_matter(place)
     schema = json.loads((LIVING_DOCS / "schemas" / "page.schema.json").read_text(encoding="utf-8"))
     assert list(Draft202012Validator(schema).iter_errors(front)) == [], place
     space = _living_docs_config()["places"][place]
-    assert front["reader"] == SPACE_READER[space], place
+    readers = {SPACE_READER[space]}
+    if space == "user" and front["kind"] == "reference":
+        # A reference names the AI agent, its reader in an adopter's project (ADR-069 point 5).
+        readers.add("act-ai-agent")
+    assert front["reader"] in readers, place
     assert (LIVING_DOCS / "templates" / f"{front['kind']}.md").is_file(), place
     friction = _friction(front)
     anchors = friction.get("anchors") or {}
     assert any(anchors.values()), f"{place}: no anchor"
-    revalidated = friction.get("revalidated") or {}
-    assert revalidated.get("at") and revalidated.get("outcome") in ("updated", "unchanged"), place
+    assert place in _revalidated(), f"{place}: no revalidation in an answer file"
 
 
 def test_no_page_path_anchors_another_page() -> None:

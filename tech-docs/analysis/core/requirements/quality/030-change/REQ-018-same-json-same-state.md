@@ -18,10 +18,6 @@ pkit:
         - tests/test_friction_artefacts.py
       artefact:
         - ACT-ci-pipeline
-    revalidated:
-      at: 2026-10-24T04:58:15Z
-      outcome: unchanged
-      unchanged-because: The tests of the whole-repository check gain one for derived links across a rename. The tests that run each reading command twice are as they were.
 ---
 
 # REQ-018 · Quality · A reading command of the friction group prints the same document for the same state

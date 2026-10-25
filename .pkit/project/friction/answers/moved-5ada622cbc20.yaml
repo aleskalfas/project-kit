@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/demo-recording/glossary.md#TERM-directive
+    revalidated:
+      at: 2026-10-24T01:18:40Z
+      outcome: unchanged
+      unchanged-because: The change makes a fenced block whose tag no loaded plugin provides a warning rather than an error, and rewords the docstring of a ready timeout. Every fenced block in a step is still read as a directive, and its tag still selects what is done, so the term holds.

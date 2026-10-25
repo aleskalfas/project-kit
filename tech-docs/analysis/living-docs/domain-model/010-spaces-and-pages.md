@@ -86,7 +86,7 @@ flowchart LR
 
 Defined in [TERM-documentation-space](../glossary.md#term-documentation-space--documentation-space).
 
-**Why:** Mixing material for two audiences either buries users in internals, or leaves maintainers without the grounds for what the user-facing pages say. A user who meets maintainers' material in navigation is lost. Separating documentation by audience gives each what it needs, and gives whoever writes it a checkable boundary in [place](../../core/glossary.md#term-place--place) of a judgement call (DEC-001).
+**Why:** Mixing material for two audiences either buries users in internals, or leaves maintainers without the grounds for what the user-facing pages say. A user who meets maintainers' material in navigation is lost. Separating documentation by audience gives each what it needs, and gives whoever writes it a checkable boundary in place of a judgement call (DEC-001).
 
 A documentation space is the collection of pages written for one audience. Every [project](../../core/glossary.md#term-project--project) has a user space and a technical space, and may add others, such as an interface reference. A space's pages lie in its places. They are the [documentation root](../../core/glossary.md#term-documentation-root--documentation-root) that serves its audience, and the places the project assigns to it, such as a top-level `README.md`.
 
@@ -99,7 +99,7 @@ A documentation space is the collection of pages written for one audience. Every
 
 **Relations:**
 
-- Its pages lie in its places. A place outside every root gives its documents the space the project assigns it to. A place inside a root gives that root's space, unless the project assigns it to another (DEC-001 point 1).
+- Its pages lie in its places. A [place](../../core/glossary.md#term-place--place) outside every root gives its documents the space the project assigns it to. A place inside a root gives that root's space, unless the project assigns it to another (DEC-001 point 1).
 - Where places nest, the [backbone](../../core/glossary.md#term-backbone--backbone)'s order of places decides which one gives a document its space (DEC-001 point 1).
 - It has one [space definition](../glossary.md#term-space-definition--space-definition) once the project writes it, and its places may hold [unclassified documents](../glossary.md#term-unclassified-document--unclassified-document) (DEC-001 points 2 and 4).
 
@@ -115,7 +115,7 @@ A documentation space is the collection of pages written for one audience. Every
 
 Defined in [TERM-space-definition](../glossary.md#term-space-definition--space-definition).
 
-**Why:** A method written once, and inherited, can be reused across projects and changed in one [place](../../core/glossary.md#term-place--place), while one mixed into content cannot be separated again. A shipped [rule set](../../core/glossary.md#term-rule-set--rule-set) takes no scope, so a set of the [project](../../core/glossary.md#term-project--project)'s own says where its rules bind. A space's definition already names the rules its pages follow, so its scope says where they bind (DEC-001).
+**Why:** A method written once, and inherited, can be reused across projects and changed in one <!-- pkit:not-the-term -->place, while one mixed into content cannot be separated again. A shipped [rule set](../../core/glossary.md#term-rule-set--rule-set) takes no scope, so a set of the [project](../../core/glossary.md#term-project--project)'s own says where its rules bind. A space's definition already names the rules its pages follow, so its scope says where they bind (DEC-001).
 
 A space definition is the rule set that says which rules a space's pages follow. It inherits `LDOC`, the shared rules living-docs ships, and adds the space's own. Its scope selects the space's pages, so those rules bind on them as soon as the definition exists.
 
@@ -128,7 +128,7 @@ A space definition is the rule set that says which rules a space's pages follow.
 **Relations:**
 
 - It belongs to one [documentation space](../glossary.md#term-documentation-space--documentation-space), whose entry in living-docs' configuration names its path (DEC-001 point 2).
-- Each [page](../glossary.md#term-page--page) that a place assigned to its space gives the space lies in its scope, and in no other (DEC-001 point 1).
+- Each [page](../glossary.md#term-page--page) that a [place](../../core/glossary.md#term-place--place) assigned to its space gives the space lies in its scope, and in no other (DEC-001 point 1).
 
 **States:** None.
 
@@ -142,7 +142,7 @@ A space definition is the rule set that says which rules a space's pages follow.
 
 Defined in [TERM-page](../glossary.md#term-page--page).
 
-**Why:** A statement nothing grounds cannot be judged true or false, which is what makes fluent, unfounded text look reliable. Anchoring the page, not each sentence, keeps the cost bearable. Anchors turn "is this still true?" into a question a tool can raise and a reviewer can [answer](../../core/glossary.md#term-answer--answer) (DEC-001).
+**Why:** A statement nothing grounds cannot be judged true or false, which is what makes fluent, unfounded text look reliable. Anchoring the page, not each sentence, keeps the cost bearable. Anchors turn "is this still true?" into a question a tool can raise and a reviewer can settle (DEC-001).
 
 A page is a document in a [documentation space](../glossary.md#term-documentation-space--documentation-space)'s places that names its [page kind](../glossary.md#term-page-kind--page-kind) in its front matter. It is written for the [reader](../glossary.md#term-reader--reader) it names there, and its anchors name what makes its statements true. A document is a page where its [place](../../core/glossary.md#term-place--place) gives the page type and it names its page kind. One that names its page kind in a place the [project](../../core/glossary.md#term-project--project) declares outside every root, with no type, is a page too.
 
@@ -160,7 +160,7 @@ A page is a document in a [documentation space](../glossary.md#term-documentatio
 - It may anchor captured sources (DEC-001 point 4).
 - `LDOC`'s rules and its space's own bind on it where a [space definition](../glossary.md#term-space-definition--space-definition)'s scope selects it (DEC-001 points 2 and 3).
 
-**States:** A page with no anchor and no accepted reason for none is unanchored, which onboarding clears (DEC-001 point 8). Once something its anchors name changes, [friction](../../core/glossary.md#term-friction--friction) flags it until an answer settles it (DEC-001 point 4).
+**States:** A page with no anchor and no accepted reason for none is unanchored, which onboarding clears (DEC-001 point 8). Once something its anchors name changes, [friction](../../core/glossary.md#term-friction--friction) flags it until an [answer](../../core/glossary.md#term-answer--answer) settles it (DEC-001 point 4).
 
 **Always true:**
 
@@ -221,7 +221,7 @@ A reader is a class of people or agents who read the [project](../../core/glossa
 
 Defined in [TERM-captured-source](../glossary.md#term-captured-source--captured-source).
 
-**Why:** A check that gives the same [answer](../../core/glossary.md#term-answer--answer) wherever it runs cannot ask a text outside the repository whether it changed. It can read the [project](../../core/glossary.md#term-project--project)'s own record of that text, which changes exactly when someone reads a new version. That is when the pages resting on the text should be read again (DEC-001).
+**Why:** A check that gives the same result wherever it runs cannot ask a text outside the repository whether it changed. It can read the [project](../../core/glossary.md#term-project--project)'s own record of that text, which changes exactly when someone reads a new version. That is when the pages resting on the text should be read again (DEC-001).
 
 A captured source is a file the project keeps for one text outside the repository, such as a standard. A [page](../glossary.md#term-page--page) anchors the text by the file's name, and any change to the file asks that page whether it still holds. The file says, of the text:
 

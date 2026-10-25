@@ -1,0 +1,5 @@
+answers:
+  - artefact: .pkit/decisions/README.md
+    revalidated:
+      at: 2026-10-24T22:54:35Z
+      outcome: updated

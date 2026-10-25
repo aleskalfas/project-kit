@@ -17,10 +17,6 @@ pkit:
         - PRJ-002
       artefact:
         - CONTRIBUTING.md#adding-a-core-record-cor
-    revalidated:
-      at: 2026-10-20T01:36:57Z
-      outcome: unchanged
-      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer
@@ -31,4 +27,4 @@ Whoever maintains a distribution of the methodology.
 - **Activities:** work in the [distribution](../../glossary.md#term-distribution--distribution)'s [source repository](../../glossary.md#term-source-repository--source-repository), on the core records, the [backbone](../../glossary.md#term-backbone--backbone) and the releases adopters upgrade to.
 - **Occasions:** for every [change](../../glossary.md#term-change--change) to the [methodology](../../glossary.md#term-methodology--methodology) and every [backbone](../../glossary.md#term-backbone--backbone) [release](../../glossary.md#term-release--release).
 - **Context:** the [methodology](../../glossary.md#term-methodology--methodology)'s disciplines (CONTRIBUTING.md). They are the first adopter of what they ship.
-- **Core:** the [source repository](../../glossary.md#term-source-repository--source-repository), its [release](../../glossary.md#term-release--release) policy and its [report](../../glossary.md#term-report--report) inbox exist for this [role](../../glossary.md#term-role--role).
+- **Core:** the [source repository](../../glossary.md#term-source-repository--source-repository), its [release](../../glossary.md#term-release--release) policy and its [report](../../glossary.md#term-report--report) inbox exist for the methodology maintainer.

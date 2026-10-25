@@ -54,9 +54,6 @@ pkit:
         - REQ-050
         - REQ-051
         - REQ-053
-    revalidated:
-      at: 2026-10-24T10:40:11Z
-      outcome: updated
 ---
 
 # UC-071 — Describe my existing project from its code, documents and decisions
@@ -72,7 +69,7 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in [place](../../../core/glossary.md#term-place--place) where software-analysis is developed (COR-017 and COR-031). The [adapter](../../../core/glossary.md#term-adapter--adapter) deploys the `analysis-author` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
+- The [project](../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in place where software-analysis is developed (COR-017 and COR-031). The [adapter](../../../core/glossary.md#term-adapter--adapter) deploys the `analysis-author` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
 - The core's [whole-repository check](../../../core/glossary.md#term-whole-repository-check--whole-repository-check) measures the declared surface that no [artefact](../../../core/glossary.md#term-artefact--artefact) anchors. It lists apart each artefact whose reason for having no anchors a person accepted (COR-050 points 1, 8 and 14).
 - An artefact new in a [change](../../../core/glossary.md#term-change--change) counts as revalidated there (COR-050 point 6).
 
@@ -84,7 +81,7 @@ pkit:
 2. The agent runs the [whole-repository check](../../../core/glossary.md#term-whole-repository-check--whole-repository-check), and reads the surface the project declares its [analysis](../../glossary.md#term-analysis--analysis) ought to cover. The project declares the surface in the [friction](../../../core/glossary.md#term-friction--friction) key of its [backbone configuration](../../../core/glossary.md#term-backbone-configuration--backbone-configuration). Where none is declared, the agent asks the developer for one, and derives no [candidate](../../glossary.md#term-candidate--candidate) until the project declares one (DEC-001 point 9).
 3. The agent derives candidates from the code, the existing documents and the project's decisions, in the order of DEC-001 point 12. It starts with the terms, then the domain-model views where the analysis keeps them, then the actors.
 4. The agent stamps each candidate with `pkit analysis new`, anchored with `--path` and `--record` to what it is drawn from.
-5. At its entry, before it writes, the [system](../../../core/glossary.md#term-system--system) checks that the repository it would [change](../../../core/glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
+5. At its entry, before it writes, the [system](../../../core/glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit analysis new` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.

@@ -68,10 +68,6 @@ pkit:
         - REQ-018
         - REQ-019
         - REQ-020
-    revalidated:
-      at: 2026-10-24T19:01:24Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, confirmations now refuse an answer piped in off a terminal. The checks the pipeline runs ask nothing, so the steps hold."
 ---
 
 # UC-006 — Make my merges wait on the system's checks
@@ -80,7 +76,7 @@ pkit:
 
 **Other actors:**
 
-- **CI pipeline** (`ACT-ci-pipeline`): runs every check with no terminal and no person to [answer](../../../glossary.md#term-answer--answer), and gates the merge on the exit status. It names the [base](../../../glossary.md#term-base--base) once, for every check (COR-054 [point](../../../glossary.md#term-point--point) 3).
+- **CI pipeline** (`ACT-ci-pipeline`): runs every check with no terminal and no person to reply, and gates the merge on the exit status. It names the [base](../../../glossary.md#term-base--base) once, for every check (COR-054 [point](../../../glossary.md#term-point--point) 3).
 - **Operator** (`ACT-operator`): is asked before `pkit config set` writes in a repository other than the session's own. So no such write happens silently (REQ-012).
 
 **Preconditions:** **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
@@ -95,7 +91,7 @@ pkit:
 **Main path:**
 
 1. The adopter runs `pkit config set friction.mode enforcing --yes`.
-8. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+8. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit config set` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -104,7 +100,7 @@ pkit:
 3. The adopter adds a job to the [project](../../../glossary.md#term-project--project)'s CI that runs `pkit sync`, then `pkit validate`, `pkit friction check` and the project's other checks. The job sets `PKIT_CHECK_BASE` to the [pull request](../../../glossary.md#term-pull-request--pull-request)'s target, and sets `PKIT_CHECK_HEAD` to the pull request's [head](../../../glossary.md#term-head--head) (COR-062 point 4). In project-kit, that job is `.github/workflows/checks.yml`.
 4. The adopter makes that job a required status of the [default branch](../../../glossary.md#term-default-branch--default-branch), on the hosting service.
 5. On each pull request, the CI pipeline runs the job with no terminal, and no check asks anything.
-6. Each check exits non-zero on what fails it. `pkit validate` fails on an `error` [finding](../../../glossary.md#term-finding--finding). The [change check](../../../glossary.md#term-change-check--change-check) fails on unanswered [friction](../../../glossary.md#term-friction--friction), a `bump`, a dead [anchor](../../../glossary.md#term-anchor--anchor), an unresolved kind and a resolver's missing [answer](../../../glossary.md#term-answer--answer). It fails too on an answer file written as COR-062 point 10 forbids.
+6. Each check exits non-zero on what fails it. `pkit validate` fails on an `error` [finding](../../../glossary.md#term-finding--finding). The [change check](../../../glossary.md#term-change-check--change-check) fails on unanswered [friction](../../../glossary.md#term-friction--friction), a `bump`, a dead [anchor](../../../glossary.md#term-anchor--anchor), an unresolved kind and a resolver's missing result. It fails too on an [answer](../../../glossary.md#term-answer--answer) file written as COR-062 point 10 forbids.
 7. The hosting service holds the merge until the job passes.
 
 **Variants:**
@@ -125,7 +121,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** on a queue's merge, the change check reads the queue's merge as each change's own head. COR-062 point 4 decides that the check judges against the change's own head wherever it runs, and #1867 tracks it.
 
-- **4a.** The adopter never makes the job required. The checks run and [report](../../../glossary.md#term-report--report), and nothing holds the merge (COR-050 point 12). The use case ends.
+- **4a.** The adopter never makes the job required. The checks run and say what they find, and nothing holds the merge (COR-050 point 12). The use case ends.
 - **6a.** The base moved on after the branch left it. The change check reports an `outdated-base` and never fails on it, since the fix is to update the branch.
 - **6b.** No [place](../../../glossary.md#term-place--place) is declared yet, or nothing in the places carries the `pkit` container. The change check is dormant and passes.
 - **6c.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. Validation warns of it, and does not fail the job on it (REQ-015).
@@ -136,6 +132,6 @@ pkit:
 **Minimal guarantees:**
 
 - An invalid [friction](../../../glossary.md#term-friction--friction) mode fails [validation](../../../glossary.md#term-validation--validation), so enforcement is never switched off silently (COR-050 [point](../../../glossary.md#term-point--point) 12).
-- A validator that gives no [answer](../../../glossary.md#term-answer--answer) fails validation, and never passes it (COR-055 point 6).
-- In enforcing mode, a resolver that gives no answer fails the [change check](../../../glossary.md#term-change-check--change-check), which could not judge its [anchor](../../../glossary.md#term-anchor--anchor) (COR-050 points 2 and 12).
+- A validator that gives no result fails validation, and never passes it (COR-055 point 6).
+- In enforcing mode, a resolver that gives no result fails the [change check](../../../glossary.md#term-change-check--change-check), which could not judge its [anchor](../../../glossary.md#term-anchor--anchor) (COR-050 points 2 and 12).
 - An outdated [base](../../../glossary.md#term-base--base) is reported, and never fails the change check (COR-050 point 12).

@@ -15,10 +15,6 @@ pkit:
         - project-management:DEC-054#5
         - project-management:DEC-016
         - project-management:DEC-018
-    revalidated:
-      at: 2026-10-23T08:53:49Z
-      outcome: unchanged
-      unchanged-because: It moved into project-management's analysis with its id, its anchors and every word, since only project-management meets its needs. The role and its needs hold.
 ---
 
 # ACT-planner — Planner
@@ -31,4 +27,4 @@ The person who plans a project's work at the level of its outcomes. An [EPIC](..
   - when work is scheduled
   - as a date-based [Milestone](../../glossary.md#term-milestone--milestone) nears its due date
 - **Context:** an intent, and the reference material that frames it, such as a scratchpad note or a related [issue](../../glossary.md#term-issue--issue).
-- **Note:** the [role](../../../core/glossary.md#term-role--role) comes with project-management, which calls it the PM (DEC-008). Its id and name are not "[project](../../../core/glossary.md#term-project--project) manager", which is also the name of project-management's agent. That agent acts for this role and for the developer (DEC-029). An actor's id is permanent once stamped, so this one names the role alone.
+- **Note:** the planner comes with project-management, which calls it the PM (DEC-008). Its id and name are not "<!-- pkit:not-the-term -->project manager", which is also the name of project-management's agent. That agent acts for the planner and for the developer (DEC-029). An actor's id is permanent once stamped, so this one names the planner alone.

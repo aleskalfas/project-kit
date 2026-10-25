@@ -57,6 +57,7 @@ from tests.analysis_repo import (
     fill,
     front,
     installed,
+    load_lib,
     new,
     prepare_seeded,
     run_script,
@@ -427,6 +428,9 @@ def test_a_record_with_no_gap_says_none_found(project: AdopterRepo) -> None:
 def test_an_open_regression_is_reported_until_it_is_revalidated_on_a_later_day(
     project: AdopterRepo,
 ) -> None:
+    """The artefact's revalidations are read at HEAD, through the backbone's explanation
+    (COR-062 Implications), so a revalidation counts once it is committed."""
+    project.commit("seed")
     regression = (
         "--change",
         "#45",
@@ -451,19 +455,140 @@ def test_an_open_regression_is_reported_until_it_is_revalidated_on_a_later_day(
     fw.write(
         fw.plan_revalidate(project.root, "UC-001", outcome="unchanged", because=because, now=now)
     )
+    project.commit("UC-001: the regression's answer")
     ((location, message),) = _said(check(project), "report")
     assert location == where
     assert f"is open: last revalidated {_today()}, not since" in message
 
-    # Revalidated against the fix on a later day, it is closed; it never failed the check.
+    # Revalidated against the fix on a later day, it is closed once committed; it never
+    # failed the check.
     later = now + datetime.timedelta(days=1)
     fixed = "The fix for #46 runs the suite again, as step 1 says."
     fw.write(
         fw.plan_revalidate(project.root, "UC-001", outcome="unchanged", because=fixed, now=later)
     )
+    ((location, message),) = _said(check(project), "report")
+    assert f"is open: last revalidated {_today()}, not since" in message  # not yet at HEAD
+    project.commit("UC-001: revalidated against the fix")
     document = check(project)
     assert _said(document, "report") == []
     assert errors(document) == []
+
+
+#: A record's front matter with a `code-regressed` outcome for UC-001, of `day`.
+def _regressed(day: str) -> tuple[str, dict[str, object]]:
+    return (
+        f"{RECORDS}/{day}-suite-lost.md",
+        {"date": day, "outcomes": {"UC-001": "code-regressed"}},
+    )
+
+
+class _Analysis:
+    """An analysis holding one artefact, as `_open_regressions` reads one: by id."""
+
+    def __init__(self, artefact: Any) -> None:
+        self._artefact = artefact
+
+    def find(self, cited: str) -> Any:
+        return self._artefact if cited == self._artefact.id else None
+
+
+def _explaining(document: Mapping[str, Any] | Exception, asked: list[str]) -> Any:
+    """A stand-in for the backbone's explanation (`pkit friction explain --json`)."""
+
+    def explain(_root: Path, artefact: str) -> Mapping[str, Any]:
+        asked.append(artefact)
+        if isinstance(document, Exception):
+            raise document
+        return document
+
+    return explain
+
+
+def _revalidated(*ats: str, home: str = "files") -> dict[str, Any]:
+    """An explanation whose live revalidations are `ats`, from `home`: each in an answer
+    file of its own where the answers are read from answer files (COR-062 point 1)."""
+    return {
+        "answers": {
+            "home": home,
+            "revalidations": [
+                {
+                    "file": None if home == "block" else f".pkit/project/friction/answers/{n}.yaml",
+                    "at": at,
+                    "outcome": "unchanged",
+                    "unchanged_because": "It holds.",
+                }
+                for n, at in enumerate(ats)
+            ],
+        }
+    }
+
+
+def test_an_open_regression_reads_the_revalidations_the_backbone_gives_from_any_home(
+    tmp_path: Path,
+) -> None:
+    """A revalidation's `at` is read from the backbone's explanation, never from the
+    artefact's file, wherever the backbone read it from: the artefact's block, or the
+    answer files (COR-062 Implications). Of two made apart, either counts. The artefact
+    is named to the backbone by its location, and explained once for every record."""
+    check_lib, model = load_lib("check", "model")
+    artefact = model.Artefact(
+        kind="use-case",
+        id="UC-001",
+        path=f"{USE_CASES}/UC-001-run-suite.md",
+        location=f"{USE_CASES}/UC-001-run-suite.md",
+        entry=False,
+        fields={},
+        anchors={},
+    )
+    analysis = _Analysis(artefact)
+    records = [_regressed("2026-10-20"), _regressed("2026-10-21")]
+
+    asked: list[str] = []
+    closed = _explaining(_revalidated("2026-10-19T09:00:00Z", "2026-10-22T09:00:00Z"), asked)
+    assert check_lib._open_regressions(tmp_path, records, analysis, closed) == []
+    assert asked == [artefact.location]
+
+    for home in ("files", "block"):
+        earlier = _explaining(_revalidated("2026-10-19T09:00:00Z", home=home), [])
+        found = check_lib._open_regressions(tmp_path, records[:1], analysis, earlier)
+        assert [f.message.split(", not since")[0] for f in found] == [
+            "UC-001's regression is open: last revalidated 2026-10-19"
+        ]
+        assert found[0].severity == "report"
+
+    never = _explaining({"answers": None}, [])
+    (found,) = check_lib._open_regressions(tmp_path, records[:1], analysis, never)
+    assert "is open: never revalidated, not since" in found.message
+
+
+@pytest.mark.parametrize("refused", [True, False])
+def test_an_open_regression_the_backbone_cannot_explain_says_why(
+    tmp_path: Path, refused: bool
+) -> None:
+    """An artefact the backbone cannot explain, or explains without its answers, is
+    still reported open — never read as revalidated — with why."""
+    check_lib, model = load_lib("check", "model")
+    artefact = model.Artefact(
+        kind="use-case",
+        id="UC-001",
+        path="a.md",
+        location="a.md",
+        entry=False,
+        fields={},
+        anchors={},
+    )
+    if refused:
+        answer: Any = model.Unreadable("`pkit friction explain` exited 1: not committed")
+        said = "`pkit friction explain` exited 1: not committed"
+    else:
+        answer, said = {"state": "current"}, "gives no `answers`: the installed backbone predates"
+    (found,) = check_lib._open_regressions(
+        tmp_path, [_regressed("2026-10-20")], _Analysis(artefact), _explaining(answer, [])
+    )
+    assert found.severity == "report"
+    assert "UC-001's regression is open: its revalidations could not be read (" in found.message
+    assert said in found.message
 
 
 # --- nothing to say, or not enough (DEC-001 points 5 and 6) ------------------------------------

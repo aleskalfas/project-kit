@@ -56,10 +56,6 @@ pkit:
         - REQ-012
         - REQ-013
         - REQ-016
-    revalidated:
-      at: 2026-10-24T19:01:51Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants
@@ -89,18 +85,18 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit sync`.
-2. At its entry, before it reads anything, [sync](../../../glossary.md#term-sync--sync) checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, [sync](../../../glossary.md#term-sync--sync) checks that the repository it would write in is the session's own. Where it is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit sync` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 3. The system checks that the running CLI is at the [version](../../../glossary.md#term-version--version) the [project](../../../glossary.md#term-project--project) records, and that no [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete (REQ-010).
 4. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s deploy primitives (`.pkit/adapters/README.md`). The fourth, `deploy-agents.sh`, deploys each [agent definition](../../../glossary.md#term-agent-definition--agent-definition) where its [harness](../../../glossary.md#term-harness--harness) reads it (COR-013 point 1).
-5. Where several places ship an agent definition of one name, the adapter deploys the project's. Otherwise it deploys the one of the [capability](../../../glossary.md#term-capability--capability) whose name sorts first, and else the core's (COR-026 and `.pkit/agents/README.md`).
+5. Where several sources ship an agent definition of one name, the adapter deploys the project's. Otherwise it deploys the one of the [capability](../../../glossary.md#term-capability--capability) whose name sorts first, and else the core's (COR-026 and `.pkit/agents/README.md`).
 6. The adapter replaces each placeholder `<category>` in the agent definition's front matter with the paths the [overlay](../../../glossary.md#term-overlay--overlay) gives that category. A value under `overrides.<name>` replaces the top-level one for that agent definition, and is never merged with it (COR-013 point 5).
 7. The adapter carries the agent definition's model and its effort into what it deploys, each from the overlay's override, or else from the front matter. It writes none whose value is `inherit` or absent (`agent_policy.py`).
 8. The adapter writes the deployed agent definition with its own deploy mark, so a later run tells its own files from the adopter's (`.pkit/adapters/README.md`).
-9. A session dispatches the agent for its [role](../../../glossary.md#term-role--role).
+9. A session dispatches the agent for its remit.
 10. The harness loads the deployed agent definition. The agent finds the project's own paths in its front matter, and only the tools its `tools:` list names (ADR-004 point 1).
 11. Where the adapter's [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is registered, it hands each of the agent's tool calls to the [backbone](../../../glossary.md#term-backbone--backbone)'s permission code, for the subject `agent:<name>`. That code needs only the system `python3` (REQ-016). It applies the grants to `all` and the agent's own, and a deny wins over an allow (REQ-013).
 
@@ -114,12 +110,12 @@ pkit:
 - **6c.** A category that carries writes names a path that sync manages. The adapter skips the agent definition, saying that the category names sync-managed paths, so no agent owns a path that sync writes over (`.pkit/lifecycle/ownership.py`).
 - **7a.** The model or the effort is a value the [harness](../../../glossary.md#term-harness--harness) does not accept. The adapter carries no value for it, so the agent takes the harness's default, and the system reports a `warning` line naming the value (`agent_policy.py`).
 - **8a.** A file without the deploy mark stands where the adapter would deploy, such as an agent definition the adopter wrote there. The adapter leaves the file untouched, and reports it `skipped`.
-- **8b.** A deployed agent definition carries the deploy mark, and no [place](../../../glossary.md#term-place--place) ships its agent definition any more. The adapter removes it, and reports it `removed`.
+- **8b.** A deployed agent definition carries the deploy mark, and no source ships its agent definition any more. The adapter removes it, and reports it `removed`.
 - **11a.** The [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is not registered. Only the `tools:` list and the harness's own settings apply. Those settings are one set for the whole session, never one for each agent (ADR-004 [point](../../../glossary.md#term-point--point) 1).
 - **11b.** The harness names no agent in the call, as for the main session. The permission code takes the default agent from the `agent` key of Claude Code's `.claude/settings.json`, the one harness's settings it reads. With none, the subject is `operator` (`decide.py`).
 - **11c.** An installed [capability](../../../glossary.md#term-capability--capability) contributes a deny [grant](../../../glossary.md#term-grant--grant) for the agent in a grants file of its own. The deny holds for that agent, whatever its other grants allow (ADR-016 and REQ-013).
 
-**Postconditions:** The [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it, with the [project](../../../glossary.md#term-project--project)'s paths in [place](../../../glossary.md#term-place--place) of the placeholders of its front matter. Where the [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is registered, each of the agent's tool calls is decided under its own grants and those to `all`.
+**Postconditions:** The [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it, with the [project](../../../glossary.md#term-project--project)'s paths in place of the placeholders of its front matter. Where the [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is registered, each of the agent's tool calls is decided under its own grants and those to `all`.
 
 **Minimal guarantees:**
 

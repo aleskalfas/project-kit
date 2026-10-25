@@ -52,10 +52,6 @@ pkit:
         - REQ-012
         - REQ-026
         - REQ-031
-    revalidated:
-      at: 2026-10-24T19:01:12Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, pkit visibility private and untrack now refuse an answer piped in off a terminal. Each step and variant still holds as written."
 ---
 
 # UC-049 — Install the system into my project with one command
@@ -75,7 +71,7 @@ pkit:
 **Main path:**
 
 1. The adopter runs `pkit init` at the root of the [project](../../../glossary.md#term-project--project)'s git repository.
-2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit init` runs no such check, and writes in whatever repository its target names. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -87,7 +83,7 @@ pkit:
 7. The system creates each seed path, such as each area's `project/` folder and the agents' [overlay](../../../glossary.md#term-overlay--overlay) (COR-001 and ADR-065 point 11).
 8. The system registers each adapter it copied, at the version the adapter ships. Each adapter's scripts then merge the methodology's entries into the files its [harness](../../../glossary.md#term-harness--harness) reads, and deploy its [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition). For Claude Code those are `.claude/settings.json` and `CLAUDE.md` (COR-002 and REQ-002).
 9. The system renders `.pkit/.gitignore`, creates the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace), and provisions each registered query command (ADR-009 point 7).
-10. The system records `completed_version` last, and prints `Install complete. Recommended next steps:`. The steps name the CLI's install at its own version (REQ-031), the project's settings files, lines for `.gitignore`, and `pkit visibility private`.
+10. The system records `completed_version` last, and prints `Install complete. Recommended next steps:`. The first step names the CLI's install of the highest [release](../../../glossary.md#term-release--release), through the tag `latest` (REQ-031). The others name the project's settings files, lines for `.gitignore`, and `pkit visibility private`.
 11. The adopter runs `pkit status`. The system shows how the methodology is wired into the project, and writes nothing (REQ-005). It shows the backbone's version, the agent workspace, the adapter, each [capability](../../../glossary.md#term-capability--capability), the [rule sets](../../../glossary.md#term-rule-set--rule-set) and the connections.
 12. The adopter commits `.pkit/` and the files the adapter deployed, so the team shares one methodology. The project's visibility stays `shared`, the default (ADR-009 point 2).
 

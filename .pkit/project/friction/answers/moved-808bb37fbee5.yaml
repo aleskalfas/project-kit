@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    revalidated:
+      at: 2026-10-25T00:33:56Z
+      outcome: unchanged
+      unchanged-because: Only core rule 20 changes, on answers. Rule 16, which this use case follows, says what it said.

@@ -1,0 +1,6 @@
+component: evidence
+kind: none
+body: >
+  The README's answers to friction move out of its front matter into
+  project-kit's own answer files, as COR-062 point 11 decides. Its anchors
+  and text stay as they were, and nothing you run changes.

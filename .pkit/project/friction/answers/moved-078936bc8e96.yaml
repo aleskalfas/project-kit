@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-adapter
+    revalidated:
+      at: 2026-10-21T15:45:07Z
+      outcome: unchanged
+      unchanged-because: COR-005 says pkit new adapter stamps package.yaml, README.md and migrations/, and where an adapter's scripts are documented. An adapter still carries the methodology into one harness, so the definition holds.

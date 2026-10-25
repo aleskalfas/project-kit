@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-reader-review
+    revalidated:
+      at: 2026-10-25T05:30:31Z
+      outcome: unchanged
+      unchanged-because: Reader-review now reads the results the reading-evidence point holds, as advice. It still judges one page as its readers would, against the binding rules, and runs no executed check.

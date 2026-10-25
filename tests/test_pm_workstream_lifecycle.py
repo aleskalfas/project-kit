@@ -660,3 +660,122 @@ def test_remove_force_passes_the_precondition(rw, tmp_path, monkeypatch) -> None
     monkeypatch.setattr(rw, "gh_run", repo)
     assert _run(rw, monkeypatch, tmp_path, "remove-workstream", "cli", "--force") == 0
     assert "cli:" not in _file(tmp_path)
+
+
+# =========================================================================
+# The change is the person's (#2015): asked at a terminal, authorised by
+# --yes, and refused off a terminal without it, with nothing changed
+# =========================================================================
+
+
+class _Pipe:
+    """A standard input with an answer piped into it, as `echo y | …` gives."""
+
+    def isatty(self) -> bool:
+        return False
+
+
+def _never_asked(question: str) -> str:
+    raise AssertionError(f"asked off a terminal: {question!r}")
+
+
+# (module fixture, the command, the file it starts from, the labels, the answer
+# that confirms it at a terminal)
+_PERSON_CHANGES = [
+    pytest.param("rn", ("rename-workstream", "cli", "tools"), ONE, {"cli"}, "y", id="rename"),
+    pytest.param("mw", (*MERGE_OLD, "--skip-references"), TWO, {"cli", "old"}, "y", id="merge"),
+    pytest.param(
+        "sw",
+        (
+            "split-workstream",
+            "--source",
+            "cli",
+            "--into",
+            "cli-tools",
+            "--into",
+            "cli-rendering",
+            "--assign",
+            "1=cli-tools",
+            "--assign",
+            "2=cli-rendering",
+        ),
+        ONE,
+        {"cli"},
+        "y",
+        id="split",
+    ),
+    pytest.param("rw", ("remove-workstream", "cli"), ONE, {"cli"}, "cli", id="remove"),
+    pytest.param(
+        "ew",
+        ("edit-workstream", "cli", "--status", "deprecated", "--deprecated-reason", "gone"),
+        ONE,
+        {"cli"},
+        "y",
+        id="edit-status",
+    ),
+]
+
+
+def _stage(request, monkeypatch, tmp_path, fixture, start, labels):
+    module = request.getfixturevalue(fixture)
+    stage_project(tmp_path, start)
+    issues = (
+        {1: _issue("One", "workstream:cli"), 2: _issue("Two", "workstream:cli")}
+        if fixture == "sw"
+        else {}
+    )
+    repo = FakeRepo(labels={f"workstream:{label}" for label in labels}, issues=issues)
+    if hasattr(module, "gh_run"):
+        monkeypatch.setattr(module, "gh_run", repo)
+    return module, repo
+
+
+@pytest.mark.parametrize(("fixture", "argv", "start", "labels", "answer"), _PERSON_CHANGES)
+def test_off_a_terminal_without_yes_the_change_is_refused(
+    request, tmp_path, monkeypatch, capsys, fixture, argv, start, labels, answer
+) -> None:
+    module, repo = _stage(request, monkeypatch, tmp_path, fixture, start, labels)
+    monkeypatch.setattr(sys, "stdin", _Pipe())
+    monkeypatch.setattr("builtins.input", _never_asked)
+    assert _run(module, monkeypatch, tmp_path, *argv, yes=False) == 1
+    assert _file(tmp_path) == start
+    assert repo.mutations() == []
+    err = capsys.readouterr().err
+    assert "is the person's to authorise" in err
+    assert f"pkit pm {argv[0]} " in err and err.rstrip().endswith("--yes")
+
+
+@pytest.mark.parametrize(("fixture", "argv", "start", "labels", "answer"), _PERSON_CHANGES)
+def test_at_a_terminal_the_change_is_asked_and_made(
+    request, tmp_path, monkeypatch, fixture, argv, start, labels, answer
+) -> None:
+    module, _repo = _stage(request, monkeypatch, tmp_path, fixture, start, labels)
+    monkeypatch.setattr(sys, "stdin", _Shell())
+    asked: list[str] = []
+    monkeypatch.setattr("builtins.input", lambda q: asked.append(q) or answer)
+    assert _run(module, monkeypatch, tmp_path, *argv, yes=False) == 0
+    assert len(asked) == 1
+    assert _file(tmp_path) != start
+
+
+@pytest.mark.parametrize(("fixture", "argv", "start", "labels", "answer"), _PERSON_CHANGES)
+def test_yes_makes_the_change_off_a_terminal_without_asking(
+    request, tmp_path, monkeypatch, fixture, argv, start, labels, answer
+) -> None:
+    module, _repo = _stage(request, monkeypatch, tmp_path, fixture, start, labels)
+    monkeypatch.setattr(sys, "stdin", _Pipe())
+    monkeypatch.setattr("builtins.input", _never_asked)
+    assert _run(module, monkeypatch, tmp_path, *argv) == 0
+    assert _file(tmp_path) != start
+
+
+def test_off_a_terminal_an_edit_that_flips_no_status_is_not_asked(
+    ew, tmp_path, monkeypatch
+) -> None:
+    """DEC-018 confirms only a status flip; any other edit goes on as before."""
+    stage_project(tmp_path, ONE)
+    monkeypatch.setattr(sys, "stdin", _Pipe())
+    monkeypatch.setattr("builtins.input", _never_asked)
+    rc = _run(ew, monkeypatch, tmp_path, "edit-workstream", "cli", "--name", "CLI", yes=False)
+    assert rc == 0
+    assert "name: CLI" in _file(tmp_path)

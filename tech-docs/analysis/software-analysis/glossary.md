@@ -90,10 +90,6 @@ TERM-candidate:
         record:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
-      revalidated:
-        at: 2026-10-24T01:59:05Z
-        outcome: unchanged
-        unchanged-because: The change adds where brownfield onboarding starts and ends to the build. A candidate is still an artefact or a record written but not yet committed, which a person confirms or discards.
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
@@ -108,10 +104,6 @@ TERM-declared-structure:
           - .pkit/capabilities/software-analysis/scripts/_lib/structure.py
         record:
           - software-analysis:DEC-001#1
-      revalidated:
-        at: 2026-10-24T10:39:51Z
-        outcome: unchanged
-        unchanged-because: structure.py gains a reading of where a body's parts open, which the term links use. The declared structure, and how a body is held to it, are as they were.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]
@@ -173,10 +165,6 @@ TERM-revalidation-outcome:
           - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
         record:
           - software-analysis:DEC-001#5
-      revalidated:
-        at: 2026-10-24T02:12:38Z
-        outcome: unchanged
-        unchanged-because: The term still names the four outcomes and how they map onto the two answers. The change makes pkit analysis propose answer a boxed regression updated, as its distinctions already say.
 TERM-revalidation-proposal:
   name: revalidation proposal
   noun-forms: [revalidation proposals]
@@ -189,10 +177,6 @@ TERM-revalidation-proposal:
           - .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
         record:
           - software-analysis:DEC-001#5
-      revalidated:
-        at: 2026-10-24T02:12:40Z
-        outcome: unchanged
-        unchanged-because: The term still names what the agent drafts for a person to record. The change adds how the agent tells a boxed regression from one no record decides, which the term does not describe.
 TERM-revalidation-record:
   name: revalidation record
   status: active
@@ -440,7 +424,7 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 **Distinctions:**
 
 - **A relabel:** a new label, [hint](#term-hint--hint) or example for a shipped part. It tightens nothing, so it needs no rule (DEC-001 point 1).
-- **A change to a shipped part:** dropping, loosening or reordering it. No project makes one, and a part it finds wrong is a [change](../core/glossary.md#term-change--change) it proposes to the [capability](../core/glossary.md#term-capability--capability) (DEC-001 point 1).
+- **A change to a shipped part:** dropping, loosening or reordering it. No project makes one, and a part it finds wrong is an edit it proposes to the [capability](../core/glossary.md#term-capability--capability) (DEC-001 point 1).
 
 ## TERM-use-case — use case
 

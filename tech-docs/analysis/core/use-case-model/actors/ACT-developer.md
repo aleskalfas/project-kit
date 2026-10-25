@@ -26,9 +26,6 @@ pkit:
         - COR-050#3
         - COR-050#6
         - COR-050#9
-    revalidated:
-      at: 2026-10-23T08:53:41Z
-      outcome: updated
 ---
 
 # ACT-developer — Developer
@@ -38,4 +35,4 @@ The person who builds: decisions, rules, notes, code and its documentation, one 
 - **Occasions:** for every [change](../../glossary.md#term-change--change), and again when some work recurs often enough to deserve tooling of its own.
 - **Context:** the [change](../../glossary.md#term-change--change). They direct agents to make it.
 - **Core:** whatever tracks the work, every [change](../../glossary.md#term-change--change) passes the [acceptance gate](../../glossary.md#term-acceptance-gate--acceptance-gate) and the [friction](../../glossary.md#term-friction--friction) check, and lands as COR-009 sets out. That the [backbone](../../glossary.md#term-backbone--backbone) itself lands [pull requests](../../glossary.md#term-pull-request--pull-request) is provisional (ADR-061 [point](../../glossary.md#term-point--point) 3, raised as #1222).
-- **Note:** a work tracker's view of this [role](../../glossary.md#term-role--role) (project-management's "Implementer") comes with that [capability](../../glossary.md#term-capability--capability).
+- **Note:** a work tracker's view of the developer (project-management's "Implementer") comes with that [capability](../../glossary.md#term-capability--capability).

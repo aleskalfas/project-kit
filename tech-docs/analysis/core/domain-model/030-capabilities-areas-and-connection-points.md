@@ -36,9 +36,6 @@ pkit:
         - TERM-role
         - TERM-data-point
         - TERM-process
-    revalidated:
-      at: 2026-10-21T19:08:58Z
-      outcome: updated
 ---
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points
@@ -198,13 +195,13 @@ A connection point is a declared interface that one installed capability defines
   - a [data point](../glossary.md#term-data-point--data-point), which takes data in
   - a [process](../glossary.md#term-process--process), offered for others to depend on
   - an event, which signals that a writing command finished
-- a [version](../glossary.md#term-version--version), an integer that rises only where it breaks what connects to it (COR-053 point 5)
+- a <!-- pkit:not-the-term -->version, an integer that rises only where it breaks what connects to it (COR-053 point 5)
 - a description, in prose (COR-053 point 3)
 
 **Relations:**
 
 - The capability that provides its role defines it (COR-053 point 2).
-- Other components connect to it at a version equal to its own (COR-053 point 5).
+- Other components connect to it at a <!-- pkit:not-the-term -->version equal to its own (COR-053 point 5).
 - The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every connection to it (COR-053 point 7).
 
 **States:** None.
@@ -212,7 +209,7 @@ A connection point is a declared interface that one installed capability defines
 **Always true:**
 
 - It is optional by default. A connection to it is mandatory only with a reason (COR-053 point 6).
-- Two of its versions are compatible only when they are equal (COR-053 point 5).
+- Two of its <!-- pkit:not-the-term -->versions are compatible only when they are equal (COR-053 point 5).
 - The component that offers an event never names those that subscribe to it (COR-053 point 2).
 
 ## Role
@@ -226,7 +223,7 @@ A role is a name under which one installed capability provides [connection point
 **Attributes:**
 
 - its qualified name, `<publisher>::<role>` (COR-053 [point](../glossary.md#term-point--point) 1)
-- no [version](../glossary.md#term-version--version): a role redefined in a way that breaks takes a new name (COR-053 point 5)
+- no <!-- pkit:not-the-term -->version: a role redefined in a way that breaks takes a new name (COR-053 point 5)
 
 **Relations:**
 
@@ -251,7 +248,7 @@ A data point is a declared interface through which the [capability](../glossary.
 
 **Attributes:**
 
-- its address, its [version](../glossary.md#term-version--version) and the schema of its data (COR-052 points 1 and 5)
+- its address, its schema version and the schema of its data (COR-052 points 1 and 5)
 - a combination policy, one of these (COR-052 [point](../glossary.md#term-point--point) 3):
   - one filler alone fills it
   - entries merge by id
@@ -268,7 +265,7 @@ A data point is a declared interface through which the [capability](../glossary.
 **Always true:**
 
 - A filler that fails gives no result, which is never read as an empty one (COR-052 point 6).
-- A capability's filler counts only where its version matches the point's (COR-052 point 5).
+- A capability's filler counts only where its schema version matches the point's (COR-052 point 5).
 - A question asks only what has no recorded reply. Where nobody can reply, it records nothing (COR-061 points 1 and 5).
 
 ## Process

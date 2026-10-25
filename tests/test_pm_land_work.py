@@ -333,6 +333,9 @@ class _Run:
     #: not be read.
     written: list[dict[str, Any]] = field(default_factory=list)
     settings: list[Any] = field(default_factory=list)
+    #: The check's `answered_apart_at_tip`: each revalidation on the base's tip the
+    #: change's answer did not read.
+    apart: list[dict[str, Any]] = field(default_factory=list)
     outdated: bool = False
     tip: str = ""
     unreadable: list[str] = field(default_factory=list)
@@ -373,6 +376,7 @@ class _Run:
             },
             "findings": [],
             "answers": self.written,
+            "answered_apart_at_tip": self.apart,
             "unreadable": self.unreadable,
         }
         return fa.Derivation(
@@ -1641,8 +1645,8 @@ def test_an_authorisation_for_another_head_stops_before_anything(world, capsys) 
     assert out.splitlines()[-1] == (
         f"head: stopped — PR #{PR}'s head is {_short(head)}, not "
         f"{authorised[:7]}, the head the merge was authorised for: an authorisation covers a "
-        "later head only where every change since lies inside `revalidated` blocks or "
-        "`revisited` lists, a clean merge of main counting as none, and these changes do "
+        "later head only where every change since lies inside answer files the change "
+        "adds, a clean merge of main counting as none, and these changes do "
         f"not: after.txt ({head[:7]}: added). "
         f"Nothing was done; `land-work {ISSUE}` checks and reviews the new one"
     )
@@ -1703,7 +1707,7 @@ def test_a_later_head_whose_base_cannot_be_read_stops_before_anything(world, cap
 def _covered(authorised: str) -> str:
     return (
         f"the authorisation for {_short(authorised)} covers it, since every change after "
-        f"{_short(authorised)} lies inside `revalidated` blocks or `revisited` lists, a "
+        f"{_short(authorised)} lies inside answer files the change adds, a "
         "clean merge of main counting as none"
     )
 
@@ -2245,6 +2249,101 @@ def test_a_base_whose_changes_cannot_be_read_is_refused(world, capsys) -> None:
     run.github.body = _PR_BODY
     rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
+
+
+#: An answer file the change adds, as the change check names it (COR-062 point 1). This
+#: world's repository ignores `.pkit/`, and land-work reads the path as the check gives
+#: it, wherever it lies.
+_ANSWER_FILE = "friction/answers/20261022T090000Z-1a2b3c4d.yaml"
+
+
+def _answered_in_a_file(world: Callable[..., _Run]) -> _Run:
+    """`_answers_world`, the change's answer on docs/install.md written in an answer
+    file, as the change check names it (`file`)."""
+    run = world()
+    run.written = [{**INSTALL, "file": _ANSWER_FILE}, {**DEFERRED, "file": "docs/cli.md"}]
+    run.github.body = f"{_PR_BODY}\n{run.section()}\n"
+    return run
+
+
+def test_a_base_that_changed_the_answer_file_a_listed_answer_is_in_is_refused(
+    world, capsys
+) -> None:
+    """The list's words sit in the file the change check names for each answer: a base
+    that changed that answer file since the head left it could land words the list does
+    not show (DEC-055 point 3)."""
+    run = _answered_in_a_file(world)
+    _main_moves_on(run, _ANSWER_FILE)
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert f"changed 1 file ({_ANSWER_FILE}) the list's words are on" in out.splitlines()[-1]
+    assert run.github.merges == []
+
+
+def test_a_base_that_changed_only_the_document_an_answer_file_answers_stops_nothing(
+    world, capsys
+) -> None:
+    """An answer in an answer file leaves its words out of the document it answers on:
+    a base that changed only that document lands no word the list does not show."""
+    run = _answered_in_a_file(world)
+    _main_moves_on(run, "docs/install.md")
+    rc, out, err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == 0, out + err
+    assert run.github.merges[-1][-1] == run.github.head
+
+
+#: A revalidation on the base's tip that the change's answer on docs/install.md did not
+#: read, as the change check reports it (`answered_apart_at_tip`).
+_APART = {
+    "artefact": "install",
+    "location": "docs/install.md",
+    "revalidations": [
+        {
+            "file": ".pkit/project/friction/answers/20261023T090000Z-5e6f7a8b.yaml",
+            "at": "2026-10-23T09:00:00Z",
+            "outcome": "unchanged",
+            "unchanged_because": "The new flag leaves the steps as written.",
+        }
+    ],
+}
+_APART_LINE = (
+    "  Answered apart once merged: docs/install.md — the base's revalidation in "
+    ".pkit/project/friction/answers/20261023T090000Z-5e6f7a8b.yaml of 2026-10-23T09:00:00Z, "
+    "which this change's answer did not read. Still accurate: \"The new flag leaves the "
+    'steps as written."'
+)
+
+
+def test_a_revalidation_the_merge_would_leave_answered_apart_is_printed_and_stops_nothing(
+    world, capsys
+) -> None:
+    """Before it stops ready, the run prints each revalidation on the base's tip that the
+    change's answer did not read, beside the list and never in the description, and the
+    `ready:` line counts it, as information (DEC-055 point 3)."""
+    run = _answers_world(world)
+    run.apart = [_APART]
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    step = next(i for i, line in enumerate(lines) if line.startswith(f"{_STEP}:"))
+    assert lines.index(_APART_LINE) < step  # printed with the list, before the step's line
+    assert lines.count(_APART_LINE) == 2  # and told again above the `ready:` line
+    assert lines[-1] == _ready_line(
+        run,
+        ", 1 document left out of date and 1 revalidation answered apart once merged above, "
+        "for information",
+    )
+    (written,) = run.github.bodies
+    assert "Answered apart" not in written
+
+
+def test_a_revalidation_answered_apart_never_holds_an_authorised_merge(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    run.apart = [_APART]
+    rc, out, err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == 0, out + err
+    assert _APART_LINE in out.splitlines()
+    assert run.github.merges[-1][-1] == run.github.head
 
 
 def test_a_file_the_change_did_not_touch_that_cannot_be_read_is_no_reason_to_stop(

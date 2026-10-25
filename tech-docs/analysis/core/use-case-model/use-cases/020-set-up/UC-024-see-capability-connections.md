@@ -27,10 +27,6 @@ pkit:
         - REQ-005
         - REQ-010
         - REQ-011
-    revalidated:
-      at: 2026-10-24T19:00:51Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the collision prompts now refuse an answer piped in off a terminal. Showing a capability's connections asks nothing, so the steps hold."
 ---
 
 # UC-024 — See what a capability would connect to before I install it
@@ -46,7 +42,7 @@ pkit:
 
 **Assumptions:** None.
 
-**Trigger:** The adopter considers a [capability](../../../glossary.md#term-capability--capability) for the [project](../../../glossary.md#term-project--project), by its name or from a suggestion the status [report](../../../glossary.md#term-report--report) gives.
+**Trigger:** The adopter considers a [capability](../../../glossary.md#term-capability--capability) for the [project](../../../glossary.md#term-project--project), by its name or from a suggestion `pkit status` gives.
 
 **Main path:**
 

@@ -39,10 +39,6 @@ pkit:
       artefact:
         - REQ-022
         - REQ-025
-    revalidated:
-      at: 2026-10-24T03:53:20Z
-      outcome: unchanged
-      unchanged-because: The agent and its storyboard changed only how reader-review falls back to a space's audience. Proposing a stale page's fix is as it was.
 ---
 
 # UC-045 — Have the fix for a stale page proposed, and review it before it is applied
@@ -57,7 +53,7 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in [place](../../../core/glossary.md#term-place--place) where living-docs is developed, and the [adapter](../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) (COR-013, COR-017 and COR-031).
+- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed, and the [adapter](../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) (COR-013, COR-017 and COR-031).
 - A change modified what one of the [page](../../glossary.md#term-page--page)'s anchors names, and the core's [friction](../../../core/glossary.md#term-friction--friction) checks name the page stale or deferred. That is the [change check](../../../core/glossary.md#term-change-check--change-check), the [whole-repository check](../../../core/glossary.md#term-whole-repository-check--whole-repository-check) or its [debt](../../../core/glossary.md#term-debt--debt) listing (COR-050 point 5).
 - The history at hand reaches the page's last [answer](../../../core/glossary.md#term-answer--answer), as the friction checks need it (COR-050 point 5).
 - The answer a page carries is a person's decision. The developer gives it once the diff is applied, as `core:UC-002` describes (COR-050 point 3).
@@ -87,10 +83,10 @@ pkit:
 - **2b.** The [artefact](../../../core/glossary.md#term-artefact--artefact) is no page, such as a [decision record](../../../core/glossary.md#term-decision-record--decision-record), a [rule](../../../core/glossary.md#term-rule--rule), or another [component](../../../core/glossary.md#term-component--component)'s artefact. The agent says that its owner revalidates it, and stops (COR-050 point 6).
 - **2c.** `explain` reports the page `unresolved`, so it was not judged. The agent proposes nothing for its text, and says why from the [anchor](../../../core/glossary.md#term-anchor--anchor)'s [finding](../../../core/glossary.md#term-finding--finding). Where the anchor's kind misspells a registered one, it proposes the one-line correction of the anchor.
 - **2d.** A [friction](../../../core/glossary.md#term-friction--friction) document carries a `schema_version` other than 1. The agent refuses it, naming the command and the version, and proposes nothing from it (core:REQ-019). The use case ends.
-- **2e.** The page is stale on a `source` anchor. The agent reads the versions recorded, and the address, from the [captured source](../../glossary.md#term-captured-source--captured-source)'s history, and never fetches the text (REQ-025). It names the text, both versions and the link, and asks the developer what changed that bears on the page (DEC-001 point 4). The path goes on at step 4, judged from the developer's [answer](../../../core/glossary.md#term-answer--answer).
+- **2e.** The page is stale on a `source` anchor. The agent reads the versions recorded, and the address, from the [captured source](../../glossary.md#term-captured-source--captured-source)'s history, and never fetches the text (REQ-025). It names the text, both versions and the link, and asks the developer what changed that bears on the page (DEC-001 point 4). The path goes on at step 4, judged from the developer's reply.
 - **2f.** The developer cannot say yet what changed in the text. The agent proposes nothing for the page's text. It names the two answers that are the developer's: read the text and come back, or defer the anchor with a reason. The use case ends.
 - **4a.** The change looks wrong, rather than the page, such as code that now contradicts a decision the page applies. The agent says so, and leaves the call to the developer. It never rewrites the page to match a regression (DEC-001 point 5).
-- **4b.** No statement needs to change. The agent proposes the `unchanged` answer, with its evidence and a draft reason the developer confirms or rewrites, and writes no diff.
+- **4b.** No statement needs to change. The agent proposes the `unchanged` [answer](../../../core/glossary.md#term-answer--answer), with its evidence and a draft reason the developer confirms or rewrites, and writes no diff.
 - **4c.** A statement rests on a screenshot a capture script takes, flagged through the script. The agent runs no capture, and holds the page with one question for the developer (DEC-002 point 5).
 
 > [!WARNING]

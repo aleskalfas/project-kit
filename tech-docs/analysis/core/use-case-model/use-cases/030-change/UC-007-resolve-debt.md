@@ -25,14 +25,11 @@ shortfalls:
     issue: "#1765"
     record: ADR-034#1
   - at: 7
-    issue: "#1873"
+    issue: "#2032"
     record: COR-062#1
   - at: "3b"
     issue: "#1765"
     record: ADR-034#1
-  - at: "4c"
-    issue: "#1873"
-    record: COR-062#5
 pkit:
   friction:
     anchors:
@@ -70,10 +67,6 @@ pkit:
         - REQ-018
         - REQ-019
         - REQ-020
-    revalidated:
-      at: 2026-10-24T04:58:26Z
-      outcome: unchanged
-      unchanged-because: A renamed placed file whose derived links alone moved is no longer listed behind a deferral. How a person resolves debt is unchanged.
 ---
 
 # UC-007 — Resolve what the default branch left out of date
@@ -107,13 +100,13 @@ pkit:
    - updating the [artefact](../../../glossary.md#term-artefact--artefact) and revalidating it `updated`
    - revalidating it `unchanged`, with why it still holds
    - deferring it to an open follow-up issue
-7. At its entry, each command that writes an [answer](../../../glossary.md#term-answer--answer) checks that the repository it would change is the session's own. Where it is another, the command asks the operator (REQ-012). It writes the answer to an answer file of the change's own, as UC-002 does (COR-062 point 1).
+7. At its entry, each command that writes an [answer](../../../glossary.md#term-answer--answer) checks that the repository it would write in is the session's own. Where it is another, the command asks the operator (REQ-012). It writes the answer to an answer file of the change's own, as UC-002 does (COR-062 point 1).
 
 > [!WARNING]
 > **Not built yet:** `pkit friction revalidate` and `pkit friction defer` run no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 > [!WARNING]
-> **Not built yet:** each answer is written in the artefact's own `friction` block. COR-062 point 1 decides that a change writes its answers in answer files of its own, and #1873 tracks it.
+> **Not built yet:** where the artefact's own `friction` block already holds an answer, each answer is written there instead, until those answers move out. COR-062 point 1 decides that a change writes its answers in answer files of its own, and #2032 tracks it.
 
 5. The developer lands the answers in a change of their own. Its [change check](../../../glossary.md#term-change-check--change-check) flags each answer the change was not asked for as `not asked for by this change`.
 6. The next [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) finds each answered artefact `current`, or `deferred` where the developer deferred it.
@@ -121,24 +114,21 @@ pkit:
 **Variants:**
 
 - **1a.** The clone is shallow, and an [artefact](../../../glossary.md#term-artefact--artefact)'s revalidation point lies beyond the cut. The check reports the artefact `unreachable`, and does not judge it until `git fetch --unshallow` brings the history. The path goes on at step 2 for the other debts.
-- **1b.** An [anchor](../../../glossary.md#term-anchor--anchor)'s resolver gives no [answer](../../../glossary.md#term-answer--answer), or the anchor names a kind that nothing installed resolves. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
+- **1b.** An [anchor](../../../glossary.md#term-anchor--anchor)'s resolver gives no result, or the anchor names a kind that nothing installed resolves. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
 - **1c.** An anchor resolves to nothing at the latest commit, such as a path whose files were removed. The check reports it as a `dead-anchor`, an error it reports and never fails on, and judges the artefact on its other anchors (REQ-020). The path goes on at step 2.
 - **3a.** An installed [capability](../../../glossary.md#term-capability--capability) ships an agent for the artefact's type. The developer dispatches that agent, which proposes the outcome with its evidence and the commands to run, and runs none (COR-050 [point](../../../glossary.md#term-point--point) 3). The path goes on at step 4.
-- **3b.** An agent that an installed capability ships for the artefact's type proposed the answer before the developer reached the [debt](../../../glossary.md#term-debt--debt). The agent ran with nobody watching, through the [backbone](../../../glossary.md#term-backbone--backbone)'s run command, `pkit agents run`:
+- **3b.** An agent that an installed capability ships for the artefact's type proposed the [answer](../../../glossary.md#term-answer--answer) before the developer reached the [debt](../../../glossary.md#term-debt--debt). The agent ran with nobody watching, through the [backbone](../../../glossary.md#term-backbone--backbone)'s run command, `pkit agents run`:
   - The command starts the runner the [adapter](../../../glossary.md#term-adapter--adapter) registers, confined to a clone at a pinned commit (ADR-066 point 1).
-  - At its entry, the command checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. With nobody to ask, the command refuses another (REQ-012).
+  - At its entry, the command checks that the repository it would write in is the session's own. With nobody to ask, the command refuses another (REQ-012).
 
   The developer reads the agent's proposal, a file the run handed back, and the path goes on at step 4.
 
 > [!WARNING]
 > **Not built yet:** `pkit agents run` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-- **4a.** The artefact still describes what is wanted, and a change broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
+- **4a.** The artefact still describes what is wanted, and a [change](../../../glossary.md#term-change--change) broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
 - **4b.** An anchor is dead, such as a path whose files were removed. The developer corrects the anchor in the block, and revalidates the artefact, since its anchor list changed. The [change check](../../../glossary.md#term-change-check--change-check) asks for that revalidation, so it is not flagged at step 5.
-- **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. The revalidation reads both, and replaces them (COR-062 points 5 and 7).
-
-> [!WARNING]
-> **Not built yet:** the writers write no answer file, so no revalidation reads another and replaces it. COR-062 point 5 decides that a revalidation replaces the revalidations it read, and #1873 tracks it.
+- **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. `pkit friction revalidate` names the files of both in the new revalidation's `read`, so the new revalidation replaces the two (COR-062 points 5 and 7).
 
 - **5a.** An answer the developer gives is `updated`, so the artefact's content changed. Each artefact anchored to it owes an answer in the same change (COR-050 point 6), and the path rejoins at step 4 for each one.
 

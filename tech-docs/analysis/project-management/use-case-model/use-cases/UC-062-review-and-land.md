@@ -15,18 +15,9 @@ requirements:
 after:
   - [UC-061]
 shortfalls:
-  - at: 9
-    issue: "#1872"
-    record: project-management:DEC-055#3
   - at: "1b"
     issue: "#1938"
     record: COR-004
-  - at: "6b"
-    issue: "#1872"
-    record: project-management:DEC-032#D1
-  - at: "12a"
-    issue: "#1779"
-    record: project-management:DEC-055#3
 pkit:
   friction:
     anchors:
@@ -74,9 +65,6 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
-    revalidated:
-      at: 2026-10-24T06:13:38Z
-      outcome: updated
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it
@@ -105,18 +93,14 @@ pkit:
 **Main path:**
 
 1. The developer runs `pkit pm land-work <N>`, with the [Task](../../glossary.md#term-task--task)'s number.
-2. At its entry, the system checks the [project](../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would [change](../../../core/glossary.md#term-change--change) is the session's own, and asks the operator where it is another (core:REQ-012).
+2. At its entry, the system checks the [project](../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would write in is the session's own, and asks the operator where it is another (core:REQ-012).
 3. The system reads the [pull request](../../../core/glossary.md#term-pull-request--pull-request)'s [head](../../../core/glossary.md#term-head--head), prints it, and holds it as the head this run judges.
 4. The system waits for the checks at that head, and goes on once each has passed. A head with no check reported never counts as passed (`ci_checks.py`).
-5. The system works out the [required reviewers](../../glossary.md#term-required-reviewer--required-reviewer): those the project's settings name, and each a [capability](../../../core/glossary.md#term-capability--capability) contributes whose condition the change meets (DEC-032 point D1). It prints them, with each contributed [reviewer](../../../core/glossary.md#term-reviewer--reviewer) the project declined and its reason (DEC-032 point D2).
+5. The system works out the [required reviewers](../../glossary.md#term-required-reviewer--required-reviewer): those the project's settings name, and each a [capability](../../../core/glossary.md#term-capability--capability) contributes whose condition the [change](../../../core/glossary.md#term-change--change) meets (DEC-032 point D1). It prints them, with each contributed [reviewer](../../../core/glossary.md#term-reviewer--reviewer) the project declined and its reason (DEC-032 point D2).
 6. For each required reviewer whose latest [verdict](../../glossary.md#term-verdict--verdict) still stands for the head, the system keeps the verdict. It runs the others at once, through `review-pr`, each on the change at that head (DEC-028 and DEC-032 point D4).
 7. Each reviewer posts its verdict, whose first line approves the change or requests changes, and whose marker names the head and the [base](../../../core/glossary.md#term-base--base) it reviewed. Its [findings](../../../core/glossary.md#term-finding--finding) follow, each tagged `[block]`, `[person]` or `[advisory]` (DEC-028).
 8. The system prints each `[person]` finding whole, and marks one whose verdict no longer stands for the head (DEC-055 point 3).
 9. The system lists the answers the change wrote, from the [change check](../../../core/glossary.md#term-change-check--change-check), and writes the list into the pull request's description (DEC-055 point 1). It prints, beside the list, each revalidation of a document on the base's tip that the change's [answer](../../../core/glossary.md#term-answer--answer) did not read (DEC-055 point 3).
-
-> [!WARNING]
-> **Not built yet:** the system prints no revalidation that was answered apart. DEC-055 point 3 decides that it prints each one beside the list, and #1872 tracks it.
-
 10. With no [authorisation](../../glossary.md#term-authorisation--authorisation) yet, the system stops ready and exits `8`. It names the command that merges: `pkit pm land-work <N> --yes --expect-head <sha>`.
 11. The merge authoriser reads the findings and the list, and authorises the merge of the pull request at that head (DEC-055 point 3).
 12. The developer runs `pkit pm land-work <N> --yes --expect-head <sha>`, and the system runs steps 2 to 9 again at that head.
@@ -139,18 +123,10 @@ pkit:
 - **5b.** The project registers no local reviewer of its own. The system runs each reviewer a [capability](../../../core/glossary.md#term-capability--capability) contributes that the change requires, as any other (DEC-032 point D4). Where the change requires no local reviewer at all, the system says so and runs none.
 - **6a.** The developer changed something a reviewer checks since its [verdict](../../glossary.md#term-verdict--verdict)'s head, or the [pull request](../../../core/glossary.md#term-pull-request--pull-request) no longer stands on the verdict's [base](../../../core/glossary.md#term-base--base). The verdict is stale, and the system runs that reviewer again (DEC-028).
 - **6b.** The developer's only edits since an approving verdict are [answer](../../../core/glossary.md#term-answer--answer) files the change adds. The verdict of a reviewer that only the condition `touches-code` requires stands, since an answer file is no code (DEC-032 point D1).
-
-> [!WARNING]
-> **Not built yet:** an answer file counts as code, so such a change makes that verdict stale. DEC-032 point D1 decides that an answer file is no code, and #1872 tracks it.
-
 - **6c.** A reviewer's output holds no line that reads as a verdict. The system counts no verdict for it, prints the reviewer's whole output, and stops, exiting `6` (DEC-028). The use case ends.
 - **7a.** A verdict requests changes. The system prints the first line of each `[block]` [finding](../../../core/glossary.md#term-finding--finding), and starts no merge (DEC-028). The developer changes the work, and the path rejoins at step 1.
 - **8a.** A `[person]` finding's verdict was posted while the run went on, or does not stand for the head. A run authorised up front stops ready, and merges nothing until the merge authoriser has seen the finding (DEC-055 point 3).
 - **12a.** The head is not the one the [authorisation](../../glossary.md#term-authorisation--authorisation) named. The system stops before it checks anything, unless each edit since that head lies in answer files the change adds. Then the authorisation covers the later head (DEC-055 point 3).
-
-> [!WARNING]
-> **Not built yet:** the system reads the answers from the documents' own blocks, never from answer files. DEC-055 point 3 decides that a later head is covered where the developer's edits lie in the change's answer files, and #1779 tracks it.
-
 - **13a.** A required reviewer's latest verdict is missing or stale. The system refuses the merge, and lists each reviewer it still needs. It names `pkit pm review-pr <N>`, with the [Task](../../glossary.md#term-task--task)'s number, to run them again (DEC-028).
 
 - **13b.** A [checkbox](../../glossary.md#term-checkbox--checkbox) of an [issue](../../glossary.md#term-issue--issue) the pull request closes is unticked. The system refuses the merge, listing each one (DEC-007). The use case ends.

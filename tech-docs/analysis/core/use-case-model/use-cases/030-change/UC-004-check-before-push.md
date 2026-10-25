@@ -48,10 +48,6 @@ pkit:
         - REQ-015
         - REQ-018
         - REQ-019
-    revalidated:
-      at: 2026-10-24T18:58:10Z
-      outcome: unchanged
-      unchanged-because: The aggregator gains a line that runs the pages' console fences. Each step names the aggregator's checks as a whole, and each still holds, the short check's included.
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks
@@ -60,7 +56,7 @@ pkit:
 
 **Other actors:**
 
-- **CI pipeline** (`ACT-ci-pipeline`): runs the same checks on the [pull request](../../../glossary.md#term-pull-request--pull-request) with no person to [answer](../../../glossary.md#term-answer--answer). It names the [base](../../../glossary.md#term-base--base) once, for every check (COR-054 [point](../../../glossary.md#term-point--point) 3).
+- **CI pipeline** (`ACT-ci-pipeline`): runs the same checks on the [pull request](../../../glossary.md#term-pull-request--pull-request) with no person to reply. It names the [base](../../../glossary.md#term-base--base) once, for every check (COR-054 [point](../../../glossary.md#term-point--point) 3).
 
 **Preconditions:** **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 
@@ -93,10 +89,10 @@ pkit:
 - **6a.** The developer pushes with `git push --no-verify`, so the hook does not run. The CI pipeline still runs the checks on the pull request.
 - **6b.** In project-kit, the push changes only answers since the pull request's most recent full run in CI, which passed. The CI pipeline runs every check but the test suite on it (project rule 2). Where the hook ran, it ran the whole aggregator before the push.
 
-**Postconditions:** Before the push, the developer has the [answer](../../../glossary.md#term-answer--answer) the [project](../../../glossary.md#term-project--project)'s checks give on the [change](../../../glossary.md#term-change--change), against the [base](../../../glossary.md#term-base--base) CI will name.
+**Postconditions:** Before the push, the developer has the result the [project](../../../glossary.md#term-project--project)'s checks give on the [change](../../../glossary.md#term-change--change), against the [base](../../../glossary.md#term-base--base) CI will name.
 
 **Minimal guarantees:**
 
-- A validator that gives no [answer](../../../glossary.md#term-answer--answer) fails [validation](../../../glossary.md#term-validation--validation), and never passes it (COR-055 [point](../../../glossary.md#term-point--point) 6).
+- A validator that gives no result fails [validation](../../../glossary.md#term-validation--validation), and never passes it (COR-055 [point](../../../glossary.md#term-point--point) 6).
 - No [base](../../../glossary.md#term-base--base) named for one run reaches a validator (ADR-058 point 7). So `pkit validate` answers the same for the same working tree, HEAD, fetched history and default-branch commit.
 - A base that resolves to no commit is reported with its fixes, and never guessed (COR-054 point 4).

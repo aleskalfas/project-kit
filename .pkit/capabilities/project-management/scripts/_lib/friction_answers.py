@@ -47,11 +47,21 @@ updated document's sentence from the change's author:
   could open or close a comment around the section's markers.
   `sentence_closing_reference` and `sentence_comment_delimiter` name the same
   in an author's sentence.
+- `listed_paths(document)` names the files the list's words are on, from the
+  file the change check gives each answer, an answer file or the artefact's own
+  (COR-062 point 1): the firm stop on a base that changed one (DEC-055 point 3).
+  `apart(document)` is each revalidation on the base's tip that a merge would
+  leave answered apart from the change's own (`answered_apart_at_tip`, COR-062
+  point 7), a line each, printed beside the list and never in it.
+- `answers_folder(root)` is where the backbone keeps the friction answers, as
+  its whole-repository check gives it, read once for a run: no path in it
+  counts as code for a floor (DEC-032 D1).
 - `covers(since, head, base)` asks the backbone whether every change from one
-  head of a pull request to a later one lies inside `revalidated` blocks, a
-  clean merge of the base counting as none (`pkit friction since`): where it does, an
-  authorisation for the earlier head covers the later one (DEC-055 point 3).
-  An answer that cannot be read is never a pass.
+  head of a pull request to a later one lies inside answer files the change
+  adds, a clean merge of the base counting as none (`pkit friction since`, its
+  document's version 2): where it does, an authorisation for the earlier head
+  covers the later one (DEC-055 point 3). An answer that cannot be read is
+  never a pass.
 - `stamp`, `strip`, `find` and `current` place, remove, find and compare the
   section — strip-then-place-exactly-one, as `provenance.stamp` keeps the
   footer. The section sits last, before the provenance footer. A section
@@ -152,13 +162,15 @@ RESOLVER_REFUSAL = "Run from a checkout at"
 #: reading of the friction settings a capability's script makes, which never
 #: re-reads the configuration itself (the CLI README, "friction artefacts").
 ARTEFACTS = ("friction", "artefacts", "--json", "--at")
-#: Whether what changed between two heads lies inside `revalidated` blocks, a clean
-#: merge of the base counting as none, as the backbone answers it (`pkit friction since`, the CLI
-#: README, "friction since"): the one reading of the blocks this capability makes.
+#: Whether what changed between two heads lies inside answer files the change adds, a
+#: clean merge of the base counting as none, as the backbone answers it (`pkit friction
+#: since`, the CLI README, "friction since"): this capability never reads an answer itself.
 SINCE = ("friction", "since")
 #: The version of `pkit friction since --json` this module reads, versioned apart from
 #: the change check's document; a document of another is no answer, never misread.
-SINCE_SCHEMA_VERSION = 1
+#: Version 2 counts answer files the change adds, where version 1 counted the
+#: artefacts' blocks (ADR-068 point 5).
+SINCE_SCHEMA_VERSION = 2
 #: Where a friction setting's change is said to be, in a refusal.
 SETTINGS_WHERE = "the friction settings"
 
@@ -442,26 +454,26 @@ def _run_check(head: str, base: str, *, cwd: Path | None) -> Mapping[str, Any] |
 @dataclass(frozen=True)
 class Coverage:
     """The backbone's answer for two heads of a pull request: whether every change from
-    `since` to `head` lies inside `revalidated` blocks, a clean merge of the base
-    counting as none (DEC-055 point 3). `outside` names each change that does not, a line each, and
-    `problem` why the answer could not be read, which is never a pass."""
+    `since` to `head` lies inside answer files the change adds, a clean merge of the
+    base counting as none (DEC-055 point 3). `outside` names each change that does not,
+    a line each, and `problem` why the answer could not be read, which is never a pass."""
 
     since: str = ""
     head: str = ""
     covered: bool = False
-    #: How many files changed only inside `revalidated` blocks.
+    #: How many answer files the change adds changed.
     inside: int = 0
     outside: tuple[str, ...] = ()
     problem: str | None = None
 
 
 def covers(since: str, head: str, base: str) -> Coverage:
-    """Whether the changes from commit `since` to commit `head` lie only inside
-    `revalidated` blocks, a clean merge of the branch `base` counting as none, as the
+    """Whether the changes from commit `since` to commit `head` lie only inside answer
+    files the change adds, a clean merge of the branch `base` counting as none, as the
     backbone answers it (`pkit friction since <since> --head <head> --base <base>
     --json`, run unrouted as the change check is). The base is fetched first where it
     is a remote's, so a merge of it is told from the author's own commits. This
-    capability never reads a friction block itself (DEC-055 point 3)."""
+    capability never reads an answer itself (DEC-055 point 3)."""
     problem = _refresh_base(base)
     if problem is not None:
         return Coverage(problem=problem)
@@ -599,9 +611,68 @@ def _entries(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 
 
 def listed_paths(document: Mapping[str, Any]) -> set[str]:
-    """The files the list's words are on: each answer's artefact file, which holds
-    the deferrals a revalidation kept too."""
-    return {str(e.get("location") or "").split("#", 1)[0] for e in _entries(document)} - {""}
+    """The files the list's words are on: the file the change check names for each
+    answer (`file`), which holds the deferrals a revalidation kept too. That is an
+    answer file the change adds, or the artefact's own file for an answer in its
+    block (COR-062 point 1). An answer it names no file for, such as a target
+    revisited by changing it, counts its artefact's file."""
+    found: set[str] = set()
+    for entry in _entries(document):
+        file = entry.get("file")
+        if isinstance(file, str) and file:
+            found.add(file)
+        else:
+            found.add(str(entry.get("location") or "").split("#", 1)[0])
+    return found - {""}
+
+
+# --- where the backbone keeps the answers -------------------------------------------
+
+#: The backbone's whole-repository check, whose document gives the folder of friction
+#: answers (`answers.folder`, the CLI README, "Friction checks"): the reading that
+#: gives it for no one artefact.
+WHOLE = ("friction", "check", "--all", "--json")
+
+#: The folder each repository root's backbone gave, read once for a run.
+_FOLDERS: dict[str, str | None] = {}
+
+
+def answers_folder(root: Path, run: Any = subprocess.run) -> str | None:
+    """The folder the backbone keeps the friction answers in, repository-relative, as
+    it gives it (`answers.folder` in `pkit friction check --all --json`, COR-062 point
+    2), read at `root` once for a run, unrouted as the change check is. This capability
+    never names the folder itself. None where the backbone gives none, for any reason:
+    a reader then sets no path apart, which errs toward more review, never less
+    (DEC-032 D5)."""
+    key = str(root)
+    if key not in _FOLDERS:
+        _FOLDERS[key] = _folder_at(root, run)
+    return _FOLDERS[key]
+
+
+def _folder_at(root: Path, run: Any) -> str | None:
+    try:
+        proc = run(
+            [*PKIT, *WHOLE],
+            cwd=root,
+            env={**os.environ, **UNROUTED},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=TIMEOUT,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    try:
+        document = json.loads(proc.stdout or "") if proc.returncode == 0 else None
+    except ValueError:
+        return None
+    if not isinstance(document, Mapping) or document.get("schema_version", 1) != SCHEMA_VERSION:
+        return None
+    folder = _mapping(document.get("answers")).get("folder")
+    if not isinstance(folder, str) or not folder.strip("/") or folder.startswith("/"):
+        return None
+    return folder.strip("/")
 
 
 def documents(answers: Iterable[Mapping[str, Any]]) -> int:
@@ -1004,6 +1075,39 @@ def _late_target(entry: _Entry) -> str:
     target = entry.target.said(markdown=False) if entry.target is not None else A_TARGET
     through = f" through {_and(list(entry.links))}" if entry.links else ""
     return f"{target}, which {entry.location} names{through}"
+
+
+#: How a line names a revalidation on the base's tip that a merge would leave
+#: answered apart from the change's own (COR-062 point 7).
+APART = "Answered apart once merged"
+
+
+def apart(document: Mapping[str, Any]) -> list[str]:
+    """Each live revalidation on the base's tip that the change's answer on its
+    document did not read, a line each, as the change check reports it
+    (`answered_apart_at_tip`). Merged, the two are answered apart, which the
+    whole-repository check reports as debt until a revalidation reads both (COR-062
+    point 7). Printed beside the list, never in it, as information that stops
+    nothing (DEC-055 point 3). Every text is shown escaped."""
+    out: list[str] = []
+    found = document.get("answered_apart_at_tip")
+    for item in found if isinstance(found, list) else []:
+        location = shown(str(_mapping(item).get("location") or "?"))
+        revalidations = _mapping(item).get("revalidations")
+        for revalidation in revalidations if isinstance(revalidations, list) else []:
+            said = _mapping(revalidation)
+            file, at = said.get("file"), said.get("at")
+            where = f" in {shown(str(file))}" if file else ""
+            when = f" of {shown(str(at))}" if at else ""
+            outcome = said.get("outcome")
+            label = LABELS.get(str(outcome), shown(str(outcome))) if outcome else NO_OUTCOME
+            words = said.get("unchanged_because")
+            out.append(
+                f"{APART}: {location} — the base's revalidation{where}{when}, which this "
+                f"change's answer did not read. {label[:1].upper()}{label[1:]}"
+                f"{_quoted(shown(str(words)) if words is not None else None)}"
+            )
+    return out
 
 
 class Counted(NamedTuple):

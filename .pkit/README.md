@@ -18,10 +18,6 @@ pkit:
         - .pkit/process/README.md#
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
-    revalidated:
-      at: 2026-10-24T04:34:57Z
-      outcome: unchanged
-      unchanged-because: The CLI reference's Authoring commands gain a section on the folders a sync writes. This index still points authors of an area, adapter, capability or migration to Authoring commands as a whole, so what it says holds.
 ---
 
 # project-kit

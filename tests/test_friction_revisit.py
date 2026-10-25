@@ -18,6 +18,7 @@ from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from ruamel.yaml import YAML
 
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
@@ -33,6 +34,9 @@ from project_kit.manifest import (
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config
+
+#: The fixtures here still write answers in blocks, until #2032 moves them.
+pytestmark = pytest.mark.usefixtures("answers_in_blocks")
 
 LINKER = "linker"
 SOURCE_DOC = "reqs/latency.md"
@@ -510,15 +514,18 @@ def test_a_collection_entry_is_a_source_of_its_own(repo: AdopterRepo) -> None:
     result = _run(repo)
     unrevisited = [f.location for f in result.findings if f.kind is fc.FindingKind.UNREVISITED]
     assert unrevisited == [f"{coll}#RS-1"]
-    fw.write(
-        fw.plan_revisit(
-            repo.root, f"{coll}#RS-1", target=TEST_FILE, outcome="unchanged", reason="still holds"
-        )
+    plan = fw.plan_revisit(
+        repo.root, f"{coll}#RS-1", target=TEST_FILE, outcome="unchanged", reason="still holds"
     )
+    fw.write(plan)
+    # The entry's block holds no answer, so the entry goes to an answer file of the
+    # change's own, its block left as it was (COR-062 point 1).
     (source,) = [
         a for a in fd.discover_artefacts(repo.root).artefacts if a.location == f"{coll}#RS-1"
     ]
-    assert source.friction["revisited"] == [entry("unchanged", "still holds")]
+    assert "revisited" not in source.friction and plan.answer_file and plan.creates
+    (written,) = YAML(typ="safe").load(plan.after)["answers"]
+    assert written == {"artefact": f"{coll}#RS-1", "revisited": [entry("unchanged", "still holds")]}
     assert fv.validate_friction(repo.root).errors == ()
     assert [kind for kind, _target, _answer in _revisits(_run(repo))] == ["revisited"]
 
@@ -687,6 +694,27 @@ def test_revisit_writes_one_entry_sorted_and_leaves_at(written: AdopterRepo) -> 
         entry("unchanged", "still under 2 s"),
     ]
     assert block["revalidated"]["at"] == T1
+    assert fv.validate_friction(written.root).errors == ()
+
+
+def test_defer_on_a_block_holding_only_revisit_entries_writes_deferred_alone(
+    written: AdopterRepo,
+) -> None:
+    """A block that holds an answer, here a `revisited` list, takes a deferral: a
+    `revalidated` block holding `deferred` alone, among the block's keys before
+    `revisited`. A block holding no answer gets it in an answer file instead (COR-062
+    point 1; `tests/test_friction_write_answer_files.py`)."""
+    revisited = [entry("unchanged", "still under 2 s")]
+    written.write(
+        {SOURCE_DOC: requirement(at=None, outcome=None, because=None, revisited=revisited)}
+    )
+    fw.write(fw.plan_defer(written.root, "REQ-1", anchor=f"path:{DECISION}", reason="later"))
+    block = _block(written)
+    assert list(block) == ["anchors", "revalidated", "revisited"]
+    assert block["revalidated"] == {
+        "deferred": [{"anchor": {"kind": "path", "value": DECISION}, "reason": "later"}]
+    }
+    assert block["revisited"] == revisited
     assert fv.validate_friction(written.root).errors == ()
 
 

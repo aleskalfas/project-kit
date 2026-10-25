@@ -10,10 +10,6 @@ pkit:
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - src/project_kit/install.py
       record: [COR-001, COR-014]
-    revalidated:
-      at: 2026-10-23T09:46:25Z
-      outcome: unchanged
-      unchanged-because: Rules 14, 16 and 19 stop calling the permission model a capability, and only their wording changes. This page's account of the rules' numbers, titles and sections is as it was.
 ---
 
 # Rules

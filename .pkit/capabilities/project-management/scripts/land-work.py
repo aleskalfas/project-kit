@@ -48,9 +48,9 @@ there instead, and changes nothing else.
           open PRs are read once (`_lib.issue_branch`, #1608). The PR's head
           on GitHub is read once and pinned. `--expect-head` stops the run when
           it is not the head named, unless the authorisation for that head
-          covers it: every change since lies inside `revalidated` blocks or
-          `revisited` lists, a clean merge of the base counting as none, as
-          the backbone answers
+          covers it: every change since lies inside answer files the change
+          adds, a clean merge of the base counting as none, as the backbone
+          answers
           it (`friction_answers.covers`, DEC-055 point 3). The line then says
           so, and the run goes on at the later head. Refused when the local branch holds
           commits that head lacks (the line gives the push) or has diverged
@@ -109,7 +109,13 @@ there instead, and changes nothing else.
           reference or holds an HTML comment's delimiter, a list the
           description cannot hold, and — where there is a list — a base whose
           commits since the head left it changed a file the list's words are
-          on. A write the host answers with an error merges nothing.
+          on: the file the change check names for an answer, an answer file or
+          the artefact's own. A write the host answers with an error merges
+          nothing. Beside the list, never in it, the step prints each
+          revalidation on the base's tip that the change's answer on its
+          document did not read, which the check derived against the base it
+          fetched (`answered_apart_at_tip`, DEC-055 point 3): once merged,
+          each and the change's own are answered apart. It stops nothing.
           The step also prints each grant and refusal the change adds to the
           fixers' grant list or removes from it, a line each: `fixers` in this
           capability's project configuration, read where the head left its
@@ -304,8 +310,8 @@ class _Head:
     #: The PR's base branch as GitHub names it; empty when it named none.
     base_branch: str = ""
     #: The earlier head `--expect-head` authorised, where its authorisation covers this
-    #: one: every change since lies inside `revalidated` blocks or `revisited` lists, a
-    #: clean merge of the base counting as none (DEC-055 point 3). Empty where the head
+    #: one: every change since lies inside answer files the change adds, a clean merge
+    #: of the base counting as none (DEC-055 point 3). Empty where the head
     #: is the one named.
     authorised: str = ""
 
@@ -318,7 +324,7 @@ class _Head:
         earlier = short_sha(self.authorised)
         return (
             f"the authorisation for {earlier} covers it, since every change after {earlier} "
-            f"lies inside `revalidated` blocks or `revisited` lists, a clean merge of "
+            f"lies inside answer files the change adds, a clean merge of "
             f"{self.base} counting as none"
         )
 
@@ -383,6 +389,9 @@ class _AnswersEnd:
     #: the pinned head, as the `ready:` line says it, or "": the change differs from
     #: the one at the head authorised, or that one could not be read.
     grants_moved: str = ""
+    #: How many revalidations on the base's tip the merge would leave answered apart
+    #: from the change's own (`friction_answers.apart`); their lines are in `told` too.
+    apart: int = 0
 
     def phrase(self) -> str:
         """What the `ready:` line says of the lines above it —
@@ -403,6 +412,9 @@ class _AnswersEnd:
             parts.append(friction_answers.CHECKED)
         if self.grants:
             parts.append(GRANTS)
+        if self.apart:
+            noun = "revalidation" if self.apart == 1 else "revalidations"
+            parts.append(f"{self.apart} {noun} answered apart once merged")
         if not parts:
             return ""
         said = parts[0] if len(parts) == 1 else f"{', '.join(parts[:-1])} and {parts[-1]}"
@@ -537,7 +549,7 @@ def _parser() -> argparse.ArgumentParser:
         help=(
             "The PR head the merge is authorised for (7 to 40 hex digits), which --yes "
             "needs: the run stops (exit 3) when the PR's head is another, unless every "
-            "change since lies inside `revalidated` blocks or `revisited` lists, a clean "
+            "change since lies inside answer files the change adds, a clean "
             "merge of the base counting as none. The `ready:` line names it."
         ),
     )
@@ -690,9 +702,9 @@ def _pin_head(
 
 def _covered(head: _Head, authorised: str, *, cross_repository: bool) -> _Head:
     """The pinned head, where the authorisation for the earlier head `authorised` covers
-    it: every change from that head to this one lies inside `revalidated` blocks or
-    `revisited` lists, a clean merge of the base counting as none, as the backbone
-    answers it (DEC-055 point 3). Any other change, and an answer that cannot be read, stops the run
+    it: every change from that head to this one lies inside answer files the change
+    adds, a clean merge of the base counting as none, as the backbone answers it
+    (DEC-055 point 3). Any other change, and an answer that cannot be read, stops the run
     before anything is checked, as a head nobody authorised does."""
     issue, number, sha = head.issue, head.pr_number, short_sha(head.oid)
     moved = (
@@ -730,7 +742,7 @@ def _covered(head: _Head, authorised: str, *, cross_repository: bool) -> _Head:
         raise _Stop(
             EXIT_HEAD_MOVED,
             f"{moved}: an authorisation covers a later head only where every change since "
-            f"lies inside `revalidated` blocks or `revisited` lists, a clean merge of "
+            f"lies inside answer files the change adds, a clean merge of "
             f"{head.base} counting as none, and these changes do not: {listed}. {again}",
         )
     return replace(head, authorised=found.since)
@@ -1165,10 +1177,13 @@ def _answers(
         )
     grants = _grant_change(derived, head, capability_root)
     moved = _grants_moved(derived, head, capability_root, grants)
+    # Against the base's tip, which `derive` fetched for the run: printed beside the
+    # list, never in it, and stopping nothing (DEC-055 point 3).
+    apart = tuple(friction_answers.apart(document))
     body = _read_body(head, config)
     if not derived.listed:
         _warn_unread(friction_answers.strip(body))
-        return _no_answers(args, head, body, config, capability_root, grants, moved)
+        return _no_answers(args, head, body, config, capability_root, grants, moved, apart)
     if derived.outdated:
         _refuse_moved_base(derived, head)
     settings = derived.settings
@@ -1216,8 +1231,8 @@ def _answers(
     _warn_unread(body if friction_answers.current(body, section) else friction_answers.strip(body))
     for line in friction_answers.lines(document, settings, sentences):
         print(f"  {line}")
-    for change in grants:
-        print(f"  {change.said()}")
+    for line in (*apart, *(change.said() for change in grants)):
+        print(f"  {line}")
     count = friction_answers.documents(derived.answers)
     written = _with_grants(friction_answers.affected(count, settings=bool(settings)), grants)
     counted = friction_answers.counted_told(document)
@@ -1228,11 +1243,13 @@ def _answers(
         settings=len(settings),
         told=(
             *friction_answers.told(document, settings, sentences),
+            *apart,
             *(change.said() for change in grants),
         ),
         unasked=sum(1 for entry in derived.answers if entry.get("asked") is not True),
         grants=grants,
         grants_moved=moved,
+        apart=len(apart),
     )
     if friction_answers.current(body, section):
         _say(f"{STEP}: {written}, {_LISTED}")
@@ -1271,17 +1288,18 @@ def _no_answers(
     capability_root: Path,
     grants: tuple[fixers.GrantChange, ...] = (),
     moved: str = "",
+    apart: tuple[str, ...] = (),
 ) -> _AnswersEnd:
     """A change that wrote no answers and alters no friction setting: the run goes
     on as it would without the step, and a list an earlier head left in the
     description — or a section under its heading no command wrote — is removed.
-    A change to the fixers' grant list is printed all the same."""
-    for change in grants:
-        print(f"  {change.said()}")
+    A revalidation the merge would leave answered apart from one the change moved,
+    and a change to the fixers' grant list, are printed all the same."""
+    said = (*apart, *(change.said() for change in grants))
+    for line in said:
+        print(f"  {line}")
     none = _with_grants("none", grants)
-    end = _AnswersEnd(
-        told=tuple(change.said() for change in grants), grants=grants, grants_moved=moved
-    )
+    end = _AnswersEnd(told=said, grants=grants, grants_moved=moved, apart=len(apart))
     if friction_answers.current(body, None):
         _say(f"{STEP}: {none}")
         return end
@@ -1416,7 +1434,8 @@ def _grants_between(
 
 def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> None:
     """Where the base moved on after the head left it, refuse when its commits
-    since changed what the list's words are on — a file an answer is on, or the
+    since changed what the list's words are on — the file the change check names
+    for an answer, an answer file or the artefact's own (`listed_paths`), or the
     friction settings the list shows: the merge could then land words the list
     does not show. An outdated base that changed none of them stops nothing; one
     whose changes cannot be read is refused, never guessed."""

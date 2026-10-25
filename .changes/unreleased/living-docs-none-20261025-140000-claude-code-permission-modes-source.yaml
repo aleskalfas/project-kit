@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  Project-kit captures Claude Code's permission modes page as a source of its
+  own, `claude-code-permission-modes`, in living-docs' project tier, so the
+  permissions README can anchor it. Nothing living-docs ships or runs changes.

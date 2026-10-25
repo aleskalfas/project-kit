@@ -141,7 +141,7 @@ A hint is a marked comment on one line, `<!-- pkit:hint … -->`, which says wha
 
 Defined in [TERM-tightening](../glossary.md#term-tightening--tightening).
 
-**Why:** The shipped parts come from established practice, not from a [project](../../core/glossary.md#term-project--project)'s own [system](../../core/glossary.md#term-system--system). What a project's review of them finds goes into its own changes to the structure. Those serve the project alone, so the project decides whether each binds (DEC-001).
+**Why:** The shipped parts come from established practice, not from a [project](../../core/glossary.md#term-project--project)'s own software. What a project's review of them finds goes into its own changes to the structure. Those serve the project alone, so the project decides whether each binds (DEC-001).
 
 A tightening is a group of a project's own changes to one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind)'s [declared structure](../glossary.md#term-declared-structure--declared-structure), in the [capability](../../core/glossary.md#term-capability--capability)'s `project/structures.yaml`. It adds parts, makes a part required, or closes the kind's list of labels. It names the project's own [rule](../../core/glossary.md#term-rule--rule) that asks for it.
 

@@ -20,10 +20,6 @@ pkit:
         - COR-050#12
       artefact:
         - ACT-developer
-    revalidated:
-      at: 2026-10-24T04:58:17Z
-      outcome: unchanged
-      unchanged-because: The tests of the whole-repository check gain one for derived links across a rename. The tests of dead anchors are as they were.
 ---
 
 # REQ-020 · Functional · A dead anchor is an error, never silence

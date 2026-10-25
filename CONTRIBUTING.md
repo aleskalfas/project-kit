@@ -9,8 +9,10 @@ pkit:
         - scripts/pyright_ratchet.py
         - scripts/prose_lint.py
         - scripts/prose-lint.yaml
+        - tech-docs/rule-sets/writing.md
         - scripts/check_deployed_agents.py
         - scripts/console_fences.py
+        - scripts/page_contents.py
         - scripts/short_check.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
@@ -25,26 +27,6 @@ pkit:
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
-    revalidated:
-      at: 2026-10-24T20:08:10Z
-      outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: ADR-055
-          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: ADR-067
-          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: project-management:DEC-053
-          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
 ---
 
 # Contributing to project-kit
@@ -57,7 +39,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`) and the pages' console fences (`uv run python scripts/console_fences.py`), each described below. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check, the pages' console fences and the pages' contents lists, each described below. Run it any time:
 
 ```
 ./scripts/check.sh
@@ -72,7 +54,7 @@ The same aggregator runs in two places, so the gate can't drift:
 
 **When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` instead of the whole aggregator in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
-- **Only answers changed since.** `pkit friction since` says every change from that run's head lies inside `revalidated` blocks and `revisited` lists. A merge of the base counts only for what differs from git's merge of it.
+- **Only answers changed since.** `pkit friction since` says every change from that run's head lies in the change's answers to friction, as that command reads them. A merge of the base counts only for what differs from git's merge of it.
 
 The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
 
@@ -120,7 +102,7 @@ Answer what it reports in a pull request like any friction (the friction gate, a
 **The prose lint** (#1415). The aggregator's `prose lint` line, `uv run python scripts/prose_lint.py`, checks the mechanical parts of the writing rules in the text a change adds or moves. It exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run. A finding names the file, the line, the rule's id and, for a collection entry, the entry. It shows each control or format character as `<U+XXXX>`, so the report shows what the file holds.
 
 - **Where it looks:** in each artefact the change altered, where an accepted rule binds that declares the lint. It reads those artefacts, their rules and the base from `pkit rule-sets altered` (the CLI reference, "Rule-set commands"), and keeps no list of paths. Its base is the friction check's, and `--base REF` compares with another.
-- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves. For a nesting entry, a list item that holds such text in any of its blocks. An item is the change's too when the change alters its marker's line, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
+- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves, in any of the paragraph's blocks. For a nesting entry, a list item that holds such text in any of its blocks. A nesting entry's item is the change's too when the change alters its marker's line, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
   - **Moved text:** text the diff deletes in one place and inserts in another is the change's where it is inserted. Where two blocks of a file swap places, the diff keeps one in place, and only the other is the change's.
   - **A moved file:** a file moved with its content alters nothing in `pkit rule-sets altered`, so the lint does not read it. A file moved with edits is compared with its old self, so only the edits are the change's.
   - **An entry:** the span `pkit rule-sets altered` gives holds the entry's section only. The lint also reads the entry's values from its file's front matter. An entry that reads the whole file reads the lines of the entry's data there.
@@ -132,12 +114,17 @@ Answer what it reports in a pull request like any friction (the friction gate, a
   - A code span's own spaces split no token. So the text joined to a code span up to a space is part of its word, as in `` `pkit`'s ``.
   - Each block ends a sentence: a paragraph, a list item, a table cell and a front-matter value.
   - A line inside a block's text that opens with a number other than 1, as `2026.` does, goes on from the block. In CommonMark, such a list cannot interrupt a paragraph.
-  - A bold label is bold text that opens a block and ends in a colon. A block that is only a label holds no sentence.
+  - A bold label is bold text that opens a block and ends in a colon or a full stop, such as `**2a.**`. RS-WRITE-005's *How* counts no bold label, so a label holds no sentence, and a block that is only a label holds none at all.
   - A quoted example of a broken rule runs from the first quotation mark to the last, in a block labelled "Breaks the rule".
   - Every text value of the front matter is read, except inside the methodology's `pkit` container. Its answers are never rewritten for style (RS-WRITE-013).
   - Only fenced code is a code block. A fence closes on a bare fence of its own character, at least as long as the one that opened it. A fence opened in a block quote closes there, or where the quote ends.
   - A block quote's words count, and its text is quoted, so RS-WRITE-008 exempts its semicolons.
   - An HTML comment is not read, and a setext heading is a heading. For a count, a bare URL and an HTML entity are tokens like any other. A link's target is part of its link's last token. No pattern searches them, so a URL holds no semicolon.
+- **How it counts a paragraph:** RS-WRITE-007's at most four sentences, in a paragraph as that rule's *How* reads one. That *How* counts a list item as one paragraph, and exempts table cells. Where the *How* is silent, the lint reads as follows:
+  - A list item is one paragraph with every block indented to its text.
+  - A nested item is a paragraph of its own, and so is each paragraph of a block quote, inside an item too.
+  - Any other block is one paragraph alone, a front-matter value included.
+  - A paragraph's finding names the line of its first word.
 - **How it counts levels:** a list's levels as RS-WRITE-017's *How* counts them. Where the *How* is silent, it counts as follows:
   - An item is inside another while it is indented to that item's text. The text starts after the marker and the spaces that follow it. Where more than four columns follow, or nothing else on the line, it starts one column after the marker. A tab reaches the next multiple of four columns.
   - A line that starts a block closes each item it is not indented to. So a paragraph, a heading, a table or a fence at the margin closes every item. A line that goes on from the line before it closes none, even at the margin.
@@ -181,6 +168,19 @@ To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what
 - **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output in which a line the command printed would read as a command, close the fence or hold `<any>`. It writes no page at all when a command of the run wrote in the repository. Review the new output as any change to the page.
 
 Name pages to run only those, such as `uv run python scripts/console_fences.py README.md`. The script exits 0 when every fence matches, when no page holds one, or when `--update` wrote every output that differed. It exits 1 on any other failure, and 2 when it cannot start.
+
+**The pages' contents lists** (#2053). A page a reader moves around in, such as a long guide or a reference, holds a contents list of its second-level sections near its top. The aggregator's `contents lists` line, `uv run python scripts/page_contents.py`, fails on a list that is stale. The line reads the same pages as the console fences' line.
+
+- **How a page opts in:** the page holds two markers, each alone on its line outside fenced code. They are `<!-- pkit:contents -->` and, below it, `<!-- /pkit:contents -->`. A host renders both as nothing, since each is an HTML comment.
+- **Where the markers go:** put them under a second-level heading of their own, such as `## Contents`, after the page's opening paragraph. A rename then changes only the Contents section, not the page's lead. Markers in the lead work too, and their list names every second-level section.
+- **What the list holds:** one item for each second-level heading, in the page's order, linked to the heading's address. The section that holds the markers is left out. A heading is an ATX heading outside fenced code, as the backbone reads one. The item shows the heading's text, with a link in it read as its words.
+- **The address:** the one GitHub renders for the heading. The heading's text loses its markup, and keeps a code span's text and a link's words. That text takes the backbone's slug, with its underscores kept. A second heading of any level with the same address takes `-1`, and a third takes `-2`.
+- **A section anchor's slug:** drops underscores and numbers no repeated heading (COR-050 point 2). So a section anchor's slug and the list's address for one heading can differ.
+- **An explicit anchor:** a page may keep an anchor for a section's old address, such as `<a id="old-address"></a>` on the line before the heading. Such an anchor changes no item: the item links the heading's own address.
+- **A refresh:** `uv run python scripts/page_contents.py --update` writes each stale list between its markers, and changes nothing else in the page. Commit the list with the change that adds, renames or moves a section.
+- **What fails:** a stale list, and markers that make no one pair. Examples are a marker alone, a closing marker above its opening one, and a second pair. `--update` writes no list in a page whose markers fail.
+
+Name pages to check only those, such as `uv run python scripts/page_contents.py README.md`. The script exits 0 when every list is fresh, when no page holds one, or when `--update` wrote every stale list. It exits 1 on any other finding, and 2 when it cannot start.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 

@@ -1,6 +1,6 @@
 ---
 rule-set: WRITE
-version: 2.0.0
+version: 2.1.0
 rules:
   RS-WRITE-001:
     status: accepted
@@ -60,6 +60,9 @@ checks:
   RS-WRITE-005:
     - check: prose-lint
       part: A sentence that holds text a change adds or moves has at most 25 words, counted as the How counts them, outside the `pkit` container.
+  RS-WRITE-007:
+    - check: prose-lint
+      part: A paragraph that holds text a change adds or moves has at most four sentences, outside table cells and the `pkit` container. A list item counts as one paragraph, with every block of it. Sentences are counted as RS-WRITE-005's How counts them.
   RS-WRITE-008:
     - check: prose-lint
       part: Text a change adds or moves holds no semicolon outside code, quotation marks and the `pkit` container.
@@ -73,13 +76,15 @@ checks:
 
 # WRITE — project-kit's general writing rules
 
-These are project-kit's general writing rules. `ANA`, the analysis's own set, inherits them. The documentation spaces will inherit them later (#1350).
+These are project-kit's general writing rules. `ANA`, the analysis's own set, inherits them. The documentation spaces will inherit them later (#1350). Until then, `REWORK` brings them to each page the documentation rework has rewritten.
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
 - **Where the rules apply:** everything under `tech-docs/analysis/`, software-analysis's templates, and the structures its kinds declare (software-analysis DEC-001 point 1). project-kit's operational rules send whoever writes any of them here (`.pkit/rules/project.md`). This set has no scope of its own. No scope could reach a template or a structure anyway, since neither is an artefact (ADR-055 point 3).
   - **In shipped text:** where a rule here would carry project-kit's own vocabulary or style into a template or a structure, universal applicability wins (COR-014). Examples are project-kit's glossary terms and its labels. The shipped text stays fit for any adopter.
+  - **On pages:** each page that `REWORK` selects ("The set for the reworked pages" below).
 - **The set for the analysis:** `ANA` (`tech-docs/rule-sets/analysis.md`) inherits this set, and its scope selects the analysis by type. It holds the analysis's own rules.
-- **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350).
+- **The set for the reworked pages:** `REWORK` (`tech-docs/living-docs/rule-sets/rework.md`) inherits this set and `living-docs:LDOC`, and holds no rules of its own. Its scope selects each page the documentation rework has rewritten (#1928).
+- **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). `REWORK` then goes.
 - **What an inheriting set may fill:** the list of labels for a kind of document it governs (`RS-WRITE-002#labels`). `ANA` fills it for the analysis.
 - **Where the rules come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The rules were then tried on two reference pages, and the try-out found what such pages need. The trial, the try-out and what they left out are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
 - **How a rule reads:** a statement, then *How*, then examples. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
@@ -327,4 +332,4 @@ This set leaves three kinds of writing to their own rules, and reaches a table c
 - **Rule sets:** the rule-set record governs them (COR-051). This set keeps its own rules anyway.
 - **Agent and skill bodies:** their own disciplines govern them (`.pkit/agents/README.md` and `.pkit/skills/README.md`).
 - **Table cells:** a rule that does not reach a cell says so in its *How*, as RS-WRITE-001 to RS-WRITE-004, RS-WRITE-007 and RS-WRITE-017 do.
-- **Note:** this set does not inherit `living-docs:LDOC`. LDOC's rules are for pages, and would pull a page's `reader` field (RS-LDOC-003) onto analysis artefacts, which are never pages (living-docs DEC-001 point 1). living-docs DEC-001 point 3 keeps a project's documentation rules in a set that inherits LDOC. Pages will reach WRITE only through `TECH` and `USER`, which inherit LDOC, so every page that takes WRITE will take LDOC beside it.
+- **Note:** this set does not inherit `living-docs:LDOC`. LDOC's rules are for pages, and would pull a page's `reader` field (RS-LDOC-003) onto analysis artefacts, which are never pages (living-docs DEC-001 point 1). living-docs DEC-001 point 3 keeps a project's documentation rules in a set that inherits LDOC, as `REWORK`, `TECH` and `USER` each do. Pages reach WRITE through `REWORK` during the rework and through `TECH` and `USER` after it, so every page that takes WRITE takes LDOC beside it.

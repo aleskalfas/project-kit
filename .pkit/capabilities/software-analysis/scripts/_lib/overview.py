@@ -234,13 +234,18 @@ def _top(analysis: Analysis, folder: str | None) -> str:
 
 
 def read(
-    analysis: Analysis, listing: analyses.Listing, folder: str | None, root: Path | None = None
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+    root: Path | None = None,
+    record_files: backbone.RecordFiles | None = None,
 ) -> Read:
     """What the overview of the analysis in `folder` reads: front matter and paths alone,
-    and the front matter of its purpose's record, found from the repository at `root`.
-    Raises diagrams.NoAnswer where a file of the kinds it reads cannot be read in full, as
-    the query would find it for any of its diagrams, or where whether the repository
-    holds the purpose's record cannot be read."""
+    and the front matter of its purpose's record, found from the repository at `root`,
+    through `record_files` where a reader gives it. Raises diagrams.NoAnswer where a file
+    of the kinds it reads cannot be read in full, as the query would find it for any of
+    its diagrams, or where whether the repository holds the purpose's record cannot be
+    read."""
     diagrams.diagrams(analysis, None, {}, folder)
     artefacts = tuple(
         sorted(
@@ -264,15 +269,18 @@ def read(
         _top(analysis, folder),
         analyses.glossary_of(analysis, folder),
         _foreign(analysis, folder, [a for a in artefacts if a.kind == USE_CASE]),
-        _purpose(root, named) if named is not None else None,
+        _purpose(root, named, record_files) if named is not None else None,
     )
 
 
-def record(root: Path, record_id: str) -> Record | None:
-    """The decision record `record_id` names, as `pkit refs lookup` finds it: its file and
-    what its front matter gives; `None` where it names no record the repository holds, or
-    one whose file cannot be read. Raises Unreadable where `pkit` cannot be run."""
-    rel = backbone.record_file(root, record_id)
+def record(
+    root: Path, record_id: str, record_files: backbone.RecordFiles | None = None
+) -> Record | None:
+    """The decision record `record_id` names, as `pkit refs lookup` finds it, through
+    `record_files` where a reader gives it: its file and what its front matter gives;
+    `None` where it names no record the repository holds, or one whose file cannot be
+    read. Raises Unreadable where `pkit` gives no answer."""
+    rel = (record_files or backbone.RecordFiles(root)).file(record_id)
     if rel is None:
         return None
     try:
@@ -293,7 +301,9 @@ def record(root: Path, record_id: str) -> Record | None:
     )
 
 
-def _purpose(root: Path | None, record_id: str) -> Purpose:
+def _purpose(
+    root: Path | None, record_id: str, record_files: backbone.RecordFiles | None = None
+) -> Purpose:
     """The record the analysis names as what its component is for, as the repository
     holds it, or not. A record that is not accepted, or none, is said on the page, and
     its check fails the pointer (`_purpose_findings`). Raises diagrams.NoAnswer where
@@ -302,7 +312,7 @@ def _purpose(root: Path | None, record_id: str) -> Purpose:
     if root is None:
         raise diagrams.NoAnswer(f"{said}, is not read here")
     try:
-        found = record(root, record_id)
+        found = record(root, record_id, record_files)
     except Unreadable as exc:
         raise diagrams.NoAnswer(f"{said}, cannot be read: {exc}") from exc
     if found is None:
@@ -813,16 +823,23 @@ def refresh(root: Path, named: str | None) -> tuple[str | None, str | None]:
 # --- what the check holds ----------------------------------------------------------------------
 
 
-def findings(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
+def findings(
+    root: Path,
+    analysis: Analysis,
+    listing: analyses.Listing,
+    record_files: backbone.RecordFiles | None = None,
+) -> list[Finding]:
     """What the check reports of the overviews, the areas' goals and the purposes: for
     each analysis the project keeps, an area without a goal, a purpose that names no
     accepted record, and an overview missing, stale, or left in place where the project
-    keeps none (DEC-003 point 8)."""
+    keeps none (DEC-003 point 8). Each purpose's record is found through `record_files`,
+    so a run asks the backbone once for each."""
+    files = record_files or backbone.RecordFiles(root)
     found: list[Finding] = []
     for folder in listing.kept():
         found += _goals(analysis, listing, folder)
-        found += _purpose_findings(root, listing, folder)
-        found += _freshness(root, analysis, listing, folder)
+        found += _purpose_findings(root, listing, folder, files)
+        found += _freshness(root, analysis, listing, folder, files)
     return found
 
 
@@ -859,7 +876,12 @@ def _goals(analysis: Analysis, listing: analyses.Listing, folder: str | None) ->
     ]
 
 
-def _purpose_findings(root: Path, listing: analyses.Listing, folder: str | None) -> list[Finding]:
+def _purpose_findings(
+    root: Path,
+    listing: analyses.Listing,
+    folder: str | None,
+    record_files: backbone.RecordFiles,
+) -> list[Finding]:
     """A purpose that names no record the repository holds, or a record that is not
     accepted, an error, whatever the setting `overview` (DEC-003 point 8)."""
     named = listing.purpose_of(folder)
@@ -880,7 +902,7 @@ def _purpose_findings(root: Path, listing: analyses.Listing, folder: str | None)
             )
         ]
     try:
-        found = record(root, named)
+        found = record(root, named, record_files)
     except Unreadable as exc:
         return [
             Finding(ERROR, where, f"whether {named} is an accepted record cannot be read: {exc}")
@@ -920,7 +942,11 @@ def _area_folder(analysis: Analysis, artefact: Artefact, area: str) -> str:
 
 
 def _freshness(
-    root: Path, analysis: Analysis, listing: analyses.Listing, folder: str | None
+    root: Path,
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+    record_files: backbone.RecordFiles,
 ) -> list[Finding]:
     rel = path_of(analysis, folder)
     target = root / rel
@@ -968,7 +994,7 @@ def _freshness(
     try:
         now = fingerprint(
             analysis,
-            read(analysis, listing, folder, root),
+            read(analysis, listing, folder, root, record_files),
             listed.component if listed is not None else None,
         )
     except diagrams.NoAnswer as exc:

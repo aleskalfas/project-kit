@@ -107,10 +107,6 @@ TERM-cascade:
         record:
           - project-management:DEC-006
           - project-management:DEC-034
-      revalidated:
-        at: 2026-10-24T06:23:37Z
-        outcome: unchanged
-        unchanged-because: close-issue now offers a parent for closing only once the engine finds no open child under it, as the term says. The cascade still never closes a parent.
 TERM-checkbox:
   name: checkbox
   noun-forms: [checkboxes]
@@ -125,10 +121,6 @@ TERM-checkbox:
         record:
           - project-management:DEC-007
           - project-management:DEC-038
-      revalidated:
-        at: 2026-10-24T01:41:56Z
-        outcome: unchanged
-        unchanged-because: The checkbox rules of body-format.yaml are untouched. The change gives three universal body rules an id, so the body check reads each one's severity from the schema.
 TERM-classification-axis:
   name: classification axis
   noun-forms: [classification axes]
@@ -216,10 +208,6 @@ TERM-merge-gate:
           - project-management:DEC-028
           - project-management:DEC-007
           - project-management:DEC-026
-      revalidated:
-        at: 2026-10-24T06:13:39Z
-        outcome: unchanged
-        unchanged-because: done-work's refusal now names review-pr with the issue's number. What a pull request must meet before it lands is the same.
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]
@@ -335,10 +323,6 @@ TERM-workstream:
         record:
           - project-management:DEC-018
           - project-management:DEC-012
-      revalidated:
-        at: 2026-10-24T10:37:33Z
-        outcome: unchanged
-        unchanged-because: The library gains the reading of the workstreams file that filing makes, to refuse a workstream the file does not hold as active. What a workstream is, and the file that declares it, are unchanged.
 ---
 
 # Glossary

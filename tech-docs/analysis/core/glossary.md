@@ -10,10 +10,6 @@ TERM-acceptance-gate:
           - .pkit/decisions/README.md
         record:
           - COR-051#4
-      revalidated:
-        at: 2026-10-21T13:00:59Z
-        outcome: unchanged
-        unchanged-because: The decisions README gains how pkit refs lookup prints the file a record's id names. Which records bind, and the gate on proposed ones, are untouched.
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]
@@ -26,10 +22,6 @@ TERM-adapter:
           - COR-005
           - COR-028
           - COR-047
-      revalidated:
-        at: 2026-10-21T15:45:07Z
-        outcome: unchanged
-        unchanged-because: COR-005 says pkit new adapter stamps package.yaml, README.md and migrations/, and where an adapter's scripts are documented. An adapter still carries the methodology into one harness, so the definition holds.
 TERM-agent-definition:
   name: agent definition
   noun-forms: [agent definitions]
@@ -46,10 +38,6 @@ TERM-agent-definition:
           - COR-013#1
           - COR-013#2
           - COR-013#5
-      revalidated:
-        at: 2026-10-24T04:34:09Z
-        outcome: unchanged
-        unchanged-because: The agent stamp now refuses a core or capability folder the project receives as synced copies. An agent definition is still a deployed document with one remit, so the definition holds.
 TERM-agent-workspace:
   name: agent workspace
   noun-forms: [agent workspaces]
@@ -65,10 +53,6 @@ TERM-agent-workspace:
           - ADR-060#1
           - ADR-060#3
           - ADR-060#9
-      revalidated:
-        at: 2026-10-23T14:50:21Z
-        outcome: unchanged
-        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
 TERM-anchor:
   name: anchor
   status: active
@@ -81,10 +65,6 @@ TERM-anchor:
         record:
           - COR-050#2
           - COR-050#7
-      revalidated:
-        at: 2026-10-24T04:57:41Z
-        outcome: unchanged
-        unchanged-because: Discovery now matches each declared form of derived link on its own, so forms that clash when joined stop no check. What an anchor is stays as defined.
 TERM-answer:
   name: answer
   status: active
@@ -97,19 +77,6 @@ TERM-answer:
         record:
           - COR-050#3
           - COR-050#4
-      revalidated:
-        at: 2026-10-20T01:37:05Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
-        deferred:
-          - anchor:
-              kind: record
-              value: COR-050#3
-            reason: "It defines an answer as a statement in the artefact's friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the definition."
-          - anchor:
-              kind: record
-              value: COR-050#4
-            reason: "A deferral moves from the block to an answer file under COR-062, so the definition's block is out of date. #1779 builds it and rewrites the definition."
 TERM-area:
   name: area
   noun-forms: [areas]
@@ -121,10 +88,6 @@ TERM-area:
         record:
           - COR-011
           - COR-003
-      revalidated:
-        at: 2026-10-20T01:37:06Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-artefact:
   name: artefact
   noun-forms: [artefacts]
@@ -137,10 +100,6 @@ TERM-artefact:
           - src/project_kit/friction_discovery.py
         record:
           - COR-050#1
-      revalidated:
-        at: 2026-10-24T04:57:48Z
-        outcome: unchanged
-        unchanged-because: Discovery now matches each form of derived link a place declares on its own. What an artefact is stays as defined.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -156,10 +115,6 @@ TERM-artefact-type:
           - COR-056#2
           - COR-056#3
           - COR-056#5
-      revalidated:
-        at: 2026-10-24T04:57:50Z
-        outcome: unchanged
-        unchanged-because: Discovery now matches each form of derived link on its own, and resolves types as before. The definition holds.
 TERM-backbone:
   name: backbone
   status: active
@@ -170,10 +125,6 @@ TERM-backbone:
         record:
           - COR-010
           - COR-059#1
-      revalidated:
-        at: 2026-10-20T01:37:10Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-backbone-configuration:
   name: backbone configuration
   status: active
@@ -189,10 +140,6 @@ TERM-backbone-configuration:
           - COR-048#2
           - COR-048#4
           - COR-048#5
-      revalidated:
-        at: 2026-10-24T19:00:26Z
-        outcome: unchanged
-        unchanged-because: "As #2003 asks, project_config.py gains a helper that asks only at a terminal. The configuration file, and the consent its writer asks, are as the definition says."
 TERM-base:
   name: base
   status: active
@@ -205,10 +152,6 @@ TERM-base:
         record:
           - COR-054#2
           - COR-054#3
-      revalidated:
-        at: 2026-10-22T22:12:25Z
-        outcome: unchanged
-        unchanged-because: The change check now reads the change's own head from PKIT_CHECK_HEAD, which a pipeline names beside the base. What a base is stays as the definition says.
 TERM-capability:
   name: capability
   noun-forms: [capabilities]
@@ -223,10 +166,6 @@ TERM-capability:
           - COR-017
           - COR-026
           - COR-031
-      revalidated:
-        at: 2026-10-20T01:37:13Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-change:
   name: change
   status: active
@@ -239,10 +178,6 @@ TERM-change:
           - COR-009#5
           - COR-050#3
           - COR-050#6
-      revalidated:
-        at: 2026-10-21T14:25:43Z
-        outcome: unchanged
-        unchanged-because: COR-050 is partially superseded and its point 6 says where an answer is judged. A change is still a unit of work that lands on the branch it targets, so the definition holds.
 TERM-change-check:
   name: change check
   noun-forms: [change checks]
@@ -257,10 +192,6 @@ TERM-change-check:
           - COR-050#6
           - COR-050#12
           - COR-054#3
-      revalidated:
-        at: 2026-10-23T08:13:53Z
-        outcome: unchanged
-        unchanged-because: The change check reads derived links as their words alone, under the head's declaration. It still compares a change's base with its head, as defined.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -274,10 +205,6 @@ TERM-changeset:
         record:
           - PRJ-002#D1
           - PRJ-002#D2
-      revalidated:
-        at: 2026-10-20T01:37:17Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-component:
   name: component
   noun-forms: [components]
@@ -291,10 +218,6 @@ TERM-component:
           - src/project_kit/changesets.py
         record:
           - COR-010
-      revalidated:
-        at: 2026-10-20T01:37:18Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-component-origin:
   name: component origin
   status: active
@@ -309,10 +232,6 @@ TERM-component-origin:
           - COR-031#D2
           - COR-041
           - COR-059#1
-      revalidated:
-        at: 2026-10-20T01:37:19Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-connection-point:
   name: connection point
   noun-forms: [connection points]
@@ -328,10 +247,6 @@ TERM-connection-point:
           - COR-053#3
           - COR-053#5
           - COR-053#6
-      revalidated:
-        at: 2026-10-20T01:37:20Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-consent:
   name: consent
   status: active
@@ -343,10 +258,6 @@ TERM-consent:
           - COR-048#5
           - COR-059#4
           - COR-002
-      revalidated:
-        at: 2026-10-20T01:37:22Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-data-point:
   name: data point
   noun-forms: [data points]
@@ -366,10 +277,6 @@ TERM-data-point:
           - COR-052#6
           - COR-053#2
           - COR-061#1
-      revalidated:
-        at: 2026-10-20T01:37:24Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-debt:
   name: debt
   status: active
@@ -382,23 +289,6 @@ TERM-debt:
           - src/project_kit/friction_report.py
         record:
           - COR-050#9
-      revalidated:
-        at: 2026-10-24T04:58:03Z
-        outcome: unchanged
-        unchanged-because: The whole-repository check now reads a renamed placed file under the derived links its name at HEAD sets aside, at both versions. What debt is stays as defined.
-        deferred:
-          - anchor:
-              kind: path
-              value: src/project_kit/friction_report.py
-            reason: "The debt listing now lists debt answered apart, dormant until the answers move to answer files, which this term's definition and section do not name. #1779 builds the move and rewrites them."
-          - anchor:
-              kind: path
-              value: src/project_kit/friction_repository.py
-            reason: "The debt listing now lists debt answered apart, dormant until the answers move to answer files, which this term's definition and section do not name. #1779 builds the move and rewrites them."
-          - anchor:
-              kind: record
-              value: COR-050#9
-            reason: "COR-050 point 9 gains debt answered apart, which this term's definition and section do not name. #1779 builds it and rewrites them."
 TERM-decision-record:
   name: decision record
   noun-forms: [decision records]
@@ -413,10 +303,6 @@ TERM-decision-record:
           - COR-006
           - COR-025
           - COR-058#1
-      revalidated:
-        at: 2026-10-24T04:34:14Z
-        outcome: unchanged
-        unchanged-because: The stamp now refuses the core namespace outside the methodology's source repository too. A record is still numbered in its namespace and binds once accepted, so the definition holds.
 TERM-default-branch:
   name: default branch
   status: active
@@ -431,10 +317,6 @@ TERM-default-branch:
           - COR-054#1
           - COR-054#2
           - COR-054#4
-      revalidated:
-        at: 2026-10-22T22:12:33Z
-        outcome: unchanged
-        unchanged-because: The change only names PKIT_CHECK_HEAD, the change's own head, beside the base override, and no reader of the default branch reads it. The definition holds.
 TERM-distribution:
   name: distribution
   noun-forms: [distributions]
@@ -447,10 +329,6 @@ TERM-distribution:
           - COR-041
           - PRJ-004
           - ADR-047#3
-      revalidated:
-        at: 2026-10-20T01:37:29Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-documentation-root:
   name: documentation root
   noun-forms: [documentation roots]
@@ -465,10 +343,6 @@ TERM-documentation-root:
           - COR-049#1
           - COR-049#3
           - COR-049#5
-      revalidated:
-        at: 2026-10-20T01:37:30Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-finding:
   name: finding
   noun-forms: [findings]
@@ -484,10 +358,6 @@ TERM-finding:
           - COR-055#4
           - COR-055#5
           - COR-057#3
-      revalidated:
-        at: 2026-10-22T22:12:35Z
-        outcome: unchanged
-        unchanged-because: No query the backbone runs inherits PKIT_CHECK_HEAD now, as none inherits the base. A finding is still a statement whose severity says whether it fails, so the definition holds.
 TERM-friction:
   name: friction
   status: active
@@ -503,35 +373,6 @@ TERM-friction:
           - COR-050#5
           - COR-050#6
           - COR-050#9
-      revalidated:
-        at: 2026-10-24T04:58:05Z
-        outcome: unchanged
-        unchanged-because: A renamed placed file is now read under the derived links HEAD sets aside in it, at both versions. Friction is still an anchor that changed with no answer, as defined.
-        deferred:
-          - anchor:
-              kind: path
-              value: src/project_kit/friction_check.py
-            reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
-          - anchor:
-              kind: path
-              value: src/project_kit/friction_repository.py
-            reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
-          - anchor:
-              kind: record
-              value: COR-050#1
-            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
-          - anchor:
-              kind: record
-              value: COR-050#5
-            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
-          - anchor:
-              kind: record
-              value: COR-050#6
-            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
-          - anchor:
-              kind: record
-              value: COR-050#9
-            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
 TERM-grant:
   name: grant
   status: active
@@ -546,10 +387,6 @@ TERM-grant:
           - COR-028#1
           - COR-028#2
           - ADR-005#2
-      revalidated:
-        at: 2026-10-24T11:48:10Z
-        outcome: unchanged
-        unchanged-because: A grant still allows or denies a subject privileges within its scope. The core now removes a redirection that writes no file before it matches a grant, so a grant matches the words of the command it always matched.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -564,10 +401,6 @@ TERM-guardrail:
         record:
           - COR-028#2
           - ADR-021#3
-      revalidated:
-        at: 2026-10-24T12:56:59Z
-        outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. The new privileges for read-only filters and uv run are allow grants, and a guardrail still binds on a program behind a redirection that writes no file.
 TERM-harness:
   name: harness
   status: active
@@ -578,12 +411,9 @@ TERM-harness:
         record:
           - COR-006
           - COR-047
-      revalidated:
-        at: 2026-10-20T01:37:34Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-head:
   name: head
+  other-senses: [head branch]
   status: active
   definition: "latest commit of the branch that carries a change, the later state a check compares with the base"
   pkit:
@@ -592,10 +422,6 @@ TERM-head:
         record:
           - COR-050#5
           - COR-050#6
-      revalidated:
-        at: 2026-10-23T08:13:57Z
-        outcome: unchanged
-        unchanged-because: COR-050 point 5 reads derived links under the head's declaration in the change check. What the head is stays as defined.
 TERM-install:
   name: install
   status: active
@@ -610,10 +436,18 @@ TERM-install:
           - COR-010
           - COR-017
           - COR-030
-      revalidated:
-        at: 2026-10-20T01:37:36Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+TERM-link-target:
+  name: link target
+  noun-forms: [link targets]
+  status: active
+  definition: "anchor of an artefact, taken by a component's declaration on the artefact's place, for which an edit to the artefact's trigger fields asks a revisit"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_discovery.py
+        record:
+          - COR-050#16
 TERM-manifest:
   name: manifest
   status: active
@@ -628,10 +462,6 @@ TERM-manifest:
           - COR-031#D2
           - COR-059#1
           - ADR-065#2
-      revalidated:
-        at: 2026-10-20T01:37:37Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-merge-delivery:
   name: merge delivery
   status: active
@@ -644,10 +474,6 @@ TERM-merge-delivery:
         record:
           - COR-002
           - COR-059#2
-      revalidated:
-        at: 2026-10-20T01:37:39Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-methodology:
   name: methodology
   status: active
@@ -655,10 +481,6 @@ TERM-methodology:
   pkit:
     friction:
       unanchored-because: It names the whole body the system ships, so an anchor on its records and rules would match every change to them. COR-007 says what a methodology is in general, not what this word names here.
-      revalidated:
-        at: 2026-10-20T01:37:40Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-migration:
   name: migration
   noun-forms: [migrations]
@@ -672,9 +494,6 @@ TERM-migration:
           - .pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh
         record:
           - COR-010
-      revalidated:
-        at: 2026-10-23T08:53:37Z
-        outcome: updated
 TERM-operational-rule:
   name: operational rule
   noun-forms: [operational rules]
@@ -689,10 +508,6 @@ TERM-operational-rule:
         record:
           - COR-014
           - COR-051#1
-      revalidated:
-        at: 2026-10-23T14:50:23Z
-        outcome: unchanged
-        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
 TERM-overlay:
   name: overlay
   status: active
@@ -719,10 +534,6 @@ TERM-package-metadata:
           - COR-021
           - COR-053#3
           - COR-056#2
-      revalidated:
-        at: 2026-10-23T08:13:59Z
-        outcome: unchanged
-        unchanged-because: The package check fails a derived link whose target does not compile. What package metadata is stays as defined.
 TERM-permission-hook:
   name: permission hook
   noun-forms: [permission hooks]
@@ -739,12 +550,9 @@ TERM-permission-hook:
           - COR-028#3
           - ADR-002#4
           - ADR-003
-      revalidated:
-        at: 2026-10-24T11:48:05Z
-        outcome: unchanged
-        unchanged-because: The backbone code still allows, denies or defers each call. It now removes a redirection that writes no file before it reads a Bash command, which changes some verdicts and leaves what the hook is as it was.
 TERM-place:
   name: place
+  other-senses: [in place]
   status: active
   definition: path or glob the project or a component declares, within which the backbone looks for documents that carry anchors
   pkit:
@@ -755,10 +563,6 @@ TERM-place:
         record:
           - COR-050#1
           - COR-050#14
-      revalidated:
-        at: 2026-10-24T04:57:52Z
-        outcome: unchanged
-        unchanged-because: Each form of derived link a place declares is now matched on its own. What a place is stays as defined.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -773,10 +577,6 @@ TERM-point:
           - COR-058#1
           - COR-058#3
           - COR-058#4
-      revalidated:
-        at: 2026-10-20T01:37:46Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-privilege:
   name: privilege
   status: active
@@ -791,10 +591,6 @@ TERM-privilege:
           - COR-028#1
           - ADR-021
           - ADR-060#1
-      revalidated:
-        at: 2026-10-24T12:57:01Z
-        outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command. The catalog gains text-filter and uv-run, each recognised by its program, and the core removes a redirection that writes no file before it recognises one.
 TERM-process:
   name: process
   noun-forms: [processes]
@@ -824,10 +620,6 @@ TERM-profile:
           - ADR-005#1
           - ADR-005#2
           - ADR-032
-      revalidated:
-        at: 2026-10-24T12:39:08Z
-        outcome: unchanged
-        unchanged-because: Every shipped profile now grants text-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
 TERM-project:
   name: project
   status: active
@@ -838,10 +630,6 @@ TERM-project:
         record:
           - COR-001
           - COR-010
-      revalidated:
-        at: 2026-10-20T01:37:47Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-project-owned-content:
   name: project-owned content
   status: active
@@ -855,10 +643,6 @@ TERM-project-owned-content:
           - COR-001
           - COR-003
           - COR-059#2
-      revalidated:
-        at: 2026-10-20T01:37:48Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-propagation:
   name: propagation
   status: active
@@ -872,10 +656,6 @@ TERM-propagation:
           - COR-001
           - COR-059#2
           - ADR-065#1
-      revalidated:
-        at: 2026-10-20T01:37:50Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-pull-request:
   name: pull request
   noun-forms: [pull requests]
@@ -891,10 +671,6 @@ TERM-pull-request:
           - COR-009#2
           - COR-009#3
           - COR-009#5
-      revalidated:
-        at: 2026-10-20T01:37:51Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-range:
   name: range
   status: active
@@ -908,10 +684,6 @@ TERM-range:
           - PRJ-002#D4
           - COR-010
           - COR-030
-      revalidated:
-        at: 2026-10-20T01:37:52Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-recorded-version:
   name: recorded version
   noun-forms: [recorded versions]
@@ -927,10 +699,6 @@ TERM-recorded-version:
           - COR-059#2
           - COR-059#6
           - ADR-065#2
-      revalidated:
-        at: 2026-10-20T01:37:53Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-release:
   name: release
   status: active
@@ -942,10 +710,6 @@ TERM-release:
           - COR-059#1
           - COR-059#7
           - PRJ-004
-      revalidated:
-        at: 2026-10-20T01:37:55Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-release-step:
   name: release step
   noun-forms: [release steps]
@@ -960,12 +724,9 @@ TERM-release-step:
           - PRJ-002#D3
           - PRJ-002#D4
           - PRJ-004
-      revalidated:
-        at: 2026-10-24T03:44:23Z
-        outcome: unchanged
-        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-report:
   name: report
+  other-senses: [whole-repository report]
   status: active
   definition: "issue an adopter composes with the system and files on the repository of the distribution they use: a bug, a change request or feedback"
   pkit:
@@ -977,10 +738,6 @@ TERM-report:
           - PRJ-008
           - ADR-047#3
           - COR-043#3
-      revalidated:
-        at: 2026-10-20T01:37:57Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-reviewer:
   name: reviewer
   noun-forms: [reviewers]
@@ -995,10 +752,32 @@ TERM-reviewer:
           - COR-057#1
           - COR-057#3
           - COR-057#5
-      revalidated:
-        at: 2026-10-21T14:25:51Z
-        outcome: unchanged
-        unchanged-because: COR-062 keeps who decides an answer, and that a reviewer other than its writer checks it (COR-050 point 3). A reviewer is still defined by its remit, so the definition holds.
+TERM-revisit:
+  name: revisit
+  status: active
+  definition: "judgement, owed by a change that edits a trigger field, of whether one link target that field asks about still stands against the change"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_check.py
+          - src/project_kit/friction_write.py
+        record:
+          - COR-050#16
+          - COR-062#1
+          - COR-062#5
+TERM-revisit-link:
+  name: revisit link
+  noun-forms: [revisit links]
+  status: active
+  definition: "declaration a component makes on a place, that editing chosen fields of an artefact there asks whether what the artefact's chosen anchors name still stands"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_discovery.py
+        record:
+          - COR-050#16
 TERM-role:
   name: role
   noun-forms: [roles]
@@ -1012,10 +791,6 @@ TERM-role:
         record:
           - COR-053#1
           - COR-053#7
-      revalidated:
-        at: 2026-10-20T01:38:00Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-rule:
   name: rule
   other-senses: [core rule, project rule]
@@ -1031,10 +806,6 @@ TERM-rule:
           - COR-051#3
           - COR-051#4
           - COR-051#5
-      revalidated:
-        at: 2026-10-20T01:38:01Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-rule-set:
   name: rule set
   noun-forms: [rule sets]
@@ -1049,10 +820,6 @@ TERM-rule-set:
           - COR-051#2
           - COR-051#6
           - COR-051#7
-      revalidated:
-        at: 2026-10-21T14:25:53Z
-        outcome: unchanged
-        unchanged-because: COR-051 point 2 now keeps a rule's answers in answer files and asks none of a synced rule. A rule set is still a collection file of named statements with a version, inheritance and scope.
 TERM-sandbox:
   name: sandbox
   status: active
@@ -1096,10 +863,6 @@ TERM-seeding:
           - COR-001
           - COR-003
           - COR-059#8
-      revalidated:
-        at: 2026-10-20T01:38:03Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-session-anchor:
   name: session anchor
   noun-forms: [session anchors]
@@ -1128,10 +891,6 @@ TERM-skill:
           - COR-005
           - COR-006
           - COR-020
-      revalidated:
-        at: 2026-10-23T08:53:48Z
-        outcome: unchanged
-        unchanged-because: It anchors the skills area and the core's contract with adapters in place of the Claude Code adapter's deploy script. Its definition and its section hold.
 TERM-source-repository:
   name: source repository
   noun-forms: [source repositories]
@@ -1146,10 +905,6 @@ TERM-source-repository:
           - COR-050#14
           - COR-041
           - ADR-059#1
-      revalidated:
-        at: 2026-10-21T14:25:59Z
-        outcome: unchanged
-        unchanged-because: COR-062 keeps answers in the source repository's own answer folder, which no sync carries. A source repository is still where the originals are authored, so the definition holds.
 TERM-stamp:
   name: stamp
   status: active
@@ -1161,10 +916,6 @@ TERM-stamp:
           - src/project_kit/scaffolds.py
         record:
           - COR-005
-      revalidated:
-        at: 2026-10-24T04:34:17Z
-        outcome: unchanged
-        unchanged-because: The migration stamp now refuses a backbone or capability folder the project receives as synced copies. A stamp is still a command writing a new file, paired with a skill, so the definition holds.
 TERM-storyboard:
   name: storyboard
   noun-forms: [storyboards]
@@ -1178,10 +929,6 @@ TERM-storyboard:
           - src/project_kit/storyboards.py
         record:
           - COR-016
-      revalidated:
-        at: 2026-10-24T04:34:19Z
-        outcome: unchanged
-        unchanged-because: The storyboard stamp now refuses an agent whose files the project receives as synced copies. A storyboard still scripts a dialogue for the file that carries it out, so the definition holds.
 TERM-surface-change:
   name: surface change
   noun-forms: [surface changes]
@@ -1196,10 +943,6 @@ TERM-surface-change:
           - PRJ-002#D1
           - PRJ-002#D2
           - COR-050#8
-      revalidated:
-        at: 2026-10-24T03:44:24Z
-        outcome: unchanged
-        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-sync:
   name: sync
   status: active
@@ -1215,10 +958,6 @@ TERM-sync:
           - COR-001
           - COR-059#2
           - COR-059#9
-      revalidated:
-        at: 2026-10-20T01:38:10Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-synced-copy:
   name: synced copy
   noun-forms: [synced copies]
@@ -1234,10 +973,6 @@ TERM-synced-copy:
           - COR-050#14
           - COR-059#2
           - COR-041
-      revalidated:
-        at: 2026-10-21T14:25:56Z
-        outcome: unchanged
-        unchanged-because: COR-062 says an artefact received by sync owes no answer, its answers staying with its source. A synced copy is still a file sync writes and the project never edits, so the definition holds.
 TERM-system:
   name: system
   other-senses: [operating system]
@@ -1246,10 +981,18 @@ TERM-system:
   pkit:
     friction:
       unanchored-because: It names the whole of pkit, so an anchor on its code would match every change. No record defines it.
-      revalidated:
-        at: 2026-10-20T01:38:12Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+TERM-trigger-field:
+  name: trigger field
+  noun-forms: [trigger fields]
+  status: active
+  definition: "own key of an artefact that a revisit link names, whose edit asks for a revisit of every link target of that revisit link"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_check.py
+        record:
+          - COR-050#16
 TERM-validation:
   name: validation
   status: active
@@ -1264,14 +1007,10 @@ TERM-validation:
           - COR-055#2
           - COR-055#3
           - COR-055#5
-      revalidated:
-        at: 2026-10-20T01:38:13Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-version:
   name: version
   noun-forms: [versions]
-  other-senses: ["data point's version"]
+  other-senses: ["data point's version", schema version, schema versions]
   status: active
   definition: "number of the form major.minor.patch that names one state of a top-level part of the system, as semantic versioning reads it"
   pkit:
@@ -1280,10 +1019,6 @@ TERM-version:
         record:
           - COR-010
           - PRJ-002#D2
-      revalidated:
-        at: 2026-10-20T01:38:15Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-version-pin:
   name: version pin
   noun-forms: [version pins]
@@ -1300,10 +1035,6 @@ TERM-version-pin:
           - ADR-049#3
           - ADR-064#1
           - ADR-064#3
-      revalidated:
-        at: 2026-10-20T01:38:16Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-version-transition:
   name: version transition
   noun-forms: [version transitions]
@@ -1319,10 +1050,6 @@ TERM-version-transition:
           - COR-059#4
           - COR-059#6
           - COR-059#7
-      revalidated:
-        at: 2026-10-20T01:38:17Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-whole-repository-check:
   name: whole-repository check
   status: active
@@ -1335,10 +1062,6 @@ TERM-whole-repository-check:
         record:
           - COR-050#6
           - COR-050#9
-      revalidated:
-        at: 2026-10-24T04:58:06Z
-        outcome: unchanged
-        unchanged-because: The check now reads a renamed placed file under the derived links HEAD sets aside in it, at both versions. What the check is stays as defined.
 ---
 
 # Glossary
@@ -1415,7 +1138,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Revalidation:** an answer saying the [artefact](#term-artefact--artefact) was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds (COR-050 [point](#term-point--point) 3).
 - **Deferral:** an answer that puts off one [anchor](#term-anchor--anchor)'s [friction](#term-friction--friction), with a reason naming the follow-up that will answer it (COR-050 point 4).
-- **Revisit entry:** an answer on a link's source, saying why a target still stands or which follow-up will revisit it (COR-050 point 16).
+- **Revisit entry:** an answer on a [revisit link](#term-revisit-link--revisit-link)'s source, saying why a [link target](#term-link-target--link-target) still stands or which follow-up will [revisit](#term-revisit--revisit) it (COR-050 point 16).
 - **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live on the artefacts.
 - **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
 
@@ -1677,7 +1400,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#finding).
 
-**Example:** [validation](#term-validation--validation) fails on a revisit entry that names no target, and only warns of an [anchor](#term-anchor--anchor) on a retired [point](#term-point--point).
+**Example:** [validation](#term-validation--validation) fails on a [revisit](#term-revisit--revisit) entry that names no [link target](#term-link-target--link-target), and only warns of an [anchor](#term-anchor--anchor) on a retired [point](#term-point--point).
 
 **Distinctions:**
 
@@ -1758,6 +1481,18 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Installing the CLI:** puts the [system](#term-system--system)'s command on a machine (PRJ-004). It acts on no project (COR-059 [point](#term-point--point) 5).
 - **Version transition:** moves what is installed to another [version](#term-version--version). Install adds what was not there.
 - **Registration:** how a project adds a capability it authors itself. Registration copies nothing (COR-031 point D3).
+
+## TERM-link-target — link target
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#link-target).
+
+**Example:** a requirement anchors the test that verifies it, outside its `actors` and `refines`. So that [anchor](#term-anchor--anchor) is a link target of the [revisit link](#term-revisit-link--revisit-link) on the requirement's [place](#term-place--place). A [change](#term-change--change) that relaxes the requirement's `measure` owes that anchor a [revisit](#term-revisit--revisit).
+
+**Distinctions:**
+
+- **Anchor's value:** how an anchor is written, such as `COR-058#4`. A value in a revisit link's field names every anchor of the [artefact](#term-artefact--artefact) that has it. A revisit entry names its link target by the anchor's kind and value (COR-050 [point](#term-point--point) 16).
+- **An anchor's target:** what an anchor names, such as the files a path anchor matches. What the anchor stands on is what the checks compare of that target, such as those files' content and mode (COR-050 point 5). A link target is the anchor itself, and it changed where what it stands on differs (COR-050 point 16).
+- **A version transition's target and a pull request's target:** the [release](#term-release--release) or [version](#term-version--version) a transition moves to, and the branch a [pull request](#term-pull-request--pull-request) lands on. They share the word only.
 
 ## TERM-manifest — manifest
 
@@ -1867,6 +1602,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Documentation root:** where a [project](#term-project--project) keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
 - **Synced copy:** a file that [propagation](#term-propagation--propagation) writes into the project, such as a core record. A folder of [synced copies](#term-synced-copy--synced-copy) is never a place, or each [sync](#term-sync--sync) would read as [friction](#term-friction--friction) (COR-050 [point](#term-point--point) 14).
 - **Held folder:** a folder a [component](#term-component--component) declares for its held documents. No place reads a file in it as an [artefact](#term-artefact--artefact) (COR-050 point 1).
+- **In place:** where a file or an entry already stands, as in a record edited in place. In *in place of*, the phrase means instead of. It shares only the word.
 
 ## TERM-point — point
 
@@ -2056,6 +1792,30 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **The answers' reviewer:** the reviewer the [project](#term-project--project) chooses to check the answers an agent wrote for its own change (COR-050 [point](#term-point--point) 3).
 - **Merge authoriser:** the person who authorises a merge (`ACT-merge-authoriser`). A reviewer's approval is never that authorisation (project-management DEC-055 point 3).
 
+## TERM-revisit — revisit
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revisit).
+
+**Example:** a [change](#term-change--change) relaxes a requirement's `measure`. The change then owes a revisit of the requirement's [anchor](#term-anchor--anchor) on the test that verifies the requirement. The change updates the test, or records with `pkit friction revisit` why the test still stands.
+
+**Distinctions:**
+
+- **Revalidation:** an [answer](#term-answer--answer) on the [artefact](#term-artefact--artefact) itself, saying it still holds against what changed under its anchors (COR-050 [point](#term-point--point) 3). A revisit judges a [link target](#term-link-target--link-target) instead, and moves no revalidation point (COR-050 point 16).
+- **Revisit entry:** the answer that records a revisit among the source's answers (COR-062 point 1). Its outcome is `unchanged`, with why the link target still stands, or `deferred`, with the open follow-up that will revisit it (COR-050 point 16). It replaces only the entry for its own link target that it read, and its reason differs from each entry it replaces (COR-062 point 5). A revisit met by changing what the link target stands on needs no entry.
+- **Friction:** a [finding](#term-finding--finding) that something an artefact rests on changed. A link target left unrevisited is a finding of the [change check](#term-change-check--change-check) instead, and no other check reports it (COR-050 points 12 and 16).
+- **Revisiting a file:** [merge delivery](#term-merge-delivery--merge-delivery) revisits its file on each run, in the word's everyday sense. That asks nothing of a change.
+
+## TERM-revisit-link — revisit link
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revisit-link).
+
+**Example:** software-analysis declares a revisit link on each of its requirement places, under `revisits` in its [package metadata](#term-package-metadata--package-metadata). Editing a requirement's `statement`, `measure` or `applies-to` asks for a [revisit](#term-revisit--revisit) of every [anchor](#term-anchor--anchor) outside its `actors` and `refines` (software-analysis DEC-002 [point](#term-point--point) 4).
+
+**Distinctions:**
+
+- **Anchor:** the declared link from an [artefact](#term-artefact--artefact) to what makes it true, which flags the artefact when what the anchor names changes (COR-050 point 2). A revisit link makes chosen anchors ask the other way too, when chosen fields of the artefact are edited (COR-050 point 16).
+- **Derived link:** markup in a body that leads a reader elsewhere, written by a command from data, such as a mention's link to its glossary entry. It asks for no revisit (COR-050 point 5).
+
 ## TERM-role — role
 
 Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#role).
@@ -2143,7 +1903,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **Target:** the repository a [change](#term-change--change) would land in, read from the working directory. The cross-repository guard compares it with the session anchor's repository (ADR-034 [point](#term-point--point) 1).
+- **Target:** the repository a command would write in, read from the working directory. The cross-repository guard compares it with the session anchor's repository (ADR-034 [point](#term-point--point) 1).
 - **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of the cross-repository guard's comparison (ADR-034 point 1).
 - **Anchor:** an [artefact](#term-artefact--artefact)'s link to what makes it true (`TERM-anchor`). It shares the word, and nothing else.
 
@@ -2245,6 +2005,18 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **A platform:** in COR-009, the hosting service a [project](#term-project--project)'s remote lives on. It is other software, never the system.
 - **Operating system:** the software a machine runs, beneath the harness and the system. It is other software, and its [sandbox](#term-sandbox--sandbox) bounds the commands the harness runs.
 - **The methodology:** the body of [decision records](#term-decision-record--decision-record), rules, [operational rules](#term-operational-rule--operational-rule) and conventions the system ships and enforces. It is a term of its own, whose *Distinctions* refer back here.
+
+## TERM-trigger-field — trigger field
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#trigger-field).
+
+**Example:** a requirement's `statement`, `measure` and `applies-to` are its trigger fields. A [change](#term-change--change) that relaxes the requirement's `measure` owes a [revisit](#term-revisit--revisit) of each of the requirement's [link targets](#term-link-target--link-target), such as its [anchor](#term-anchor--anchor) on a test.
+
+**Distinctions:**
+
+- **The fields that choose the link targets:** the own fields a [revisit link](#term-revisit-link--revisit-link) reads to choose them, such as a requirement's `actors` and `refines`, which list the anchors that stay out. An edit to them asks for no revisit, unless the revisit link names them as trigger fields too (COR-050 [point](#term-point--point) 16).
+- **The anchor list:** a change to an [artefact](#term-artefact--artefact)'s own anchors asks for its revalidation (COR-050 point 6), never a revisit.
+- **The body:** its text is no field, so rewording it, such as a requirement's rationale, asks for no revisit (COR-050 point 16).
 
 ## TERM-validation — validation
 

@@ -31,6 +31,7 @@ from project_kit import (
     cli_render,
     default_branch,
     friction_check,
+    friction_move,
     friction_report,
     friction_repository,
     friction_resolve,
@@ -1758,10 +1759,11 @@ def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
     discovery finds, whether what changed since a commit lies inside
-    `revalidated` blocks and `revisited` lists — which never write, the
-    writers — revalidate, defer, revisit, record-status — which write one block,
-    only with consent, and resolve, which resolves a merge's conflicting
-    revalidations and revisit entries as text and writes no answer.
+    `revalidated` blocks and `revisited` lists, the plan of the move of the
+    answers into answer files — which never write, the writers — revalidate,
+    defer, revisit, record-status — which write one answer or status, only with
+    consent, and resolve, which resolves a merge's conflicting revalidations and
+    revisit entries as text and writes no answer.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -1846,10 +1848,13 @@ def friction_revalidate_command(
     """Write ARTEFACT's revalidation (COR-050 point 3): a fresh `at`, the outcome, and
     for `unchanged` a new `unchanged-because`.
 
-    Rewrites the `revalidated` block and nothing else in the file. Re-states
-    the deferrals kept — each named with --keep or confirmed at the prompt —
-    and removes the rest (point 4). ARTEFACT is a location (`path`, or
-    `path#id` for a collection entry) or an id.
+    Where ARTEFACT's block holds no answer, it writes into an answer file of this
+    change's own, which names every other answer file on ARTEFACT in `read`
+    (COR-062 points 1 and 4); where its block holds answers, it rewrites the
+    `revalidated` block and nothing else in the file. Re-states the deferrals
+    kept — each named with --keep or confirmed at the prompt — and drops the
+    rest (point 4). ARTEFACT is a location (`path`, or `path#id` for a
+    collection entry) or an id.
     """
     rerun = ["pkit", "friction", "revalidate", artefact, "--outcome", outcome]
     if because is not None:
@@ -1888,8 +1893,10 @@ def friction_defer_command(
     or reword the reason of the entry already there.
 
     Writes the `deferred` list and nothing else — never `at`: a deferral is
-    not a revalidation. The entry covers the anchor's changes up to the
-    commit that introduces it; rewording its reason does not move that.
+    not a revalidation. Where ARTEFACT's block holds no answer, the list is in an
+    answer file of this change's own (COR-062 point 1). The entry covers the
+    anchor's changes up to the commit that introduces it; rewording its reason
+    does not move that.
     """
     rerun = ["pkit", "friction", "defer", artefact, "--anchor", anchor, "--reason", reason]
 
@@ -1933,7 +1940,8 @@ def friction_revisit_command(
     change alters its trigger fields, each target changes in the same change or
     ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
     it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
-    an entry is no revalidation of ARTEFACT.
+    an entry is no revalidation of ARTEFACT. Where ARTEFACT's block holds no
+    answer, the list is in an answer file of this change's own (COR-062 point 1).
     """
     rerun = [
         "pkit",
@@ -1973,6 +1981,30 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
         return friction_write.plan_record_status(target_root, artefact)
 
     _friction_write(plan_of, yes, dry_run, rerun, writes_answer=False)
+
+
+@friction.command("move-plan")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_move_plan_command(as_json: bool) -> None:
+    """Plan the move of the project's answers out of the artefacts' blocks (COR-062 point
+    11): each answer file the move would add, with its content, and each artefact file's
+    new text, its blocks' answers taken out. A reading command: it writes nothing.
+
+    The backbone migration that makes the move writes the plan's bytes. An artefact the
+    project receives by sync keeps its answers, and so does one whose answers would not
+    read back in the answer files' shape; each is listed with why. Over a project whose
+    blocks hold no answer it plans nothing.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    plan = friction_move.plan_move(target_root)
+    if as_json:
+        click.echo(friction_move.render_json(plan), nl=False)
+    else:
+        click.echo(friction_move.render_human(plan), nl=False)
 
 
 @friction.command("resolve")
@@ -2292,17 +2324,17 @@ def friction_since_command(
     since_rev: str, head_rev: str | None, base_ref: str | None, as_json: bool
 ) -> None:
     """Whether every change from commit REV to the head, apart from merges of the base, lies
-    inside `revalidated` blocks and `revisited` lists (COR-050 points 3 and 16).
+    inside answer files the change adds (COR-062 point 3, ADR-068 point 5).
 
     The head must descend from REV along its own line of commits. A merge of
     the base counts only for what differs from git's clean merge of its two
-    parents, and any other commit for its own diff. A file lies inside the
-    blocks and lists only when it is an artefact's file, its two texts are
-    the same once every `revalidated` and `revisited` key is taken out, and
-    no block or list was removed or emptied. Each change outside is named
-    with its commit and why. Reads git only and writes nothing. Exit 0 when
-    answered, either way; 1 when it cannot answer: a shallow clone, a name that
-    is no commit, a base that does not resolve, a git too old for `merge-tree`.
+    parents, and any other commit for its own diff. A file lies inside only
+    when it is an answer file that the base, where the head left it, does not
+    hold. An answer file removed, or one the base holds, lies outside. Each
+    change outside is named with its commit and why. Reads git only and writes
+    nothing. Exit 0 when answered, either way; 1 when it cannot answer: a
+    shallow clone, a name that is no commit, a base that does not resolve, a git
+    too old for `merge-tree`.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -5326,36 +5358,35 @@ def refs_who_references(target: str) -> None:
 
 
 @refs.command("lookup")
-@click.argument("record_id")
-def refs_lookup(record_id: str) -> None:
+@click.argument("record_ids", metavar="RECORD_ID...", nargs=-1, required=True)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Print one document answering each id given, in order: where it lies, or why it "
+    "does not resolve. Exit 0 either way.",
+)
+def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
     """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a rule (`RS-CMN-001`,
     `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set,
     or a role or point address (`[pkit::documentation]`, `[pkit::documentation:readers]`)
-    to where an installed capability declares it."""
-    from project_kit import rule_sets as rule_sets_mod
+    to where an installed capability declares it. With `--json`, several ids at once,
+    answered in one document."""
+    import json
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    if refs_mod.is_address_citation(record_id):
-        address = refs_mod.resolve_address(target_root, record_id)
-        if address.malformed:
-            raise click.ClickException(f"{record_id!r} is {address.problem}.")
-        if not address.resolved:
-            raise click.ClickException(f"{record_id!r} does not resolve: {address.problem}.")
-        for location in address.locations:
-            click.echo(location)
+    if as_json:
+        click.echo(json.dumps(refs_mod.lookup_document(target_root, record_ids), indent=2))
         return
-    if rule_sets_mod.is_rule_citation(record_id):
-        resolution = refs_mod.resolve_rule_citation(target_root, record_id)
-        if not resolution.resolved:
-            raise click.ClickException(f"{record_id!r} does not resolve: {resolution.problem}.")
-        click.echo(resolution.location)
-        return
-    path = refs_mod.resolve_record(target_root, record_id)
-    if path is None:
-        raise click.ClickException(f"no record matches {record_id!r}.")
-    click.echo(path.relative_to(target_root))
+    if len(record_ids) != 1:
+        raise click.UsageError("several ids are looked up with --json, in one document.")
+    found = refs_mod.lookup(target_root, record_ids[0])
+    if found.problem is not None:
+        raise click.ClickException(f"{found.problem}.")
+    for path in found.paths:
+        click.echo(path)
 
 
 @refs.command("rename")
@@ -9680,21 +9711,24 @@ def process_handoff(
     "--advisory",
     is_flag=True,
     default=False,
-    help="Preset = relation:informational,triggered-by (no runtime block).",
+    help="Preset = relation:informational,triggered-by (no runtime block), added to any "
+    "--relation.",
 )
 @click.option("--seams", is_flag=True, default=False, help="Preset = cross-capability edges only.")
-@click.option("--connectors", is_flag=True, default=False, help="Preset = mode:push.")
+@click.option(
+    "--connectors", is_flag=True, default=False, help="Preset = mode:push, added to any --mode."
+)
 @click.option(
     "--declared",
     is_flag=True,
     default=False,
-    help="Preset = source:annotated (the inert depends_on layer).",
+    help="Preset = source:annotated (the inert depends_on layer), added to any --source.",
 )
 @click.option(
     "--derived",
     is_flag=True,
     default=False,
-    help="Preset = source:derived (the composition/aggregation layer).",
+    help="Preset = source:derived (the composition/aggregation layer), added to any --source.",
 )
 @click.option(
     "--cycles", is_flag=True, default=False, help="Preset = edges lying on a dependency cycle."
@@ -9748,7 +9782,7 @@ def process_graph(
 
     \b
     Presets are documented EXPANSIONS of the atomic filters (a preset is a named
-    combo, not magic), and AND-combine with any atomic filters you also pass:
+    combo, not magic):
       --enforced      = source:derived ∪ relation:gates-on-readiness
       --advisory      = relation:informational,triggered-by
       --seams         = cross-capability edges only
@@ -9758,6 +9792,13 @@ def process_graph(
       --cycles        = edges on a dependency cycle
       --upstream-of   = transitive closure following dependency direction
       --downstream-of = transitive closure against dependency direction
+
+    \b
+    A preset combines with the atomic filters you also pass, and an edge is
+    kept only where all of them keep it. The exception is --advisory,
+    --connectors, --declared and --derived. Each ADDS the relations, mode or
+    source it names to those --relation, --mode, --source or another of them
+    names, so `--connectors --mode pull` keeps both modes.
 
     \b
     Composition order (defensible, pinned): when --enforced is combined with a

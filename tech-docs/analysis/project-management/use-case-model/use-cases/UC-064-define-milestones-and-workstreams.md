@@ -51,10 +51,6 @@ pkit:
         - ACT-planner
         - REQ-040
         - REQ-041
-    revalidated:
-      at: 2026-10-24T10:37:37Z
-      outcome: unchanged
-      unchanged-because: The library gains the reading of the workstreams file that filing makes, which UC-060 describes. Defining, renaming, merging, splitting and removing a workstream are unchanged.
 ---
 
 # UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward
@@ -78,14 +74,14 @@ pkit:
 
 1. The planner declares the [project](../../../core/glossary.md#term-project--project)'s [Milestone categories](../../glossary.md#term-milestone-category--milestone-category) in the [capability](../../../core/glossary.md#term-capability--capability)'s settings. Each has its title format, its default [close trigger](../../glossary.md#term-close-trigger--close-trigger) and what it means (DEC-016).
 2. The planner creates a [Milestone](../../glossary.md#term-milestone--milestone): `pkit pm create-milestone <category> --name "<name>" --due-on <date>`.
-3. At its entry, the system checks the project's prerequisites, and the planner's membership where the team keeps a list (REQ-041). It then checks that the repository it would [change](../../../core/glossary.md#term-change--change) is the session's own, and asks the operator where it is another (core:REQ-012).
+3. At its entry, the system checks the project's prerequisites, and the planner's membership where the team keeps a list (REQ-041). It then checks that the repository it would write in is the session's own, and asks the operator where it is another (core:REQ-012).
 4. The system checks that the category is declared, and builds the title from its format. Where the format holds a number, the system numbers the Milestone after the last of its category (DEC-016).
 
 > [!WARNING]
 > **Not built yet:** `create-milestone` refuses a format that holds no number. DEC-016 decides that a Milestone's number is optional, and #1939 tracks it.
 
 5. The system creates the Milestone, its description opening with `Close trigger: <trigger>`, and prints `[ok] created: <url>` (DEC-016).
-6. The planner adds a [workstream](../../glossary.md#term-workstream--workstream): `pkit pm add-workstream <slug> --name "<name>" --description "<text>"`. The system runs the checks of step 3.
+6. The planner adds a [workstream](../../glossary.md#term-workstream--workstream): `pkit pm add-workstream <slug> --name "<name>" --description "<text>"`. The system runs the checks of step 3. It writes a workstream only once the planner authorises the write, with a yes at the terminal or with `--yes` (`add-workstream.py`).
 7. The system checks the slug and each attribute against what DEC-018 decides of their form, and writes the workstream into the project's workstreams file. It creates the label `workstream:<slug>`, or adds the workstream to the board's field where a board carries the axis (DEC-018).
 8. Work is filed into the Milestone and the workstream, as `UC-060` and `UC-063` describe.
 9. A few days before a date-based Milestone's due date, the agent lists its open issues for the planner to triage (DEC-016).
@@ -93,22 +89,24 @@ pkit:
 > [!WARNING]
 > **Not built yet:** nothing reads `pre_close_triage_lead_days`, and nothing lists the open issues. DEC-016 decides that the triage is offered before the due date, and #1939 tracks it.
 
-10. Once the due date has passed, the planner closes the Milestone: `pkit pm close-milestone <M>`. The system runs the checks of step 3.
+10. Once the due date has passed, the planner closes the Milestone: `pkit pm close-milestone <M>`. The system runs the checks of step 3. It closes the Milestone only once the planner authorises the close, with a yes at the terminal or with `--yes` (`close-milestone.py`).
 11. The system reads the close trigger, and finds the Milestone's issues. A date-based Milestone closes whether issues are still open or not (DEC-016).
 12. The system finds where the open issues roll forward to. That is the Milestone the description names as `Rollforward target:`, or else the next open one of its category (DEC-016).
 13. The system closes the Milestone, with a line that records its trigger and what rolled forward. It moves each open [issue](../../glossary.md#term-issue--issue) to the target, each with an [audit comment](../../glossary.md#term-audit-comment--audit-comment), and keeps each issue's state. It prints `[ok] rolled <n> open child issue(s) forward to <target>` (DEC-016).
 
 **Variants:**
 
-- **2a.** The planner passes `--dry-run` to any of these commands. The system makes its checks, prints what it would create, [change](../../../core/glossary.md#term-change--change) or move, and writes nothing. The use case ends.
+- **2a.** The planner passes `--dry-run` to any of these commands. The system makes its checks, prints what it would create, edit or move, and writes nothing. The use case ends.
 - **3a.** The [project](../../../core/glossary.md#term-project--project) does not meet the prerequisites, the planner is no member, or the operator declines a write in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
 - **4a.** The category is not declared, or the project declares none. The system refuses, names the declared categories, and creates nothing (DEC-016). The use case ends.
 - **4b.** A [Milestone](../../glossary.md#term-milestone--milestone) of that title exists. The system refuses, and asks for `--number` (`create-milestone.py`). The use case ends.
+- **6a.** This command, or a command of 7b to 7e, runs with no terminal and no `--yes`, so nobody can authorise the write. The system refuses, names the command to run with `--yes`, and writes nothing (`add-workstream.py`). The use case ends.
 - **7a.** The slug is malformed, or a [workstream](../../glossary.md#term-workstream--workstream) of that slug exists. The system refuses, and writes nothing (DEC-018). The use case ends.
 - **7b.** The planner renames a workstream: `pkit pm rename-workstream <old> <new>`. The system checks the new slug, and the old and the new label or board option, before it changes anything. Where both exist, it refuses and changes nothing. Otherwise it renames the label or board option first, then renames the entry, so the workstream's issues carry the new label or board option (DEC-018).
 - **7c.** The planner merges workstreams: `pkit pm merge-workstream --survivor <S> <L>`. The system counts the issues of each workstream it removes, and moves them to the survivor. It rewrites the references to the removed workstreams, and deletes their labels or board options (DEC-018).
 - **7d.** The planner splits a workstream: `pkit pm split-workstream --source <S> --into <A> --into <B>`. The system adds the new workstreams, and asks of each [issue](../../glossary.md#term-issue--issue) of the source which one it moves to (DEC-018). Where the system cannot ask, it takes the answers `--assign` and `--default` give, and refuses while an issue has none (`split-workstream.py`).
 - **7e.** The planner removes a workstream: `pkit pm remove-workstream <slug>`. The system refuses while any issue carries it, on whatever substrate carries the axis. Otherwise it asks the planner to type the slug, removes the entry and deletes the label (DEC-018).
+- **10a.** The command runs with no terminal and no `--yes`, so nobody can authorise the close. The system refuses, names the command to run with `--yes`, and closes and moves nothing (`close-milestone.py`). The use case ends.
 - **11a.** The Milestone's description holds no [close trigger](../../glossary.md#term-close-trigger--close-trigger). The system infers one, date-based where the Milestone has a due date, and warns. It offers to write the trigger into the description (DEC-016).
 
 > [!WARNING]

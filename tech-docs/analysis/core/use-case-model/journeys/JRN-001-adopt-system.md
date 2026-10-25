@@ -45,10 +45,6 @@ pkit:
         - UC-023
         - UC-006
         - UC-048
-    revalidated:
-      at: 2026-10-24T19:01:22Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, collision prompts now refuse an answer piped in, so with nobody at a terminal nothing is copied. The journey's guarantee holds."
 ---
 
 # JRN-001 — Adopt the system
@@ -58,7 +54,7 @@ pkit:
 **Steps:**
 
 1. UC-049 — Install the system into my project with one command
-   - **Needs from UC-048 (outside this journey):** the CLI on the adopter's machine, at a [release](../../glossary.md#term-release--release). A CLI installed from a branch or from main's [head](../../glossary.md#term-head--head) names the last release as its [version](../../glossary.md#term-version--version), while its files may be newer. The [project](../../glossary.md#term-project--project) then records a version that vouches for no content (PRJ-004 and ADR-065 [point](../../glossary.md#term-point--point) 12).
+   - **Needs from UC-048 (outside this journey):** the CLI on the adopter's machine, at a [release](../../glossary.md#term-release--release). A CLI installed from a branch or from main's latest commit names the last release as its [version](../../glossary.md#term-version--version), while its files may be newer. The [project](../../glossary.md#term-project--project) then records a version that vouches for no content (PRJ-004 and ADR-065 [point](../../glossary.md#term-point--point) 12).
 2. UC-021 — Declare my project's backbone configuration once, and have it validated
    - **Needs from step 1 (UC-049):** the [system](../../glossary.md#term-system--system) installed in the project, with `.pkit/` to hold the [backbone configuration](../../glossary.md#term-backbone-configuration--backbone-configuration). Where the adopter keeps the system out of the shared repository (UC-049 variant 12a), `.pkit/` is excluded whole. The team's clones then never hold the backbone configuration the adopter declares (ADR-009 point 3).
 3. UC-023 — Add or remove a capability, and be told of a name collision
@@ -85,4 +81,4 @@ pkit:
 
 - An [install](../../glossary.md#term-install--install) cut short reads as incomplete, and the next [version transition](../../glossary.md#term-version-transition--version-transition) finishes it (COR-059 [point](../../glossary.md#term-point--point) 6).
 - Wherever the path stops, `pkit config set` has written no value that breaks the schema of the [backbone configuration](../../glossary.md#term-backbone-configuration--backbone-configuration) (`project_config.py`).
-- No name collision of a [capability](../../glossary.md#term-capability--capability) is settled silently. The adopter chooses for each one, and with nobody to [answer](../../glossary.md#term-answer--answer) nothing is copied (COR-017).
+- No name collision of a [capability](../../glossary.md#term-capability--capability) is settled silently. The adopter chooses for each one, and with nobody to reply nothing is copied (COR-017).

@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-guardrail
+    revalidated:
+      at: 2026-10-24T12:56:59Z
+      outcome: unchanged
+      unchanged-because: A guardrail is still denied to every subject whatever any grant allows. The new privileges for read-only filters and uv run are allow grants, and a guardrail still binds on a program behind a redirection that writes no file.

@@ -26,10 +26,6 @@ pkit:
         - ACT-component-author
         - ACT-ai-agent
         - REQ-009
-    revalidated:
-      at: 2026-10-24T19:01:28Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
 ---
 
 # UC-015 — Package a recurring discipline as a capability

@@ -367,6 +367,119 @@ def test_a_change_that_wrote_no_answers_has_no_section(fa: ModuleType) -> None:
     assert fa.lines(_document()) == []
 
 
+# ---- the answers as the backbone gives them (COR-062, DEC-055 point 3) ------------
+
+#: Answer files, in the folder the backbone gives (COR-062 point 2).
+ANSWERS = ".pkit/project/friction/answers"
+ANSWER_FILE = f"{ANSWERS}/20261022T090000Z-1a2b3c4d.yaml"
+TIP_FILE = f"{ANSWERS}/20261023T090000Z-5e6f7a8b.yaml"
+
+
+def test_the_list_s_words_are_in_the_file_the_check_names_for_each_answer(
+    fa: ModuleType,
+) -> None:
+    """The firm stop's files are those the change check names for each answer: an
+    answer file the change adds, or the artefact's own file for an answer in its block
+    (COR-062 point 1). An answer it names no file for, such as a target revisited by
+    changing it, counts its artefact's file. With every answer in a block these are
+    the artefacts' files, as before the answers moved."""
+    in_file = {**_entry("docs/a.md", "unchanged", "Holds."), "file": ANSWER_FILE}
+    in_block = {**_entry("docs/b.md", "unchanged", "Holds."), "file": "docs/b.md"}
+    entry = {**_entry("docs/terms.md#TERM-x", "deferred", "In #9."), "file": "docs/terms.md"}
+    by_change = _entry("docs/c.md", "revisited")
+    document = _document(in_file, in_block, entry, by_change)
+    assert fa.listed_paths(document) == {ANSWER_FILE, "docs/b.md", "docs/terms.md", "docs/c.md"}
+    assert fa.listed_paths(_document(_entry("docs/a.md#X", "unchanged", "Holds."))) == {"docs/a.md"}
+
+
+def _apart(*revalidations: dict[str, Any]) -> dict[str, Any]:
+    """A change check's document whose answer on `docs/a.md` did not read
+    `revalidations`, live on the base's tip (`answered_apart_at_tip`)."""
+    answer = {**_entry("docs/a.md", "unchanged", "Holds."), "file": ANSWER_FILE}
+    return {
+        **_document(answer),
+        "answered_apart_at_tip": [
+            {"artefact": "a", "location": "docs/a.md", "revalidations": list(revalidations)}
+        ],
+    }
+
+
+def test_each_revalidation_a_merge_would_leave_answered_apart_is_a_line(fa: ModuleType) -> None:
+    """Each live revalidation on the base's tip that the change's answer did not read
+    is a line, its words shown escaped. It is printed beside the list and never joins
+    it, in the description or at a terminal (DEC-055 point 3)."""
+    document = _apart(
+        {
+            "file": TIP_FILE,
+            "at": "2026-10-23T09:00:00Z",
+            "outcome": "unchanged",
+            "unchanged_because": "Still\x1b[2K holds.",
+        },
+        {"file": ANSWER_FILE, "at": None, "outcome": "updated", "unchanged_because": None},
+    )
+    assert fa.apart(document) == [
+        f"Answered apart once merged: docs/a.md — the base's revalidation in {TIP_FILE} of "
+        "2026-10-23T09:00:00Z, which this change's answer did not read. Still accurate: "
+        '"Still\\x1b[2K holds."',
+        f"Answered apart once merged: docs/a.md — the base's revalidation in {ANSWER_FILE}, "
+        "which this change's answer did not read. Updated in this change",
+    ]
+    section = fa.render(document, HEAD)
+    assert section is not None and fa.APART not in section
+    assert not any(fa.APART in line for line in fa.lines(document) + fa.told(document))
+    assert fa.apart(_document()) == []  # none reported, as with answers only in blocks
+
+
+def _folder_answering(proc: Any, asked: list[Any]) -> Any:
+    """A stand-in for `subprocess.run` answering the whole-repository check with `proc`:
+    a document, an exit code and a document, or an exception to raise."""
+
+    def run(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        asked.append((argv, kw.get("cwd"), (kw.get("env") or {}).get("PKIT_NO_ROUTE")))
+        if isinstance(proc, Exception):
+            raise proc
+        code, document = proc if isinstance(proc, tuple) else (0, proc)
+        text = document if isinstance(document, str) else json.dumps(document)
+        return subprocess.CompletedProcess(argv, code, text, "")
+
+    return run
+
+
+def test_where_the_backbone_keeps_the_answers_is_read_once_from_its_check(
+    fa: ModuleType, tmp_path: Path
+) -> None:
+    """The folder is the backbone's to give, in its whole-repository check's document
+    (`answers.folder`); this capability never names it. It is read once for a run,
+    unrouted, at the repository root."""
+    asked: list[Any] = []
+    whole = {"schema_version": 1, "answers": {"folder": ANSWERS, "files": 0, "prunable": []}}
+    run = _folder_answering(whole, asked)
+    assert fa.answers_folder(tmp_path, run) == ANSWERS
+    assert fa.answers_folder(tmp_path, run) == ANSWERS
+    assert asked == [(["pkit", "friction", "check", "--all", "--json"], tmp_path, "1")]
+
+
+@pytest.mark.parametrize(
+    "proc",
+    [
+        OSError("no pkit"),
+        subprocess.TimeoutExpired("pkit", 600),
+        (1, {"schema_version": 1, "answers": {"folder": ANSWERS}}),
+        "not json",
+        {"schema_version": 2, "answers": {"folder": ANSWERS}},
+        {"schema_version": 1},
+        {"schema_version": 1, "answers": {"folder": ""}},
+        {"schema_version": 1, "answers": {"folder": "/etc"}},
+    ],
+)
+def test_a_backbone_that_gives_no_folder_is_read_as_none(
+    fa: ModuleType, tmp_path: Path, proc: Any
+) -> None:
+    """Whatever stops the backbone giving the folder, there is none: a reader then sets
+    no path apart, which errs toward more review (DEC-032 D5)."""
+    assert fa.answers_folder(tmp_path, _folder_answering(proc, [])) is None
+
+
 def test_files_the_check_could_not_read_are_counted_under_the_opening(fa: ModuleType) -> None:
     one = fa.render(_document(_entry("a.md", "updated"), unreadable=["b.md"]), HEAD)
     assert one is not None
@@ -1676,18 +1789,33 @@ def test_a_sentence_the_list_must_not_hold_is_named(
 def test_the_backbone_says_a_later_head_of_answers_is_covered(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
-    """The real `pkit friction since`: the head after a revalidation alone is covered;
-    the head after the code change is not, and the change outside is named."""
-    repo, head = _branch_with_an_answer(make_adopter_repo)
-    changed = repo.git("rev-parse", "HEAD~1").stdout.strip()
+    """The real `pkit friction since`: the head after a revalidation alone, in an answer
+    file the change adds, is covered; the head after the code change is not, and the
+    change outside is named. An answer written in the guide's block is not covered."""
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    changed = repo.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+    answer = ".pkit/project/friction/answers/20261003T100000Z-0a1b2c3d.yaml"
+    text = (
+        "answers:\n  - artefact: docs/guide.md\n    revalidated:\n"
+        f"      at: 2026-10-03T10:00:00Z\n      outcome: unchanged\n"
+        f"      unchanged-because: {BECAUSE}\n"
+    )
+    head = repo.commit("revalidate the guide", {answer: text})
     found = fa.covers(changed[:9], head, "main")
     assert found == fa.Coverage(changed, head, True, inside=1)
     main = repo.git("rev-parse", "main").stdout.strip()
     found = fa.covers(main, head, "main")
     assert (found.covered, found.problem) == (False, None)
-    assert found.outside == (
-        f"src/cli/main.py ({changed[:7]}: not an artefact's file: no declared place holds it)",
+    assert found.outside == (f"src/cli/main.py ({changed[:7]}: not an answer file)",)
+    in_block = repo.commit(
+        "answer in the block",
+        {"docs/guide.md": guide(at="2026-10-04T10:00:00Z", because=BECAUSE)},
     )
+    found = fa.covers(head, in_block, "main")
+    assert found.outside == (f"docs/guide.md ({in_block[:7]}: not an answer file)",)
 
 
 def _answering(
@@ -1707,12 +1835,12 @@ def _answering(
 
 def _since_document(**fields: Any) -> str:
     document = {
-        "schema_version": 1,
+        "schema_version": 2,
         "since": MERGE_BASE,
         "head": HEAD,
         "all_inside": True,
         "reason": None,
-        "inside": ["docs/guide.md"],
+        "inside": [".pkit/project/friction/answers/one.yaml"],
         "outside": [],
         **fields,
     }
@@ -1734,8 +1862,8 @@ def test_the_backbone_is_asked_unrouted_with_the_base_named(
     [
         (1, "", "it exited 1: Error: boom"),
         (0, "not json", "its answer is not JSON"),
-        (0, '{"schema_version": 2}', "not a document of version 1"),
-        (0, '{"schema_version": 1, "since": "a", "head": "b"}', "lacks what an answer needs"),
+        (0, '{"schema_version": 1}', "not a document of version 2"),
+        (0, '{"schema_version": 2, "since": "a", "head": "b"}', "lacks what an answer needs"),
         (0, _since_document(all_inside="yes"), "lacks what an answer needs"),
         (0, _since_document(all_inside=False), "and the changes it names disagree"),
         (

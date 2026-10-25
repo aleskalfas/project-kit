@@ -40,10 +40,6 @@ pkit:
         - TERM-source-repository
         - TERM-distribution
         - TERM-component-origin
-    revalidated:
-      at: 2026-10-23T08:54:14Z
-      outcome: unchanged
-      unchanged-because: TERM-migration's example now names a backbone migration, and its definition is as it was. The view's section on migration holds.
 ---
 
 # VIEW-versions-and-copies — Versions and copies
@@ -342,7 +338,7 @@ A source repository is the versioned tree where the [backbone](../glossary.md#te
 
 Defined in [TERM-distribution](../glossary.md#term-distribution--distribution).
 
-**Why:** Whoever sets up the [system](../glossary.md#term-system--system) must know where it comes from, and through which channel (PRJ-004). The ref an [install](../glossary.md#term-install--install) names there decides whether a [project](../glossary.md#term-project--project)'s [recorded version](../glossary.md#term-recorded-version--recorded-version) names one content (PRJ-004).
+**Why:** Whoever sets up the [system](../glossary.md#term-system--system) must know where it comes from, and through which channel (PRJ-004). The ref the CLI is installed from there decides whether a [project](../glossary.md#term-project--project)'s [recorded version](../glossary.md#term-recorded-version--recorded-version) names one content (PRJ-004).
 
 A distribution is one edition of the [methodology](../glossary.md#term-methodology--methodology) and of the system that carries it, released from one [source repository](../glossary.md#term-source-repository--source-repository) through one channel. project-kit is one, and a fork that releases from its own repository is another.
 
@@ -359,7 +355,7 @@ A distribution is one edition of the [methodology](../glossary.md#term-methodolo
 
 **Always true:**
 
-- Only a CLI taken from a release's tag has a [version](../glossary.md#term-version--version) that vouches for its content (PRJ-004).
+- Only a CLI taken from a tag on a release's commit, the release's own or `latest`, has a [version](../glossary.md#term-version--version) that vouches for its content (PRJ-004).
 
 ## Component origin
 

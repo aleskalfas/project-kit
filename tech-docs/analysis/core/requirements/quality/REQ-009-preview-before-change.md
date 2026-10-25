@@ -26,10 +26,6 @@ pkit:
         - COR-004
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T19:00:28Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the tests gain cases that refuse an answer piped in off a terminal. Their dry runs still write nothing, as the measure says."
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`

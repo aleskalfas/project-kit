@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-001
+    revalidated:
+      at: 2026-10-22T16:24:46Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, a sentence that says who the actor is. The actor's voice in needs and goals, which this rule asks for, is untouched.

@@ -40,10 +40,6 @@ pkit:
         - TERM-surface-change
         - TERM-changeset
         - TERM-release-step
-    revalidated:
-      at: 2026-10-23T08:13:46Z
-      outcome: unchanged
-      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. A check still compares a change from its base to its head, as the view says.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

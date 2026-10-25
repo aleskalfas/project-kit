@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-045-propose-page-fix.md
+    revalidated:
+      at: 2026-10-25T05:30:46Z
+      outcome: unchanged
+      unchanged-because: The agent and its storyboard changed only in reader-review, which now reads the reading-evidence point. Proposing the fix for a stale page is as it was.

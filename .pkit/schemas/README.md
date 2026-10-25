@@ -23,47 +23,6 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
-    revalidated:
-      at: 2026-10-24T05:22:41Z
-      outcome: unchanged
-      unchanged-because: Friction now matches each derived-link form on its own, so a clash between forms no longer changes what one means. What the README says of a place's derived links, and of the rest of the schemas, still holds.
-      deferred:
-        - anchor:
-            kind: path
-            value: .pkit/schemas/backbone/**
-          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
-        - anchor:
-            kind: path
-            value: src/project_kit/backbone_schemas.py
-          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
-        - anchor:
-            kind: path
-            value: src/project_kit/data_validate.py
-          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_discovery.py
-          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_validate.py
-          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
-        - anchor:
-            kind: record
-            value: ADR-056
-          reason: "ADR-056 point 2 gains a location rule for answer files, which the README's binding order does not list. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: ADR-057
-          reason: "ADR-057 point 2 gains the answer reader, whose files' schema is a backbone file schema. #1779 builds it and rewrites the README with it."
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "It models the friction block with its answers, which COR-062 moves to answer files with a schema of their own. #1779 builds it and rewrites the README."
-        - anchor:
-            kind: record
-            value: COR-051
-          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README models in the block. #1779 builds it and rewrites it."
 ---
 
 # Schemas

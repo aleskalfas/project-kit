@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    revalidated:
+      at: 2026-10-25T00:34:44Z
+      outcome: unchanged
+      unchanged-because: The resolver's body changes only in naming the answers its commands write. It still proposes, and runs no writer.
