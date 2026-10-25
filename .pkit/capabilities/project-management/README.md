@@ -747,7 +747,7 @@ pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the 
 | `split-workstream --source <S> --into <A> --into <B>...` | Asks of each issue of the source which new workstream it moves to, then moves it. |
 | `remove-workstream <slug>` | Refuses while any issue carries the workstream, then asks you to type the slug. |
 
-**Each change is the person's.** A workstream is the project's own configuration, which DEC-018 gives the PM to change (#2015). At a terminal each command asks before it changes anything, and `--yes` authorises the change. Off a terminal, without `--yes`, it shows the plan, then refuses with exit 1 and names the command to run with `--yes`. `edit-workstream` asks only before a status flip, so its other edits go on as before.
+**Each change is the person's**, since a workstream is the project's own configuration, which DEC-018 gives the PM to change (#2015). At a terminal each command asks before it changes anything, and `--yes` authorises the change. Off a terminal, without `--yes`, it shows the plan, then refuses with exit 1 and names the command to run with `--yes`. `edit-workstream` asks only before a status flip, so its other edits go on as before.
 
 **The checks.** A slug has 2 to 40 characters, matches `^[a-z][a-z0-9-]*[a-z0-9]$` and holds no consecutive hyphens. A name is one line of at most 64 characters. A description or a deprecation reason is one line of at most 200. Each command refuses a value outside these rules before it writes anything.
 
