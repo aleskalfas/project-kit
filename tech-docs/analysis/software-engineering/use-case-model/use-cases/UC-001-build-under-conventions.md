@@ -18,6 +18,8 @@ pkit:
       record:
         - software-engineering:DEC-001
         - software-engineering:DEC-002#4
+        - software-engineering:DEC-004
+        - project-management:DEC-060#2
         - project-management:DEC-028
         - project-management:DEC-032#D1
         - COR-024
@@ -70,6 +72,7 @@ pkit:
 **Variants:**
 
 - **2a.** The project names no corpus, as project-kit names none today, or the corpus is empty or silent on a choice. The agent says so, as in "no project conventions found for X; proceeding as a careful generalist", and works by ordinary judgement. The path rejoins at step 3.
+- **2b.** The change builds a walking skeleton, the thin slice that a foundation builds before the slices are planned ([project-management DEC-060 point 2](../../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#2-the-foundation-is-one-feature-built-one-task-at-a-time)). Before it writes code, the agent drafts into the corpus each convention the skeleton settles, and the developer accepts the entries ([software-engineering DEC-004](../../../../../.pkit/capabilities/software-engineering/decisions/DEC-004-skeleton-conventions-in-corpus.md)). Where the corpus offers no single place the project owns, the agent writes none and says so. The path rejoins at step 3, where the code follows the accepted entries.
 - **3a.** A design fork arises that the corpus does not settle. The agent names it and its trade-off, rather than choosing silently. The developer decides, asked one decision at a time with the agent's recommendation (core rule 17), and the path rejoins at step 3.
 - **3b.** The change makes an anchored artefact owe an answer. The agent writes the answers its own change owes, as `core:UC-002` describes, and says in its hand-off that the change wrote answers. It composes no list of them, and the path goes on at step 4.
 
