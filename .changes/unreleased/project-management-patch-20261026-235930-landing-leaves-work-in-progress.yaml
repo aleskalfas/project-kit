@@ -1,0 +1,17 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  After a merge, `done-work` and `merge-pr` switch their clone to the default
+  branch and pull it only where the clone is on the merged pull request's
+  head branch with a clean working tree. A clone on another branch or a
+  detached HEAD, or with uncommitted changes, untracked files included, is
+  now left where it is, nothing pulled, and the merged branch's local copy is
+  kept, said in one line. Before, the clean-up checked out the default branch
+  whatever the clone held, so a worker's clone in the middle of a Task was
+  moved onto it with its changes, and its next commit could land there.
+  Where the switch fails, the clone stays on the head branch and the local
+  copy is kept, with a warning, rather than a delete that cannot succeed. The
+  head branch on GitHub is deleted as before. `land-work` lands through
+  `done-work`, so it leaves its clone the same way.

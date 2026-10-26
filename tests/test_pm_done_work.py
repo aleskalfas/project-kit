@@ -1917,7 +1917,6 @@ def test_abbreviated_canonical_flag_cannot_evade_the_ambiguity_refusal(
 # mechanic itself (`_lib.pr_merge`) is unit-tested in test_pm_pr_merge_lib.py;
 # these tests cover done-work's sequencing of it.
 
-_DETACHED_HEAD_ERR = "could not determine current branch: failed to run git: not on any branch"
 _MAIN_HELD_ELSEWHERE_ERR = "fatal: 'main' is already used by worktree at '/repo/wt-main'"
 
 
@@ -1937,17 +1936,27 @@ def test_transition_runs_immediately_after_merge_before_cleanup(dw, monkeypatch)
     ]
 
 
-def _fake_git(monkeypatch, dw, *, checkout_stderr="", branch_d_stderr=""):
-    """Stub `subprocess.run` for the local git steps: `checkout main` and
-    `branch -D` fail with the given stderr (empty = succeed); `pull` succeeds,
-    and the local head is the head that merged (`rev-parse` answers it, and
-    nothing on it is unmerged). Returns the list of git argvs seen."""
+def _fake_git(
+    monkeypatch, dw, *, checkout_stderr="", branch_d_stderr="", current="fix/42-slug", changes=""
+):
+    """Stub `subprocess.run` for the local git steps: the clone is on `current`
+    (empty: a detached HEAD), its working tree holding `changes` (`git status
+    --porcelain`'s lines; empty: clean); `checkout main` and `branch -D` fail
+    with the given stderr (empty = succeed); `pull` succeeds, and the local
+    head is the head that merged (`rev-parse` answers it, and nothing on it is
+    unmerged). Returns the list of git argvs seen."""
     import subprocess
 
     seen: list[list[str]] = []
 
     def fake_run(argv, **kwargs):
         seen.append(list(argv))
+        if argv[:2] == ["git", "symbolic-ref"]:
+            return subprocess.CompletedProcess(
+                argv, 0 if current else 1, stdout=f"{current}\n", stderr=""
+            )
+        if argv[:2] == ["git", "status"]:
+            return subprocess.CompletedProcess(argv, 0, stdout=changes, stderr="")
         if argv[:2] == ["git", "rev-parse"]:
             return subprocess.CompletedProcess(argv, 0, stdout="sha-head\n", stderr="")
         if argv[:2] == ["git", "rev-list"]:
@@ -1971,26 +1980,84 @@ def test_detached_head_worktree_completes_merge_and_transition(
     monkeypatch,
     capsys,
 ):
-    """Trigger 1 (#878): the working tree is on a detached HEAD. The local step
-    reports it as a warning; the merge and the transition both complete."""
+    """Trigger 1 (#878): the working tree is on a detached HEAD. The merge and
+    the transition both complete. A detached HEAD is not the branch that
+    merged, so the local clean-up leaves the clone there (#2183)."""
     real_cleanup = dw.pr_merge.cleanup_local
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
-    seen = _fake_git(monkeypatch, dw, checkout_stderr=_DETACHED_HEAD_ERR)
+    seen = _fake_git(monkeypatch, dw, current="")
 
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
 
-    err = capsys.readouterr().err
+    captured = capsys.readouterr()
     assert rc == 0
     assert calls["merged"] is True
     assert calls["moved"] is True
     assert ("remote_delete", "sha-head") in calls["order"]
-    assert f"[warn] git checkout main failed: {_DETACHED_HEAD_ERR}" in err
-    assert _script_error_lines(err) == []
-    # The pull is skipped when main could not be checked out; the local head
-    # is not checked out on a detached HEAD, so its delete is still attempted.
-    assert ["git", "pull", "--ff-only"] not in seen
+    assert _script_error_lines(captured.err) == []
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
+    assert "  left this clone where it is: it is on a detached HEAD" in captured.out
+
+
+def test_a_clone_mid_task_on_another_branch_is_left_there(dw, monkeypatch, capsys):
+    """#2183: a worker's clone is on its next Task's branch, with changes not
+    yet committed, when a PR lands from it. The merge and the transition
+    complete, and the clone stays on its branch with its changes: nothing is
+    checked out or pulled, and the merged branch's local copy is kept."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, current="feat/43-next", changes=" M src/next.py\n")
+
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert calls["merged"] is True
+    assert calls["moved"] is True
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
+    assert (
+        "  left this clone where it is: it is on feat/43-next, not on fix/42-slug, the branch "
+        "that merged. Local branch fix/42-slug is kept."
+    ) in captured.out
+
+
+def test_a_clone_with_uncommitted_changes_on_the_merged_branch_is_left_there(
+    dw, monkeypatch, capsys
+):
+    """#2183: on the branch that merged, with changes not committed, the clone
+    is not switched to main: the next commit would land there."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, changes="?? draft.md\n")
+
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert (
+        "  left this clone where it is: its working tree has uncommitted changes. "
+        "Local branch fix/42-slug is kept."
+    ) in capsys.readouterr().out
+
+
+def test_a_clean_clone_on_the_merged_branch_moves_to_main(dw, monkeypatch, capsys):
+    """#2183: the clean case is as before — on the branch that merged, nothing
+    uncommitted, the clone switches to main, pulls it and deletes the branch."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw)
+
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+
+    assert ["git", "checkout", "main"] in seen
+    assert ["git", "pull", "--ff-only"] in seen
     assert ["git", "branch", "-D", "fix/42-slug"] in seen
+    assert "left this clone" not in capsys.readouterr().out
 
 
 def test_main_held_by_other_worktree_completes_merge_and_transition(
@@ -1999,18 +2066,12 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     capsys,
 ):
     """Trigger 2 (#878): `main` is checked out in a different worktree, so the
-    local checkout is refused and the head branch (the one checked out here)
-    cannot be deleted. Both are warnings; merge and transition complete."""
+    local checkout is refused, a warning, and the head branch, still the one
+    checked out here, is kept. Merge and transition complete."""
     real_cleanup = dw.pr_merge.cleanup_local
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
-    branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
-    seen = _fake_git(
-        monkeypatch,
-        dw,
-        checkout_stderr=_MAIN_HELD_ELSEWHERE_ERR,
-        branch_d_stderr=branch_err,
-    )
+    seen = _fake_git(monkeypatch, dw, checkout_stderr=_MAIN_HELD_ELSEWHERE_ERR)
 
     rc = _run_main(dw, monkeypatch, ["42", "--yes"])
 
@@ -2019,10 +2080,13 @@ def test_main_held_by_other_worktree_completes_merge_and_transition(
     assert calls["merged"] is True
     assert calls["moved"] is True
     assert ("remote_delete", "sha-head") in calls["order"]
-    assert f"[warn] git checkout main failed: {_MAIN_HELD_ELSEWHERE_ERR}" in err
-    assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
+    assert (
+        f"[warn] git checkout main failed: {_MAIN_HELD_ELSEWHERE_ERR}. This clone stays on "
+        "fix/42-slug, and local branch fix/42-slug is kept."
+    ) in err
     assert _script_error_lines(err) == []
     assert ["git", "pull", "--ff-only"] not in seen
+    assert ["git", "branch", "-D", "fix/42-slug"] not in seen
 
 
 @pytest.mark.parametrize("remote", ["deleted", "gone", "kept", "refused", "unconfirmed"])
@@ -3866,6 +3930,8 @@ def test_a_later_run_on_a_stale_local_branch_completes_it_and_keeps_the_branch(
         if argv[:1] != ["git"]:
             return real_run(argv, **kwargs)
         seen.append(list(argv))
+        if argv[:2] == ["git", "symbolic-ref"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="fix/42-slug\n", stderr="")
         if argv[:2] == ["git", "rev-parse"]:
             return subprocess.CompletedProcess(argv, 0, stdout="sha-newer\n", stderr="")
         if argv[:2] == ["git", "rev-list"]:

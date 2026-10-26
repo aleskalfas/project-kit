@@ -1344,9 +1344,10 @@ def _after_merge(
 
     # Branch cleanup — never fatal, after the steps above. The head branch on
     # GitHub is the backbone's to delete, only while its tip is the head that
-    # merged; the local steps warn and continue when the working tree cannot
-    # switch to the default branch (detached HEAD, the default branch held by
-    # another worktree).
+    # merged. The local steps switch only a clone on the head branch with a
+    # clean working tree, leaving any other where it is (#2183), and warn and
+    # continue when the switch fails (the default branch held by another
+    # worktree).
     remote = pr_merge.delete_branch(pr_number, merged_head, config, allow_foreign_repo=confirmed)
     pr_merge.cleanup_local(
         branch, config, cross_repository=cross, merged_head=merged_head, remote=remote

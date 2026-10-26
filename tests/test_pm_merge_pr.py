@@ -648,37 +648,38 @@ def test_head_branch_checked_out_in_worktree_is_a_warning_not_a_failure(
     capsys,
 ):
     """#587's trigger under the shared mechanic: the head branch is checked
-    out in a worktree, so the local `branch -D` is refused. The merge and the
-    hooks complete, the verb exits 0, and the refusal is a warning."""
+    out in another worktree, so this clone, on main, is not on it. The merge
+    and the hooks complete and the verb exits 0. The local clean-up leaves
+    this clone where it is and keeps the branch, in one line (#2183)."""
     import subprocess
 
     real_cleanup = mp.pr_merge.cleanup_local
     calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
     monkeypatch.setattr(mp.pr_merge, "cleanup_local", real_cleanup)
-    branch_err = "error: cannot delete branch 'fix/42-slug' used by worktree at '/repo/wt-42'"
     seen: list[list[str]] = []
 
     def fake_run(argv, **kwargs):
         seen.append(list(argv))
+        if argv[:2] == ["git", "symbolic-ref"]:
+            return subprocess.CompletedProcess(argv, 0, stdout="main\n", stderr="")
         if argv[:2] == ["git", "rev-parse"]:
             return subprocess.CompletedProcess(argv, 0, stdout="sha-head\n", stderr="")
-        if argv[:2] == ["git", "rev-list"]:
-            return subprocess.CompletedProcess(argv, 0, stdout="0\n", stderr="")
-        if argv[:3] == ["git", "branch", "-D"]:
-            return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_err)
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
     monkeypatch.setattr(mp.pr_merge.subprocess, "run", fake_run)
     rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
 
-    err = capsys.readouterr().err
+    captured = capsys.readouterr()
     assert rc == 0
     assert calls["merged"] is True
     assert ("hooks", "after_merge_pr") in calls["order"]
     assert ("remote_delete", "sha-head") in calls["order"]
-    assert ["git", "branch", "-D", "fix/42-slug"] in seen
-    assert f"[warn] git branch -D fix/42-slug failed: {branch_err}" in err
-    assert not [ln for ln in err.splitlines() if ln.lower().startswith("error:")]
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "branch"]) for argv in seen)
+    assert (
+        "  left this clone where it is: it is on main, not on fix/42-slug, the branch that "
+        "merged. Local branch fix/42-slug is kept."
+    ) in captured.out
+    assert not [ln for ln in captured.err.splitlines() if ln.lower().startswith("error:")]
 
 
 def test_missing_head_branch_skips_the_local_cleanup_with_a_warning(mp, monkeypatch, capsys):
