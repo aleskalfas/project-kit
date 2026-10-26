@@ -14,8 +14,6 @@ pkit:
         - .pkit/capabilities/project-management/adapters/**
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
-        - .pkit/schemas/backbone/config.schema.json
-        - src/project_kit/project_config.py
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
 ---
 
@@ -1326,7 +1324,7 @@ pkit pm answer-question <artefact> <answer> [--by NAME] [--dry-run]
 
 **Your delegate may decide them.** You may name one agent, such as the project manager, to decide in your place the answers no change owes ([COR-064](../../decisions/core/COR-064-answer-delegate.md)).
 
-- **Naming and withdrawing.** Name it in the backbone configuration, `friction.delegate: project-manager` ([`pkit config set friction.delegate project-manager`](../../cli/README.md#configuration-file)). It counts once the default branch holds it. Telling it to stop stops it in that session, and removing the name stops it everywhere.
+- **Naming and withdrawing.** Name it in the friction key of the backbone configuration (COR-064 point 2). The CLI reference's ["Configuration file"](../../cli/README.md#configuration-file) <!-- unanchored: named as the section that gives the key, whose meaning rests on COR-064, which the page anchors --> names the key. It counts once the default branch holds it. Telling it to stop stops it in that session, and removing the name stops it everywhere.
 - **Which proposals.** A proposal is the delegate's to decide only where the capability that owns its type hands its answers on. A capability whose record keeps them for a person keeps them for you.
 - **How it decides.** It reads every word of each proposal, judges it from what the files hold, and accepts, rewords or refuses it. It never changes a proposal's outcome or its diff.
 - **What stays yours.** An answer it drafted, a question a fixer held, one only an account could settle, and everything else you decide, such as a merge. It decides nothing where the project chose no reviewer of the answers.
