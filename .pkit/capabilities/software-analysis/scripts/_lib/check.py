@@ -135,6 +135,10 @@ What is checked, each against the record's words:
   one missing or stale into a file the project receives as a synced copy, a
   citation that resolves to nothing, or a point its record does not hold, and a
   `DEC-NNN` that names no capability, are warned of (`_lib/citations.py`).
+- **The links of ids** (point 14), whatever any rule's status, in every analysis:
+  each first mention of an artefact by its id in each section, in the same files and
+  parts, against what `pkit analysis link` writes — a link missing, extra or stale,
+  the message naming the command.
 - **One name, one concept** (points 1 and 2), whatever any rule's status, as a
   shared id is refused: no two terms in force of an analysis share a name, a
   noun form counted, and none takes a name another replaces; no term takes a
@@ -1546,14 +1550,14 @@ def _senses(own: Sequence[Artefact]) -> list[Finding]:
 
 def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
     """The links `pkit analysis link` writes (`_lib/links.py`), whatever any rule's
-    status: in every analysis, the links of citations (DEC-001 point 13); in every
-    analysis that keeps a domain model, each section's link to its term and the
-    mentions' links, in the glossary, the views, and the actors, use cases, journeys and
-    requirements (DEC-004 point 7). A link missing, one extra and one whose target is
-    stale fail; a citation that resolves to nothing is warned of. Where the lookup
-    cannot be run, that fails, and no link is held. Where the kinds' declared structure
-    cannot be read, which the structure check reports, the four kinds' parts are not read
-    for mentions."""
+    status: in every analysis, the links of citations (DEC-001 point 13) and the links of
+    the ids its text names (DEC-001 point 14); in every analysis that keeps a domain
+    model, each section's link to its term and the mentions' links, in the glossary, the
+    views, and the actors, use cases, journeys and requirements (DEC-004 point 7). A link
+    missing, one extra and one whose target is stale fail; a citation that resolves to
+    nothing is warned of. Where the lookup cannot be run, that fails, and no link is held.
+    Where the kinds' declared structure cannot be read, which the structure check reports,
+    the four kinds' parts are not read for mentions nor for ids."""
     try:
         kinds: Mapping[str, structure.Kind] | None = links.parted(root)
     except structure.Unreadable:
@@ -1614,6 +1618,8 @@ def _link_message(d: links.Departure) -> str:
             f"`{d.written}`: a section's one link to its term is its first line below its "
             f"heading, to its own term while that term is in force — {mend}"
         )
+    if d.of_id:
+        return _id_link_message(d)
     if d.how == links.MISSING:
         return (
             f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
@@ -1659,6 +1665,27 @@ def _cited_message(d: links.Departure) -> str:
         f"line {d.line}: `{d.text}` links to `{d.written}` where no link belongs: only the "
         f"first citation of each record, point or rule in each section takes one, never one "
         f"that resolves to nothing, nor after `{citations.ESCAPE}` — {mend}"
+    )
+
+
+def _id_link_message(d: links.Departure) -> str:
+    """What a departure of an id's link says, and what mends it (DEC-001 point 14)."""
+    mend = "run `pkit analysis link`, which writes the links (DEC-001 point 14)"
+    if d.how == links.MISSING:
+        return (
+            f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
+            f"takes a link to it, `{d.wanted}` — {mend}"
+        )
+    if d.how == links.STALE:
+        return (
+            f"line {d.line}: `{d.text}` links to `{d.written}`, and {d.term} is `{d.wanted}` "
+            f"— {mend}"
+        )
+    return (
+        f"line {d.line}: `{d.text}` links to `{d.written}`, where no link belongs: only the "
+        f"first mention of an artefact of the analysis, or of one it builds on, by its id in "
+        f"each section takes one, never in the artefact itself, a goal or an actor's first "
+        f"sentence — {mend}"
     )
 
 

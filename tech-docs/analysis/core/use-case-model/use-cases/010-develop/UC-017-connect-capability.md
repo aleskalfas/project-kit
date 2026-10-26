@@ -51,7 +51,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-016 or UC-023:** The [capability](../../../glossary.md#term-capability--capability) is recorded in the [project](../../../glossary.md#term-project--project)'s [manifest](../../../glossary.md#term-manifest--manifest), so the [backbone](../../../glossary.md#term-backbone--backbone) reads its [package metadata](../../../glossary.md#term-package-metadata--package-metadata) and its [processes](../../../glossary.md#term-process--process).
+- **From [UC-016](UC-016-keep-capability.md) or [UC-023](../020-set-up/UC-023-add-or-remove-capability.md):** The [capability](../../../glossary.md#term-capability--capability) is recorded in the [project](../../../glossary.md#term-project--project)'s [manifest](../../../glossary.md#term-manifest--manifest), so the [backbone](../../../glossary.md#term-backbone--backbone) reads its [package metadata](../../../glossary.md#term-package-metadata--package-metadata) and its [processes](../../../glossary.md#term-process--process).
 
 **Assumptions:** None.
 
