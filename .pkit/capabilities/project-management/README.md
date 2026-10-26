@@ -313,8 +313,8 @@ A bare `DEC-NNN` is not checked. Each capability numbers its own decisions, so a
 Each id the check reads is looked up through `pkit`, and one that no record holds is reported as `body.predicted-decision-id`, naming it. Where `pkit` gives no answer for an id, one notice, `body.decision-ids-unchecked`, names the ids not checked and why, at the rule's severity:
 
 ```
-[warning] body.predicted-decision-id: cites COR-064, which no record holds. Cite a decision only once its record exists, and describe one not yet written without an id.
-[warning] body.decision-ids-unchecked: decision ids not checked (COR-064): the records could not be read — `pkit` is not on PATH. None is reported as predicted on that ground.
+[warning] body.predicted-decision-id: cites COR-999, which no record holds. Cite a decision only once its record exists, and describe one not yet written without an id.
+[warning] body.decision-ids-unchecked: decision ids not checked (COR-999): the records could not be read — `pkit` is not on PATH. None is reported as predicted on that ground.
 ```
 
 `validate-issue` and `edit-issue` run the same checks.
@@ -1313,7 +1313,7 @@ The index records the version of the run's contract each run followed, each arte
 
 #### Deciding the proposals — `show-proposals`, `apply-proposals`, `refuse-proposals`, `answer-question`
 
-You decide each proposal: accept it, reword it or refuse it ([project-management:DEC-056-drift-fixers] point 6). Four commands reach the queue, and the project manager reaches it through them alone, never with file tools. Each refuses inside an agent run, since a fixer only proposes, and one at a time works on the queue, under the drift command's lock.
+You decide each proposal: accept it, reword it or refuse it ([project-management:DEC-056-drift-fixers] point 6). You may instead name a delegate to decide them in your place ("Your delegate may decide them" below). Four commands reach the queue, and the project manager reaches it through them alone, never with file tools. Each refuses inside an agent run, since a fixer only proposes, and one at a time works on the queue, under the drift command's lock.
 
 ```
 pkit pm show-proposals
@@ -1321,6 +1321,14 @@ pkit pm apply-proposals <artefact>... [--because <artefact> <words>]... [--sente
 pkit pm refuse-proposals <artefact>... [--dry-run]
 pkit pm answer-question <artefact> <answer> [--by NAME] [--dry-run]
 ```
+
+**Your delegate may decide them.** You may name one agent, such as the project manager, to decide in your place the answers no change owes ([COR-064](../../decisions/core/COR-064-answer-delegate.md)).
+
+- **Naming and withdrawing.** Name it in the backbone configuration, `friction.delegate: project-manager` (`pkit config set friction.delegate project-manager`). It counts once the default branch holds it. Telling it to stop stops it in that session, and removing the name stops it everywhere.
+- **Which proposals.** A proposal is the delegate's to decide only where the capability that owns its type hands its answers on. A capability whose record keeps them for a person keeps them for you.
+- **How it decides.** It reads every word of each proposal, judges it from what the files hold, and accepts, rewords or refuses it. It never changes a proposal's outcome or its diff.
+- **What stays yours.** An answer it drafted, a question a fixer held, one only an account could settle, and everything else you decide, such as a merge. It decides nothing where the project chose no reviewer of the answers.
+- **What you are told.** A reviewer checks each answer it decided. The pull request that writes them tells you what it decided and what it refused, as information.
 
 **Checked again first.** Before a proposal is shown, and again before it is applied, it is checked at the default branch's commit. It is set aside where its artefact is no longer stale, or its friction differs from what it was judged against. It is set aside too where it was judged under another version of the run's contract, or its files no longer read. A proposal set aside is never shown or applied, and the next `fix-drift` dispatches it again.
 
@@ -1336,7 +1344,7 @@ It prints each question a fixer held, with the command that answers it, and list
 **Accepting.** What you accept reaches the default branch through an ordinary pull request. The project manager files a Task, cuts its branch from the default branch and runs `apply-proposals` there. It then opens the pull request, and you authorise its merge.
 
 - **It refuses, writing nothing,** on the default branch or on no branch, and where an artefact's file differs from the default branch's. It refuses too where an `unchanged` justification still holds a placeholder for you to fill, such as `<the defect reference>`, and no `--because` gives your words.
-- **Upstream first,** it applies each diff, then runs its writer, `pkit friction revalidate`. The writer is built from the answer's fields, never from a command a fixer wrote, and runs with `--yes`, since you accepted it word for word.
+- **Upstream first,** it applies each diff, then runs its writer, `pkit friction revalidate`. The writer is built from the answer's fields, never from a command a fixer wrote, and runs with `--yes`, since you, or your delegate, accepted it word for word.
 - **A diff that no longer applies** is set aside. A writer that fails leaves the file as it was, and its proposal keeps waiting.
 - **Your words.** `--because` gives them for an `unchanged` justification, and `--sentence` for an `updated` sentence. Each is held to the line an answer's own words are held to.
 - **For the description,** it prints the `## What changed in each updated document` section, one sentence for each `updated` answer.
