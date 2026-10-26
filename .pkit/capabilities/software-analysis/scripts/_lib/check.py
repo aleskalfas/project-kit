@@ -234,7 +234,8 @@ And where the format rule binds, at its status:
   withdrawn artefact is never failed for a part it lacks or for a form, since
   either may have come after its withdrawal. A document's missing title
   heading is the heading check's, above, which holds it whatever the rule's
-  status.
+  status. A part that still holds its hint is the placeholder check's, above,
+  so it is reported once, never again as empty or missing (#2088).
 - **Where the rule binds.** `SAN` takes no scope, so its rules bind only
   through a set of the project's own that inherits it, as the backbone's one
   reading of where rules bind says (`pkit rule-sets reach`, COR-051 point 7).
@@ -3298,7 +3299,10 @@ def _artefact_structure(
         if artefact.kind == VIEW:
             # A section's link to its term is no content of its explanation (DEC-004 point 7).
             lines = [(n, "" if links.DEFINED_LINE.match(t) else t) for n, t in lines]
-        departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
+        # A part still holding its hint is `_placeholders`', which reports it once (#2088).
+        departing = structure.departures(
+            lines, kind, fields=artefact.fields, titles=titles, hints_checked=True
+        )
     found: list[tuple[Finding, tuple[object, ...]]] = [
         (
             Finding(

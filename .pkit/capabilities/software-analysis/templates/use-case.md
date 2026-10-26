@@ -37,9 +37,13 @@ pkit:
 
 **Trigger:** <!-- pkit:hint The event that starts the use case, and who or what causes it. Example: The analyst asks to export the report on screen. -->
 
-**Main path:** <!-- pkit:hint Numbered steps from the start to the goal, each saying who does what. Example: 1. The analyst chooses `Export`. 2. The system writes the report to a file. -->
+**Main path:**
 
-**Variants:** <!-- pkit:hint One for each condition, lettered after the step it branches from. Say what happens instead, and where the path rejoins or ends. Write `None.` when there is none. Example: 2a. The disk is full. The system says so and writes nothing, and the use case ends. -->
+<!-- pkit:hint Numbered steps from the start to the goal, each saying who does what. Write each as an item of a numbered list, one step to a line. Example: 1. The analyst chooses `Export`. -->
+
+**Variants:**
+
+<!-- pkit:hint One for each condition, lettered after the step it branches from. Write each as a list item that opens with that number and letter in bold. Say what happens instead, and where the path rejoins or ends. Write `None.` when there is none. Example: - **1a.** The disk is full. The system says so and writes nothing, and the use case ends. -->
 
 **Postconditions:** <!-- pkit:hint The state that shows the goal is met. Example: The file holds the whole report. -->
 
