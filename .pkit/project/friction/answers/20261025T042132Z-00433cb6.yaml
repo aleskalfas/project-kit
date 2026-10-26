@@ -1,40 +1,5 @@
 answers:
-  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
-    revalidated:
-      at: 2026-10-25T04:21:32Z
-      outcome: unchanged
-      unchanged-because: The kinds' declared structures change only their hints' examples, which now cite a project's own record such as PRJ-003. DEC-001 point 1 now says the link command also places a link at each citation. What an artefact kind is holds.
-  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-hint
-    revalidated:
-      at: 2026-10-25T04:21:47Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes, and the shipped examples cite a project's own record. What a hint is holds.
-  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-shortfall
-    revalidated:
-      at: 2026-10-25T04:21:57Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. What a shortfall is, and the record it rests on, is untouched.
-  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-tightening
-    revalidated:
-      at: 2026-10-25T04:22:02Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. What a tightening is, and the rule it names, is untouched.
-  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-use-case
-    revalidated:
-      at: 2026-10-25T04:22:07Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. What a use case is, and the parts it carries, is untouched.
-  - artefact: tech-docs/analysis/software-analysis/domain-model/010-analyses-and-use-cases.md
-    revalidated:
-      at: 2026-10-25T04:22:12Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. How analyses, their artefacts and their ids move together is untouched.
   - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-072-revise-before-change.md
     revalidated:
       at: 2026-10-25T04:22:36Z
       outcome: updated
-  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
-    revalidated:
-      at: 2026-10-25T04:22:38Z
-      outcome: unchanged
-      unchanged-because: The shipped examples of the hints now cite a project's own record, such as PRJ-003, and DEC-001 point 1 says the link command places a link at each citation. Choosing each kind's parts is untouched.
