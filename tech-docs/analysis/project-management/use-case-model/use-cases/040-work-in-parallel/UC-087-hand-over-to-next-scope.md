@@ -85,5 +85,5 @@ pkit:
 What the worker needs here that no accepted record decides yet:
 
 - **A checked hand-over between stages,** so that the next piece starts only from what this piece declared done. The core's [processes](../../../../core/glossary.md#term-process--process) can declare a hand-over that a check reports on, which COR-042 calls a hand-off contract. None is declared between stages of the work.
-- **How a scope names a stage of the work,** such as testing.
+- **How a scope names a discipline,** such as testing, for the [seat](../../../glossary.md#term-seat--seat) that does that stage of the work. The maintainer decided on 26 October that a seat's [scope](../../../glossary.md#term-scope--scope) may name a discipline, and its form is not decided yet (`UC-084`).
 - **How the next piece's agent learns that its Task can start.** While `## Dependencies` is prose, that agent reads the section of each [Task](../../../glossary.md#term-task--task). Typed `Blocked by:` lines are DEC-025's, which is proposed.

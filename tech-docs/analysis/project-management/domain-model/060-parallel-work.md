@@ -37,7 +37,7 @@ These concepts serve the use cases in [040-work-in-parallel](../overview/README.
 ```mermaid
 classDiagram
   accTitle: Parallel work
-  accDescr: A topology declares seats. A seat may give its agent a scope, which names workstreams, and has one state issue. An instance holds at most one seat. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee.
+  accDescr: A topology declares seats. A seat may give its agent a scope, which names workstreams. A seat has one state issue. An instance holds at most one seat. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee.
   class Topology {
     seats
   }
@@ -141,7 +141,7 @@ A seat is one place in a [topology](../glossary.md#term-topology--topology), whi
 - At most one clone holds it at a time, and that clone's agent acts in it (the maintainer, 26 October).
 - It has one [state issue](../glossary.md#term-state-issue--state-issue), which logs each clone that takes it or releases it (the maintainer, 26 October).
 
-**States:** A seat is free until a clone takes it, and held until that clone releases it. In the first and most tolerant mode, nothing else frees it but a release by force, which its state issue logs.
+**States:** A seat is free until a clone takes it, and is held until that clone releases it. In the first and most tolerant mode, nothing else frees it but a release by force, which its state issue logs.
 
 **Always true:** None.
 
@@ -259,7 +259,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
-- [UC-092 — Take a seat of my project's topology, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust it on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 **Seat:**
@@ -268,8 +268,9 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md)
+- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
-- [UC-092 — Take a seat of my project's topology, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [JRN-004 — Set up the topology my project runs, and adjust it on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 **Scope:**
@@ -293,7 +294,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
-- [UC-092 — Take a seat of my project's topology, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
 - [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md)
 - [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)
 
@@ -315,4 +316,4 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
-- [UC-092 — Take a seat of my project's topology, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md)

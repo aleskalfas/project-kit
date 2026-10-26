@@ -29,6 +29,10 @@ An AI agent of a topology that takes ready Tasks one at a time, and builds each 
 - whenever a [Task](../../glossary.md#term-task--task) it can start waits in Backlog
 - each time one of its sessions starts again after the last one ended
 
-**Context:** its [seat](../../glossary.md#term-seat--seat) and the seat's [scope](../../glossary.md#term-scope--scope) where it has one, its [instance](../../glossary.md#term-instance--instance)'s number, and the Tasks in Backlog.
+**Context:**
+
+- its [seat](../../glossary.md#term-seat--seat), and the seat's [scope](../../glossary.md#term-scope--scope) where it has one
+- its [instance](../../glossary.md#term-instance--instance)'s number
+- the Tasks in Backlog
 
 **Note:** it is an AI agent (`core:ACT-ai-agent`) with its own job in a [topology](../../glossary.md#term-topology--topology). It does for a [Task](../../glossary.md#term-task--task) what the developer does, through the same commands (DEC-008 and DEC-026). The developer's use cases give those steps, such as `UC-061` and `UC-062`. A lead agent does the same within its own [scope](../../glossary.md#term-scope--scope), and plans too.

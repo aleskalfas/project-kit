@@ -119,12 +119,12 @@ pkit:
 
 What the worker needs here that no accepted record decides yet:
 
-- **How long an instance owns a Task, decided.** The maintainer decided on 26 October that a [Task](../../../glossary.md#term-task--task)'s ownership rests on four layers, and a project-management record on [topologies](../../../glossary.md#term-topology--topology) is to hold them (#512):
+- **How long an instance owns a Task, decided.** The maintainer decided on 26 October that a [Task](../../../glossary.md#term-task--task)'s ownership rests on four safeguards, and a project-management record on [topologies](../../../glossary.md#term-topology--topology) is to hold them (#512):
   - the [owner](../../../glossary.md#term-owner--owner) releases the Task once it is done, or once the owner stops work on it
   - the work renews the ownership as it goes on
   - a generous limit ends an ownership the work no longer renews, so another agent may take the Task
-  - a clone that comes back checks that it still owns the Task before it writes, and parks its work where it no longer does
-- **What DEC-035 decides of these.** It releases the owner when the Task closes, at its merge or as won't-do (DEC-035 point 4). It decides no renewal and no limit, so a dead session's Task stays owned until another [instance](../../../glossary.md#term-instance--instance) takes it over (DEC-035 point 4).
+  - a session that comes back checks that its [instance](../../../glossary.md#term-instance--instance) still owns the Task before writing, and parks its work otherwise
+- **What DEC-035 decides of these safeguards.** It releases the owner when the Task closes, at its merge or as won't-do (DEC-035 point 4). It decides no renewal and no limit, so a dead session's Task stays owned until another instance takes it over (DEC-035 point 4).
 - **A seat held as a Task is owned, decided.** Taking a [seat](../../../glossary.md#term-seat--seat) is the same claim as taking a Task, written on the seat's [state issue](../../../glossary.md#term-state-issue--state-issue). A seat is freed differently, as `UC-092` describes.
 - **Instances of two people** that take one Task at the same instant. DEC-035 leaves the tie-break between people for later. Numbers derived from the topology's seats would differ across people too (`UC-092`), and no record says yet whether the tie-break then holds between them.
 - **Agents with GitHub accounts of their own.** Today every agent acts under its person's account, so only the instances tell the agents apart. Accounts for agents are named for later under [EPIC](../../../glossary.md#term-epic--epic) #1673, and no [issue](../../../glossary.md#term-issue--issue) tracks them.

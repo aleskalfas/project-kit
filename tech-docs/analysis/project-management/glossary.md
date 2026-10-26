@@ -41,7 +41,7 @@ builds-on:
       - id: ACT-ai-agent
         name: AI agent
         needs:
-          - Take a seat of my project's topology, and act as that seat's agent.
+          - Take a seat of my project's topology for my clone, and act as that seat's agent.
       - id: ACT-ci-pipeline
         name: CI pipeline
       - id: ACT-merge-authoriser
@@ -441,7 +441,7 @@ The words of the domain and what each means. A term's id is stable, and its name
     - Move my issue through its lifecycle, with each move checked and the moves that need my authorisation never made without it.
     - Have the reviewer agents my change requires review my pull request, each verdict standing only while I change nothing its reviewer checks.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
-    - Take a seat of my project's topology, and act as that seat's agent.
+    - Take a seat of my project's topology for my clone, and act as that seat's agent.
   - **Actor:** [CI pipeline](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ci-pipeline.md)
   - **Actor:** [Merge authoriser](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md)
   - **Actor:** [Operator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-operator.md)
@@ -683,12 +683,12 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#seat).
 
-**Example:** the seat `api-worker` is held by a worker agent that follows the project-manager agent's definition. A clone that takes the seat works under the name `api-worker`, and its agent builds Tasks.
+**Example:** the seat `api-worker` says that its agent builds, and that this agent follows the project-manager agent's definition. A clone that takes the seat works under the name `api-worker`, and the clone's agent builds Tasks.
 
 **Distinctions:**
 
 - **Instance:** a clone with a number of its own. A clone takes a seat, and the maintainer decided on 26 October that the clone's identity is then the seat's name.
-- **Actor:** the planning agent, a worker agent and a lead agent are actors of this analysis. A seat says which of them the agent that holds it is.
+- **Actor:** the planning agent, a worker agent and a lead agent are actors of this analysis. A seat says which of them the agent of the clone that holds it is.
 - **DEC-045's named instance:** a clone with a name, listed in one person's file with the [workstreams](#term-workstream--workstream) it handles (DEC-045 points 1 and 2). The maintainer decided on 26 October that the adopter writes seats in the [project](../core/glossary.md#term-project--project)'s committed configuration instead.
 - **Agent definition:** the file that defines an agent. A seat names the [agent definition](../core/glossary.md#term-agent-definition--agent-definition) its agent follows, the project-manager agent's by default.
 
@@ -700,7 +700,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#state-issue)
 
 **Distinctions:**
 
-- **Issue:** an item of work, filed as one of four types. A state issue holds no work, takes none of the four types and sits under no parent.
+- **Issue:** an item of work, filed as one of four types. A state issue holds no work. It takes none of the four types, and sits under no parent.
 - **The owner's comment log:** the comments on an [issue](#term-issue--issue) of work that record its [owner](#term-owner--owner), with a summary in its description (DEC-043 points 3 and 4). A state issue keeps its own data the same way.
 - **Committed configuration:** what a person reviews before it changes, such as the [topology](#term-topology--topology). A state issue holds what changes while agents work, as the maintainer decided on 26 October.
 

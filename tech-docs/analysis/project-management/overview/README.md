@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:a2da890b16757fd64e22461cbe7e25a2924c48b183e85e8d6a75811a14c97520 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:dedf12dc8f41f6afed2c48d1c40a2d7611662c7aa5585654baf33ab7f1eb8a2f -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -97,7 +97,7 @@ Run several AI agents on one project at once, each on its own scope and never on
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md) ([not built yet](#not-built-yet): step 1)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
-- [UC-092 — Take a seat of my project's topology, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md) ([not built yet](#not-built-yet): step 2)
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md) ([not built yet](#not-built-yet): step 2)
 
 ## Reference
 
@@ -153,7 +153,7 @@ flowchart LR
     UC_084(["UC-084 — Take my next ready Task, and build it up to its merge"])
     UC_087(["UC-087 — Hand the next piece of the work to the scope that does it"])
     UC_089(["UC-089 — Land my Task while other agents land theirs"])
-    UC_092(["UC-092 — Take a seat of my project's topology, and act as that seat's agent"])
+    UC_092(["UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent"])
   end
   core_ACT_adopter --> step_1
   step_1 --> step_2
@@ -201,7 +201,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#3`, tracked in `#519`
 - [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md): step 1, decided by `project-management:DEC-035#3`, tracked in `#519`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-035#7`, tracked in `#521`
-- [UC-092 — Take a seat of my project's topology, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): step 2, decided by `project-management:DEC-045#1`, tracked in `#512`
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): step 2, decided by `project-management:DEC-045#1`, tracked in `#512`
 
 ### Diagrams
 
