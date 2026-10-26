@@ -48,7 +48,7 @@ Each kind has a folder of its own, and the three sit in one folder of the analys
 - **A place for each kind.** Each kind's folder is a place, which gives its artefacts the kind's type: `quality-requirement`, `functional-requirement` or `constraint`. A scope names them in full, as `software-analysis:constraint`.
 - **As for DEC-001's kinds,** no type names a kind field, and no place admits a project place (DEC-001 point 2).
 - **The folder that holds the three is no place.** A requirement lies in the folder of its kind.
-- **Areas.** A kind's folder may group its requirements in folders by functional area, as the use cases may be. Moving a requirement between areas never changes its id.
+- **Areas.** A kind's folder may group its requirements in folders by the use cases' functional areas, which hold every use case (refinement per [software-analysis:DEC-005-finding-functionality] point 1). Moving a requirement between areas never changes its id.
   - **One name.** A requirement's area folder takes the name of the use cases' area it belongs to. The overview shows the requirement under that area (refinement per [software-analysis:DEC-003-analysis-diagrams] point 8).
 
 ### 4. Their parts: the fields a tool reads, and the parts a reader reads

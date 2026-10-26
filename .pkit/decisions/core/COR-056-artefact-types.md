@@ -28,7 +28,7 @@ A type is one declared name for what an artefact is. An artefact has one type, o
 ### 2. Who declares it
 
 Each owner declares its own types, and whoever declares a place may name a type on it.
-- **A component's type registry.** A component declares its types in a *type registry*, under `types` in the `friction` block of its package metadata. Each entry has a description. It also says whether a project may give the type to its own places, and an entry that does not say admits no project place.
+- **A component's type registry.** A component declares its types in a *type registry*, under `types` in the `friction` block of its package metadata. Each entry has a description. It also says whether a project may give the type to its own places, and an entry that does not say admits no project place. It may also say whether a document of the type may keep its data in a sidecar, and an entry that does not say allows none (refinement per COR-063).
 - **A kind field.** A registry entry may also name the type's *kind field*. That is one of the artefact's own fields, in which an artefact of the type declares its kind. Here a *kind* is the type's owner's word for one variety of the type, never an anchor kind (COR-050 point 2). Point 4 says how a kind field gates the type.
 - **The backbone's types.** The backbone declares its own types, and the one answer lists them beside the type registries (point 6). The backbone gives them without any place, and no place may name one.
 - **A component's places.** A component names a type of its own type registry on a place it declares in its package metadata, under the key `type`. A place that names a type its registry does not declare gives no type. The project cannot mend a component's package metadata, so that is reported and does not fail (COR-055 point 1).
@@ -53,7 +53,7 @@ The backbone takes an artefact's type from the places that match its file. It fi
 
 A kind field (point 2) is one of the artefact's own fields, outside the methodology's container (COR-050 point 1).
 - **The declaration decides.** Where the winning place (point 3) gives a type with a kind field, an artefact takes the type only when it declares its kind there. Otherwise it has no type. A less specific place does not type it instead.
-- **Documents and entries alike.** A document declares its kind in its front matter, and an entry among its own fields.
+- **Documents and entries alike.** A document declares its kind in its front matter, or in the sidecar that holds it (refinement per COR-063), and an entry among its own fields.
 - **The kinds are the owner's.** The backbone reads only whether the field is present and not empty, never which kind it names.
 
 ### 5. Limits

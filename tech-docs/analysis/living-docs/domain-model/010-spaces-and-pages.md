@@ -107,7 +107,7 @@ A documentation space is the collection of pages written for one audience. Every
 
 **Always true:**
 
-- Two roots that are one folder give no space until onboarding separates them (DEC-001 point 1).
+- Two roots that are one folder give no space until they are set apart (DEC-001 point 1). The command that stamps a space, or a page of the user or technical space, offers to set them apart first (DEC-001 point 2).
 - A place outside every root that holds a document nothing else claims belongs to exactly one space, the one assigned to it. An untyped place of [rule sets](../../core/glossary.md#term-rule-set--rule-set) owes no assignment, and is passed over until it has one (DEC-001 point 1).
 - A synced tree is never a place of a space (DEC-001 point 1).
 

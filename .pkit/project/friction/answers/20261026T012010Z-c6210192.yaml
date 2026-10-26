@@ -1,0 +1,307 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T01:20:10Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-96e1f9e9c108.yaml
+    revalidated:
+      at: 2026-10-26T01:20:17Z
+      outcome: unchanged
+      unchanged-because: DEC-005 partially supersedes DEC-001 only where it lets use cases lie outside functional areas. Point 10, the review contribution this README cites, stands as written, so its passage holds.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says two branches revalidating one page conflict in its block and friction resolve takes the base side's answer, which COR-062 replaces. #1779 builds it and rewrites the passage."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README keeps in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passage #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-001
+    read:
+      - moved-cfb5a5e6377e.yaml
+    revalidated:
+      at: 2026-10-26T01:20:24Z
+      outcome: unchanged
+      unchanged-because: DEC-005 overturns only DEC-001's optional grouping of use cases by area. The format rule rests on point 1's declared structures, which stand, and an area adds no part to any kind.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-002
+    read:
+      - moved-1975b37c5d6a.yaml
+    revalidated:
+      at: 2026-10-26T01:20:31Z
+      outcome: unchanged
+      unchanged-because: The partial supersession leaves point 3's ids, steps and variants as written, and an area holds no part of an id, so the append-only rule holds.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-003
+    read:
+      - moved-0d5d5e362e2b.yaml
+    revalidated:
+      at: 2026-10-26T01:20:38Z
+      outcome: unchanged
+      unchanged-because: DEC-005 overturns only the optional area grouping in points 2 and 12. What a use case's actor and other actors are, in points 1 to 4, stands, so this rule holds.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-004
+    read:
+      - moved-7499b6f74bf4.yaml
+    revalidated:
+      at: 2026-10-26T01:20:43Z
+      outcome: unchanged
+      unchanged-because: The partial supersession changes only where use cases lie, never what a goal or a need is, so a goal stays one of its actor's needs.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-005
+    read:
+      - moved-cf1897716e93.yaml
+    revalidated:
+      at: 2026-10-26T01:20:48Z
+      outcome: unchanged
+      unchanged-because: The anchors of points 4, 9 and 11, and point 2's places, stand. DEC-005 changes only that every use case lies in an area folder, which draws no anchor.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-007
+    read:
+      - moved-9bc4a100eab6.yaml
+    revalidated:
+      at: 2026-10-26T01:20:52Z
+      outcome: unchanged
+      unchanged-because: Point 1's goals and guarantees, and the anchors points 4 and 11 give, stand under the partial supersession, so the sources this rule asks for are as before.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-008
+    read:
+      - moved-e5b931beeb5e.yaml
+    revalidated:
+      at: 2026-10-26T01:20:57Z
+      outcome: unchanged
+      unchanged-because: Point 12 keeps its concepts-first steps, and DEC-005 adds only the area plan and a journey for each path, so what an artefact uses of the glossary is judged as before.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-009
+    read:
+      - moved-9c96c36c753c.yaml
+    revalidated:
+      at: 2026-10-26T01:21:01Z
+      outcome: unchanged
+      unchanged-because: The areas' numbers and each precondition's producers in point 12 stand. DEC-005 leaves two areas that build on each other without numbers, a case this rule's How on an area without a number already reads.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-010
+    read:
+      - moved-10d4577c2d01.yaml
+    revalidated:
+      at: 2026-10-26T01:21:04Z
+      outcome: unchanged
+      unchanged-because: Point 2's dependencies between analyses and point 4's anchors across them stand under the partial supersession, which touches only area grouping.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-012
+    read:
+      - moved-98ed394a1c20.yaml
+    revalidated:
+      at: 2026-10-26T01:21:08Z
+      outcome: unchanged
+      unchanged-because: One name for one concept, in points 1 and 2, stands, since DEC-005 overturns only the optional grouping of use cases by area.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-013
+    read:
+      - moved-9b0cd39c4c82.yaml
+    revalidated:
+      at: 2026-10-26T01:21:12Z
+      outcome: unchanged
+      unchanged-because: Point 1's boxes and entries, and point 5's revalidation, stand, since DEC-005 overturns only the optional grouping of use cases by area.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/010-analyses-and-use-cases.md
+    revalidated:
+      at: 2026-10-26T01:21:18Z
+      outcome: unchanged
+      unchanged-because: The view explains analyses, use cases, ids and freed ids, none of which DEC-005 changes. It states nothing of areas, whose optional grouping alone the partial supersession overturns.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/020-revalidations.md
+    read:
+      - moved-9593b9f5285b.yaml
+    revalidated:
+      at: 2026-10-26T01:21:21Z
+      outcome: unchanged
+      unchanged-because: Revalidation, its outcomes, its records and its evidence in points 4 to 7 stand, and DEC-005 overturns only the optional grouping of use cases by area, which the view never states.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/030-kinds-and-structures.md
+    read:
+      - moved-47cbe686e4db.yaml
+    revalidated:
+      at: 2026-10-26T01:21:25Z
+      outcome: unchanged
+      unchanged-because: Kinds, declared structures, ids and candidates in points 1, 3 and 9 stand. The view states nothing of areas, whose optional grouping alone DEC-005 overturns.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-analysis
+    revalidated:
+      at: 2026-10-26T01:21:29Z
+      outcome: unchanged
+      unchanged-because: The definition, an account of what one component must do kept as anchored artefacts, holds whether or not its use cases lie in areas.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    revalidated:
+      at: 2026-10-26T01:21:33Z
+      outcome: unchanged
+      unchanged-because: Point 1's kinds stand, and DEC-005 adds no kind, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-candidate
+    read:
+      - moved-a9ec29110af1.yaml
+    revalidated:
+      at: 2026-10-26T01:21:37Z
+      outcome: unchanged
+      unchanged-because: A candidate is still written, then confirmed or discarded by a person. The skill's area plan and journeys change what is built, not what a candidate is, and points 1 and 9 stand.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T01:21:41Z
+      outcome: unchanged
+      unchanged-because: Point 1's declared structures stand, and DEC-005 adds no part to any kind.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-design-source
+    revalidated:
+      at: 2026-10-26T01:21:44Z
+      outcome: unchanged
+      unchanged-because: Point 6's planned records and the sources they name stand under the partial supersession, which touches only area grouping.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-freed-id
+    revalidated:
+      at: 2026-10-26T01:21:48Z
+      outcome: unchanged
+      unchanged-because: Point 3's ids and the one exception that frees them stand, and an area is no part of an id.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-hint
+    revalidated:
+      at: 2026-10-26T01:21:52Z
+      outcome: unchanged
+      unchanged-because: Point 1's hints stand, and DEC-005 adds no hint to any kind.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-revalidation
+    revalidated:
+      at: 2026-10-26T01:21:55Z
+      outcome: unchanged
+      unchanged-because: Points 4 and 5 stand, and DEC-005 changes no revalidation, only where use cases lie.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-revalidation-outcome
+    read:
+      - moved-9622c49a9af5.yaml
+    revalidated:
+      at: 2026-10-26T01:21:59Z
+      outcome: unchanged
+      unchanged-because: Point 5's four outcomes stand under the partial supersession, which touches only area grouping.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-revalidation-proposal
+    read:
+      - moved-8e5538b29006.yaml
+    revalidated:
+      at: 2026-10-26T01:22:03Z
+      outcome: unchanged
+      unchanged-because: Point 5's proposal by the agent stands under the partial supersession, which touches only area grouping.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-revalidation-record
+    revalidated:
+      at: 2026-10-26T01:22:06Z
+      outcome: unchanged
+      unchanged-because: Point 6's records stand under the partial supersession, which touches only area grouping.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-shortfall
+    revalidated:
+      at: 2026-10-26T01:22:10Z
+      outcome: unchanged
+      unchanged-because: Point 1's shortfalls and boxes stand, since DEC-005 overturns only the optional grouping of use cases by area.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-tightening
+    revalidated:
+      at: 2026-10-26T01:22:13Z
+      outcome: unchanged
+      unchanged-because: A project's tightening of a structure, in point 1, stands under the partial supersession, which touches only area grouping.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-use-case
+    revalidated:
+      at: 2026-10-26T01:22:16Z
+      outcome: unchanged
+      unchanged-because: What a use case is, and its id, stand in points 1 and 3. Where it lies is no part of the definition, so DEC-005's areas leave it true.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T01:22:23Z
+      outcome: unchanged
+      unchanged-because: The skill still asks a person to confirm each candidate, and its area plan and journeys are candidates a person confirms too. Points 1, 3, 5 and 9 stand under the partial supersession.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-051-id-names-one-artefact.md
+    revalidated:
+      at: 2026-10-26T01:22:27Z
+      outcome: unchanged
+      unchanged-because: Point 3's one numbering and settled ids stand, and an area is no part of an id.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-052-record-only-with-something-to-say.md
+    read:
+      - moved-501953a7814d.yaml
+    revalidated:
+      at: 2026-10-26T01:22:30Z
+      outcome: unchanged
+      unchanged-because: Points 5 and 6 on revalidation and its records stand under the partial supersession, which touches only area grouping.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T01:22:34Z
+      outcome: unchanged
+      unchanged-because: Point 1's binding of a structure where the format rule binds stands, and DEC-005 adds no part to any kind.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    revalidated:
+      at: 2026-10-26T01:22:38Z
+      outcome: unchanged
+      unchanged-because: Choosing each kind's parts, in point 1, stands, and DEC-005 adds no part to any kind.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T01:22:42Z
+      outcome: unchanged
+      unchanged-because: "Its steps hold: the agent derives the terms, the views and the actors first, then the requirements, the use cases and the journeys, as step 9 says. The skill's area plan and a journey for each path happen inside those steps."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-072-revise-before-change.md
+    revalidated:
+      at: 2026-10-26T01:22:47Z
+      outcome: unchanged
+      unchanged-because: Revising the analysis before a change, with its record, stands in points 5 and 6. The use-case procedure's area and path guidance changes how a use case is stamped, not the revision this use case describes.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T01:22:50Z
+      outcome: unchanged
+      unchanged-because: The package metadata changed only the description of the use cases' place, and points 5, 6 and 8 stand, so revalidating after a change holds as described.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-074-free-uncited-ids.md
+    read:
+      - moved-cac80ba8834a.yaml
+    revalidated:
+      at: 2026-10-26T01:22:54Z
+      outcome: unchanged
+      unchanged-because: Freeing uncited ids, in point 3, stands, and the skill's edit adds only its area and journey guidance, which this use case does not describe.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-001
+    read:
+      - moved-e075489b6421.yaml
+    revalidated:
+      at: 2026-10-26T01:22:59Z
+      outcome: unchanged
+      unchanged-because: The actor's voice in needs and goals rests on point 1's hints, which stand under the partial supersession.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-003
+    read:
+      - moved-39b95d82f432.yaml
+    revalidated:
+      at: 2026-10-26T01:23:03Z
+      outcome: unchanged
+      unchanged-because: An area's number keeps its meaning in points 2 and 12, and DEC-005 keeps it, so the form this rule gives an area's number holds.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-004
+    read:
+      - moved-8ae28aa712ae.yaml
+    revalidated:
+      at: 2026-10-26T01:23:07Z
+      outcome: unchanged
+      unchanged-because: One analysis per component, in point 2, stands under the partial supersession, which touches only area grouping.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-005
+    read:
+      - moved-18e6f556365d.yaml
+    revalidated:
+      at: 2026-10-26T01:23:10Z
+      outcome: unchanged
+      unchanged-because: "The rule keeps each of the core's use cases in one of its five areas, which DEC-005 allows. Whether each area serves one function is RS-SAN-014's judgement, which #2105 makes of the core's analysis."
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-006
+    read:
+      - moved-2df4b0ac7338.yaml
+    revalidated:
+      at: 2026-10-26T01:23:14Z
+      outcome: unchanged
+      unchanged-because: The version of the links between analyses, in point 2, stands under the partial supersession, which touches only area grouping.

@@ -15,8 +15,9 @@ checks, after the friction change check; a finding fails the run.
 
 The deployed agents' check (#1559) runs `scripts/check_deployed_agents.py`
 right after `pkit validate`, before the diff-scoped checks; a finding fails the
-run. The pages' console fences (#1807) run `scripts/console_fences.py` right
-after it; a failure fails the run. The pages' contents lists (#2053) are checked
+run. The pages' console fences (#1807, #2098) run the doc-examples capability's
+run, `.pkit/capabilities/doc-examples/scripts/run-examples.py`, right after it;
+a failure fails the run. The pages' contents lists (#2053) are checked
 by `scripts/page_contents.py` right after the console fences; a stale list fails
 the run.
 
@@ -60,6 +61,8 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[1]
 CHECK = REPO / "scripts" / "check.sh"
+#: The doc-examples capability's run, started by its path (doc-examples DEC-001 point 9).
+RUN_EXAMPLES = ".pkit/capabilities/doc-examples/scripts/run-examples.py"
 
 # The stand-in for `uv run [--flag ...] <command> [arg ...]`: it logs each
 # command; `python` is this interpreter, but for the ratchet, which exits with
@@ -81,7 +84,7 @@ case "$1" in
       scripts/pyright_ratchet.py) exit "${{STUB_TYPES_STATUS:-0}}" ;;
       scripts/prose_lint.py) exit "${{STUB_PROSE_STATUS:-0}}" ;;
       scripts/check_deployed_agents.py) exit "${{STUB_AGENTS_STATUS:-0}}" ;;
-      scripts/console_fences.py) exit "${{STUB_CONSOLE_STATUS:-0}}" ;;
+      .pkit/capabilities/doc-examples/scripts/run-examples.py) exit "${{STUB_CONSOLE_STATUS:-0}}" ;;
       scripts/page_contents.py) exit "${{STUB_CONTENTS_STATUS:-0}}" ;;
     esac
     exec "{python}" "$@" ;;
@@ -266,7 +269,7 @@ def test_the_console_fences_run_after_the_deployed_agents_and_a_failure_fails_th
     assert "-- console fences: FAILED" in done.stdout
     assert "-- changelog lint: ok" in done.stdout
     steps = checkout.steps.read_text().splitlines()
-    fences = steps.index("python scripts/console_fences.py")
+    fences = steps.index(f"python {RUN_EXAMPLES}")
     assert fences == steps.index("python scripts/check_deployed_agents.py") + 1
     assert fences < steps.index("pkit migrations check-diff")
 
@@ -281,7 +284,7 @@ def test_the_contents_lists_run_after_the_console_fences_and_a_stale_one_fails_t
     assert "-- changelog lint: ok" in done.stdout
     steps = checkout.steps.read_text().splitlines()
     contents = steps.index("python scripts/page_contents.py")
-    assert contents == steps.index("python scripts/console_fences.py") + 1
+    assert contents == steps.index(f"python {RUN_EXAMPLES}") + 1
     assert contents < steps.index("pkit migrations check-diff")
 
 

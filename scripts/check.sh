@@ -51,10 +51,12 @@
 #     writes from its source. It reads git's index, not the working tree,
 #     because CI's `pkit sync` redeploys the working tree's copies before this
 #     aggregator runs.
-#   - the pages' console fences (`scripts/console_fences.py`, #1807). Each
+#   - the pages' console fences, run by the doc-examples capability's run
+#     (`.pkit/capabilities/doc-examples/scripts/run-examples.py`, #2098). Each
 #     `console` fence of a living-docs page is run as a test, in a scratch
-#     project outside the repository, and its output compared with the page's
-#     (living-docs DEC-002 point 6).
+#     project outside the repository that project-kit's setup step builds, and
+#     its output compared with the page's (doc-examples DEC-001). The run is a
+#     program started by its path, never a `pkit` command (DEC-001 point 9).
 #   - the pages' contents lists (`scripts/page_contents.py`, #2053). A page that
 #     holds the contents markers lists its second-level sections between them,
 #     and a stale list fails; `--update` writes it.
@@ -206,7 +208,7 @@ else
 fi
 run "validate"           uv run pkit validate
 run "deployed agents"    uv run python scripts/check_deployed_agents.py
-run "console fences"     uv run python scripts/console_fences.py
+run "console fences"     uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py
 run "contents lists"     uv run python scripts/page_contents.py
 run "migrations check"   uv run pkit migrations check-diff
 run "record numbering"   uv run pkit decisions check-diff

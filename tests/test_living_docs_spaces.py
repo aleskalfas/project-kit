@@ -1371,6 +1371,11 @@ def test_roots_that_are_one_folder_are_reported_not_failed(project: AdopterRepo)
     separation = [f for f in document["findings"] if f["location"] == f"{CONFIG}:/docs"]
     assert [f["severity"] for f in separation] == ["report"]
     assert "both documentation roots are 'docs'" in separation[0]["message"]
+    # It names the command that sets them apart, and the folder it recommends (#2084).
+    assert (
+        "`pkit living-docs new space user` offers to set the internal root apart, at "
+        "'tech-docs', before it creates the space"
+    ) in separation[0]["message"]
 
 
 # --- the package metadata ----------------------------------------------------------------
