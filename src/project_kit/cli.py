@@ -5387,15 +5387,18 @@ def refs_who_references(target: str) -> None:
     is_flag=True,
     help="Print one document answering each id given, in order: where it lies, the file and "
     "the host's anchor of a cited point's or rule's heading, whether that file arrives as a "
-    "synced copy, or why it does not resolve. Exit 0 either way.",
+    "synced copy, a point's record's partial-supersession line, or why it does not resolve. "
+    "Exit 0 either way.",
 )
 def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
     """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a point of a record
     (`COR-050#14`, `PRJ-002#D1`) to its file and the anchor a repository host gives its
     heading, a rule (`RS-CMN-001`, `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to
     its place in its rule set, or a role or point address (`[pkit::documentation]`,
-    `[pkit::documentation:readers]`) to where an installed capability declares it. With
-    `--json`, several ids at once, answered in one document."""
+    `[pkit::documentation:readers]`) to where an installed capability declares it. A
+    point of a record another overturns in part is followed by the record's top line,
+    which reads "Partially superseded by …". With `--json`, several ids at once,
+    answered in one document."""
     import json
 
     target_root = find_target_root()
@@ -5412,6 +5415,8 @@ def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
         raise click.ClickException(f"{found.problem}.")
     for path in found.paths:
         click.echo(path)
+    if found.partial_supersession is not None:
+        click.echo(found.partial_supersession)
 
 
 @refs.command("rename")
