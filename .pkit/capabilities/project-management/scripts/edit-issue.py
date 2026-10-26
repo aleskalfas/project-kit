@@ -33,10 +33,11 @@ takes `--reason` and posts an audit comment (from, to, why) before it writes,
 and the issue's type must be one `issue-types.yaml` lets sit under a
 milestone (#1016).
 
-Refuses on hard-reject validation findings; warns on warning-level
-findings. The `--force` flag is the operator override of a hard-reject
-finding (the `--force` layer per DEC-046 — distinct from the reason-based
-`--bypass` mechanism), recording an audit comment.
+Refuses on hard-reject validation findings, and on any a schema declares
+bypassable-with-audit (no rule it checks is today); warns on warning-level
+findings. The `--force` flag is the operator override of either refusal
+(the `--force` layer per DEC-046 — distinct from the reason-based `--bypass`
+mechanism), recording an audit comment.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -213,10 +214,11 @@ def main() -> int:
         "--force",
         action="store_true",
         help=(
-            "Operator override of hard-reject validation findings, with an "
-            "audit comment (the `--force` layer per DEC-046 — a hard-reject "
-            "is force-overridable out of band, distinct from the "
-            "`--bypass` mechanism). Default: refuse on hard-reject."
+            "Operator override of the validation findings that refuse an edit, "
+            "hard-reject or bypassable-with-audit, with an audit comment (the "
+            "`--force` layer per DEC-046 — a hard-reject is force-overridable "
+            "out of band, distinct from the `--bypass` mechanism). Default: "
+            "refuse on either."
         ),
     )
     parser.add_argument(
@@ -227,7 +229,9 @@ def main() -> int:
             "Bypass the clash guard, which refuses an edit of an issue another "
             "instance owns (bypassable-with-audit per DEC-014, DEC-035 point 6): "
             "the reason is posted on the issue as an audit comment before the edit. "
-            "Qualified per DEC-046, since validation findings are another gate here."
+            "Qualified per DEC-046, since the validation stop is a second gate: it "
+            "refuses a finding declared bypassable-with-audit as it refuses a "
+            "hard-reject one, and --force writes past both."
         ),
     )
     parser.add_argument(

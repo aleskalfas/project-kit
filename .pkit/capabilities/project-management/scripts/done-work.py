@@ -222,8 +222,9 @@ more than one open, or when gh does not say, it refuses before anything else.
 
 Exit codes:
   0  merged + done
-  1  membership refusal / approval, checkbox or CI gate fails; a queue the
-     run may not go around or through
+  1  membership refusal / approval, checkbox or CI gate fails / the clash
+     guard refused an issue another instance owns; a queue the run may not go
+     around or through
   2  usage error / gh failure, the PR's checks that could not be read among
      them; a run with no `--yes` and no terminal to ask at, which merges
      nothing
