@@ -60,7 +60,7 @@ pkit:
 
 **Other actors:** **Operator** (`core:ACT-operator`): starts the new session in the same clone, on the machine or the sandbox where the clone lies.
 
-**Preconditions:** **From UC-084:** The worker's [instance](../../../glossary.md#term-instance--instance) owns a [Task](../../../glossary.md#term-task--task) In Progress, on the Task's own branch ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+**Preconditions:** **From [UC-084](UC-084-take-next-task.md):** The worker's [instance](../../../glossary.md#term-instance--instance) owns a [Task](../../../glossary.md#term-task--task) In Progress, on the Task's own branch ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
 **Assumptions:**
 

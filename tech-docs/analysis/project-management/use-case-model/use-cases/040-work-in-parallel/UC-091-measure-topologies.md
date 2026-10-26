@@ -26,7 +26,7 @@ pkit:
 
 **Other actors:** None.
 
-**Preconditions:** **From UC-082:** Each [topology](../../../glossary.md#term-topology--topology) to compare is set up.
+**Preconditions:** **From [UC-082](UC-082-set-up-topology.md):** Each [topology](../../../glossary.md#term-topology--topology) to compare is set up.
 
 **Assumptions:**
 

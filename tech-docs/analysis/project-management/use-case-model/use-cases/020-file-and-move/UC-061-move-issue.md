@@ -74,9 +74,9 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`core:ACT-ai-agent`): moves the [issue](../../../glossary.md#term-issue--issue) for the developer, through the `pm` [skill](../../../../core/glossary.md#term-skill--skill)'s `transition-state.md`. It makes on its own only the moves the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) leaves to it ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
-- **Operator** (`core:ACT-operator`): is asked before a command moves an issue of a repository other than the session's own, so no such move happens silently (core:REQ-012).
+- **Operator** (`core:ACT-operator`): is asked before a command moves an issue of a repository other than the session's own, so no such move happens silently ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-060, or UC-063:** The [issue](../../../glossary.md#term-issue--issue) is filed.
+**Preconditions:** **From [UC-060](UC-060-file-task.md), or [UC-063](../010-plan/UC-063-plan-intent.md):** The [issue](../../../glossary.md#term-issue--issue) is filed.
 
 **Assumptions:**
 
@@ -88,7 +88,7 @@ pkit:
 **Main path:**
 
 1. The developer schedules the [issue](../../../glossary.md#term-issue--issue): `pkit pm promote-issue <N> --reason "<R>"`, with `--milestone <M>` where the [project](../../../../core/glossary.md#term-project--project) uses [Milestones](../../../glossary.md#term-milestone--milestone) ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and [DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
-2. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would write in is the session's own, and asks the operator where it is another (core:REQ-012).
+2. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own, and asks the operator where it is another ([core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 3. The system checks that the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares the move from Todo to Backlog for the issue's type. It checks too that the issue's body holds no placeholder of its template (DEC-006 and [DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)).
 4. Unless the project turns [audit comments](../../../glossary.md#term-audit-comment--audit-comment) off, the system posts the reason in an audit comment that names the move, before the move ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a journal, the move goes into it with its reason ([DEC-049](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
@@ -111,7 +111,7 @@ pkit:
 
 - **1b.** The developer gives no reason. `promote-issue` refuses before it writes, and the use case ends ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 - **1c.** The [issue](../../../glossary.md#term-issue--issue) is past Todo already. The system says so, and changes nothing (`promote-issue.py`).
-- **2a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, the developer is no member, or the operator declines a move in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
+- **2a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, the developer is no member, or the operator declines a move in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
 - **3a.** The [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares no such move for the issue's type, such as Review for an [EPIC](../../../glossary.md#term-epic--epic). The system refuses, naming the moves the issue lifecycle declares, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). The use case ends.
 - **3b.** The issue's body still holds a placeholder of its template. The system refuses the move until the body is written ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)). The use case ends.
 - **5a.** A move of the cascade fails part-way. The system warns, and names the issues it did not move. Running the same move again finishes the cascade, since a move already made is not made twice ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).

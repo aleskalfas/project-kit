@@ -45,8 +45,8 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-092:** The lead's clone holds a lead agent's [seat](../../../glossary.md#term-seat--seat), whose [scope](../../../glossary.md#term-scope--scope) names what the lead takes work from (DEC-059 points [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
-- **From UC-083, or UC-060:** The [Task](../../../glossary.md#term-task--task) is filed in the lead's scope ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- **From [UC-092](UC-092-take-seat.md):** The lead's clone holds a lead agent's [seat](../../../glossary.md#term-seat--seat), whose [scope](../../../glossary.md#term-scope--scope) names what the lead takes work from (DEC-059 points [4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+- **From [UC-083](UC-083-plan-across-scopes.md), or [UC-060](../020-file-and-move/UC-060-file-task.md):** The [Task](../../../glossary.md#term-task--task) is filed in the lead's scope ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Assumptions:**
 

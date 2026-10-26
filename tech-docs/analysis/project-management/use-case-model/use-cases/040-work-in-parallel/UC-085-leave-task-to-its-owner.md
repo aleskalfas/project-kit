@@ -69,7 +69,7 @@ pkit:
 
 **Other actors:** **Developer** (`core:ACT-developer`): only a person sets the refusal aside, with a reason that an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records before the start ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 
-**Preconditions:** **From UC-083, or UC-060:** The [Task](../../../glossary.md#term-task--task) is filed, with its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+**Preconditions:** **From [UC-083](UC-083-plan-across-scopes.md), or [UC-060](../020-file-and-move/UC-060-file-task.md):** The [Task](../../../glossary.md#term-task--task) is filed, with its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Assumptions:**
 

@@ -49,7 +49,7 @@ pkit:
 
 **Other actors:** None.
 
-**Preconditions:** **From UC-082, or UC-092:** Each agent's clone holds a [seat](../../../glossary.md#term-seat--seat) of the [topology](../../../glossary.md#term-topology--topology) ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
+**Preconditions:** **From [UC-082](UC-082-set-up-topology.md), or [UC-092](UC-092-take-seat.md):** Each agent's clone holds a [seat](../../../glossary.md#term-seat--seat) of the [topology](../../../glossary.md#term-topology--topology) ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 
 **Assumptions:**
 

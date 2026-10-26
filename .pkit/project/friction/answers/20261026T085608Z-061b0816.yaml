@@ -1,0 +1,12 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      at: 2026-10-26T08:56:08Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 010-plan and mends its links, and ACT-planner gains a need and an occasion for parallel work. Judged with the answers main holds on COR-053 point 10 and on the seat roles DEC-029 gains, its steps hold. Planning still reads the use-case data point the backbone resolves, and files only once the planner approves the whole plan.
