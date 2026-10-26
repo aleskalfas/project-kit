@@ -354,7 +354,7 @@ A project is a repository the system is installed into. It holds the methodology
 
 - Each file it tracks has one owner, the methodology or the project, never both (COR-001).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Version:**
 

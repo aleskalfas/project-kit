@@ -348,7 +348,7 @@ A checkbox is a box in an [issue](../glossary.md#term-issue--issue)'s body besid
 - An issue with an unticked checkbox cannot close (DEC-007).
 - A tick is never checked again at the close (DEC-007).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Issue:**
 

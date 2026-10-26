@@ -331,7 +331,7 @@ A session anchor is the directory the [harness](../glossary.md#term-harness--har
 - On a difference, the system asks, or refuses where nobody is there to ask, and never blocks a write that was confirmed (COR-039 point 1).
 - The guard is an interlock against a mistake, not a security boundary (COR-039 point 3).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Overlay:**
 

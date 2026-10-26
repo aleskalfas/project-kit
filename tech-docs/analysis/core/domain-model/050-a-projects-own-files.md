@@ -316,7 +316,7 @@ A documentation root is the folder for internal readers, or the one for user-fac
 - A location derived from it is recorded when first used, so changing the root later moves nothing (COR-049 point 5).
 - A declared root that does not exist yet is a warning, never a failure (COR-049 point 7).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Project-owned content:**
 

@@ -134,7 +134,7 @@ def _view(linked: bool) -> str:
 
 #: The view's closing section where nothing in the analysis links a term it explains, as
 #: the command writes it (DEC-004 point 7).
-CLOSING_NONE = "\n## Where these concepts are used\n\n**Order:** None.\n\n**Payment:** None.\n"
+CLOSING_NONE = "\n## What is built on these concepts\n\n**Order:** None.\n\n**Payment:** None.\n"
 
 VIEW_BODY = _view(linked=False)
 VIEW_LINKED = _view(linked=True) + CLOSING_NONE
@@ -310,7 +310,7 @@ def test_the_check_reports_each_link_missing_extra_or_stale_and_names_the_comman
     )
     assert (
         VIEW,
-        "the view ends with no section `## Where these concepts are used`: the view's one "
+        "the view ends with no section `## What is built on these concepts`: the view's one "
         "closing section, at its end, lists under each concept it explains each use case, "
         "journey and requirement in force of its analysis that links the concept's term — run "
         "`pkit analysis link`, which writes the links (DEC-004 point 7)",
@@ -1103,7 +1103,7 @@ def test_the_check_holds_the_links_of_the_four_kinds_and_a_link_on_a_datum_is_ex
     assert _validate(kinds) == []
 
 
-# --- a view's closing section: where its concepts are used (DEC-004 point 7) -----------------
+# --- a view's closing section: what is built on its concepts (DEC-004 point 7) -----------------
 
 #: Each artefact of `kinds` the closing sections list, by its id: its line there.
 _ITEM = {
@@ -1134,14 +1134,14 @@ def _under(label: str, *ids: str) -> str:
 #: second requirement links `order` and no `payment`, and the constraint links `payment
 #: method` alone, so it is under neither.
 KINDS_CLOSING = (
-    "## Where these concepts are used\n\n"
+    "## What is built on these concepts\n\n"
     + _under("Order", "UC-001", "UC-002", "JRN-001", "REQ-001", "REQ-002")
     + "\n"
     + _under("Payment", "UC-001", "UC-002", "JRN-001", "REQ-001")
 )
 
 #: The heading of a view's closing section, as the command writes it.
-CLOSING_HEADING = "## Where these concepts are used"
+CLOSING_HEADING = "## What is built on these concepts"
 
 
 def _closing_of(repo: AdopterRepo, rel: str = VIEW) -> str:

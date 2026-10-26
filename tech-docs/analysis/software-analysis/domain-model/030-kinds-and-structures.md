@@ -185,7 +185,7 @@ A candidate is an [analysis](../glossary.md#term-analysis--analysis) [artefact](
 - A person confirms each candidate before it is committed (DEC-001 point 9).
 - Where an accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) decides behaviour the code lacks, a candidate describes that behaviour as the record decides. Each such step is a [shortfall](../glossary.md#term-shortfall--shortfall) (DEC-001 point 9).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Artefact kind:** None.
 

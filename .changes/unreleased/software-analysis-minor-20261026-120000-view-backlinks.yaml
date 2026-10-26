@@ -3,10 +3,10 @@ kind: minor
 custom:
   category: Added
 body: >
-  A reader who starts from a concept now finds where it is used, as DEC-004
-  point 7 decides (#2104). In an analysis that keeps a domain model,
+  A reader who starts from a concept now finds what is built on it, as DEC-004
+  point 7 and DEC-005 point 3 decide (#2104). In an analysis that keeps a domain model,
   `pkit analysis link` ends each view in force with a section
-  `## Where these concepts are used`. Under each concept the view explains, it
+  `## What is built on these concepts`. Under each concept the view explains, it
   lists each use case, journey and requirement in force of the view's analysis
   whose body links the concept's term, by its id and title, or `None.`. The
   stamp writes the section on a new view. Whatever any rule's status,
@@ -16,7 +16,7 @@ body: >
   of the view. The views' places declare the form of its links, so a change
   that only retargets them asks no answer. The overview's areas gain
   "Its concepts": each view of the analysis that explains a term one of the
-  area's use cases or requirements links, read from those links. The
+  area's use cases links, read from those links. The
   overview's fingerprint reads them, and its version is 5, so an overview
   written before is a warning until `pkit analysis overview` writes it anew.
   Run `pkit analysis link` before `pkit analysis overview`. DEC-001 points 1

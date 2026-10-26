@@ -253,7 +253,7 @@ A shortfall is a step or a variant of a use case that the system does not carry 
 - Only an accepted decision record grounds one. A step no record decides follows the code, and takes no box (DEC-001 point 1).
 - Each box has its entry in the use case's front matter, and each entry has its box (DEC-001 point 1).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Revalidation:**
 

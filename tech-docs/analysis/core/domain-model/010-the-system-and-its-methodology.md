@@ -345,7 +345,7 @@ The methodology is the body of [decision records](../glossary.md#term-decision-r
 
 **Always true:** None.
 
-## Where these concepts are used
+## What is built on these concepts
 
 **System:**
 

@@ -550,11 +550,11 @@ VERIFIED = (
 
 def test_each_area_shows_its_concepts_from_the_links_to_the_terms(project: AdopterRepo) -> None:
     """Where the analysis holds a view in force, each area shows its concepts: each view
-    that explains a term one of its use cases or requirements links, in the order of the
-    views' numbers, or none. They are read from the links `pkit analysis link` writes, so a
-    link that leads an area to another view makes the overview stale, and a reworded
-    sentence that moves no link leaves it fresh (DEC-003 point 8). The use cases in no area
-    show none."""
+    that explains a term one of its use cases links, in the order of the views' numbers, or
+    none. A requirement's links lead its area nowhere. They are read from the links `pkit
+    analysis link` writes, so a link that leads an area to another view makes the overview
+    stale, and a reworded sentence that moves no link leaves it fresh (DEC-003 point 8,
+    DEC-005 point 3). The use cases in no area show none."""
     project.write(
         {SETTINGS: HEAD + "areas:\n  010-run: Run the suites.\n  020-read: Read the results.\n"}
     )
@@ -567,15 +567,16 @@ def test_each_area_shows_its_concepts_from_the_links_to_the_terms(project: Adopt
     stamped(project, "use-case", "read", "--actor", "ACT-tester", "--area", "020-read")
     stamped(project, "use-case", "share", "--actor", "ACT-tester", "--area", "030-share")
     stamped(project, "use-case", "set-up", "--actor", "ACT-tester")
-    stamped(project, "quality-requirement", "quick", "--area", "020-read", "--actor", "ACT-tester")
+    stamped(project, "quality-requirement", "quick", "--area", "010-run", "--actor", "ACT-tester")
     fill(project)
     run = f"{USE_CASES}/010-run/UC-001-run.md"
     read = f"{USE_CASES}/020-read/UC-002-read.md"
-    quick = f"{QUALITY}/020-read/REQ-001-quick.md"
+    quick = f"{QUALITY}/010-run/REQ-001-quick.md"
     set_up = f"{USE_CASES}/UC-004-set-up.md"
     project.write(
         {
             run: _read(project, run).replace(TRIGGER, "**Trigger:** The tester starts a suite."),
+            read: _read(project, read).replace(TRIGGER, "**Trigger:** The tester reads a result."),
             quick: _read(project, quick).replace(VERIFIED, "**Verified by:** A result shows."),
             set_up: _read(project, set_up).replace(TRIGGER, "**Trigger:** A suite is set up."),
         }
@@ -586,7 +587,7 @@ def test_each_area_shows_its_concepts_from_the_links_to_the_terms(project: Adopt
     views["020"] = "- [020 — Results](../domain-model/020-results.md)"
     text = _read(project)
     assert _section(text, "### 010-run").startswith(
-        f"Run the suites.\n\n**Its concepts:**\n\n{views['010']}\n\n**Its requirements:** none."
+        f"Run the suites.\n\n**Its concepts:**\n\n{views['010']}\n\n**Its requirements:**\n\n"
     )
     assert f"Read the results.\n\n**Its concepts:**\n\n{views['020']}\n\n" in text
     assert (
@@ -597,10 +598,11 @@ def test_each_area_shows_its_concepts_from_the_links_to_the_terms(project: Adopt
     assert _about(_check(project), "error", OVERVIEW_FILE) == []
 
     # A reworded sentence moves no link; a mention linked leads the area to another view.
-    project.write({read: _read(project, read).replace(TRIGGER, "**Trigger:** The tester asks.")})
+    reworded = _read(project, read).replace("tester reads a", "tester reads the")
+    project.write({read: reworded})
     link(project)
     assert _about(_check(project), "error", OVERVIEW_FILE) == []
-    project.write({read: _read(project, read).replace("tester asks.", "tester reads a suite.")})
+    project.write({read: _read(project, read).replace("result).", "result) of a suite.")})
     link(project)
     (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
     assert stale.startswith("it is stale")

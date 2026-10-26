@@ -37,7 +37,7 @@ The stamp anchors each term it explains, from `explains`. Add as `--record` each
 pkit analysis new view <slug> --number <number> --explains <TERM-id> [--explains <TERM-id>]... [--title "<Title>"] [--record <id>]...
 ```
 
-The stamp writes the view, with one section for each term, headed by the term's name in sentence case. Each section opens with its link to its term's entry, `Defined in [<TERM-id>](../glossary.md#<anchor>).`. It also writes each term's link to its section, on a line under the term's heading in the glossary. The check holds both lines. The view ends with its closing section, `## Where these concepts are used`, which the stamp and `pkit analysis link` write (section 7).
+The stamp writes the view, with one section for each term, headed by the term's name in sentence case. Each section opens with its link to its term's entry, `Defined in [<TERM-id>](../glossary.md#<anchor>).`. It also writes each term's link to its section, on a line under the term's heading in the glossary. The check holds both lines. The view ends with its closing section, `## What is built on these concepts`, which the stamp and `pkit analysis link` write (section 7).
 
 - **Sentence case** capitalizes the first letter alone, so the term `decision record` heads its section `## Decision record`. The rest keeps the name's case, so `pull request on GitHub` reads `Pull request on GitHub`.
 - **A name whose first word holds a capital already,** such as a proper name like `iPhone app`, stands as it is.
@@ -114,7 +114,7 @@ Run `pkit analysis link`. The first view an analysis holds turns the links on fo
 
 - **What it links.** The first mention of each term in each section, in the views and the glossary entries, and in each part of the other kinds, to the term's entry. A term is never linked in its own section.
 - **A wrong link** is a finding: the section uses a term's name in another sense, so reword it (`RS-SAN-008`). The escape `<!-- pkit:not-the-term -->` right before a mention serves last, such as for a word in a quotation.
-- **Where its concepts are used.** The view ends with a section, `## Where these concepts are used`. Under each concept, it lists each use case, journey and requirement of the analysis whose body links the concept's term (DEC-004 point 7). Write nothing in it, and add no section after it: the command writes it last, and the check holds it.
+- **What is built on its concepts.** The view ends with a section, `## What is built on these concepts`. Under each concept, it lists each use case, journey and requirement of the analysis whose body links the concept's term (DEC-004 point 7). Write nothing in it, and add no section after it: the command writes it last, and the check holds it.
 - **Each later edit** of a view, an entry, a use case, a journey or a requirement may move a link, so run the command again before the checks. Run it before `pkit analysis overview`, whose areas read the links it writes.
 
 Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first. Where the format rule binds, the check holds each section's heading to the name of the term `explains` lists in its place, in sentence case. It holds each section's parts too: its *Why* first and filled, or `None.`, then its explanation below it. Whatever any rule's status, it holds the links.

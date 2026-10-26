@@ -262,7 +262,7 @@ An unclassified document is a file in a space's places that is neither a [page](
 
 **Always true:** [Validation](../../core/glossary.md#term-validation--validation) reports it for onboarding to classify (DEC-001 point 4).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Documentation space:**
 

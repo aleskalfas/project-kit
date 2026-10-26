@@ -296,7 +296,7 @@ A process is the course a capability declares for one kind of subject of its dis
 - The engine reads a subject's state from what it observes, never from a stored label (COR-033 P3).
 - A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the subject stands, and allows no move (COR-044 point 2 and COR-033 P5).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Capability:**
 

@@ -5,7 +5,7 @@ Held to software-analysis DEC-004:
 - **the stamp** — `pkit analysis new view <slug> --number <digits> --explains <TERM-id>…`
   writes `domain-model/<number>-<slug>.md`, its id `VIEW-<slug>`, with `explains`, an
   anchor to each term it lists and one section for each, headed by the term's name, then
-  its closing section on where its concepts are used. It writes each term's link to its
+  its closing section on what is built on its concepts. It writes each term's link to its
   section under the term's heading in the glossary, and refuses what a view may not
   explain (points 2, 4, 5 and 7);
 - **the check, whatever any rule's status** — a view's file's name against its id, the
@@ -138,7 +138,7 @@ def test_a_view_is_stamped_with_its_terms_their_sections_and_their_links(
         f"# {VIEW_ID} — Orders and payments",
         "## Order",
         "## Payment",
-        "## Where these concepts are used",
+        "## What is built on these concepts",
     ]
     # Each section opens with its link to its term, then its *Why*, then its explanation.
     order = body.split("## Order\n", 1)[1].split("\n## ", 1)[0].strip("\n").split("\n\n")
@@ -166,7 +166,7 @@ def test_the_stamp_heads_each_section_in_sentence_case(project: AdopterRepo) -> 
     stamped(project, "view", "lines", "--number", "020", *explains)
     view = f"{DOMAIN_MODEL}/020-lines.md"
     headings = [line for line in _read(project, view).splitlines() if line.startswith("## ")]
-    assert headings == ["## Line item", "## GitHub issue", "## Where these concepts are used"]
+    assert headings == ["## Line item", "## GitHub issue", "## What is built on these concepts"]
     glossary = _read(project, GLOSSARY)
     assert "Explained in [VIEW-lines](domain-model/020-lines.md#line-item)." in glossary
     assert "Explained in [VIEW-lines](domain-model/020-lines.md#github-issue)." in glossary

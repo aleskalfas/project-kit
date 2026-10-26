@@ -196,7 +196,7 @@ The stamp reads the analysis through the core's reading command, `pkit friction 
 Where an analysis keeps a domain model, `pkit analysis link` links its terms where they are mentioned, so each concept is a click from its definition (DEC-004 point 7). An analysis keeps a domain model once its `domain-model/` folder holds a view, in force or withdrawn. An analysis without one sees no link.
 
 - **What it writes.** Each section of a view in force opens with `Defined in [<TERM-id>](<glossary>#<anchor>).`, right below its heading. The first mention of each term in each section links to the term's entry. A term is never linked in its own section, nor in its own entry.
-- **Where each concept is used.** Each view in force ends with a section, `## Where these concepts are used`. Under each concept, its term's name in sentence case as a bold label, it lists each use case, journey and requirement in force of the view's analysis whose body links the concept's term. The use cases come first, then the journeys, then the requirements, each by its id and title, and a concept nothing uses reads `None.`.
+- **What is built on each concept.** Each view in force ends with a section, `## What is built on these concepts`. Under each concept, its term's name in sentence case as a bold label, it lists each use case, journey and requirement in force of the view's analysis whose body links the concept's term. The use cases come first, then the journeys, then the requirements, each by its id and title, and a concept nothing uses reads `None.`.
   - **Read from the links it writes.** An artefact uses a term where the command links a mention of it. A term named only in front matter, such as a requirement's statement, lists nothing.
   - **Its own analysis alone.** An analysis that builds on this one may link its terms, and none of its artefacts is listed.
   - **No part.** The structure check reads the section as no part of the view, and the command links no mention in it. It writes the section last, in place of any the view holds.
@@ -527,7 +527,7 @@ A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart fr
 
 **Always true:** None.
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Run:**
 
@@ -564,7 +564,7 @@ A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart fr
 
   The link is part of the term's content, so a change to it flags whatever anchors the term. A view renumbered or renamed, a section added, moved or taken out, and a view withdrawn each change a link.
 - **Its links to the glossary:** see [Linking terms](#linking-terms-pkit-analysis-link), above.
-- **Where its concepts are used.** The view ends with a section, `## Where these concepts are used`, which `pkit analysis link` and the stamp write: see [Linking terms](#linking-terms-pkit-analysis-link), above. Write nothing there, and add each concept's section above it.
+- **What is built on its concepts.** The view ends with a section, `## What is built on these concepts`, which `pkit analysis link` and the stamp write: see [Linking terms](#linking-terms-pkit-analysis-link), above. Write nothing there, and add each concept's section above it.
 - **A section added by hand.** Add its term to `explains`, in the section's place. Then write the term anchor and the term's link that the check names: its message gives the anchors to write, and the line, word for word. Moving a section to another view moves its term between the two lists, their anchors and its link, in the same change.
 
 An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the artefact's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
@@ -1043,7 +1043,7 @@ Each analysis keeps a generated overview, `overview/README.md` in its folder: th
     An analysis that builds on others names them in the second sentence. In a project that lists no analyses, the first sentence names the system where a component's name would stand.
   - **Areas,** in the order of their numbers. Each shows its goal, then:
     - **Builds on:** the other areas that hold a producer its use cases name in `after`, save one in a later area. The environment is no area. An area none of whose use cases writes `after` shows no such line.
-    - **Its concepts:** each domain-model view of the analysis that explains a term one of the area's use cases or requirements links, in the order of the views' numbers. It shows where the analysis holds a view in force.
+    - **Its concepts:** each domain-model view of the analysis that explains a term one of the area's use cases links, in the order of the views' numbers. It shows where the analysis holds a view in force.
     - **Its requirements:** each requirement whose file lies in a folder named for the area, inside its kind's folder, such as `requirements/quality/010-run/`.
     - **Its use cases,** each marked *not built yet* where an open shortfall names one of its steps or variants.
     - **Not written yet:** an area whose goal you give and which holds no use case in force shows its goal and this line.
@@ -1058,7 +1058,7 @@ Each analysis keeps a generated overview, `overview/README.md` in its folder: th
     - **Diagrams,** on every page: one line that names `pkit analysis diagram`, as you run it for this analysis, and its subjects. The page shows no use-case diagram, requirement map or chain of use cases.
 
   A journey's flow is `pkit analysis diagram`'s own output, with its text alternative. A closing line says the command writes the page.
-- **Front matter, and the links to the terms.** The overview reads your analysis's front matter and the paths of its files, and no file of another analysis. Of a body, it reads only the links to the terms a use case or a requirement holds, which `pkit analysis link` writes. Beyond the analysis, it reads the settings file and the front matter of the record `purpose` names.
+- **Front matter, and the links to the terms.** The overview reads your analysis's front matter and the paths of its files, and no file of another analysis. Of a body, it reads only the links to the terms a use case holds, which `pkit analysis link` writes. Beyond the analysis, it reads the settings file and the front matter of the record `purpose` names.
 - **Who writes it.** The stamp rewrites the overview of the analysis it writes in, after each artefact. Run `pkit analysis overview` after you change by hand what it shows, such as a title, a status, an `after`, a use case's `other-actors` or `shortfalls`, an actor's `summary`, a name in the glossary's head, a goal, or the purpose record's title or status. After you change a body, run `pkit analysis link` first, since an area's concepts are read from the links it writes. The command writes the overview of each analysis that holds an artefact, and only where its bytes change. Install writes none, so a project gets its overview from its first stamp, or from the command.
 - **Fresh by fingerprint.** The page carries a line `<!-- pkit:overview reads=5 fingerprint=sha256:… -->`, which GitHub does not show. It is a fingerprint of the data the overview reads, never of its text. `pkit analysis validate` fails an overview whose fingerprint no longer matches the analysis, and names the command. So a release that only prints the overview differently fails nothing, and the next rewrite prints it anew. A release that changes what the fingerprint reads, or how it is computed, raises the line's `reads=` version, and an overview written under another one is a warning until the command rewrites it.
 - **A missing overview** is a warning that names the command, so an upgrade fails nothing.

@@ -154,7 +154,7 @@ A citation is the text `[ev:<slug>]`, right after the claim it backs. Its slug i
 - One token names one record, so two records take two tokens, never a list (DEC-001).
 - Text of its form is no citation in a fenced code block or an HTML comment of a Markdown file. Nor is it one in its scope's `evidence.yaml` (DEC-003).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Outside fact:**
 

@@ -16,7 +16,7 @@ read when needed. In this order:
   force lies in, and each the settings give a goal. Each shows its goal, what it builds
   on, its concepts, its requirements and its use cases, each linked and marked where an
   open shortfall names one of its steps or variants. Its concepts are the views in force
-  that explain a term one of its use cases or requirements links, shown where the
+  that explain a term one of its use cases links, shown where the
   analysis has a view in force. An area none of whose use cases writes `after` shows no
   line of what it builds on, and one that holds no use case in force reads "Not written
   yet." An analysis whose use cases lie in no area lists them under its use cases,
@@ -44,7 +44,7 @@ shows conflict on that section alone.
 
 **Front matter, and the links to the terms.** The overview reads the front matter of the
 analysis it shows, and the paths of its files (DEC-001 point 1). Of a body, it reads only
-the links to the glossary's entries a use case or a requirement in force holds, which
+the links to the glossary's entries a use case in force holds, which
 `pkit analysis link` writes and the check holds, to lead each area to its concepts. A
 requirement's area is the folder of its kind's folder that holds it (`Analysis.area`). It
 reads no file of another analysis: an actor of one is shown as this analysis's
@@ -69,7 +69,7 @@ shows no title of such a record, and says what is wrong with the pointer instead
 it reads, never its text (`fingerprint`), with the version of what it reads (`VERSION`).
 That is each artefact in force of the kinds it shows, with its id, its path and the
 fields it reads, each actor of another analysis it shows with its name, the views each
-use case and requirement leads to, the goal of each area it shows, and the id, title,
+use case leads to, the goal of each area it shows, and the id, title,
 status and path of its purpose's record.
 Validation compares it with the analysis in the working tree, and fails a stale
 overview, naming the command. A release that only
@@ -225,7 +225,7 @@ class Read:
     another analysis it shows, by its id with that analysis, such as
     `core:ACT-developer`, with the name the glossary's head gives it, `None` where the
     head lists it not, the record its purpose names, `None` where it names none, and the
-    views in force each use case and requirement in force leads to, by its id, the views'
+    views in force each use case in force leads to, by its id, the views'
     ids in their order, where it links a term one of them explains (`_concepts`)."""
 
     artefacts: tuple[Artefact, ...]
@@ -260,7 +260,7 @@ def read(
     record_files: backbone.RecordFiles | None = None,
 ) -> Read:
     """What the overview of the analysis in `folder` reads: front matter and paths, the
-    links to the terms each use case and requirement holds, and the front matter of its
+    links to the terms each use case holds, and the front matter of its
     purpose's record, found from the repository at `root`, through `record_files` where a
     reader gives it. Raises diagrams.NoAnswer where a file of the kinds it reads cannot be
     read in full, as the query would find it for any of its diagrams, or where whether
@@ -300,12 +300,12 @@ def _concepts(
     artefacts: Sequence[Artefact],
     root: Path | None,
 ) -> dict[str, tuple[str, ...]]:
-    """The views in force of `artefacts` each use case and requirement among them leads
-    to, by its id, the views in their order: those that explain a term its body links,
-    as `pkit analysis link` writes the links and the check holds them (DEC-004 point 7).
-    None where the analysis shows no view, or where no repository is read. Of a body, only
-    its links to the glossary's entries are read. Raises diagrams.NoAnswer where such a
-    body cannot be read."""
+    """The views in force of `artefacts` each use case among them leads to, by its id, the
+    views in their order: those that explain a term its body links, as `pkit analysis link`
+    writes the links and the check holds them (DEC-004 point 7, DEC-005 point 3). None
+    where the analysis shows no view, or where no repository is read. Of a body, only its
+    links to the glossary's entries are read. Raises diagrams.NoAnswer where such a body
+    cannot be read."""
     shown = [v for v in artefacts if v.kind == VIEW]
     if not shown or root is None:
         return {}
@@ -317,7 +317,7 @@ def _concepts(
     words = links.vocabulary(analysis, listing, folder)
     found: dict[str, tuple[str, ...]] = {}
     for artefact in artefacts:
-        if artefact.kind != USE_CASE and artefact.kind not in REQUIREMENTS:
+        if artefact.kind != USE_CASE:
             continue
         try:
             text = (root / artefact.path).read_text(encoding="utf-8")
@@ -380,7 +380,7 @@ def _purpose(
 def fingerprint(analysis: Analysis, read_: Read, component: str | None) -> str:
     """The fingerprint of what the overview draws: each artefact it reads, by its kind, its
     id, its path within the analysis and the fields it reads, each actor of another
-    analysis it shows, with its name, the views each use case and requirement leads to,
+    analysis it shows, with its name, the views each use case leads to,
     each area's goal, the glossary's path, the analysis's component, and its purpose's
     record, by its id, its title and its path. Never the overview's text, so a release
     that only prints it differently changes none."""
@@ -568,7 +568,7 @@ def _areas_part(page: _Page) -> list[str]:
             built = _builds_on(page, own, name)
             out += ["", f"**Builds on:** {_joined(built) if built else 'no other area'}."]
         if views_shown and (bound or own):
-            reached = {v for a in (*bound, *own) for v in read_.concepts.get(str(a.id), ())}
+            reached = {v for a in own for v in read_.concepts.get(str(a.id), ())}
             shown = [v for v in views_shown if str(v.id) in reached]
             out += ["", "**Its concepts:**" + ("" if shown else " none.")]
             out += ["", *(f"- {page.link(v)}" for v in shown)] if shown else []

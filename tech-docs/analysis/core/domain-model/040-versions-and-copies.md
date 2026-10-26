@@ -385,7 +385,7 @@ A component origin is where an installed [capability](../glossary.md#term-capabi
 - An origin governs only what the component is reconciled against. Dependencies and deployment treat every origin alike (COR-031 point D1).
 - Removing a capability the project authored unregisters it, and leaves its files where they are (COR-031 point D4).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Manifest:**
 

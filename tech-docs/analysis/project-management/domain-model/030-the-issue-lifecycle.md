@@ -217,7 +217,7 @@ A bypass overrides one check that refuses by default, such as scheduling an [iss
 - A bypass with no reason is refused (DEC-014).
 - A check that guards what must never happen takes no bypass. Only an operator's `--force` overrides it (DEC-046 point 2).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Issue lifecycle:**
 

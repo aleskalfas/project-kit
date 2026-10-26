@@ -105,7 +105,7 @@ A batch plan is the outline the project-manager agent drafts for an intent. It h
 - None of its issues is filed before the person approves the whole plan (DEC-029).
 - It cites only ids the [data point](../../core/glossary.md#term-data-point--data-point) holds, and never suggests one (DEC-054 point 5).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Use-case entry:**
 

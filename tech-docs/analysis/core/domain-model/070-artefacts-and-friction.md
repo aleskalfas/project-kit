@@ -536,7 +536,7 @@ Package metadata is the file a component ships that declares its [version](../gl
 
 **Note:** COR-017 calls it the capability's manifest, a word the analysis keeps for the project's record.
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Anchor:**
 

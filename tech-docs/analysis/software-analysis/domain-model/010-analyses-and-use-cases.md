@@ -137,7 +137,7 @@ A freed id is the id of a removed [use case](../glossary.md#term-use-case--use-c
 - Only the project frees an id, and no tool infers one (DEC-001 point 3).
 - Nothing frees an id but that declaration, which names only ids that nothing cites (DEC-001 point 3).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Analysis:**
 

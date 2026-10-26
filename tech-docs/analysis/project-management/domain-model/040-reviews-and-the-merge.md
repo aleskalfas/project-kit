@@ -145,7 +145,7 @@ The merge gate is the set of conditions project-management holds a [pull request
 - A gate that passes gives no [authorisation](../glossary.md#term-authorisation--authorisation) to merge, which stays the person's (DEC-055 point 3).
 - A person bypasses one required reviewer only with a reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records (DEC-050).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Verdict:**
 

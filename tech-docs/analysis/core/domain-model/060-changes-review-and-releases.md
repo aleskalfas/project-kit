@@ -373,7 +373,7 @@ The release step is the procedure that consumes every pending [changeset](../glo
 - A floor rises only where a changeset declares it, and the backbone's upper bound only ever widens (PRJ-002 D4).
 - It refuses to leave a [range](../glossary.md#term-range--range) that excludes the version it writes for a dependency (PRJ-002 D4).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Change:**
 

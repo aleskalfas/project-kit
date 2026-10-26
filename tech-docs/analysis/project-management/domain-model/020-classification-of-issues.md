@@ -108,7 +108,7 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 - The project's file of workstreams is authoritative, and a board's field reflects it (DEC-018).
 - Its slug is 2 to 40 lowercase letters, digits and single hyphens (DEC-018).
 
-## Where these concepts are used
+## What is built on these concepts
 
 **Classification axis:**
 

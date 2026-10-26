@@ -76,7 +76,7 @@ written by hand is held as the command's. Another link is the writer's, and its
 text is skipped.
 
 **A view's closing section** (`closing`). Each view in force ends with a section headed
-`Where these concepts are used`. Under each concept it explains, labelled by its
+`What is built on these concepts`. Under each concept it explains, labelled by its
 section's heading, it lists each use case, journey and requirement in force of its
 analysis that links the concept's term: the use cases first, then the journeys, then
 the requirements, each in the order of their numbers, linked by its id and its title as
@@ -142,7 +142,7 @@ DEFINED = "Defined in"
 
 #: The heading of a view's closing section, which links what uses its concepts (DEC-004
 #: point 7), and the kinds it lists under each concept, in their order.
-CLOSING = "Where these concepts are used"
+CLOSING = "What is built on these concepts"
 LISTED: tuple[str, ...] = (USE_CASE, JOURNEY, *REQUIREMENTS)
 
 #: A line that heads a view's closing section, its spaces as any.
