@@ -632,14 +632,14 @@ A **state issue** holds one piece of shared state that changes while agents work
 - **The description shows the state.** A region of the description shows who holds the state, rewritten whole after each change. A stray edit to the region is rebuilt, and nothing is lost
 - **The first claim on a free state holds.** Another clone's claim on a held state counts for nothing, and stays void after the holder releases
 - **A comment counts only from an author who may write:** a member where the membership gate is closed, and otherwise an account GitHub records as having write access or more. The access is read once for each author in a run
-- **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out, so no check counts it as work
+- **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out. The listings of issues leave state issues out once the one read of issues lands (#2139)
 
 `scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. The commands that create, take, release and list seats come later, so no command creates a state issue yet.
 
 Two things no code enforces, for a person to watch once seats are in use:
 
 - **After an account loses its access or is deleted,** its comments stop counting. A seat's holder may then change, since a void claim may hold, or an earlier holder return. Check the listing of seats, and release by force each seat whose holder changed
-- **A Task that a board's automation moves back to In Progress** renews no claim, since only a command of the capability renews one. Once claims lapse ([project-management:DEC-059-topology-of-seats] point 9), such a Task's claim may lapse at once
+- **A Task that a board's automation moves back to In Progress** renews no claim, since only an ownership event renews one, and a board's automation posts none. Once claims lapse ([project-management:DEC-059-topology-of-seats] point 9), such a Task's claim may lapse at once
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 
