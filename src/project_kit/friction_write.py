@@ -29,7 +29,8 @@ commands, each naming what it writes and writing only with consent (point 13):
 change's own (`_OwnFile`): the one answer file in the working tree that no commit
 of the checkout holds and the move did not write, else a new one named for its UTC
 time and eight random hexadecimal digits. Its entry for the artefact names, in
-`read`, every other answer file present that answers the artefact. Two such
+`read`, every other answer file present that answers the artefact, under any path
+its file had, a move not yet committed included, as the change check reads it. Two such
 uncommitted files that each answer the artefact refuse the write, naming both. A
 revalidation re-states the deferrals it keeps in its own entry. An artefact whose
 own block still holds an answer is refused, naming the move: validation fails such
@@ -778,7 +779,10 @@ def _source(target_root: Path, reference: str) -> tuple[_Source, Discovery]:
 
 def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnFile:
     """Where the artefact's answers are written: the answer file of the change's own, and
-    every other answer file present that answers the artefact, which the answer reads.
+    every other answer file present that answers the artefact, which the answer reads. An
+    answer file answers it where an entry names it under any path its file had, as the
+    change check follows a move, committed or not (`af.working_locations`; COR-062 points
+    4 and 10).
 
     The change's own file is one the working tree holds and no commit of `_NOT_OWN`
     holds: the one of them that answers the artefact already, else the newest by the
@@ -802,11 +806,13 @@ def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnF
     present = af.working_tree_files(target_root)
     at_head = af.head_names(target_root)
     held = at_head.union(*(af.head_names(target_root, ref) for ref in _NOT_OWN[1:]))
-    locate = af.working_locator(discovery, target_root)
+    # Every location an answer may name the artefact by: under each path its file had, a
+    # move not yet committed included, as the change check reads them (COR-062 point 10).
+    # No answer file present, nothing names it, and no history is read.
+    locations = af.working_locations(target_root)(artefact) if present else (artefact.location,)
 
     def names_it(entry: af.Entry) -> bool:
-        found = locate(entry.location)
-        return found is not None and found.location == artefact.location
+        return entry.location in locations
 
     answering = sorted(n for n, f in present.items() if any(names_it(e) for e in f.entries))
     candidates = {n for n in present if n not in held and not n.startswith(af.MOVED_PREFIX)}
@@ -826,16 +832,13 @@ def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnF
     index: int | None = None
     if name is not None:
         before, entries, index = _own_entries(target_root, present[name], artefact, names_it)
-    locations = {artefact.location} | {
-        e.location for f in present.values() for e in f.entries if names_it(e)
-    }
     state = af.StateAnswers(
         present,
         # An uncommitted entry honours a name of a file HEAD holds (COR-062 point 5). A
         # name a committed entry carries is read as honoured too: telling it needs the
         # history the checks read, and a writer only offers what it may keep with it.
         lambda _reader, named: named in at_head,
-        lambda a: tuple(locations) if a.location == artefact.location else (a.location,),
+        lambda a: locations if a.location == artefact.location else (a.location,),
     )
     return _OwnFile(
         target_root=target_root,
