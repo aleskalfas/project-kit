@@ -1,18 +1,20 @@
 """The friction writers write a change's answers into answer files of its own (COR-062
 points 1, 4 and 10; ADR-068 point 3; #1873).
 
-An artefact whose block holds no answer gets `revalidate`'s, `defer`'s and
-`revisit`'s answer in the one answer file in the working tree that no commit
-holds, a new one where there is none. Its entry names every other answer file
-present that answers the artefact in `read`. An artefact whose block holds an
-answer keeps getting it in the block (`test_friction_write.py`). Every test stands
-up a real adopter repository; the ones the checks read commit real history.
+`revalidate`, `defer` and `revisit` write their answer in the one answer file in
+the working tree that no commit holds, a new one where there is none. Its entry
+names every other answer file present that answers the artefact in `read`. An
+artefact whose block still holds an answer is refused, naming the move (#2032).
+Every test stands up a real adopter repository; the ones the checks read commit
+real history.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -304,11 +306,32 @@ def test_an_own_file_that_does_not_read_is_refused(repo: AdopterRepo) -> None:
         fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW)
 
 
-def test_a_block_holding_an_answer_is_written_as_before(repo: AdopterRepo) -> None:
+@pytest.mark.parametrize(
+    "write",
+    [
+        pytest.param(
+            lambda root: fw.plan_revalidate(root, "guide", outcome="updated", now=NOW),
+            id="revalidate",
+        ),
+        pytest.param(
+            lambda root: fw.plan_defer(root, "guide", anchor="src/cli/**", reason="r", now=NOW),
+            id="defer",
+        ),
+    ],
+)
+def test_a_block_still_holding_an_answer_is_refused_naming_the_move(
+    repo: AdopterRepo, write: Callable[[Path], fw.Plan]
+) -> None:
+    """No writer writes an answer in a block, nor beside one a block still holds: validation
+    fails such a block, and the move takes it out (COR-062 points 1, 10 and 11)."""
     repo.write({GUIDE: guide()})
-    plan = fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW)
-    assert not plan.answer_file and plan.rel == GUIDE
-    assert plan.target == "pkit.friction.revalidated"
+    before = (repo.root / GUIDE).read_bytes()
+    with pytest.raises(fw.FrictionWriteError) as refused:
+        write(repo.root)
+    assert "its block still holds answers" in str(refused.value.message)
+    assert af.MOVE_COMMAND in str(refused.value.message)
+    assert (repo.root / GUIDE).read_bytes() == before
+    assert _answer_files(repo) == {}
 
 
 # --- the command, and the checks that read what it wrote ------------------------------------

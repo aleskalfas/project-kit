@@ -16,7 +16,8 @@ realises, over the real repository:
 - the analysis location derives under the internal root (criterion 4);
 - living-docs' own checks pass over this tree end to end: its validator, the
   shared method `LDOC` and both spaces' definitions inheriting it, and the
-  friction pass over the roots it declares as places (#1003);
+  friction pass over the roots it declares as places (#1003); the user pages'
+  sets `REWORK` and `GUIDE` pin `LDOC` and `WRITE` (ADR-069 point 4);
 - every declared place is a page — its reader, a kind with a template, a
   friction block anchoring what it describes and a revalidation — and the
   code-to-doc mapping keeps no rule a page's anchors now carry (#1010);
@@ -312,6 +313,29 @@ def test_ldoc_and_both_space_definitions_validate_and_pin_it() -> None:
     for name in ("USER", "TECH"):
         assert names[name].component is None
         assert [str(pin) for _index, pin in names[name].pins] == ["living-docs:LDOC@1"]
+    assert all(check.problem is None for check in rs.pin_checks(result.discovery))
+
+
+def test_the_rework_and_guide_sets_pin_ldoc_and_write() -> None:
+    """The user pages' rules beside the spaces' definitions (ADR-069 point 4): `REWORK`
+    for every reworked page, and `GUIDE` for the guides and the entry README, a set of
+    its own since a scope belongs to a set (COR-051 point 2). Both inherit the shared
+    method and the writing rules at the majors the space definitions pin."""
+    result = rs.validate_rule_sets(REPO)
+    assert result.errors == ()
+    names = {rule_set.name: rule_set for rule_set in result.discovery.rule_sets}
+    expected_paths = {
+        "REWORK": "tech-docs/living-docs/rule-sets/rework.md",
+        "GUIDE": "tech-docs/living-docs/rule-sets/guide.md",
+    }
+    for name, path in expected_paths.items():
+        rule_set = names[name]
+        assert (rule_set.component, rule_set.path) == (None, path)
+        assert [str(pin) for _index, pin in rule_set.pins] == ["living-docs:LDOC@1", "WRITE@2"]
+    guide = YAML(typ="safe").load(
+        split_front_matter((REPO / expected_paths["GUIDE"]).read_text(encoding="utf-8"))[0]
+    )
+    assert guide["scope"] == {"paths": ["docs/**", "README.md"], "types": ["living-docs:page"]}
     assert all(check.problem is None for check in rs.pin_checks(result.discovery))
 
 

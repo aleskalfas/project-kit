@@ -68,10 +68,10 @@ src/project_kit/friction_validate.py reportUnknownArgumentType 1
 src/project_kit/friction_validate.py reportUnknownParameterType 3
 src/project_kit/friction_validate.py reportUnknownVariableType 1
 src/project_kit/friction_write.py reportMissingTypeArgument 1
-src/project_kit/friction_write.py reportUnknownArgumentType 26
-src/project_kit/friction_write.py reportUnknownMemberType 61
+src/project_kit/friction_write.py reportUnknownArgumentType 22
+src/project_kit/friction_write.py reportUnknownMemberType 57
 src/project_kit/friction_write.py reportUnknownParameterType 1
-src/project_kit/friction_write.py reportUnknownVariableType 40
+src/project_kit/friction_write.py reportUnknownVariableType 36
 src/project_kit/install.py reportUnknownVariableType 2
 src/project_kit/manifest.py reportUnknownMemberType 2
 src/project_kit/migrations.py reportReturnType 1

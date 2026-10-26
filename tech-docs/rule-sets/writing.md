@@ -1,6 +1,6 @@
 ---
 rule-set: WRITE
-version: 2.1.0
+version: 2.2.0
 rules:
   RS-WRITE-001:
     status: accepted
@@ -47,7 +47,7 @@ rules:
     origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "The CLI reference describes a key in three forms: \"`roots` — the documentation roots\", \"`check` (`change`)\" and \"**`span`** is the lines that part spans\" (.pkit/cli/README.md). One form lets a reader find every key the same way. A path names a key wherever it is written, as `history.cut` already does there. The try-out on two reference pages asked for one form (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-016:
     status: accepted
-    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Text points at a heading or a label by its words or its place, as in (\"Resolver limits\" below). No check follows such a pointer. In the try-out on two reference pages, a move took text out from under the label The three answers, which another item points at (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Text points at a heading or a label by its words or its place, as in (\"Resolver limits\" below). No check follows such a pointer. In the try-out on two reference pages, a move took text out from under the label The three answers, which another item points at (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md). Renaming a linked heading whose old address still leads to it was allowed on 25 October. That day Aleš Kalfas agreed to numbered page names in the layout record (ADR-069): \"I lean to see the order\", then \"yes\". The rework under that layout renames and moves sections of shipped pages, and keeps each old address as an HTML id."}
   RS-WRITE-017:
     status: accepted
     origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Deep nesting was the first cost of the try-out on two reference pages. Lists for series with detail (RS-WRITE-003) nested the `--json` key lists, and the flags of an answer's line, four levels deep (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md). The CLI reference already nests a key list five levels deep (.pkit/cli/README.md). Every list in this set fits in three levels."}
@@ -76,14 +76,15 @@ checks:
 
 # WRITE — project-kit's general writing rules
 
-These are project-kit's general writing rules. `ANA`, the analysis's own set, inherits them. The documentation spaces will inherit them later (#1350). Until then, `REWORK` brings them to each page the documentation rework has rewritten.
+These are project-kit's general writing rules. `ANA`, the analysis's own set, inherits them. The documentation spaces will inherit them later (#1350). Until then, `REWORK` brings them to each page the documentation rework has rewritten, and `GUIDE` to the guides and the entry README.
 
 - **What matters most:** the meaning. A rewrite keeps it (RS-WRITE-013).
 - **Where the rules apply:** everything under `tech-docs/analysis/`, software-analysis's templates, and the structures its kinds declare (software-analysis DEC-001 point 1). project-kit's operational rules send whoever writes any of them here (`.pkit/rules/project.md`). This set has no scope of its own. No scope could reach a template or a structure anyway, since neither is an artefact (ADR-055 point 3).
   - **In shipped text:** where a rule here would carry project-kit's own vocabulary or style into a template or a structure, universal applicability wins (COR-014). Examples are project-kit's glossary terms and its labels. The shipped text stays fit for any adopter.
-  - **On pages:** each page that `REWORK` selects ("The set for the reworked pages" below).
+  - **On pages:** each page that `REWORK` or `GUIDE` selects ("The set for the reworked pages" and "The set for the guides" below).
 - **The set for the analysis:** `ANA` (`tech-docs/rule-sets/analysis.md`) inherits this set, and its scope selects the analysis by type. It holds the analysis's own rules.
-- **The set for the reworked pages:** `REWORK` (`tech-docs/living-docs/rule-sets/rework.md`) inherits this set and `living-docs:LDOC`, and holds no rules of its own. Its scope selects each page the documentation rework has rewritten (#1928).
+- **The set for the reworked pages:** `REWORK` (`tech-docs/living-docs/rule-sets/rework.md`) inherits this set and `living-docs:LDOC`. It holds the rules every user page follows (ADR-069 point 4). Its scope selects each page the documentation rework has rewritten (#1928).
+- **The set for the guides:** `GUIDE` (`tech-docs/living-docs/rule-sets/guide.md`) inherits this set and `living-docs:LDOC`, and holds the guides' own rules. Its scope selects the guides in `docs/` and the entry README, `README.md` (ADR-069 point 4).
 - **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). `REWORK` then goes.
 - **What an inheriting set may fill:** the list of labels for a kind of document it governs (`RS-WRITE-002#labels`). `ANA` fills it for the analysis.
 - **Where the rules come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The rules were then tried on two reference pages, and the try-out found what such pages need. The trial, the try-out and what they left out are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
@@ -280,6 +281,7 @@ Keep a heading or a label that other text points to, with its words and what a p
   - A pointer that gives a place, such as "below", relies on the label's place too.
   - Moving text out from under a label breaks a pointer, as renaming the label does. The pointer then leads to a label that no longer holds what the reader came for.
   - Where a pointer lies outside what the change can edit, keep the label. An example is a link into a shipped page from an adopter's repository.
+  - A heading that a link outside what the change can edit leads to may instead be renamed. The page must then keep the old address leading to the renamed heading, such as by an HTML id. For the rename, that address counts as mending the link. No address mends a pointer by words.
   - Before a rename or a move, look for the pointers by words and the links to the heading. A section anchor in a friction block needs no search, since the change check reports it dead (COR-050 point 7).
 - **Breaks the rule on a page:** a first pass of the CLI reference's try-out moved the file history out from under the label *The three answers*. *What it compares* still pointed there with ("The three answers"). That pass is on no branch.
 - **Keeps the rule on a page:** the try-out kept the file history under *The three answers*, as its item *Telling a written-back answer from a new one*.
@@ -332,4 +334,4 @@ This set leaves three kinds of writing to their own rules, and reaches a table c
 - **Rule sets:** the rule-set record governs them (COR-051). This set keeps its own rules anyway.
 - **Agent and skill bodies:** their own disciplines govern them (`.pkit/agents/README.md` and `.pkit/skills/README.md`).
 - **Table cells:** a rule that does not reach a cell says so in its *How*, as RS-WRITE-001 to RS-WRITE-004, RS-WRITE-007 and RS-WRITE-017 do.
-- **Note:** this set does not inherit `living-docs:LDOC`. LDOC's rules are for pages, and would pull a page's `reader` field (RS-LDOC-003) onto analysis artefacts, which are never pages (living-docs DEC-001 point 1). living-docs DEC-001 point 3 keeps a project's documentation rules in a set that inherits LDOC, as `REWORK`, `TECH` and `USER` each do. Pages reach WRITE through `REWORK` during the rework and through `TECH` and `USER` after it, so every page that takes WRITE takes LDOC beside it.
+- **Note:** this set does not inherit `living-docs:LDOC`. LDOC's rules are for pages, and would pull a page's `reader` field (RS-LDOC-003) onto analysis artefacts, which are never pages (living-docs DEC-001 point 1). living-docs DEC-001 point 3 keeps a project's documentation rules in a set that inherits LDOC, as `GUIDE`, `REWORK`, `TECH` and `USER` each do. Pages reach WRITE only through those sets, so every page that takes WRITE takes LDOC beside it.

@@ -1,0 +1,22 @@
+component: backbone
+kind: major
+custom:
+  category: Changed
+body: >
+  The friction readers and writers now read and write your answers in answer
+  files alone, as COR-062 point 1 decides. **`pkit friction check`, `check
+  --all`, `debt` and `explain`** read an artefact's answers from
+  `.pkit/project/friction/answers/` only. An answer left in an artefact's
+  block is read only in history, for the point its value keeps. At the head
+  it answers nothing, and `pkit validate` fails it, naming the move. Run over
+  a project whose answers have not moved, these commands refuse to run and
+  say so once, naming the move, instead of reporting each answer as missing
+  (COR-062 point 11). **`pkit friction revalidate`, `defer` and `revisit`**
+  always write an answer file of the change's own, and refuse an artefact
+  whose block still holds an answer, naming the move. `record-status` still
+  writes the block's `last-check`. The change check's `answer-file-ignored`
+  finding goes, since no block answer is read beside an answer file any
+  more. **A move whose history starts again**, such as an entry that becomes
+  a document of its own: the change check no longer reads a value its old
+  location carried as written back, nor reports the base's tip's answers on
+  that location as answered apart (COR-062 point 10).
