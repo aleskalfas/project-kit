@@ -547,7 +547,7 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
         f"- {link}: step 2, decided by `PRJ-001`, tracked in `#12`\n"
         f"- {link}: variant 2a, decided by `software-analysis:DEC-001#1`, tracked in `#13`"
     )
-    assert f"reads={overview.VERSION} " in text and overview.VERSION == 4
+    assert f"reads={overview.VERSION} " in text and overview.VERSION == 5
 
     entries = [ENTRIES[0], {**ENTRIES[1], "issue": "https://example.com/issues/13"}]
     project.write(
