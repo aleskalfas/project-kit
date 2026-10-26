@@ -191,6 +191,19 @@ def test_a_release_by_force_frees_whoever_holds_and_the_next_claim_holds() -> No
     assert si.fold([_ev(si.FORCE_RELEASE, "bob", "z", 1)]).events[0].void
 
 
+def test_the_fold_names_the_comment_of_the_holders_take() -> None:
+    """The take is the claim that made the holder hold the state: the holder's
+    claim again moves it not, and the same clone's claim after a release by
+    force is a take of its own (#2182)."""
+    assert si.fold([]).take is None
+    held = [_ev(si.CLAIM, "me", "a", 1), _ev(si.CLAIM, "me", "a", 2), _ev(si.CLAIM, "me", "b", 3)]
+    assert si.fold(held).take == 1
+    again = [*held, _ev(si.FORCE_RELEASE, "bob", "z", 4), _ev(si.CLAIM, "me", "a", 5)]
+    assert si.fold(again).holder == si.Holder("me", "a", "p")
+    assert si.fold(again).take == 5
+    assert si.fold([*held, _ev(si.RELEASE, "me", "a", 4)]).take is None
+
+
 # ---- create and finish --------------------------------------------------------------
 
 
@@ -337,6 +350,8 @@ def test_only_the_comments_of_an_author_who_may_write_count() -> None:
     read = si.read(5, "seat", "planner", _run(repo))
     assert _holder(read) == si.Holder("me", "key-me", ME.place)
     assert [e.author for e in _some(read.fold).events] == ["me"]
+    # The take is the id GitHub gave the counted claim's comment (#2182).
+    assert _some(read.fold).take == repo.issues[5].comments[-1]["id"]
 
 
 def test_with_the_gate_open_each_author_is_asked_about_once_in_a_run() -> None:

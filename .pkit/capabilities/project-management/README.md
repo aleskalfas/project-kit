@@ -662,7 +662,9 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 **Two clones can claim one issue in the same instant.** GitHub has no atomic claim, so a claim reads the issue again after writing. Where a lower-numbered instance claimed too, the higher one withdraws its claim. `start-work` then stops before the move with exit code 2, as it does where its claim finds another instance's claim made after the clash guard passed. This catches a clash rather than preventing it: a clone whose re-read came first keeps its claim, and both claims stay on the issue.
 
-**In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files. A claim counts only while the clone its stamp names holds the seat the stamp names. A seat's release thus frees its clone's work with no write to the issues.
+**In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files.
+
+**A claim counts only after the current take of the seat its stamp names,** and only while the clone the stamp names holds that seat. A clone's take of a seat is the claim, on the seat's state issue, that made the clone the seat's holder. GitHub numbers the comments of every issue from one sequence, so a claim made after the take has the higher id. A seat's release thus frees its clone's work for good, with no write to the issues, even where the same clone takes the seat again.
 
 The guard does not refuse on a claim that no longer counts, and refuses on one whose seat it could not read. Each command reads a seat's holder from the seat's state issue the first time a claim names that seat, and keeps it for the rest of its run.
 
@@ -755,7 +757,7 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 **Releasing a seat.** A seat stays taken until it is released: the tolerant mode is the only one built, so no seat is freed for its clone's silence. `pkit pm release-seat` releases the seat this clone holds, and the clone then forgets it. `pkit pm release-seat <name> --force --reason "<why>"` releases a seat whoever holds it, and the seat's state issue logs the reason.
 
 - **Who may release by force:** the clone of the organizer seat, or a person in any clone. A person authorises it at a terminal, or with `--yes`, as a held move. An agent never passes `--yes` for itself, and off a terminal with no `--yes` the command refuses
-- **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks are then free for another clone to take
+- **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks are then free for another clone to take. A clone that takes the seat again, the same clone included, revives none of those claims
 
 **Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition and its scope. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub.
 

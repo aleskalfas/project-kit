@@ -63,7 +63,11 @@ In a project with a topology (DEC-059), every claim names the claimant's seat,
 the seat's number and the clone's key, in the audit-log facility's stamp. The
 fold then takes each seat's holder from its caller, as :class:`Holder`, and reads
 no other seam: a claim counts only while the clone it names holds the seat it
-names, judged when it is read. A claim that names no seat does not count, and a
+names, judged when it is read. The holder names its take of the seat, the
+comment on the seat's state issue that made it the holder. A claim counts only
+where GitHub gave its comment a higher id than the take's, so a seat's release
+frees its clone's claims for good, even where the same clone takes the seat
+again (DEC-059 point 5, #2182). A claim that names no seat does not count, and a
 claim whose seat was not read cannot be judged, which no consumer treats as free.
 Renewal and lapse are not judged yet.
 
@@ -144,7 +148,8 @@ class OwnershipEvent:
     fold orders by the comments, never by ``ts``. ``seat``, ``seat_number`` and
     ``clone`` are what a claim names in a project with a topology (ADR-041 point
     7), and ``act`` the id of the act. ``legacy`` marks an old stamp.
-    Content-free about what the event *means* for the guard — that is the
+    ``comment_id`` is the id GitHub gave the comment, where the comment carries
+    it. Content-free about what the event *means* for the guard — that is the
     caller's posture.
     """
 
@@ -158,6 +163,7 @@ class OwnershipEvent:
     clone: str | None = None
     act: str | None = None
     legacy: bool = False
+    comment_id: int | None = None
 
 
 # ---- a project with a topology of seats (ADR-041 point 7) ---------------------
@@ -176,18 +182,26 @@ UNJUDGED = "unjudged"
 #: Why a claim is void, or cannot be judged.
 NO_SEAT = "it names no seat"
 SEAT_RELEASED = "its clone no longer holds its seat"
+SEAT_RELEASED_SINCE = "its seat was released after it was made"
 SEAT_UNREAD_REASON = "its seat's holder could not be read"
 SEAT_NOT_READ = "its seat is not among the seats read"
+NO_COMMENT_ID = "its comment's id could not be read"
 
 
 @dataclass(frozen=True)
 class Holder:
     """Who holds one seat, as the caller read it from the seat's state issue
-    (ADR-041 point 7): a clone, by its account and key, or free, or unread."""
+    (ADR-041 point 7): a clone, by its account and key, or free, or unread.
+
+    ``take`` is the id of the comment on the seat's state issue whose claim made
+    the clone the holder, its current take of the seat. A holder read from a
+    state issue always names it. Where a caller names none, a claim is judged
+    on its clone alone."""
 
     state: str
     login: str | None = None
     clone: str | None = None
+    take: int | None = None
 
 
 @dataclass(frozen=True)
@@ -298,6 +312,25 @@ def _created_at(comment: Any) -> str | None:
     return None
 
 
+#: The end of a comment's address, which holds the id GitHub gave the comment.
+_COMMENT_URL = re.compile(r"#issuecomment-([0-9]{1,15})$")
+
+
+def _comment_id(comment: Any) -> int | None:
+    """The id GitHub gave the comment, or None where it carries none.
+
+    The log and GitHub's REST answer give it as ``id``. ``gh issue view`` gives
+    a node id there, and the number at the end of the comment's ``url``."""
+    cid = _field(comment, "id")
+    if isinstance(cid, int) and not isinstance(cid, bool):
+        return cid
+    for name in ("url", "html_url"):
+        match = _COMMENT_URL.search(str(_field(comment, name) or ""))
+        if match:
+            return int(match.group(1))
+    return None
+
+
 def _int(value: str | None) -> int | None:
     """The number ``value`` holds, ASCII digits of bounded length, or None, so
     no text a comment carries can make the fold fail."""
@@ -341,6 +374,7 @@ def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[Ow
                 clone=ev.get("clone"),
                 act=ev.act,
                 legacy=ev.legacy,
+                comment_id=_comment_id(c),
             )
         )
     return out
@@ -388,7 +422,13 @@ def judge_claim(
     It counts only while the clone it names holds the seat it names: the seat's
     holder has the claim's key, and its account where the holder names one. A
     claim that names no seat, or whose seat is free or held by another clone, is
-    void. A seat that is unread, or not among the holders, leaves it unjudged."""
+    void. A seat that is unread, or not among the holders, leaves it unjudged.
+
+    A seat's release frees its clone's claims for good (DEC-059 point 5), so a
+    claim counts only where it came after the holder's take of the seat. GitHub
+    numbers the comments of every issue from one sequence, so the claim's id is
+    then the higher. A claim made before the take is void, even where the same
+    clone took the seat again. One whose id was not read is unjudged (#2182)."""
     if not event.seat:
         return ClaimJudgement(instance, None, event.clone, VOID, NO_SEAT)
     holder = holders.get(event.seat)
@@ -397,9 +437,15 @@ def judge_claim(
     if holder.state == SEAT_UNREAD:
         return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, SEAT_UNREAD_REASON)
     same_account = holder.login is None or holder.login == event.assignee
-    if holder.state == SEAT_HELD and holder.clone == event.clone and same_account:
+    if not (holder.state == SEAT_HELD and holder.clone == event.clone and same_account):
+        return ClaimJudgement(instance, event.seat, event.clone, VOID, SEAT_RELEASED)
+    if holder.take is None:
         return ClaimJudgement(instance, event.seat, event.clone, COUNTS)
-    return ClaimJudgement(instance, event.seat, event.clone, VOID, SEAT_RELEASED)
+    if event.comment_id is None:
+        return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, NO_COMMENT_ID)
+    if event.comment_id <= holder.take:
+        return ClaimJudgement(instance, event.seat, event.clone, VOID, SEAT_RELEASED_SINCE)
+    return ClaimJudgement(instance, event.seat, event.clone, COUNTS)
 
 
 def _resolve_with_seats(
