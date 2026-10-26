@@ -199,7 +199,7 @@ A place inside a root belongs to that root's space; list it under `places` only 
 
 **Your definitions' scopes and the assignment.** Where a space's definition carries a scope, which selects artefacts by path and by type (COR-051 point 2), the scope and the assignment both say where the space's pages lie. Validation holds them to each other (DEC-001 point 1):
 
-- Each page an assigned place gives a space lies in that space definition's scope, and in no other space definition's scope. The validator reads the scopes covering each page from `in_scope_of` in `pkit friction artefacts --json`.
+- Each page an assigned place gives a space lies in that space definition's scope, and in no other space definition's scope. The validator reads the scopes covering each page from `in_scope_of` in [`pkit friction artefacts --json`](../../cli/README.md#friction-artefacts---at-rev---json).
 - Where a definition selects by type, `types` in its scope, each assigned place outside every root gives the page type: `{path: CONTRIBUTING.md, type: living-docs:page}` in `friction.places`. Such a place that names no type fails, before it holds any page.
 
 A definition with no scope selects nothing itself, so nothing is held to it. The places assigned to its space are checked only against the scopes of the other spaces' definitions. A space with no definition yet is checked the same way. The validator's summary names the spaces whose definitions carry a scope.
@@ -296,14 +296,14 @@ mention(s) a page's anchors do not cover, each with an anchor that would cover i
 
 **What it reads.** The page's body below its front matter, outside fenced code, HTML comments and strikethrough:
 
-- **A path**: an inline code span that holds a `/` and no space, or a link's target, naming a file your repository holds. A code span is read from the repository's root, and failing that from the page's folder. A link is read from the page's folder. A placeholder such as `<name>`, a glob, an ellipsis, a URL, a folder and an image are not read, and a link's `#fragment` names a section.
+- **A path**: an inline code span that holds a `/` and no space, or a link's target, naming a file your repository holds. A code span is read from the repository's root, and failing that from the page's folder. A link is read from the page's folder, or from the root where it opens with `/`. A placeholder such as `<name>`, a glob, an ellipsis, a URL, a folder and an image are not read, and a link's `#fragment` names a section.
 - **A record**: `COR-NNN`, `PRJ-NNN`, `ADR-NNN`, a capability's decision as `<capability>:DEC-NNN`, with its slug or without, or as `<capability> DEC-NNN`, and a bare `DEC-NNN` on a page in that capability's folder. The points written after the id count: `COR-050#5`, `COR-050 point 5`, `COR-050 points 2 and 5`. A link to a record's file mentions the record.
 - **A rule**: `RS-<SET>-NNN`, bare or after its component, as in `[living-docs:RS-LDOC-003]`.
-- **A command**: an inline code span that opens with `pkit`, or `uv run pkit`, and a word. Its words run to the first that is not a lowercase word, so `pkit friction check --base main` is `pkit friction check`.
+- **A command**: an inline code span that opens with `pkit`, or `uv run pkit`, and a word. Its words run to the first that is not a word of lowercase letters, digits and hyphens, so `pkit friction check --base main` is `pkit friction check`.
 
-A record counts only where `pkit refs lookup` resolves it, a rule only where `pkit friction artefacts --json` lists it, and a page never mentions itself.
+An id that names no record or rule is not read, and a page never mentions itself.
 
-**What covers each.** The validator reads the page's anchors as the backbone resolves them: the files each path anchor stands on, `path_anchors` in `pkit friction artefacts --json`, and each part an anchor names, `part_anchors`.
+**What covers each.** A mention is covered by an anchor of the page that stands on what it names:
 
 | Mention | Covered by an anchor on | The finding suggests |
 |---|---|---|
@@ -312,21 +312,15 @@ A record counts only where `pkit refs lookup` resolves it, a rule only where `pk
 | a rule | the rule, or its rule set's whole file | `artefact: [RS-LDOC-003]` |
 | a command | the script that implements it, or what documents it: the whole file, or the section that names it | that section, by its heading, and the script |
 
-A command's section is the heading whose code span opens with the most of the command's words. For a backbone command it is read in the CLI reference, `.pkit/cli/README.md`. For a capability's command it is read in that capability's README, where its heading may leave out `pkit` and the capability's name. In any page, a heading names a command where its code span opens with `pkit`. A capability's command is implemented by the script its `package.yaml` registers.
-
-- **No heading names it.** A section the page anchors whose text names the command covers it.
-- **The page documents it.** Only the command's script covers it there.
-- **The reference lies in none of your places,** as the CLI reference does in most projects. Anchor it by its path, since an artefact anchor names only a document of your places.
-
 **Marking a passage.** A name that gives none of the named thing's facts needs no anchor (DEC-001 point 3). Where a passage only names a thing, mark it right after the mention, on its line, with the reason:
 
 ```markdown
 Run `pkit sync` <!-- unanchored: named as the next step, not described --> after upgrading.
 ```
 
-- **One passage.** A mark passes over the last mention before it on its line, after any earlier comment. A later passage that rests on the same thing is still read.
+- **One passage.** A mark passes over the path, id or command it follows: the last before it on its line, after any earlier comment. A later passage that rests on the same thing is still read.
 - **A person's decision.** A mark is written on a person's decision, and the `living-docs` agent proposes one as it proposes any change to a page.
-- **A mark that passes nothing over is reported:** one that follows no mention on its line, one that gives no reason, and one after a mention the page's anchors cover.
+- **A mark that passes nothing over is reported:** one that follows no mention, one that gives no reason, and one after a mention the page's anchors cover. A mark after a file since removed, or a record that no longer exists, follows no mention. It is reported, never moved to an earlier mention.
 
 A page accepted with no anchors (`unanchored-because`) has its mentions read like any other. The report settles no part of `RS-LDOC-001`: whether a statement rests on what it mentions stays a judgment, the agent's reader-review's and the rule-set reviewer's. So `LDOC` declares no check for it.
 
