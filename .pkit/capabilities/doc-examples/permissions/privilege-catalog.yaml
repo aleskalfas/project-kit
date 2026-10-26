@@ -14,9 +14,13 @@ schema_version: 1
 #     privilege: '[privilege-catalog:doc-examples:run-examples]'
 #     effect: allow
 #
-# Recognized by the program's path from the repository's root, alone or after
-# `python3` or `python` named bare. A path that only ends like it, such as
-# one under another folder, is another program and is not recognized.
+# Recognized by the program's path relative to the folder the call runs in,
+# alone or after `python3` or `python` named bare. A path written otherwise,
+# such as an absolute one, is not recognized. A recognizer sees no folder,
+# and the decision core reads a leading `cd` as no change of folder. So a
+# grant also allows a program at that relative path under any folder the
+# grantee can enter, one it wrote included: grant it only to a subject you
+# would let run a program of its own.
 privileges:
   run-examples:
     description: >-
@@ -25,7 +29,9 @@ privileges:
       The run starts every command of the project's setup step, its
       placeholders and its pages, as the caller and confined by nothing of its
       own, so a grant of it allows each of those commands (DEC-001 point 9).
-      No grant ships: a project grants it by this name.
+      It is recognized by the program's path relative to the folder the call
+      runs in, so a grant also allows a program at that path under another
+      folder. No grant ships: a project grants it by this name.
     recognize:
       bash:
         - pattern: '^(?:python3?\s+)?(?:\./)?\.pkit/capabilities/doc-examples/scripts/run-examples\.py(?:\s|$)'

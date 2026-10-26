@@ -63,7 +63,7 @@ def check(root: Path) -> tuple[list[str], list[selection.Problem]]:
     fences = 0
     for path in pages.paths:
         try:
-            text = (root / path).read_text(encoding="utf-8")
+            text = runner.read_page(root / path)
         except (OSError, UnicodeDecodeError) as exc:
             problems.append(selection.Problem(selection.ERROR, path, f"cannot be read: {exc}"))
             continue

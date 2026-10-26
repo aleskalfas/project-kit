@@ -112,6 +112,9 @@ PROJECT, HOME, TMP, SCRATCH, REPOSITORY = (
 )
 #: A project placeholder's name, and the name a caller's value is written as.
 PROJECT_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
+#: A control character an update never writes: every C0 character but the tab, DEL,
+#: and the line and paragraph separators a reader may take for a line's end.
+CONTROL = re.compile(r"[\x00-\x08\x0a-\x1f\x7f\x85\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]")
 
 _QUOTE = re.compile(r"[ ]{0,3}>[ ]?")
 _OPENING = re.compile(
@@ -169,13 +172,19 @@ class Fence:
             return True
         return _closing(self.mark).match(line) is not None
 
-    def unwritable(self, lines: Sequence[str]) -> str | None:
+    def unwritable(self, lines: Sequence[str], secrets: Sequence[str] = ()) -> str | None:
         """Why an update cannot write `lines` as output in this fence, or None when it
-        can: a line would read as a command or close the fence, or holds `<any>`."""
+        can: a line would read as a command or close the fence, holds a control
+        character, which could end a line or hide text, holds `<any>`, or holds one of
+        `secrets`, the values variables take from the caller."""
         if any(self.reads_as_markup(line) for line in lines):
             return "a line of it would read as a command or close the fence"
+        if any(CONTROL.search(line) for line in lines):
+            return "a line of it holds a control character, which could end a line or hide text"
         if any(ANY in line for line in lines):
             return f"a line of it holds `{ANY}`, which the next run would read as any text"
+        if any(secret in line for line in lines for secret in secrets):
+            return "a line of it holds a value a variable takes from you"
         return None
 
     def written(self, line: str) -> str:
@@ -183,6 +192,14 @@ class Fence:
         if not line:
             return self.quote.rstrip()
         return self.quote + " " * self.indent + line
+
+
+def read_page(path: Path) -> str:
+    """A page's text, its lines ending at a line feed alone. A carriage return ends no
+    line, unlike Python's default reading: the run reads the lines it writes, and a
+    reviewer's diff shows them. Raises OSError or UnicodeDecodeError."""
+    with path.open(encoding="utf-8", newline="") as page:
+        return page.read().replace("\r\n", "\n")
 
 
 def _closing(mark: str) -> re.Pattern[str]:
@@ -583,15 +600,15 @@ Listing = dict[str, tuple[int, ...]]
 def listing(root: Path) -> Listing:
     """Every path under `root` with what a write changes: a file's or a link's mode,
     size, modification and change times and inode, a folder's mode. The git directory
-    is left out with what it holds, and so is a folder holding a `.git` of its own,
-    another repository. A linked worktree's `.git` file is listed."""
+    is left out with what it holds. A folder holding a `.git` of its own, another
+    repository, is listed but not what it holds, so a new one is seen. A linked
+    worktree's `.git` file is listed."""
     found: Listing = {}
     for folder, folders, files in os.walk(root):
         here = Path(folder)
-        folders[:] = [
-            name for name in folders if name != GIT_DIR and not (here / name / GIT_DIR).exists()
-        ]
-        for name in (*folders, *files):
+        listed = [name for name in folders if name != GIT_DIR]
+        folders[:] = [name for name in listed if not (here / name / GIT_DIR).exists()]
+        for name in (*listed, *files):
             path = here / name
             relative = path.relative_to(root).as_posix()
             try:
@@ -615,6 +632,23 @@ def changed(before: Listing, after: Listing) -> list[str]:
     """The paths added, removed or changed between two listings."""
     paths = before.keys() | after.keys()
     return sorted(path for path in paths if before.get(path) != after.get(path))
+
+
+class Guard:
+    """The repository's listing, carried from each look to the next. So a write is seen
+    whenever it lands: during a command, between two commands, or after a fence's last
+    one, by a process a command left."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self._last = listing(root)
+
+    def wrote(self) -> list[str]:
+        """The paths written in the repository since the last look."""
+        now = listing(self.root)
+        found = changed(self._last, now)
+        self._last = now
+        return found
 
 
 def _shown_paths(paths: Sequence[str]) -> tuple[str, ...]:
@@ -682,27 +716,36 @@ class Scratch:
 
 def _remove(path: Path) -> None:
     """Remove `path` and what it holds, a folder a command left read-only included. A
-    link is removed, never followed, and no mode is changed outside the folder."""
+    link is removed, never followed, and no mode is changed outside `path`."""
+    top = os.path.normpath(path)
+    tried: set[str] = set()
 
     def retry(_function: object, failed: str, *_rest: object) -> None:
-        with contextlib.suppress(OSError):
-            os.chmod(os.path.dirname(failed), 0o700)
+        failed = os.path.normpath(failed)
+        if failed in tried:
+            return
+        tried.add(failed)
+        if failed != top:
+            with contextlib.suppress(OSError):
+                os.chmod(os.path.dirname(failed), 0o700)
         if os.path.isdir(failed) and not os.path.islink(failed):
             with contextlib.suppress(OSError):
                 os.chmod(failed, 0o700)
-            shutil.rmtree(failed, ignore_errors=True)
+            _rmtree(failed)
         else:
-            with contextlib.suppress(FileNotFoundError):
+            with contextlib.suppress(OSError):
                 os.unlink(failed)
+
+    def _rmtree(folder: str) -> None:
+        if sys.version_info >= (3, 12):
+            shutil.rmtree(folder, onexc=retry)
+        else:  # pragma: no cover - the interpreter the tests run on is newer
+            shutil.rmtree(folder, onerror=retry)
 
     if path.is_symlink():
         path.unlink()
-    elif not path.exists():
-        return
-    elif sys.version_info >= (3, 12):
-        shutil.rmtree(path, onexc=retry)
-    else:  # pragma: no cover - the interpreter the tests run on is newer
-        shutil.rmtree(path, onerror=retry)
+    elif path.exists():
+        _rmtree(top)
 
 
 def expanded(value: str, folders: Mapping[str, Path]) -> str:
@@ -828,7 +871,7 @@ def run_pages(
     texts: dict[str, str] = {}
     for path in paths:
         try:
-            texts[path] = (root / path).read_text(encoding="utf-8")
+            texts[path] = read_page(root / path)
         except (OSError, UnicodeDecodeError) as exc:
             raise CannotRun(f"the page {path} cannot be read: {exc}") from exc
     runnable: dict[str, list[Fence]] = {}
@@ -852,23 +895,26 @@ def run_pages(
     if not runnable:
         return report
     written: dict[str, list[str]] = {}
+    secrets = caller_values(selection, caller)
     scratch = Scratch(Path(tempfile.mkdtemp(prefix="doc-examples-", dir=scratch_parent)))
     try:
         if _inside(scratch.base, root):
             raise CannotRun(f"the scratch area {scratch.base} lies inside the repository")
         scratch.make()
-        folders = scratch.folders(root)
-        env = environment(selection, folders, caller)
-        _setup(selection, scratch, env, limits)
+        guard = Guard(root)
+        run = _Run(selection, scratch, environment(selection, scratch.folders(root), caller))
+        _setup(run, guard, limits, secrets)
         scratch.save()
-        texts_of = _placeholders(selection, scratch, env, limits)
-        texts_of.update(caller_values(selection, caller))
-        replace = substitutions(folders, texts_of)
+        texts_of = _placeholders(run, guard, limits, secrets)
+        texts_of.update(secrets)
+        replace = substitutions(scratch.folders(root), texts_of)
+        last = runnable[next(iter(runnable))][0]
         for path, fences in runnable.items():
             ran: list[tuple[Fence, dict[int, list[str]]]] = []
             for fence in fences:
                 scratch.restore()
-                outputs = _run_fence(root, fence, scratch, env, replace, limits, report)
+                last = fence
+                outputs = _run_fence(run, guard, fence, replace, limits, report, secrets)
                 if report.stopped:
                     return report
                 ran.append((fence, outputs))
@@ -879,9 +925,13 @@ def run_pages(
                 written[path] = lines
     finally:
         _remove(scratch.base)
+    late = guard.wrote()
+    if late:
+        _stop(report, last, f"a process the run left wrote in the repository after {_LAST}", late)
+        return report
     for path, lines in written.items():
         try:
-            now = (root / path).read_text(encoding="utf-8")
+            now = read_page(root / path)
         except (OSError, UnicodeDecodeError):
             now = None
         if now != texts[path]:
@@ -898,41 +948,57 @@ def run_pages(
     return report
 
 
-def _guarded(shell: Shell, root: Path, command: str, timeout: float) -> tuple[Ran, list[str]]:
-    """Run `command` in `shell`, and the paths it wrote in the repository."""
-    before = listing(root)
+@dataclass(frozen=True)
+class _Run:
+    """What every command of the run is started with: the selection, the scratch area,
+    and the environment the run built."""
+
+    selection: Selection
+    scratch: Scratch
+    env: Mapping[str, str]
+
+    def given_repository(self) -> dict[str, str]:
+        """The environment with the repository's path, as the setup step and the
+        placeholders' commands are given it."""
+        return {**self.env, REPOSITORY_VARIABLE: str(self.selection.root)}
+
+
+#: Where a late write is said to land, in a finding.
+_LAST = "its last command"
+
+
+def _guarded(shell: Shell, guard: Guard, command: str, timeout: float) -> tuple[Ran, list[str]]:
+    """Run `command` in `shell`, and the paths written in the repository since the last
+    look, which are taken for the command's."""
     ran = shell.run(command, timeout)
-    return ran, changed(before, listing(root))
+    return ran, guard.wrote()
 
 
-def _setup(selection: Selection, scratch: Scratch, env: Mapping[str, str], limits: Limits) -> None:
+def _setup(run: _Run, guard: Guard, limits: Limits, secrets: Mapping[str, str]) -> None:
     """Build the scratch project: the setup step's commands, in order, in one shell, from
-    the empty project folder. Raises CannotRun naming the command that failed."""
-    if not selection.setup:
+    the empty project folder. Raises CannotRun naming the command that failed, or a
+    write in the repository, by a command or by a process one left."""
+    if not run.selection.setup:
         return
-    with Shell(scratch.project, _given_repository(env, selection.root)) as shell:
-        for command in selection.setup:
-            ran, wrote = _guarded(shell, selection.root, command, limits.setup_timeout)
-            _refuse(f"the setup step's command `{command}`", ran, wrote, limits.setup_timeout)
-
-
-def _given_repository(env: Mapping[str, str], root: Path) -> dict[str, str]:
-    """`env` with the repository's path, as the setup step and the placeholders'
-    commands are given it."""
-    return {**env, REPOSITORY_VARIABLE: str(root)}
+    with Shell(run.scratch.project, run.given_repository()) as shell:
+        for command in run.selection.setup:
+            ran, wrote = _guarded(shell, guard, command, limits.setup_timeout)
+            what = f"the setup step's command `{command}`"
+            _refuse(what, ran, wrote, limits.setup_timeout, secrets)
+    _refuse("a process the setup step left", Ran("", 0), guard.wrote(), 0, secrets)
 
 
 def _placeholders(
-    selection: Selection, scratch: Scratch, env: Mapping[str, str], limits: Limits
+    run: _Run, guard: Guard, limits: Limits, secrets: Mapping[str, str]
 ) -> dict[str, str]:
     """The text each of the project's placeholders stands for: the one line its command
     printed, run once in the scratch project after the setup step."""
     texts: dict[str, str] = {}
-    for name, command in selection.placeholders.items():
-        with Shell(scratch.project, _given_repository(env, selection.root)) as shell:
-            ran, wrote = _guarded(shell, selection.root, command, limits.setup_timeout)
+    for name, command in run.selection.placeholders.items():
+        with Shell(run.scratch.project, run.given_repository()) as shell:
+            ran, wrote = _guarded(shell, guard, command, limits.setup_timeout)
         what = f"the command of the placeholder `<{name}>`, `{command}`,"
-        _refuse(what, ran, wrote, limits.setup_timeout)
+        _refuse(what, ran, wrote + guard.wrote(), limits.setup_timeout, secrets)
         lines = ran.output.strip("\n").split("\n")
         if len(lines) != 1 or not lines[0].strip():
             printed = "more than one line" if len(lines) > 1 else "no text"
@@ -941,9 +1007,25 @@ def _placeholders(
     return texts
 
 
-def _refuse(what: str, ran: Ran, wrote: Sequence[str], timeout: float) -> None:
+def _masked(text: str, secrets: Mapping[str, str]) -> str:
+    """`text` with each value a variable takes from the caller written as its
+    placeholder, wherever it stands, and each control character escaped."""
+    for placeholder, value in secrets.items():
+        text = text.replace(value, placeholder)
+    return _escaped(text)
+
+
+def _escaped(text: str) -> str:
+    """`text` with each control character an update never writes shown as an escape, so
+    a report shows what a terminal would otherwise act on."""
+    return CONTROL.sub(lambda found: repr(found.group())[1:-1], text)
+
+
+def _refuse(
+    what: str, ran: Ran, wrote: Sequence[str], timeout: float, secrets: Mapping[str, str]
+) -> None:
     """Raise CannotRun when the command `what` names wrote in the repository, was
-    stopped, or failed."""
+    stopped, or failed. What it printed is shown with the caller's values masked."""
     if wrote:
         raise CannotRun(f"{what} wrote in the repository:\n" + "\n".join(_shown_paths(wrote)))
     if ran.stopped is not None or ran.status != 0:
@@ -952,27 +1034,42 @@ def _refuse(what: str, ran: Ran, wrote: Sequence[str], timeout: float) -> None:
             "size": f"printed more than {OUTPUT_LIMIT} bytes",
         }.get(ran.stopped or "", f"exited {ran.status}")
         said = ran.output.strip().splitlines()[-20:]
-        raise CannotRun(f"{what} {why}" + "".join(f"\n  {line}" for line in said))
+        shown = "".join(f"\n  {_masked(line, secrets)}" for line in said)
+        raise CannotRun(f"{what} {why}{shown}")
+
+
+def _stop(report: Report, fence: Fence, what: str, wrote: Sequence[str]) -> None:
+    """A write in the repository: a finding at `fence`, and the run stops."""
+    report.findings.append(
+        Finding(
+            fence.path,
+            fence.line,
+            f"{what}, outside the scratch project; the run stops here",
+            _shown_paths(wrote),
+        )
+    )
+    report.stopped = True
 
 
 def _run_fence(
-    root: Path,
+    run: _Run,
+    guard: Guard,
     fence: Fence,
-    scratch: Scratch,
-    env: Mapping[str, str],
     replace: Substitutions,
     limits: Limits,
     report: Report,
+    secrets: Mapping[str, str],
 ) -> dict[int, list[str]]:
     """Run `fence`'s commands in order in one shell, adding a finding for each that
     fails; the output to write for each command whose output differs, by its prompt's
-    index."""
+    index. A write in the repository stops the run, whether a command made it or a
+    process the fence left made it before its shell was stopped."""
     outputs: dict[int, list[str]] = {}
-    with Shell(scratch.project, env) as shell:
+    with Shell(run.scratch.project, run.env) as shell:
         for position, command in enumerate(fence.commands):
             report.commands += 1
             line = command.index + 1
-            ran, wrote = _guarded(shell, root, command.text, limits.timeout)
+            ran, wrote = _guarded(shell, guard, command.text, limits.timeout)
             if wrote:
                 report.findings.append(
                     Finding(
@@ -998,8 +1095,8 @@ def _run_fence(
                         f"`{command.text}` {why}; the fence's later commands did not run",
                     )
                 )
-                return outputs
-            _compare(fence, command, ran, replace, report, outputs)
+                break
+            _compare(fence, command, ran, replace, report, outputs, secrets)
             if ran.stopped == "ended" and position + 1 < len(fence.commands):
                 report.findings.append(
                     Finding(
@@ -1009,7 +1106,11 @@ def _run_fence(
                         "the fence's later commands did not run",
                     )
                 )
-                return outputs
+                break
+    late = guard.wrote()
+    if late:
+        what = f"a process the fence left wrote in the repository after {_LAST}"
+        _stop(report, fence, what, late)
     return outputs
 
 
@@ -1020,13 +1121,17 @@ def _compare(
     replace: Substitutions,
     report: Report,
     outputs: dict[int, list[str]],
+    secrets: Mapping[str, str],
 ) -> None:
+    """Compare what `command` printed with the page. The report shows the difference
+    with the caller's values masked wherever they stand, and its control characters
+    escaped."""
     expected = compared(command.output)
     actual = normalised(ran.output, replace)
     if output_matches(expected, actual):
         return
     diff = difflib.unified_diff(expected, actual, "the page", "the run", lineterm="", n=2)
-    unwritable = fence.unwritable(actual)
+    unwritable = fence.unwritable(actual, tuple(secrets.values()))
     message = f"`{command.text}` printed other output than the page shows"
     if unwritable is not None:
         message += f"; `--update` leaves it, since {unwritable}"
@@ -1035,7 +1140,7 @@ def _compare(
             fence.path,
             command.index + 1,
             message,
-            tuple(f"  {row}" for row in diff),
+            tuple(f"  {_masked(row, secrets)}" for row in diff),
             rewritable=unwritable is None,
         )
     )
@@ -1136,11 +1241,13 @@ def _named(page: str, here: Path, root: Path) -> str:
 
 
 def _terminated(signum: int, _frame: object) -> None:
-    """End the run on SIGTERM as on an interrupt: the shell running is stopped with its
-    process group, and the scratch area is removed."""
+    """End the run on SIGTERM or SIGHUP as on an interrupt: the shell running is stopped
+    with its process group, and the scratch area is removed. The shell's group lies in a
+    session of its own, so a closed terminal sends it no hangup of its own."""
     raise SystemExit(128 + signum)
 
 
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, _terminated)
+    signal.signal(signal.SIGHUP, _terminated)
     sys.exit(main())

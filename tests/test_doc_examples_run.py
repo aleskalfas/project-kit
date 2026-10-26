@@ -454,6 +454,44 @@ def test_a_value_taken_from_the_caller_is_written_as_its_placeholder(pages: Page
     assert "token: <GH_TOKEN>" in pages.read("guide.md")
 
 
+@pytest.mark.parametrize(
+    "printed",
+    ["prefix_ghp_secret", "ghp_secret1", "\\nghp_secret"],
+    ids=["after-a-word", "before-a-digit", "after-an-escape"],
+)
+def test_a_value_taken_from_the_caller_is_never_written_where_it_stands_in_a_word(
+    pages: Pages, printed: str
+) -> None:
+    pages.write("guide.md", "```console", f"$ printf '%s\\n' '{printed}'", "old", FENCE)
+    before = pages.read("guide.md")
+
+    report = pages.run(
+        update=True,
+        environment={"gh_token": None},
+        caller={"PATH": os.environ.get("PATH", os.defpath), "gh_token": "ghp_secret"},
+    )
+
+    (finding,) = report.findings
+    assert not finding.rewritable
+    assert finding.message.endswith("since a line of it holds a value a variable takes from you")
+    assert not any("ghp_secret" in row for row in finding.detail)
+    assert pages.read("guide.md") == before
+
+
+def test_a_failing_setup_step_s_output_shows_a_caller_s_value_masked(pages: Pages) -> None:
+    pages.write("guide.md", "```console", "$ echo x", "x", FENCE)
+
+    with pytest.raises(run.CannotRun) as raised:
+        pages.run(
+            setup=('echo "token=$gh_token"; exit 1',),
+            environment={"gh_token": None},
+            caller={"PATH": os.environ.get("PATH", os.defpath), "gh_token": "ghp_secret"},
+        )
+
+    assert "token=<GH_TOKEN>" in str(raised.value)
+    assert "ghp_secret" not in str(raised.value)
+
+
 # --- what is compared ---------------------------------------------------------------------
 
 
@@ -654,6 +692,29 @@ def test_update_never_writes_output_that_would_read_as_markup(pages: Pages, prin
     assert run.exit_status(report, update=True) == 1
 
 
+@pytest.mark.parametrize(
+    "printed",
+    ["about tool\\r$ echo injected", "\\033[31mred\\033[0m", "a\\0b"],
+    ids=["a-carriage-return", "a-terminal-escape", "a-nul"],
+)
+def test_update_never_writes_output_that_holds_a_control_character(
+    pages: Pages, printed: str
+) -> None:
+    pages.write("guide.md", "```console", f"$ printf '{printed}\\n'", "old", FENCE)
+    before = pages.read("guide.md")
+
+    report = pages.run(update=True)
+
+    (finding,) = report.findings
+    assert not finding.rewritable
+    assert finding.message.endswith(
+        "since a line of it holds a control character, which could end a line or hide text"
+    )
+    assert not any(run.CONTROL.search(row) for row in finding.detail)
+    assert pages.read("guide.md") == before
+    assert len(run.console_fences(before.split("\n"), "guide.md")[0].commands) == 1
+
+
 def test_update_never_writes_output_that_holds_the_wildcard_text(pages: Pages) -> None:
     pages.write("guide.md", "```console", "$ echo 'took <any> seconds'", "old", FENCE)
     before = pages.read("guide.md")
@@ -689,7 +750,7 @@ def test_update_writes_no_page_when_a_later_command_wrote_in_the_repository(
     assert run.exit_status(report, update=True) == 1
 
 
-def test_update_does_not_write_a_page_that_changed_while_the_run_read_it(
+def test_a_write_in_the_repository_after_the_last_command_stops_the_run(
     pages: Pages, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     pages.write("guide.md", "```console", "$ echo new", "old", FENCE)
@@ -704,10 +765,81 @@ def test_update_does_not_write_a_page_that_changed_while_the_run_read_it(
 
     report = pages.run(update=True)
 
+    assert report.stopped
     assert report.updated == []
     assert pages.read("guide.md") == "edited meanwhile\n"
+    finding = report.findings[-1]
+    assert finding.message.startswith(
+        "a process the run left wrote in the repository after its last command"
+    )
+    assert finding.detail == ("  guide.md",)
+    assert run.exit_status(report, update=True) == 1
+
+
+def test_a_write_by_a_process_a_fence_left_stops_the_run(pages: Pages, tmp_path: Path) -> None:
+    pages.write(
+        "guide.md",
+        "```console",
+        f"$ (sleep 0.3; touch {pages.root}/late.txt) > /dev/null 2>&1 &",
+        "$ sleep 1",
+        FENCE,
+        "",
+        "```console",
+        "$ echo never",
+        "never",
+        FENCE,
+    )
+
+    report = pages.run()
+
+    (finding,) = report.findings
+    assert finding.message.startswith("`sleep 1` wrote outside the scratch project")
+    assert finding.detail == ("  late.txt",)
+    assert report.commands == 2
+
+
+def test_update_does_not_write_a_page_that_changed_while_the_run_read_it(
+    pages: Pages, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pages.write("guide.md", "```console", "$ echo new", "old", FENCE)
+    before = pages.read("guide.md")
+    read = run.read_page
+    reads: list[Path] = []
+
+    def read_twice(path: Path) -> str:
+        reads.append(path)
+        return read(path) if len(reads) == 1 else "edited meanwhile\n"
+
+    monkeypatch.setattr(run, "read_page", read_twice)
+
+    report = pages.run(update=True)
+
+    assert len(reads) == 2
+    assert report.updated == []
+    assert pages.read("guide.md") == before
     assert "the page changed while the run read it" in _messages(report)[-1]
     assert run.exit_status(report, update=True) == 1
+
+
+def test_a_page_is_read_with_a_carriage_return_inside_its_line() -> None:
+    text = _page("```console", "$ tool --about", "about tool\r$ echo injected", FENCE)
+
+    (fence,) = run.console_fences(text.split("\n"), "guide.md")
+
+    assert [c.text for c in fence.commands] == ["tool --about"]
+
+
+def test_a_page_written_with_carriage_returns_and_line_feeds_reads_as_lines(
+    pages: Pages,
+) -> None:
+    (pages.root / "guide.md").write_bytes(
+        _page("```console", "$ echo crlf", "crlf", FENCE).replace("\n", "\r\n").encode()
+    )
+
+    assert run.read_page(pages.root / "guide.md") == _page(
+        "```console", "$ echo crlf", "crlf", FENCE
+    )
+    assert pages.run().findings == []
 
 
 def test_the_longest_run_of_matching_lines_is_kept() -> None:
@@ -871,10 +1003,30 @@ def test_the_listing_leaves_out_the_git_directory_and_a_repository_inside(
     (root / "worktree" / "new").write_text("another repository's", encoding="utf-8")
     unchanged = run.changed(before, run.listing(root))
     (root / "a.txt").write_text("changed", encoding="utf-8")
+    (root / "docs" / "cloned").mkdir(parents=True)
+    (root / "docs" / "cloned" / ".git").mkdir()
+    (root / "docs" / "cloned" / "file.txt").write_text("cloned", encoding="utf-8")
 
-    assert sorted(before) == ["a.txt"]
+    assert sorted(before) == ["a.txt", "worktree"]
     assert unchanged == []
-    assert run.changed(before, run.listing(root)) == ["a.txt"]
+    assert run.changed(before, run.listing(root)) == ["a.txt", "docs", "docs/cloned"]
+
+
+def test_removing_the_scratch_area_changes_no_mode_outside_it(tmp_path: Path) -> None:
+    parent = tmp_path / "parent"
+    (parent / "area" / "locked").mkdir(parents=True)
+    (parent / "area" / "locked" / "file").write_text("x", encoding="utf-8")
+    (parent / "area" / "link").symlink_to(tmp_path / "outside")
+    (tmp_path / "outside").write_text("kept", encoding="utf-8")
+    (parent / "area" / "locked").chmod(0o500)
+    (parent / "area").chmod(0o000)
+    parent.chmod(0o755)
+
+    run._remove(parent / "area")
+
+    assert not (parent / "area").exists()
+    assert parent.stat().st_mode & 0o777 == 0o755
+    assert (tmp_path / "outside").read_text(encoding="utf-8") == "kept"
 
 
 def test_the_listing_keeps_a_linked_worktree_s_git_file(tmp_path: Path) -> None:

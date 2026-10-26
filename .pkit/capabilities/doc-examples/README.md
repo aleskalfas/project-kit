@@ -183,7 +183,7 @@ python3 .pkit/capabilities/doc-examples/scripts/run-examples.py --update     # w
 
 - **What it needs:** Python 3.10 or later, with its standard library alone, and a POSIX system. It reads the pages and your configuration through `pkit doc-examples pages --json`, so it needs `pkit` on `PATH`.
 - **Its options:** the pages to run, `--update`, `--timeout SECONDS` and `--setup-timeout SECONDS`. A page named that is not among the pages stops the run.
-- **Its report:** each finding at its page's line, with a diff of the page's output and the run's, then a summary line.
+- **Its report:** each finding at its page's line, with a diff of the page's output and the run's, then a summary line. The report shows a control character as an escape, and a value of yours as its placeholder.
 - **Its exit statuses:**
   - `0`: every fence matches, no page holds one, or `--update` wrote every output that differed
   - `1`: a fence fails
@@ -193,16 +193,16 @@ python3 .pkit/capabilities/doc-examples/scripts/run-examples.py --update     # w
 
 `--update` writes each command's new output into its page, and keeps each line of the page's output that still matches, `<any>` included. Review the new output as any change to the page (living-docs DEC-002 point 6).
 
-- **What it never writes:** output with a line that would read as a command or close the fence, so nothing a command prints becomes a command of the next run. Nor output with a line that holds `<any>`, which the next run would read as any text.
+- **What it never writes:** output with a line that would read as a command or close the fence, so nothing a command prints becomes a command of the next run. Nor output with a line that holds `<any>`, which the next run would read as any text. Nor output with a control character, such as a carriage return or a terminal escape, or with a value of yours anywhere in a line.
 - **When it writes:** only once every page's commands have run with no write in the repository. A page that changed since the run read it is not written, and the run reports it.
 
 ## The guards, and what the run confines
 
 - **Every command:** the guards hold for each command the run starts, whether of the setup step, of a placeholder or of a page.
-- **A write in the repository:** before and after each command, the run lists each file and folder of your repository, and compares the two lists.
+- **A write in the repository:** the run lists each file and folder of your repository before the setup step and after each command, and compares each list with the one before it. It lists them again once a fence's shell is stopped, and before it writes any page. So a write by a process a command left is seen too.
   - **A path added, removed or changed** fails the test and stops the run, and no page is updated.
-  - **Left out:** the repository's git directory, since any process that reads the repository's state may write there. A folder that holds a repository of its own, such as a linked worktree, is left out too.
-  - **Another process's write** in the repository during the command is taken for the command's.
+  - **Left out:** the repository's git directory, since any process that reads the repository's state may write there. So is what lies inside a folder that holds a repository of its own, such as a linked worktree. The folder itself is listed, so a new one is seen.
+  - **Another process's write** in the repository is taken for the command's that ran when the run saw it.
 - **The scratch area** lies outside the repository, in the system's temporary folder, and is removed after the run.
 - **What it confines:** nothing. A command runs as you, and reads and reaches what you can, the network included. The guards keep a mistaken page from harming your checkout, and stop no command written to do harm.
 - **So a page's commands are code your project runs,** and so are the setup step and the placeholders' commands. Review a change that adds or alters one as you review a change to a test.
@@ -223,7 +223,7 @@ Add the step once your pages pass, after an update has written their output and 
 **The run's commands lie below the permission model.** The permission model decides each call an agent or the operator makes through a harness (COR-028). It decides the call that starts the run, and never a command the run starts. So whatever allows that call allows every command of the setup step, the placeholders and the pages.
 
 - **No shipped grant allows the run:** the run is no command of `pkit`, so no grant of the CLI allows a call to it. Nor does any other grant the methodology ships, nor the core settings an adapter merges into your harness. Your harness's own rules decide such a call.
-- **A privilege of its own:** `doc-examples:run-examples` recognizes the call by the program's path from the repository's root, alone or after `python3` or `python`. No grant of it ships. To let an agent run your pages' examples, grant it by name in `.pkit/permissions/project/grants.yaml`:
+- **A privilege of its own:** `doc-examples:run-examples` recognizes the call by the program's path relative to the folder the call runs in, alone or after `python3` or `python`. No grant of it ships. To let an agent run your pages' examples, grant it by name in `.pkit/permissions/project/grants.yaml`:
 
   ```yaml
   - subject: agent:docs-writer
@@ -231,6 +231,7 @@ Add the step once your pages pass, after an update has written their output and 
     effect: allow
   ```
 
+- **What a grant of it reaches:** the permission model sees no folder in such a path, and reads a leading `cd` as no change of folder. So a grant also allows a program at that relative path under any folder the grantee can enter, one it wrote included. Grant it only to whom you would let run a program of its own.
 - **Grants that reach the run anyway:** a grant of a wrapper that runs any program, such as `uv run`, allows the run through that wrapper. So does a grant of a version-control command whose hook starts the run.
 - **A sandbox:** inside an operating-system sandbox, the run's commands are confined as the call is. Where the call runs outside one, so do they.
 

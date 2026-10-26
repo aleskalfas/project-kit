@@ -11,11 +11,14 @@ allows a call to it:
   operator or an agent they do not name, is allowed a call to the run.
 - **The core baseline:** no allow rule of the settings the Claude Code adapter
   merges into the harness matches a call to the run, read as widely as its
-  wildcards allow.
+  wildcards allow, but for a call whose last word ends in `.sh`. Such a word names
+  no page, since a page is a Markdown document, so the run refuses it before any
+  command runs.
 - **The privilege of its own:** the capability's catalog fragment defines
-  `doc-examples:run-examples`, which recognizes the run's call by its path from the
-  repository's root, and nothing else; the capability ships no grant of it, and a
-  project's grant of it allows the call.
+  `doc-examples:run-examples`, which recognizes the run's call by its path relative
+  to the folder the call runs in, and nothing else; the capability ships no grant
+  of it. A project's grant of it allows the call, and, through a leading `cd`,
+  a program at that path under another folder, as the README says.
 
 The model is built from the shipped files, as `load_model` composes them, through
 the decision core the hook and the CLI share.
@@ -44,7 +47,12 @@ CALLS = (
     f"./{RUN} --update",
     f"python3 {RUN} README.md",
     f"python {RUN} --timeout 5",
+    f"cd docs && {RUN}",
+    f"cd /elsewhere && python3 {RUN}",
 )
+#: A call whose last word ends in `.sh`, which the baseline's script rule reads as
+#: its own at its widest.
+SH_CALL = f"{RUN} docs/a.sh"
 
 
 @pytest.fixture(scope="module")
@@ -124,8 +132,10 @@ def test_no_allow_rule_of_the_core_baseline_matches_a_call_to_the_run() -> None:
     allow = json.loads(BASELINE.read_text(encoding="utf-8"))["permissions"]["allow"]
 
     matched = [(rule, call) for rule in allow for call in CALLS if _baseline_allows(rule, call)]
+    matched_sh = [rule for rule in allow if _baseline_allows(rule, SH_CALL)]
 
     assert matched == []
+    assert matched_sh == ["Bash(.pkit/**/*.sh)"]
     # The matcher reads a rule as the harness does at its widest: it does match a
     # call the baseline means to allow.
     assert _baseline_allows("Bash(.pkit/**/*.sh)", ".pkit/adapters/claude-code/deploy-skills.sh")
@@ -174,5 +184,6 @@ def test_a_project_s_grant_of_the_privilege_allows_the_call(
         ],
     }
 
-    assert decide_mod.decide(model, catalog, _bash(CALLS[2], "agent:docs"))[0] == "allow"
-    assert decide_mod.decide(model, catalog, _bash(CALLS[2], "agent:other"))[0] != "allow"
+    for call in CALLS:
+        assert decide_mod.decide(model, catalog, _bash(call, "agent:docs"))[0] == "allow", call
+        assert decide_mod.decide(model, catalog, _bash(call, "agent:other"))[0] != "allow", call
