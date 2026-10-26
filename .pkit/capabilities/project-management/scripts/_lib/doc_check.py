@@ -27,12 +27,15 @@ Four things live here, for the filler and the check:
 - **A page's answer in the change.** `answer_files` reads, from the change
   check's list of the answers a change adds, the pages an answer meets the
   obligation of (DEC-053 point 2): one of the core record's three, which the
-  change check accepts.
+  change check accepts. A deferral the change rewrote meets one too, where the
+  change check counts it for its anchor and its reason names a follow-up
+  (`follow_ups`) that the host does not say is closed.
 """
 
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -260,16 +263,93 @@ def sources_of(obligations: Sequence[Mapping[str, Any]]) -> list[str]:
 #: each one the change check accepts — `stands` in its list of the change's answers.
 PAGE_ANSWERS = frozenset({"updated", "unchanged", "deferred"})
 ACCEPTED = "stands"
+#: A deferral the change rewrote: the change check lists it `edited`, since it keeps the
+#: point of the deferral it rewords or replaces (COR-050 point 4, COR-062 point 6), and
+#: counts it where it covers its anchor — an `answered` finding, `deferred`, on it.
+DEFERRED = "deferred"
+EDITED = "edited"
+COUNTED = "answered"
+
+#: An issue a reason names, in the host's grammar: an issue's or a pull request's URL,
+#: `owner/repo#N`, or `#N`. A repository's name alone before `#` names none.
+_FOLLOW_UP = re.compile(
+    r"https?://(?P<host>[^/\s]+)/(?P<owner>[\w.-]+)/(?P<name>[\w.-]+)/(?:issues|pull)/(?P<at>\d+)"
+    r"|(?<![\w/#])(?:(?P<repo>[\w.-]+/[\w.-]+))?#(?P<number>\d+)\b"
+)
 
 
-def answer_files(answers: Iterable[Mapping[str, Any]]) -> dict[str, str]:
+@dataclass(frozen=True)
+class FollowUp:
+    """An issue a deferral's reason names: its number, and its repository where the
+    reason names one (`[host/]owner/repo`), else the project's own."""
+
+    number: int
+    repo: str | None = None
+
+    def __str__(self) -> str:
+        return f"{self.repo or ''}#{self.number}"
+
+
+#: Whether a follow-up is open: as the host answers, or None where it could not be asked.
+OpenFollowUp = Callable[[FollowUp], bool | None]
+
+
+def follow_ups(reason: Any) -> tuple[FollowUp, ...]:
+    """Each issue `reason` names, each once, in the order it names them."""
+    found: dict[FollowUp, None] = {}
+    for match in _FOLLOW_UP.finditer(reason if isinstance(reason, str) else ""):
+        if match.group("at") is not None:
+            repo = "/".join(match.group("host", "owner", "name"))
+            found.setdefault(FollowUp(int(match.group("at")), repo))
+        else:
+            found.setdefault(FollowUp(int(match.group("number")), match.group("repo")))
+    return tuple(found)
+
+
+def answer_files(
+    answers: Iterable[Mapping[str, Any]],
+    findings: Iterable[Mapping[str, Any]] = (),
+    is_open: OpenFollowUp | None = None,
+) -> dict[str, str]:
     """Each location the change check lists an answer on that meets a page's
-    obligation — updated, unchanged or deferred, and accepted — with the file that
-    holds it, the first listed (DEC-053 point 2). A bump, an answer written back, a
-    reason for having no anchors and a revisit entry meet none."""
+    obligation, with the file that holds it, the first listed (DEC-053 point 2):
+    - an answer updated, unchanged or deferred that the check accepts
+    - a deferral the change rewrote (`edited`) that the check counts for its anchor
+      in `findings`, whose reason names a follow-up `is_open` does not say is closed.
+      That is the follow-up the reviewer checks is open (COR-050 point 3).
+
+    Without `is_open`, a rewritten deferral meets none. A bump, an answer written
+    back, a reason for having no anchors and a revisit entry meet none either."""
+    counted = {
+        (str(f.get("location") or ""), _anchor_key(f.get("anchor")))
+        for f in findings
+        if f.get("kind") == COUNTED and f.get("answer") == DEFERRED
+    }
     found: dict[str, str] = {}
     for answer in answers:
         location = str(answer.get("location") or "")
-        if location and answer.get("answer") in PAGE_ANSWERS and answer.get("status") == ACCEPTED:
+        if not location or answer.get("answer") not in PAGE_ANSWERS:
+            continue
+        status = answer.get("status")
+        rewritten = (
+            status == EDITED
+            and answer.get("answer") == DEFERRED
+            and (location, _anchor_key(answer.get("anchor"))) in counted
+            and is_open is not None
+            and _followed_up(answer.get("reason"), is_open)
+        )
+        if status == ACCEPTED or rewritten:
             found.setdefault(location, str(answer.get("file") or location))
     return found
+
+
+def _anchor_key(anchor: Any) -> tuple[str, str] | None:
+    if not isinstance(anchor, Mapping):
+        return None
+    return str(anchor.get("kind")), str(anchor.get("value"))
+
+
+def _followed_up(reason: Any, is_open: OpenFollowUp) -> bool:
+    """Whether `reason` names a follow-up the host does not say is closed: one open, or
+    one it could not be asked about. Each is asked until one answers."""
+    return any(is_open(follow_up) is not False for follow_up in follow_ups(reason))

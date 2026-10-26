@@ -42,6 +42,7 @@ from ruamel.yaml import YAML
 
 from project_kit import data_points as dp
 from project_kit.cli import main
+from project_kit.friction_discovery import Anchor
 from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
@@ -302,6 +303,75 @@ def test_a_page_is_answered_by_one_of_the_three_answers_the_change_check_accepts
         "docs/b.md": "answers/b.md-deferred.yaml",
         "docs/c.md": "answers/c.md-updated.yaml",
     }
+
+
+def test_a_follow_up_is_an_issue_a_reason_names_in_the_host_s_grammar() -> None:
+    """`#N`, `owner/repo#N` and an issue's or a pull request's URL, each once, in the
+    order the reason names them. A repository's name alone before `#`, or digits run
+    on into a word, name no issue."""
+    reason = (
+        "until #7 and o/r#8 are done (https://git.example/o/r/issues/9#note, "
+        "https://git.example/o/r/pull/10), then #7 again; not project-kit#11, a#12 or #13x"
+    )
+    assert doc_check.follow_ups(reason) == (
+        doc_check.FollowUp(7),
+        doc_check.FollowUp(8, "o/r"),
+        doc_check.FollowUp(9, "git.example/o/r"),
+        doc_check.FollowUp(10, "git.example/o/r"),
+    )
+    assert [str(f) for f in doc_check.follow_ups("#7, o/r#8")] == ["#7", "o/r#8"]
+    assert doc_check.follow_ups(None) == ()
+
+
+def test_a_deferral_the_change_rewrote_meets_a_page_where_it_is_counted_and_followed_up() -> None:
+    """A deferral the change rewrote is listed as `edited`: it keeps the point of the one
+    it rewords (COR-050 point 4, COR-062 point 6). It meets its page's obligation where
+    the change check counts it as the answer for its anchor, and its reason names a
+    follow-up the host does not say is closed (COR-050 point 3). With no way to ask
+    the host, none is asked about and none meets."""
+    anchor = {"kind": "path", "value": "src/a.py"}
+
+    def rewritten(location: str, reason: str, answer: str = "deferred") -> dict[str, Any]:
+        return {
+            "location": location,
+            "answer": answer,
+            "anchor": anchor if answer == "deferred" else None,
+            "reason": reason,
+            "status": "edited",
+            "file": f"answers/{location.removeprefix('docs/')}.yaml",
+        }
+
+    def counted(location: str, kind: str = "answered") -> dict[str, Any]:
+        return {"location": location, "kind": kind, "anchor": anchor, "answer": "deferred"}
+
+    answers = [
+        rewritten("docs/open.md", "until #7 is done"),
+        rewritten("docs/closed.md", "until #8 is done"),
+        rewritten("docs/unasked.md", "until o/r#9 is done"),
+        rewritten("docs/mixed.md", "until #8 and o/r#9 are done"),
+        rewritten("docs/none.md", "fixed later"),
+        rewritten("docs/uncounted.md", "until #7 is done"),
+        rewritten("docs/revalidated.md", "until #7 is done", answer="unchanged"),
+    ]
+    findings = [
+        *(counted(a["location"]) for a in answers if a["location"] != "docs/uncounted.md"),
+        counted("docs/uncounted.md", kind="friction"),
+    ]
+    states = {doc_check.FollowUp(7): True, doc_check.FollowUp(8): False}
+    asked: list[doc_check.FollowUp] = []
+
+    def is_open(follow_up: doc_check.FollowUp) -> bool | None:
+        asked.append(follow_up)
+        return states.get(follow_up)
+
+    found = doc_check.answer_files(answers, findings, is_open)
+    assert found == {
+        "docs/open.md": "answers/open.md.yaml",
+        "docs/unasked.md": "answers/unasked.md.yaml",
+        "docs/mixed.md": "answers/mixed.md.yaml",
+    }
+    assert doc_check.FollowUp(7) in asked and doc_check.FollowUp(8) in asked
+    assert doc_check.answer_files(answers, findings) == {}
 
 
 # --- the point through the backbone ------------------------------------------------------
@@ -750,6 +820,63 @@ def test_a_page_the_change_gives_no_accepted_answer_stays_unmet(
         "\n[refused] 1 friction obligation(s) unanswered — answer each on its page in this "
         "diff; a `## Doc impact` line does not meet them.\n"
     )
+
+
+REWRITTEN = answer_path("y")
+
+
+def _with_gh(tmp_path: Path, script: str) -> Path:
+    """A bin folder holding the real `pkit` and a fake `gh` running `script`, which
+    logs each call: no test asks the host."""
+    bin_dir = _pkit_on_path(tmp_path)
+    gh = bin_dir / "gh"
+    gh.write_text(f'#!/bin/sh\necho "$*" >> "{tmp_path / "gh.log"}"\n{script}', encoding="utf-8")
+    gh.chmod(0o755)
+    return bin_dir
+
+
+def _rewrite_a_deferral(paged: AdopterRepo) -> None:
+    """The branch defers its change to `src/a.py`, then rewrites the deferral in an
+    answer file that read the first: the change check lists it `edited`, and counts
+    it as the answer for the anchor, since it keeps the first one's point (COR-062
+    point 6)."""
+    _contribute(paged, [STALE_GUIDE])
+    anchor = Anchor("path", "src/a.py")
+    paged.commit(
+        "change a, deferred",
+        {"src/a.py": "A = 2\n", ANSWER: answers(entry(PAGE, deferred=[(anchor, "until #7")]))},
+    )
+    reworded = entry(PAGE, read=["x"], deferred=[(anchor, "until #7, judging both changes")])
+    paged.commit("reword the deferral", {REWRITTEN: answers(reworded)})
+
+
+@pytest.mark.parametrize(
+    ("gh", "met", "warned"),
+    [
+        pytest.param('[ "$1 $2 $3" = "issue view 7" ] && echo OPEN\n', True, False, id="open"),
+        pytest.param('[ "$1 $2 $3" = "issue view 7" ] && echo CLOSED\n', False, False, id="closed"),
+        pytest.param('echo "gh auth login" >&2\nexit 4\n', True, True, id="host not asked"),
+    ],
+)
+def test_a_deferral_the_change_rewrote_meets_the_page_while_its_follow_up_is_open(
+    paged: AdopterRepo, tmp_path: Path, gh: str, met: bool, warned: bool
+) -> None:
+    """A deferral the change rewrote meets the page's obligation where the change check
+    counts it and its follow-up is open, as the change check and the reviewer treat
+    it (COR-050 point 3; #2135). One the host says is closed meets nothing. Where the
+    host cannot be asked, as in a check run with no token, the deferral counts on its
+    words and the check says so: the reviewer checks the follow-up."""
+    _rewrite_a_deferral(paged)
+    run = _run(paged, tmp_path, bin_dir=_with_gh(tmp_path, gh))
+    lines = run.stdout.splitlines()
+    if met:
+        assert f"  ✓ [friction] {PAGE} → answered in the diff ({REWRITTEN})" in lines
+    else:
+        assert f"  ✗ [friction] {PAGE} → no answer in the diff (page-stale)" in lines
+    assert run.returncode == (0 if met else 1)
+    assert ("could not ask whether #7 is open" in run.stderr) is warned
+    calls = (tmp_path / "gh.log").read_text(encoding="utf-8").splitlines()
+    assert calls == ["issue view 7 --json state --jq .state"]
 
 
 def test_each_source_is_enforced_on_its_own_setting(project: AdopterRepo, tmp_path: Path) -> None:

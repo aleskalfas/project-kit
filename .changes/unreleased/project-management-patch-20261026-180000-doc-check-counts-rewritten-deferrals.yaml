@@ -1,0 +1,12 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The doc check (`check-doc-mapping`) meets a page's friction obligation by a
+  deferral the change rewrote, which the change check lists as edited, where the
+  change check counts it for its anchor and its reason names an open follow-up
+  (#2135). The check asks the host through `gh` whether each follow-up the
+  reason names is open. Where the host cannot be asked, as in a check run with
+  no token, a follow-up counts as open, with a warning, and the reviewer checks
+  it. A bump, or an answer the change check refuses, still meets nothing.
