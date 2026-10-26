@@ -22,14 +22,16 @@ makes real commits before running a check. They cover:
 - **what is not friction's** — `pkit rule-sets altered` still lists an artefact
   changed only in such links, and `pkit friction resolve` advises the outcome the
   change check bears out;
-- **software-analysis** — the forms its places declare are the link command's own,
-  and what `pkit analysis link` writes, in the glossary, the views, the actors, the use
-  cases, the journeys and the requirements, asks nothing of what rests on the linked
-  documents.
+- **software-analysis** — the forms its places declare are the link command's own, a
+  term's link and a citation's (#2064), and what `pkit analysis link` writes, in the
+  glossary, the views, the actors, the use cases, the journeys and the requirements,
+  asks nothing of what rests on the linked documents; a citation's link re-pointed
+  asks nothing either, while a word beside it still asks.
 """
 
 from __future__ import annotations
 
+import posixpath
 import re
 from pathlib import Path
 from typing import Any
@@ -62,6 +64,7 @@ from tests.friction_documents import (
     pointed_record,
 )
 from tests.test_answer_files import answer_path, answers, entry
+from tests.test_software_analysis_record_links import FROM, LOOKUPS, PRJ_001
 from tests.test_software_analysis_term_links import (
     BODIES,
     JOURNEY,
@@ -525,15 +528,17 @@ def _declared(place: str) -> list[str]:
 def test_software_analysis_declares_the_link_commands_own_form() -> None:
     """The glossary's form is the command's target; every other place's, its branch by a
     path, since only the glossary links an entry by its anchor alone: the views, the actors,
-    the use cases, the journeys and the three kinds of requirement. The views' places also
-    declare the form of their closing section's links (#2104)."""
-    (links,) = load_lib("links")
+    the use cases, the journeys and the three kinds of requirement. Beside it, every place
+    declares the target the command writes for a citation (DEC-001 point 13). The views'
+    places also declare the form of their closing section's links (#2104)."""
+    links, citations = load_lib("links", "citations")
     entry_form: str = links._ENTRY
+    cited: str = citations.TARGET
     for place in ("glossary.md", "*/glossary.md"):
-        assert _declared(place) == [entry_form]
+        assert _declared(place) == [entry_form, cited]
     by_path = entry_form.split("|", 1)[0]
     for place in ("domain-model", "*/domain-model/**"):
-        assert _declared(place) == [by_path, links.CLOSING_TARGET]
+        assert _declared(place) == [by_path, cited, links.CLOSING_TARGET]
     for folder in (
         "use-case-model/actors",
         "use-case-model/use-cases",
@@ -542,8 +547,119 @@ def test_software_analysis_declares_the_link_commands_own_form() -> None:
         "requirements/functional",
         "requirements/constraints",
     ):
-        assert _declared(folder) == [by_path], folder
-        assert _declared(f"*/{folder}/**") == [by_path], folder
+        assert _declared(folder) == [by_path, cited], folder
+        assert _declared(f"*/{folder}/**") == [by_path, cited], folder
+
+
+#: Files at several depths a citation's link may lead from: the glossary two folders down,
+#: a use case in an area, and a file at the root.
+STARTS = (FROM, "tech-docs/analysis/use-case-model/use-cases/010-run/UC-001-run.md", "a.md")
+
+
+def test_each_target_of_a_citation_s_link_is_of_the_declared_form() -> None:
+    """Every target the lookup gives a citation's link, a record's file whole or at a point
+    and a rule's heading in its rule set, from a file at any depth, is of the form. A link
+    to another artefact, to a glossary entry, to a web address or to a rule set whole is
+    not."""
+    (citations,) = load_lib("citations")
+    form = re.compile(citations.TARGET)
+    targets = {
+        found.target(start, whole=whole)
+        for key, found in LOOKUPS.items()
+        if found.path is not None
+        for start in STARTS
+        for whole in ((False,) if "RS-" in key else (False, True))
+    }
+    assert len(targets) > len(LOOKUPS)
+    assert [t for t in targets if form.fullmatch(t) is None] == []
+    for other in (
+        "UC-002-pay-order.md",
+        "../use-cases/UC-002-pay-order.md",
+        "../../glossary.md#term-order--order",
+        "https://example.org/PRJ-001-exports.md",
+        "../rule-sets/writing.md",
+        "../../README.md#linking-citations",
+    ):
+        assert form.fullmatch(other) is None, other
+
+
+def test_a_bracketed_citation_s_link_stays_content() -> None:
+    """The core reads no link whose words hold a bracket, so the link of a citation in
+    brackets is read as written, a cost DEC-001 point 13 states; a bare one is set aside."""
+    (citations,) = load_lib("citations")
+    aside = fd.SetAside((citations.TARGET,))
+    target = "../../.pkit/capabilities/software-analysis/decisions/DEC-001-x.md#2-where"
+    bracketed = f"Per [[software-analysis:DEC-001] point 2]({target})."
+    assert aside.body(bracketed) == bracketed
+    bare = f"Per [software-analysis DEC-001 point 2]({target})."
+    assert aside.body(bare) == "Per software-analysis DEC-001 point 2."
+
+
+#: The sentence a use case's step ends with, citing a project record's point.
+SIGNED = "signed as PRJ-001 point 1 asks"
+CITED = ".pkit/decisions/project/PRJ-001-exports.md"
+
+
+def _cited(repo: AdopterRepo) -> None:
+    """`_kinds`, a project record, and the first step of the use case to place an order
+    citing one of its points. Built once per session (`installed`)."""
+    _kinds(repo)
+    text = (repo.root / PLACE).read_text(encoding="utf-8")
+    step = "and the system opens an order."
+    assert step in text
+    repo.write({CITED: PRJ_001, PLACE: text.replace(step, f"{step[:-1]}, {SIGNED}.", 1)})
+
+
+@pytest.fixture
+def cited(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """The analysis linked on `main`, its terms and its citation, and `feature` off it."""
+    repo = installed(make_adopter_repo, monkeypatch, then=_cited)
+    link(repo)
+    repo.commit("the analysis, linked")
+    repo.checkout("feature", create=True)
+    return repo
+
+
+def _reworded_heading(repo: AdopterRepo) -> tuple[str, str]:
+    """The cited point's heading reworded and the links mended: the use case before and
+    after, its link to the point re-pointed and nothing else changed."""
+    before = (repo.root / PLACE).read_text(encoding="utf-8")
+    to_record = posixpath.relpath(CITED, posixpath.dirname(PLACE))
+    assert f"[PRJ-001 point 1]({to_record}#1-sign-each-export) asks" in before
+    repo.write({CITED: PRJ_001.replace("### 1. Sign each export", "### 1. Sign every export")})
+    link(repo)
+    after = (repo.root / PLACE).read_text(encoding="utf-8")
+    assert after == before.replace("#1-sign-each-export)", "#1-sign-every-export)")
+    return before, after
+
+
+def test_a_citation_s_link_re_pointed_asks_nothing_and_a_word_beside_it_still_asks(
+    cited: AdopterRepo,
+) -> None:
+    """The cited point's heading reworded, `pkit analysis link` re-points the use case's
+    link to it: the use case changed in a link alone, so nothing asks the journey that
+    rests on it (DEC-001 point 13). A word changed beside the link still asks it."""
+    _before, after = _reworded_heading(cited)
+    assert _friction(fc.run_change_check(cited.root, "main")) == []
+    cited.write({PLACE: after.replace("signed as", "sealed as", 1)})
+    assert _friction(fc.run_change_check(cited.root, "main")) == [JOURNEY]
+
+
+def test_without_the_citation_form_the_same_re_pointing_asks_the_journey(
+    cited: AdopterRepo,
+) -> None:
+    """The form of a term's link alone declared, the citation's link moved is content."""
+    (citations,) = load_lib("citations")
+    package = cited.root / ".pkit/capabilities/software-analysis/package.yaml"
+    lines = package.read_text(encoding="utf-8").split("\n")
+    form = f"        - target: '{citations.TARGET}'"
+    assert form in lines
+    kept = [line for i, line in enumerate(lines) if form not in (line, lines[i - 1])]
+    cited.write({package.relative_to(cited.root).as_posix(): "\n".join(kept)})
+    _reworded_heading(cited)
+    assert _friction(fc.run_change_check(cited.root, "main")) == [JOURNEY]
 
 
 @pytest.fixture

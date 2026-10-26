@@ -52,6 +52,7 @@ from ruamel.yaml import YAML
 
 from project_kit import agent_policy, agents_overlay, connections, rule_sets
 from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
+from project_kit.line_breaks import universal_newlines
 from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
 from project_kit.validators import Finding, Outcome, Severity, counts_line, location_of
 
@@ -436,67 +437,6 @@ def _unbracket(text: str) -> str:
     return text[1:-1] if text.startswith("[") and text.endswith("]") else text
 
 
-#: The version of the document `pkit refs lookup --json` prints.
-LOOKUP_VERSION = 1
-
-
-@dataclass(frozen=True)
-class Lookup:
-    """What `pkit refs lookup` answers for one id: where it lies, each path
-    repository-relative — a record's file, a rule's place in its rule set, or where an
-    installed capability declares a role or a point — or why it does not resolve."""
-
-    id: str
-    paths: tuple[str, ...] = ()
-    problem: str | None = None
-
-    @property
-    def resolved(self) -> bool:
-        return self.problem is None
-
-
-def lookup(target_root: Path, record_id: str) -> Lookup:
-    """Resolve a record id, a rule citation, or a role or point address, as `pkit refs
-    lookup` does: an address to where it is declared, a rule to its place in its rule
-    set, anything else to a record's file."""
-    if is_address_citation(record_id):
-        address = resolve_address(target_root, record_id)
-        if address.malformed:
-            return Lookup(record_id, problem=f"{record_id!r} is {address.problem}")
-        if not address.resolved:
-            return Lookup(record_id, problem=f"{record_id!r} does not resolve: {address.problem}")
-        return Lookup(record_id, address.locations)
-    if rule_sets.is_rule_citation(record_id):
-        resolution = resolve_rule_citation(target_root, record_id)
-        if not resolution.resolved:
-            return Lookup(
-                record_id, problem=f"{record_id!r} does not resolve: {resolution.problem}"
-            )
-        location = resolution.location
-        return Lookup(record_id, (location,) if location is not None else ())
-    path = resolve_record(target_root, record_id)
-    if path is None:
-        return Lookup(record_id, problem=f"no record matches {record_id!r}")
-    return Lookup(record_id, (path.relative_to(target_root).as_posix(),))
-
-
-def lookup_document(target_root: Path, record_ids: Collection[str]) -> dict[str, Any]:
-    """The document `pkit refs lookup --json` prints: each id's answer, in the order the
-    ids are given, so a script reads every record it needs from one run."""
-    return {
-        "schema_version": LOOKUP_VERSION,
-        "lookups": [
-            {
-                "id": found.id,
-                "resolved": found.resolved,
-                "paths": list(found.paths),
-                "problem": found.problem,
-            }
-            for found in (lookup(target_root, record_id) for record_id in record_ids)
-        ],
-    }
-
-
 def resolve_record(
     target_root: Path, record_id: str, *, files: Collection[str] | None = None
 ) -> Path | None:
@@ -602,6 +542,175 @@ def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
     order = {"project": 0, "capability": 1, "adapter": 2, "core": 3}
     candidates.sort(key=lambda p: order.get(p.tier, 99))
     return candidates[0]
+
+
+#: The version of the document `pkit refs lookup --json` prints.
+LOOKUP_VERSION = 1
+
+
+@dataclass(frozen=True)
+class Lookup:
+    """What `pkit refs lookup` answers for one id or citation.
+
+    - `paths`: what the command prints for it, one line each, repository-relative: a
+      record's file, a point's file and its heading's anchor, a rule's place in its rule
+      set, or where an installed capability declares a role or a point.
+    - `problem`: why it does not resolve, as the command says it, or `None`. A point
+      its record does not hold has its record's `path`, and a problem.
+    - `path`: the file of a record, or of a rule's set, relative to the root; `None`
+      for an address, and where no file is found.
+    - `anchor`: the anchor a repository host gives the heading of a cited point or rule
+      (`document_parts.host_anchors`); `None` for a record cited whole, an address, a
+      point with no heading, such as one of a record whose points are a list, and a
+      retired point whose record keeps no stub.
+    - `received`: whether `path` arrives in the repository as a synced copy, which the
+      project receives and does not write, as validation tells one
+      (`decisions_validate.synced_record_test`, COR-055 point 1).
+    """
+
+    id: str
+    paths: tuple[str, ...] = ()
+    problem: str | None = None
+    path: str | None = None
+    anchor: str | None = None
+    received: bool = False
+
+    @property
+    def resolved(self) -> bool:
+        return self.problem is None
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "resolved": self.resolved,
+            "paths": list(self.paths),
+            "problem": self.problem,
+            "path": self.path,
+            "anchor": self.anchor,
+            "received": self.received,
+        }
+
+
+def lookup(target_root: Path, record_id: str) -> Lookup:
+    """Resolve one id or citation, as `pkit refs lookup` does (`lookup_citations`)."""
+    return lookup_citations(target_root, [record_id])[0]
+
+
+def lookup_document(target_root: Path, record_ids: Collection[str]) -> dict[str, Any]:
+    """The document `pkit refs lookup --json` prints: each id's answer, in the order the
+    ids are given, so a script reads every record it needs from one run."""
+    return {
+        "schema_version": LOOKUP_VERSION,
+        "lookups": [found.as_json() for found in lookup_citations(target_root, record_ids)],
+    }
+
+
+def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Lookup]:
+    """Resolve each of `citations`, in order: a record's id (`COR-005`, `PRJ-002`,
+    `ADR-012`, and whatever `resolve_record` resolves) to its file, a point of one
+    (`COR-050#14`, `PRJ-002#D1`) to its file and its heading's anchor, a rule
+    (`RS-CMN-001`, `[living-docs:RS-LDOC-001]`) to its place and its heading's anchor,
+    and a role or point address to where an installed capability declares it.
+
+    A record's points are read as validation reads them (`record_points`, COR-058
+    point 7): a live point gives its heading's anchor, the first where two share its
+    id; a retired id gives its stub's; a record whose points are a list gives none;
+    and an id the record neither holds nor retires is a problem. The rule sets are
+    discovered once, and each record read once, however many citations name it. Each
+    file found says whether it arrives as a synced copy (`Lookup.received`).
+    """
+    from project_kit import document_parts, record_points
+    from project_kit.decisions_validate import synced_record_test
+
+    discovery: rule_sets.RuleSetDiscovery | None = None
+    texts: dict[Path, str | None] = {}
+
+    def read(path: Path) -> str | None:
+        if path not in texts:
+            try:
+                texts[path] = universal_newlines(path.read_bytes().decode("utf-8"))
+            except (OSError, UnicodeDecodeError):
+                texts[path] = None
+        return texts[path]
+
+    def anchor_of(start: int, body: document_parts.Body) -> str | None:
+        for heading, anchor in zip(
+            body.headings, document_parts.host_anchors(body.headings), strict=True
+        ):
+            if heading.start == start:
+                return anchor
+        return None
+
+    def relative(path: Path) -> str:
+        try:
+            return path.resolve().relative_to(target_root.resolve()).as_posix()
+        except ValueError:
+            return path.as_posix()
+
+    found: list[Lookup] = []
+    for citation in citations:
+        if is_address_citation(citation):
+            address = resolve_address(target_root, citation)
+            if address.malformed:
+                found.append(Lookup(citation, problem=f"{citation!r} is {address.problem}"))
+            elif not address.resolved:
+                found.append(
+                    Lookup(citation, problem=f"{citation!r} does not resolve: {address.problem}")
+                )
+            else:
+                found.append(Lookup(citation, tuple(address.locations)))
+            continue
+        if rule_sets.is_rule_citation(citation):
+            if discovery is None:
+                discovery = rule_sets.discover_rule_sets(target_root)
+            resolution = rule_sets.resolve_citation(discovery, citation)
+            if not resolution.resolved or resolution.rule is None:
+                found.append(
+                    Lookup(citation, problem=f"{citation!r} does not resolve: {resolution.problem}")
+                )
+                continue
+            rule = resolution.rule
+            anchor = None
+            text = read(target_root / rule.path)
+            if text is not None:
+                _front, body_text = document_parts.split_front_matter(text)
+                body = document_parts.Body.read(body_text)
+                section = body.section_by_id(rule.id)
+                if section is not None and section.heading is not None:
+                    anchor = anchor_of(section.heading.start, body)
+            found.append(Lookup(citation, (rule.location,), path=rule.path, anchor=anchor))
+            continue
+        record, point = record_points.split_anchor(citation)
+        path = resolve_record(target_root, record)
+        if path is None:
+            found.append(Lookup(citation, problem=f"no record matches {record!r}"))
+            continue
+        rel = relative(path)
+        if point is None:
+            found.append(Lookup(citation, (rel,), path=rel))
+            continue
+        text = read(path)
+        if text is None:
+            found.append(Lookup(citation, path=rel, problem=f"{rel} could not be read"))
+            continue
+        points = record_points.read_points(text)
+        anchored = points.anchored(point)
+        state = anchored.state
+        if state is record_points.PointState.MISSING:
+            found.append(Lookup(citation, path=rel, problem=f"{record} holds no point {point}"))
+            continue
+        heading = None
+        if state in (record_points.PointState.LIVE, record_points.PointState.AMBIGUOUS):
+            live = points.point(point)
+            heading = live.extent.heading if live is not None else None
+        elif state is record_points.PointState.RETIRED:
+            stub = points.stub(point)
+            heading = stub.extent.heading if stub is not None else None
+        anchor = anchor_of(heading.start, points.body) if heading is not None else None
+        located = f"{rel}#{anchor}" if anchor else rel
+        found.append(Lookup(citation, (located,), path=rel, anchor=anchor))
+    is_synced = synced_record_test(target_root)
+    return [replace(f, received=is_synced(f.path)) if f.path else f for f in found]
 
 
 def who_references(artifacts: list[Artifact], target: str) -> list[Artifact]:

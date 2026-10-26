@@ -87,6 +87,7 @@ pkit:
         - .pkit/adapters/README.md#harness-requirements
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
+        - .pkit/decisions/README.md#looking-a-citation-up
         - .pkit/lifecycle/README.md#what-sync-writes
         - .pkit/lifecycle/README.md#the-ownership-predicates-ownershippy
         - .pkit/lifecycle/README.md#an-adapters-manifest
@@ -239,7 +240,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `refs validate` | run the checks of the `refs` member of `validate` on their own (see "Diagnostic commands", `validate`). Exits 1 on any finding, drift included, where the member only warns of drift | no | yes (read-only) |
 | `refs show <name>` | show the outgoing references of the agent or skill of that name, by kind | no | yes (read-only) |
 | `refs who-references <target>` | list the agents and skills that reference a path, a record id or a hook | no | yes (read-only) |
-| `refs lookup <id> [--json]`, `refs lookup <id>... --json` | resolve a record id (`COR-005`) to its file, a rule id (`RS-CMN-001`, `[living-docs:RS-LDOC-001]`) to its place in its rule set, or a role or point address (`[pkit::documentation]`) to where an installed capability declares it. Exits 1 when the id resolves nowhere. With `--json` it takes several ids and prints one document that answers each, in order, with where it lies or why it does not resolve, and exits 0 either way | no | yes (read-only) |
+| `refs lookup <id> [--json]`, `refs lookup <id>... --json` | print where a citation lies: a record (`COR-005`), a point of a record (`COR-050#14`), a rule (`RS-CMN-001`) or an address (`[pkit::documentation]`). Exits 1 when the id resolves nowhere, and with `--json` exits 0 either way. What it prints is in [the decisions README, "Looking a citation up"](../decisions/README.md#looking-a-citation-up) | no | yes (read-only) |
 | `refs rename <old> <new> [--dry-run]` | rewrite one reference value across every agent and skill, front matter and body. `--dry-run` lists the files it would change and writes nothing | yes (`--dry-run`: no) | yes — a second run finds nothing to rename |
 | `refs rot` | list the references to superseded records, dropped scratchpad notes and missing files. It reports them and exits 0 | no | yes (read-only) |
 | `refs graph [--format <ascii\|text\|dot>]` | print the reference graph: a tree drawn in box characters (`ascii`, the default), a plain outline (`text`), or Graphviz input (`dot`) | no | yes (read-only) |

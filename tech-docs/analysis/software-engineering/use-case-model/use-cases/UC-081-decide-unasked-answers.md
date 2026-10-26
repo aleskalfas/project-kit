@@ -41,17 +41,17 @@ pkit:
 
 **Assumptions:**
 
-- The project has software-engineering installed, or registered in place where software-engineering is developed (COR-017 and COR-031). The adapter deploys software-engineering's `software-engineer` and `docs-reviewer` agent definitions (COR-013).
-- The change check flags each answer the change was not asked for, "not asked for by this change". The whole-repository check reports each debt (COR-050 points 6 and 12).
-- A dispatched agent's hand-off reaches the agent that dispatched it whole, as `core:UC-029` describes (COR-047).
-- The `software-engineer` agent keeps to its definition. Nothing at run time stops an agent writing an answer the change does not owe (COR-050 point 3).
+- The project has software-engineering installed, or registered in place where software-engineering is developed ([COR-017](../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../.pkit/decisions/core/COR-031-capability-origin.md)). The adapter deploys software-engineering's `software-engineer` and `docs-reviewer` agent definitions ([COR-013](../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
+- The change check flags each answer the change was not asked for, "not asked for by this change". The whole-repository check reports each debt (COR-050 points [6](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks) and [12](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
+- A dispatched agent's hand-off reaches the agent that dispatched it whole, as `core:UC-029` describes ([COR-047](../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)).
+- The `software-engineer` agent keeps to its definition. Nothing at run time stops an agent writing an answer the change does not owe ([COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - The developer, or another agent the developer directs, writes each answer the developer accepted, as `core:UC-002` describes (COR-050 point 3 and core rule 20).
 
 **Trigger:** While making a change, as UC-001 describes, the `software-engineer` agent finds an answer the change check did not ask of the change.
 
 **Main path:**
 
-1. The agent finds an answer the change check did not ask of the change (COR-050 points 3 and 16). It may be:
+1. The agent finds an answer the change check did not ask of the change (COR-050 points [3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [16](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)). It may be:
    - an answer on an artefact the change check did not ask about, or for a debt the whole-repository check reports
    - a revisit entry for a target the change asks no revisit of, or one whose outcome alone changed
    - a reason for having no anchors

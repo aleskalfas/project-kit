@@ -24,8 +24,8 @@ pkit:
 
 **Verified by:** Tests load the permission model and decide calls with `ruamel.yaml` made unimportable, and find the same results as with it. No test checks that the code imports nothing else outside the standard library.
 
-**Imposed by:** ADR-014 [point](../../../glossary.md#term-point--point) 1. An [adapter](../../../glossary.md#term-adapter--adapter)'s [permission hook](../../../glossary.md#term-permission-hook--permission-hook) imports this code, and decides each call with the same loader and the same decision as the `pkit permissions` commands. So the code needs no more than the interpreter the hook runs under.
+**Imposed by:** [ADR-014 point 1](../../../../../architecture/decisions/ADR-014-macos-sandbox-platform-stance.md#1-enforcement-runs-in-box--the-permission-hook-is-a-zero-dependency-python3-script). An [adapter](../../../glossary.md#term-adapter--adapter)'s [permission hook](../../../glossary.md#term-permission-hook--permission-hook) imports this code, and decides each call with the same loader and the same decision as the `pkit permissions` commands. So the code needs no more than the interpreter the hook runs under.
 
-ADR-014 gives the example of `claude-code` on macOS. There `uv` cannot run inside the operating system's [sandbox](../../../glossary.md#term-sandbox--sandbox), while the [system](../../../glossary.md#term-system--system) `python3` exists in every such sandbox. So the hook runs under the system `python3`, and the code reads YAML through a parser of its own where `ruamel.yaml` is missing.
+[ADR-014](../../../../../architecture/decisions/ADR-014-macos-sandbox-platform-stance.md) gives the example of `claude-code` on macOS. There `uv` cannot run inside the operating system's [sandbox](../../../glossary.md#term-sandbox--sandbox), while the [system](../../../glossary.md#term-system--system) `python3` exists in every such sandbox. So the hook runs under the system `python3`, and the code reads YAML through a parser of its own where `ruamel.yaml` is missing.
 
 #1765 may refine ADR-014 points 1 to 3, since the code turns the sandbox off on macOS entirely.

@@ -33,7 +33,7 @@ pkit:
 
 **Preconditions:** <!-- pkit:hint What the system, or an earlier use case, has already made true before the use case starts. Each is a state, not an event, and no step checks it. Write `None.` when there is none. Example: The analyst is signed in. -->
 
-**Assumptions:** <!-- pkit:hint What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. Write `None.` when there is none. Example: The disk keeps the file as the system wrote it (DEC-003). -->
+**Assumptions:** <!-- pkit:hint What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. Write `None.` when there is none. Example: The disk keeps the file as the system wrote it (PRJ-003). -->
 
 **Trigger:** <!-- pkit:hint The event that starts the use case, and who or what causes it. Example: The analyst asks to export the report on screen. -->
 
@@ -47,4 +47,4 @@ pkit:
 
 **Postconditions:** <!-- pkit:hint The state that shows the goal is met. Example: The file holds the whole report. -->
 
-**Minimal guarantees:** <!-- pkit:hint What the system still guarantees when the use case ends early or fails. Name the record or code each rests on. Write `None.` when there is none. Example: A failed export leaves no partial file (DEC-003). -->
+**Minimal guarantees:** <!-- pkit:hint What the system still guarantees when the use case ends early or fails. Name the record or code each rests on. Write `None.` when there is none. Example: A failed export leaves no partial file (PRJ-003). -->
