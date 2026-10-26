@@ -148,6 +148,7 @@ from _lib.declarations import (
     INTERNAL_ROOT,
     LDOC_FILE,
     LIVING_DOCS_CONFIG,
+    RECOMMENDED_INTERNAL_ROOT,
     USER_ROOT,
     Declarations,
     ProjectPlace,
@@ -1779,8 +1780,14 @@ def _separation_findings(decl: Declarations, outcome: Outcome) -> None:
     user, internal = decl.user_root, decl.internal_root
     if user == internal:
         state = f"both documentation roots are {user!r}"
+        fix = (
+            f"`pkit {CAPABILITY} new space {USER_SPACE}` offers to set the internal root apart, "
+            f"at {RECOMMENDED_INTERNAL_ROOT!r}, before it creates the space, or set it with `pkit "
+            f"config set docs.internal <path>` (DEC-001 points 1 and 2)"
+        )
     elif is_within(user, internal) or is_within(internal, user):
         state = f"the documentation roots {user!r} and {internal!r} nest"
+        fix = "onboarding separates them (DEC-001 points 1 and 8)"
     else:
         return
     outcome.findings.append(
@@ -1789,7 +1796,7 @@ def _separation_findings(decl: Declarations, outcome: Outcome) -> None:
             f"{BACKBONE_CONFIG}:/docs",
             f"{state}, so the user and technical spaces are not separate yet: user-facing "
             f"navigation must never lead into technical material, and neither root lies inside "
-            f"the other — onboarding separates them (DEC-001 points 1 and 8).",
+            f"the other — {fix}.",
             check="separation",
         )
     )

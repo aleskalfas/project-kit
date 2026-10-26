@@ -211,9 +211,10 @@ A definition with no scope selects nothing itself, so nothing is held to it. The
 `pkit living-docs new` stamps a page or a space's definition. The `docs-author` skill pairs with it (COR-005). It walks you through the choices the command does not make. `pkit sync` deploys it with the other skills, in Claude Code as `.claude/skills/docs-author/`.
 
 ```
-pkit living-docs new space <space> [--set <NAME>] [--dry-run]
+pkit living-docs new space <space> [--set <NAME>] [--internal-root <path>] [--yes] [--dry-run]
 pkit living-docs new page <file> --space <space> --kind <kind> --reader <id> --title "<Title>"
-    [--path <glob>]... [--record <id>]... [--artefact <id>]... [--source <name>]... [--dry-run]
+    [--path <glob>]... [--record <id>]... [--artefact <id>]... [--source <name>]...
+    [--internal-root <path>] [--yes] [--dry-run]
 ```
 
 **One check decides.** Each command runs the validator's own check before and after it writes. That is the check `pkit living-docs validate` runs.
@@ -234,7 +235,7 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - **It refuses a write that breaks validation,** such as a place outside every root, assigned to the space, that gives no page type.
 - **It reports, without refusing,** each page of the space that the space's rules fail once they bind.
 - **It refuses when the check cannot read what it judges** once the rules bind, such as a readers point that does not resolve while the space's pages name readers.
-- **It writes nothing else:** nothing of the backbone configuration, and no other space's definition.
+- **It writes nothing else itself:** no other space's definition, and nothing of the backbone configuration. Only `pkit config set` writes that, when the command sets the roots apart ([A fresh project](#a-fresh-project-the-first-stamp-sets-the-roots-apart)).
 
 **`new page`** writes one new page into a space of your project, from the template of a kind this capability declares, `signpost` or `reference`.
 
@@ -245,7 +246,16 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - **It refuses a file the check does not read as a page of the space you named.**
 - **It warns** when the space has no definition yet, since no rule binds on the page then.
 
-**A fresh project.** Both roots default to `docs/`. Two roots that are one folder give no space (DEC-001 point 1). So until you separate them, `new space` finds no scope for the user or technical space. Nor does `new page` write a page under them. Separate the roots first, as onboarding's first step says.
+### A fresh project: the first stamp sets the roots apart
+
+Both roots default to `docs/`, and two roots that are one folder give no space (DEC-001 point 1). So before it stamps a space, or a page of the user or technical space, the command offers to set the internal root apart. You need no step before it, and you may install the capabilities in any order.
+
+- **The folder.** The internal root goes to `tech-docs/`, and the user root keeps `docs/`. Name another folder with `--internal-root <path>`. One that lies in the user root, or holds it, is refused.
+- **The write.** `pkit config set docs.internal tech-docs` makes it, and asks once at a terminal. Off a terminal it needs `--yes`, and without it the command refuses, writes nothing and names the command to run. Declined, nothing is written or stamped.
+- **What stays in `docs/`.** No document moves. A project rule set a capability's install created in `docs/rule-sets/` stays found there. `pkit config set` declares that folder a place, and prints each recorded location the old root held, such as the overlay's `adr-records`, with how to move it.
+- **A dry run** says it would set the root first, and writes nothing.
+
+Accepted, the roots stay apart even where the stamp then refuses. A space your project adds lies in places of its own, so a page of it needs no separation. Its definition still lies under the internal root, so `new space` for it offers the separation too.
 
 ## Validation
 
@@ -269,7 +279,7 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - an entry point that is not a document of its space — under its root or in a place assigned to it. An entry point without front matter whose places cannot be told apart (above) fails only when none of them gives its space;
 - a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
 
-It reports, without failing: a `source` anchor, or a rule origin citing a `source`, that no captured file answers (the whole-repository check reports it dead); a captured source nothing anchors or cites; a captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier; a file in the sources folder whose name does not end in `.yaml` — notes, an editor's backup — which captures nothing; a space with no definition yet, a definition with no scope, or with the template's placeholder in its scope, naming the scope to give it, the pages of a space its definition's scope leaves out, a file without front matter whose places cannot be told apart, unless every one of them is an unassigned place outside every root, which fails (above), roots that are the same folder or nested (onboarding separates them), a document that declares its page kind and lies only in an untyped place of rule sets outside every root that no assignment gives a space, naming the assignment that would make it a page, each kind that declares no structure, with the pages that name it where `RS-LDOC-004` binds and the kinds that do declare one, and — in its summary — the unclassified documents and the documents of a type of your own, whether each entry point is a page yet, the spaces whose definitions carry a scope, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, how many pages each check left out because its rule does not bind on them, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
+It reports, without failing: a `source` anchor, or a rule origin citing a `source`, that no captured file answers (the whole-repository check reports it dead); a captured source nothing anchors or cites; a captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier; a file in the sources folder whose name does not end in `.yaml` — notes, an editor's backup — which captures nothing; a space with no definition yet, a definition with no scope, or with the template's placeholder in its scope, naming the scope to give it, the pages of a space its definition's scope leaves out, a file without front matter whose places cannot be told apart, unless every one of them is an unassigned place outside every root, which fails (above), roots that are the same folder, naming the stamp that sets them apart and the folder it recommends, or nested (onboarding separates them), a document that declares its page kind and lies only in an untyped place of rule sets outside every root that no assignment gives a space, naming the assignment that would make it a page, each kind that declares no structure, with the pages that name it where `RS-LDOC-004` binds and the kinds that do declare one, and — in its summary — the unclassified documents and the documents of a type of your own, whether each entry point is a page yet, the spaces whose definitions carry a scope, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, how many pages each check left out because its rule does not bind on them, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
 
 **Pages are checked** for their front matter — `kind`, and `reader` against the readers point where `RS-LDOC-003` binds, and the friction block, which `pkit validate` checks under `friction` — for their body's structure, against the structure their kind declares, where `RS-LDOC-004` binds, and for their diagrams' text alternatives where `RS-LDOC-008` binds. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact has one home, and whether the page says only what its reader needs.
 
