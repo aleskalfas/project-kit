@@ -43,7 +43,8 @@ Exit codes:
   1  membership refusal / foreign-repo refusal
   2  usage error / a clone that holds no seat, or a planner's seat / the
      listing reached its limit, so an open dependency could be missed
-  3  the open issues, or every ready Task's owner, could not be read
+  3  the open issues could not be read, or a ready Task's owner could not be
+     read and no other Task was free
   5  no Task is ready for this clone, so nothing was started
   *  a failed `start-work` passes its exit code through
 """

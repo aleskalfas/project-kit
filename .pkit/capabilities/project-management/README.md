@@ -735,12 +735,14 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 
 #### Taking the next ready Task — `next-task` (per [project-management:DEC-059-topology-of-seats] point 7)
 
-`pkit pm next-task` takes the next ready Task from one pool that every seat shares, and starts it, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It takes this clone's own Tasks first, then the shared pool. It ranks both by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
+`pkit pm next-task` takes this clone's own Task, else the next ready Task from one pool that every seat shares. It starts the Task, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It ranks this clone's own Tasks, and then the pool's, by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
 
 A ready Task is one of two kinds:
 
-- **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue. A Task in Backlog that this clone's instance owns is this clone's own work, outside the pool, as a lead owns what it files. Such a Task comes first where its dependencies are closed and it falls in the seat's scope
+- **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue
 - **A Task In Progress whose claim no longer counts,** in a project with a topology, since the seat that claimed it was released. No claim lapses yet
+
+**This clone's own Tasks.** A Task in Backlog that this clone's instance owns is this clone's own work, outside the pool, as a lead owns what it files. Such a Task comes first where its `## Dependencies` section names no open issue and it falls in the seat's scope.
 
 What else holds a Task back:
 
@@ -762,7 +764,7 @@ What else holds a Task back:
 | 0 | A Task was started, or a dry run said which it would start |
 | 1 | Membership refused, or the foreign-repo guard did |
 | 2 | A clone that holds no seat, or a planner's seat, or a listing that reached `--limit` |
-| 3 | The open issues could not be read, or nor could the owner of any ready Task |
+| 3 | The open issues could not be read, or a ready Task's owner could not be read and no other Task was free |
 | 5 | No Task is ready for this clone, so nothing was started |
 | other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |
 
