@@ -24,7 +24,6 @@ reads:
     - .pkit/decisions/core/COR-017-capability-pattern.md
     - .pkit/decisions/core/COR-005-bundle-pattern.md
     - .pkit/decisions/core/COR-007-pattern-extraction.md
-    - CONTRIBUTING.md
 ---
 
 # Authoring a capability
@@ -123,9 +122,9 @@ Open `.pkit/capabilities/<name>/README.md` and replace the placeholders with:
 
 ### 5. Author the decisions
 
-Capability decisions live in `decisions/` with filenames `DEC-NNN-<slug>.md`. The numbering is scoped to *this* capability — every capability has its own `DEC-001`. Author by hand for now: there is no `pkit new decision` extension for capability namespaces yet (per COR-007, that pattern lands when capability authoring recurs enough to justify the tooling).
+Capability decisions live in `decisions/` with filenames `DEC-NNN-<slug>.md`. The numbering is scoped to *this* capability — every capability has its own `DEC-001`. Stamp each with `pkit new decision <name> <slug>` through the `decision-author` skill, which numbers it within the capability.
 
-Each decision has the same shape as a PRJ decision (axiom + principles-not-inventory disciplines apply; project-neutrality does not — capabilities are explicitly discipline-specific):
+Each decision has the same shape as a PRJ decision, and follows the disciplines every record follows (`.pkit/decisions/README.md`, "Writing a record"). Project-neutrality does not apply — capabilities are explicitly discipline-specific:
 
 ```markdown
 ---

@@ -1,6 +1,6 @@
 ---
 name: decision-author
-description: Author a new decision record (COR, PRJ, ADR, or a capability-scoped DEC) with proper schema, disciplines, and citations. Use when adding a methodology, project-side, project-architectural, or capability-internal decision.
+description: Author a new decision record — a project's own PRJ or ADR record, a capability-scoped DEC, or, for the methodology's maintainers, a COR — with proper schema, disciplines, and citations. Use when adding a project-side, project-architectural, capability-internal, or methodology decision.
 metadata:
   wraps_command: pkit new decision
 gates:
@@ -10,9 +10,9 @@ gates:
 reads:
   records:
     - COR-024
+    - COR-046
     - COR-049
   paths:
-    - CONTRIBUTING.md
     - .pkit/decisions/README.md
     - .pkit/cli/README.md
     - .pkit/agents/project/overlay.yaml
@@ -20,7 +20,15 @@ reads:
 
 # Authoring a decision record
 
-This skill walks through adding a new **COR** (core methodology) record under `.pkit/decisions/core/`. **PRJ** records (project-side, under `.pkit/decisions/project/`) follow the same shape with two differences: they skip the project-neutrality discipline, and they use the `PRJ` prefix and a separate numbering sequence. **ADR** records (project-architectural, at the overlay-resolved `<adr-records>` path per [COR-025](../../decisions/core/COR-025-adr-decision-space.md)) follow the same shape with a different discipline emphasis (architectural-fit, see below) and use the `ADR` prefix at the adopter's `docs/architecture/decisions/` (or wherever the overlay resolves). **DEC** records (capability-scoped, under `.pkit/capabilities/<capability>/decisions/`) follow the same shape and use the `DEC` prefix, numbered independently within each capability; pass the capability name as the namespace. Use a DEC record when the decision is internal to a single capability's design; use COR/PRJ/ADR for project- or methodology-wide decisions.
+This skill walks through adding a new decision record. A project writes two kinds of record of its own, in the same shape:
+
+- **PRJ** records, under `.pkit/decisions/project/`, say how the project works: its workflow, tooling and conventions.
+- **ADR** records, at the overlay-resolved `<adr-records>` path, `docs/architecture/decisions/` by default ([COR-025](../../decisions/core/COR-025-adr-decision-space.md)), say what the project built and why: its boundaries, technologies and integration patterns.
+
+Two more kinds share the shape and this procedure:
+
+- **DEC** records, under `.pkit/capabilities/<capability>/decisions/`, hold a decision internal to one capability's design. Each capability numbers its own; pass the capability's name as the namespace.
+- **COR** records, under `.pkit/decisions/core/`, hold the methodology's own principles. Writing one is the methodology maintainers' case, in the methodology's source repository. A project receives them by sync and never edits them: to propose one, it contributes upstream (`.pkit/decisions/README.md`, "Adding a record").
 
 ## Acceptance gate (run first)
 
@@ -30,44 +38,43 @@ The current declared dependencies:
 
 - **COR-006** — artifact roles. Used so this skill cites authoritative docs/decisions rather than restating them.
 - **COR-008** — git workflow conventions. Used for the commit-message format in the final step.
+- **COR-025** — the ADR decision space. Used to pick the record's kind in the first step.
 
 ## Procedure
 
-### 1. Read the disciplines
+### 1. Pick the kind of record
 
-Read `CONTRIBUTING.md`'s **Adding a core record (COR)** section. Three disciplines apply when authoring a COR:
+COR-025's scope test picks the kind, its three tests in order:
 
-- **Axiom discipline** — use only previously-defined terms in the corpus, generic English, or named external tools (e.g. Claude Code, Yeoman). Do not reach for framework-internal command names that haven't been decided yet. One exception: a record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
-- **Project-neutrality** — the record must make sense in any adopting project. Framework-source-specific decisions (CLI binary name, self-hosting, distribution channel) belong in PRJ records, not COR.
-- **Principles, not inventory** — capture durable rules-among-alternatives, not path lists, command lists, or current-state inventories. Inventory belongs in reference docs that the COR points at.
+- **Does the rule apply to this one project, not to every project that adopts the methodology?** Then it is the project's: continue. A rule every adopter would need is a COR. Outside the methodology's source repository, stop there and propose it upstream.
+- **Is it internal to one installed capability's discipline?** Then it is a DEC in that capability.
+- **Otherwise, what question does it answer?** "How do we work, with what tooling, by what process?" is a PRJ. "What did we build, why these boundaries, why this technology?" is an ADR.
 
-A fourth discipline applies to **every** record type (COR, PRJ, ADR):
+### 2. Read the disciplines
 
-- **Lead with meaning** — the record opens with a short declarative title and a plain-language summary a reader grasps in under a minute, *before* the rigor; cross-references serve the sentence (roughly one per point), not pile five-deep. Keep the depth, but put a readable on-ramp in front of it. See CONTRIBUTING.md's "Lead with meaning". This guards against the wall-of-jargon record whose decision is unrecoverable on a first read.
+Read `.pkit/decisions/README.md`'s **Writing a record** section. Which disciplines bind depends on the kind:
 
-For **PRJ records**, project-neutrality does not apply (PRJ records are explicitly project-specific). The other disciplines still apply.
+- **Every record**, whatever its kind: lead with meaning, principles, not inventory, the role named rather than its current holder (COR-046), and defined terms. It states the present, with no log of its revisions.
+- **An ADR** adds architectural fit. Its readers are the project's architects, maintainers and on-call engineers, not the methodology's.
+- **A COR**, the maintainers' case, adds the axiom discipline and project-neutrality.
 
-For **ADR records** (per COR-025), project-neutrality does not apply either, and the *audience* is the project's architects + future maintainers + on-call engineers (not the methodology corpus). One additional discipline replaces project-neutrality:
-
-- **Architectural fit** — the record captures *what the project built and why*: a system boundary, technology choice, integration pattern, key abstraction, or deployment topology. Workflow conventions, tooling choices unconnected to architecture, and how-we-work practices belong in PRJ, not ADR. The discriminator: an ADR answers "what did we build / why these boundaries / why this technology over alternatives?"; a PRJ answers "how do we work / what tooling / what's our process?". When a decision touches both, prefer pinning the architecturally-significant aspect as ADR and cross-referencing a PRJ for the workflow-mechanical aspect.
-
-### 2. Read the schema
+### 3. Read the schema
 
 Read `.pkit/decisions/README.md`'s **Schema** and **Statuses** sections. Every record has the same frontmatter and four required sections.
 
-### 3. Pick a slug
+### 4. Pick a slug
 
 Kebab-case, 2–4 words, describing what's decided. Examples: `content-mechanisms`, `merge-delivery`, `pr-workflow`, `git-conventions`, `pattern-extraction`.
 
-### 4. Stamp the stub
+### 5. Stamp the stub
 
 Use the methodology's authoring command to scaffold the file (per `.pkit/cli/README.md` → "Authoring commands" → `new decision`):
 
 ```
-pkit new decision core <slug>            # for COR
 pkit new decision project <slug>         # for PRJ
 pkit new decision adr <slug>             # for ADR (per COR-025)
 pkit new decision <capability> <slug>    # for DEC (capability-scoped)
+pkit new decision core <slug>            # for COR (the maintainers' case)
 ```
 
 The command picks the next number in the id-space, stamps the frontmatter (`id`, `title` placeholder, `status: proposed`, today's `date`, `author` from git config), and writes the four required section headers (`## Context`, `## Decision`, `## Rationale`, `## Implications`) with empty bodies, but for a first point heading under `## Decision`, `### 1. Point title`.
@@ -78,7 +85,7 @@ For a **capability namespace** (any namespace that is not `core`/`project`/`adr`
 
 This is the deterministic half of authoring. The conversational half — drafting the body — happens in the next steps.
 
-### 5. Draft the body
+### 6. Draft the body
 
 Open the stamped file and fill in:
 
@@ -88,28 +95,30 @@ Open the stamped file and fill in:
 - **`## Rationale`** — why this choice over alternatives. May include an `### Alternatives considered` sub-section.
 - **`## Implications`** — what does this mean for code, tests, workflow, downstream decisions?
 
-### 6. Self-check against disciplines
+### 7. Self-check against disciplines
 
-Before showing the draft, walk it against each applicable discipline:
+Before showing the draft, walk it against each discipline that binds its kind (step 2):
 
-- *Axiom*: every term used has a prior definition, is generic English/Markdown/filesystem vocabulary, or names a known external tool.
-- *Project-neutrality* (COR only): would this record fit naturally in `example-brownfield` or `example-greenfield` adopting the methodology?
-- *Architectural fit* (ADR only): does the record answer "what did we build / why these boundaries / why this technology"? If it answers "how do we work / what's our process", it belongs in PRJ.
-- *Principles-not-inventory*: does the body capture rules-among-alternatives, or has it slipped into enumerating state? Tag candidate content as *rule* or *inventory*; inventory gets a one-line cross-reference, not enumeration.
-- *Lead with meaning* (every record type): is the title short and declarative? Does a plain-language summary open the record so a reader grasps the decision in under a minute before the rigor? Do any sentences pile up cross-references and bury their own meaning? If the decision isn't recoverable on a first read, revise the on-ramp before showing it.
+- *Lead with meaning* (every record): is the title short and declarative? Does a plain-language summary open the record so a reader grasps the decision in under a minute before the rigor? Do any sentences pile up cross-references and bury their own meaning? If the decision isn't recoverable on a first read, revise the on-ramp before showing it.
+- *Principles, not inventory* (every record): does the body capture rules among alternatives, or has it slipped into enumerating state? Tag candidate content as *rule* or *state*; state gets a one-line cross-reference, not enumeration.
+- *The role, not its current holder* (every record): would a sentence become false if a path, module or function it names were renamed, with no decision changed? Then it meant the role: name the part instead, sharply enough that only one thing could play it.
+- *Defined terms* (every record): does every term have a definition in the project's accepted records or the methodology's, or is it generic English or a tool the record names? Define a new term where it is first used.
+- *Architectural fit* (ADR): does the record answer "what did we build / why these boundaries / why this technology"? If it answers "how do we work / what's our process", it belongs in PRJ.
+- *Axiom* (COR): every term used has a prior definition in an earlier core record, is generic English/Markdown/filesystem vocabulary, or names a known external tool.
+- *Project-neutrality* (COR): would the record make sense, and apply, read in any project that adopts the methodology? If it says how the methodology's own source project is built, it belongs in that project's PRJ records.
 
 If any check fails, revise.
 
-### 7. Show the draft for review
+### 8. Show the draft for review
 
 Surface the draft to the user. Do **not** commit until approved. The acceptance gate forbids using the new record as a basis for downstream work until it's accepted; the same caution applies to committing — uncommitted drafts can still be revised cheaply.
 
-### 8. Commit (after approval)
+### 9. Commit (after approval)
 
 Per COR-008, use conventional-commits format. Type is `decision`; scope reflects the area:
 
 ```
-decision(<scope>): add COR-NNN <short title>
+decision(<scope>): add <ID> <short title>
 
 <body — 1–3 paragraphs summarising context and decision>
 
@@ -123,4 +132,4 @@ The record lands as `proposed`. Acceptance is a separate gesture (status flip + 
 ## Variations
 
 - **Refining an existing accepted record** — not this skill's work: this skill authors new records. A refinement that introduces no new decision is an edit in place, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
-- **Superseding an existing record** — this skill authors the superseding record; set `supersedes: COR-NNN` in its frontmatter for a record it replaces whole. A record that overturns another only in part sets none. The edit to the superseded record is a separate step, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
+- **Superseding an existing record** — this skill authors the superseding record; set `supersedes:` in its frontmatter to the id of a record it replaces whole, such as `supersedes: PRJ-NNN`. A record that overturns another only in part sets none. The edit to the superseded record is a separate step, made as `.pkit/decisions/README.md` → "Refining an accepted record" says.
