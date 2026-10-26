@@ -20,8 +20,16 @@ and this check applies them to the diff:
   section names the code path or the rule's glob.
 - **A contributed obligation** — from a documentation capability, or the
   project's own filler file — that names a `document` is met only by the
-  page's answer in the diff: a changed file matches its `document`; the form
-  of the answer is the core change check's to verify (`pkit friction check`).
+  page's answer in the diff: a changed file matches its `document`, or the
+  core change check (`pkit friction check --json`, run against the same base
+  as the gate runs it) lists an answer the change adds on the page — updated,
+  unchanged or deferred — that it accepts. The change check compares the base
+  with the head, the one squash commit the pull request lands as (DEC-013), so
+  an answer meets the obligation wherever it falls among the branch's commits:
+  a fix round that edits an anchor after the commit that answered for it
+  leaves the page stale at the head, as the whole-repository check reads the
+  branch, and not once it lands. Where the change check gives no list, the
+  check says why and meets the page only by its change in the diff.
   One that names no `document` — a `code-undocumented` path — is met only by
   leaving the point: its filler reads the branch's HEAD, so once a page anchors
   the path it is no longer given. Still given, it is unmet, whatever else the
@@ -164,6 +172,24 @@ def _matches(glob: str, path: str) -> bool:
     return spec.match_file(path)
 
 
+def _answered(base: str) -> dict[str, str]:
+    """The pages the change's answers meet the obligation of, each with the file that
+    holds its answer, from the change check against `base` as the gate runs it
+    (DEC-053 point 2). The check compares the base with the head, the one squash
+    commit the pull request lands as (DEC-013), so an answer meets the obligation
+    wherever it falls among the branch's commits. Where the check gives no list, it
+    says why and meets none: never a pass on an answer it could not read."""
+    derived = friction_answers.written(base)
+    if derived.problem is not None:
+        print(
+            "warn: the change check gives no list of the answers this change adds, so a "
+            f"page is met only by its change in the diff: {derived.problem}",
+            file=sys.stderr,
+        )
+        return {}
+    return doc_check.answer_files(derived.answers)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -282,11 +308,13 @@ def main() -> int:
         unsatisfied.append(code_glob)
 
     # Contributed obligations. One naming a page is met by the page's answer in
-    # the diff — the page changed. One naming none is met only by leaving the
+    # the diff: the page changed, or the change check lists an answer the change
+    # adds on it, which it accepts. One naming none is met only by leaving the
     # point: the filler read HEAD, so an obligation still here is unmet, however
     # much else the diff changed. The `## Doc impact` section is not read.
     unanswered: dict[str, int] = {}
     unanchored: dict[str, int] = {}
+    answered: dict[str, str] | None = None  # read once, at the first page left to meet
     for obligation in contributed:
         source = str(obligation["source"])
         reason = obligation["reason"]
@@ -301,6 +329,14 @@ def main() -> int:
         page = str(obligation["document"])
         if any(_matches(page, f) for f in changed_set):
             print(f"  ✓ [{source}] {page} → answered in the diff")
+            continue
+        if answered is None:
+            answered = _answered(base.ref)
+        # The answer's location is the page's exactly: read as a pattern, `README.md`
+        # would take an answer on any README in the tree for the root's.
+        file = answered.get(page)
+        if file is not None:
+            print(f"  ✓ [{source}] {page} → answered in the diff ({file})")
             continue
         print(f"  ✗ [{source}] {page} → no answer in the diff ({reason})")
         unanswered[source] = unanswered.get(source, 0) + 1
