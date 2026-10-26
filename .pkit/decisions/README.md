@@ -15,7 +15,7 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, "COR-043#5", COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", "ADR-061#3"]
+      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, "COR-043#5", COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", ADR-061]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -178,7 +178,7 @@ The **`waits-on`** field is optional, and only a proposed record carries it. It 
 - **`date: 2026-12-01`:** the date comes.
 - **`record: ADR-071`:** the record is accepted, or superseded since. A capability's decision is written as in an anchor's value, such as `project-management:DEC-059`.
 
-**An issue** is read through `gh` each time a command asks, and its state is stored nowhere. One that cannot be read is reported with why, and blocks nothing ([COR-043](core/COR-043-scratchpad-reported-state.md) point 5). The condition reads GitHub only, and is labelled so. project-kit keeps such GitHub-only acts in core under a label provisionally (its ADR-061 point 3), and [project-kit#1222](https://github.com/aleskalfas/project-kit/issues/1222) raises the question for a core decision.
+**An issue** is read through `gh` each time a command asks, and its state is stored nowhere. One that cannot be read is reported with why, and blocks nothing, as for the issues a reported scratchpad note became ([COR-043](core/COR-043-scratchpad-reported-state.md) point 5). The condition reads GitHub only, and is labelled so. project-kit keeps it in core under that label provisionally, as its ADR-061 point 3 does for landing a pull request, and [project-kit#1222](https://github.com/aleskalfas/project-kit/issues/1222) raises the question for a core decision.
 
 A project that tracks its issues elsewhere waits on a date or a record. A record that waits on several things names the one that settles last, or an issue that gathers them.
 

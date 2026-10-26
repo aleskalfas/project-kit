@@ -33,9 +33,9 @@ from the working tree, so all but an issue reads offline. An issue is read
 through the backbone's one issue reader, `github_issues.read_issue`, from the
 project's root. That read is live and pull-only, stores nothing, and gives an
 issue it cannot read as unknown, with why, never blocking (COR-043 point 5).
-The condition is tied to GitHub, through `gh`, under a label naming it, a
-placement adopted provisionally (ADR-061 point 3) while #1222 raises it for a
-core decision. The report's answer moves with the date and the tracker, so it
+The condition is tied to GitHub, through `gh`, under a label naming it,
+provisionally, as ADR-061 point 3 places the backbone's landing of a pull
+request, while #1222 raises the question for a core decision. The report's answer moves with the date and the tracker, so it
 is a command of its own, never a member of validation (COR-055 point 2). A
 synced copy is not listed, since it is settled where it is authored (COR-055
 point 1), though a record of the project's may wait on one.

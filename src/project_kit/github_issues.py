@@ -13,9 +13,9 @@ as COR-043 point 5 has it:
 - **never blocking:** a read that fails, or that `gh` does not answer within
   `GH_TIMEOUT_SECONDS`, ends there, and the caller goes on
 
-It reads GitHub only, through `gh`, and its name says so. The backbone's acts on
-one hosting service carry a label naming it, a placement adopted provisionally
-(ADR-061 point 3). Whether core content may act on one hosting service is raised
+It reads GitHub only, through `gh`, and its name says so. It sits in the backbone
+under that label provisionally, as ADR-061 point 3 places the backbone's landing
+of a pull request. Whether core content may act on one hosting service is raised
 for a core decision in #1222.
 
 `issue` names an issue of the repository `gh` finds from the git remote of `cwd`
