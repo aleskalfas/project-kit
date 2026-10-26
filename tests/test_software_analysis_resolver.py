@@ -92,8 +92,9 @@ GENERATED = "src/generated/stub.py"
 #: The hint the stamp leaves as an actor's opening, its first part (#1366).
 WHO = re.compile(r"^<!-- pkit:hint What this role is.*? -->$", re.MULTILINE)
 
-#: The hint the stamp leaves after a use case's `**Main path:**` label (#1366).
-MAIN_PATH = re.compile(r"\*\*Main path:\*\* <!-- pkit:hint .*? -->")
+#: The hint the stamp leaves below a use case's `**Main path:**` label, where its list goes
+#: (#1366, #2088).
+MAIN_PATH = re.compile(r"\*\*Main path:\*\*\n\n<!-- pkit:hint .*? -->")
 
 
 # --- the rules, on their own ---------------------------------------------------------------
