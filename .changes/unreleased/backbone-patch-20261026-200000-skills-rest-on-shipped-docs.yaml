@@ -1,0 +1,18 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The authoring skills no longer send their reader to sections of project-kit's
+  own `CONTRIBUTING.md`, which no install writes, nor to project-kit's example
+  projects (#2156). The disciplines a decision record follows now live in the
+  decisions README, `.pkit/decisions/README.md`, under "Writing a record". Every
+  record leads with meaning, holds principles, not inventory, and names the role
+  rather than its current holder (COR-046). An ADR adds architectural fit, and a
+  core record, the methodology maintainers' case, the axiom discipline and
+  project-neutrality. `decision-author` leads with the records a project writes,
+  PRJ and ADR, and picks a record's kind by COR-025's scope test.
+  `agent-author`, `capability-author` and the `schema` skill point to the README
+  too. The axiom discipline now binds core records and the schemas core ships
+  only, no longer a project's own PRJ records, capability records or schemas.
+  No migration.

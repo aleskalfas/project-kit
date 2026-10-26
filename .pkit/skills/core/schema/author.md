@@ -178,11 +178,11 @@ For richer entries, write to a YAML file and pass via `--from`. For simple ones,
 
 ### 11. Self-check against the disciplines
 
-Walk the new schema against the kit's authoring disciplines (per `CONTRIBUTING.md`):
+Walk the new schema against the authoring disciplines the dispatcher's shared framing lists (`schema.md`, "Disciplines"):
 
-- *Axiom*: every term used in the schema's prose has a prior definition, is generic English / YAML / JSON Schema vocabulary, or names a known external tool.
-- *Project-neutrality* (when the schema ships kit-side): would this fit naturally in `example-brownfield` or `example-greenfield` adopting the methodology?
 - *Principles-not-inventory*: the schema captures rules-among-alternatives, not state inventories. (The *entries* may be a closed set when the methodology defines it — e.g., the three severity classes; but the schema's *shape* expresses the rule.)
+- *Axiom* (a schema core ships, the methodology maintainers' case): every term used in the schema's prose has a prior definition, is generic English / YAML / JSON Schema vocabulary, or names a known external tool.
+- *Project-neutrality* (a schema core ships, the methodology maintainers' case): would the schema make sense, and apply, in any project that adopts the methodology?
 
 ### 12. Commit
 
