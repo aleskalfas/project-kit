@@ -92,7 +92,7 @@ Hello, world!
 - **The scratch project:** your setup step builds it once for each run ("The configuration" below). Each fence starts from the project and its home as the setup left them, at the same paths, and from an empty temporary folder. So no fence sees what another left.
 - **The environment:** a command gets an environment the run builds, and nothing else of yours. It holds your `PATH` behind the folders you name, the variables you name, and the settings the run fixes.
   - **The settings the run fixes:** `HOME`, the scratch home, and `TMPDIR`, the temporary folder. Then `LANG=C`, `LC_ALL=C`, `TERM=dumb` and `NO_COLOR=1`.
-  - **Its own value wins** over a variable you name with one of these names, or with `PATH`.
+  - **The run's value wins** over a variable you name with one of these names, or with `PATH`.
   - **No tool reads your configuration** through `HOME`, since `HOME` is the scratch home.
 - **The limits:** a command of a page may run 60 seconds, which `--timeout` changes, and print 1 MiB. A command of the setup step or of a placeholder may run 600 seconds, which `--setup-timeout` changes.
   - **A command past a limit** is stopped, with every process left in the fence's shell. So is the command running when you interrupt the run.
