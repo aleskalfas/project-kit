@@ -40,6 +40,14 @@ finding (the `--force` layer per DEC-046 — distinct from the reason-based
 
 Membership gate per DEC-021 runs at startup.
 
+The clash guard (DEC-035 point 6) runs before anything is written, where this
+clone set an instance id or holds a seat of a topology: an edit of an issue
+another instance owns is refused at bypassable-with-audit (DEC-014), through
+`_lib/instance_claims`. `--bypass-owner "<reason>"` posts the reason on the
+issue as an audit comment first. In a project with a topology, a claim whose
+clone no longer holds its seat is no claim, and one that cannot be judged
+refuses (DEC-059 point 9).
+
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-issue.py 42 --body-file new-body.md
 
@@ -49,7 +57,8 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  edited (or dry-run reported, or nothing to change)
   1  membership refusal / validation refusal / a milestone edit that would
-     move the issue in the lifecycle or orphan its parent-ref
+     move the issue in the lifecycle or orphan its parent-ref / the clash
+     guard refused an issue another instance owns
   2  usage error (issue not found; no mode specified; milestone matches no
      open milestone)
   3  gh failure
@@ -79,6 +88,7 @@ from _lib import (
     body_rules,
     bootstrap_gate,
     decision_ids,
+    instance_claims,
     provenance,
     session_guard,
     title_rules,
@@ -207,6 +217,17 @@ def main() -> int:
             "audit comment (the `--force` layer per DEC-046 — a hard-reject "
             "is force-overridable out of band, distinct from the "
             "`--bypass` mechanism). Default: refuse on hard-reject."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses an edit of an issue another "
+            "instance owns (bypassable-with-audit per DEC-014, DEC-035 point 6): "
+            "the reason is posted on the issue as an audit comment before the edit. "
+            "Qualified per DEC-046, since validation findings are another gate here."
         ),
     )
     parser.add_argument(
@@ -410,6 +431,24 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+
+    # The clash guard (DEC-035 point 6), before anything is written: an edit of
+    # an issue another instance owns is refused, unless a bypass posts its reason.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="edit-issue",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 1
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")

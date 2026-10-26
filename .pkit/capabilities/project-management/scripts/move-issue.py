@@ -60,6 +60,15 @@ near the end of this file.
 
 Membership gate per DEC-021 runs at startup.
 
+The clash guard (DEC-035 point 6) runs before anything is written, where this
+clone set an instance id or holds a seat of a topology: a move of an issue
+another instance owns is refused at bypassable-with-audit (DEC-014), through
+`_lib/instance_claims`. `--bypass-owner "<reason>"` posts the reason on the
+issue as an audit comment first. A verb that composes this one hands on the
+reason its own guard was bypassed with, and the comment is posted once. In a
+project with a topology, a claim whose clone no longer holds its seat is no
+claim, and one that cannot be judged refuses (DEC-059 point 9).
+
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/move-issue.py 42 --to in-progress
 
@@ -69,7 +78,8 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  transitioned, already there, or dry-run reported — a forward cascade
      left incomplete is a warning, not a failure: the issue's move stands
-  1  membership refusal / authorisation refusal
+  1  membership refusal / authorisation refusal / the clash guard refused an
+     issue another instance owns
   2  usage error (unknown state, illegal transition, issue not found)
   3  gh failure
 """
@@ -99,6 +109,7 @@ from _lib import (
     composed_move,
     containment,
     engine_said,
+    instance_claims,
     move_journal,
     session_guard,
     state_timeline,
@@ -231,6 +242,17 @@ def main() -> int:
             "Reason recorded in the audit comment and, where a journal is kept, "
             "on the move's journal entry; required (non-empty) whenever --bypass "
             "is set — a bare --bypass is refused."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses a move of an issue another "
+            "instance owns (bypassable-with-audit per DEC-014, DEC-035 point 6): "
+            "the reason is posted on the issue as an audit comment before the "
+            "move. Distinct from --bypass, which clears the transition's gate."
         ),
     )
     parser.add_argument(
@@ -427,6 +449,24 @@ def main() -> int:
             closed=state == "closed",
             closed_as=closed_as,
         )
+
+    # The clash guard (DEC-035 point 6), before anything is written: a move of an
+    # issue another instance owns is refused, unless a bypass posts its reason.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="move-issue",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 1
 
     # Idempotency check: issue is already at the requested state.
     #

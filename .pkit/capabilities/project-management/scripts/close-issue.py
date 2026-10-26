@@ -96,7 +96,8 @@ stays realm-blind (DEC-035 point 8). `done-work` releases through this script,
 which it runs for each issue its merge closed. A release that fails is a
 warning, and the close stands. A dry run, and a run that finds the issue
 already closed in won't-do or cascade mode, release nothing. With no id set,
-nothing of this runs.
+nothing of this runs. In a project with a topology of seats, a clone in a seat
+releases as a clone with an id does (DEC-059 point 9).
 
 Membership gate per DEC-021 runs at startup.
 
@@ -346,7 +347,7 @@ def main() -> int:
 
     # Instance ownership (DEC-035): None unless this clone set an instance id,
     # and then nothing below changes.
-    clone = instance_claims.this_clone(capability_root, invoker.github_login)
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
 
     print(f"close-issue: #{args.issue_number}")
     print(f"  title:        {title}")

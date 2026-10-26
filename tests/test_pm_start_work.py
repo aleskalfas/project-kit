@@ -5,13 +5,14 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
-from tests.pm_ownership_support import FakeGitHub, clone_with
+from tests.pm_ownership_support import FakeGitHub, clone_with, stub_seat_stamps, topology_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
@@ -404,13 +405,15 @@ def test_start_work_refuses_a_base_that_resolves_nowhere(
 @pytest.fixture
 def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
     """Returns `run(issue, move_rc=0, engine=None, config=None, move=None,
-    dry_run=False, instance=None, github=None) -> (rc, mutations)` over stubbed
-    seams. `engine` is the process engine, a `FakeEngine` (by default one that
-    gives no answer); `config` adds to the adopter config. `move` runs the
-    composed move-issue in process; without it the move is recorded and answers
-    `move_rc`. `instance` is this clone's instance id (none by default), and
-    `github` the in-memory GitHub its ownership calls reach; each ownership
-    write is recorded as `("ownership", <gh verb>)`."""
+    dry_run=False, instance=None, github=None, extra=()) -> (rc, mutations)`
+    over stubbed seams. `engine` is the process engine, a `FakeEngine` (by
+    default one that gives no answer); `config` adds to the adopter config.
+    `move` runs the composed move-issue in process; without it the move is
+    recorded and answers `move_rc`, and a clash-guard bypass it is handed is
+    recorded as `("move-bypass", <reason>)`. `instance` is this clone's instance
+    id (none by default), and `github` the in-memory GitHub its ownership calls
+    reach; each ownership write is recorded as `("ownership", <gh verb>)`.
+    `extra` adds to the command line."""
     from types import SimpleNamespace
 
     def run(
@@ -422,6 +425,7 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
         dry_run: bool = False,
         instance: int | None = None,
         github: FakeGitHub | None = None,
+        extra: tuple[str, ...] = (),
     ):
         mutations: list[tuple] = []
         fake = github if github is not None else FakeGitHub()
@@ -433,7 +437,7 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
 
         clone_with(sw.instance_claims, monkeypatch, instance)
         monkeypatch.setattr(sw.instance_claims, "_gh", ownership_gh)
-        argv = ["start-work", "42", "--yes", *(["--dry-run"] if dry_run else [])]
+        argv = ["start-work", "42", "--yes", *(["--dry-run"] if dry_run else []), *extra]
         monkeypatch.setattr(sys, "argv", argv)
         monkeypatch.setattr(sw, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(sw.bootstrap_gate, "enforce", lambda *a, **k: True)
@@ -459,8 +463,10 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
             mutations.append(("assignee", login))
             return True
 
-        def move_issue(n, target, **_kw):
+        def move_issue(n, target, **kw):
             mutations.append(("move", target))
+            if kw.get("bypass_owner"):
+                mutations.append(("move-bypass", kw["bypass_owner"]))
             return move_rc
 
         monkeypatch.setattr(sw, "_create_branch", create_branch)
@@ -629,12 +635,11 @@ def _assigned_42() -> FakeGitHub:
     return github
 
 
-def _stamp(sw, event: str, instance: int) -> str:
-    from datetime import UTC, datetime
+_T = datetime(2026, 7, 7, tzinfo=UTC)
 
-    return sw.instance_claims.ownership.format_event_comment(
-        event=event, instance=instance, ts=datetime(2026, 7, 7, tzinfo=UTC)
-    )
+
+def _stamp(sw, event: str, instance: int) -> str:
+    return sw.instance_claims.ownership.format_event_comment(event=event, instance=instance, ts=_T)
 
 
 def test_with_no_instance_id_start_work_is_unchanged(run_main, capsys) -> None:
@@ -669,25 +674,99 @@ def test_claims_an_unowned_issue_before_the_move(run_main, capsys) -> None:
     assert "[ok] ownership: #42 claimed for instance 2 (comment substrate)." in out
 
 
-def test_an_issue_another_instance_owns_is_started_unclaimed(run_main, sw, capsys) -> None:
-    """Owned by another instance, the issue is not claimed. Refusing the start is
-    the clash guard's, which this does not add."""
+def test_the_clash_guard_refuses_an_issue_another_instance_owns(run_main, sw, capsys) -> None:
+    """DEC-035 point 6: refused before any branch, assignee or move."""
     github = _assigned_42()
     github.post(42, _stamp(sw, "claim", 3))
     rc, mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == 2
+    assert mutations == []
+    err = capsys.readouterr().err
+    assert (
+        "[refused] start-work #42: #42 is owned by instance 3, and this clone is instance 2" in err
+    )
+    assert 'pass --bypass "<reason>"' in err
+
+
+def test_a_bypass_posts_its_reason_and_starts_the_work_unclaimed(run_main, sw, capsys) -> None:
+    """The audit comment comes first, the issue stays the other instance's, and
+    the composed move is handed the same reason, so it posts no second comment."""
+    github = _assigned_42()
+    github.post(42, _stamp(sw, "claim", 3))
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]),
+        instance=2,
+        github=github,
+        extra=("--bypass", "instance 3's session is gone"),
+    )
     assert rc == 0
-    assert ("move", "in-progress") in mutations
-    assert not [m for m in mutations if m[0] == "ownership"]
-    assert "#42 is owned by instance 3" in capsys.readouterr().out
+    assert mutations == [
+        ("ownership", "comment"),
+        ("branch", "fix/42-do-the-thing"),
+        ("assignee", "me"),
+        ("move", "in-progress"),
+        ("move-bypass", "instance 3's session is gone"),
+    ]
+    audit = github.issues[42].comments[-1]["body"]
+    assert audit.startswith("<!-- pkit-audit -->")
+    assert "Bypassed by me: instance 3's session is gone" in audit
+    assert "<!-- pkit-audit-key: ownership-guard:" in audit
+    captured = capsys.readouterr()
+    assert "--bypass let this clone, instance 2, act on it" in captured.err
+    assert "#42 is owned by instance 3, so this clone, instance 2, did not claim it" in captured.out
+
+
+def test_the_composed_move_finds_the_bypass_posted(run_main, sw, monkeypatch, capsys) -> None:
+    """move-issue's own guard is handed the reason, finds the audit comment it
+    would post, and posts no second one."""
+    github = _assigned_42()
+    github.post(42, _stamp(sw, "claim", 3))
+    from types import SimpleNamespace
+
+    at_move = {**_task(["type:bug", "state:in-progress"]), "body": "## What\nx"}
+    move = MoveIssueInProcess(monkeypatch, at_move)
+    # The child runs as the same person as start-work, as a real child does.
+    me = SimpleNamespace(github_login="me")
+    monkeypatch.setattr(move.module, "resolve_invoker_identity", lambda config=None: me)
+    rc, _mutations = run_main(
+        _task(["type:bug", "state:backlog"]),
+        engine=FakeEngine(status_at("in-progress")),
+        move=move,
+        instance=2,
+        github=github,
+        extra=("--bypass", "instance 3's session is gone"),
+    )
+    assert rc == 0
+    assert move.runs[0][-2:] == ["--bypass-owner", "instance 3's session is gone"]
+    audits = [c for c in github.issues[42].comments if "pkit-audit-key" in c["body"]]
+    assert len(audits) == 1
+    assert "audit comment already present; idempotent skip" in capsys.readouterr().out
+
+
+def test_a_dry_run_bypass_posts_nothing(run_main, sw, capsys) -> None:
+    github = _assigned_42()
+    github.post(42, _stamp(sw, "claim", 3))
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]),
+        dry_run=True,
+        instance=2,
+        github=github,
+        extra=("--bypass", "why"),
+    )
+    assert rc == 0
+    assert mutations == []
+    assert github.writes() == []
+    assert "--bypass would post an audit comment first" in capsys.readouterr().out
 
 
 def test_a_lost_same_instant_claim_stops_before_the_move(run_main, sw, capsys) -> None:
     """Instance 1 claims in the same instant: this clone, instance 2, withdraws
-    its claim, does not move the issue, and names the branch it cut."""
+    its claim, does not move the issue, and names the branch it cut. The rival's
+    claim lands before the third read: the guard's, the claim's and its re-read."""
     github = _assigned_42()
 
     def rival(number: int, seen: int) -> None:
-        if seen == 1:
+        if seen == 2:
             github.post(number, _stamp(sw, "claim", 1))
 
     github.on_view = rival
@@ -706,7 +785,7 @@ def test_a_lost_claim_whose_withdrawal_fails_still_stops(run_main, sw, capsys) -
     github = _assigned_42()
 
     def rival(number: int, seen: int) -> None:
-        if seen == 1:
+        if seen == 2:
             github.post(number, _stamp(sw, "claim", 1))
             github.failing.add("comment")
 
@@ -735,5 +814,108 @@ def test_a_dry_run_claims_nothing(run_main, capsys) -> None:
     )
     assert rc == 0
     assert mutations == []
-    assert github.calls == []
+    assert github.writes() == []
     assert "  ownership: claimed for instance 2" in capsys.readouterr().out
+
+
+# ---- a project with a topology of seats (DEC-059 points 5, 7 and 9) -----------
+#
+# The run's reading of the topology and the stamp that names a seat stand in for
+# what #2140, #2141 and #2138 bring (`tests/pm_ownership_support`).
+
+
+@pytest.fixture
+def seats(sw, monkeypatch) -> Any:
+    """Returns `seat(role="worker", holders=None)`: this clone holds `worker-2`,
+    the topology's second seat, with the key `k2`, and the topology's reading
+    gives each seat's holder (`worker-2` held by this clone by default)."""
+    claims = sw.instance_claims
+    ownership = claims.ownership
+    stub_seat_stamps(ownership, monkeypatch)
+
+    def seat(role: str = "worker", holders: dict | None = None) -> None:
+        held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
+        topology = claims.Topology(claims.Seat("worker-2", 2, role), "k2", holders or held)
+        topology_with(claims, monkeypatch, topology)
+
+    return seat
+
+
+def _seat_claim(sw, seat: str, instance: int, key: str) -> str:
+    return sw.instance_claims.ownership.format_event_comment(
+        event="claim", instance=instance, ts=_T, seat=seat, key=key
+    )
+
+
+def test_a_worker_claims_for_its_seat(run_main, sw, seats, capsys) -> None:
+    """The claim names the seat, its number and the clone's key (DEC-059 point 9)."""
+    seats()
+    github = _assigned_42()
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), github=github)
+    assert rc == 0
+    assert ("move", "in-progress") in mutations
+    claim = github.issues[42].comments[0]["body"]
+    assert "event=claim instance=2 seat=worker-2 key=k2" in claim
+    assert "[ok] ownership: #42 claimed for seat worker-2, instance 2" in capsys.readouterr().out
+
+
+def test_a_claim_whose_seat_was_released_is_no_claim(run_main, sw, seats, capsys) -> None:
+    """Seat worker-1 is free now, so its old claim stops counting with no write to
+    the issue (DEC-059 point 5): the guard passes and this clone claims."""
+    ownership = sw.instance_claims.ownership
+    seats(
+        holders={
+            "worker-1": ownership.Holder(ownership.SEAT_FREE),
+            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2"),
+        }
+    )
+    github = _assigned_42()
+    github.post(42, _seat_claim(sw, "worker-1", 1, "k1"))
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), github=github)
+    assert rc == 0
+    assert ("move", "in-progress") in mutations
+    assert "#42 claimed for seat worker-2, instance 2" in capsys.readouterr().out
+
+
+def test_another_seats_task_is_refused(run_main, sw, seats, capsys) -> None:
+    ownership = sw.instance_claims.ownership
+    seats(
+        holders={
+            "worker-1": ownership.Holder(ownership.SEAT_HELD, "me", "k1"),
+            "worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2"),
+        }
+    )
+    github = _assigned_42()
+    github.post(42, _seat_claim(sw, "worker-1", 1, "k1"))
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), github=github)
+    assert rc == 2
+    assert mutations == []
+    assert (
+        "#42 is owned by seat worker-1, instance 1, and this clone is seat worker-2, instance 2."
+        in capsys.readouterr().err
+    )
+
+
+def test_a_claim_whose_seat_cannot_be_read_refuses(run_main, sw, seats, capsys) -> None:
+    """No consumer treats an unjudged claim as free (ADR-041 point 5)."""
+    seats()
+    github = _assigned_42()
+    github.post(42, _seat_claim(sw, "worker-1", 1, "k1"))
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), github=github)
+    assert rc == 2
+    assert mutations == []
+    assert "whose claim could not be judged since its seat is not among the seats read" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_clone_that_holds_no_seat_marks_nothing(run_main, sw, monkeypatch, capsys) -> None:
+    """DEC-059 point 6: no seat, no instance, whatever id file the clone kept."""
+    claims = sw.instance_claims
+    topology_with(claims, monkeypatch, claims.Topology(None, "k9", {}))
+    github = _assigned_42()
+    github.post(42, _stamp(sw, "claim", 3))
+    rc, _mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == 0
+    assert github.calls == []
+    assert "ownership" not in capsys.readouterr().out

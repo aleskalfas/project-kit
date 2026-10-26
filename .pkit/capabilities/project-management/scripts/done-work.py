@@ -12,8 +12,17 @@ Transitions Review → Done by squash-merging the PR (an issue still In Progress
 goes through Review first, #1162). Per DEC-026:
 
     done-work <N> [--bypass "<reason>"] [--bypass-ci "<reason>"]
-                  [--skip-checkbox-gate]
+                  [--skip-checkbox-gate] [--bypass-owner "<reason>"]
                   [--bypass-reviewer <name> ... --bypass-reviewer-reason "<r>"]
+
+The clash guard (DEC-035 point 6) runs first, where this clone set an instance
+id or holds a seat of a topology: landing an issue another instance owns is
+refused at bypassable-with-audit (DEC-014), through `_lib/instance_claims`.
+`--bypass-owner "<reason>"` posts the reason on the issue as an audit comment
+before anything else, and hands it to the moves this run composes, whose own
+guard finds the comment posted. In a project with a topology, a claim whose
+clone no longer holds its seat is no claim, and one that cannot be judged
+refuses (DEC-059 point 9).
 
 Authorisation (#1760): the merge is the person's to authorise
 ([project-management:DEC-006-state-machine-and-cascade],
@@ -252,6 +261,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import (
     axis_labels,
     bootstrap_gate,
+    instance_claims,
     issue_branch,
     merge_queue,
     pr_merge,
@@ -559,6 +569,17 @@ def run(
         ),
     )
     parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses to land an issue another "
+            "instance owns (bypassable-with-audit per DEC-014, DEC-035 point 6): "
+            "the reason is posted on the issue as an audit comment before anything "
+            "else. Independent of --bypass and --bypass-ci."
+        ),
+    )
+    parser.add_argument(
         "--skip-checkbox-gate",
         action="store_true",
         help=(
@@ -678,6 +699,25 @@ def run(
     if not guard:
         return _ended(REFUSED, 1, reason="the foreign-repository guard refused (see above)")
     confirmed = session_guard.confirmed(guard)
+
+    # The clash guard (DEC-035 point 6), before anything is posted or merged:
+    # landing an issue another instance owns is refused, unless a bypass posts
+    # its reason. The moves this run composes are handed the same reason.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    if clone is not None:
+        owner_guard = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="done-work",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        if owner_guard.refused:
+            return _ended(REFUSED, 1, owner_guard.line)
+        instance_claims.say_guard(owner_guard)
 
     # The issue's local branch (#1608): of several, the one with its open PR. A
     # composing verb hands its reading on. With several and none open, the run
@@ -1168,6 +1208,7 @@ def run(
             lead_in.to_state,
             args.capability_root,
             confirmed=confirmed,
+            **_owner_bypass(args),
         )
         if lead_in_rc != 0:
             return _ended(
@@ -1250,7 +1291,12 @@ def _after_merge(
     # PR is named, so the move is journaled with the reason close-issue gives the
     # other issues it closed (#1296).
     move_rc = _invoke_move_issue(
-        args.issue_number, "done", args.capability_root, confirmed=confirmed, merged_pr=pr_number
+        args.issue_number,
+        "done",
+        args.capability_root,
+        confirmed=confirmed,
+        merged_pr=pr_number,
+        **_owner_bypass(args),
     )
     if move_rc != 0:
         owed = (
@@ -1624,7 +1670,11 @@ def _complete_merged_pr(
             return _ended(DECLINED, 0, "aborted.")
     if lead_in is not None:
         lead_in_rc = _invoke_move_issue(
-            issue_number, lead_in.to_state, args.capability_root, confirmed=confirmed
+            issue_number,
+            lead_in.to_state,
+            args.capability_root,
+            confirmed=confirmed,
+            **_owner_bypass(args),
         )
         if lead_in_rc != 0:
             return _ended(
@@ -3554,6 +3604,13 @@ def _issue_list(numbers) -> str:
     return ", ".join(f"#{n}" for n in numbers)
 
 
+def _owner_bypass(args: argparse.Namespace) -> dict[str, str]:
+    """The reason this run's clash guard was bypassed with, for a move it
+    composes, where one was given (DEC-035 point 6)."""
+    reason = getattr(args, "bypass_owner", None)
+    return {"bypass_owner": reason} if reason else {}
+
+
 def _invoke_move_issue(
     issue_number: int,
     target: str,
@@ -3561,13 +3618,18 @@ def _invoke_move_issue(
     *,
     confirmed: bool,
     merged_pr: int | None = None,
+    bypass_owner: str | None = None,
 ) -> int:
     """Move the issue to `target` through move-issue. `merged_pr` names the
     merged PR a move to done follows, so its journal entry carries the reason
-    close-issue gives every other issue that PR closed."""
+    close-issue gives every other issue that PR closed. `bypass_owner` is the
+    reason this run's clash guard was bypassed with: move-issue's guard finds
+    its audit comment posted, and posts none of its own."""
     argv = [str(issue_number), "--to", target]
     if merged_pr is not None:
         argv += ["--merged-pr", str(merged_pr)]
+    if bypass_owner:
+        argv += ["--bypass-owner", bypass_owner]
     return _run_sibling("move-issue.py", argv, capability_root_arg, confirmed=confirmed)
 
 

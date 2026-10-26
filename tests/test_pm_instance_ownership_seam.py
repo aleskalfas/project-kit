@@ -24,6 +24,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.pm_ownership_support import stub_seat_stamps
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 LIB = SCRIPTS / "_lib"
@@ -266,6 +268,134 @@ def test_selector_reads_own_schema_home(io) -> None:
     assert io.resolve_substrate({"substrate": "label"}) == "label"
     # An unknown value falls back to the safe default.
     assert io.resolve_substrate({"substrate": "bogus"}) == "comment"
+
+
+# ---- a project with a topology of seats (ADR-041 point 7) -----------------
+
+
+@pytest.fixture
+def seat_stamps(io, monkeypatch) -> None:
+    """The stamp that names a seat, as the audit-log facility will build it (#2138)."""
+    stub_seat_stamps(io, monkeypatch)
+
+
+def _seat_comment(io, *, event, instance, seat, key, author="alice", to=None, created=None):
+    body = io.format_event_comment(event=event, instance=instance, ts=T0, seat=seat, key=key, to=to)
+    comment = {"body": body, "author": {"login": author}}
+    if created is not None:
+        comment["createdAt"] = created
+    return comment
+
+
+def _holders(io, **seats):
+    """Each seat's holder: a key held by `alice`, `free` or `unread`."""
+    out = {}
+    for seat, value in seats.items():
+        if value in ("free", "unread"):
+            out[seat.replace("_", "-")] = io.Holder(value)
+        else:
+            out[seat.replace("_", "-")] = io.Holder(io.SEAT_HELD, "alice", value)
+    return out
+
+
+def test_with_no_builder_no_stamp_names_a_seat(io) -> None:
+    """The builder and parser are #2138's: until they land, a claim that names a
+    seat cannot be built, and no comment is read as one."""
+    with pytest.raises(io.SeatStampUnavailable, match="#2138"):
+        io.format_event_comment(event="claim", instance=1, ts=T0, seat="w-1", key="k1")
+    assert io.read_seat_stamp("<!-- anything -->") is None
+
+
+def test_a_seat_stamp_round_trips_with_its_seat_key_and_github_time(io, seat_stamps) -> None:
+    comment = _seat_comment(
+        io, event="claim", instance=2, seat="w-2", key="k2", created="2026-10-26T08:00:00Z"
+    )
+    (event,) = io.parse_events([comment], "alice")
+    assert (event.event, event.instance, event.seat, event.key) == ("claim", 2, "w-2", "k2")
+    assert event.ts == datetime(2026, 10, 26, 8, 0, tzinfo=UTC)
+    assert "**🔖 Claimed** — instance 2 (w-2)" in comment["body"]
+
+
+def test_a_claim_counts_while_its_clone_holds_its_seat(io, seat_stamps) -> None:
+    comments = [_seat_comment(io, event="claim", instance=1, seat="w-1", key="k1")]
+    res = io.resolve_owner(
+        comments=comments, labels=[], assignee_login="alice", holders=_holders(io, w_1="k1")
+    )
+    assert res.owners == frozenset({1})
+    assert res.claimants == frozenset({1})
+    assert res.judgement(1) == io.ClaimJudgement(1, "w-1", "k1", io.COUNTS)
+
+
+@pytest.mark.parametrize(
+    ("holder", "verdict", "reason"),
+    [
+        ("free", "void", "its clone no longer holds its seat"),
+        ("k9", "void", "its clone no longer holds its seat"),
+        ("unread", "unjudged", "its seat's holder could not be read"),
+        (None, "unjudged", "its seat is not among the seats read"),
+    ],
+)
+def test_a_claim_is_judged_against_its_seats_holder(io, seat_stamps, holder, verdict, reason):
+    """A seat's release frees its clone's claims when they are read (DEC-059 point
+    5), and a seat that was not read leaves the claim unjudged (ADR-041 point 7)."""
+    comments = [_seat_comment(io, event="claim", instance=1, seat="w-1", key="k1")]
+    holders = _holders(io, w_1=holder) if holder is not None else {}
+    res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
+    assert res.owners == frozenset()
+    assert res.judgement(1).verdict == verdict
+    assert res.judgement(1).reason == reason
+    assert res.claimants == (frozenset({1}) if verdict == "unjudged" else frozenset())
+
+
+def test_a_holder_under_another_account_does_not_hold_the_claim(io, seat_stamps) -> None:
+    comments = [_seat_comment(io, event="claim", instance=1, seat="w-1", key="k1")]
+    holders = {"w-1": io.Holder(io.SEAT_HELD, "bob", "k1")}
+    res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
+    assert res.judgement(1).verdict == io.VOID
+
+
+def test_under_a_topology_a_typed_number_claim_and_a_label_are_void(io) -> None:
+    """DEC-059 point 9: neither names a seat."""
+    comments = [_comment(io, event="claim", instance=2, author="alice", ts=T0)]
+    res = io.resolve_owner(
+        comments=comments, labels=["instance:3"], assignee_login="alice", holders={}
+    )
+    assert res.owners == frozenset()
+    assert [(j.instance, j.verdict, j.reason) for j in res.judgements] == [
+        (2, "void", "it names no seat"),
+        (3, "void", "it names no seat"),
+    ]
+
+
+def test_under_a_topology_the_log_folds_in_githubs_order(io, seat_stamps) -> None:
+    """The stamps' times are a clone's and decide nothing (ADR-041 point 7): a
+    claim listed after an abandon holds, whatever time its stamp carries."""
+    abandon = _comment(io, event="abandon", instance=1, author="alice", ts=T1)
+    claim = _seat_comment(io, event="claim", instance=1, seat="w-1", key="k1")
+    holders = _holders(io, w_1="k1")
+    res = io.resolve_owner(
+        comments=[abandon, claim], labels=[], assignee_login="alice", holders=holders
+    )
+    assert res.owners == frozenset({1})
+    # With no topology a log listed in the same order folds by the stamps'
+    # times: the abandon, stamped later, comes last there.
+    plain = io.resolve_owner(
+        comments=[abandon, _comment(io, event="claim", instance=1, author="alice", ts=T0)],
+        labels=[],
+        assignee_login="alice",
+    )
+    assert plain.owners == frozenset()
+
+
+def test_a_handoff_to_a_seat_counts_for_the_target(io, seat_stamps) -> None:
+    comments = [
+        _seat_comment(io, event="claim", instance=1, seat="w-1", key="k1"),
+        _seat_comment(io, event="handoff", instance=1, seat="w-2", key="k2", to=2),
+    ]
+    holders = _holders(io, w_1="k1", w_2="k2")
+    res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
+    assert res.owners == frozenset({2})
+    assert res.judgement(2).seat == "w-2"
 
 
 # ========================================================================

@@ -14,6 +14,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.pm_ownership_support import FakeGitHub, clone_with, use
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "edit-issue.py"
@@ -672,6 +674,71 @@ def test_main_refuses_a_retitle_that_breaks_a_hard_reject_rule(ei, monkeypatch, 
     out = capsys.readouterr()
     assert "title.conventional-commits-prefix" in out.out
     assert "[refused]" in out.err
+
+
+def _retitle_an_issue_instance_3_owns(ei, monkeypatch, *extra: str):
+    """Run `edit-issue --title` as instance 2 on an issue instance 3 claimed;
+    returns (rc, the edit's own writes, the in-memory GitHub)."""
+    from datetime import UTC, datetime
+    from types import SimpleNamespace
+
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    claims = ei.instance_claims
+    github.post(
+        42,
+        claims.ownership.format_event_comment(
+            event="claim", instance=3, ts=datetime(2026, 7, 7, tzinfo=UTC)
+        ),
+    )
+    issue = {
+        "title": "[Task] Evidence points are keyed so two providers can report one",
+        "body": "## What\nx\n",
+        "state": "OPEN",
+        "labels": [{"name": "type:feature"}],
+        "milestone": None,
+    }
+    writes: list = []
+    title = "[Task] Evidence points are keyed so that two providers can report one"
+    monkeypatch.setattr(sys, "argv", ["edit-issue", "42", "--title", title, "--yes", *extra])
+    monkeypatch.setattr(ei, "resolve_capability_root", lambda _explicit: CAP_ROOT)
+    monkeypatch.setattr(ei.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(ei.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(ei, "load_adopter_config", lambda _root: {})
+    monkeypatch.setattr(ei, "_read_members", lambda *a: [])
+    monkeypatch.setattr(
+        ei, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
+    monkeypatch.setattr(ei, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+    monkeypatch.setattr(ei, "_gh_get_issue", lambda _n, _config: issue)
+    monkeypatch.setattr(ei, "_gh_apply_edit", lambda *a, **k: writes.append(k) or True)
+    monkeypatch.setattr(ei, "_gh_comment", lambda *a, **k: writes.append(a) or True)
+    use(claims, monkeypatch, github)
+    clone_with(claims, monkeypatch, 2)
+    return ei.main(), writes, github
+
+
+def test_the_clash_guard_refuses_an_edit_of_another_instances_issue(
+    ei, monkeypatch, capsys
+) -> None:
+    """DEC-035 point 6: refused before the edit is written."""
+    rc, writes, github = _retitle_an_issue_instance_3_owns(ei, monkeypatch)
+    assert rc == 1
+    assert writes == []
+    assert github.writes() == []
+    err = capsys.readouterr().err
+    assert (
+        "[refused] edit-issue #42: #42 is owned by instance 3, and this clone is instance 2" in err
+    )
+
+
+def test_bypass_owner_posts_the_reason_before_the_edit(ei, monkeypatch, capsys) -> None:
+    rc, writes, github = _retitle_an_issue_instance_3_owns(
+        ei, monkeypatch, "--bypass-owner", "instance 3 asked for it"
+    )
+    assert rc == 0
+    assert len(writes) == 1
+    assert "instance 3 asked for it" in github.issues[42].comments[-1]["body"]
 
 
 def test_gh_comment_call_sites_thread_config() -> None:

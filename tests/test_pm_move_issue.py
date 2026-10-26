@@ -21,6 +21,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
+from tests.pm_ownership_support import FakeGitHub, clone_with, use
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "move-issue.py"
@@ -1021,3 +1024,60 @@ def test_audit_comment_is_posted_before_the_label_write() -> None:
     assert main_src.index("_post_transition_audit_once(") < main_src.index(
         "_gh_apply_state_label(args.issue_number, plan, config)\n        if not ok"
     )
+
+
+# ---- the clash guard (DEC-035 point 6) ------------------------------------------
+#
+# move-issue runs in process, as a composing verb's child would; its ownership
+# reads and writes reach an in-memory GitHub, and it makes no other write.
+
+
+def _owned_by_instance_3() -> FakeGitHub:
+    from datetime import UTC, datetime
+
+    from _lib import instance_ownership
+
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    claim = instance_ownership.format_event_comment(
+        event="claim", instance=3, ts=datetime(2026, 7, 7, tzinfo=UTC)
+    )
+    github.post(42, claim)
+    return github
+
+
+def _move_42(monkeypatch, github: FakeGitHub, *extra: str) -> int:
+    issue = {
+        "title": "[Task] do the thing",
+        "labels": ["type:bug", "state:in-progress"],
+        "assignees": [{"login": "me"}],
+        "state": "OPEN",
+        "body": "## What\nx",
+        "milestone": None,
+    }
+    move = MoveIssueInProcess(monkeypatch, issue)
+    claims = move.module.instance_claims
+    use(claims, monkeypatch, github)
+    clone_with(claims, monkeypatch, 2)
+    FakeEngine(status_at("in-progress")).install(monkeypatch)
+    argv = [sys.executable, "move-issue.py", "42", "--to", "in-progress", "--yes", *extra]
+    return move.run(argv).returncode
+
+
+def test_the_clash_guard_refuses_a_move_of_another_instances_issue(monkeypatch, capsys) -> None:
+    github = _owned_by_instance_3()
+    assert _move_42(monkeypatch, github) == 1
+    assert github.writes() == []
+    err = capsys.readouterr().err
+    assert (
+        "[refused] move-issue #42: #42 is owned by instance 3, and this clone is instance 2" in err
+    )
+    assert 'pass --bypass-owner "<reason>"' in err
+
+
+def test_bypass_owner_posts_the_reason_and_moves(monkeypatch, capsys) -> None:
+    github = _owned_by_instance_3()
+    assert _move_42(monkeypatch, github, "--bypass-owner", "its session is gone") == 0
+    assert [argv[2] for argv in github.writes()] == ["comment"]
+    assert "its session is gone" in github.issues[42].comments[-1]["body"]
+    assert "[noop] already at target state" in capsys.readouterr().out

@@ -16,7 +16,13 @@ from pathlib import Path
 
 import pytest
 
-from tests.pm_ownership_support import FakeGitHub, clone_with, use
+from tests.pm_ownership_support import (
+    FakeGitHub,
+    clone_with,
+    stub_seat_stamps,
+    topology_with,
+    use,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -498,6 +504,43 @@ def test_an_issue_filed_for_another_person_is_not_claimed(
     assert rc == 0
     assert github.calls == []
     assert "  ownership:  not claimed: assigned to @someone-else" in capsys.readouterr().out
+
+
+def _file_from_seat(ci, tmp_path, monkeypatch, role: str) -> tuple[int, list, FakeGitHub]:
+    """File from a clone that holds the topology's first seat, of `role`
+    (DEC-059), with the stamp that names a seat stood in for (#2138)."""
+    github = FakeGitHub(author="filer-login")
+    github.add(55, assignees=("filer-login",))
+    claims = ci.instance_claims
+    ownership = claims.ownership
+    stub_seat_stamps(ownership, monkeypatch)
+    holder = ownership.Holder(ownership.SEAT_HELD, "filer-login", "k1")
+    seat = claims.Seat("seat-1", 1, role)
+    topology_with(claims, monkeypatch, claims.Topology(seat, "k1", {"seat-1": holder}))
+    use(claims, monkeypatch, github)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
+    return rc, calls, github
+
+
+def test_a_planners_seat_files_with_no_owner(ci, tmp_path, monkeypatch, capsys) -> None:
+    """DEC-059 point 7: the planner's work enters the shared pool."""
+    rc, calls, github = _file_from_seat(ci, tmp_path, monkeypatch, "planner")
+    assert rc == 0
+    assert _issue_created(calls)
+    assert github.calls == []
+    assert (
+        "  ownership:  not claimed: seat seat-1, instance 1 is a planner's seat, which files "
+        "with no owner, so the issue enters the shared pool"
+    ) in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("role", ["worker", "lead"])
+def test_any_other_seat_claims_what_it_files(ci, tmp_path, monkeypatch, capsys, role) -> None:
+    rc, _calls, github = _file_from_seat(ci, tmp_path, monkeypatch, role)
+    assert rc == 0
+    claim = github.issues[55].comments[0]["body"]
+    assert "event=claim instance=1 seat=seat-1 key=k1" in claim
+    assert "#55 claimed for seat seat-1, instance 1" in capsys.readouterr().out
 
 
 def test_a_failed_claim_leaves_the_issue_filed(ci, tmp_path, monkeypatch, capsys) -> None:

@@ -10,7 +10,7 @@
 Transitions an issue Backlog → In Progress by creating the feature
 branch + setting the assignee. Per DEC-026:
 
-    start-work <N>
+    start-work <N> [--bypass "<reason>"]
 
 Gates per DEC-026:
   - Current user is a team member (DEC-021); open-mode degrades to no-op.
@@ -25,6 +25,14 @@ Gates per DEC-026:
     matching, the issue's is the one with its open PR; with none or more than
     one open, it refuses, naming each (`_lib/issue_branch`, #1608). A branch
     naming the issue in another shape is refused only when no branch matches.
+  - The clash guard (DEC-035 point 6), with an instance id set or a seat of
+    a topology held: an issue another instance owns is refused, before
+    anything is written, at bypassable-with-audit (DEC-014). `--bypass
+    "<reason>"` posts the reason on the issue as an audit comment and starts
+    the work unclaimed, and the composed move-issue is handed the same
+    reason. In a project with a topology, a claim whose clone no longer holds
+    its seat is no claim, and one that cannot be judged refuses (DEC-059
+    point 9).
 
 Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
@@ -37,7 +45,9 @@ Side-effects:
     clone withdraws its claim and stops before the move, naming the branch it
     left (DEC-035 point 6). It stops there too when the withdrawal could not
     be written. Any other claim that fails is a warning, and the work starts
-    unclaimed. With no id set, nothing of this runs.
+    unclaimed. With no id set, nothing of this runs. In a project with a
+    topology, a clone claims for the seat it holds, its number the seat's, and
+    a clone that holds no seat claims nothing (DEC-059 points 6 and 7).
   - Composes over `move-issue.py --to in-progress`. If that move still fails
     after the branch / assignee were written (a network error, or a state
     that changed since the check so the move is no longer legal), the run
@@ -48,7 +58,8 @@ Exit codes:
   1  membership refusal
   2  usage error / gate failure / illegal transition / gh failure / another
      instance claimed the issue in the same instant and keeps it, so this
-     clone withdrew its claim and did not move the issue
+     clone withdrew its claim and did not move the issue / the clash guard
+     refused an issue another instance owns
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -108,6 +119,17 @@ def main() -> int:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
+    parser.add_argument(
+        "--bypass",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses an issue another instance owns "
+            "(bypassable-with-audit per DEC-014, DEC-035 point 6): the reason is "
+            "posted on the issue as an audit comment before anything is written, "
+            "and the work starts unclaimed."
+        ),
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
@@ -233,8 +255,28 @@ def main() -> int:
         return 2
 
     # Instance ownership (DEC-035): None unless this clone set an instance id,
-    # and then nothing below changes.
-    clone = instance_claims.this_clone(capability_root, invoker.github_login)
+    # or holds a seat of a topology (DEC-059), and then nothing below changes.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+
+    # The clash guard (DEC-035 point 6), before anything is written: an issue
+    # another instance owns is refused, unless a bypass posts its reason.
+    owner_bypass: str | None = None
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="start-work",
+            flag="--bypass",
+            bypass=args.bypass,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 2
+        if decision.bypassed:
+            owner_bypass = args.bypass
 
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
@@ -309,6 +351,7 @@ def main() -> int:
         TARGET_STATE,
         capability_root_arg=args.capability_root,
         allow_foreign_repo=args.allow_foreign_repo,
+        **({"bypass_owner": owner_bypass} if owner_bypass else {}),
     )
     if rc != 0:
         print(

@@ -2641,7 +2641,7 @@ if args[:1] == ["issue"] and len(args) > 2:
         issue["state"] = "CLOSED"
     elif args[1] == "comment":
         issue.setdefault("comments", []).append({
-            "body": option("--body"), "viewerDidAuthor": True,
+            "body": option("--body"), "viewerDidAuthor": True, "includesCreatedEdit": False,
             "lastEditedAt": None, "author": {"login": "octocat"},
         })
     with open(path, "w", encoding="utf-8") as fh:
@@ -2720,15 +2720,18 @@ def _run_done_work_end_to_end(
     milestone: dict[str, Any] | None = None,
     merged_by_queue: bool = False,
     claimed_by: int | None = None,
+    instance: int | None = None,
+    extra: tuple[str, ...] = (),
 ) -> _EndToEnd:
     """done-work on #42, carrying `primary_label`, with the REAL move-issue and
     close-issue run against the stateful fake `gh`. With `milestone` (a
     Milestone as `gh api` returns it), #42 is scheduled into it by its native
     field — the only issue in it. With `merged_by_queue`, the run is the one
     after a merge queue merged PR #496 (#1011): no open PR, the merged one from
-    the branch, and #42 closed by GitHub as it merged. With `claimed_by`, this
-    clone is that instance (DEC-035) and #42 is assigned to the fake's account
-    and claimed by it for that instance."""
+    the branch, and #42 closed by GitHub as it merged. With `claimed_by`, #42 is
+    assigned to the fake's account and claimed by it for that instance, and this
+    clone is `instance`, that instance by default (DEC-035). `extra` adds to the
+    command line."""
     import shutil
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
@@ -2738,7 +2741,7 @@ def _run_done_work_end_to_end(
     if claimed_by is not None:
         from _lib.instance_identity import write_instance_id
 
-        write_instance_id(cap_root, claimed_by)
+        write_instance_id(cap_root, instance if instance is not None else claimed_by)
 
     feature = {
         "title": "[Feature] widgets",
@@ -2842,7 +2845,7 @@ def _run_done_work_end_to_end(
     rc: int = _run_main(
         dw,
         monkeypatch,
-        ["42", "--yes", "--capability-root", str(cap_root)],
+        ["42", "--yes", "--capability-root", str(cap_root), *extra],
     )
 
     captured = capfd.readouterr()
@@ -2916,6 +2919,56 @@ def test_a_merge_releases_the_issues_instance_ownership(
     assert "[ok] ownership: #42 released (instance 2)." in run.out
     release = next(i for i, c in enumerate(run.calls) if "--body" in c and "release" in c[-1])
     assert release > run.calls_at_merge
+
+
+def test_the_clash_guard_refuses_to_land_another_instances_issue(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """DEC-035 point 6: refused before anything is posted, moved or merged."""
+    run = _run_done_work_end_to_end(
+        dw, tmp_path, monkeypatch, capfd, "state:review", claimed_by=3, instance=2
+    )
+    assert run.rc == 1
+    assert run.calls_at_merge == 0
+    assert run.end["state"] == "OPEN"
+    assert len(run.end["comments"]) == 1
+    assert "[refused] done-work #42: #42 is owned by instance 3, and this clone is instance 2." in (
+        run.err
+    )
+
+
+def test_bypass_owner_lands_with_one_audit_comment(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """The reason is posted before the merge, and the move done-work composes
+    finds it posted, so the issue carries it once."""
+    # The child move-issue resolves the same person as the stubbed parent does.
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "user.email")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "o@e.com")
+    run = _run_done_work_end_to_end(
+        dw,
+        tmp_path,
+        monkeypatch,
+        capfd,
+        "state:review",
+        claimed_by=3,
+        instance=2,
+        extra=("--bypass-owner", "instance 3's session is gone"),
+    )
+    assert run.rc == 0, run.out + run.err
+    key = "pkit-audit-key: ownership-guard"
+    audits = [c["body"] for c in run.end["comments"] if key in c["body"]]
+    assert len(audits) == 1
+    assert "instance 3's session is gone" in audits[0]
+    posted = next(i for i, c in enumerate(run.calls) if "--body" in c and key in c[-1])
+    assert posted < run.calls_at_merge
 
 
 # ---- a merge that finishes a Milestone (#414) ---------------------------
