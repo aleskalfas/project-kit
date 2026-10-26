@@ -40,7 +40,7 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
   name only the analyses its component depends on (#1809). Both stay proposed;
 - the **area rule**, `RS-SAN-014`, its origin DEC-005, asks each use case to lie in
   its function's area, and a journey to tell each path, planned from content and
-  never from counts (#2106). It and its record stay proposed;
+  never from counts (#2106). It stays proposed, and its record ships accepted;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
   `pkit validate`, and the append-only rule `check-numbers`. The consequence rule
@@ -203,7 +203,7 @@ ORIGINS = {
 SOURCE_RULE = "RS-SAN-007"
 #: The area rule (#2106): each use case in its function's area, a journey for each path.
 AREA_RULE = "RS-SAN-014"
-#: The record the area rule rests on, proposed until the maintainer accepts it.
+#: The record the area rule rests on, which ships accepted while the rule stays proposed.
 AREA_RECORD = f"{SA.as_posix()}/decisions/DEC-005-finding-functionality.md"
 #: The concept rule (#1784): what an artefact uses of the domain, the glossary defines.
 CONCEPT_RULE = "RS-SAN-008"
@@ -1008,25 +1008,21 @@ def test_the_source_rule_cannot_be_accepted_without_its_why(project: AdopterRepo
     assert not rs.validate_rule_sets(project.root).errors
 
 
-def _with_its_record_accepted(project: AdopterRepo) -> None:
-    """The adopter's copy of the area rule's record, accepted: a fixture, not the
-    acceptance, which the maintainer makes (#2106)."""
-    text = (project.root / AREA_RECORD).read_text(encoding="utf-8")
-    assert text.count("\nstatus: proposed\n") == 1
-    project.write({AREA_RECORD: text.replace("\nstatus: proposed\n", "\nstatus: accepted\n")})
-
-
 def test_the_area_rule_cannot_be_accepted_before_its_record(project: AdopterRepo) -> None:
-    """The area rule's origin is DEC-005, proposed as it ships. An accepted rule cites an
-    accepted record (COR-051 point 5), so a copy that accepts the rule alone fails
-    validation on its origin, and passes once the record is accepted too."""
+    """The area rule's origin is DEC-005, which ships accepted. An accepted rule cites an
+    accepted record (COR-051 point 5), so a copy that accepts the rule while its record
+    is still proposed, a fixture, fails validation on its origin. It passes once the
+    record is accepted, as it ships."""
     _with_an_actor_and_a_set_inheriting_san(project, major=2)
+    record = (project.root / AREA_RECORD).read_text(encoding="utf-8")
+    assert record.count("\nstatus: accepted\n") == 1
+    project.write({AREA_RECORD: record.replace("\nstatus: accepted\n", "\nstatus: proposed\n")})
     text = with_status((project.root / SAN_REL).read_text(encoding="utf-8"), AREA_RULE, "accepted")
     project.write({SAN_REL: text.replace("version: 1.0.0", "version: 2.0.0", 1)})
     (error,) = rs.validate_rule_sets(project.root).errors
     assert error.location == f"{SAN_REL}#{AREA_RULE}"
     assert error.kind == Kind.DECISION_NOT_ACCEPTED
-    _with_its_record_accepted(project)
+    project.write({AREA_RECORD: record})
     assert not rs.validate_rule_sets(project.root).errors
 
 
@@ -1069,9 +1065,6 @@ def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
     for rule_id in JUDGEMENT_RULES:
         text = with_status(text, rule_id, "accepted")
     project.write({SAN_REL: text.replace("version: 1.0.0", "version: 2.0.0", 1)})
-    # An accepted rule's origin record is accepted too (COR-051 point 5), so the copy
-    # accepts the area rule's record as its acceptance would.
-    _with_its_record_accepted(project)
     assert not rs.validate_rule_sets(project.root).errors
     assert _bound(project) == [
         "software-analysis:" + r for r in (RULE, STEPS_RULE, *JUDGEMENT_RULES)
