@@ -98,7 +98,12 @@ closes on its line, so a body may quote the mark. A mark inside another
 comment opens no hint. A field's text is read the same way (`hint_in`).
 The placeholder check reports a hint left in whatever the format rule's
 status, as it reports any placeholder (DEC-001 point 1). So a field's text
-that still holds its hint is never judged against the field's form here.
+that still holds its hint is never judged against the field's form here. Nor
+is a part that still holds one, where the caller's placeholder check reports
+each hint left in, as it does an artefact's (`hints_checked`): the part is
+reported once, by that check, never again as empty or missing (#2088). A
+record's body and a collection's head are no artefact's, so a part there
+that holds only a hint is still empty.
 """
 
 from __future__ import annotations
@@ -592,6 +597,7 @@ def departures(
     head: bool = False,
     fields: Mapping[str, Any] | None = None,
     titles: Mapping[str, str] | None = None,
+    hints_checked: bool = False,
 ) -> list[Departure]:
     """How a body with `lines` departs from `kind`'s structure — its file head's, with
     `head` — in declared order: an element missing or out of order, once, and otherwise
@@ -599,18 +605,23 @@ def departures(
     matches the front matter reads `fields`, the artefact's or record's own, and a
     journey's steps read each use case's title in `titles`, by id, as a domain-model
     view's sections read each term's name. A kind with a repeated section is read one
-    section at a time (`_repeating`)."""
+    section at a time (`_repeating`). With `hints_checked`, the caller's placeholder
+    check reports each hint left in, so a part that still holds one is left to it and
+    reported once (`_holds_hint`)."""
     repeated = next((i for i, e in enumerate(kind.sections) if e.type == REPEATED), None)
     if not head and repeated is not None:
-        return _repeating(lines, kind, repeated, fields, titles)
+        return _repeating(lines, kind, repeated, fields, titles, hints_checked)
     elements = kind.head if head else kind.sections
     body = _read(lines, kind.labels)
     found, at = _located(body, elements, kind)
     carried = {i: part for i in range(len(elements)) if (part := _part(i, elements, at, body))}
     context = _context(elements, carried, fields, titles)
+    hinted = frozenset(number for number, _said in hints(lines)) if hints_checked else frozenset()
     for i, element in enumerate(elements):
         if i in found or not element.filled:
             continue
+        if _holds_hint(i, elements, at, body, hinted):
+            continue  # the placeholder check reports the hint, and the part with it
         part = carried.get(i)
         if part is None:
             if element.type == OPENING and element.required:
@@ -629,6 +640,7 @@ def _repeating(
     at: int,
     fields: Mapping[str, Any] | None,
     titles: Mapping[str, str] | None,
+    hints_checked: bool,
 ) -> list[Departure]:
     """How a body departs from a kind whose element at `at` is a repeated section, a
     domain-model view's section for each concept (DEC-004 point 2). Every heading of the
@@ -646,13 +658,18 @@ def _repeating(
     ]
     above = starts[0][0] if starts else len(lines)
     head = dataclasses.replace(kind, sections=kind.sections[:at])
-    found = departures(lines[:above], head, fields=fields, titles=titles)
+    found = departures(
+        lines[:above], head, fields=fields, titles=titles, hints_checked=hints_checked
+    )
     section = dataclasses.replace(kind, sections=section_elements(repeated))
     for n, (start, text) in enumerate(starts):
         end = starts[n + 1][0] if n + 1 < len(starts) else len(lines)
+        within = departures(
+            lines[start:end], section, fields=fields, titles=titles, hints_checked=hints_checked
+        )
         found += [
             dataclasses.replace(departure, within=text)
-            for departure in departures(lines[start:end], section, fields=fields, titles=titles)
+            for departure in within
             if not (departure.element.type == HEADING and departure.element.id == repeated.id)
         ]
     if not starts:
@@ -795,6 +812,29 @@ def _part(
     item = body.content[mark.index] if mark.offset else ""
     extent = _extent(mark, body, paragraph=_before_opening(i, elements))
     return forms.Part(line, _rows(body, extent), lead, item)
+
+
+def _holds_hint(
+    i: int,
+    elements: Sequence[Element],
+    at: Mapping[int, int],
+    body: _Body,
+    hinted: frozenset[int],
+) -> bool:
+    """Whether the part of the element at `i` still holds a hint, one of the lines in
+    `hinted`: on its label's or heading's line, on a line below it within its part, or on
+    any line of an opening's, one with no text of its own included (DEC-001 point 1)."""
+    if not hinted:
+        return False
+    if elements[i].type == OPENING:
+        extent = _until_next_mark(_after_previous(i, elements, at, body), body)
+    elif i in at:
+        mark = body.marks[at[i]]
+        below = _extent(mark, body, paragraph=_before_opening(i, elements))
+        extent = range(mark.index, below.stop)
+    else:
+        return False
+    return any(body.numbers[k] in hinted for k in extent)
 
 
 def _before_opening(i: int, elements: Sequence[Element]) -> bool:

@@ -394,6 +394,31 @@ def test_code_and_comments_hide_marks_and_a_hint_left_alone_is_no_content() -> N
         "**Goal:** <!-- pkit:hint What the actor wants. -->",
     )
     assert _found(hinted) == [("goal", "empty", 3)]
+    # Where the caller's placeholder check reports each hint left in, as an artefact's
+    # does, the part is left to it and reported once (#2088).
+    assert _found(hinted, hints_checked=True) == []
+
+
+def test_a_part_still_holding_its_hint_is_left_to_the_placeholder_check() -> None:
+    """Where the placeholder check reports each hint left in, a part that still holds one
+    is not judged here, so it is reported once (#2088): a label's part with only its hint,
+    on the label's line or below it, an opening with only its hint, and a part whose
+    text beside the hint breaks its form. A part beside it is still judged."""
+    hint = "<!-- pkit:hint Numbered steps. Example: 1. The analyst chooses `Export`. -->"
+    steps = "1. The analyst chooses `Export`.\n2. The system writes the report to a file."
+    below = USE_CASE.replace(steps, hint)
+    assert _found(below) == [("main-path", "empty", 13)]
+    assert _found(below, hints_checked=True) == []
+    beside = USE_CASE.replace(steps, f"{hint}\n\nThe analyst chooses `Export`.")
+    assert _found(beside) == [("main-path", "breaks-its-form", 13)]
+    assert _found(beside, hints_checked=True) == []
+    trigger = "**Trigger:** The analyst asks to export the report on screen."
+    both = below.replace(trigger, "**Trigger:** None.")
+    assert _found(both, hints_checked=True) == [("trigger", "none-refused", 11)]
+    opening = "Whoever writes and runs the project's tests."
+    actor = ACTOR_BODY.replace(opening, "<!-- pkit:hint What this role is. -->")
+    assert _found(actor, "actor") == [("opening", "missing", None)]
+    assert _found(actor, "actor", hints_checked=True) == []
 
 
 def test_a_hint_left_in_is_found_outside_code_and_other_comments() -> None:
@@ -1061,7 +1086,9 @@ FIELDS = {
     field_hint("term", "definition"): "set of tests run together",
 }
 
-_HINTED = re.compile(r"(?:\*\*(?P<label>[^*\n]+):\*\* )?<!-- pkit:hint .*? -->")
+#: A hint, and the label it follows: on the label's line, or below it where a list goes
+#: (#2088).
+_HINTED = re.compile(r"(?:\*\*(?P<label>[^*\n]+):\*\*(?: |\n\n))?<!-- pkit:hint .*? -->")
 
 
 def _written(text: str) -> str:

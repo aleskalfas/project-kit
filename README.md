@@ -321,8 +321,8 @@ The methodology appears as `.pkit/`, and brings:
 ```console
 $ pkit status | grep -e "Backbone version" -e deployed
   Backbone version:      <VERSION>   (up to date)
-    skills deployed    <any> kit-managed:
-    agents deployed    <any> kit-managed:
+    skills             <any> deployed from core:
+    agents             <any> deployed from core:
 ```
 
 **That's it: your next AI session already sees the methodology, as [Your rules load into every session](#your-rules-load-into-every-session) shows.**

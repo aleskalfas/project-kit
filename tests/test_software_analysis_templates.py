@@ -944,8 +944,9 @@ def test_each_part_a_writer_fills_holds_its_hint_and_a_record_none(name: str) ->
 def test_a_template_misses_no_part_and_breaks_no_order(name: str) -> None:
     """Read against its kind's structure, a template carries every part in order: each
     part a writer fills is only empty, its hint being no content, and an opening holding
-    only its hint reads as missing. The record's template, filled with each part's
-    example, departs from nothing."""
+    only its hint reads as missing. Where the placeholder check reports each hint left in,
+    as it does an artefact's, no part departs at all, so each is reported once (#2088).
+    The record's template, filled with each part's example, departs from nothing."""
     kind = _kind(name)
     lines = STRUCTURE.body_lines(_body(name))
     if kind.head:
@@ -955,10 +956,12 @@ def test_a_template_misses_no_part_and_breaks_no_order(name: str) -> None:
     if name == "revalidation-record":
         assert departing == []
         return
+    assert departing
     for departure in departing:
         element = departure.element
         assert element.filled, element.id
         assert departure.how == ("missing" if element.type == "opening" else "empty"), element.id
+    assert STRUCTURE.departures(lines, kind, fields=_template(name), hints_checked=True) == []
 
 
 def test_a_hint_is_one_marked_comment_with_its_example() -> None:
@@ -971,6 +974,58 @@ def test_a_hint_is_one_marked_comment_with_its_example() -> None:
         "refer to themselves. Example: Export my report as a file. -->"
     )
     assert f"**Goal:** {RENDER.hint(goal)}\n" in _body("use-case")
+
+
+def test_a_list_a_writer_writes_holds_its_hint_where_the_list_goes() -> None:
+    """A part whose form is a list a writer writes, a use case's *Main path* and the
+    *Variants* of a use case or a journey, holds its hint on a line of its own below its
+    label, after a blank line, where the list goes. So its example, written in the hint's
+    place, is the list's first item (#2088). Every other label's part holds its hint on
+    the label's line, a journey's *Steps* among them, whose items the stamp writes."""
+    lists = (("use-case", "main-path"), ("use-case", "variants"), ("journey", "variants"))
+    for name, part in lists:
+        element = next(e for e in _kind(name).sections if e.id == part)
+        assert f"**{element.text}:**\n\n{RENDER.hint(element)}\n" in _body(name)
+    steps = next(e for e in _kind("journey").sections if e.id == "steps")
+    assert f"**Steps:** {RENDER.hint(steps)}\n" in _body("journey")
+    stamped = RENDER.body(_kind("journey"), "JRN-001 — Title", {"steps": "1. UC-001 — One"})
+    assert f"**Steps:** {RENDER.hint(steps)}\n\n1. UC-001 — One\n" in stamped
+
+
+#: A hint as the stamp writes it, and the example it gives.
+_HINTED = re.compile(r"<!-- pkit:hint .*? Example: (.*?) -->")
+
+#: What the stamp writes besides the hints, for the kinds that need it to be read: a
+#: journey's front matter and step lines, for two steps, and a view's front matter and its
+#: section for the one term it explains.
+_STAMPED: dict[str, tuple[dict[str, Any], dict[str, str], tuple[str, ...]]] = {
+    "journey": (
+        {"steps": ["UC-001", "UC-002"]},
+        {"steps": "1. UC-001 — Build the report\n2. UC-002 — Export the report as a file"},
+        (),
+    ),
+    "domain-model-view": ({"explains": ["TERM-sandbox"]}, {}, ("Sandbox",)),
+}
+
+
+@pytest.mark.parametrize(
+    "kind_name", sorted(k for k in STRUCTURE.read_kinds() if k != "revalidation-record")
+)
+def test_a_body_and_its_fields_filled_as_their_hints_show_depart_from_nothing(
+    kind_name: str,
+) -> None:
+    """Each hint shows a form the check accepts: a body whose every hint is written over
+    with its example, and front matter whose every field reads its example, depart from
+    nothing their kind declares (#2088). A revalidation record carries no hints."""
+    kind = STRUCTURE.read_kinds()[kind_name]
+    front, written, repeats = _STAMPED.get(kind_name, ({}, {}, ()))
+    body = RENDER.body(kind, "ID-001 — Title", written, repeats=repeats)
+    filled = _HINTED.sub(r"\1", body)
+    assert "pkit:hint" not in filled
+    fields = {**{f.name: f.example for f in kind.fields}, **front}
+    lines = list(enumerate(filled.split("\n"), 1))
+    assert STRUCTURE.departures(lines, kind, fields=fields) == []
+    assert STRUCTURE.field_departures(fields, kind) == []
 
 
 #: The front-matter fields the stamp leaves a writer to fill, by artefact template: each
