@@ -287,6 +287,97 @@ def test_a_deferral_beside_the_changes_revalidation_keeps_what_its_read_gains(
     ]
 
 
+# --- a moved artefact ---------------------------------------------------------------------
+
+#: Where the guide moves to, inside the same place.
+MOVED = "docs/area/guide.md"
+
+#: The base's answer on the guide at its old path: a revalidation and one deferral.
+BASE_ANSWER = answers(
+    entry(at=T1, because="the CLI still holds", deferred=((Anchor("path", "src/core/**"), "#12"),))
+)
+
+
+def _moved(repo: AdopterRepo, *, committed: bool) -> None:
+    """`main` holds the guide at its old path, answered there in `a0`; the branch `feature`
+    moves it with `git mv`, the move left uncommitted or committed."""
+    repo.write({CONFIG: friction_config(mode="enforcing"), answer_path("a0"): BASE_ANSWER})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    (repo.root / MOVED).parent.mkdir()
+    repo.git("mv", GUIDE, MOVED)
+    if committed:
+        repo.git("commit", "-q", "-m", "move the guide")
+
+
+@pytest.mark.parametrize("committed", [False, True], ids=["uncommitted", "committed"])
+@pytest.mark.parametrize(
+    "write",
+    [
+        pytest.param(
+            lambda root: fw.plan_revalidate(
+                root, "guide", outcome="unchanged", because="the move keeps its words", now=NOW
+            ),
+            id="revalidate",
+        ),
+        pytest.param(
+            lambda root: fw.plan_defer(root, "guide", anchor="src/cli/**", reason="#13", now=NOW),
+            id="defer",
+        ),
+    ],
+)
+def test_an_answer_on_a_moved_artefact_reads_the_answers_at_its_old_path(
+    repo: AdopterRepo, committed: bool, write: Callable[[Path], fw.Plan]
+) -> None:
+    """The writer reads an artefact's answers at every path its file had, as the history
+    walk does, a move not yet committed included (COR-062 points 4 and 10; #2108)."""
+    _moved(repo, committed=committed)
+    plan = write(repo.root)
+    (written,) = _entries(plan.after)
+    assert written["artefact"] == MOVED
+    assert written["read"] == ["a0.yaml"]
+    assert "read: a0.yaml" in plan.items
+
+
+def test_a_revalidation_of_a_moved_artefact_judges_the_answers_at_its_old_path(
+    repo: AdopterRepo,
+) -> None:
+    """The answers at the old path are live for the moved artefact: a deferral there can be
+    kept, and its revalidation's justification cannot be given again (COR-050 points 3
+    and 4, COR-062 point 5)."""
+    _moved(repo, committed=False)
+    with pytest.raises(fw.FrictionWriteError, match="must differ from that of each revalidation"):
+        fw.plan_revalidate(
+            repo.root, "guide", outcome="unchanged", because="the CLI still holds", now=NOW
+        )
+    plan = fw.plan_revalidate(repo.root, "guide", outcome="updated", keep=["src/core/**"], now=NOW)
+    assert "keeps deferral path:src/core/**   (#12)" in plan.items
+    (written,) = _entries(plan.after)
+    assert written["revalidated"]["deferred"] == [
+        {"anchor": {"kind": "path", "value": "src/core/**"}, "reason": "#12"}
+    ]
+
+
+def test_the_change_check_passes_a_move_answered_through_the_writer_alone(
+    repo: AdopterRepo,
+) -> None:
+    """A move answered through the writer, with no hand edit, names the answers at the old
+    path, so the change check fails nothing once it is committed (#2108)."""
+    _moved(repo, committed=False)
+    fw.write(
+        fw.plan_revalidate(
+            repo.root, "guide", outcome="unchanged", because="the move keeps its words", now=NOW
+        )
+    )
+    repo.commit("move the guide and answer it", files=None)
+    result = fc.run_change_check(repo.root, "main")
+    assert not result.failed, [(f.kind, f.message) for f in result.findings]
+    assert fc.FindingKind.READ_INCOMPLETE not in [f.kind for f in result.findings]
+    assert [(f.kind, f.location) for f in result.findings if f.answer is not None] == [
+        (fc.FindingKind.ANSWERED, MOVED)
+    ]
+
+
 # --- what is refused --------------------------------------------------------------------
 
 
