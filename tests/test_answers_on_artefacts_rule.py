@@ -51,9 +51,21 @@ def _change_bullet() -> str:
 
 def test_rule_20_keeps_its_number_and_title():
     assert _rule_20().startswith(
-        "20. **A reviewer checks the answers your change owes, and a person decides any"
-        " other answer on an artefact.**"
+        "20. **A reviewer checks the answers your change owes, and a person, or the delegate"
+        " they named, decides any other answer on an artefact.**"
     )
+
+
+def test_rule_20_names_the_delegate_and_its_bounds():
+    """A person may name a delegate to decide the answers no change owes (COR-064): named
+    in the default branch's configuration, never on its own draft, and a reviewer checks
+    every such answer, whoever decided it."""
+    rule = _rule_20()
+    assert "or the project's delegate decided it." in rule
+    assert "the agent the default branch's configuration names (`friction.delegate`)" in rule
+    assert "it never decides an answer it drafted (COR-064)" in rule
+    assert "The reviewer checks these answers too, whoever decided them." in rule
+    assert "If you can ask neither the person nor the delegate, return the commands" in rule
 
 
 @pytest.mark.parametrize(

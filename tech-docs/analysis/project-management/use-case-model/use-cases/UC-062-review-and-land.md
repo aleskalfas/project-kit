@@ -18,6 +18,9 @@ shortfalls:
   - at: "1b"
     issue: "#1938"
     record: COR-004
+  - at: 9
+    issue: "#2122"
+    record: COR-064#2
 pkit:
   friction:
     anchors:
@@ -59,6 +62,7 @@ pkit:
         - COR-050
         - COR-057
         - COR-062
+        - COR-064#2
         - ADR-034#1
         - ADR-061
       artefact:
@@ -101,6 +105,10 @@ pkit:
 7. Each reviewer posts its verdict, whose first line approves the change or requests changes, and whose marker names the head and the [base](../../../core/glossary.md#term-base--base) it reviewed. Its [findings](../../../core/glossary.md#term-finding--finding) follow, each tagged `[block]`, `[person]` or `[advisory]` (DEC-028).
 8. The system prints each `[person]` finding whole, and marks one whose verdict no longer stands for the head ([DEC-055 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 9. The system lists the answers the change wrote, from the [change check](../../../core/glossary.md#term-change-check--change-check), and writes the list into the pull request's description ([DEC-055 point 1](../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#1-the-list)). It prints, beside the list, each revalidation of a document on the base's tip that the change's [answer](../../../core/glossary.md#term-answer--answer) did not read (DEC-055 point 3).
+
+> [!WARNING]
+> **Not built yet:** `land-work` does not show what the change does to the delegate's name. [COR-064 point 2](../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#2-named-in-committed-configuration-by-the-person-alone) decides that the merge authoriser is shown it, and #2122 tracks it.
+
 10. With no [authorisation](../../glossary.md#term-authorisation--authorisation) yet, the system stops ready and exits `8`. It names the command that merges: `pkit pm land-work <N> --yes --expect-head <sha>`.
 11. The merge authoriser reads the findings and the list, and authorises the merge of the pull request at that head (DEC-055 point 3).
 12. The developer runs `pkit pm land-work <N> --yes --expect-head <sha>`, and the system runs steps 2 to 9 again at that head.
