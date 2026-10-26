@@ -4,8 +4,9 @@ Held to software-analysis DEC-003 point 8:
 
 - **what it shows** — for a newcomer first, in two parts. The story: the opening, with
   what the component is for from its purpose record and what the analysis is, then
-  the areas, each with its goal, what it builds on, its requirements and its use cases,
-  or "Not written yet", or the use cases where there are no areas. Then reference: one
+  the areas, each with its goal, what it builds on, its concepts read from the links to
+  the terms, its requirements and its use cases, or "Not written yet", or the use cases
+  where there are no areas. Then reference: one
   table of who takes part, an actor of another analysis as the glossary's head names
   it; the concepts, each view by its number and title; the requirements in no area; the
   journeys, each with its flow; what is not built yet; then the line that names the query
@@ -13,7 +14,8 @@ Held to software-analysis DEC-003 point 8:
   flow is the query's own output. No other diagram is on the page;
 - **its purpose** — `purpose` names an accepted record, whose title it shows; a pointer
   to no record, or to one not accepted, fails the check and is said on the page;
-- **front matter only** — a view's body is never read (DEC-001 point 1);
+- **front matter, and the links to the terms** — a view's body is never read, and of a
+  use case's or a requirement's body only its links to the terms (DEC-001 point 1);
 - **who writes it** — the stamp, after each artefact, and `pkit analysis
   overview`, each only where its bytes change;
 - **fresh by fingerprint** — the check fails a stale overview, never one only
@@ -50,6 +52,7 @@ from tests.analysis_repo import (
     actor_at,
     fill,
     installed,
+    link,
     load,
     load_lib,
     new,
@@ -199,7 +202,7 @@ def test_the_stamp_writes_the_overview_and_the_check_holds_it_fresh(seeded: Adop
     stale, and the command writes it anew."""
     text = _read(seeded)
     assert text.startswith(
-        "# Overview of the analysis\n\n<!-- pkit:overview reads=4 fingerprint=sha256:"
+        "# Overview of the analysis\n\n<!-- pkit:overview reads=5 fingerprint=sha256:"
     )
     assert _section(text, "### Who takes part") == (
         "| Actor | Who they are | Areas they act in |\n| --- | --- | --- |\n"
@@ -535,6 +538,76 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
     assert run_script(project, OVERVIEW).returncode == 0
     assert "### 010-run\n\nRun the suites.\n" in _read(project)
     assert "030-share" not in _read(project)
+
+
+#: The trigger and the check of a requirement as `fill` writes them, the shipped examples.
+TRIGGER = "**Trigger:** The analyst asks to export the report on screen."
+VERIFIED = (
+    "**Verified by:** A timing test opens a report of a year's figures, and fails if it takes "
+    "over two seconds to show."
+)
+
+
+def test_each_area_shows_its_concepts_from_the_links_to_the_terms(project: AdopterRepo) -> None:
+    """Where the analysis holds a view in force, each area shows its concepts: each view
+    that explains a term one of its use cases or requirements links, in the order of the
+    views' numbers, or none. They are read from the links `pkit analysis link` writes, so a
+    link that leads an area to another view makes the overview stale, and a reworded
+    sentence that moves no link leaves it fresh (DEC-003 point 8). The use cases in no area
+    show none."""
+    project.write(
+        {SETTINGS: HEAD + "areas:\n  010-run: Run the suites.\n  020-read: Read the results.\n"}
+    )
+    for slug in ("suite", "result"):
+        stamped(project, "term", slug, "--name", slug, "--path", "src/run.py")
+    stamped(project, "view", "results", "--number", "020", "--explains", "TERM-result")
+    stamped(project, "view", "suites", "--number", "010", "--explains", "TERM-suite")
+    stamped(project, "actor", "tester", "--path", "src/**")
+    stamped(project, "use-case", "run", "--actor", "ACT-tester", "--area", "010-run")
+    stamped(project, "use-case", "read", "--actor", "ACT-tester", "--area", "020-read")
+    stamped(project, "use-case", "share", "--actor", "ACT-tester", "--area", "030-share")
+    stamped(project, "use-case", "set-up", "--actor", "ACT-tester")
+    stamped(project, "quality-requirement", "quick", "--area", "020-read", "--actor", "ACT-tester")
+    fill(project)
+    run = f"{USE_CASES}/010-run/UC-001-run.md"
+    read = f"{USE_CASES}/020-read/UC-002-read.md"
+    quick = f"{QUALITY}/020-read/REQ-001-quick.md"
+    set_up = f"{USE_CASES}/UC-004-set-up.md"
+    project.write(
+        {
+            run: _read(project, run).replace(TRIGGER, "**Trigger:** The tester starts a suite."),
+            quick: _read(project, quick).replace(VERIFIED, "**Verified by:** A result shows."),
+            set_up: _read(project, set_up).replace(TRIGGER, "**Trigger:** A suite is set up."),
+        }
+    )
+    link(project)
+    assert run_script(project, OVERVIEW).returncode == 0
+    views = {"010": "- [010 — Suites](../domain-model/010-suites.md)"}
+    views["020"] = "- [020 — Results](../domain-model/020-results.md)"
+    text = _read(project)
+    assert _section(text, "### 010-run").startswith(
+        f"Run the suites.\n\n**Its concepts:**\n\n{views['010']}\n\n**Its requirements:** none."
+    )
+    assert f"Read the results.\n\n**Its concepts:**\n\n{views['020']}\n\n" in text
+    assert (
+        "### 030-share\n\nNo goal is written for this area yet.\n\n**Its concepts:** none.\n"
+        in (text)
+    )
+    assert "Its concepts" not in _section(text, "### Outside any area")
+    assert _about(_check(project), "error", OVERVIEW_FILE) == []
+
+    # A reworded sentence moves no link; a mention linked leads the area to another view.
+    project.write({read: _read(project, read).replace(TRIGGER, "**Trigger:** The tester asks.")})
+    link(project)
+    assert _about(_check(project), "error", OVERVIEW_FILE) == []
+    project.write({read: _read(project, read).replace("tester asks.", "tester reads a suite.")})
+    link(project)
+    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
+    assert stale.startswith("it is stale")
+    assert run_script(project, OVERVIEW).returncode == 0
+    assert f"Read the results.\n\n**Its concepts:**\n\n{views['010']}\n{views['020']}\n\n" in _read(
+        project
+    )
 
 
 def _after(repo: AdopterRepo, rel: str, *entries: str) -> None:
@@ -931,6 +1004,11 @@ def test_the_fingerprint_reads_what_it_draws_and_nothing_else() -> None:
     headed = _fingerprint(_headed(actor, use_case))
     assert headed not in (first, _fingerprint(_headed(actor, use_case, name="Dev")))
     assert _fingerprint(_headed(actor, use_case, needs="B")) == headed
+    # The views each use case leads to, through the links to the terms, are read.
+    analysis = _analysis(actor, use_case)
+    read_ = overview.read(analysis, analyses.Listing(), None)
+    led = dataclasses.replace(read_, concepts={"UC-001": ("VIEW-orders",)})
+    assert overview.fingerprint(analysis, led, None) != overview.fingerprint(analysis, read_, None)
     marked = overview.mark(first)
     assert overview.written_fingerprint(f"# Overview\n\n{marked}\n") == (overview.VERSION, first)
     assert overview.written_fingerprint("# Overview\n") is None

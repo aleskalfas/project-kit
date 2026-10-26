@@ -39,7 +39,8 @@ analysis location. Its front matter comes from its kind's template in
   its own analysis that no view in force explains yet (point 5). It anchors
   each, and the records `--record` names, never code. Its body holds one
   section for each, headed by the term's name in sentence case, its first
-  letter capitalized (point 2). The stamp also writes each
+  letter capitalized (point 2), and ends with its closing section on where its
+  concepts are used, as `pkit analysis link` writes it. The stamp also writes each
   term's link to its section, under the term's heading in the glossary, and
   writes the two files whole, or neither (point 7; `_lib/views.py`).
 
@@ -284,6 +285,7 @@ def stamp(
         text = _defined(
             _document(root, kind, new_id, request, analysis), location, request, analysis
         )
+        text = _closed(root, text, location, request, analysis, listing, folder)
         recorded, linked = _write_view(root, target, location, text, request, analysis, record)
         notes += [line for line in (recorded,) if line]
         notes.append(linked)
@@ -850,6 +852,38 @@ def _defined(text: str, location: str, request: Request, analysis: Analysis) -> 
         term = links.term_of(artefact) if artefact is not None else None
         wanted.append(links.defined(term, location) if term is not None else None)
     return "\n".join(links.with_definitions(lines, sections, request.explains, wanted)[0])
+
+
+def _closed(
+    root: Path,
+    text: str,
+    location: str,
+    request: Request,
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+) -> str:
+    """A new view's `text` ending with its closing section: each use case, journey and
+    requirement in force of its analysis whose body links a term it explains, as `pkit
+    analysis link` writes their links (DEC-004 point 7). Refused where a body or the
+    kinds' declared structure cannot be read, since the section would be a guess."""
+    try:
+        kinds = links.parted(root)
+    except structure.Unreadable as exc:
+        raise Refused(f"the kinds' declared structure could not be read: {exc}") from exc
+    listed = links.listed_in_closing(analysis, folder)
+    read: dict[str, str | None] = {}
+    for artefact in listed:
+        try:
+            held = (root / artefact.path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            raise Refused(f"{artefact.path} could not be read: {exc}") from exc
+        read[artefact.path] = held.replace("\r\n", "\n")
+    used = links.uses(analysis, listing, folder, read, kinds)
+    shown_as = {name: kind.shown_as or name for name, kind in kinds.items()}
+    headings = {term_id: views.heading(analysis, term_id) for term_id in request.explains}
+    closing = links.closing(location, request.explains, headings, listed, used, shown_as)
+    return links.ending_with(text, closing)
 
 
 def _write_view(
