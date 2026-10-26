@@ -88,6 +88,7 @@ pkit:
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/decisions/README.md#looking-a-citation-up
+        - .pkit/decisions/README.md#finding-the-records-a-path-leads-to
         - .pkit/lifecycle/README.md#what-sync-writes
         - .pkit/lifecycle/README.md#the-ownership-predicates-ownershippy
         - .pkit/lifecycle/README.md#an-adapters-manifest
