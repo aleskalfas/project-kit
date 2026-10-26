@@ -95,6 +95,7 @@ def test_a_key_that_would_break_the_marker_is_refused(key: str) -> None:
 def test_the_read_leaves_state_issues_out_and_counts_what_gh_returned() -> None:
     runner = _Runner([_work(1), _state(2), _work(3)])
     listing = issue_list.list_issues({}, ["--state", "all"], fields="number,body", gh_call=runner)
+    assert listing.rows is not None
     assert [row["number"] for row in listing.rows] == [1, 3]
     assert listing.returned == 3
 
