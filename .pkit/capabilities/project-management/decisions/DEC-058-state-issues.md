@@ -1,7 +1,7 @@
 ---
 id: DEC-058
 title: Shared state that changes while agents work lives in state issues, outside the work hierarchy
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

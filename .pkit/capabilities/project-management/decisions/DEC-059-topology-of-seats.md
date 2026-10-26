@@ -1,7 +1,7 @@
 ---
 id: DEC-059
 title: Parallel clones take seats of a committed topology, and take their work from one shared pool
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
