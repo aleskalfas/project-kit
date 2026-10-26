@@ -1,7 +1,7 @@
 ---
 id: ADR-070
 title: A document's sidecar sits in .pkit-meta beside it, and never ships
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
