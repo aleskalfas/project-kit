@@ -1,7 +1,7 @@
 ---
 id: COR-064
 title: A reviewer checks every answer no change owes, which a person may delegate to an agent
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
