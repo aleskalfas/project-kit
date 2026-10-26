@@ -27,6 +27,11 @@ checks the owning records ask for:
   pass is the one owner of these findings and of the `friction.mode` enum
   (the schema); the friction pass reads the settings and reports only on the
   artefacts.
+- **The delegate** (COR-064 point 2): `friction.delegate` names an agent of the
+  project, one whose definition the project, a capability or the methodology
+  ships (`agents.agent_locations`) — otherwise an error naming the fix. One
+  whose definition does not declare that it reads COR-064 is a warning, since
+  it says nothing of when it decides as the delegate.
 - **Types on the project's places** (COR-056 points 2 and 3): the type
   findings artefact discovery raises and names this pass to report, at the
   severity it names (`friction_discovery.TYPE_FINDINGS`; ADR-057 point 2). A
@@ -47,7 +52,7 @@ checks the owning records ask for:
 
 Findings are structured records (a JSON Pointer into the file, a severity,
 a message) in a deterministic order: shape findings by position, then the
-repository checks in a fixed order — docs, friction, types, connections — each entry
+repository checks in a fixed order — docs, friction, the delegate, types, connections — each entry
 in written order. Only errors fail validation.
 """
 
@@ -69,6 +74,7 @@ from ruamel.yaml.error import YAMLError
 
 from project_kit import backbone_schemas, validators
 from project_kit import connections as wiring
+from project_kit.agents import agent_locations, find_agent_file
 from project_kit.friction_discovery import (
     CONFIGURATION_MEMBER,
     SettingsPath,
@@ -92,6 +98,9 @@ METHODOLOGY_TREE = ".pkit"
 DOCS_KEY = "docs"
 FRICTION_KEY = "friction"
 FRICTION_PATTERN_KEYS = ("places", "surface", "exclude")
+DELEGATE_KEY = "delegate"
+# The record an agent that takes the delegate's role declares it reads (COR-064 point 2).
+DELEGATE_RECORD = "COR-064"
 CONNECTIONS_KEY = "connections"
 PROVIDERS_KEY = "providers"
 SELECTIONS_KEY = "selections"
@@ -207,6 +216,7 @@ def run_configuration_pass(target_root: Path) -> ConfigReport:
     flagged = frozenset(f.path for f in findings)
     findings.extend(_docs_findings(target_root, config.get(DOCS_KEY), flagged))
     findings.extend(_friction_findings(target_root, config.get(FRICTION_KEY), flagged))
+    findings.extend(_delegate_findings(target_root, config.get(FRICTION_KEY), flagged))
     findings.extend(_type_findings(target_root))
     findings.extend(_connections_findings(target_root, config.get(CONNECTIONS_KEY), flagged))
     return ConfigReport(
@@ -382,6 +392,86 @@ def _pattern_findings(
             )
         ]
     return []
+
+
+# --- the delegate (COR-064) ----------------------------------------------------
+
+
+def _delegate_findings(
+    target_root: Path, friction: Any, flagged: frozenset[str]
+) -> list[ConfigFinding]:
+    """The delegate names an agent of the project, one that knows the role (COR-064
+    point 2).
+
+    An agent of the project is one whose definition the project, a capability
+    under `.pkit/capabilities/` or the methodology ships, in the folders the
+    adapter deploys from, the first in its precedence winning. A name no such
+    definition carries is an error. A definition that does not declare it reads
+    COR-064 (`reads.records`, COR-013) says nothing of when it decides as the
+    delegate, so naming it makes no agent decide: a warning. A name the shape
+    pass refused is not judged again: one finding per mistake.
+    """
+    if not isinstance(friction, Mapping):
+        return []
+    name: Any = cast("Mapping[str, Any]", friction).get(DELEGATE_KEY)
+    pointer = f"/{FRICTION_KEY}/{DELEGATE_KEY}"
+    if pointer in flagged or not isinstance(name, str) or not name:
+        return []  # absent, or the shape pass already reported it
+    definition = next(
+        (
+            found
+            for _, folder in agent_locations(target_root)
+            if (found := find_agent_file(folder, name)) is not None
+        ),
+        None,
+    )
+    if definition is None:
+        return [
+            ConfigFinding(
+                pointer,
+                Severity.ERROR,
+                f"delegate {name!r} names no agent of the project: none the project, a "
+                f"capability or the methodology ships. Name another agent, or remove the "
+                f"key, and until then nobody decides as the delegate (COR-064 point 2).",
+            )
+        ]
+    if DELEGATE_RECORD not in _records_read(definition):
+        return [
+            ConfigFinding(
+                pointer,
+                Severity.WARNING,
+                f"delegate {name!r} is an agent whose definition does not declare that it "
+                f"reads {DELEGATE_RECORD} (`reads.records`), so it says nothing of when it "
+                f"decides as the delegate, and naming it makes no agent decide. Name an "
+                f"agent whose definition takes the role (COR-064 point 2).",
+            )
+        ]
+    return []
+
+
+def _records_read(definition: Path) -> frozenset[str]:
+    """The records an agent's definition declares it reads, from its front matter's
+    `reads.records` (COR-013); none where the front matter cannot be read."""
+    try:
+        lines = definition.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return frozenset()
+    if not lines or lines[0].strip() != "---":
+        return frozenset()
+    end = next((i for i, line in enumerate(lines[1:], start=1) if line.strip() == "---"), None)
+    if end is None:
+        return frozenset()
+    try:
+        data: Any = YAML(typ="safe").load("\n".join(lines[1:end]))
+    except YAMLError:
+        return frozenset()
+    if not isinstance(data, Mapping):
+        return frozenset()
+    reads: Any = cast("Mapping[str, Any]", data).get("reads")
+    records: Any = reads.get("records") if isinstance(reads, Mapping) else None
+    if not isinstance(records, list):
+        return frozenset()
+    return frozenset(str(record) for record in cast("list[Any]", records))
 
 
 # --- types on the project's places (COR-056) ----------------------------------
