@@ -375,6 +375,33 @@ def test_find_takes_the_state_issues_the_one_read_of_issues_left_out() -> None:
     assert found.outcome == si.READ and _some(found.read).number == 8
 
 
+def test_the_seam_asks_the_one_read_of_issues_for_the_open_state_issues() -> None:
+    """`list_open` lists the open issues through the one read of issues, and
+    keeps the state issues it left out (ADR-071 point 2)."""
+    repo = FakeRepo()
+    _state_issue(repo, number=8)
+    _state_issue(repo, number=9, key="worker")
+    repo.issues[9].state = "CLOSED"
+    repo.add(3, "## What\n\nA task.\n")
+    listed = si.list_open(_run(repo))
+    assert [row["number"] for row in _some(listed.rows)] == [8] and not listed.cut
+    (argv,) = [a for a in repo.calls if a[1:3] == ["issue", "list"]]
+    assert argv[argv.index("--state") + 1] == "open" and "--search" not in argv
+    found = si.find("seat", "planner", _some(listed.rows), _run(repo))
+    assert found.outcome == si.READ and _some(found.read).number == 8
+
+
+def test_a_listing_of_state_issues_says_when_it_failed_or_reached_its_limit() -> None:
+    repo = FakeRepo(failing={"list"})
+    failed = si.list_open(_run(repo))
+    assert failed.rows is None and "502" in (failed.cause or "")
+    repo = FakeRepo()
+    _state_issue(repo, number=8)
+    repo.add(3, "## What\n\nA task.\n")
+    assert si.list_open(_run(repo), limit=2).cut
+    assert not si.list_open(_run(repo), limit=3).cut
+
+
 # ---- claim, release, release by force -----------------------------------------------
 
 

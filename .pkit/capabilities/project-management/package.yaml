@@ -48,6 +48,12 @@ commands:
   set-instance:
     script: scripts/set-instance.py
     help: "Set (or --show / --clear) this clone's numeric instance id — the opt-in, per-clone activation gate for instance ownership (DEC-035). Writes a git-ignored runtime file; a clone with no id set behaves as a single-clone repo."
+  create-seats:
+    script: scripts/create-seats.py
+    help: "Run on the change that adds seats to the topology (DEC-059 point 3): creates the state issue of each seat in project/topology.yaml that names none and is not retired, and writes its number into the file in the working tree, each as soon as it exists. Idempotent: a seat that names its state issue is left alone, and a state issue an earlier run created, or left half done, is found by its marker among the open issues and its number written. Who may write on a state issue comes from the members of the default branch; a run that cannot resolve the default branch creates nothing. Refuses a file with other problems check-topology reports. --dry-run prints the plan; asks before creating unless --yes."
+  check-topology:
+    script: scripts/check-topology.py
+    help: "Check project/topology.yaml against the topology of the default branch, or of --base (DEC-059 points 1 to 3), and say which commit it read. Fails on a shape the schema refuses, a seat name used twice, more than one organizer seat, a seat with no state issue or two naming one, a scope naming an undeclared workstream or type, the label ownership substrate, a seat of the base deleted or moved rather than retired, and a base that cannot be resolved while the working tree holds a topology. A check of a change, read-only and offline."
   decline-use-case-task:
     script: scripts/decline-use-case-task.py
     help: "Keep (or --show [--json] / --clear) the answer that declined the Task to author the use cases over an empty use-case set (DEC-054 point 5). Batch planning in this checkout then leaves the Task out until the next calendar day, in the machine's local time. Writes the time of the answer to a git-ignored runtime file; --show is read-only."
