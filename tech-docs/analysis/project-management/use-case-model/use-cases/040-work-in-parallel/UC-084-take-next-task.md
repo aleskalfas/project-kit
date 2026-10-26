@@ -16,9 +16,6 @@ shortfalls:
   - at: 1
     issue: "#521"
     record: project-management:DEC-035#7
-  - at: 3
-    issue: "#2142"
-    record: project-management:DEC-059#7
   - at: 5
     issue: "#519"
     record: project-management:DEC-035#3
@@ -47,6 +44,8 @@ pkit:
   friction:
     anchors:
       path:
+        - .pkit/capabilities/project-management/scripts/next-task.py
+        - .pkit/capabilities/project-management/scripts/_lib/task_pool.py
         - .pkit/capabilities/project-management/scripts/start-work.py
         - .pkit/capabilities/project-management/scripts/review-work.py
         - .pkit/capabilities/project-management/scripts/handoff-issue.py
@@ -103,13 +102,9 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no command lists issues signed by their owner. DEC-035 point 7 decides the signed listing, and #521 tracks it.
 
-2. Of the Tasks in Backlog with no owner, the worker keeps those whose `## Dependencies` section names no [issue](../../../glossary.md#term-issue--issue) still open. These Tasks are ready, as are the Tasks In Progress of variant 2b, and every [seat](../../../glossary.md#term-seat--seat) shares the ready Tasks ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
-3. Where the worker's seat gives the worker a [scope](../../../glossary.md#term-scope--scope), the worker keeps the ready Tasks that fall in the scope. The worker chooses the highest in priority (DEC-059 point 7 and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
-
-> [!WARNING]
-> **Not built yet:** nothing narrows the ready Tasks to a seat's scope. DEC-059 point 7 decides that a scope narrows the ready Tasks of the scope's seat, and #2142 tracks it.
-
-4. The worker starts the chosen Task: `pkit pm start-work <N>`. The system checks the move, cuts the Task's branch, assigns the worker's account and moves the Task to In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+2. The worker asks for the next Task to build: `pkit pm next-task`. Of the Tasks in Backlog with no owner, the system keeps those whose `## Dependencies` section names no [issue](../../../glossary.md#term-issue--issue) still open. These Tasks are ready, as are the Tasks In Progress of variant 2b, and every [seat](../../../glossary.md#term-seat--seat) shares the ready Tasks ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
+3. Where the worker's seat gives the worker a [scope](../../../glossary.md#term-scope--scope), the system keeps the Tasks that fall in the scope. The system chooses the highest in priority among the Tasks in Backlog that the worker's instance owns and whose dependencies name no open issue. Where there is none, the system chooses the highest in priority among the ready Tasks (DEC-059 point 7 and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+4. The system starts the chosen Task through `pkit pm start-work <N>`. That command checks the move, cuts the Task's branch, assigns the worker's account and moves the Task to In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 5. The system makes the worker's instance the Task's owner ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The ownership names the worker's seat, the seat's number and the clone's key ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
 
 > [!WARNING]
@@ -170,5 +165,5 @@ pkit:
 What the worker needs here that no accepted record decides yet:
 
 - **Taking over a Task in Backlog.** [project-management DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-on-terminal-transitions-and-transfers-on-reclaim) adds the takeover to `handoff-issue`, which [project-management DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md) lets act only on an [issue](../../../glossary.md#term-issue--issue) In Progress or in Review. No record says which of the two holds for a [Task](../../../glossary.md#term-task--task) in Backlog.
-- **Which Tasks are ready to start.** While `## Dependencies` is prose, the worker reads the section of each Task. Typed `Blocked by:` lines, and a listing of the Tasks ready to start, are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s, which is proposed. [DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md) names typed dependencies between Tasks for later.
+- **Typed dependencies.** While `## Dependencies` is prose, `pkit pm next-task` reads each `#N` the section names. Typed `Blocked by:` lines are named in [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md), and wait for lived evidence before they are built. [DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md) names typed dependencies between Tasks for later.
 - **Whether the worker asks the person anything,** or only stops when the worker's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is ready to merge. The maintainer decided on 17 October that agents bring the person's decisions in one batch (#1675), and no record holds that decision yet.

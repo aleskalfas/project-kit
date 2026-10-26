@@ -44,7 +44,10 @@ Side-effects:
     issue: where a lower-numbered instance claimed in the same instant, this
     clone withdraws its claim and stops before the move, naming the branch it
     left (DEC-035 point 6). It stops there too when the withdrawal could not
-    be written. Any other claim that fails is a warning, and the work starts
+    be written, and when the claim finds another instance's claim made first,
+    after the clash guard passed: the first claim holds, so two clones that
+    run `next-task` at once never both start one task (DEC-059 point 7). Any
+    other claim that fails is a warning, and the work starts
     unclaimed. After a bypass it claims nothing, whichever account's instance
     owned the issue. With no id set, nothing of this runs. In a project with a
     topology, a clone claims for the seat it holds, its number the seat's, and
@@ -60,10 +63,9 @@ Exit codes:
   0  in-progress
   1  membership refusal
   2  usage error / gate failure / illegal transition / gh failure / another
-     instance claimed the issue in the same instant and keeps it, so this
-     clone withdrew its claim and did not move the issue / the clash guard
-     refused an issue another instance owns / this clone's seat could not be
-     confirmed
+     instance claimed the issue in the same instant and keeps it, or claimed
+     it first, so this clone did not move the issue / the clash guard refused
+     an issue another instance owns / this clone's seat could not be confirmed
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -101,9 +103,20 @@ from _lib.membership import (
 
 TARGET_STATE = "in-progress"
 
-#: Another instance claimed the issue in the same instant and keeps it: a gate
-#: this clone does not pass, so the exit code of a gate failure.
+#: Another instance claimed the issue in the same instant and keeps it, or
+#: claimed it first, after the clash guard read it: a gate this clone does not
+#: pass, so the exit code of a gate failure.
 EXIT_CLAIM_LOST = 2
+
+#: The claim's outcomes that stop the run before the move, where another
+#: instance holds the issue: a lost same-instant claim, its withdrawal failed,
+#: and a claim that found the issue owned since the guard read it (DEC-035
+#: point 6, DEC-059 point 7).
+_OUTCOMES_THAT_STOP = (
+    instance_claims.LOST,
+    instance_claims.FAILED,
+    instance_claims.ELSEWHERE,
+)
 
 
 def main() -> int:
@@ -351,15 +364,14 @@ def main() -> int:
     elif clone is not None:
         claimed = instance_claims.claim(args.issue_number, clone, config)
         instance_claims.say(claimed)
-        if claimed.outcome in (instance_claims.LOST, instance_claims.FAILED) and (
-            claimed.winner not in (None, clone.instance)
-        ):
+        if claimed.outcome in _OUTCOMES_THAT_STOP and claimed.winner not in (None, clone.instance):
             print(
                 _claim_lost_message(
                     args.issue_number,
                     claimed.winner,
                     branch_name=branch_name if branch_created else None,
                     base=base,
+                    first=claimed.outcome == instance_claims.ELSEWHERE,
                 ),
                 file=sys.stderr,
             )
@@ -405,15 +417,22 @@ def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
 
 
 def _claim_lost_message(
-    issue_number: int, winner: int | None, *, branch_name: str | None, base: str
+    issue_number: int,
+    winner: int | None,
+    *,
+    branch_name: str | None,
+    base: str,
+    first: bool = False,
 ) -> str:
-    """The stop after a lost same-instant claim (DEC-035 point 6): the issue is
-    the winning instance's, so this clone does not move it. The branch it cut
-    is named with its undo. The assignee stays: it is this account's, as it is
-    the winning clone's."""
+    """The stop after a lost claim (DEC-035 point 6): the issue is the winning
+    instance's, so this clone does not move it. ``first`` says the claim found
+    the winner's claim before it wrote its own, though the clash guard had
+    passed. The branch it cut is named with its undo. The assignee stays: it is
+    this account's, as it is the winning clone's."""
+    when = "first, and the first claim holds" if first else "in the same instant and keeps it"
     lines = [
-        f"[stopped] start-work #{issue_number}: instance {winner} claimed it in the same "
-        "instant and keeps it, so this clone did not move it.",
+        f"[stopped] start-work #{issue_number}: instance {winner} claimed it {when}, "
+        "so this clone did not move it.",
     ]
     if branch_name is not None:
         lines.append(

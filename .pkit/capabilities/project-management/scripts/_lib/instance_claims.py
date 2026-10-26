@@ -156,11 +156,13 @@ Run = Callable[[list[str]], Any]
 @dataclass(frozen=True)
 class Seat:
     """A seat of the topology, as this clone holds it: its name, its number,
-    which is its place in the topology, and its role (DEC-059 points 2 and 6)."""
+    which is its place in the topology, its role, and the scope that narrows its
+    own pool of work, where it has one (DEC-059 points 2, 6 and 7)."""
 
     name: str
     number: int
     role: str
+    scope: topology.Scope | None = None
 
 
 @dataclass(frozen=True)
@@ -761,6 +763,30 @@ def guard(
         f"[warn] ownership: {why}, and {flag} let this clone, {me}, act on it. "
         "The reason is on the issue.",
     )
+
+
+# ---- the owner, as the shared pool reads it (DEC-059 point 7) ------------------
+
+
+def read_owner(
+    issue_number: int, clone: Clone, config: dict, *, run: Run | None = None
+) -> ownership.OwnershipResolution | None:
+    """The issue's owners, folded by the seam as the clash guard folds them:
+    the markers of this clone's account where it is an assignee, else of the
+    first assignee. None where the issue could not be read. Writes nothing."""
+    gh = run or _runner(config)
+    issue = _read(gh, issue_number)
+    if issue is None:
+        return None
+    assignees = _assignees(issue)
+    account = clone.login if clone.login in assignees else (assignees[0] if assignees else None)
+    return _resolve(issue, account, clone)
+
+
+def owner_named(resolution: ownership.OwnershipResolution, instance: int) -> str:
+    """How a line names the owner ``instance`` of a folded issue: its seat, where
+    its claim names one, and why its claim could not be judged, where it could not."""
+    return _owner(resolution, instance)
 
 
 # ---- release ----------------------------------------------------------------

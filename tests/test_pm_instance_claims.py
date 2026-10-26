@@ -1012,3 +1012,41 @@ def test_every_write_command_confirms_the_seat_where_the_guard_runs(script: str)
     assert "except instance_claims.Unconfirmed" in source
     first = min(source.index(w) for w in _OWNERSHIP_WRITES if w in source)
     assert source.index("instance_claims.this_clone(") < first
+
+
+# ---- the owner, as the shared pool reads it (DEC-059 point 7) ------------------
+
+
+def test_read_owner_folds_as_the_guard_does_and_writes_nothing(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7)
+    gh.post(7, _seat_stamp(ic, "worker-1", 1, "k1"))
+    held = {"worker-1": _held(ic, key="k1"), "worker-2": _held(ic)}
+    resolution = ic.read_owner(7, _seat_clone(ic, root, holders=held), {}, run=gh)
+    assert resolution is not None
+    assert resolution.claimants == frozenset({1})
+    assert ic.owner_named(resolution, 1) == "seat worker-1, instance 1"
+    assert gh.writes() == []
+
+
+def test_read_owner_reads_the_assignees_markers(ic, root: Path) -> None:
+    """The markers of the first assignee where this clone's account is none."""
+    gh = FakeGitHub()
+    gh.add(7, assignees=("alice",))
+    gh.post(7, _stamp(ic, "claim", 3), author="alice")
+    resolution = ic.read_owner(7, _clone(ic, root), {}, run=gh)
+    assert resolution is not None
+    assert resolution.owners == frozenset({3})
+
+
+def test_read_owner_of_an_issue_it_cannot_read_is_none(ic, root: Path) -> None:
+    gh = FakeGitHub(failing={"view"})
+    gh.add(7)
+    assert ic.read_owner(7, _clone(ic, root), {}, run=gh) is None
+
+
+def test_a_seat_has_no_scope_unless_the_topology_gives_one(ic) -> None:
+    """#2141's reading of the topology fills the scope next-task narrows by."""
+    assert ic.Seat("worker-2", 2, ic.WORKER).scope is None
+    scope = importlib.import_module("_lib.topology").Scope(workstreams=("cli",))
+    assert ic.Seat("worker-2", 2, ic.WORKER, scope).scope is scope
