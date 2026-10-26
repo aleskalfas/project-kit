@@ -15,6 +15,9 @@ shortfalls:
   - at: 2
     issue: "#520"
     record: project-management:DEC-035#6
+  - at: 2
+    issue: "#2141"
+    record: project-management:DEC-059#6
   - at: 3
     issue: "#520"
     record: project-management:DEC-035#6
@@ -30,6 +33,9 @@ shortfalls:
   - at: "3b"
     issue: "#521"
     record: project-management:DEC-035#4
+  - at: "3c"
+    issue: "#2136"
+    record: project-management:DEC-059#9
 pkit:
   friction:
     anchors:
@@ -43,6 +49,8 @@ pkit:
         - project-management:DEC-035#6
         - project-management:DEC-035#8
         - project-management:DEC-043#3
+        - project-management:DEC-059#6
+        - project-management:DEC-059#9
         - project-management:DEC-014
         - project-management:DEC-026
         - project-management:DEC-012
@@ -59,25 +67,28 @@ pkit:
 
 **Goal:** Never work on a Task that another agent already works on.
 
-**Other actors:** **Developer** (`core:ACT-developer`): only a person sets the refusal aside, with a reason that an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records before the start (DEC-014).
+**Other actors:** **Developer** (`core:ACT-developer`): only a person sets the refusal aside, with a reason that an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records before the start ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 
-**Preconditions:** **From UC-083, or UC-060:** The [Task](../../../glossary.md#term-task--task) is filed, with its [workstream](../../../glossary.md#term-workstream--workstream) (DEC-012).
+**Preconditions:** **From UC-083, or UC-060:** The [Task](../../../glossary.md#term-task--task) is filed, with its [workstream](../../../glossary.md#term-workstream--workstream) ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and its commands (COR-017 and COR-021).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and its commands ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
 
 **Trigger:** The worker starts a [Task](../../../glossary.md#term-task--task) that another [instance](../../../glossary.md#term-instance--instance) owns, or that another instance starts at the same instant.
 
 **Main path:**
 
 1. The worker starts a [Task](../../../glossary.md#term-task--task): `pkit pm start-work <N>`.
-2. Before it changes anything, the system reads the Task's [owner](../../../glossary.md#term-owner--owner) (DEC-035 point 6).
+2. Before it changes anything, the system reads the Task's [owner](../../../glossary.md#term-owner--owner) ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)). With a [topology](../../../glossary.md#term-topology--topology), the system first confirms on the [seat](../../../glossary.md#term-seat--seat)'s [state issue](../../../glossary.md#term-state-issue--state-issue) that the worker's clone still holds the seat ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 
 > [!WARNING]
 > **Not built yet:** `start-work` reads no owner. DEC-035 point 6 decides that an ordinary command reads the owner first, and #520 tracks it.
 
-3. Another [instance](../../../glossary.md#term-instance--instance) owns the Task. The system refuses the start, names that instance, and writes nothing (DEC-035 point 6).
+> [!WARNING]
+> **Not built yet:** no command confirms a clone's seat. DEC-059 point 6 decides that every command acting as an [instance](../../../glossary.md#term-instance--instance) confirms it before writing, and #2141 tracks it.
+
+3. Another instance owns the Task. The system refuses the start, names that instance, and writes nothing (DEC-035 point 6).
 
 > [!WARNING]
 > **Not built yet:** `start-work` starts the Task again for a second instance under the same account. DEC-035 point 6 decides the refusal, and #520 tracks it.
@@ -86,45 +97,43 @@ pkit:
 
 **Variants:**
 
-- **1a.** The worker acts on the [Task](../../../glossary.md#term-task--task) with another ordinary command: `done-work`, `edit-issue` or `move-issue`. The system refuses as at step 3 (DEC-035 point 6).
+- **1a.** The worker acts on the [Task](../../../glossary.md#term-task--task) with another ordinary command: `done-work`, `edit-issue` or `move-issue`. The system refuses as at step 3 ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 
 > [!WARNING]
 > **Not built yet:** none of these commands reads the [owner](../../../glossary.md#term-owner--owner). DEC-035 point 6 decides the refusal, and #520 tracks it.
 
-- **2a.** No [instance](../../../glossary.md#term-instance--instance) owns the Task, and another instance starts it at the same instant. Each instance writes itself as the Task's owner, reads the Task again and finds two owners. The higher-numbered instance gives the Task up and says so, and the lower one keeps it (DEC-035 point 6).
+- **2a.** No [instance](../../../glossary.md#term-instance--instance) owns the Task, and another instance starts it at the same instant. Each instance writes itself as the Task's owner, reads the Task again and finds two owners. The higher-numbered instance gives the Task up and says so, and the lower one keeps it ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 
 > [!WARNING]
 > **Not built yet:** no command writes an owner or reads the Task back, so both instances go on. DEC-035 point 6 decides that the higher number gives the Task up, and #519 tracks it.
 
 - **2b.** The Task is assigned to another person's account. `start-work` refuses, points to `handoff-issue`, and changes nothing (`start-work.py`).
-- **3a.** The developer decides that the worker takes the Task all the same, and sets the refusal aside with a reason. The worker passes that reason with its start, and an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records it before the start (DEC-035 point 6 and DEC-014).
+- **3a.** The developer decides that the worker takes the Task all the same, and sets the refusal aside with a reason. The worker passes that reason with its start, and an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records it before the start ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock) and [DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 
 > [!WARNING]
 > **Not built yet:** there is no refusal to set aside. DEC-035 point 6 decides that the refusal yields to a reason, and #520 tracks it.
 
-- **3b.** The owner's agent no longer works on the Task, such as one whose [scope](../../../glossary.md#term-scope--scope) changed. The worker takes the Task over: `pkit pm handoff-issue <N> --to-instance self --reason "<R>"`. Its instance becomes the owner, and the assignee stays (DEC-035 point 4).
+- **3b.** The owner's agent no longer works on the Task, such as one whose [scope](../../../glossary.md#term-scope--scope) changed. The worker takes the Task over: `pkit pm handoff-issue <N> --to-instance self --reason "<R>"`. Its instance becomes the owner, and the assignee stays ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-on-terminal-transitions-and-transfers-on-reclaim)).
 
 > [!WARNING]
 > **Not built yet:** `handoff-issue` hands an [issue](../../../glossary.md#term-issue--issue) from one person to another only. DEC-035 point 4 decides the hand-over between instances, and #521 tracks it.
+
+- **3c.** The owner's ownership no longer counts, since it lapsed or the owner's [seat](../../../glossary.md#term-seat--seat) was released. The system does not refuse, and the worker takes the Task over, as `UC-084` variant 2b describes ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again) and [DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
+
+> [!WARNING]
+> **Not built yet:** no ownership lapses or stops counting. DEC-059 point 9 decides that an ownership that no longer counts is no ownership, and #2136 tracks it.
 
 **Postconditions:** The [Task](../../../glossary.md#term-task--task) has one [owner](../../../glossary.md#term-owner--owner), and the worker works on no Task that its [instance](../../../glossary.md#term-instance--instance) does not own, unless a person set the refusal aside.
 
 **Minimal guarantees:**
 
 - A start the system refuses writes nothing (`start-work.py`).
-- Two [instances](../../../glossary.md#term-instance--instance) that take one [Task](../../../glossary.md#term-task--task) at the same instant end with one [owner](../../../glossary.md#term-owner--owner) (DEC-035 point 6).
-- A refusal never moves the Task in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), since the owner is no input to a move (DEC-035 point 8).
+- Two [instances](../../../glossary.md#term-instance--instance) that take one [Task](../../../glossary.md#term-task--task) at the same instant end with one [owner](../../../glossary.md#term-owner--owner) ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
+- A refusal never moves the Task in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), since the owner is no input to a move ([DEC-035 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state)).
 
 ## Open for the design
 
 What the worker needs here that no accepted record decides yet:
 
-- **How long an instance owns a Task, decided.** The maintainer decided on 26 October that a [Task](../../../glossary.md#term-task--task)'s ownership rests on four safeguards, and a project-management record on [topologies](../../../glossary.md#term-topology--topology) is to hold them (#512):
-  - the [owner](../../../glossary.md#term-owner--owner) releases the Task once it is done, or once the owner stops work on it
-  - the work renews the ownership as it goes on
-  - a generous limit ends an ownership the work no longer renews, so another agent may take the Task
-  - a session that comes back checks that its [instance](../../../glossary.md#term-instance--instance) still owns the Task before writing, and parks its work otherwise
-- **What DEC-035 decides of these safeguards.** It releases the owner when the Task closes, at its merge or as won't-do (DEC-035 point 4). It decides no renewal and no limit, so a dead session's Task stays owned until another instance takes it over (DEC-035 point 4).
-- **A seat held as a Task is owned, decided.** Taking a [seat](../../../glossary.md#term-seat--seat) is the same claim as taking a Task, written on the seat's [state issue](../../../glossary.md#term-state-issue--state-issue). A seat is freed differently, as `UC-092` describes.
-- **Instances of two people** that take one Task at the same instant. DEC-035 leaves the tie-break between people for later. Numbers derived from the topology's seats would differ across people too (`UC-092`), and no record says yet whether the tie-break then holds between them.
-- **Agents with GitHub accounts of their own.** Today every agent acts under its person's account, so only the instances tell the agents apart. Accounts for agents are named for later under [EPIC](../../../glossary.md#term-epic--epic) #1673, and no [issue](../../../glossary.md#term-issue--issue) tracks them.
+- **Instances of two people** that take one [Task](../../../glossary.md#term-task--task) at the same instant. [project-management DEC-035](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md) leaves the tie-break between people for later. A [topology](../../../glossary.md#term-topology--topology) numbers its [seats](../../../glossary.md#term-seat--seat) across the whole [project](../../../../core/glossary.md#term-project--project) ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)), and no record says whether the lower number then wins between people.
+- **Agents with GitHub accounts of their own.** Today every agent acts under its person's account, so only the [instances](../../../glossary.md#term-instance--instance) tell the agents apart. [DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md) names accounts for agents for later, as [EPIC](../../../glossary.md#term-epic--epic) #1673 does, and no [issue](../../../glossary.md#term-issue--issue) tracks them.

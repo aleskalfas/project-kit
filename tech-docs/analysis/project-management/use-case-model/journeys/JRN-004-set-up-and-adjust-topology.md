@@ -23,6 +23,9 @@ pkit:
         - .pkit/capabilities/project-management/scripts/_lib/agent_verdicts.py
       record:
         - project-management:DEC-045
+        - project-management:DEC-059
+        - project-management:DEC-059#1
+        - project-management:DEC-059#7
         - project-management:DEC-035#1
         - project-management:DEC-035#8
         - project-management:DEC-028
@@ -44,14 +47,14 @@ pkit:
 **Steps:**
 
 1. UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats
-   - **Needs from UC-064 (outside this journey):** the [workstreams](../../glossary.md#term-workstream--workstream) the [project](../../../core/glossary.md#term-project--project) declares, which a [seat](../../glossary.md#term-seat--seat)'s [scope](../../glossary.md#term-scope--scope) may name (DEC-045 point 3). DEC-045 point 4 has the system warn of a workstream that two scopes name, or that none names. UC-082 step 5 shows that nothing warns yet.
+   - **Needs from UC-064 (outside this journey):** the [workstreams](../../glossary.md#term-workstream--workstream) the [project](../../../core/glossary.md#term-project--project) declares, which a [seat](../../glossary.md#term-seat--seat)'s [scope](../../glossary.md#term-scope--scope) may name ([DEC-045 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy)). [DEC-059 point 7](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) has the system warn of a workstream that no seat may take. UC-082 step 5 shows that nothing warns yet.
 2. UC-091 — Measure one topology against another on comparable work
-   - **Needs from step 1 (UC-082):** each [topology](../../glossary.md#term-topology--topology) to compare, set up in turn. GitHub records no topology beside a [pull request](../../../core/glossary.md#term-pull-request--pull-request), so the adopter keeps which topology did which work.
+   - **Needs from step 1 (UC-082):** each [topology](../../glossary.md#term-topology--topology) to compare, set up in turn. Each topology is committed on the [default branch](../../../core/glossary.md#term-default-branch--default-branch), so the branch's history shows which topology was in force for each [pull request](../../../core/glossary.md#term-pull-request--pull-request) ([DEC-059 point 1](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
    - **Needs from UC-092 (outside this journey):** each seat of the topology taken by a clone, whose agent acts as that seat's agent. A seat that no clone takes has no agent, so none of the topology's work is done in it.
    - **Needs from UC-083 (outside this journey):** the Tasks of each plan the planner approved, each filed with the workstream of its work. These Tasks are the work a topology does.
    - **Needs from UC-084 (outside this journey):** each [Task](../../glossary.md#term-task--task) a worker agent took and built, with its pull request open. A topology's time runs from its first pull request.
-   - **Needs from UC-087 (outside this journey):** what each next piece of the work needs from an earlier piece, landed on the [default branch](../../../core/glossary.md#term-default-branch--default-branch). The next piece's Task can start only after that landing, so a topology's work reaches its last merge only once every piece is handed on.
-   - **Needs from UC-089 (outside this journey):** each Task's pull request merged, with the [verdict](../../glossary.md#term-verdict--verdict) of each review round naming the [head](../../../core/glossary.md#term-head--head) that round reviewed (DEC-028). A pull request still open gives no time to its merge, so all the work compared must have landed.
+   - **Needs from UC-087 (outside this journey):** what each next piece of the work needs from an earlier piece, landed on the default branch. The next piece's Task can start only after that landing, so a topology's work reaches its last merge only once every piece is handed on.
+   - **Needs from UC-089 (outside this journey):** each Task's pull request merged, with the [verdict](../../glossary.md#term-verdict--verdict) of each review round naming the [head](../../../core/glossary.md#term-head--head) that round reviewed ([DEC-028](../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). A pull request still open gives no time to its merge, so all the work compared must have landed.
 3. UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats
    - **Needs from step 2 (UC-091):** each topology's figures, which show the one that serves the project better. The adopter sets that topology up again for the work that follows.
 
@@ -64,9 +67,9 @@ pkit:
 
 **Minimal guarantees:**
 
-- A [topology](../../glossary.md#term-topology--topology) never changes a [workstream](../../glossary.md#term-workstream--workstream), so a path stopped at any step leaves the [project](../../../core/glossary.md#term-project--project)'s workstreams as they were (DEC-045 point 3).
-- The [owner](../../glossary.md#term-owner--owner) is never an input to a gate or a move of the [issue lifecycle](../../glossary.md#term-issue-lifecycle--issue-lifecycle) (DEC-035 point 8). So a path stopped with owners written leaves each [issue](../../glossary.md#term-issue--issue) to move as before.
+- A [topology](../../glossary.md#term-topology--topology) never changes a [workstream](../../glossary.md#term-workstream--workstream), so a path stopped at any step leaves the [project](../../../core/glossary.md#term-project--project)'s workstreams as they were ([DEC-045 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy)).
+- The [owner](../../glossary.md#term-owner--owner) is never an input to a gate or a move of the [issue lifecycle](../../glossary.md#term-issue-lifecycle--issue-lifecycle) ([DEC-035 point 8](../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state)). So a path stopped with owners written leaves each [issue](../../glossary.md#term-issue--issue) to move as before.
 
 ## Sources
 
-The goal rests on DEC-045, which decides the [topology](../../glossary.md#term-topology--topology) and each agent's [scope](../../glossary.md#term-scope--scope). It rests too on the maintainer's decisions that `UC-082` quotes: on 26 October he decided that each agent works in a [seat](../../glossary.md#term-seat--seat) of the topology. Measuring one topology against another is a goal that #2096 names, as the sources of UC-091 say. Adjusting the topology on what the measure shows is setting it up again, as UC-082 describes.
+The goal rests on [project-management DEC-059](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md), which decides the [topology](../../glossary.md#term-topology--topology), its [seats](../../glossary.md#term-seat--seat) and each seat's [scope](../../glossary.md#term-scope--scope). Measuring one topology against another is a goal that #2096 names, as the sources of UC-091 say. Adjusting the topology on what the measure shows is setting it up again, as UC-082 describes.

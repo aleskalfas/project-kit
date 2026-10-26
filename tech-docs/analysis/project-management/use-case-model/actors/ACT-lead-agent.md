@@ -17,13 +17,13 @@ pkit:
 
 # ACT-lead-agent — Lead agent
 
-An AI agent of a topology that plans and builds the work of its scope, delegating Tasks to agents it starts itself. Its [instance](../../glossary.md#term-instance--instance) owns the work it files (DEC-035 point 3).
+An AI agent of a topology that plans and builds the work of its scope, delegating Tasks to agents it starts itself. Its [instance](../../glossary.md#term-instance--instance) owns the work it files ([DEC-035 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)).
 
-**Role holders:** an AI agent that plans and builds through the `pm` [skill](../../../core/glossary.md#term-skill--skill), such as the project-manager agent (DEC-008 and DEC-029).
+**Role holders:** an AI agent that plans and builds through the `pm` [skill](../../../core/glossary.md#term-skill--skill), such as the project-manager agent ([DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md) and [DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
 **Occasions:** whenever its [scope](../../glossary.md#term-scope--scope) holds work to plan or to build.
 
-**Context:** its [scope](../../glossary.md#term-scope--scope), its [instance](../../glossary.md#term-instance--instance)'s number, and the harness's limit on how deep agents may start further agents (DEC-029).
+**Context:** its [scope](../../glossary.md#term-scope--scope), its [instance](../../glossary.md#term-instance--instance)'s number, and the harness's limit on how deep agents may start further agents ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
 **Note:**
 

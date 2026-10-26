@@ -28,7 +28,7 @@ pkit:
 
 **Verified by:** None.
 
-**Rationale:** Clones coordinate through GitHub, so the only state they keep is each clone's number and the marks on the issues (DEC-035). [EPIC](../../../glossary.md#term-epic--epic) #943 sets the outcome this serves: with every session killed, each clone finds where it was from GitHub and the clone's number. The [owner](../../../glossary.md#term-owner--owner) is written on the [issue](../../../glossary.md#term-issue--issue) itself, so it survives a session that died (DEC-043 point 4). Each [Task](../../../glossary.md#term-task--task)'s branch is named after the Task, so the branch is found from the issue (DEC-013).
+**Rationale:** Clones coordinate through GitHub, so the only state they keep is each clone's number and the marks on the issues ([DEC-035](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md)). [EPIC](../../../glossary.md#term-epic--epic) #943 sets the outcome this serves: with every session killed, each clone finds where it was from GitHub and the clone's number. The [owner](../../../glossary.md#term-owner--owner) is written on the [issue](../../../glossary.md#term-issue--issue) itself, so it survives a session that died ([DEC-043 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)). Each [Task](../../../glossary.md#term-task--task)'s branch is named after the Task, so the branch is found from the issue ([DEC-013](../../../../../../.pkit/capabilities/project-management/decisions/DEC-013-branch-and-pr-conventions.md)).
 
 ## Open for the design
 

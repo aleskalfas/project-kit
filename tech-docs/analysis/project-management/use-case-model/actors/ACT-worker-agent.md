@@ -22,7 +22,7 @@ pkit:
 
 An AI agent of a topology that takes ready Tasks one at a time, and builds each up to its merge. It plans nothing beyond the [Task](../../glossary.md#term-task--task) it builds.
 
-**Role holders:** an AI agent that follows the `pm` [skill](../../../core/glossary.md#term-skill--skill) on a developer's direction, such as the project-manager agent (DEC-008 and DEC-029).
+**Role holders:** an AI agent that follows the `pm` [skill](../../../core/glossary.md#term-skill--skill) on a developer's direction, such as the project-manager agent ([DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md) and [DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
 **Occasions:**
 
@@ -35,4 +35,4 @@ An AI agent of a topology that takes ready Tasks one at a time, and builds each 
 - its [instance](../../glossary.md#term-instance--instance)'s number
 - the Tasks in Backlog
 
-**Note:** it is an AI agent (`core:ACT-ai-agent`) with its own job in a [topology](../../glossary.md#term-topology--topology). It does for a [Task](../../glossary.md#term-task--task) what the developer does, through the same commands (DEC-008 and DEC-026). The developer's use cases give those steps, such as `UC-061` and `UC-062`. A lead agent does the same within its own [scope](../../glossary.md#term-scope--scope), and plans too.
+**Note:** it is an AI agent (`core:ACT-ai-agent`) with its own job in a [topology](../../glossary.md#term-topology--topology). It does for a [Task](../../glossary.md#term-task--task) what the developer does, through the same commands ([DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md) and [DEC-026](../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)). The developer's use cases give those steps, such as `UC-061` and `UC-062`. A lead agent does the same within its own [scope](../../glossary.md#term-scope--scope), and plans too.

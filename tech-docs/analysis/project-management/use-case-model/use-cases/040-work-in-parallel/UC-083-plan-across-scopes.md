@@ -1,6 +1,6 @@
 ---
 id: UC-083
-title: Plan an intent into work for each scope of the topology
+title: Plan an intent into Tasks that one agent can each finish
 status: active
 actor: ACT-planning-agent
 other-actors:
@@ -12,11 +12,18 @@ requirements:
   - REQ-041
 after:
   - [UC-082]
+  - [UC-092]
   - [UC-064]
 shortfalls:
-  - at: 8
-    issue: "#519"
-    record: project-management:DEC-035#3
+  - at: 2
+    issue: "#2143"
+    record: project-management:DEC-059#1
+  - at: 3
+    issue: "#2143"
+    record: project-management:DEC-059#7
+  - at: 10
+    issue: "#2136"
+    record: project-management:DEC-059#7
   - at: "1a"
     issue: "#519"
     record: project-management:DEC-035#3
@@ -32,10 +39,13 @@ pkit:
         - project-management:DEC-005
         - project-management:DEC-012
         - project-management:DEC-018
-        - project-management:DEC-035#1
         - project-management:DEC-035#3
-        - project-management:DEC-045#3
-        - project-management:DEC-045#5
+        - project-management:DEC-045#4
+        - project-management:DEC-059#1
+        - project-management:DEC-059#2
+        - project-management:DEC-059#4
+        - project-management:DEC-059#6
+        - project-management:DEC-059#7
         - COR-013
         - COR-017
       artefact:
@@ -47,64 +57,72 @@ pkit:
         - REQ-041
 ---
 
-# UC-083 — Plan an intent into work for each scope of the topology
+# UC-083 — Plan an intent into Tasks that one agent can each finish
 
-**Goal:** Plan my planner's intent into Tasks that each fall in one scope of the topology, ordered where one scope needs another's work.
+**Goal:** Plan my planner's intent into Tasks that one agent can each finish, ordered where one Task needs another's work.
 
 **Other actors:**
 
-- **Planner** (`ACT-planner`): approves the whole plan before any [issue](../../../glossary.md#term-issue--issue) of it is filed (DEC-029).
-- **Worker agent** (`ACT-worker-agent`) and **Lead agent** (`ACT-lead-agent`): take the Tasks of their scopes. Each [Task](../../../glossary.md#term-task--task) names the Tasks it waits on, so these agents never start a Task too early (`batch-plan.md`).
+- **Planner** (`ACT-planner`): approves the whole plan before any [issue](../../../glossary.md#term-issue--issue) of it is filed ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+- **Worker agent** (`ACT-worker-agent`) and **Lead agent** (`ACT-lead-agent`): take the Tasks from the ready Tasks that every [seat](../../../glossary.md#term-seat--seat) shares. Each [Task](../../../glossary.md#term-task--task) names the Tasks it waits on, so these agents never start a Task too early (`batch-plan.md`).
 
 **Preconditions:**
 
-- **From UC-082:** The [topology](../../../glossary.md#term-topology--topology) gives each agent its [scope](../../../glossary.md#term-scope--scope), which names [workstreams](../../../glossary.md#term-workstream--workstream) (DEC-045 point 3).
-- **From UC-064:** The [project](../../../../core/glossary.md#term-project--project) declares the workstreams its work falls into (DEC-018).
+- **From UC-082:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares the [seats](../../../glossary.md#term-seat--seat), and the [scope](../../../glossary.md#term-scope--scope) of each seat that has one (DEC-059 points [1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) and [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)).
+- **From UC-092:** The planning agent's clone holds the planning agent's seat ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
+- **From UC-064:** The [project](../../../../core/glossary.md#term-project--project) declares the [workstreams](../../../glossary.md#term-workstream--workstream) its work falls into ([DEC-018](../../../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md)).
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) (COR-013 and COR-017).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the `project-manager` agent and the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 
 **Trigger:** The planner gives the planning agent an intent to plan for the [topology](../../../glossary.md#term-topology--topology)'s agents.
 
 **Main path:**
 
 1. The planner gives the planning agent an intent, with its reference material, as `UC-063` step 1 describes.
-2. The agent reads the intent, its references and the [project](../../../../core/glossary.md#term-project--project)'s use cases, as `UC-063` steps 2 and 3 describe (DEC-054 point 5).
-3. The agent slices the intent into an [EPIC](../../../glossary.md#term-epic--epic), Features and Tasks, and gives each [Task](../../../glossary.md#term-task--task) the [workstream](../../../glossary.md#term-workstream--workstream) of the work it does (DEC-012 and DEC-029). The Task then lies in each [scope](../../../glossary.md#term-scope--scope) that names that workstream (DEC-045 point 3).
-4. Where two Tasks edit the same files, the later one names the earlier in its `## Dependencies` section. It is built once the earlier has merged (`batch-plan.md` and DEC-005).
-5. Where a Task needs what a Task of another scope builds, it names that Task in its `## Dependencies` section too (`batch-plan.md` and DEC-005).
-6. The agent has the plan reviewed, and shows it to the planner, as `UC-063` steps 5 and 6 describe (DEC-029).
-7. The planner approves the plan (DEC-029).
-8. The agent files the issues, as `UC-063` steps 8 and 9 describe. Its [instance](../../../glossary.md#term-instance--instance) owns each [issue](../../../glossary.md#term-issue--issue) it files, the parents and the Tasks alike (DEC-035 point 3). The agent of each scope takes its Tasks over, as `UC-084` variant 2a describes.
+2. The agent reads the intent, its references and the [project](../../../../core/glossary.md#term-project--project)'s use cases, as `UC-063` steps 2 and 3 describe ([DEC-054 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#5-the-planning-step)). It reads too the [topology](../../../glossary.md#term-topology--topology) from the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), with each [seat](../../../glossary.md#term-seat--seat) and its [scope](../../../glossary.md#term-scope--scope) ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
 
 > [!WARNING]
-> **Not built yet:** `create-issue` writes no [owner](../../../glossary.md#term-owner--owner). DEC-035 point 3 decides that the instance that files an issue owns it, and #519 tracks it.
+> **Not built yet:** `batch-plan.md` reads no topology. DEC-059 point 1 decides that every clone reads the topology from the default branch, and #2143 tracks it.
 
-9. The agent reports each issue it filed, with its number, its link and its workstream.
+3. The agent slices the intent into an [EPIC](../../../glossary.md#term-epic--epic), Features and Tasks. It slices vertically, so that one agent can finish a [Task](../../../glossary.md#term-task--task) or a [Feature](../../../glossary.md#term-feature--feature) across the software's layers ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). It gives each Task the [workstream](../../../glossary.md#term-workstream--workstream) and the kind of the work it does ([DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)). A Task falls in each scope whose parts the Task matches.
+
+> [!WARNING]
+> **Not built yet:** `batch-plan.md` says nothing of how a plan is sliced across the software's layers. DEC-059 point 7 decides vertical slices, and #2143 tracks it.
+
+10. The system warns of each Task of the plan that no seat may take, and refuses nothing (DEC-059 point 7 and [DEC-045 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#4-the-partition-is-soft--full-coverage-is-the-default-sharing-and-gaps-are-allowed-but-discouraged)).
+
+> [!WARNING]
+> **Not built yet:** nothing reads the seats' scopes, so nothing warns. DEC-059 point 7 decides the warning, and #2136 tracks it.
+
+4. Where two Tasks edit the same files, the later one names the earlier in its `## Dependencies` section. It is built once the earlier has merged ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md) and `batch-plan.md`).
+5. Where a Task needs what a Task of another scope builds, it names that Task in its `## Dependencies` section too (DEC-005 and `batch-plan.md`).
+6. The agent has the plan reviewed, and shows it to the planner, as `UC-063` steps 5 and 6 describe ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+7. The planner approves the plan (DEC-029).
+8. The agent files the issues, as `UC-063` steps 8 and 9 describe. It files them with no [owner](../../../glossary.md#term-owner--owner), so they join the ready Tasks that every seat shares (DEC-059 point 7). The agent of each seat takes its Tasks from there, as `UC-084` describes.
+9. The agent reports each [issue](../../../glossary.md#term-issue--issue) it filed, with its number, its link and its workstream.
 
 **Variants:**
 
-- **1a.** A lead agent plans the work of its own [scope](../../../glossary.md#term-scope--scope), in place of a planning agent. Its [instance](../../../glossary.md#term-instance--instance) owns each [issue](../../../glossary.md#term-issue--issue) it files, the parents and the Tasks alike, and builds them itself (DEC-035 point 3).
+- **1a.** A lead agent plans the work of its own [scope](../../../glossary.md#term-scope--scope), in place of a planning agent. Its [instance](../../../glossary.md#term-instance--instance) owns each [issue](../../../glossary.md#term-issue--issue) it files, the parents and the Tasks alike, and builds them itself ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree) and [DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 
 > [!WARNING]
 > **Not built yet:** `create-issue` writes no [owner](../../../glossary.md#term-owner--owner). DEC-035 point 3 decides that the instance that files an issue owns it, and #519 tracks it.
 
 - **7a.** The planner asks for changes, or cancels the plan, as `UC-063` variants 7a and 7c describe.
-- **8a.** The planning agent's clone has set no number. No issue it files has an owner, so the agent of each scope may start its Tasks at once (DEC-035 point 1).
+- **8a.** The planning agent's clone holds no [seat](../../../glossary.md#term-seat--seat). The clone marks no issue, and the agent files as step 8 does, with no owner ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 
-**Postconditions:** Each [Task](../../../glossary.md#term-task--task) of the approved plan is filed with the [workstream](../../../glossary.md#term-workstream--workstream) of its work. Each Task that waits on another names it in its `## Dependencies` section.
+**Postconditions:** Each [Task](../../../glossary.md#term-task--task) of the approved plan is filed with no [owner](../../../glossary.md#term-owner--owner), with the [workstream](../../../glossary.md#term-workstream--workstream) and the kind of its work. Each Task that waits on another names it in its `## Dependencies` section.
 
 **Minimal guarantees:**
 
-- No [issue](../../../glossary.md#term-issue--issue) is filed before the planner approves the whole plan (DEC-029).
+- No [issue](../../../glossary.md#term-issue--issue) is filed before the planner approves the whole plan ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 - A [Task](../../../glossary.md#term-task--task) that edits the same files as an earlier Task names that Task in its `## Dependencies` section (`batch-plan.md`).
 
 ## Open for the design
 
 What the planning agent needs here that no accepted record decides yet:
 
-- **How the planning agent reads the topology.** Without it, the agent cannot check that each [workstream](../../../glossary.md#term-workstream--workstream) it gives lies in some agent's [scope](../../../glossary.md#term-scope--scope), nor name the work that falls in none.
-- **How one scope gives another what it needs,** such as an interface two scopes share. A contract between scopes is proposed only, in an unmerged note (draft PR #566). Typed `Blocked by:` lines, and the Tasks ready to start that they give, are DEC-025's, which is proposed.
-- **Who owns what the planning agent files.** DEC-035 point 3 makes the filer the [owner](../../../glossary.md#term-owner--owner), so each agent of a scope must take over each of its Tasks. DEC-045 point 5 expects instead the [instance](../../../glossary.md#term-instance--instance) whose scope names the [Task](../../../glossary.md#term-task--task)'s workstream. The [topology](../../../glossary.md#term-topology--topology)'s design chooses between them.
+- **How one scope gives another what it needs,** such as an interface two scopes share. A contract between scopes is proposed only, in an unmerged note (draft PR #566). Typed `Blocked by:` lines, and the Tasks ready to start that they give, are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s, which is proposed.
 - **Work that passes through stages,** such as design, development and testing, where each stage needs the work of the stage before. No record decides how such work is planned.
