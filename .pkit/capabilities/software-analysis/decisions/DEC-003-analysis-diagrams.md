@@ -120,7 +120,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
     > This analysis describes what billing does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
 
     An analysis that builds on others names them in the second sentence, as the configuration lists them. The one analysis at the location's top names no component, so its first sentence reads "the system" where a component's name would stand.
-  - **the areas,** in their numbered order, each with its goal, the areas it builds on, its requirements and its use cases (below). Then the use cases in no area, in a section of their own. An analysis whose use cases lie in no area lists them under its use cases.
+  - **the areas,** in their numbered order, each with its goal, the areas it builds on, its requirements, its use cases and its journeys (below). Then the use cases in no area, in a section of their own. An analysis whose use cases lie in no area lists them under its use cases. A use case in no area breaks the rule on areas and journeys wherever it binds. So these sections, and each passage of this point on use cases in no area, serve an analysis that rule does not bind on (refinement per [software-analysis:DEC-005-finding-functionality] point 5).
   - **reference,** each part below a section heading of its own under "Reference":
     - **who takes part:** one table of the actors (below)
     - **the words:** the glossary, then each domain-model view in its numbered order, by its number and its title
@@ -144,6 +144,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
   - **Builds on:** the other areas that hold a producer its use cases name in `after`. A producer in a later area is left out, as an alternative the area does not build on (point 5, DEC-001 point 12). The environment is no area. Where none of the area's use cases writes `after`, the line is left out, since nothing says what the area builds on.
   - **Its requirements:** each requirement in force whose file lies in a folder named for the area, inside its kind's folder (DEC-002 point 3). A requirement's area folder takes the name of the use cases' area, so the two read as one area.
   - **Its use cases,** each marked where an open shortfall names one of its steps or variants.
+  - **Its journeys:** each journey in force with a step among the area's use cases, or a line that says the area has none. Each flow stays in reference (refinement per [software-analysis:DEC-005-finding-functionality] point 2).
   - **Not written yet:** an area whose goal the configuration gives, and which holds no use case in force, shows its goal and "Not written yet."
 
   The areas shown are those that hold a use case or a requirement in force, and those the configuration gives a goal. An area is matched by its folder's name, among the use cases, the requirements and the goals alike.
@@ -233,7 +234,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why two parts, with the page's order as the reading path.** A newcomer reads the page from top to bottom, so the page's order is the reading path. A line that names two places to start gives no single path. The heading of reference marks where the story ends. So a newcomer knows where to stop, and a returning reader knows where to look things up. The capability's maintainer chose the two parts on 22 October, on the same issue.
 - **The words in reference.** A term is looked up where the story uses it, so the glossary and the views lie in reference.
-- **The journeys in reference.** No analysis the maintainer has reviewed holds a journey yet, so none has shown how one reads. The first that does is the trigger to weigh whether journeys belong to the story, and whether their flows stay on the page as journeys grow in number (COR-007).
+- **The journeys' flows in reference.** A flow is a picture a reader looks up when needed. Each area names its journeys in the story, so a reader meets there the paths that pass through it (refinement per [software-analysis:DEC-005-finding-functionality] point 2). The first overview whose flows outgrow its reference is the trigger to weigh leaving them to the query, as the other diagrams are (COR-007).
 
 **Why the purpose lives in a record, and the configuration points to it.**
 - **A reason belongs in a record.** What a component is for is the reason behind every area of its analysis. A decision holds a choice and why it was made (DEC-001 point 11, "Where a statement belongs"). A record is also reviewed and accepted. An artefact that rests on it, such as a view of the component's concepts, can anchor it.
