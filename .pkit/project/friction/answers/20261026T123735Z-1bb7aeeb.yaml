@@ -1,0 +1,61 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/constraints/REQ-040-github-and-gh.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - moved-3d3c5cb615ab.yaml
+    revalidated:
+      at: 2026-10-26T12:37:35Z
+      outcome: unchanged
+      unchanged-because: ACT-planner gains a need, seeing which agent works on which issue, and an occasion, while several AI agents work at once. Main runs pre-check's title-prefix sample through the one read of issues, and its check of gh auth status is as it was. Judged together, project-management still reads and changes the work on GitHub alone, through gh, so the constraint holds.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - moved-c1c76fd062d5.yaml
+    revalidated:
+      at: 2026-10-26T12:37:45Z
+      outcome: unchanged
+      unchanged-because: ACT-planner gains a need, seeing which agent works on which issue, and an occasion, while several AI agents work at once, and seeing the work makes no move. Main's DEC-055 point 3 adds the delegate's decision of unasked entries, and close-issue's tests gain one that a state issue is never an open child. Judged together, a held move still waits on a person's authorisation, so the requirement holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - moved-e8b5c957d8c2.yaml
+    revalidated:
+      at: 2026-10-26T12:37:54Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 010-plan, and mends its term links for the new folder. Main reads a workstream's carriers and the bodies a rename rewrites through the one read of issues, which leaves state issues out and gives each issue of work back as before. Judged together, each step and variant still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - moved-a3323ce78e42.yaml
+    revalidated:
+      at: 2026-10-26T12:38:03Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 020-file-and-move, and mends its term links for the new folder. Main has the containment seam read its corpus through the one read of issues, which leaves state issues out and gives each issue of work back as before. Judged together, filing a Task, its checks and its link to the parent still hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - moved-6e104fbc48be.yaml
+    revalidated:
+      at: 2026-10-26T12:38:07Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 020-file-and-move, and mends its term links for the new folder. Main's DEC-052 gains roster rows for the ownership and state-issue events, and leaves the move kind, its intent and its audit comment as they were. Judged together, each step and variant still holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085608Z-061b0816.yaml
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      at: 2026-10-26T12:38:10Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 010-plan and mends its links, and ACT-planner gains a need and an occasion for parallel work. Main adds the seat roles of DEC-029, and gives the project manager a section on deciding as the delegate. Judged together with main's answer on COR-053 point 10, planning still reads the use-case data point the backbone resolves. It files only once the planner approves the whole plan, so its steps hold.
