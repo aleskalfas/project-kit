@@ -52,7 +52,7 @@ Validation checks your own records only. A record that arrives as a synced copy 
 
 ### Rule sets — a separate family with the same guarantees
 
-Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, and each rule's statement sits in the body, in a section headed by the rule's id. Rules form their own identifier family, **`RS-<SET>-NNN`** — the family prefix, the rule set's name, a number — so a rule id can never collide with a record id. Ids are permanent: a rule is never renumbered, and a retired id is never reused.
+Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, never in a sidecar beside the file ([COR-063](core/COR-063-document-sidecars.md)), and each rule's statement sits in the body, in a section headed by the rule's id. Rules form their own identifier family, **`RS-<SET>-NNN`** — the family prefix, the rule set's name, a number — so a rule id can never collide with a record id. Ids are permanent: a rule is never renumbered, and a retired id is never reused.
 
 - **Statuses.** A rule without a status is **`proposed`** and binds nothing. **`accepted`** rules bind. A **`superseded`** rule names its successor — in the same rule set, or in one that inherits it — and binds nothing. Rules add **`withdrawn`**, which only rules have: a rule retired without a successor, binding nothing. Superseded and withdrawn rules stay in place with their ids.
 - **The acceptance gate** applies per rule, wherever the rule set lives. That includes project-owned rule sets outside this folder, under the project's internal documentation root by default. A proposed rule binds nothing, and accepting one is a reviewed change.
@@ -100,7 +100,7 @@ Examples: `COR-001-init-vs-synced-lifecycle.md` (kit-owned, read-only), `PRJ-001
 
 ## Schema
 
-Each record is a Markdown file with YAML frontmatter and four required sections:
+Each record is a Markdown file with YAML frontmatter and four required sections, as below. A record keeps its frontmatter in its own file. Some other documents may keep theirs in a sidecar, a separate file beside the document, but a record never does ([COR-063](core/COR-063-document-sidecars.md)).
 
 ```markdown
 ---
