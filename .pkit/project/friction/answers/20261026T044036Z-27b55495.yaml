@@ -1,0 +1,87 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T04:40:36Z
+      outcome: unchanged
+      unchanged-because: "Main's change has the skill run the links and overview commands, which decide nothing, and this change lets a delegate decide answers no change owes. software-analysis DEC-001 point 5 still keeps its agent's proposals for a person until #2123, so the agent proposes only, as stated."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T04:40:45Z
+      outcome: unchanged
+      unchanged-because: "Main updated the use case for view backlinks, and this change lets a delegate decide a reason for having no anchors, its key in COR-050 point 14. software-analysis keeps that reason for a person by RS-SAN-005 until #2123, so the developer still accepts each one, as variant 4a says."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-072-revise-before-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-10-26T04:40:49Z
+      outcome: unchanged
+      unchanged-because: Main's change restates what a tool reads and adds DEC-005's area guidance, and this change adds a delegate for answers no change owes. Revising the analysis before a change records answers that change owes, so the use case holds against both.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T04:40:55Z
+      outcome: unchanged
+      unchanged-because: "Main declares the form of a view's closing links, and this change lets a delegate decide a fixer's proposal where its type's owner hands it on. software-analysis DEC-001 point 5 keeps its proposals for a person until #2123, so the developer still decides each answer, as step 7a and the rest describe."
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-005
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-cf1897716e93.yaml
+    revalidated:
+      at: 2026-10-26T04:41:00Z
+      outcome: unchanged
+      unchanged-because: "Main updated the rule for view backlinks, and this change lets a delegate decide a reason for having no anchors. The rule still keeps that reason a person's decision for the analysis, which COR-064 point 1 respects until #2123."
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T04:41:05Z
+      outcome: unchanged
+      unchanged-because: "Main updated the README for view backlinks, and this change lets a delegate decide a fixer's proposal where its type's owner hands it on. software-analysis keeps its agent's proposals for a person until #2123, so the README's account of proposing and deciding holds against both."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
