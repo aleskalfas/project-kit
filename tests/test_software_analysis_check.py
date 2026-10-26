@@ -27,6 +27,7 @@ from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
+    ANALYSIS,
     ANALYSIS_SET,
     ANALYSIS_SET_TEXT,
     CAPABILITY,
@@ -34,11 +35,15 @@ from tests.analysis_repo import (
     CONSTRAINTS,
     FUNCTIONAL,
     GLOSSARY,
+    HINT,
     JOURNEYS,
     MAIN,
     NEW,
+    OVERVIEW_FILE,
+    OVERVIEW_SCRIPT,
     QUALITY,
     RECORDS,
+    SETTINGS,
     USE_CASES,
     VALIDATE,
     accepting_san,
@@ -231,6 +236,51 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
         ],
         "findings": [unbound(7)],
     }
+
+
+def test_a_stamped_artefact_is_reported_once_and_passes_filled_as_its_hints_show(
+    project: AdopterRepo,
+) -> None:
+    """Where the format rule binds, each artefact the stamp writes is still reported once
+    for its body's hints, by the placeholder check, and once for each field still holding
+    its hint: never again for a part its hint leaves empty or missing (#2088). Written
+    over with its example, each hint holds its part's form, so every kind the stamp
+    writes passes filled as its hints show. The overview the stamp kept is then stale, and
+    the check names the one command that writes it anew."""
+    project.write(
+        {SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"}
+        | accepting_san(project)
+    )
+    project.commit("bind the format rule, and keep the overview")
+    stamped(project, "actor", "tester", "--path", "src/run.py")
+    stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--path", "src/run.py")
+    stamped(project, "use-case", "read-report", "--actor", "ACT-tester", "--path", "src/run.py")
+    steps = ("--step", "UC-001", "--step", "UC-002")
+    stamped(project, "journey", "first-run", "--actor", "ACT-tester", *steps)
+    stamped(project, "term", "sandbox", "--path", "src/run.py")
+    stamped(project, "view", "sandboxes", "--number", "010", "--explains", "TERM-sandbox")
+    for kind in ("quality-requirement", "functional-requirement", "constraint"):
+        stamped(project, kind, kind, "--actor", "ACT-tester", "--path", "src/run.py")
+    unfilled = errors(check(project))
+    assert [message for _at, message in unfilled if "(RS-SAN-001)" in message] == []
+    once = [location for location, _message in unfilled if ":/" not in location]
+    assert sorted(once) == sorted(set(once))
+    assert len(once) == 9  # each artefact's body or section, once
+    assert all("still holds" in message for _at, message in unfilled)
+
+    analysis = project.root / ANALYSIS
+    for path in sorted(analysis.rglob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        path.write_text(HINT.sub(r"\g<example>", text), encoding="utf-8")
+    (stale,) = errors(check(project))
+    assert stale[0] == OVERVIEW_FILE
+    assert stale[1].startswith("it is stale: what it draws changed since it was written")
+    assert "Run `pkit analysis overview` to write it anew" in stale[1]
+    written = run_script(project, OVERVIEW_SCRIPT)
+    assert written.returncode == 0, written.stderr
+    document = check(project)
+    assert errors(document) == []
+    assert "0 of them departing from it" in document["summary"][1]
 
 
 def test_a_field_placeholder_a_template_once_shipped_is_still_caught(

@@ -35,7 +35,9 @@ pkit:
 
 **Steps:** <!-- pkit:hint One line for each use case in `steps`, in order: its id and its title as the use case states it. Under a step, add one line for each hand-over it needs from an earlier step or from a use case outside the journey. Say what it receives and how that can break. Example: `3. UC-007 — Export the report as a file`, with one hand-over under it. `**Needs from step 2 (UC-005):** the report the analyst saved. A report left unsaved is not offered for export.` -->
 
-**Variants:** <!-- pkit:hint One for each branch of the whole path, lettered after the step it leaves. Say where the path rejoins or ends. Write `None.` when there is none. Example: 3a. The analyst wants a second report, and the path rejoins at step 2. -->
+**Variants:**
+
+<!-- pkit:hint One for each branch of the whole path, lettered after the step it leaves. Write each as a list item that opens with that number and letter in bold. Say where the path rejoins or ends. Write `None.` when there is none. Example: - **2a.** The analyst wants a second report, and the path rejoins at step 1. -->
 
 **Postconditions:** <!-- pkit:hint The state that shows the whole path succeeded. Example: The analyst holds a file with their first report. -->
 
