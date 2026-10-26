@@ -39,8 +39,8 @@ analysis location. Its front matter comes from its kind's template in
   its own analysis that no view in force explains yet (point 5). It anchors
   each, and the records `--record` names, never code. Its body holds one
   section for each, headed by the term's name in sentence case, its first
-  letter capitalized (point 2), and ends with its closing section on where its
-  concepts are used, as `pkit analysis link` writes it. The stamp also writes each
+  letter capitalized (point 2), and ends with its closing section on what is
+  built on its concepts, as `pkit analysis link` writes it. The stamp also writes each
   term's link to its section, under the term's heading in the glossary, and
   writes the two files whole, or neither (point 7; `_lib/views.py`).
 

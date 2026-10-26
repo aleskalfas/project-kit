@@ -14,9 +14,9 @@ heading, and links the first mention of each term in each section to the term's
 entry in the glossary: in a view's opening and its sections, in each glossary entry
 below its heading, and in each part of an actor's, a use case's, a journey's and a
 requirement's body. A goal, a journey's step lines and an actor's first sentence say
-a datum again, and stay plain. Each view ends with its closing section, `## Where these
-concepts are used`, which lists under each concept it explains each use case, journey
-and requirement whose body links the concept's term. `_lib/links.py` states what a
+a datum again, and stay plain. Each view ends with its closing section, `## What is
+built on these concepts`, which lists under each concept it explains each use case,
+journey and requirement whose body links the concept's term. `_lib/links.py` states what a
 mention is, and the safeguards that keep a link from naming the wrong term.
 
 It reads the analysis in the working tree through the backbone's discovery, `pkit

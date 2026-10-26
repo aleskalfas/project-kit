@@ -19,5 +19,7 @@ body: >
   area's use cases links, read from those links. The
   overview's fingerprint reads them, and its version is 5, so an overview
   written before is a warning until `pkit analysis overview` writes it anew.
-  Run `pkit analysis link` before `pkit analysis overview`. DEC-001 points 1
+  Run `pkit analysis link` before `pkit analysis overview`. The proposed rules
+  RS-SAN-005, RS-SAN-008 and RS-SAN-011 read a view's closing section as no
+  statement. DEC-001 points 1
   and 11, DEC-003 point 8 and DEC-004 points 2 and 7 are refined in place.
