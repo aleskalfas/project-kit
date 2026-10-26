@@ -257,9 +257,9 @@ class _Deployed:
     deployed copy nothing ships any longer, which the next deploy removes.
     """
 
-    by_owner: dict[str, list[str]] = field(default_factory=dict)
-    own: list[str] = field(default_factory=list)
-    stale: list[str] = field(default_factory=list)
+    by_owner: dict[str, list[str]] = field(default_factory=dict[str, list[str]])
+    own: list[str] = field(default_factory=list[str])
+    stale: list[str] = field(default_factory=list[str])
 
     def add(self, owner: str, line: str) -> None:
         self.by_owner.setdefault(owner, []).append(line)
