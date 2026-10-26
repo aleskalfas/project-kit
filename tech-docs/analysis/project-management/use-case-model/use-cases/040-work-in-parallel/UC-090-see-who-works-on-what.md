@@ -2,7 +2,7 @@
 id: UC-090
 title: See which agent works on which issue, without visiting each agent
 status: active
-actor: ACT-director
+actor: ACT-planner
 other-actors: []
 requirements:
   - REQ-062
@@ -28,7 +28,7 @@ pkit:
         - COR-017
         - COR-021
       artefact:
-        - ACT-director
+        - ACT-planner
         - REQ-062
 ---
 
@@ -44,22 +44,22 @@ pkit:
 
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and its commands (COR-017 and COR-021).
 
-**Trigger:** The director wants the whole picture, such as after a restart, or before changing the [topology](../../../glossary.md#term-topology--topology).
+**Trigger:** The planner wants the whole picture, such as after a restart, or before planning more work for the [topology](../../../glossary.md#term-topology--topology)'s agents.
 
 **Main path:**
 
-1. In any [instance](../../../glossary.md#term-instance--instance), the director lists the open issues, each signed with its [owner](../../../glossary.md#term-owner--owner): this instance, another instance, or none (DEC-035 point 7).
+1. In any [instance](../../../glossary.md#term-instance--instance), the planner lists the open issues, each signed with its [owner](../../../glossary.md#term-owner--owner): this instance, another instance, or none (DEC-035 point 7).
 
 > [!WARNING]
 > **Not built yet:** no command lists issues signed by their owner. DEC-035 point 7 decides the signed listing, and #521 tracks it.
 
-2. For each owned [Task](../../../glossary.md#term-task--task), the director reads its state in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), In Progress or Review, which the Task itself carries (DEC-006).
+2. For each owned [Task](../../../glossary.md#term-task--task), the planner reads its state in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), In Progress or Review, which the Task itself carries (DEC-006).
 
 **Variants:**
 
-- **1a.** The director lists from a clone that has set no number. The listing signs nothing, since only an [instance](../../../glossary.md#term-instance--instance) signs its listings (DEC-035 point 1). The director lists from an instance instead.
+- **1a.** The planner lists from a clone that has set no number. The listing signs nothing, since only an [instance](../../../glossary.md#term-instance--instance) signs its listings (DEC-035 point 1). The planner lists from an instance instead.
 
-**Postconditions:** The director knows which [instance](../../../glossary.md#term-instance--instance) works on each open [issue](../../../glossary.md#term-issue--issue), and how far each owned [Task](../../../glossary.md#term-task--task) has come, without visiting any agent.
+**Postconditions:** The planner knows which [instance](../../../glossary.md#term-instance--instance) works on each open [issue](../../../glossary.md#term-issue--issue), and how far each owned [Task](../../../glossary.md#term-task--task) has come, without visiting any agent.
 
 **Minimal guarantees:**
 
@@ -67,9 +67,9 @@ pkit:
 
 ## Open for the design
 
-What the director needs here that no accepted record decides yet:
+What the planner needs here that no accepted record decides yet:
 
 - **Each instance's name in the listing,** such as `api`. DEC-045 point 1 gives a clone a name of its own, and only DEC-045 point 2's per-user file would name the other [instances](../../../glossary.md#term-instance--instance).
-- **The fixers' proposals across clones.** Each clone keeps the proposals its own runs made, and `land-work` prints only that clone's count (DEC-056 point 6). So the director sees them only by visiting each agent.
-- **One view of all that waits on the director,** such as heads ready to merge and records waiting for acceptance. The maintainer decided on 17 October that one view lists all of that (#1682), and no record holds the decision yet.
+- **The fixers' proposals across clones.** Each clone keeps the proposals its own runs made, and `land-work` prints only that clone's count (DEC-056 point 6). So the planner sees them only by visiting each agent.
+- **One view of all that waits on a person,** such as heads ready to merge and records waiting for acceptance. The maintainer decided on 17 October that one view lists all of that (#1682), and no record holds the decision yet.
 - **Where each agent is heading,** beside what it owns. The pilot analysis proposed a command for it, under [EPIC](../../../glossary.md#term-epic--epic) #943, and no record decides it.

@@ -2,7 +2,7 @@
 id: UC-091
 title: Measure one topology against another on comparable work
 status: active
-actor: ACT-director
+actor: core:ACT-adopter
 other-actors: []
 requirements: []
 after:
@@ -17,8 +17,6 @@ pkit:
         - project-management:DEC-028
         - project-management:DEC-049#2
         - project-management:DEC-003
-      artefact:
-        - ACT-director
 ---
 
 # UC-091 — Measure one topology against another on comparable work
@@ -33,25 +31,25 @@ pkit:
 
 - GitHub keeps, for each [pull request](../../../../core/glossary.md#term-pull-request--pull-request), when it opened and when it merged (DEC-003).
 
-**Trigger:** The director wants to know which [topology](../../../glossary.md#term-topology--topology) serves the [project](../../../../core/glossary.md#term-project--project) better.
+**Trigger:** The adopter wants to know which [topology](../../../glossary.md#term-topology--topology) serves the [project](../../../../core/glossary.md#term-project--project) better.
 
 **Main path:**
 
-1. The director has each [topology](../../../glossary.md#term-topology--topology) work on comparable work, until all of it has landed.
-2. The director reads, for each topology, when each [pull request](../../../../core/glossary.md#term-pull-request--pull-request) opened and when it merged.
-3. The director counts the review rounds of each pull request from its [verdicts](../../../glossary.md#term-verdict--verdict), since each verdict names the [head](../../../../core/glossary.md#term-head--head) it reviewed (DEC-028).
-4. Where the [project](../../../../core/glossary.md#term-project--project) set its [audit comments](../../../glossary.md#term-audit-comment--audit-comment) to `full`, the director reads each write the agents made, with its versions (DEC-049 point 2).
-5. The director compares the topologies on these figures.
+1. The adopter has each [topology](../../../glossary.md#term-topology--topology) work on comparable work, until all of it has landed.
+2. The adopter reads, for each topology, when each [pull request](../../../../core/glossary.md#term-pull-request--pull-request) opened and when it merged.
+3. The adopter counts the review rounds of each pull request from its [verdicts](../../../glossary.md#term-verdict--verdict), since each verdict names the [head](../../../../core/glossary.md#term-head--head) it reviewed (DEC-028).
+4. Where the [project](../../../../core/glossary.md#term-project--project) set its [audit comments](../../../glossary.md#term-audit-comment--audit-comment) to `full`, the adopter reads each write the agents made, with its versions (DEC-049 point 2).
+5. The adopter compares the topologies on these figures.
 
 **Variants:** None.
 
-**Postconditions:** The director holds, for each [topology](../../../glossary.md#term-topology--topology), the time from its first [pull request](../../../../core/glossary.md#term-pull-request--pull-request) to its last merge, and the review rounds of each pull request.
+**Postconditions:** The adopter holds, for each [topology](../../../glossary.md#term-topology--topology), the time from its first [pull request](../../../../core/glossary.md#term-pull-request--pull-request) to its last merge, and the review rounds of each pull request.
 
 **Minimal guarantees:** None.
 
 ## Open for the design
 
-What the director needs here that no accepted record decides yet:
+What the adopter needs here that no accepted record decides yet:
 
 - **How the topologies get comparable work.** One way is a copy of the [project](../../../../core/glossary.md#term-project--project) for each. Another runs them one after the other on comparable backlogs, and another splits one backlog between them.
 - **What else to record:**

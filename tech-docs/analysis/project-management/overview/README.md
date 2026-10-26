@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=4 fingerprint=sha256:739d9c5421e2dd3ef08fd923d2437e32cc140f6c8e00db70b5d5afeed0d9d90b -->
+<!-- pkit:overview reads=4 fingerprint=sha256:880365426265f1e86d853323527f5ce713fc20f0a25df64f5ebee6eab1bd0ff8 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -76,14 +76,14 @@ Run several AI agents on one project at once, each on its own scope and never on
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
-| [ACT-director — Director](../use-case-model/actors/ACT-director.md) | The person who directs a project's AI agents while several of them work on it at once. | [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-lead-agent — Lead agent](../use-case-model/actors/ACT-lead-agent.md) | An AI agent of a topology that plans and builds the work of its scope, delegating Tasks to agents it starts itself. | [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-planner — Planner](../use-case-model/actors/ACT-planner.md) | The person who plans a project's work at the level of its outcomes. | [010-plan](#010-plan), [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-planning-agent — Planning agent](../use-case-model/actors/ACT-planning-agent.md) | An AI agent of a topology that slices a project's work and files it for the other agents, and builds none of it. | [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-worker-agent — Worker agent](../use-case-model/actors/ACT-worker-agent.md) | An AI agent of a topology that takes the Tasks of its scope one at a time, and builds each up to its merge. | [040-work-in-parallel](#040-work-in-parallel) |
+| core:ACT-adopter — Adopter | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [040-work-in-parallel](#040-work-in-parallel) |
 | core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-plan](#010-plan), [020-file-and-move](#020-file-and-move), [030-review-and-land](#030-review-and-land), [040-work-in-parallel](#040-work-in-parallel) |
 | core:ACT-ci-pipeline — CI pipeline | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [030-review-and-land](#030-review-and-land), [040-work-in-parallel](#040-work-in-parallel) |
-| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [020-file-and-move](#020-file-and-move), [030-review-and-land](#030-review-and-land) |
+| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [020-file-and-move](#020-file-and-move), [030-review-and-land](#030-review-and-land), [040-work-in-parallel](#040-work-in-parallel) |
 | core:ACT-merge-authoriser — Merge authoriser | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [030-review-and-land](#030-review-and-land), [040-work-in-parallel](#040-work-in-parallel) |
 | core:ACT-operator — Operator | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-plan](#010-plan), [020-file-and-move](#020-file-and-move), [030-review-and-land](#030-review-and-land), [040-work-in-parallel](#040-work-in-parallel) |
 
@@ -108,16 +108,16 @@ Each view of the domain model explains a group of related concepts:
 
 ### Journeys
 
-#### [JRN-004 — Direct several AI agents that work on my project at once](../use-case-model/journeys/JRN-004-direct-parallel-work.md)
+#### [JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 ```mermaid
 flowchart LR
-  accTitle: JRN-004 — Direct several AI agents that work on my project at once
-  accDescr: The flow of JRN-004: ACT-director takes 3 steps in order, UC-082, UC-090, UC-091. It relies on 5 use cases outside the journey, drawn apart with no arrow.
-  ACT_director["ACT-director — Director"]
+  accTitle: JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure
+  accDescr: The flow of JRN-004: core:ACT-adopter takes 3 steps in order, UC-082, UC-091, UC-082. It relies on 5 use cases outside the journey, drawn apart with no arrow.
+  core_ACT_adopter["core:ACT-adopter"]
   step_1(["1. UC-082 — Set up the topology my project runs, so that every agent reads the same one"])
-  step_2(["2. UC-090 — See which agent works on which issue, without visiting each agent"])
-  step_3(["3. UC-091 — Measure one topology against another on comparable work"])
+  step_2(["2. UC-091 — Measure one topology against another on comparable work"])
+  step_3(["3. UC-082 — Set up the topology my project runs, so that every agent reads the same one"])
   subgraph relies_on["Relied on, outside the journey"]
     UC_064(["UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward"])
     UC_083(["UC-083 — Plan an intent into work for each scope of the topology"])
@@ -125,7 +125,7 @@ flowchart LR
     UC_087(["UC-087 — Hand the next piece of the work to the scope that does it"])
     UC_089(["UC-089 — Land my Task while other agents land theirs"])
   end
-  ACT_director --> step_1
+  core_ACT_adopter --> step_1
   step_1 --> step_2
   step_2 --> step_3
 ```

@@ -2,7 +2,7 @@
 id: UC-082
 title: Set up the topology my project runs, so that every agent reads the same one
 status: active
-actor: ACT-director
+actor: core:ACT-adopter
 other-actors:
   - ACT-planning-agent
   - ACT-worker-agent
@@ -45,7 +45,6 @@ pkit:
         - COR-017
         - COR-021
       artefact:
-        - ACT-director
         - ACT-planning-agent
         - ACT-worker-agent
         - ACT-lead-agent
@@ -69,21 +68,21 @@ pkit:
 - The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and its commands (COR-017 and COR-021).
 - Each agent of the [topology](../../../glossary.md#term-topology--topology) works in a clone of the project's repository of its own, on one machine or on a platform's sandboxes (DEC-035).
 
-**Trigger:** The director decides to run several agents on the [project](../../../../core/glossary.md#term-project--project) at once, or to alter which agents run.
+**Trigger:** The adopter decides to run several agents on the [project](../../../../core/glossary.md#term-project--project) at once, or to alter which agents run.
 
 **Main path:**
 
-1. The director chooses the agents the [project](../../../../core/glossary.md#term-project--project) runs. For each agent, they choose a name and a [scope](../../../glossary.md#term-scope--scope). They also choose whether the agent plans, builds or does both.
-2. In each agent's clone, the director or the operator sets the clone's number: `pkit pm set-instance <N>`. The system writes the number to a file of the clone that is never committed (DEC-035 point 1).
+1. The adopter chooses the agents the [project](../../../../core/glossary.md#term-project--project) runs. For each agent, they choose a name and a [scope](../../../glossary.md#term-scope--scope). They also choose whether the agent plans, builds or does both.
+2. In each agent's clone, the adopter or the operator sets the clone's number: `pkit pm set-instance <N>`. The system writes the number to a file of the clone that is never committed (DEC-035 point 1).
 3. The system writes the agent's name beside the number, such as `api` (DEC-045 point 1).
 
 > [!WARNING]
 > **Not built yet:** `set-instance` takes a number alone. DEC-045 point 1 decides that an [instance](../../../glossary.md#term-instance--instance) carries a name too, and #512 tracks it.
 
-4. The system walks the director through each [workstream](../../../glossary.md#term-workstream--workstream), asking which agents' scopes name it. Each scope names workstreams and changes none of them (DEC-045 points 3 and 6).
+4. The system walks the adopter through each [workstream](../../../glossary.md#term-workstream--workstream), asking which agents' scopes name it. Each scope names workstreams and changes none of them (DEC-045 points 3 and 6).
 
 > [!WARNING]
-> **Not built yet:** nothing walks the director through the workstreams, and no scope is written anywhere. DEC-045 point 6 decides the guided assignment, and #512 tracks it.
+> **Not built yet:** nothing walks the adopter through the workstreams, and no scope is written anywhere. DEC-045 point 6 decides the guided assignment, and #512 tracks it.
 
 5. The system warns of a workstream that two scopes name, or that no scope names, and refuses neither (DEC-045 point 4).
 
@@ -93,11 +92,11 @@ pkit:
 **Variants:**
 
 - **2a.** A clone sets no number. It marks no [issue](../../../glossary.md#term-issue--issue) and is guarded by nothing, as before [instances](../../../glossary.md#term-instance--instance) existed (DEC-035 point 1).
-- **2b.** The director asks a clone for its number: `pkit pm set-instance --show` prints it, or `unset` (`set-instance.py`).
-- **4a.** The director runs the assignment again after the [workstreams](../../../glossary.md#term-workstream--workstream) changed. The system names each workstream that no [scope](../../../glossary.md#term-scope--scope) names, and each scope naming a removed workstream. It walks the director through them (DEC-045 point 6).
+- **2b.** The adopter asks a clone for its number: `pkit pm set-instance --show` prints it, or `unset` (`set-instance.py`).
+- **4a.** The adopter runs the assignment again after the [workstreams](../../../glossary.md#term-workstream--workstream) changed. The system names each workstream that no [scope](../../../glossary.md#term-scope--scope) names, and each scope naming a removed workstream. It walks the adopter through them (DEC-045 point 6).
 
 > [!WARNING]
-> **Not built yet:** nothing walks the director through the workstreams. DEC-045 point 6 decides that the assignment runs again and reconciles the changes, and #512 tracks it.
+> **Not built yet:** nothing walks the adopter through the workstreams. DEC-045 point 6 decides that the assignment runs again and reconciles the changes, and #512 tracks it.
 
 **Postconditions:** Each agent's clone carries its number and its name, and each agent's [scope](../../../glossary.md#term-scope--scope) names the [workstreams](../../../glossary.md#term-workstream--workstream) it takes work from.
 
@@ -108,7 +107,7 @@ pkit:
 
 ## Open for the design
 
-What the director needs here that no accepted record decides yet:
+What the adopter needs here that no accepted record decides yet:
 
 - **Where the topology is kept.** DEC-045 point 2 keeps it in one person's file, on one machine and never committed. The maintainer decided on 25 October that it is shared through the [project](../../../../core/glossary.md#term-project--project)'s committed configuration instead (#512). The record changes with the [topology](../../../glossary.md#term-topology--topology)'s design.
 - **The guided assignment, once the topology is shared.** DEC-045 points 5 and 6 read and write the per-user file of point 2. So the topology's design may alter steps 4 and 5 and variant 4a, and where the scopes are written.

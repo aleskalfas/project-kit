@@ -27,6 +27,11 @@ builds-on:
       - {id: TERM-skill, name: skill}
       - {id: TERM-validation, name: validation}
     actors:
+      - id: ACT-adopter
+        name: Adopter
+        needs:
+          - Set up the topology my project runs, so that every agent of that topology reads the same one.
+          - Measure one topology against another on comparable work, by figures GitHub holds.
       - id: ACT-developer
         name: Developer
         needs:
@@ -403,6 +408,9 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
+  - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
+    - Set up the topology my project runs, so that every agent of that topology reads the same one.
+    - Measure one topology against another on comparable work, by figures GitHub holds.
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - File a Task under its parent, with its title and the sections its body needs checked as it is filed.
     - Move my issue through its lifecycle, with each move checked and the moves that need my authorisation never made without it.

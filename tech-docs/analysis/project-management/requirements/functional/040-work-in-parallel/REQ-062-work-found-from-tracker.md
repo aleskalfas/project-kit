@@ -8,7 +8,7 @@ applies-to: "Every instance that has set a number, whichever way the project wri
 actors:
   - ACT-worker-agent
   - ACT-lead-agent
-  - ACT-director
+  - ACT-planner
 refines: []
 pkit:
   friction:
@@ -21,7 +21,7 @@ pkit:
       artefact:
         - ACT-worker-agent
         - ACT-lead-agent
-        - ACT-director
+        - ACT-planner
 ---
 
 # REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone

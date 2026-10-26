@@ -6,6 +6,7 @@ summary: "The person who plans a project's work at the level of its outcomes."
 needs:
   - Plan an intent against my project's use cases into an EPIC and its work, which are filed once I approve the plan.
   - Define the Milestones and long-lived workstreams the work falls into, and have a date-based Milestone roll its open work forward when it closes.
+  - See which agent works on which issue, without visiting each agent.
 pkit:
   friction:
     anchors:
@@ -26,5 +27,6 @@ The person who plans a project's work at the level of its outcomes. An [EPIC](..
   - when an outcome is framed
   - when work is scheduled
   - as a date-based [Milestone](../../glossary.md#term-milestone--milestone) nears its due date
+  - while several AI agents work on the [project](../../../core/glossary.md#term-project--project) at once
 - **Context:** an intent, and the reference material that frames it, such as a scratchpad note or a related [issue](../../glossary.md#term-issue--issue).
 - **Note:** the planner comes with project-management, which calls it the PM (DEC-008). Its id and name are not "<!-- pkit:not-the-term -->project manager", which is also the name of project-management's agent. That agent acts for the planner and for the developer (DEC-029). An actor's id is permanent once stamped, so this one names the planner alone.
