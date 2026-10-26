@@ -1,0 +1,116 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+    revalidated:
+      at: 2026-10-26T06:02:35Z
+      outcome: unchanged
+      unchanged-because: DEC-006 refines DEC-001 point 1 so that an artefact's texts, such as a term's definition, are parts of its body a tool reads by permanent id, and drops an actor's summary. The hints change merged from main rewords hints and examples in the kinds' declaration. Neither adds or removes a kind or a place, and a kind's members still share one schema, place and layout of parts, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T06:02:52Z
+      outcome: unchanged
+      unchanged-because: DEC-006 refines DEC-001 point 1 so that an artefact's texts become parts of its kind's structure, each with a permanent id a tool reads. The hints change merged from main rewords hints and examples, and leaves a part still holding its hint to the placeholder check. A declared structure still lists in order the parts each member carries, with their ids, labels and examples, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-hint
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+    revalidated:
+      at: 2026-10-26T06:03:05Z
+      outcome: unchanged
+      unchanged-because: DEC-006 refines DEC-001 point 1 so that an artefact's texts are parts of its body, and the moved texts' hints become parts' hints. The hints change merged from main puts a list's hint on a line of its own below its label, its example the list's first item. Each is still one line the stamp leaves where a writer fills a part or a front-matter field, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T06:03:17Z
+      outcome: unchanged
+      unchanged-because: DEC-006 refines DEC-001 point 1 so that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. The hints change merged from main updates only how the tests find a use case's hint below its Main path label. That an agent proposes each outcome, candidate, freed id and change to a structure, and a person decides, is untouched by both.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T06:03:31Z
+      outcome: unchanged
+      unchanged-because: DEC-006 refines DEC-001 point 1 so that an artefact's texts are parts of its body, whose presence and form bind where the format rule binds. The hints change merged from main leaves a part still holding its hint to the placeholder check. Where an artefact's structure binds, and that a record's body is held always, stay as the requirement states.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+    revalidated:
+      at: 2026-10-26T06:03:42Z
+      outcome: unchanged
+      unchanged-because: DEC-006 refines DEC-001 point 1 so that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. The hints change merged from main puts some hints below their label, each example the list's first item. The template still shows each part with its hint and example, and the agent fills each as its hint says, so every step holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T06:03:52Z
+      outcome: unchanged
+      unchanged-because: DEC-006 refines DEC-001 point 1 so that an artefact's texts are parts of its body a tool reads by permanent id, and drops an actor's summary. The hints change merged from main rewords the validate command's help on hints left in. The agent's revalidation after a change, how it is recorded and what a person decides are untouched.
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001
+          reason: "DEC-006 refines DEC-001 so that an actor's needs and a term's definition are texts of the body, read by a tool through their parts, and the actor's summary goes. The README still describes them as front-matter fields a tool reads there, and the hints change merged from main leaves those passages as they were. #2069 and #2072 build the move and rewrite them."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-002
+          reason: "DEC-006 partly supersedes DEC-002, so a requirement's statement, measure and scope become texts of its body and its revisits fire on a fingerprint of them. The README still says a tool reads the three from front matter and that they trigger the link, and the hints change merged from main leaves those passages as they were. #2069 and #2072 build it and rewrite them."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-003
+          reason: "DEC-006 refines DEC-003 point 8 so that the overview shows the first sentence of each actor's opening, read from the body, where the README says it shows the actor's summary. The hints change merged from main leaves that passage as it was. #2069 and #2072 build it and rewrite it."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-004
+          reason: "DEC-006 refines DEC-004 point 7 so that a term's definition and a requirement's texts take links in the body, and an actor's first sentence takes them too, having no summary to say again. The README still says these stay plain as data, and the hints change merged from main leaves those passages as they were. #2069 and #2072 build it and rewrite them."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-005
+          reason: "DEC-006 refines DEC-005 point 3 to say the overview reads each actor's first sentence from the body, where the README says it reads a summary from front matter. The hints change merged from main leaves that passage as it was. #2069 builds it and rewrites it."
