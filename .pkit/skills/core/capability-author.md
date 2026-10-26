@@ -15,8 +15,8 @@ reads:
     - COR-011
     - COR-031
     - COR-059
-    - PRJ-002
   paths:
+    - .pkit/rules/core.md
     - .pkit/cli/README.md
     - .pkit/lifecycle/README.md
     - .pkit/permissions/README.md
@@ -214,7 +214,7 @@ formalises, what it ships, and what motivated bundling it as an opt-in
 capability rather than core content>
 ```
 
-The capability lands at `version: 0.1.0`. Subsequent bumps follow the same surface-change rule the methodology uses for its own backbone (per PRJ-002 in project-kit's own repo; adopter-shipped capabilities use whatever bump policy that project adopts).
+The capability lands at `version: 0.1.0`. It moves from there under the version-bump policy the project records for itself, which says when, how far and who writes the new number (the core rules, `.pkit/rules/core.md`, rule 10). "Moving a capability's version" below says what moves it.
 
 ## Variations
 

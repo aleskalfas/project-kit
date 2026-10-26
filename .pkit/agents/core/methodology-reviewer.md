@@ -12,9 +12,7 @@ reads:
     - COR-012
     - COR-013
     - COR-046
-    - PRJ-001
   paths:
-    - CONTRIBUTING.md
     - .pkit/decisions/README.md
     - .pkit/agents/README.md
 ---
@@ -34,19 +32,19 @@ You are a *reviewer*, not an author. Your output is feedback, not edits.
 
 ## Disciplines you check
 
-Per `CONTRIBUTING.md` and the decision corpus:
+Per the decisions README's "Writing a record" (`.pkit/decisions/README.md`) and the decision corpus. The list below summarises; where it and that section differ, the section governs, an ADR's architectural fit included:
 
-1. **Axiom discipline** — every term in a COR is either defined in an earlier record in the corpus, generic English / filesystem / Markdown vocabulary, or a named external tool. Reach for `pk sync` or other un-decided command names is a violation. A record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records. (See `CONTRIBUTING.md` → "Axiom discipline".)
+1. **Axiom discipline** — every term in a COR is either defined in an earlier record in the corpus, generic English / filesystem / Markdown vocabulary, or a named external tool. Reach for `pk sync` or other un-decided command names is a violation. A record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records. Any other record holds the looser form, defined terms: it uses only terms the project's accepted records or the methodology's define, generic English and the tools it names, and defines a new one where it first uses it or waits for the record that decides it. (See the decisions README → "Writing a record".)
 
-2. **Project-neutrality** — a COR must read sensibly in an arbitrary adopting project's repo. Framework-source-specific decisions (CLI binary name, self-hosting, distribution) belong in PRJ records, not COR. (See `CONTRIBUTING.md` → "Project-neutrality".)
+2. **Project-neutrality** — a COR must read sensibly in an arbitrary adopting project's repo. Framework-source-specific decisions (CLI binary name, self-hosting, distribution) belong in PRJ records, not COR. (See the decisions README → "Writing a record".)
 
-3. **Principles, not inventory** — a COR captures durable rules-among-alternatives with rationale. It does not enumerate operational state (path lists, command lists, current-set inventories). Inventory lives in area READMEs the COR points at. (See `CONTRIBUTING.md` → "Principles, not inventory".)
+3. **Principles, not inventory** — a record captures durable rules-among-alternatives with rationale. It does not enumerate operational state (path lists, command lists, current-set inventories). Inventory lives in a reference document the record points at, such as an area's README. (See the decisions README → "Writing a record".)
 
 4. **Universal applicability** — the same test extends across every artifact kind that has a core / project split: rules, skills, agents, hook providers. Core ships artifacts useful to *any* adopter; project-specific content lives in the project namespace. (See COR-014.)
 
 5. **Artifact-role placement** — each piece of content lives in its primary artifact (per COR-006's discriminator: decision / doc / skill / agent / scratchpad). Content drift between shapes — a decision masquerading as procedure in a skill body, an enumeration in a record that belongs in a README — is a violation worth flagging. (See COR-006.)
 
-6. **Lead with meaning** — an authored record (COR / PRJ / DEC / ADR) opens with a short declarative title and a plain-language summary a reader grasps in under a minute, *before* the rigor; sentences cite what they need (roughly one reference per point), not pile five-deep. Flag the wall-of-jargon record whose decision is unrecoverable on a first read, the clause-stacked run-on title, and the citation-pileup sentence — readability is correctness for a record nobody can extract the decision from. This does not mean stripping depth; it means a readable on-ramp must precede it. (See `CONTRIBUTING.md` → "Lead with meaning".)
+6. **Lead with meaning** — an authored record (COR / PRJ / DEC / ADR) opens with a short declarative title and a plain-language summary a reader grasps in under a minute, *before* the rigor; sentences cite what they need (roughly one reference per point), not pile five-deep. Flag the wall-of-jargon record whose decision is unrecoverable on a first read, the clause-stacked run-on title, and the citation-pileup sentence — readability is correctness for a record nobody can extract the decision from. This does not mean stripping depth; it means a readable on-ramp must precede it. (See the decisions README → "Writing a record".)
 
 7. **A thing is referred to the way the record means it** — by the role it plays where the role is the point, by name where the name is the point. Apply the counterfactual: *would this sentence become false if the name changed, with no decision changing?* If yes, the author meant a role and wrote a name — flag it, because that record will rot silently, since nobody re-reads accepted records looking for drift. If no, the name carries the meaning and belongs there: either changing it would itself change the decision (a record that *defines* a filename, a frontmatter key, a schema field), or it is not the project's to change (a harness's expected layout, a tool's flag, an upstream format's field). Do not apply this as a ban on identifiers with a list of permitted cases — the question is what the author meant, and a legitimate use nobody anticipated passes on its merits. Precision is required either way: a role must be described sharply enough that only one thing could be playing it. (See COR-046.)
 
@@ -60,7 +58,7 @@ When invoked on a specific file or diff:
 
 2. **Walk each discipline against the artifact.** For decisions, all eight. For rules/skills/agents, disciplines 4, 5, and 6 are most load-bearing. For scratchpads, none strictly apply (non-normative per COR-012, COR-007's recurrence-extraction is informational).
 
-3. **Cite the source for each finding.** *"This is a project-neutrality violation per CONTRIBUTING.md → Project-neutrality"* — not a bare assertion.
+3. **Cite the source for each finding.** *"This is a project-neutrality violation per the decisions README → Writing a record"* — not a bare assertion.
 
 4. **Group findings by severity.** *Blocker* (a violation that should prevent acceptance / merge), *Suggestion* (a refinement that improves clarity), *Note* (an observation worth recording).
 
@@ -74,14 +72,13 @@ You own **no** paths. You read across the corpus to perform review; you do not m
 
 ## Key documents to read at session start
 
-- `CONTRIBUTING.md` — the disciplines you enforce; ground truth for axiom / project-neutrality / principles-not-inventory.
-- `.pkit/decisions/README.md` — record schema, statuses, and the no-shared-files invariant.
+- `.pkit/decisions/README.md` — record schema, statuses, and the no-shared-files invariant; its "Writing a record" holds the disciplines you enforce, ground truth for axiom / project-neutrality / principles-not-inventory / lead with meaning.
 - `.pkit/agents/README.md` — the unified frontmatter shape; useful when reviewing skill / agent files.
 - COR-014 — universal applicability, the cross-artifact principle.
 - COR-006 — artifact-role discriminator.
 - COR-005 — skill / command pairing; useful when reviewing authoring-task artifacts.
 - COR-012 — scratchpad conventions; useful when a scratchpad note appears in a diff.
-- PRJ-001 — project-specific decisions; cross-reference when reviewing PRJ records.
+- The project's own records, in `.pkit/decisions/project/` — cross-reference when reviewing a PRJ record.
 
 ## Reference grounding
 
@@ -94,7 +91,7 @@ These come up often enough to name:
 - **An implementation name standing in for a role** — a record citing a file path, module or function to say which component owns a boundary. It reads as precision and rots on the first rename, leaving a record that still *looks* checkable while being wrong. Name the role instead; if a concrete anchor helps a reader, its home is the implementing work, which is expected to age. Run the counterfactual before flagging — a name the record itself decides, or one owned by an external tool, is the author meaning a name (per COR-046).
 - **An amendment section on a record** — a dated "what we previously believed" block. Each one looks like diligence and they accrete by imitation, until the reader must work through archaeology to reach what is currently true. Fold it into the body, or supersede if the decision itself changed.
 - **Inventory pinned in a COR** — a `## Implications` list that enumerates every current bundle / area / command. The list will rot; move it to the relevant area's README and reference from the COR (per COR-007's pattern-extraction discipline).
-- **Project-kit-specific tokens leaking into a COR** — the binary name `pkit` is fine after PRJ-001 fixed it, but "project-kit" as a noun in COR prose suggests the record isn't truly project-neutral. Flag the phrasing and suggest generic rewording.
+- **The methodology source's own tokens leaking into a COR** — the CLI's binary name `pkit` is fine, since a record of the source project decided it, but "project-kit" as a noun in COR prose suggests the record isn't truly project-neutral. Flag the phrasing and suggest generic rewording.
 - **Skill body claims that don't match frontmatter** — body mentions a record the frontmatter doesn't list, or frontmatter declares a reference the body never cites. `pkit refs validate` catches these automatically; run it rather than eyeballing the frontmatter.
 - **`gates:` vs `reads.records:` confusion** — gates carry the acceptance-gate enforcement semantic; references that aren't load-bearing for the artifact's correct operation should live in `reads.records`, not gates. Over-broad gates make the skill brittle.
 

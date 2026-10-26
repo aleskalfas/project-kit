@@ -33,7 +33,7 @@ pkit:
         - ACT-merge-authoriser
         - REQ-005
         - REQ-021
-        - CONTRIBUTING.md#adding-a-core-record-cor
+        - .pkit/decisions/README.md#writing-a-record
 ---
 
 # UC-041 — Keep each core record true for any project that adopts it
@@ -61,7 +61,7 @@ pkit:
 **Main path:**
 
 1. The maintainer dispatches the `methodology-reviewer` on the core record the [change](../../../glossary.md#term-change--change) adds or refines.
-2. The [reviewer](../../../glossary.md#term-reviewer--reviewer) judges the record against the [methodology](../../../glossary.md#term-methodology--methodology)'s disciplines (`CONTRIBUTING.md`, "Adding a core record (COR)"). It reads each of these:
+2. The [reviewer](../../../glossary.md#term-reviewer--reviewer) judges the record against the [methodology](../../../glossary.md#term-methodology--methodology)'s disciplines ([the decisions README, "Writing a record"](../../../../../../.pkit/decisions/README.md#writing-a-record)). It reads each of these:
    - its terms: each is defined in an earlier record, is a plain word, or names an outside tool
    - its fit for any [project](../../../glossary.md#term-project--project) that adopts it, by the test of universal applicability ([COR-014](../../../../../../.pkit/decisions/core/COR-014-universal-applicability.md))
    - its principles among alternatives, never an inventory of current state
