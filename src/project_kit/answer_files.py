@@ -54,7 +54,9 @@ everything about them:
   whose block holds an answer wholly from its block, as it was read when it was made,
   and any other from the answer files, never kinds mixed across homes. A state
   checked whose answers have not moved — no answer file, and a block holding answers
-  — is refused, the move named once (`refuse_unmoved`; point 11).
+  — is refused, the move named once (`refuse_unmoved`; point 11). Where the state is the
+  last commit and the working tree holds the files the move wrote, the refusal names
+  the commit of the upgrade instead (`uncommitted_moves`).
 - **Points across homes** (`AnswerHistory`; COR-062 point 6). A value's point is
   the commit where the artefact's answers — its block in history, and every answer
   file naming it — first carried it; a version carrying it in one home where a
@@ -227,12 +229,58 @@ def not_moved_message(count: int) -> str:
     )
 
 
-def refuse_unmoved(artefacts: Iterable[Artefact], files: Collection[str]) -> None:
+def uncommitted_moves(target_root: Path, files: Collection[str]) -> tuple[str, ...]:
+    """The names of the answer files the move wrote (`moved-…`, ADR-068 point 1) that the
+    working tree holds and a state whose answer files are `files` does not, sorted: the
+    move has run in the working tree, and is not committed."""
+    held = {name_of(rel) for rel in files}
+    return tuple(
+        sorted(
+            name
+            for rel in working_tree(target_root).files()
+            if is_answer_file(rel)
+            and (name := name_of(rel)).startswith(MOVED_PREFIX)
+            and name not in held
+        )
+    )
+
+
+def uncommitted_move_message(count: int, moves: int) -> str:
+    """What a reader of the last commit says where its answers have not moved and the
+    working tree holds `moves` files the move wrote (`uncommitted_moves`): the move has run,
+    so the upgrade is committed, never the move run again (COR-062 point 11)."""
+    return (
+        f"{count} artefact{'' if count == 1 else 's'} hold{'s' if count == 1 else ''} "
+        f"answers in {'its' if count == 1 else 'their'} own block at the last commit, which "
+        f"holds no answer file. The working tree holds {moves} answer "
+        f"file{'' if moves == 1 else 's'} the move wrote, `{MOVED_PREFIX}…{SUFFIX}` in "
+        f"{FOLDER}/, so the move has run, and the upgrade is not committed yet. This command "
+        f"reads the last commit: commit the upgrade with `git commit`, those answer files "
+        f"among it, and run the command again (COR-062 point 11)."
+    )
+
+
+def refuse_unmoved(
+    artefacts: Iterable[Artefact],
+    files: Collection[str],
+    *,
+    target_root: Path | None = None,
+) -> None:
     """Refuse to read a state whose answers have not moved (`unmoved`): a reader says so
-    once and names the move, never reporting each answer as missing (COR-062 point 11)."""
+    once and names the move, never reporting each answer as missing (COR-062 point 11).
+
+    `target_root`, given where the state read is the last commit, lets the refusal tell an
+    upgrade not yet committed: where the working tree holds files the move wrote that the
+    state does not (`uncommitted_moves`), it names the commit, not the move. The state read
+    stays the commit."""
     count = unmoved(artefacts, files)
-    if count:
-        raise FrictionCheckError(f"{not_moved_message(count)} `pkit validate` reports it.")
+    if not count:
+        return
+    if target_root is not None:
+        moves = uncommitted_moves(target_root, files)
+        if moves:
+            raise FrictionCheckError(uncommitted_move_message(count, len(moves)))
+    raise FrictionCheckError(f"{not_moved_message(count)} `pkit validate` reports it.")
 
 
 def new_name(now: datetime) -> str:
@@ -1688,6 +1736,8 @@ __all__ = [
     "path_of",
     "read_answer_file",
     "refuse_unmoved",
+    "uncommitted_move_message",
+    "uncommitted_moves",
     "unmoved",
     "working_locations",
     "working_renames",

@@ -1621,7 +1621,9 @@ def _check_head(
     if not discovery.places:
         return _dormant(settings.mode_or_default, settings.mode, places=0)
     answer_files.refuse_unmoved(
-        discovery.artefacts, [rel for rel in tree.files() if answer_files.is_answer_file(rel)]
+        discovery.artefacts,
+        [rel for rel in tree.files() if answer_files.is_answer_file(rel)],
+        target_root=target_root,
     )
 
     head = Side(target_root, tree, discovery)
@@ -2143,7 +2145,7 @@ def run_artefact_check(
     artefact = select(discovery)
     head = HeadState(head_sha, uncommitted_paths(target_root))
     held = [rel for rel in tree.files() if answer_files.is_answer_file(rel)]
-    answer_files.refuse_unmoved(discovery.artefacts, held)
+    answer_files.refuse_unmoved(discovery.artefacts, held, target_root=target_root)
     # With no anchors and no answer file, no live deferral can make it judged (`_judged`).
     unanswered = not anchors_of(artefact) and not held
     if not artefact.has_friction_block or unanswered:
