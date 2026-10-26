@@ -666,7 +666,7 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 The guard does not refuse on a claim that no longer counts, and refuses on one whose seat it could not read. Each command reads a seat's holder from the seat's state issue the first time a claim names that seat, and keeps it for the rest of its run.
 
-**Every command this section names confirms the clone's seat before it writes** (DEC-059 point 6). It reads the topology from the default branch, then the state issue of the seat the clone took, by the clone's key. The runtime file names that seat only as a hint of where to look. Where the confirmation fails, every such command but `close-issue` refuses and writes nothing:
+**In a project with a topology, every command this section names confirms the clone's seat before it writes** (DEC-059 point 6). It reads the topology from the default branch, then the state issue of the seat the clone took, by the clone's key. The runtime file names that seat only as a hint of where to look. Where the confirmation fails, every such command but `close-issue` refuses and writes nothing:
 
 - the state issue shows the seat free, or held by another clone, such as after a release by force
 - the state issue cannot be read
