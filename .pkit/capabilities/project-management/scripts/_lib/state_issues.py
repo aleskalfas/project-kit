@@ -50,8 +50,12 @@ its clone holds. A release by force frees whatever holds when it lands, and the
 caller checks who may release by force. After each event the seam rewrites the
 description's region whole, from the fold of its next read, through the
 provenance seam ([pkit:ADR-037]). A write to a closed state issue reopens it
-first. :func:`create` makes a new one: a title, the description, then the marker's
-comment and the filing comment. :func:`finish` completes a creation left half done.
+first. :func:`create` makes a new one: a title, the description, a lock of its
+conversation to collaborators, then the marker's comment and the filing comment.
+:func:`finish` completes a creation left half done, where an author who may write
+opened the issue, and adopts no issue that one who may not write opened. The lock
+and that check narrow who can write on a state issue, and neither makes it a
+security boundary (DEC-058 point 5).
 
 What it never reads
 -------------------
@@ -690,6 +694,19 @@ def create_args(title: str, path: str) -> list[str]:
     return ["gh", "issue", "create", "--title", title, "--body-file", path]
 
 
+def lock_args(number: int) -> list[str]:
+    """The ``gh`` call that locks a state issue's conversation, so only an
+    account with write access comments on it."""
+    return ["gh", "issue", "lock", str(number)]
+
+
+def issue_args(number: int) -> list[str]:
+    """The ``gh api`` call that reads who opened an issue and whether its
+    conversation is locked. It gives the opener's login in the form the comment
+    log gives each author's."""
+    return ["gh", "api", f"repos/{{owner}}/{{repo}}/issues/{int(number)}"]
+
+
 def reopen_args(number: int) -> list[str]:
     return ["gh", "issue", "reopen", str(number)]
 
@@ -836,11 +853,13 @@ def _post_and_reread(
 
 
 def create(kind: str, key: str, title: str, run: StateRun) -> Outcome:
-    """Create a state issue for ``kind`` and ``key``, then finish it.
+    """Create a state issue for ``kind`` and ``key``, then complete it.
 
     The issue takes ``title``, for people, and the description, and no type,
-    parent, label, assignee or milestone. The marker's comment is posted first,
-    and DEC-041's filing comment after it.
+    parent, label, assignee or milestone. Its conversation is locked to
+    collaborators before any comment, then the marker's comment is posted first,
+    and DEC-041's filing comment after it. A lock that fails is said in the
+    outcome's cause and stops nothing, since the seam judges every author.
     """
     body = description(kind, key, Fold(None), run.versions)
     proc, cause = _with_file(body, lambda path: run.gh(create_args(title, path)))
@@ -849,32 +868,88 @@ def create(kind: str, key: str, title: str, run: StateRun) -> Outcome:
     match = _ISSUE_URL.search(str(getattr(proc, "stdout", "") or "").strip())
     if match is None:
         return Outcome(FAILED, None, cause="`gh issue create` printed no issue's URL")
-    done = finish(int(match.group(1)), kind, key, run)
+    done = _complete(int(match.group(1)), kind, key, run, lock=True)
     return replace(done, outcome=CREATED) if done.outcome == FINISHED else done
 
 
 def finish(number: int, kind: str, key: str, run: StateRun) -> Outcome:
-    """Finish a creation left half done: post the marker's comment where none
-    from an author who may write is there, and the filing comment where it is
-    missing. NO_STATE_ISSUE where an earlier marker comment names another key."""
+    """Finish a creation left half done, where an author who may write opened
+    the issue: lock its conversation where it is not locked, post the marker's
+    comment where none from an author who may write is there, and the filing
+    comment where it is missing.
+
+    NO_STATE_ISSUE, with nothing written, where an author who may not write
+    opened the issue, or an account GitHub no longer has, so no issue such an
+    author opened is adopted as a state issue. NO_STATE_ISSUE too where an
+    earlier marker comment names another key. FAILED where the issue could not
+    be read, and INCOMPLETE where its opener could not be judged.
+    """
+    opener, locked, cause = _opened(number, run)
+    if cause is not None:
+        return Outcome(FAILED, number, cause=cause)
+    may, cause = run.may_write(opener)
+    if cause is not None:
+        return Outcome(INCOMPLETE, number, cause=cause)
+    if not may:
+        who = f"the account {opener}" if opener else "an account GitHub no longer has"
+        return Outcome(
+            NO_STATE_ISSUE,
+            number,
+            cause=f"#{number} was opened by {who}, who may not write, so it is no state issue",
+        )
+    return _complete(number, kind, key, run, lock=not locked)
+
+
+def _complete(number: int, kind: str, key: str, run: StateRun, *, lock: bool) -> Outcome:
+    """Lock the issue where ``lock`` says, then post the marker's comment and
+    the filing comment where each is missing. NO_STATE_ISSUE, with nothing
+    written, where an earlier marker comment names another key."""
     log = comment_log.read_log(number, run.gh)
     if not log.complete:
         return Outcome(INCOMPLETE, number, cause=log.cause)
     accepted, cause = _accepts(log.comments, kind, key, run)
     if cause is not None:
         return Outcome(INCOMPLETE, number, cause=cause)
+    if not accepted and any(
+        read_marker(c.body) for c in log.comments if _authored_by_writer(c, run)
+    ):
+        return Outcome(NO_STATE_ISSUE, number, cause=f"#{number} holds another state")
+    notes: list[str] = []
+    if lock:
+        locked = _run_write(lock_args(number), run)
+        if locked.outcome != WROTE:
+            notes.append(f"the lock failed: {locked.cause}")
     if not accepted:
-        if any(read_marker(c.body) for c in log.comments if _authored_by_writer(c, run)):
-            return Outcome(NO_STATE_ISSUE, number, cause=f"#{number} holds another state")
         posted = _run_write(comment_args(number, marker_comment(kind, key, run.versions)), run)
         if posted.outcome != WROTE:
-            return Outcome(FAILED, number, cause=posted.cause)
+            return Outcome(FAILED, number, cause=", and ".join([*notes, str(posted.cause)]))
     if not any(provenance.FILING_MARKER in c.body for c in log.comments):
         filing = provenance.render_filing_comment(run.versions)
         posted = _run_write(comment_args(number, filing), run)
         if posted.outcome != WROTE:
-            return Outcome(FINISHED, number, cause=f"the filing comment failed: {posted.cause}")
-    return Outcome(FINISHED, number)
+            notes.append(f"the filing comment failed: {posted.cause}")
+    return Outcome(FINISHED, number, cause=", and ".join(notes) or None)
+
+
+def _opened(number: int, run: StateRun) -> tuple[str | None, bool, str | None]:
+    """Who opened the issue, None for an account GitHub no longer has, and
+    whether its conversation is locked; or, last, the cause where the read
+    failed."""
+    try:
+        proc = run.gh(issue_args(number))
+    except FileNotFoundError:
+        return None, False, "`gh` is not on PATH"
+    if getattr(proc, "returncode", 1) != 0:
+        return None, False, f"#{number} could not be read: {comment_log.said(proc)}"
+    try:
+        data = json.loads(getattr(proc, "stdout", "") or "")
+    except (TypeError, ValueError):
+        data = None
+    if not isinstance(data, dict):
+        return None, False, f"#{number} read as no JSON object"
+    user = data.get("user")
+    login = user.get("login") if isinstance(user, dict) else None
+    return (login if isinstance(login, str) and login else None), data.get("locked") is True, None
 
 
 def _authored_by_writer(comment: comment_log.LogComment, run: StateRun) -> bool:

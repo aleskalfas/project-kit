@@ -212,15 +212,94 @@ def test_create_makes_the_issue_then_its_marker_comment_then_the_filing_comment(
     assert not {"--label", "--assignee", "--milestone", "--type"} & set(issue.args)
 
 
+def test_create_locks_the_conversation_to_collaborators_before_its_first_comment() -> None:
+    """A new state issue is locked, so only an account with write access
+    comments on it (#2149). The seam still judges every author."""
+    repo = FakeRepo()
+    out = si.create("seat", "planner", "Seat planner", _run(repo))
+    number = _some(out.number)
+    assert out.outcome == si.CREATED and out.cause is None
+    assert repo.issues[number].locked
+    verbs = [argv[2] for argv in repo.writes()]
+    assert verbs == ["create", "lock", "comment", "comment"]
+    assert si.lock_args(number) in repo.writes()
+
+
+def test_a_lock_that_fails_is_said_and_the_creation_goes_on() -> None:
+    """The lock narrows who can comment, and is no security boundary (DEC-058
+    point 5), so a failed lock stops nothing."""
+    repo = FakeRepo(failing={"lock"})
+    out = si.create("seat", "planner", "Seat planner", _run(repo))
+    number = _some(out.number)
+    assert out.outcome == si.CREATED and "the lock failed" in (out.cause or "")
+    assert not repo.issues[number].locked
+    assert si.read(number, "seat", "planner", _run(repo)).outcome == si.READ
+
+
 def test_a_creation_left_half_done_is_finished_by_running_it_again() -> None:
     repo = FakeRepo()
     repo.add(9, si.description("seat", "planner", si.Fold(None), VERSIONS))
     assert si.read(9, "seat", "planner", _run(repo)).outcome == si.NO_STATE_ISSUE
     out = si.finish(9, "seat", "planner", _run(repo))
     assert out.outcome == si.FINISHED
+    assert repo.issues[9].locked
     assert si.read(9, "seat", "planner", _run(repo)).outcome == si.READ
+    writes = len(repo.writes())
     assert si.finish(9, "seat", "planner", _run(repo)).outcome == si.FINISHED
     assert len(repo.bodies(9)) == 2  # the second run posts nothing
+    assert len(repo.writes()) == writes  # and locks nothing again
+
+
+@pytest.mark.parametrize(
+    ("opener", "writers"),
+    [
+        ("mallory", si.Writers.closed(["me", "bob"])),
+        ("reader", si.Writers.open()),
+        ("", si.Writers.open()),
+    ],
+    ids=["no-member", "read-access", "account-gone"],
+)
+def test_finish_adopts_no_issue_an_author_who_may_not_write_opened(
+    opener: str, writers: si.Writers
+) -> None:
+    """An issue whose description carries the marker, opened by an account that
+    may not write, is taken for no state issue, and nothing is written to it
+    (#2149)."""
+    repo = FakeRepo(access={"me": "write", "reader": "read"})
+    repo.add(9, si.description("seat", "planner", si.Fold(None), VERSIONS), opener=opener)
+    out = si.finish(9, "seat", "planner", _run(repo, writers))
+    assert out.outcome == si.NO_STATE_ISSUE
+    assert "may not write" in (out.cause or "")
+    assert repo.writes() == [] and not repo.issues[9].locked
+
+
+def test_finish_adopts_a_half_done_issue_a_writer_opened_with_the_gate_open() -> None:
+    repo = FakeRepo(access={"me": "write", "bob": "maintain"})
+    repo.add(9, si.description("seat", "planner", si.Fold(None), VERSIONS), opener="bob")
+    out = si.finish(9, "seat", "planner", _run(repo, si.Writers.open()))
+    assert out.outcome == si.FINISHED and repo.issues[9].locked
+
+
+@pytest.mark.parametrize(
+    ("failing", "outcome", "said"),
+    [("issue", si.FAILED, "502"), ("access", si.INCOMPLETE, "403")],
+)
+def test_finish_that_cannot_tell_who_opened_the_issue_writes_nothing(
+    failing: str, outcome: str, said: str
+) -> None:
+    repo = FakeRepo(access={"me": "write"}, failing={failing})
+    repo.add(9, si.description("seat", "planner", si.Fold(None), VERSIONS))
+    out = si.finish(9, "seat", "planner", _run(repo, si.Writers.open()))
+    assert out.outcome == outcome and said in (out.cause or "")
+    assert repo.writes() == []
+
+
+def test_finish_locks_nothing_on_an_issue_that_holds_another_state() -> None:
+    repo = FakeRepo()
+    _state_issue(repo, number=9, key="worker")
+    out = si.finish(9, "seat", "planner", _run(repo))
+    assert out.outcome == si.NO_STATE_ISSUE
+    assert repo.writes() == [] and not repo.issues[9].locked
 
 
 def test_a_failed_create_says_so() -> None:
@@ -559,6 +638,7 @@ _WRITE_SHAPES = {
         argv[:4] == si.description_args(int(argv[3]), argv[5])[:4] and argv[4] == "--body-file"
     ),
     "create": lambda argv: argv[:3] == ["gh", "issue", "create"],
+    "lock": lambda argv: argv == si.lock_args(int(argv[3])),
     "reopen": lambda argv: argv == si.reopen_args(int(argv[3])),
     "close": lambda argv: argv == si.close_args(int(argv[3])),
 }

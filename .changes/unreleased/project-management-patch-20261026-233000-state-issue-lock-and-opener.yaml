@@ -1,0 +1,14 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+body: >
+  A new state issue now has its conversation locked to collaborators before
+  its first comment, so only an account with write access comments on it, a
+  member of the membership gate included (#2149). A lock that fails is said and
+  stops nothing. `create-seats` finishes an issue left half done only where an
+  account that may write opened it. It leaves alone one opened by an account
+  that may not write, or by one GitHub no longer has, names it on standard
+  error, and gives the seat a state issue of its own. Neither change makes a
+  state issue a security boundary (DEC-058 point 5). A state issue created
+  before this version stays unlocked: lock it on GitHub if you want it locked.

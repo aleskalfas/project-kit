@@ -685,6 +685,7 @@ A **state issue** holds one piece of shared state that changes while agents work
 - **The description shows the state.** A region of the description shows who holds the state, rewritten whole after each change. A stray edit to the region is rebuilt, and nothing is lost
 - **The first claim on a free state holds.** Another clone's claim on a held state counts for nothing, and stays void after the holder releases
 - **A comment counts only from an author who may write:** a member where the membership gate is closed, and otherwise an account GitHub records as having write access or more. The access is read once for each author in a run
+- **Its conversation is locked to collaborators** when it is created, so only an account with write access comments on it. A member needs write access too, to take or release a seat. Neither the lock nor the check of each author makes a state issue a security boundary ([project-management:DEC-058-state-issues] point 5)
 - **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out. Every listing of issues runs through the one read of issues, which leaves state issues out
 
 `scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. `create-seats` creates the state issues of a topology's seats, and `take-seat`, `release-seat` and `seats` take, release and list the seats (below).
@@ -727,7 +728,7 @@ seats:
 
 **Adding seats.** Add the seats at the end of the file on a branch, and run `pkit pm create-seats` there. The command creates a state issue for each seat that names none and is not retired. It writes each issue's number into that seat's entry. Commit the file with the change, so the change lands with its state issues.
 
-- **A second run repeats nothing.** A seat that names its state issue is left alone. A state issue that an earlier run created is found by its marker among the open issues, and one left half done is finished
+- **A second run repeats nothing.** A seat that names its state issue is left alone. A state issue that an earlier run created is found by its marker among the open issues, and one left half done is finished. An issue opened by an account that may not write is never finished, and the run names it
 - **Each number is written as soon as its state issue exists,** so a run that stops keeps what it wrote
 - **Who may write on a state issue** comes from the members the default branch holds. A run that cannot resolve the default branch creates nothing, and a state issue that does not read back as the seat's gets no number
 - **The run stops on any other problem in the file,** such as a seat name used twice, before it creates anything

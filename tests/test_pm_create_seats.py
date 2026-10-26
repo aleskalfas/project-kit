@@ -132,8 +132,15 @@ def _numbers(root: Path) -> dict[str, int | None]:
     return {seat.name: seat.state_issue for seat in topology.seats}
 
 
-def _state_issue(repo: FakeRepo, number: int, key: str, *, comment: bool = True) -> None:
-    repo.add(number, si.description("seat", key, si.Fold(None), VERSIONS), title=f"Seat {key}")
+def _state_issue(
+    repo: FakeRepo, number: int, key: str, *, comment: bool = True, opener: str | None = None
+) -> None:
+    repo.add(
+        number,
+        si.description("seat", key, si.Fold(None), VERSIONS),
+        title=f"Seat {key}",
+        opener=opener,
+    )
     if comment:
         repo.post(number, si.marker_comment("seat", key, VERSIONS))
 
@@ -194,6 +201,22 @@ def test_a_creation_left_half_done_is_finished(tmp_path: Path) -> None:
     marker = si.read_marker(repo.bodies(40)[0])
     assert marker is not None and marker.names("seat", "worker-1")
     assert any(provenance.FILING_MARKER in body for body in repo.bodies(40))
+    assert repo.issues[40].locked
+
+
+def test_a_half_done_issue_an_author_who_may_not_write_opened_is_left_alone(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """An issue that carries the seat's marker, opened by an account that may
+    not write, is never adopted: the seat gets a state issue of its own (#2149)."""
+    root = _capability(tmp_path)
+    repo = FakeRepo()
+    _state_issue(repo, 40, "worker-1", comment=False, opener="mallory")
+    assert _create(root, repo) == 0
+    assert _numbers(root)["worker-1"] not in (None, 40)
+    assert repo.bodies(40) == [] and not repo.issues[40].locked
+    err = capsys.readouterr().err
+    assert "#40" in err and "mallory" in err and "left alone" in err
 
 
 def test_a_closed_or_foreign_state_issue_is_not_taken_for_the_seat(tmp_path: Path) -> None:
@@ -304,6 +327,8 @@ def test_construction_every_write_it_runs_comes_from_the_seam(tmp_path: Path) ->
         if verb == "create":
             assert argv[:3] == ["gh", "issue", "create"] and "--body-file" in argv
             assert not {"--label", "--assignee", "--milestone", "--project"} & set(argv)
+        elif verb == "lock":
+            assert argv == si.lock_args(int(argv[3]))
         else:
             assert verb == "comment" and argv == si.comment_args(int(argv[3]), argv[5])
             body = argv[5]
