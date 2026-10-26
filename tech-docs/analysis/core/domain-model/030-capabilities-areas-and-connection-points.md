@@ -293,8 +293,8 @@ A process is the course a capability declares for one kind of subject of its dis
 
 **Always true:**
 
-- The engine reads a subject's state from what it observes, never from a stored label (COR-033 P3).
-- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the subject stands, and allows no move (COR-044 point 2 and COR-033 P5).
+- The engine reads a subject's state from what it observes, never from a stored label ([COR-033 P3](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p3--the-engine-is-a-deterministic-validator-and-a-self-explaining-memory)).
+- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the subject stands, and allows no move ([COR-044 point 2](../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#2-the-teeth-actor-is-a-new-core-agent-owner-scoped) and COR-033 P5).
 
 ## What is built on these concepts
 

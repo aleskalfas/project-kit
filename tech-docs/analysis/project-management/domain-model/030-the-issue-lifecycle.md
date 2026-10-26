@@ -215,7 +215,7 @@ A bypass overrides one check that refuses by default, such as scheduling an [iss
 **Always true:**
 
 - A bypass with no reason is refused (DEC-014).
-- A check that guards what must never happen takes no bypass. Only an operator's `--force` overrides it (DEC-046 point 2).
+- A check that guards what must never happen takes no bypass. Only an operator's `--force` overrides it ([DEC-046 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-046-override-flag-convention.md#2---force--the-operators-override-of-a-hard-reject-finding-or-a-hard-precondition)).
 
 ## What is built on these concepts
 

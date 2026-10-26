@@ -382,8 +382,8 @@ A component origin is where an installed [capability](../glossary.md#term-capabi
 
 **Always true:**
 
-- An origin governs only what the component is reconciled against. Dependencies and deployment treat every origin alike (COR-031 point D1).
-- Removing a capability the project authored unregisters it, and leaves its files where they are (COR-031 point D4).
+- An origin governs only what the component is reconciled against. Dependencies and deployment treat every origin alike ([COR-031 point D1](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d1--the-lifecycle-excludes-incubated-capabilities-from-source-reconciliation-but-not-from-self-consistency-checks)).
+- Removing a capability the project authored unregisters it, and leaves its files where they are ([COR-031 point D4](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d4--every-lifecycle-verb-honours-origin-removal-never-destroys-adopter-owned-source)).
 
 ## What is built on these concepts
 

@@ -312,9 +312,9 @@ A documentation root is the folder for internal readers, or the one for user-fac
 **Always true:**
 
 - It lies inside the repository, and outside the [methodology](../glossary.md#term-methodology--methodology)'s own tree (COR-049 point 1).
-- An explicit location always wins over a derived one (COR-049 point 3).
-- A location derived from it is recorded when first used, so changing the root later moves nothing (COR-049 point 5).
-- A declared root that does not exist yet is a warning, never a failure (COR-049 point 7).
+- An explicit location always wins over a derived one ([COR-049 point 3](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#3-where-derivation-applies)).
+- A location derived from it is recorded when first used, so changing the root later moves nothing ([COR-049 point 5](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#5-a-derived-location-is-recorded-when-it-is-first-used)).
+- A declared root that does not exist yet is a warning, never a failure ([COR-049 point 7](../../../../.pkit/decisions/core/COR-049-documentation-roots.md#7-visible-and-checked)).
 
 ## What is built on these concepts
 

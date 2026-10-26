@@ -328,8 +328,8 @@ A session anchor is the directory the [harness](../glossary.md#term-harness--har
 **Always true:**
 
 - The session anchor is only compared, and never used to find the [project](../glossary.md#term-project--project)'s root (ADR-034 point 1).
-- On a difference, the system asks, or refuses where nobody is there to ask, and never blocks a write that was confirmed (COR-039 point 1).
-- The guard is an interlock against a mistake, not a security boundary (COR-039 point 3).
+- On a difference, the system asks, or refuses where nobody is there to ask, and never blocks a write that was confirmed ([COR-039 point 1](../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md#1-operator-gated-not-blocked)).
+- The guard is an interlock against a mistake, not a security boundary ([COR-039 point 3](../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md#3-honest-about-reach--an-interlock-not-a-security-boundary)).
 
 ## What is built on these concepts
 
