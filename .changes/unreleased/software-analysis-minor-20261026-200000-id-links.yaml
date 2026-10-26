@@ -10,7 +10,7 @@ body: >
   file, and a term to its glossary entry, by a path from the file. A bold
   label is read, so a journey's seams and a precondition's producers link
   their ids inside the bold, and each step line of a journey links its use
-  case's id. An id alone names an artefact of its own analysis, in force or
+  case's id, as the stamp writes it on a new journey. An id alone names an artefact of its own analysis, in force or
   withdrawn, and `core:UC-021` one of an analysis yours builds on. Code, a
   goal, an actor's first sentence and an artefact's own id stay plain.
   Whatever any rule's status, `pkit analysis validate` reports such a link
