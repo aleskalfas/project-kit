@@ -1,0 +1,77 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-batch-plan
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T083710Z-10b15046.yaml
+    revalidated:
+      at: 2026-10-26T12:39:04Z
+      outcome: unchanged
+      unchanged-because: DEC-029 step 3 gained a pointer to DEC-060's foundation stage. A batch plan is still one plan behind one approval gate, and the two stages DEC-060 decides are two such plans.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
+    read:
+      - 20261026T072505Z-09cf4beb.yaml
+      - moved-8b857f6035c3.yaml
+    revalidated:
+      at: 2026-10-26T12:39:09Z
+      outcome: unchanged
+      unchanged-because: DEC-060, which DEC-029 step 3 now points to, changes how a plan is sliced where Tasks would share an open choice, not who plans or what the planner needs.
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261026T072505Z-09cf4beb.yaml
+      - moved-5e5765c43552.yaml
+    revalidated:
+      at: 2026-10-26T12:39:13Z
+      outcome: unchanged
+      unchanged-because: DEC-029 gained only a pointer to DEC-060 in batch planning's slicing step. What this page says of deploying the project-manager agent and of a delegated helper's result is unchanged.
+  - artefact: tech-docs/analysis/project-management/domain-model/050-batch-planning.md
+    read:
+      - 20261026T072505Z-09cf4beb.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-029
+          reason: "DEC-060's two stages of planning, which DEC-029 step 3 now points to, are not built yet. #2143 builds them in batch planning and brings this view to them."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-063-plan-intent.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-029
+          reason: "DEC-060's two stages of planning, which DEC-029 step 3 now points to, are not built yet. #2143 builds them in batch planning and adds them to this use case's slicing step."
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T12:39:44Z
+      outcome: unchanged
+      unchanged-because: "DEC-060 adds a rule for planning that no command or skill carries yet, which #2143 builds. DEC-029 and DEC-059 gain only pointers to it, so what the README says of the commands still holds."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
