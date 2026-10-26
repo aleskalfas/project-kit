@@ -460,6 +460,9 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
 
         def set_assignee(n, login, config):
             mutations.append(("assignee", login))
+            held = fake.issues.get(n)
+            if held is not None and login not in held.assignees:
+                held.assignees.append(login)  # as GitHub holds the issue after the write
             return True
 
         def move_issue(n, target, **kw):
@@ -709,7 +712,42 @@ def test_a_bypass_posts_its_reason_and_starts_the_work_unclaimed(run_main, sw, c
     assert "<!-- pkit-audit-key: ownership-guard:" in audit
     captured = capsys.readouterr()
     assert "--bypass let this clone, instance 2, act on it" in captured.err
-    assert "#42 is owned by instance 3, so this clone, instance 2, did not claim it" in captured.out
+    assert "  ownership: not claimed, since --bypass starts the work unclaimed" in captured.out
+    assert "[note] ownership: #42 is not claimed: --bypass starts the work unclaimed." in (
+        captured.out
+    )
+
+
+def test_a_bypass_of_another_accounts_claim_writes_no_claim(run_main, sw, capsys) -> None:
+    """@alice took the issue after start-work's own read, and her instance 1
+    claimed it. The run adds this clone's account as a second assignee, yet the
+    bypass still starts the work unclaimed. No claim of this clone is written,
+    and @alice's markers still name instance 1 as the owner."""
+    github = FakeGitHub()
+    github.add(42, assignees=("alice",))
+    github.post(42, _stamp(sw, "claim", 1), author="alice")
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]),
+        instance=2,
+        github=github,
+        extra=("--bypass", "alice's session is gone"),
+    )
+    assert rc == 0
+    assert mutations == [
+        ("ownership", "comment"),
+        ("branch", "fix/42-do-the-thing"),
+        ("assignee", "me"),
+        ("move", "in-progress"),
+        ("move-bypass", "alice's session is gone"),
+    ]
+    assert github.issues[42].assignees == ["alice", "me"]
+    ownership = sw.instance_claims.ownership
+    comments = github.issues[42].comments
+    mine = ownership.resolve_owner(comments=comments, labels=[], assignee_login="me")
+    theirs = ownership.resolve_owner(comments=comments, labels=[], assignee_login="alice")
+    assert mine.owners == frozenset()
+    assert theirs.owners == frozenset({1})
+    assert "#42 is not claimed: --bypass starts the work unclaimed." in capsys.readouterr().out
 
 
 def test_the_composed_move_finds_the_bypass_posted(run_main, sw, monkeypatch, capsys) -> None:

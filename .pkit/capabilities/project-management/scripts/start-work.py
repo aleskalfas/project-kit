@@ -45,7 +45,8 @@ Side-effects:
     clone withdraws its claim and stops before the move, naming the branch it
     left (DEC-035 point 6). It stops there too when the withdrawal could not
     be written. Any other claim that fails is a warning, and the work starts
-    unclaimed. With no id set, nothing of this runs. In a project with a
+    unclaimed. After a bypass it claims nothing, whichever account's instance
+    owned the issue. With no id set, nothing of this runs. In a project with a
     topology, a clone claims for the seat it holds, its number the seat's, and
     a clone that holds no seat claims nothing (DEC-059 points 6 and 7).
   - Composes over `move-issue.py --to in-progress`. If that move still fails
@@ -282,7 +283,9 @@ def main() -> int:
     print(f"  branch:    {branch_name}")
     print(f"  base:      {base}")
     print(f"  assignee:  {invoker.github_login or '(unknown invoker)'}")
-    if clone is not None:
+    if clone is not None and owner_bypass is not None:
+        print("  ownership: not claimed, since --bypass starts the work unclaimed")
+    elif clone is not None:
         print(f"  ownership: {instance_claims.claim_plan(clone)}, where no instance owns it")
 
     if args.dry_run:
@@ -327,8 +330,15 @@ def main() -> int:
     # Claim the issue for this clone (DEC-035 point 3), once the assignee is
     # set: a marker counts only from the assignee's account (DEC-043 point 3).
     # Ahead of the move, so a clone that lost a same-instant claim stops there,
-    # whether or not its withdrawal could be written.
-    if clone is not None:
+    # whether or not its withdrawal could be written. A bypass claims nothing,
+    # though this run made its account an assignee: the issue was another
+    # instance's, of this account or another, and the work starts unclaimed.
+    if clone is not None and owner_bypass is not None:
+        print(
+            f"[note] ownership: #{args.issue_number} is not claimed: --bypass starts the "
+            "work unclaimed."
+        )
+    elif clone is not None:
         claimed = instance_claims.claim(args.issue_number, clone, config)
         instance_claims.say(claimed)
         if claimed.outcome in (instance_claims.LOST, instance_claims.FAILED) and (
