@@ -151,11 +151,11 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 **A mention's link to its term.** In an analysis that keeps a domain model, the first mention of a term in each section links to the term's entry. That holds in each artefact in force.
 - **Where:**
   - in a view's opening and its sections
-  - in each part of a glossary entry: its example, its distinctions and any text a writer adds
+  - in each part of a glossary entry: its definition, its example, its distinctions and any text a writer adds (refinement per [software-analysis:DEC-006-text-in-body])
   - in each part of the body of every other kind of artefact, such as a use case
-- **Front matter stays plain.** It is data, such as a term's definition, a title, an actor's summary and its needs, and a requirement's statement.
-- **What says data again stays plain too.** Text a form holds equal to data takes no mention's link, as its data takes none. Such are a journey's step line, which gives a use case's title, and an actor's first sentence, which gives its summary where it gives one. The glossary's head is such text too, and links each term it lists already.
-- **A goal stays plain.** A use case's goal is a user story, a need stated in one sentence (DEC-001 point 1). A journey's goal states the actor's want in the same form. Both stay plain, as the needs do, by the choice the Rationale gives.
+- **Front matter stays plain.** It is data, such as a title or a term's noun forms. An artefact's texts live in its body and take links as its other parts do, such as a term's definition and a requirement's statement (refinement per [software-analysis:DEC-006-text-in-body]).
+- **What says data again stays plain too.** Text a form holds equal to data takes no mention's link, as its data takes none. Such is a journey's step line, which gives a use case's title. The glossary's head is such text too, and links each term it lists already.
+- **A goal stays plain.** A use case's goal is a user story, a need stated in one sentence (DEC-001 point 1). A journey's goal states the actor's want in the same form. Both stay plain, as the needs do, an actor's own and those a glossary's head lists, by the choice the Rationale gives.
 - **What it links to:** the term's entry in the glossary of its analysis, by the entry's anchor.
 - **A term of another analysis.** A term the head lists from an analysis the configuration lists links to its entry there, in the same repository (DEC-001 point 2).
   - **Its names.** It is mentioned by the name the head lists, and by the noun forms and the other senses its own entry declares.
@@ -181,7 +181,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 - **An escape for one mention.** The comment `<!-- pkit:not-the-term -->`, right before a mention, marks a mention that is not the term. It takes no link, and the next mention counts as the first. The escape changes no rule: a statement that uses a term's name in another sense still breaks the rule on domain concepts.
 
 **A wrong link is a finding.** A link on a word the text uses in another sense shows that word to a reader.
-- **Outside the glossary,** each section is a statement, which the rule on domain concepts judges. A word used in another sense breaks it, so the writer rewords the statement.
+- **Outside the glossary,** each section is a statement, which the rule on domain concepts judges. So is a term's definition (DEC-001, Rationale). A word used in another sense breaks it, so the writer rewords the statement.
 - **In a glossary entry,** the example and the distinctions are no statements of that rule, and the distinctions name other senses on purpose. So the term lists the phrase in its `other-senses`, or the escape marks the one mention.
 - **The escape serves last,** where neither helps, such as a word in a quotation, or an actor named in an entry beside the term for its role (point 5).
 
@@ -189,7 +189,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 - **The command,** `pkit analysis link`, writes each section's link to its term and the mentions' links, in every analysis that keeps a domain model. It reads a body only to place its links, as the stamp reads the glossary to place a term's link. Its data comes from front matter, the one data of an artefact a tool reads (DEC-001 point 1), and from the declared structures:
   - each term's name, noun forms and other senses
   - each view's `explains`
-  - each actor's name, and whether it gives a summary
+  - each actor's name
   - the labels that open each section
 - **The check** reports a link missing, one extra and one whose target is stale, and names the command. It holds them whatever any rule's status, as it holds the term's link. A link to a glossary entry written by hand is held as the command's, so it is extra where the command writes none.
 - **A copy for navigation.** Each link is such a copy, which the check holds equal to the data, so it never drifts. Both its ends lie in the analysis, and it draws no anchor.
@@ -249,7 +249,7 @@ A documentation page that is no architecture view may rest on a view's section (
 
 **Why the glossary stays.** A term's definition already defines its concept, in the form terminology standards give (ISO 1087). Moving the definitions into the views would withdraw the term kind, which every artefact relies on. Kept apart, the glossary defines and a view explains.
 
-**Why a list of the terms it explains.** A tool reads front matter only (DEC-001 point 1). The stamp writes a view's anchors and each term's link, so it reads them from `explains`, as it writes a journey's anchors from its `steps`. The sections' headings are held to the list by a form of the structure, as a journey's step lines are held to its `steps`.
+**Why a list of the terms it explains.** A tool reads data from front matter only (DEC-001 point 1). The stamp writes a view's anchors and each term's link, so it reads them from `explains`, as it writes a journey's anchors from its `steps`. The sections' headings are held to the list by a form of the structure, as a journey's step lines are held to its `steps`.
 
 **Why sentence case.** A heading or a diagram's box in lower case reads oddly, as the maintainer found on reading the core's first views ([project-kit#1838](https://github.com/aleskalfas/project-kit/pull/1838)). Sentence case capitalizes the first letter alone, so the heading still reads as the term's name. Its slug is the name's, so a term's link names the section by the slug of the name. Wherever a sentence carries the name, it stays as running text writes it (DEC-001 point 1).
 
@@ -277,13 +277,13 @@ A documentation page that is no architecture view may rest on a view's section (
 - **Why the first mention alone.** A link on every mention clutters the text, and adds nothing the first one does not give.
 - **Why every kind.** A newcomer starts with the areas and their use cases, which use the domain's words before any view explains them. A newcomer's reading of project-kit's overview found the words of its first use case unlinked ([project-kit#1895](https://github.com/aleskalfas/project-kit/issues/1895)). Linked, each word there is a click from its definition, as in the views. The goal stays plain, and the parts below it carry the links.
 - **Why each part is a section.** A reader turns to a part on its own, such as a use case's variants. Linked once in the whole artefact, a term would stay unlinked in each later part. The declared structure gives the parts as data, as it gives the glossary's entries.
-- **Why what says data again stays plain.** A journey's step line and an actor's first sentence say data again, word for word, and a form holds each equal to it. A link would set the text apart from its data, so each stays plain, as its data does.
-- **Why a goal stays plain.** A goal is a user story, as a need is (DEC-001 point 1), and the needs lie in front matter, which takes no link. The maintainer chose to keep both plain, so a goal reads as the need it states ([project-kit#1895](https://github.com/aleskalfas/project-kit/issues/1895)).
+- **Why what says data again stays plain.** A journey's step line says data again, word for word, and a form holds it equal to that data. A link would set the text apart from its data, so the line stays plain, as its data does.
+- **Why a goal stays plain.** A goal is a user story, as a need is (DEC-001 point 1). The maintainer chose to keep both plain, so a goal reads as the need it states ([project-kit#1895](https://github.com/aleskalfas/project-kit/issues/1895)). A need stays plain in the body for the same reason (refinement per [software-analysis:DEC-006-text-in-body]).
 - **Why an actor's name takes none.** An actor named by its name uses no concept, so a link on a term inside the name would be wrong. No rewording could mend it, since the name is the actor's. So the command reads the name as a whole, and a term inside it takes no link.
 - **Why a command writes them, and the check holds them.** Links written by hand go missing and go stale, unseen. A command writes them from the data, and the check holds them equal to it, as it holds the term's link.
 - **Why friction sets them aside.** A moved link states nothing new, so the revalidation it would ask could only say that. A term added would ask it of every artefact and page resting on one that mentions the term. Only this capability knows which links its command writes, so it declares their form (COR-050 point 5).
 - **Why noun forms only, and declared.** A form made by a rule can read as a verb, such as "orders". Only the writer of a term knows which forms read as a noun alone, so the term declares them. A list serves a language that inflects its nouns too, whose cases a single plural would leave unlinked.
-- **Why the phrases in another sense are data.** The distinctions tell such a phrase apart for a reader. A tool reads front matter alone (DEC-001 point 1), so `other-senses` tells it to the command.
+- **Why the phrases in another sense are data.** The distinctions tell such a phrase apart for a reader. A tool reads a term's data from its front matter, and never its distinctions (DEC-001 point 1), so `other-senses` tells it to the command.
 - **Why an escape, and why last.** A word in a quotation cannot be reworded, so an escape keeps a link off it. So can an actor's name, whole or shortened, where no data tells it from a term's. Outside the glossary, every other wrong link shows a statement the rule on domain concepts asks a writer to reword.
 - **Why the escape lies in the body.** It marks one place in a text, which only the body holds. It is no data about a term, and the command reads the body to place its links anyway.
 - **Why this is no marking of each use.** DEC-001 rejects marking each use of a term so that a script checks it. Here no writer marks a use: the command writes the links from the data. Whether a word names the concept stays a reader's judgement, which a wrong link only shows.
@@ -326,7 +326,7 @@ A documentation page that is no architecture view may rest on a view's section (
 - **A shipped part for the link in each term.** Rejected. Every live term would need a migration, and a term no view explains would read `None.`.
 - **A link on every mention of a term.** Rejected. The text grows hard to read, and the first link already leads to the definition.
 - **A term linked once in each actor, use case, journey and requirement, not once in each section.** Not taken. A reader who turns to a later part, such as the variants, would find its words unlinked.
-- **A step line and an actor's first sentence linked, the forms reading links aside.** Not taken. The text would differ from the data it says again, and each form comparing the two would need to read links.
+- **A step line linked, the form reading links aside.** Not taken. The text would differ from the data it says again, and the form comparing the two would need to read links.
 - **A goal linked as any other part.** Not taken. A goal states a need, which stays plain, and the maintainer chose to keep the two alike.
 - **An actor's name linked to the actor.** Not taken. The actor's name names an artefact, not a term, and these links lead to the glossary alone.
 - **Mentions linked by hand.** Rejected. Links go missing and stale, and nothing sees it.
