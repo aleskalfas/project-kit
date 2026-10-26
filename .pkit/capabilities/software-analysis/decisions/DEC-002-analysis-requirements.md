@@ -6,7 +6,7 @@ date: 2026-10-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-> **Partially superseded by [software-analysis:DEC-006-text-in-body].** A requirement's statement, measure and scope live in its body, and its revisits fire on `obligation`, a fingerprint of the three. Overturned: point 4's choice of front-matter fields for the three, and the three fields as the link's trigger, with the reasons and the alternative behind that choice. Among what stands: what each of the three says, that a change to any of them changes the obligation, `actors` and `refines`, the link's targets, and points 1 to 3 and 5 to 9. DEC-006's "What this overturns, and what stands" lists each passage.
+> **Partially superseded by [software-analysis:DEC-006-text-in-body].** A requirement's statement, measure and scope live in its body, and its revisits fire on `obligation`, a fingerprint of the three. Overturned: point 4's choice of front-matter fields for the three, and the three fields as the link's trigger. The reasons and the alternative behind that choice go with it. Among what stands: what each of the three says, and that a change to any of them changes the obligation. So do `actors`, `refines`, the link's targets, and points 1 to 3 and 5 to 9. DEC-006's "What this overturns, and what stands" lists each passage.
 
 ## Context
 

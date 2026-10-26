@@ -50,7 +50,7 @@ A reader who starts from a concept finds the use cases, journeys and requirement
 - **Computed, never by hand.** A command computes the lists from the analysis. Where a page keeps them, the check holds them fresh, as it holds the overview (DEC-003 point 8). They state no fact of their own, since each follows from what the artefacts already say.
 - **Where they stand is decided with their build** ([project-kit#2104](https://github.com/aleskalfas/project-kit/issues/2104)). Each way refines accepted points, so the change that builds it lands that refinement, naming its exception, read by the critic and the architect:
   - **in each view:** DEC-001 points 1 and 11 and DEC-004 point 7, since the view stores the reverse of a use. A list's words are content, so each new use changes the view and the answers on it (COR-050 point 5).
-  - **in the overview:** DEC-001 point 1 and DEC-003 point 8, which reads of a body only the links to the terms and each actor's first sentence (refinement per [software-analysis:DEC-006-text-in-body]), and a new version of the overview's fingerprint
+  - **in the overview:** DEC-001 point 1 and DEC-003 point 8, and a new version of the overview's fingerprint. Of a body, the overview reads only the links to the terms and each actor's first sentence (refinement per [software-analysis:DEC-006-text-in-body]).
   - **a query,** as for what meets a requirement (DEC-002 point 7), **or pages in the overview's held folder:** DEC-001 point 1, since the command reads bodies
 
 ### 4. Building an analysis writes its areas and its journeys

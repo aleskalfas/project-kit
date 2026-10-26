@@ -1,6 +1,6 @@
 ---
 id: DEC-006
-title: An artefact's text lives in its body alone, and a requirement's revisits fire on a fingerprint of its texts
+title: An artefact's text lives in its body alone, and a fingerprint triggers a requirement's revisits
 status: proposed
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
@@ -19,7 +19,7 @@ A requirement's front matter keeps `obligation`, a fingerprint of its three text
 
 [software-analysis:DEC-004-domain-model-views] point 7 calls them data, which takes no link.
 
-A repository host shows a document's front matter as a table above its body. On 25 October, the core's glossary opened with a table 1,065 lines long. None of its 80 sections stated what its term means, so a link to a term led to a section without its definition.
+A repository host shows a document's front matter as a table above its body. On 25 October, the core's glossary opened with a table 1,065 lines long. None of its 80 sections stated what its term means, so a link to a term led to a section without its definition ([project-kit#2051](https://github.com/aleskalfas/project-kit/issues/2051)).
 
 The core's record on sidecars lets a document's data move out of its file (COR-063). Moved there, these texts would leave the page a reader reads.
 
@@ -53,9 +53,9 @@ Front matter keeps the data a tool finds, relates, lists or links artefacts by. 
 
 ### 3. A tool reads a text by its part's permanent id
 
-A tool takes an artefact's data from its front matter, and a text from the part that holds it. The texts a tool reads are those point 1 moves. So are the first sentence of an actor's opening (point 4) and the needs a glossary's head lists (point 5). Of the rest of a body, a tool reads only the links to the terms, which the link command places there (DEC-001 point 1).
+A tool takes an artefact's data from its front matter, and a text from the part that holds it. The texts a tool reads are those point 1 moves. So are the first sentence of an actor's opening (point 4) and the needs a glossary's head lists (point 5). Of the rest of a body, a tool reads only the links to the terms (DEC-001 point 1).
 - **By its permanent id.** A tool finds a part as the check finds it, by the id the structure gives it, never by its label. So a project's relabel changes no tool's reading, once its artefacts carry the new label (DEC-001 point 1).
-- **Its words.** A tool that shows or compares a text reads each derived link in it as its words alone, where its place declares the link's form at the state the tool reads. That is how the core's friction reads such a link (COR-050 point 5).
+- **Its words.** A tool that shows or compares a text reads each derived link in it as its words alone. That holds where the place declares the link's form at the state read, as friction reads such a link (COR-050 point 5).
 - **A part the body lacks** gives no text, and a tool reads it as absent. It never reads another part's text in its place. So a missing part is no tool's finding, and its presence stays the format rule's to hold.
 - **A body it cannot read.** A tool that cannot read an artefact's body gives no answer, rather than a partial one that would read as whole (DEC-003 point 7).
 
@@ -79,25 +79,26 @@ Each requirement, of each of the three kinds, carries `obligation`: a fingerprin
 - **Written by a command.** A command of the capability writes it from the texts, so nobody writes it by hand. Validation names that command wherever the field is missing or no longer verifies. Where a part reads as absent, the finding names that part first, so a writer mends a label rather than writes a new value.
 - **Held always.** The check holds it equal to the texts, whatever any rule's status. A requirement without it fails too.
 - **The trigger.** The link each requirement's place declares fires on `obligation` alone. Its targets stay as DEC-002 point 4 gives them: every anchor but those its `actors` and `refines` list.
-- **What fires it.** A change to the words of the statement, the measure or the scope, as point 7 reads them. Moving a text between homes fires nothing, and nor does a link the command moved, emphasis or wrapping.
+- **What fires it.** A change to the words of the statement, the measure or the scope, as point 7 reads them. Moving a text between homes fires nothing, and nor does emphasis, wrapping or a link the command that links terms moved.
 - **No second home.** No reader can read a text from its fingerprint, so the field holds no copy of one.
 
 ### 7. The fingerprint's canonical form
 
 The fingerprint reads each text in one canonical form, so one text gives one value in either home. The form reads a text's characters as written, never a rendering of them, and reads both homes the same way.
+- **The rule.** The form sets aside what changes only how a text looks, or where a link the command that links terms wrote leads. It counts everything that can change what the text says.
 - **A text's characters:**
   - in front matter, the field's value once the front matter is parsed, never the marks that quote it
   - in the body, the part's characters after its label, up to the next part, as the check finds the part
-- **What is set aside:**
+- **What the first version sets aside:**
   - each derived link of a form the place declares at the state read, read as its words alone, as friction reads one (COR-050 point 5)
   - each comment, such as the escape that marks a mention as no mention (DEC-004 point 7)
   - the marks of emphasis and strong emphasis, found as Markdown finds them in those characters
   - wrapping: each run of white space, line breaks included, read as one space, and none at either end
-- **Everything else counts as written:** every word with its case and its punctuation, and every other mark. That includes a code span, strikethrough, an escape, an entity, inline HTML and a list's marker. A link of a form no place declares counts as written too.
+- **What the first version counts as written:** every word with its case and its punctuation, and every other mark. That includes a code span, strikethrough, an escape, an entity, inline HTML and a list's marker. A link of a form no place declares counts as written too.
 - **The scope** is read as the other two are: the whole of its part, every sentence of it, never its first sentence alone.
 - **The three together.** The form takes them in one order, the statement, the measure and then the scope, each under its part's permanent id. So a text moved from one part to another changes the fingerprint.
 - **A part a requirement lacks** reads as absent, which differs from `None.` and from an empty text. So the fingerprint is always defined, and a part removed changes it.
-- **Its versions.** A version of the form fixes its rules of reading: what it sets aside, how it finds where a part ends, and how it finds emphasis. The link forms and the labels it applies come from the state read, as friction and the check read them. Tests of example texts pin each version, in both homes.
+- **Its versions.** A version of the form fixes its rules of reading under the rule above. They are what it sets aside, how it finds where a part ends, and how it finds emphasis. The link forms and the labels it applies come from the state read, as friction and the check read them. Tests of example texts pin each version, in both homes.
 - **Each version kept.** The check verifies each value under the version it names, so the capability keeps every version it shipped. The command writes a value under the current version wherever the value a requirement holds no longer verifies.
 
 ### 8. The links in the texts
@@ -109,7 +110,7 @@ The links between terms reach the texts as they reach every part of a body (DEC-
 
 ### 9. Moving the texts
 
-The texts move from front matter into the body one artefact at a time.
+The texts move from front matter, their data home, into the body, one artefact at a time.
 - **One home at a time.** Until every live artefact holds its texts in the body, the capability reads each text in either home. An artefact keeps each text in one of them, and validation fails a text written in both.
 - **The fingerprint first.** Every requirement carries `obligation` before its revisits fire on it. So the release that moves the trigger comes after a release that ships the fingerprint without it. A project takes the two apart, and the change that moves its trigger finds the field at both states it compares (COR-050 point 16).
 - **Word for word.** The move writes each text's characters as they stand, and adds no escape. So a text gives one fingerprint in either home (point 7), and moving it asks for no revisit of what the requirement anchors.
@@ -126,11 +127,12 @@ This record partially supersedes DEC-002. Each overturned passage stays in DEC-0
   - in point 4, that the statement, the measure and where it holds are front-matter fields a tool reads, listed among its fields. They are parts of the body (point 1 here).
   - in point 4, under "What triggers it", the three fields as the link's trigger fields. The link fires on `obligation` (point 6 here).
   - in point 4 and in "Why the declaration leaves the other changes out", that a body part changes none of the obligation. The parts that hold none of the three change none of it.
-  - in the Rationale, the first three sentences of "Why the statement, the measure and where it holds are front-matter fields"
+  - in the Rationale paragraph "Why the statement, the measure and where it holds are front-matter fields", its first two sentences. They say a tool reads front matter only, so the parts the core's signal reads are fields.
   - in the Alternatives considered, the rejection of the three as body parts
 - **Stands:**
   - what each of the three says, the fields `actors` and `refines`, and the other parts
-  - that a change to any of the three changes the obligation, where it holds included. The last four sentences of that Rationale paragraph say why.
+  - that a change to any of the three changes the obligation, where it holds included. The rest of that Rationale paragraph says why, and stands.
+  - "the three fields", where a standing passage of DEC-002 says it, read as the three texts
   - the link's targets, and the rest of what the declaration leaves out
   - points 1 to 3 and 5 to 9, whole
 - **Refined in place,** each naming this record: DEC-001 points 1 and 2, DEC-003 points 3 and 8, DEC-004 point 7 and DEC-005 point 3.
@@ -144,7 +146,7 @@ This record partially supersedes DEC-002. Each overturned passage stays in DEC-0
 
 **Why a tool reads them there, by permanent id.** The check reads every part by the id its structure gives it (DEC-001 point 1). So a tool that reads a text there reads what the check holds, and a relabelled part reads the same. DEC-003 point 3 named this as the next step for the capability's tools.
 
-**Why only the texts.** A tool needs a few texts: the readers point carries an actor's needs, and the overview shows who an actor is. Friction needs a requirement's obligation. The rest of a body explains, and no tool needs it. Kept from tools, it stays free to be rewritten for its readers.
+**Why only the texts.** A tool needs a few texts: the readers point carries an actor's needs, and the overview shows who an actor is. Friction needs a change to what a requirement obliges. The rest of a body explains, and no tool needs it. Kept from tools, it stays free to be rewritten for its readers.
 
 **Why a missing part gives no text, and no finding.** The format rule holds a part's presence where it binds (DEC-001 point 1). A tool that failed on a missing part would hold it everywhere else too, and part of one rule would be enforced two ways (COR-051). Read as absent, a missing part leaves each tool an answer, such as an empty cell in the overview.
 
@@ -183,15 +185,15 @@ This record partially supersedes DEC-002. Each overturned passage stays in DEC-0
 - **A label gone wrong.** Where the format rule does not bind, a part whose label is misspelled reads as absent. Once its fingerprint is written again, it follows none of that part's text, and no change to the text fires a revisit.
 - **What the state supplies.** A project's tightening that adds a label can end a part earlier, in a requirement that already holds that bold text. A place that comes to declare a link form can set aside a link a text already holds. Either way the value stops verifying, and writing it again fires that requirement's revisits once.
 - **Text that reads as markup.** A text in front matter may hold characters Markdown reads as markup in a body, such as a tag. Moved word for word, it may show differently. A person who escapes it, in a change of its own, fires its revisits once.
-- **One more command.** Each edit of a requirement's texts runs the command that writes its fingerprint, as an edit that names a term runs the link command. Validation names it.
+- **One more command.** Each edit of a requirement's texts runs the command that writes its fingerprint. An edit that names a term runs the command that links terms in the same way. Validation names each.
 - **Conflicts.** Two branches that edit one requirement's texts conflict on its `obligation` line. The command, run again on the merged text, mends it.
 - **Old versions kept.** The capability keeps the code of each version of the form it shipped.
 - **A value no reviewer reads.** A change to a requirement's texts changes a hash. The reviewer reads the texts in the change, as for any change of content.
-- **A move flags what rests on it, once.** Moving a text changes its artefact's content. So the change that moves it answers each use case and journey that lists a moved requirement. It also answers each view that explains a moved term, and each artefact that anchors a moved actor.
+- **A move flags what rests on it, once.** Moving a text changes its artefact's content. So the change that moves it answers each use case and journey that lists a moved requirement. It also answers each view that explains a moved term, and each artefact that anchors a moved actor. Once the moved texts take links, a view's list of what is built on its concepts changes too (DEC-004 point 7). That flags what anchors the view.
 - **One upgrade across both steps.** A project that skips the fingerprint's release, and takes both in one upgrade, sees each requirement's revisits fire once, in that change. The field is absent at its base, so nothing in the core can spare it.
 - **Answered twice.** A project that takes the steps one at a time answers what anchors each requirement twice. It answers once when the fingerprint is added, and once when the texts move.
 - **Each adopter's own move.** A project's analysis moves by a migration, and the project answers what each move flags.
-- **Data only front matter shows.** A reader meets some data only in front matter, such as the names a term replaces. The record that lets an analysis file keep its data in a sidecar settles how a reader still sees it.
+- **Data only front matter shows.** A reader meets some data only in front matter, such as the names a term replaces. A later record of this capability that allows an analysis file a sidecar settles how a reader still sees it.
 
 ### Alternatives considered
 
@@ -199,11 +201,11 @@ This record partially supersedes DEC-002. Each overturned passage stays in DEC-0
 - **The three requirement texts kept in data, and the rest moved.** Not taken. It was the fallback, had neither the fingerprint nor a core hook been taken. A reader would still meet a requirement's obligation in a table.
 - **A core hook that asks a component whether its parts changed.** Not taken. It refines COR-050 point 16, and needs the backbone's work, for what one field gives.
 - **A trigger on any change to a requirement's content.** Rejected. A reworded reason, or a test named again, would ask for a revisit of every anchor.
-- **A fingerprint of the text as written.** Rejected. Moving a text, or the link command's run, would change it, and fire every revisit.
+- **A fingerprint of the text as written.** Rejected. Moving a text, or a run of the command that links terms, would change it, and fire every revisit.
 - **A form read from a rendering of each home.** Rejected. The front matter's parser and Markdown read the same characters differently, so a text moved word for word could change its value.
 - **A form that also sets aside case and punctuation.** Rejected. Each can change what a text obliges.
 - **A form fixed for good, with no version.** Rejected. Any change to it would fire every revisit at once.
-- **The link forms fixed in each version.** Not taken. They would have a second home beside the places' declarations. A new form the command writes would then count as written, and fire the revisits of each text that holds one.
+- **The link forms fixed in each version.** Not taken. They would have a second home beside the places' declarations. A new form the command that links terms writes would then count as written, and fire the revisits of each text that holds one.
 - **A fingerprint for each text.** Not taken. One field is one trigger, and the link names a list of fields either way.
 - **The fingerprint inside the requirement's friction block.** Rejected. The core's signal reads a source's own fields, never its block (COR-050 point 16).
 - **The fingerprint checked only where the format rule binds.** Rejected. Friction reads it wherever the analysis lies, so a stale value would hide a changed obligation there.
@@ -221,12 +223,12 @@ This record partially supersedes DEC-002. Each overturned passage stays in DEC-0
   - the fingerprint on each requirement, the command that writes it and its check, with a migration that writes it for adopters
   - each text read in either home, the trigger moved to `obligation`, and each reader of a text following it
   - a command that moves an artefact's texts into its body, and a stamp that writes them there
-  - the end of the data home: the fields and `summary` leave the schemas, and a migration moves an adopter's texts and its own structures' hints (COR-010)
+  - the end of the data home: the fields and `summary` leave the schemas. A migration moves an adopter's texts and its own structures' hints (COR-010).
 - **Adding `obligation`** changes each requirement's content once, so the change that adds it answers what anchors each requirement. Its migration writes the field on withdrawn requirements too.
-- **The releases.** The release that moves the trigger comes after one that ships the fingerprint alone, which the build holds as a gate on the release. It tells a project that skips the earlier one what that costs.
+- **The releases.** The release that moves the trigger comes after one that ships the fingerprint alone (point 9). The later release tells a project that skips the earlier one what skipping costs.
 - **The check** holds a term's heading to its id and its name, whatever any rule's status, as it holds every other kind's heading (point 2). A glossary that passed before may fail, so it lands with the end of the data home, the capability's breaking change (DEC-001 point 1).
 - **The overview** reads the first sentence of each actor's opening, so the version its fingerprint carries rises (DEC-003 point 8).
-- **The link command** links the texts point 8 names, and leaves the needs plain.
+- **The command that links terms** links the texts point 8 names, and leaves the needs plain.
 - **`SAN`'s rules** that name a text read it in the body, once the data home ends. A project's own rules that read a text follow.
 - **The authoring skill and the capability's agent** teach the texts in the body.
 - **DEC-002** is partially superseded, as "What this overturns, and what stands" lists. DEC-001 points 1 and 2, DEC-003 points 3 and 8, DEC-004 point 7 and DEC-005 point 3 name what this record adds to them.

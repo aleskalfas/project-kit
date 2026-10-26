@@ -15,7 +15,7 @@ An analysis holds relations a reader grasps faster in a picture. A diagram drawn
 - which use case follows from which
 
 [software-analysis:DEC-001-software-analysis-discipline] and [software-analysis:DEC-002-analysis-requirements] already decide what such a picture can rest on:
-- **A tool reads data from front matter.** A body's text serves readers and the check, never another tool, save the texts a tool reads by their parts' permanent ids (DEC-001 point 1, refinement per [software-analysis:DEC-006-text-in-body]).
+- **A tool reads data from front matter.** A body's text serves readers and the check, never another tool (DEC-001 point 1). The exceptions are the texts a tool reads by their parts' permanent ids (refinement per [software-analysis:DEC-006-text-in-body]).
 - **What meets a requirement is computed,** never stored on the requirement (DEC-002 point 7).
 - **Views of the solution stay outside the analysis.** A context view names the analysis's actors by id, and states none of their facts (DEC-001 point 11).
 - **A use case names what makes each precondition true,** optionally as data in `after` (DEC-001 point 1).
@@ -63,7 +63,7 @@ An analysis artefact may hold a diagram in its body, written as a Mermaid fence.
 
 The capability's diagrams are drawn from the analysis's front matter, as every tool reads it (DEC-001 point 1).
 - **What follows:** they draw relations, never a use case's main path or a journey's seams, which lie in the body.
-- **The next step:** the capability's own queries are to read a body's parts by their permanent id, as its check already reads them. A diagram of a use case's path, or of a journey's seams, comes with it. The change that builds it refines DEC-001 point 1. A tool reads an artefact's texts so, such as a term's definition (refinement per [software-analysis:DEC-006-text-in-body]).
+- **The next step:** the capability's own queries are to read a body's parts by their permanent id, as its check already reads them. A diagram of a use case's path, or of a journey's seams, comes with it. The change that builds it refines DEC-001 point 1. An artefact's texts, such as a term's definition, are read so (refinement per [software-analysis:DEC-006-text-in-body]). A use case's path and a journey's seams are not, and their diagrams wait for that step.
 
 ### 4. What it draws
 
@@ -130,7 +130,11 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
     - **the diagrams:** one line that names the query, as it is run for this analysis, and its subjects. It ends reference on every page, so every page has the heading "Reference".
   - **a closing line:** the command writes the page from the analysis, so a reader changes the analysis, never the page
 - **Complete, or no answer.** The command writes no overview where the query could not draw each of its diagrams in full (point 7). The two share one test, so the page is written only where the query it names answers. Validation fails such a file in any case.
-- **Front matter, the links to the terms, and who each actor is.** The overview reads the analysis's front matter and the paths of its files, as DEC-001 point 1 allows a tool. Of a body, it reads only the links to the glossary's entries a use case holds, which the links command writes and the check holds ([software-analysis:DEC-004-domain-model-views] point 7). It also reads the first sentence of each actor's opening, a text (refinement per [software-analysis:DEC-006-text-in-body]). A requirement's area is read from its path. Beyond the analysis's files, it reads the capability's configuration and the front matter of the record its purpose names.
+- **Front matter, the links to the terms, and who each actor is.** The overview reads the analysis's front matter and the paths of its files, as DEC-001 point 1 allows a tool. Of a body, it reads two things:
+  - the links to the glossary's entries a use case holds, which the links command writes and the check holds ([software-analysis:DEC-004-domain-model-views] point 7)
+  - the first sentence of each actor's opening, a text (refinement per [software-analysis:DEC-006-text-in-body])
+
+  A requirement's area is read from its path. Beyond the analysis's files, it reads the capability's configuration and the front matter of the record its purpose names.
 - **Its purpose.** What a component is for is a decision, so a decision record states it. The analysis's entry in the capability's configuration points to that record, `purpose: <record id>`, as the entry names the analyses it builds on.
   - **Which record:** a decision record the project owns, named as a record anchor names one, such as `PRJ-004` or `billing:DEC-001`. That is a project or an architecture record, or, for a capability's analysis, a decision of that capability.
   - **Never a record a release changes.** A core record, or another capability's decision, reaches an adopting project with a release. A new title there would leave the overview stale after an upgrade, so the check refuses such a pointer.
@@ -150,7 +154,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
 
   The areas shown are those that hold a use case or a requirement in force, and those the configuration gives a goal. An area is matched by its folder's name, among the use cases, the requirements and the goals alike.
 - **Who takes part:** one table, with a row for each actor in force. It shows the actor, linked, who it is, and the areas it acts in.
-  - **Who it is:** the first sentence of the actor's opening, its words alone, since a link written for the actor's folder would not resolve from the overview's (DEC-001 point 1). The cell is empty where the opening holds no sentence.
+  - **Who it is:** the first sentence of the actor's opening, its words alone (refinement per [software-analysis:DEC-006-text-in-body]). A link written for the actor's folder would not resolve from the overview's. The cell is empty where the opening holds no sentence.
   - **The areas it acts in:** those of the use cases in force where the actor is the main actor, its `actor`, or takes part, its `other-actors`. They are computed from the use cases' front matter, so the table states no fact of its own.
   - **A use case in no area** is shown as such beside the areas. In an analysis without areas, the cell points to its use cases.
   - **An actor of another analysis.** An analysis that builds on another may name that analysis's actors (DEC-001 point 2). Its table lists each one its glossary's head lists, or a use case names, after its own actors. It shows the actor by its id with that analysis and the name the head gives it, and the areas it acts in. Who it is says which analysis it belongs to, and whether the head lists it. It reads no file of the other analysis.
@@ -251,7 +255,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why each area shows its concepts.** A reader who starts from an area asks which concepts its use cases are built on, and where each is explained (DEC-005 point 3). The maintainer asked for it on 26 October, reviewing a change to project-management's analysis as a newcomer would read it ([project-kit#2104](https://github.com/aleskalfas/project-kit/issues/2104)).
 - **Read from the links to the terms.** They are the one reading the analysis holds of which terms an artefact uses ([software-analysis:DEC-004-domain-model-views] point 7). The links command writes them and the check holds them, so the overview reads a copy that never drifts.
-- **Only those links of a body.** A body's other text serves readers alone (DEC-001 point 1). The overview reads no part of a use case's other text, so a reworded statement that moves no link leaves it fresh. Of an actor, it reads the first sentence of its opening, its one text the table shows (refinement per [software-analysis:DEC-006-text-in-body]).
+- **What it reads of a body.** A body's other text serves readers alone (DEC-001 point 1). Of a use case, the overview reads only the links, so a reworded statement that moves no link leaves it fresh. Of an actor, it reads the first sentence of its opening, the one text the table shows (refinement per [software-analysis:DEC-006-text-in-body]).
 - **The order of the commands.** A mention that comes to lead an area to another view makes the overview stale once the links command links it. So the links command runs first, then the overview's, and the check names each where its output is stale.
 - **Its cost.** Where most artefacts use the lowest views' concepts, each area lists most views, as four of the core's five areas did on 26 October. The line still says where each area's words are explained.
 
