@@ -30,6 +30,7 @@ reads:
     - .pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md
     - .pkit/capabilities/software-analysis/decisions/DEC-002-analysis-requirements.md
     - .pkit/capabilities/software-analysis/decisions/DEC-004-domain-model-views.md
+    - .pkit/capabilities/software-analysis/decisions/DEC-005-finding-functionality.md
     - .pkit/capabilities/software-analysis/README.md
     - .pkit/project/config.yaml
 ---
@@ -73,7 +74,7 @@ Verify each record in `gates:` is `accepted`; halt if any is `proposed` or `supe
 
 A kind's parts are chosen before its first artefact or record is written, with `choose-templates.md`. The shipped parts are a starting point the project reviews, never a default it skips (DEC-001 point 1).
 
-For a part of the product not yet described, follow `build-analysis.md`, which builds it from its concepts up (DEC-001 point 12): the glossary, the domain-model views and the actors first, the journeys last. Open the matching sub-procedure in this folder and follow it. The framing below applies to all of them.
+For a part of the product not yet described, follow `build-analysis.md`, which builds it from its concepts up (DEC-001 point 12): the glossary, the domain-model views and the actors first, the journeys last. It plans the use cases' functional areas, and writes a journey for each path, as part of building ([software-analysis:DEC-005-finding-functionality]). Open the matching sub-procedure in this folder and follow it. The framing below applies to all of them.
 
 Judging whether existing artefacts still hold after a change is the capability's `analysis-resolver` agent's work. This skill writes what it, or you, decided.
 

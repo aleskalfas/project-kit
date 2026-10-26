@@ -167,7 +167,7 @@ friction:
     - location: analysis
       path: use-case-model/use-cases
       type: use-case
-      description: The use cases, one file each, in folders by functional area when the project groups them.
+      description: The use cases, one file each, in a folder for each functional area (DEC-005 point 1).
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
