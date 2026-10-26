@@ -36,8 +36,9 @@ strikethrough (`formats.prose`):
   first word is an installed capability's name or alias, and the backbone's
   otherwise.
 
-A record or a rule is mentioned only where it resolves, as the backbone resolves
-it (`pkit refs lookup`). A page's own file is no mention.
+A record is mentioned only where the backbone's resolver of records resolves it
+(`pkit refs lookup`), and a rule only where the backbone's discovery reads it
+among the artefacts (`artefacts`). A page's own file is no mention.
 
 **What stands on each**, among the page's anchors as the backbone resolves them
 (`artefacts`: the files each path anchor stands on, and each part an anchor
@@ -201,15 +202,22 @@ class Command:
 
 @dataclass(frozen=True)
 class Documents:
-    """The document artefacts the places hold: each one's file, and its file by its id."""
+    """The artefacts the places hold, as discovery reads them: each document's file, a
+    document's file by its id, and each rule's file by the rule's id."""
 
     paths: frozenset[str] = frozenset()
     ids: Mapping[str, str] = field(default_factory=dict)
+    rules: Mapping[str, str] = field(default_factory=dict)
 
     @classmethod
     def of(cls, artefacts: Iterable[Artefact]) -> Documents:
-        documents = [a for a in artefacts if not a.entry]
-        return cls(frozenset(a.path for a in documents), {a.id: a.path for a in documents})
+        listed = list(artefacts)
+        documents = [a for a in listed if not a.entry]
+        return cls(
+            frozenset(a.path for a in documents),
+            {a.id: a.path for a in documents},
+            {a.id: a.path for a in listed if a.rule},
+        )
 
 
 Lookup = Callable[[Sequence[str]], Mapping[str, str | None]]
@@ -217,9 +225,9 @@ Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
 def look_up(root: Path, run: Runner = subprocess.run) -> Lookup:
-    """The backbone's resolver of records' and rules' ids, through `pkit refs lookup
-    --json`: each id the location it resolves to — a file, or a rule's file and id
-    joined by `#` — or `None`. Raises Unreadable when there is no answer to read."""
+    """The backbone's resolver of records' ids, through `pkit refs lookup --json`:
+    each id the file it resolves to, or `None`. Raises Unreadable when there is no
+    answer to read."""
 
     def lookup(ids: Sequence[str]) -> Mapping[str, str | None]:
         if not ids:
@@ -298,7 +306,7 @@ def read(
             continue
         found, idle = _mentions(root, rel, text, installed)
         read_pages[rel] = (found, idle)
-        ids.update(m.record for m in found if m.record is not None)
+        ids.update(m.record for m in found if m.kind == RECORD and m.record is not None)
         artefact = pages[rel]
         if artefact is not None and artefact.anchors is not None:
             ids.update(value.split("#", 1)[0] for value in artefact.anchors.get(RECORD, ()))
@@ -309,7 +317,7 @@ def read(
         grounds = _grounds(pages[rel], resolved, documents)
         seen: set[tuple[Any, ...]] = set()
         named: set[str] = set()
-        for mention in _resolved(found, resolved):
+        for mention in _resolved(found, resolved, documents.rules):
             key = (mention.kind, mention.file, mention.section, mention.points, mention.words)
             if key not in seen:
                 seen.add(key)
@@ -496,9 +504,7 @@ def _command(text: str, line: int, start: int) -> Mention | None:
     return Mention(COMMAND, " ".join(["pkit", *named]), line, start, words=named)
 
 
-def _records(
-    text: str, line: int, capability: str | None, known: Collection[str]
-) -> list[Mention]:
+def _records(text: str, line: int, capability: str | None, known: Collection[str]) -> list[Mention]:
     """The records a line names, each with the points written after it."""
     found: list[Mention] = []
     for match in _RECORD.finditer(text):
@@ -541,17 +547,23 @@ def _points(after: str) -> tuple[str, ...]:
     return tuple(re.findall(_POINT, match.group("list")))
 
 
-def _resolved(found: Iterable[Mention], resolved: Mapping[str, str | None]) -> list[Mention]:
-    """The mentions with each record's and rule's file, as the backbone resolves it. A
-    record or a rule it does not resolve is no mention, and a link to a file no
+def _resolved(
+    found: Iterable[Mention], resolved: Mapping[str, str | None], rules: Mapping[str, str]
+) -> list[Mention]:
+    """The mentions with each record's and rule's file, as the backbone resolves it: a
+    record through its resolver, a rule as its discovery reads it among the artefacts.
+    A record or a rule it does not resolve is no mention, and a link to a file no
     record resolves to is a path again."""
     kept: list[Mention] = []
     for mention in found:
         if mention.kind not in (RECORD, RULE):
             kept.append(mention)
             continue
-        location = resolved.get(mention.record or "")
-        file = location.split("#", 1)[0] if location is not None else None
+        if mention.kind == RULE:
+            file = rules.get(mention.name)
+        else:
+            location = resolved.get(mention.record or "")
+            file = location.split("#", 1)[0] if location is not None else None
         if file is None or (mention.file is not None and mention.file != file):
             if mention.file is not None:
                 kept.append(replace(mention, kind=PATH, name=mention.file, record=None))

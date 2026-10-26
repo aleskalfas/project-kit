@@ -301,7 +301,7 @@ mention(s) a page's anchors do not cover, each with an anchor that would cover i
 - **A rule**: `RS-<SET>-NNN`, bare or after its component, as in `[living-docs:RS-LDOC-003]`.
 - **A command**: an inline code span that opens with `pkit`, or `uv run pkit`, and a word. Its words run to the first that is not a lowercase word, so `pkit friction check --base main` is `pkit friction check`.
 
-A record or a rule counts only where `pkit refs lookup` resolves it, and a page never mentions itself.
+A record counts only where `pkit refs lookup` resolves it, a rule only where `pkit friction artefacts --json` lists it, and a page never mentions itself.
 
 **What covers each.** The validator reads the page's anchors as the backbone resolves them: the files each path anchor stands on, `path_anchors` in `pkit friction artefacts --json`, and each part an anchor names, `part_anchors`.
 

@@ -30,8 +30,8 @@ reads through the backbone's read commands: the roots, the places and the
 documents in them through `pkit friction artefacts`, where the rules bind
 through `pkit rule-sets reach`, only when there is a page, the readers
 point through `pkit connections resolve`, only when some page names a reader
-where RS-LDOC-003 binds, and the records and rules a page mentions or anchors
-through `pkit refs lookup`, only where RS-LDOC-001 binds on some page.
+where RS-LDOC-003 binds, and the records a page mentions or anchors through
+`pkit refs lookup`, only where RS-LDOC-001 binds on some page.
 
 Usage:
   pkit living-docs validate           the summary, the findings, the unclassified documents,

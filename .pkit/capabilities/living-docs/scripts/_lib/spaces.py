@@ -1159,14 +1159,14 @@ def _mention_findings(
             Finding(
                 REPORT,
                 BACKBONE_CONFIG,
-                f"the records and rules the pages mention cannot be resolved — "
+                f"the records the pages mention cannot be resolved — "
                 f"{str(exc).rstrip('.')}. No mention is read until they can: {CAPABILITY} "
                 f"resolves them through the backbone's `pkit refs lookup --json` (DEC-001 "
                 f"point 6).",
                 check="mentions-unread",
             )
         )
-        return "mentions: not read — the records and rules cannot be resolved."
+        return "mentions: not read — the records cannot be resolved."
     outcome.unanchored_mentions.extend(report.unanchored)
     by_page: dict[str, list[mentions.Unanchored]] = {}
     for found in report.unanchored:
