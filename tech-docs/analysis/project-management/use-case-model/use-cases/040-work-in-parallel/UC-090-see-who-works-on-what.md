@@ -92,6 +92,6 @@ pkit:
 
 What the planner needs here that no accepted record decides yet:
 
-- **The fixers' proposals across clones.** Each clone keeps the proposals its own runs made, and `land-work` prints only that clone's count ([project-management DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-the-person)). So the planner sees the proposals only by visiting each agent.
+- **The fixers' proposals across clones.** Each clone keeps the proposals its own runs made, and `land-work` prints only that clone's count ([project-management DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)). So the planner sees the proposals only by visiting each agent.
 - **One view of all that waits on a person,** such as heads ready to merge and records waiting for acceptance. The maintainer decided on 17 October that one view lists all of that (#1682), and no record holds the decision yet.
 - **Where each agent is heading,** beside what the agent owns. The pilot analysis proposed a command that shows where each agent is heading, under [EPIC](../../../glossary.md#term-epic--epic) #943, and no record decides on that command.
