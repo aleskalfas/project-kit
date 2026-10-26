@@ -1,7 +1,7 @@
 ---
 id: DEC-005
 title: An analysis leads its reader to each function by its areas, its journeys and its concepts
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
