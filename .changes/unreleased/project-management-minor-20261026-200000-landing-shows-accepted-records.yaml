@@ -1,0 +1,15 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  `land-work` shows the person who authorises a merge each accepted decision
+  record the change alters or removes, with each point it adds, alters or
+  retires, among the findings to judge, and counts it on the `ready:` line. The
+  list comes from the backbone's `pkit decisions check-diff --json --head`,
+  derived at the pinned head against the pull request's base, and a list that
+  cannot be read stops the run with nothing merged. It stands for the head, so
+  a `--yes` for that head covers it. At a later head an earlier head's
+  authorisation covers, a list other than the one at the head authorised stops
+  the run at `ready:`.

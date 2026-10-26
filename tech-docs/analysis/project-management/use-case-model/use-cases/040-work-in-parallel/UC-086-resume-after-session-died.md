@@ -10,9 +10,6 @@ requirements:
 after:
   - [UC-084]
 shortfalls:
-  - at: 1
-    issue: "#2141"
-    record: project-management:DEC-059#4
   - at: 2
     issue: "#521"
     record: project-management:DEC-035#7
@@ -70,10 +67,7 @@ pkit:
 
 **Main path:**
 
-1. The new session takes up the clone's [seat](../../../glossary.md#term-seat--seat), since the clone's key outlived the session that died ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [DEC-058 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)). In the first mode, a seat stays taken until the seat is released, so no other clone took the seat meanwhile ([DEC-059 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released)).
-
-> [!WARNING]
-> **Not built yet:** no clone holds a seat, and a new session reads the number typed into its clone. DEC-059 point 4 decides that a new session takes up its clone's seat, and #2141 tracks it.
+1. The new session takes up the clone's [seat](../../../glossary.md#term-seat--seat) with `pkit pm take-seat`, since the clone's key outlived the dead session ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat) and [DEC-058 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)). In the first mode, a seat stays taken until the seat is released, so no other clone took the seat meanwhile ([DEC-059 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released)).
 
 2. The worker lists the issues the worker's [instance](../../../glossary.md#term-instance--instance) owns, with the signed listing narrowed to that instance's issues ([DEC-035 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#7-listings-show-every-issue-signed-by-owner)).
 

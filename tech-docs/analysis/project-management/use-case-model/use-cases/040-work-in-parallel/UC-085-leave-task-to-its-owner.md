@@ -15,9 +15,6 @@ shortfalls:
   - at: 2
     issue: "#520"
     record: project-management:DEC-035#6
-  - at: 2
-    issue: "#2141"
-    record: project-management:DEC-059#6
   - at: 3
     issue: "#520"
     record: project-management:DEC-035#6
@@ -85,10 +82,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `start-work` reads no owner. DEC-035 point 6 decides that an ordinary command reads the owner first, and #520 tracks it.
 
-> [!WARNING]
-> **Not built yet:** no command confirms a clone's seat. DEC-059 point 6 decides that every command acting as an [instance](../../../glossary.md#term-instance--instance) confirms the clone's seat before writing, and #2141 tracks it.
-
-3. Another instance owns the Task. The system refuses the start, names that instance, and writes nothing (DEC-035 point 6).
+3. Another [instance](../../../glossary.md#term-instance--instance) owns the Task. The system refuses the start, names that instance, and writes nothing (DEC-035 point 6).
 
 > [!WARNING]
 > **Not built yet:** `start-work` starts the Task again for a second instance under the same account. DEC-035 point 6 decides the refusal, and #520 tracks it.
@@ -121,7 +115,7 @@ pkit:
 - **3c.** The owner's ownership no longer counts, since the ownership lapsed or the owner's [seat](../../../glossary.md#term-seat--seat) was released. The system does not refuse, and the worker takes the Task over, as `UC-084` variant 2b describes ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again) and [DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 
 > [!WARNING]
-> **Not built yet:** no ownership lapses or stops counting. DEC-059 point 9 decides that an ownership that no longer counts is no ownership, and #2136 tracks it.
+> **Not built yet:** no ownership lapses. DEC-059 point 9 decides that an ownership that lapsed is no ownership, and #2136 tracks it.
 
 **Postconditions:** The [Task](../../../glossary.md#term-task--task) has one [owner](../../../glossary.md#term-owner--owner). The worker works on no Task that the worker's [instance](../../../glossary.md#term-instance--instance) does not own, unless a person set the refusal aside.
 

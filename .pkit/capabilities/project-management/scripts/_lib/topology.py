@@ -14,17 +14,30 @@ Three readings
   the topology from the default branch, at the commit the backbone resolves it
   to (``_lib/default_branch``, COR-054 point 5), and never from the branch or the
   working tree (point 1). The topology it returns names the reference and the
-  commit it read. It returns None where that commit declares no topology, or the
-  default branch has no commit yet, and raises :class:`Unresolved` where the
-  default branch resolves to no commit, or git cannot read the file there.
+  commit it read, and :func:`name_once` says that commit once in a run, however
+  many of the run's commands read it. It returns None where that commit declares
+  no topology, or the default branch has no commit yet, and raises
+  :class:`Unresolved` where the default branch resolves to no commit, or git
+  cannot read the file there.
 - :func:`read_working_tree` reads the change's own file: the command that creates
   the seats' state issues writes into it, and the check judges it.
 - :func:`read_at` reads the topology at a commit, such as a check's base.
 
 :func:`writers_at` reads the members at the same commit, as the state-issue seam
-takes them from its caller ([pkit:ADR-071] points 1 and 3). The seats' holders,
-the clone's key and place and the time of reading join that snapshot with the
-commands that take and release seats.
+takes them from its caller ([pkit:ADR-071] points 1 and 3).
+
+One run's snapshot
+------------------
+:func:`snapshot` builds one run's inputs for both seams ([pkit:ADR-071] points 1
+and 8): the topology the default branch holds, the members at its commit, and
+this clone's account, key and place (DEC-058 point 5). Its :class:`Snapshot`
+reads a seat's holder from the seat's state issue, through the state-issue seam,
+the first time the run asks for that seat, and keeps it for the rest of the run.
+So one run judges every claim against one state of the seats. Nothing is kept
+across runs. The commands that take, release and list seats read it, and so does
+instance ownership, which confirms the clone's seat before a command writes
+(DEC-059 point 6) and passes each seat's holder to the ownership fold
+([pkit:ADR-041] point 7). The time of reading joins it when a claim lapses.
 
 The check
 ---------
@@ -37,24 +50,27 @@ substrate (point 9), and each seat of the base deleted or moved rather than
 retired. :func:`check_change` reads all of it for one run, the base as the
 backbone resolves it, with COR-054's override, and says which commit it read.
 
-Reads no GitHub, and writes nothing. Every git call stays in this clone, asking
-no remote for what it lacks.
+The file's readings and the check read no GitHub, and write nothing. Every git
+call stays in this clone, asking no remote for what it lacks. A snapshot reads
+GitHub only through the state-issue seam.
 """
 
 from __future__ import annotations
 
 import os
 import re
+import socket
 import subprocess
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, MutableMapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 try:
-    from _lib import default_branch, state_issues, workstreams
+    from _lib import default_branch, provenance, state_issues, workstreams
 except ImportError:  # pragma: no cover - a test that puts `_lib` itself on the path
     import default_branch  # type: ignore[no-redef]
+    import provenance  # type: ignore[no-redef]
     import state_issues  # type: ignore[no-redef]
     import workstreams  # type: ignore[no-redef]
 
@@ -110,6 +126,11 @@ UNRESOLVED = "unresolved"
 #: Git's environment for a reading that stays in this clone: a partial clone
 #: fetches an object it lacks unless told not to.
 _OFFLINE = {"GIT_NO_LAZY_FETCH": "1", "GIT_ALLOW_PROTOCOL": "none"}
+
+#: The commit of the default branch this run has named (:func:`name_once`). It
+#: lives in the environment, so each command a command runs, such as the
+#: ``move-issue`` that ``start-work`` runs, inherits it.
+NAMED_ENV = "PKIT_TOPOLOGY_NAMED"
 
 #: A git runner: takes the arguments after ``git``, returns what
 #: ``subprocess.run`` returns.
@@ -471,6 +492,23 @@ def read(
     return read_at(capability_root, settled(capability_root, run=run), git=git)
 
 
+def name_once(tree: Topology, environ: MutableMapping[str, str] | None = None) -> str | None:
+    """Where ``tree`` was read, in words a line can carry, the first time this
+    run reads that commit, or None where the run named it already.
+
+    A clone that has not fetched the default branch reads what it last fetched,
+    and says which commit it read (DEC-059 point 1). One run says it once,
+    however many of its commands read the topology. The commit named is kept in
+    ``environ``, this process's environment unless a caller gives another, which
+    each command the run starts inherits. A reading at another commit names that
+    commit. A topology read from no commit names nothing."""
+    env = os.environ if environ is None else environ
+    if tree.commit is None or env.get(NAMED_ENV) == tree.commit:
+        return None
+    env[NAMED_ENV] = tree.commit
+    return tree.where()
+
+
 def read_at(capability_root: Path, at: Settled, *, git: Git | None = None) -> Topology | None:
     """The topology the commit ``at`` holds, or None where it holds none.
     Raises :class:`Unresolved` where git cannot read it there."""
@@ -552,6 +590,160 @@ def _git(root: Path) -> Git:
 def _said(proc: Any) -> str:
     lines = [line for line in str(getattr(proc, "stderr", "") or "").splitlines() if line.strip()]
     return lines[-1].strip() if lines else f"exit {getattr(proc, 'returncode', '?')}"
+
+
+# ---- one run's snapshot (ADR-071 points 1 and 8) ---------------------------------
+
+#: What a seat's state issue says of it: a clone holds it, it is free, or it
+#: could not be read, which no reader takes for free.
+HELD = "held"
+FREE = "free"
+UNREAD = "unread"
+
+
+@dataclass(frozen=True)
+class SeatState:
+    """Who holds one seat, as this run read it from the seat's state issue.
+
+    ``state`` is HELD, FREE or UNREAD. ``holder`` is the clone that holds it, and
+    ``read`` the read that found it. ``cause`` says why an unread seat was not
+    read: no state issue named, or a read that did not end."""
+
+    seat: Seat
+    state: str
+    holder: state_issues.Holder | None = None
+    read: state_issues.StateRead | None = None
+    cause: str | None = None
+
+    def held_by(self, clone: state_issues.Clone) -> bool:
+        """Whether ``clone``, by its account and key, holds the seat."""
+        return (
+            self.state == HELD
+            and self.holder is not None
+            and bool(clone.account and clone.key)
+            and self.holder.is_clone(clone.account, clone.key)
+        )
+
+    def said(self) -> str:
+        """The seat's holder, in words a line can carry."""
+        if self.state == FREE:
+            return "free"
+        if self.state == UNREAD or self.holder is None:
+            return f"unread ({self.cause})"
+        return (
+            f"held by @{shown(self.holder.account)}, clone {shown(self.holder.clone)}, at "
+            f"{shown(self.holder.place) or 'an unnamed place'}"
+        )
+
+
+def shown(value: str) -> str:
+    """``value`` on one line, as a terminal shows it: each character a terminal
+    would act on, such as a newline or an escape, written as its escape. A
+    value read from GitHub never starts a line of its own, or moves the cursor."""
+    return "".join(c if c.isprintable() else repr(c)[1:-1] for c in value)
+
+
+class Snapshot:
+    """One run's reading of the topology, and the inputs both seams take from it
+    ([pkit:ADR-071] points 1 and 8).
+
+    It holds the topology the default branch holds, the run of the state-issue
+    seam, with the members at the same commit, and this clone by its account,
+    key and place. :meth:`state` reads a seat's state issue the first time the
+    run asks for it, and keeps what it read until :meth:`learn` replaces it with
+    what a write of this run found."""
+
+    def __init__(
+        self, topology: Topology, run: state_issues.StateRun, clone: state_issues.Clone
+    ) -> None:
+        self.topology = topology
+        self.run = run
+        self.clone = clone
+        self._states: dict[str, SeatState] = {}
+
+    def state(self, name: str) -> SeatState | None:
+        """Who holds the seat ``name``, or None where the topology has no such seat."""
+        seat = self.topology.seat(name)
+        if seat is None:
+            return None
+        if name not in self._states:
+            self._states[name] = self._read(seat)
+        return self._states[name]
+
+    def states(self) -> tuple[SeatState, ...]:
+        """Every seat's state, in the topology's order: one read for each seat."""
+        return tuple(s for s in (self.state(seat.name) for seat in self.topology.seats) if s)
+
+    def learn(self, seat: Seat, found: state_issues.StateRead | None) -> SeatState:
+        """Keep what a write's last read found of ``seat`` for the rest of the run."""
+        state = (
+            _seat_state(seat, found)
+            if found is not None
+            else SeatState(seat, UNREAD, cause="its state issue was not read again")
+        )
+        self._states[seat.name] = state
+        return state
+
+    def _read(self, seat: Seat) -> SeatState:
+        if seat.state_issue is None:
+            return SeatState(seat, UNREAD, cause="the topology names no state issue for it")
+        return _seat_state(
+            seat, state_issues.read(seat.state_issue, SEAT_KIND, seat.name, self.run)
+        )
+
+
+def _seat_state(seat: Seat, found: state_issues.StateRead) -> SeatState:
+    if found.outcome != state_issues.READ or found.fold is None:
+        cause = found.cause or found.outcome
+        return SeatState(seat, UNREAD, read=found, cause=cause)
+    holder = found.fold.holder
+    return SeatState(seat, FREE if holder is None else HELD, holder=holder, read=found)
+
+
+def place(capability_root: Path, *, home: Path | None = None) -> str:
+    """Where this clone lies, in words a person reads: its machine and its folder
+    (DEC-058 point 5). A folder under the home folder is written from `~`, so
+    the claim, which a public repository shows to anyone, names no user."""
+    try:
+        machine = socket.gethostname() or "an unnamed machine"
+    except OSError:
+        machine = "an unnamed machine"
+    folder = repo_root(capability_root).resolve()
+    try:
+        base = (home if home is not None else Path.home()).resolve()
+        shown_folder = f"~/{folder.relative_to(base).as_posix()}"
+    except (RuntimeError, ValueError, OSError):
+        shown_folder = folder.as_posix()
+    return f"{machine}:{shown_folder}"
+
+
+def snapshot(
+    capability_root: Path,
+    *,
+    gh: state_issues.Gh,
+    account: str | None,
+    key: str | None,
+    run: Callable[..., Any] = subprocess.run,
+    git: Git | None = None,
+    versions: Any = None,
+) -> Snapshot | None:
+    """This run's snapshot, or None where the default branch declares no topology.
+
+    ``gh`` runs each call of the state-issue seam, and ``account`` and ``key``
+    are this clone's GitHub account and its key, where it has them. The members
+    who may write on a seat's state issue are read at the commit the topology was
+    read at. Raises :class:`Unresolved` where the default branch, or the
+    members there, cannot be read."""
+    topology = read(capability_root, run=run, git=git)
+    if topology is None:
+        return None
+    at = Settled(topology.ref or "the default branch", topology.commit)
+    writers = writers_at(capability_root, at, git=git)
+    state_run = state_issues.StateRun(
+        gh, writers, versions if versions is not None else provenance.read_versions(capability_root)
+    )
+    clone = state_issues.Clone(account or "", key or "", place(capability_root))
+    return Snapshot(topology, state_run, clone)
 
 
 # ---- the check -----------------------------------------------------------------

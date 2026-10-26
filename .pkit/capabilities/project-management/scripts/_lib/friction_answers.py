@@ -381,6 +381,13 @@ def derive(head: str, base: str) -> Derivation:
     return Derivation(head, document=found, answers=tuple(_entries(found)), settings=settings)
 
 
+def refresh_base(base: str) -> str | None:
+    """Fetch `base` where it is a remote's, as `derive` does before the change check
+    reads it: why not, or None. Another reader of the change against that base, such
+    as the accepted records it alters (`accepted_records`), fetches it the same way."""
+    return _refresh_base(base)
+
+
 def _refresh_base(base: str) -> str | None:
     """Fetch the base the check will read where it is a remote's; why not, or None."""
     try:

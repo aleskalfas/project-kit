@@ -47,13 +47,22 @@ commands:
     help: Show the current team-membership roster and resolved invoker identity (read-only).
   set-instance:
     script: scripts/set-instance.py
-    help: "Set (or --show / --clear) this clone's numeric instance id — the opt-in, per-clone activation gate for instance ownership (DEC-035). Writes a git-ignored runtime file; a clone with no id set behaves as a single-clone repo."
+    help: "Set (or --show / --clear) this clone's numeric instance id — the opt-in, per-clone activation gate for instance ownership (DEC-035). Writes a git-ignored runtime file; a clone with no id set behaves as a single-clone repo. Refuses a number where the default branch holds a topology of seats, whose clones are numbered by their seats (DEC-059 point 6), and where the default branch cannot be resolved; --show also names the seat the clone took."
   create-seats:
     script: scripts/create-seats.py
     help: "Run on the change that adds seats to the topology (DEC-059 point 3): creates the state issue of each seat in project/topology.yaml that names none and is not retired, and writes its number into the file in the working tree, each as soon as it exists. Idempotent: a seat that names its state issue is left alone, and a state issue an earlier run created, or left half done, is found by its marker among the open issues and its number written. Who may write on a state issue comes from the members of the default branch; a run that cannot resolve the default branch creates nothing. Refuses a file with other problems check-topology reports. --dry-run prints the plan; asks before creating unless --yes."
   check-topology:
     script: scripts/check-topology.py
     help: "Check project/topology.yaml against the topology of the default branch, or of --base (DEC-059 points 1 to 3), and say which commit it read. Fails on a shape the schema refuses, a seat name used twice, more than one organizer seat, a seat with no state issue or two naming one, a scope naming an undeclared workstream or type, the label ownership substrate, a seat of the base deleted or moved rather than retired, and a base that cannot be resolved while the working tree holds a topology. A check of a change, read-only and offline."
+  take-seat:
+    script: scripts/take-seat.py
+    help: "Take a seat of the topology the default branch holds for this clone (DEC-059 point 4): the seat named, or the first free one, of --role where given, and only one that names the agent definition this session follows (--agent, or $PKIT_AGENT). A claim on the seat's state issue, whose first claim on a free seat holds; prints the commit read, and the seat's name, number, role and agent definition. A clone holds at most one seat: it takes up the one it holds, and releases a retired one first. Takes no seat where the default branch cannot be resolved, or the seat's state issue is not named or cannot be read. --dry-run prints the plan."
+  release-seat:
+    script: scripts/release-seat.py
+    help: "Release the seat this clone holds, or <name> --force --reason \"<why>\" a seat whoever holds it, the reason logged on its state issue (DEC-059 point 5). A release by force comes from the organizer seat's clone, or from a person, at a terminal or with --yes. A release frees every claim of the seat's clone, with no write to those issues. No seat is freed for silence: the tolerant mode is the only one built. --dry-run prints the plan."
+  seats:
+    script: scripts/seats.py
+    help: "List the seats of the topology the default branch holds, and say which commit it read (DEC-059 point 3): each seat's number, name, role, agent definition, scope, organizer or retired mark, state issue and holder, read from its state issue, with the seat this clone holds marked. Then names each open state issue of a seat that no seat names, for a person to close."
   decline-use-case-task:
     script: scripts/decline-use-case-task.py
     help: "Keep (or --show [--json] / --clear) the answer that declined the Task to author the use cases over an empty use-case set (DEC-054 point 5). Batch planning in this checkout then leaves the Task out until the next calendar day, in the machine's local time. Writes the time of the answer to a git-ignored runtime file; --show is read-only."
@@ -175,6 +184,9 @@ commands:
   start-work:
     script: scripts/start-work.py
     help: "Workflow wrapper (DEC-026): Backlog → In Progress. Creates branch + sets assignee; composes over move-issue."
+  next-task:
+    script: scripts/next-task.py
+    help: "Take the next ready Task from the shared pool (DEC-059 point 7) and start it, claimed, through start-work. Ready: an open Task in Backlog, with no owner and not assigned to another account, whose ## Dependencies section names no open issue by #N, or, in a project with a topology, a Task In Progress whose claim no longer counts. This clone's own Tasks in Backlog come first, then the shared pool, each the highest in priority first (DEC-012), then the lowest number, within the scope of the seat this clone holds; a clone with no seat, or a planner's seat, takes nothing in a project with a topology. Where another instance claims the Task first, the first claim holds, and this clone takes the next ready Task. --dry-run says which it would start; asks before starting unless --yes. Exit 5 when no Task is ready."
   create-draft:
     script: scripts/create-draft.py
     help: "Workflow wrapper (DEC-026): opens a draft PR for an in-progress branch. No issue-state transition."

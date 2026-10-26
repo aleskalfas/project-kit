@@ -1,18 +1,20 @@
 """An in-memory GitHub for the state-issue seam and the reader of comment logs.
 
 `FakeRepo` answers the `gh` calls `_lib/state_issues` and `_lib/comment_log`
-make: a page of an issue's comments and an author's access (`gh api`), a read
-of an issue, a listing of issues, a comment, a description written from a file,
-a new issue, and a reopen or a close. Every comment it is handed is authored by
-`author`, as GitHub authors a comment by the account `gh` runs as. No test
-reaches GitHub.
+make: a page of an issue's comments, an author's access and who opened an issue
+(`gh api`), a read of an issue, a listing of issues, a comment, a description
+written from a file, a new issue, a lock, and a reopen or a close. Every comment
+and issue it is handed is authored by `author`, as GitHub authors one by the
+account `gh` runs as. An issue a test adds is opened by `author` too, unless the
+test names its `opener`. No test reaches GitHub.
 
 `access` maps a login to the level GitHub would answer; a login it lacks
 answers 404. `failing` holds the verbs whose next call fails once (`"comment"`,
-`"edit"`, `"create"`, `"view"`, `"list"`, `"page"`, `"access"`, `"reopen"`), and
-`"comment-landed"` for a comment that lands though its call fails. `before_post`
-runs before each comment lands, with the issue's number, so a test can post
-another clone's comment there to stand for one made in the same instant.
+`"edit"`, `"create"`, `"view"`, `"list"`, `"page"`, `"access"`, `"issue"`,
+`"lock"`, `"reopen"`), and `"comment-landed"` for a comment that lands though
+its call fails. `before_post` runs before each comment lands, with the issue's
+number, so a test can post another clone's comment there to stand for one made
+in the same instant.
 """
 
 from __future__ import annotations
@@ -27,15 +29,21 @@ from typing import Any
 
 _PAGE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)/comments\?per_page=(\d+)&page=(\d+)")
 _ACCESS = re.compile(r"repos/\{owner\}/\{repo\}/collaborators/([^/]+)/permission")
+_ISSUE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)")
 
 
 @dataclass
 class FakeIssue:
+    """One issue. ``opener`` is the login that opened it, and ``""`` stands for
+    an account GitHub no longer has."""
+
     title: str
     body: str
     state: str = "OPEN"
     comments: list[dict[str, Any]] = field(default_factory=list)
     args: list[str] = field(default_factory=list)
+    opener: str = "me"
+    locked: bool = False
 
 
 @dataclass
@@ -49,8 +57,18 @@ class FakeRepo:
     next_issue: int = 100
     next_comment: int = 1000
 
-    def add(self, number: int, body: str = "", *, title: str = "t", state: str = "OPEN"):
-        self.issues[number] = FakeIssue(title, body, state)
+    def add(
+        self,
+        number: int,
+        body: str = "",
+        *,
+        title: str = "t",
+        state: str = "OPEN",
+        opener: str | None = None,
+    ):
+        self.issues[number] = FakeIssue(
+            title, body, state, opener=self.author if opener is None else opener
+        )
         return self.issues[number]
 
     def post(self, number: int, body: str, author: str | None = None) -> dict[str, Any]:
@@ -72,7 +90,8 @@ class FakeRepo:
         return [
             argv
             for argv in self.calls
-            if argv[1] == "issue" and argv[2] in ("comment", "edit", "create", "reopen", "close")
+            if argv[1] == "issue"
+            and argv[2] in ("comment", "edit", "create", "lock", "reopen", "close")
         ]
 
     def bodies(self, number: int) -> list[str]:
@@ -120,6 +139,11 @@ class FakeRepo:
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             issue.body = Path(argv[argv.index("--body-file") + 1]).read_text(encoding="utf-8")
             return _done(argv)
+        if verb == "lock":
+            if self._fails("lock"):
+                return _done(argv, 1, stderr="HTTP 403: Resource not accessible by integration")
+            issue.locked = True
+            return _done(argv)
         if verb in ("reopen", "close"):
             if self._fails(verb):
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
@@ -164,6 +188,16 @@ class FakeRepo:
                 return _done(argv, 1, stderr="gh: Not Found (HTTP 404)")
             level = self.access[login]
             return _done(argv, stdout=json.dumps({"permission": level, "role_name": level}))
+        opened = _ISSUE.fullmatch(path)
+        if opened:
+            if self._fails("issue"):
+                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+            number = int(opened.group(1))
+            issue = self.issues[number]
+            user = {"login": issue.opener} if issue.opener else None
+            record = {"number": number, "state": issue.state.lower(), "user": user}
+            record["locked"] = issue.locked
+            return _done(argv, stdout=json.dumps(record))
         raise AssertionError(f"unexpected gh api call: {argv}")
 
     def _fails(self, verb: str) -> bool:

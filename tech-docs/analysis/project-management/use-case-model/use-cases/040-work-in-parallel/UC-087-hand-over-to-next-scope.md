@@ -18,14 +18,12 @@ shortfalls:
   - at: "4a"
     issue: "#519"
     record: project-management:DEC-035#3
-  - at: "4b"
-    issue: "#2142"
-    record: project-management:DEC-059#7
 pkit:
   friction:
     anchors:
       path:
         - .pkit/capabilities/project-management/scripts/handoff-issue.py
+        - .pkit/capabilities/project-management/scripts/next-task.py
       record:
         - project-management:DEC-005
         - project-management:DEC-012
@@ -79,10 +77,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `create-issue` writes no owner. DEC-035 point 3 decides that the instance that files an issue owns the issue, and #519 tracks it.
 
-- **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task, and so may the agent of every seat that builds with no scope ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
-
-> [!WARNING]
-> **Not built yet:** nothing narrows the ready Tasks to a seat's scope, so no seat keeps to one kind of work. DEC-059 point 7 decides that a scope may name kinds of work, and #2142 tracks it.
+- **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task with `pkit pm next-task`, and so may the agent of every seat that builds with no scope. The command hands the Task to no seat whose scope leaves the Task out ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Postconditions:** What the next piece needs from this piece has landed on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and the next piece's [Task](../../../glossary.md#term-task--task) can start.
 
@@ -96,4 +91,4 @@ What the worker needs here that no accepted record decides yet:
 
 - **A checked hand-over between stages,** so that the next piece starts only from what this piece declared done. The core's [processes](../../../../core/glossary.md#term-process--process) can declare a hand-over that a check reports on. [COR-042](../../../../../../.pkit/decisions/core/COR-042-process-health.md) calls such a hand-over a hand-off contract. None is declared between stages of the work.
 - **A scope by a discipline that no kind of work carries,** such as design, for the [seat](../../../glossary.md#term-seat--seat) that does that discipline's work. A [scope](../../../glossary.md#term-scope--scope) names testing by the kind of work `test` (variant 4b). [project-management DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) leaves a discipline with no kind to a record that decides how a [Task](../../../glossary.md#term-task--task) carries the discipline.
-- **How the next piece's agent learns that the next piece's Task can start.** While `## Dependencies` is prose, that agent reads the section of each Task. Typed `Blocked by:` lines are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s, which is proposed.
+- **Typed dependencies.** While `## Dependencies` is prose, `pkit pm next-task` reads each `#N` the section names, and so finds the next piece's Task ready once this piece's Task closes. Typed `Blocked by:` lines are named in [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md), and wait for lived evidence before they are built.
