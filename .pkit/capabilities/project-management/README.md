@@ -636,7 +636,7 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 
 Setting the id touches no issue. The lifecycle commands read it and write each issue's ownership *marker*, as the next section says.
 
-**In a project with a topology of seats,** a clone's number is its seat's place in the topology, and nobody types it ([project-management:DEC-059-topology-of-seats] point 6). So `set-instance <N>` refuses a number where the default branch holds a topology. It refuses one too where the default branch cannot be resolved, since it cannot then tell. A clone there takes a seat with `take-seat` (below).
+**In a project with a topology of seats,** a clone's number is its seat's place in the topology, and nobody types it ([project-management:DEC-059-topology-of-seats] point 6). So `set-instance <N>` refuses a number where the default branch holds a topology. The command refuses one too where the default branch cannot be resolved, since whether it holds one cannot then be told. A clone there takes a seat with `take-seat` (below).
 
 The same runtime file keeps the clone's **key**. The clone generates it the first time it claims on a state issue (below), and keeps it whatever its number. Setting or clearing the id keeps the key, and so does taking or releasing a seat. Whoever copies a clone clears its runtime file, since two clones that share a key cannot be told apart.
 
@@ -687,7 +687,7 @@ A **state issue** holds one piece of shared state that changes while agents work
 - **A comment counts only from an author who may write:** a member where the membership gate is closed, and otherwise an account GitHub records as having write access or more. The access is read once for each author in a run
 - **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out. Every listing of issues runs through the one read of issues, which leaves state issues out
 
-`scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. `create-seats` creates the state issues of a topology's seats, and `take-seat`, `release-seat` and `seats` take, release and list them (below).
+`scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. `create-seats` creates the state issues of a topology's seats, and `take-seat`, `release-seat` and `seats` take, release and list the seats (below).
 
 Two things no code enforces, for a person to watch once seats are in use:
 
