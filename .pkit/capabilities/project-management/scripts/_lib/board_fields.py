@@ -82,6 +82,13 @@ except ImportError:  # pragma: no cover - defensive import fallback
         gh_project_run = None  # type: ignore[assignment]
         gh_run = None  # type: ignore[assignment]
 
+# The state-issue seam's one reader of the marker (ADR-071 point 6), by which the
+# board's read leaves a state issue's card out.
+try:
+    from state_issues import is_state_issue  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover - defensive import fallback
+    from _lib.state_issues import is_state_issue  # type: ignore[no-redef]
+
 
 GhCall = Callable[..., "subprocess.CompletedProcess[str]"]
 
@@ -430,12 +437,14 @@ def read_items_with_option(
 
     Reads the board's cards a page at a time through GraphQL, and keeps those
     whose single-select value is that option. Cards from every repository on
-    the board count, since the field and its options are the board's.
+    the board count, since the field and its options are the board's. A card
+    that holds a state issue is left out, by its marker, since a state issue
+    holds no work ([project-management:DEC-058-state-issues] point 3).
     """
     query = (
         "query($project: ID!, $field: String!, $after: String) { node(id: $project) "
         "{ ... on ProjectV2 { items(first: 100, after: $after) { pageInfo "
-        "{ hasNextPage endCursor } nodes { id content { ... on Issue { number title } "
+        "{ hasNextPage endCursor } nodes { id content { ... on Issue { number title body } "
         "... on PullRequest { number title } ... on DraftIssue { title } } "
         "fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
         "{ optionId } } } } } } }"
@@ -475,6 +484,8 @@ def read_items_with_option(
             if not isinstance(item_id, str) or not item_id:
                 continue
             content = item.get("content") if isinstance(item.get("content"), dict) else {}
+            if is_state_issue(str(content.get("body") or "")):
+                continue
             number = content.get("number")
             found.append(
                 BoardItem(

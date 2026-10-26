@@ -228,6 +228,7 @@ from _lib import (
 )
 from _lib.gh import gh_run, load_adopter_config
 from _lib.hooks import HOOKS_RELATIVE_PATH, load_hooks_file
+from _lib.state_issues import is_state_issue
 
 CAPABILITY_NAME = "project-management"
 PLAN_SCHEMA_VERSION = 1
@@ -1401,7 +1402,8 @@ def _resolve_board_item_ids(
 
     Returns ``{}`` when no board node id resolves or the read fails — every field
     intent then reports as blocked (needs membership) rather than guessing. Best-
-    effort and bounded: a single paginated read.
+    effort and bounded: a single paginated read. A card that holds a state issue
+    is left out by its marker, since a state issue holds no work (DEC-058 point 3).
     """
     if not isinstance(project_node_id, str) or not project_node_id:
         return {}
@@ -1410,7 +1412,7 @@ def _resolve_board_item_ids(
         "query($project: ID!, $cursor: String) { node(id: $project) { "
         "... on ProjectV2 { items(first: 100, after: $cursor) { "
         "pageInfo { hasNextPage endCursor } nodes { id content { "
-        "... on Issue { number repository { nameWithOwner } } } } } } } }"
+        "... on Issue { number body repository { nameWithOwner } } } } } } } }"
     )
     out: dict[tuple[str, int], str] = {}
     cursor: str | None = None
@@ -1446,7 +1448,7 @@ def _resolve_board_item_ids(
             if not isinstance(node, dict):
                 continue
             content = node.get("content") or {}
-            if not isinstance(content, dict):
+            if not isinstance(content, dict) or is_state_issue(str(content.get("body") or "")):
                 continue
             number = content.get("number")
             repo_block = content.get("repository") or {}
