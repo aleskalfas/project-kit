@@ -31,6 +31,7 @@ pkit:
         - src/project_kit/decisions_validate.py
         - src/project_kit/decisions_check_diff.py
         - src/project_kit/record_points.py
+        - src/project_kit/refs.py
         - src/project_kit/cli.py
         - .pkit/lifecycle/ownership.py
         - .pkit/skills/core/decision-author.md
@@ -79,7 +80,7 @@ pkit:
 
 **Assumptions:**
 
-- Work that builds on a [decision record](../../../glossary.md#term-decision-record--decision-record) cites only an accepted one, as the [acceptance gate](../../../glossary.md#term-acceptance-gate--acceptance-gate) asks. No check of the [system](../../../glossary.md#term-system--system) reads what a [change](../../../glossary.md#term-change--change) builds on, save a [rule](../../../glossary.md#term-rule--rule)'s origin (core rule 2 and [COR-051 point 5](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
+- Work that builds on a [decision record](../../../glossary.md#term-decision-record--decision-record) cites only an accepted one, as the [acceptance gate](../../../glossary.md#term-acceptance-gate--acceptance-gate) asks. `pkit refs rot` lists each accepted record whose body cites a proposed one, and fails nothing. No check of the [system](../../../glossary.md#term-system--system) fails a [change](../../../glossary.md#term-change--change) for what it builds on, save a [rule](../../../glossary.md#term-rule--rule)'s origin (core rule 2 and [COR-051 point 5](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
 - The developer writes records only where the [project](../../../glossary.md#term-project--project) authors them, never in a folder of [synced copies](../../../glossary.md#term-synced-copy--synced-copy). Nothing stops an edit or a record written by hand there. [Sync](../../../glossary.md#term-sync--sync) owns those folders (core rule 1).
 
 **Trigger:** The developer makes a choice that the [project](../../../glossary.md#term-project--project)'s records do not hold yet, such as a technology or a way of working.

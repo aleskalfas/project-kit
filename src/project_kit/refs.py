@@ -974,17 +974,21 @@ def who_references(artifacts: list[Artifact], target: str) -> list[Artifact]:
 
 
 def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
-    """List references to superseded records, dropped scratchpads, or missing files.
+    """List references to superseded records, dropped scratchpads, or missing files,
+    and accepted records that cite proposed ones.
 
-    Three categories:
+    Four categories:
     - **Superseded records** — an artifact still cites a record whose
-      `status:` is `superseded`. The methodology requires moving to the
-      superseding record.
+      `status:` is `superseded`, a capability's decision among them. The
+      methodology requires moving to the superseding record.
     - **Dropped scratchpads** — an artifact cites a scratchpad note that
       retired to `dropped/` (per COR-012). The thinking was abandoned;
       the reference shouldn't persist.
     - **Missing local paths** — an artifact cites a relative or
       project-rooted path that no longer resolves on disk.
+    - **Proposed grounds** — an accepted record's body cites a record that
+      is still `proposed` (`find_proposed_grounds`), against the acceptance
+      gate of `.pkit/decisions/README.md`.
 
     External URLs and template placeholders are not checked here.
     """
@@ -998,7 +1002,12 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
             if target_root in art.path.parents
             else str(art.path)
         )
-        all_records = art.declared.reads_records | art.declared.gates | art.body_refs.records
+        all_records = (
+            art.declared.reads_records
+            | art.declared.gates
+            | art.body_refs.records
+            | {_capability_key(cap, stem) for cap, stem in art.body_refs.capability_citations}
+        )
         all_paths = art.declared.reads_paths | art.declared.owns | art.body_refs.paths
 
         for rec in sorted(all_records):
@@ -1037,20 +1046,123 @@ def find_rot(target_root: Path, artifacts: list[Artifact]) -> list[Issue]:
                 )
             )
 
+    issues.extend(find_proposed_grounds(target_root, record_status_index))
     return issues
 
 
+def find_proposed_grounds(target_root: Path, statuses: dict[str, str] | None = None) -> list[Issue]:
+    """Each accepted record whose body cites a record that is still proposed.
+
+    The acceptance gate lets a record rest on accepted records only
+    (`.pkit/decisions/README.md`), and a record rests on what its body cites.
+    Every id-space is read: COR, PRJ and ADR records by their bare ids, and a
+    capability's decisions by `[<capability>:DEC-NNN]` from any record, or by a
+    bare `DEC-NNN` inside a capability's own records, which names a decision of
+    that capability unless another capability's name stands just before it.
+    Fenced code blocks, HTML comments and strikethrough are not read. One
+    finding for each record and each proposed record it cites, with the lines.
+    """
+    from project_kit.decisions_validate import discover_decision_records
+
+    if statuses is None:
+        statuses = _index_decision_statuses(target_root)
+    capabilities = frozenset(key.split(":", 1)[0] for key in statuses if ":" in key)
+    issues: list[Issue] = []
+    for record in discover_decision_records(target_root):
+        try:
+            text = universal_newlines(record.path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError):
+            continue
+        front, body = _split_frontmatter(text)
+        if front.get("status") != "accepted":
+            continue
+        own = record.id_space.partition("capability:")[2] or None
+        first_line = text[: len(text) - len(body)].count("\n") + 1
+        cited = record_citations(body, own, capabilities)
+        rel = (
+            record.path.relative_to(target_root).as_posix()
+            if target_root in record.path.parents
+            else str(record.path)
+        )
+        for key in sorted(cited):
+            if statuses.get(key) != "proposed":
+                continue
+            lines = [first_line + line - 1 for line in cited[key]]
+            where = f"line {lines[0]}" if len(lines) == 1 else f"lines {', '.join(map(str, lines))}"
+            issues.append(
+                Issue(
+                    location=rel,
+                    diagnosis=(
+                        f"accepted record cites proposed record {key!r} ({where}); "
+                        "an accepted record rests on accepted records only."
+                    ),
+                )
+            )
+    return issues
+
+
+# A bare capability decision id, and the capability name that may stand before it
+# in prose (`software-analysis DEC-001 point 1`).
+_BARE_DECISION_RE = re.compile(r"(?:\b([a-z][a-z0-9-]*[a-z0-9]) )?\b(DEC-\d+)\b")
+
+
+def record_citations(
+    body: str, capability: str | None, capabilities: Collection[str] = ()
+) -> dict[str, list[int]]:
+    """The records a record's body cites, each with the lines it is cited on,
+    counted from the body's first line.
+
+    Keys are `COR-NNN`, `PRJ-NNN` and `ADR-NNN`, and `<capability>:DEC-NNN` for
+    a capability's decision (`find_proposed_grounds` says how each is read).
+    `capability` is the citing record's own capability, `None` outside one, and
+    `capabilities` the installed capabilities' names.
+    """
+    text = _blank_skip_regions(body)
+    cited: dict[str, set[int]] = {}
+
+    def add(key: str, offset: int) -> None:
+        cited.setdefault(key, set()).add(text.count("\n", 0, offset) + 1)
+
+    for match in CAP_CITATION_RE.finditer(text):
+        add(_capability_key(match.group(1), match.group(2)), match.start())
+    rest = CAP_CITATION_RE.sub(lambda m: " " * len(m.group(0)), text)
+    for match in RECORD_TOKEN_RE.finditer(rest):
+        add(match.group(0), match.start())
+    for match in _BARE_DECISION_RE.finditer(rest):
+        named = match.group(1)
+        owner = named if named in capabilities else capability
+        if owner is not None:
+            add(f"{owner}:{match.group(2)}", match.start(2))
+    return {key: sorted(lines) for key, lines in cited.items()}
+
+
+def _capability_key(capability: str, stem: str) -> str:
+    """`<capability>:DEC-NNN` for a citation of a capability's decision, its slug left out."""
+    return f"{capability}:{'-'.join(stem.split('-')[:2])}"
+
+
+def _blank_skip_regions(body: str) -> str:
+    """`_strip_skip_regions`, with each region's line breaks kept, so lines still count."""
+    for pattern in (FENCED_BLOCK_RE, HTML_COMMENT_RE, STRIKETHROUGH_RE):
+        body = pattern.sub(lambda m: "\n" * m.group(0).count("\n"), body)
+    return body
+
+
 def _index_decision_statuses(target_root: Path) -> dict[str, str]:
-    """Map every decision ID (COR-NNN / PRJ-NNN / ADR-NNN) to its current status."""
+    """Map every decision ID to its current status: `COR-NNN`, `PRJ-NNN` and
+    `ADR-NNN` as they are, and a capability's decision as `<capability>:DEC-NNN`."""
     index: dict[str, str] = {}
-    dirs: list[Path] = [
-        target_root / ".pkit" / "decisions" / "core",
-        target_root / ".pkit" / "decisions" / "project",
+    dirs: list[tuple[Path, str]] = [
+        (target_root / ".pkit" / "decisions" / "core", ""),
+        (target_root / ".pkit" / "decisions" / "project", ""),
     ]
     adr_dir = _adr_records_dir_or_none(target_root)
     if adr_dir is not None:
-        dirs.append(adr_dir)
-    for decisions_dir in dirs:
+        dirs.append((adr_dir, ""))
+    caps_dir = target_root / ".pkit" / "capabilities"
+    if caps_dir.is_dir():
+        dirs.extend((cap / "decisions", f"{cap.name}:") for cap in sorted(caps_dir.iterdir()))
+    for decisions_dir, prefix in dirs:
         if not decisions_dir.is_dir():
             continue
         for record in sorted(decisions_dir.glob("*.md")):
@@ -1059,7 +1171,7 @@ def _index_decision_statuses(target_root: Path) -> dict[str, str]:
             rid = fm.get("id")
             status = fm.get("status")
             if isinstance(rid, str) and isinstance(status, str):
-                index[rid] = status
+                index[f"{prefix}{rid}"] = status
     return index
 
 
