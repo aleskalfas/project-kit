@@ -1,0 +1,901 @@
+answers:
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-300b8204a467.yaml
+    revalidated:
+      at: 2026-10-26T16:27:22Z
+      outcome: updated
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T051019Z-da72435c.yaml
+      - 20261026T051427Z-db09293e.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T053814Z-1774e924.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T071913Z-056e87c1.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T16:27:30Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-26T16:27:35Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-26T16:27:39Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-26T16:27:43Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-0fe260ad4d42.yaml
+    revalidated:
+      at: 2026-10-26T16:27:47Z
+      outcome: unchanged
+      unchanged-because: "The decisions README gains the waits-on field and the report of proposed records due. Judged with the changes answered apart, its section on writing a record, its lookup's overturned line and its test for an edit made in place to an accepted record, the gate this term defines holds: work builds only on accepted records and rules."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-bca813b8718e.yaml
+    revalidated:
+      at: 2026-10-26T16:27:55Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Judged together with the capability-author skill's reads, the refs lookup's overturned line and the shipped citations, none changes how a capability is packaged, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-c023390f2be9.yaml
+    revalidated:
+      at: 2026-10-26T16:27:59Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Re-pinning an inherited rule set uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-14cab8fa596f.yaml
+    revalidated:
+      at: 2026-10-26T16:28:03Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Knowing a capability is ready to share rests on none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-e74c084a6ef5.yaml
+    revalidated:
+      at: 2026-10-26T16:28:07Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. None touches a capability's roles, data points or processes, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-26T16:28:10Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Declaring a changeset and the release check that reads it use none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-677ab7326b1b.yaml
+    revalidated:
+      at: 2026-10-26T16:28:17Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Judged with the reviewer agents' shipped citations, also answered apart, a draft is challenged and a diff checked as the use case says, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-82a9f92cf8a6.yaml
+    revalidated:
+      at: 2026-10-26T16:28:20Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Keeping a capability in one's own repository uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-26T16:28:25Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Adapting the system to another harness uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-26T16:28:29Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Judged with the authoring skills' reads and the refs lookup's overturned line, also answered apart, how a project turns recurring work into its own skill or agent is as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-828a24ebf347.yaml
+    revalidated:
+      at: 2026-10-26T16:28:32Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Seeing what a capability would connect to uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-26T16:28:39Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Rules are left out of all three, so authoring and extending a rule set is as it was.
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-26T16:28:42Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. The adapters README describes harness translation and the run-agent command, never the decisions verbs, so it holds.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-7bd9bf62ec3a.yaml
+      - moved-a08ed9a38659.yaml
+    revalidated:
+      at: 2026-10-26T16:28:45Z
+      outcome: unchanged
+      unchanged-because: The CLI README's Surface section gains the decisions proposed row and names the waits-on check in the decisions validate row. Judged with the rows answered apart, refs lookup, refs rot and decisions check-diff, and the capability-author skill's reads, no grant, profile or step of the permission model's README changes, so it holds.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261025T214334Z-3176bb1a.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T162109Z-26721c6a.yaml
+    revalidated:
+      at: 2026-10-26T16:28:49Z
+      outcome: unchanged
+      unchanged-because: The CLI README's Surface section gains the decisions proposed row and names the waits-on check in the decisions validate row. Judged with the rows answered apart, refs lookup, refs rot and decisions check-diff, and the capability-author skill's steps, no profile or grant this guide sets up changes, so it holds.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T174422Z-ea676633.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T202350Z-6a1bd668.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221052Z-9302b480.yaml
+      - 20261025T234102Z-0231f155.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-69dea4023970.yaml
+    revalidated:
+      at: 2026-10-26T16:28:52Z
+      outcome: unchanged
+      unchanged-because: "The decisions README gains the waits-on field in its Schema and the report of proposed records due in its Statuses. Judged with the changes answered apart, its section on writing a record, its lookup's overturned line and check-diff's list of edits to accepted records, CONTRIBUTING.md holds: a record opens as proposed and is accepted once agreed, and the schema stays the README's."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-067
+          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-053
+          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-26T16:28:58Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Developing the methodology in its source repository goes through the commands and checks it names, which hold, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-50d19a823f20.yaml
+    revalidated:
+      at: 2026-10-26T16:29:02Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. None reads the backbone configuration, so declaring and validating it is as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-26T16:29:05Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Adding a project's own rules, settings, grants and agent paths uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-66d5b1529575.yaml
+    revalidated:
+      at: 2026-10-26T16:29:08Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Adding or removing a capability, and the name collisions it is told of, use none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-c6041f71d67c.yaml
+    revalidated:
+      at: 2026-10-26T16:29:11Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Choosing which capability provides a role uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-26T16:29:18Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Deploying an agent definition with the project's paths and grants uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-26T16:29:23Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed, which reads an issue's state through gh, of another repository too, and writes nothing, and, answered apart, check-diff's --head and --json, which read only. The guard against changing another repository reaches only writes, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-c95d6fad77f9.yaml
+    revalidated:
+      at: 2026-10-26T16:29:27Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed, which reports and exits 0, and a waits-on check inside validation, and, answered apart, check-diff's list of edits to accepted records, which fails nothing. The checks a merge waits on are as this use case says, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-26T16:29:31Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Each adds and none renames or removes, so neither ships a migration, as this use case asks of an additive change.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-26T16:29:35Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Carrying projects across a breaking change of a component uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-26T16:29:41Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Landing a change on the default branch runs the gates and commands this use case names, which hold, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-525e5f95da00.yaml
+    revalidated:
+      at: 2026-10-26T16:29:44Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. A scratchpad note is no record, so thinking a question through and retiring the note is as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-26T16:29:48Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Releasing the backbone reads the changesets as before, these changes' among them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-26T16:29:52Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Releasing a component on its own version uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-012-report-problem.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-16225f01f42e.yaml
+    revalidated:
+      at: 2026-10-26T16:29:55Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Judged with the report-author skill's shipped citations, also answered apart, reporting a problem and following the report is as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-013-link-reports.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-441b89549614.yaml
+    revalidated:
+      at: 2026-10-26T16:30:03Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Receiving adopters' reports and linking each to its fix uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-26T16:30:07Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Putting the CLI on a machine at a release uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-26T16:30:10Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Installing the system with one command uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-26T16:30:14Z
+      outcome: unchanged
+      unchanged-because: UC-037 gains the waits-on field in steps 6 and 7 and variant 7e, beside step 8's list of edits to accepted records, answered apart. UC-040 gains variant 1b, which finds a landed proposal. What the journey needs from each, the record and its acceptance before work builds on it, is as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-26T16:30:18Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Getting a fresh clone ready with one sync uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-26T16:30:24Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. The field is optional and nothing is renamed or removed, so upgrading the system like a dependency needs no migration and is as it was.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T16:30:27Z
+      outcome: unchanged
+      unchanged-because: "cli.py gains pkit decisions proposed and decisions_validate.py the waits-on check. Judged with the seats' claims, the refs lookup's overturned line, the shipped citations and check-diff's --head and --json, all answered apart, the README's claims hold: agents build only on accepted decisions, drafts start proposed, and pkit decisions validate checks decision ids."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-26T16:30:31Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Running each project at the version it pins uses none of them, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T162109Z-26721c6a.yaml
+      - moved-4859ed958bd4.yaml
+    revalidated:
+      at: 2026-10-26T16:30:34Z
+      outcome: unchanged
+      unchanged-because: cli.py gains pkit decisions proposed and the waits-on check, and, answered apart, check-diff's --head, --json and list of edits to accepted records. Upgrading one capability on its own uses none of them, so the use case holds.
