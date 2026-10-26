@@ -103,7 +103,7 @@ The fingerprint reads each text in one canonical form, so one text gives one val
 ### 8. The links in the texts
 
 The links between terms reach the texts as they reach every part of a body (DEC-004 point 7).
-- **These take links:** a term's definition, a requirement's statement, measure and scope, and the first sentence of an actor's opening. The first mention of a term in each part links to the term's entry. A term is never linked in its own entry.
+- **These take links:** a term's definition, a requirement's statement, measure and scope, and the first sentence of an actor's opening. The first mention of a term in each part links to the term's entry. A term is never linked in its own entry. A requirement's texts so count among what is built on a concept, which each view lists (DEC-004 point 7).
 - **The needs stay plain,** an actor's own and those a glossary's head lists. A need is a user story, as a use case's goal is, and stays plain as a goal does.
 - **Front matter stays plain.** No field holds a text, so no field takes a link.
 

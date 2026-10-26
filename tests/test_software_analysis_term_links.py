@@ -20,6 +20,10 @@ Held to software-analysis DEC-004 point 7 and DEC-001 points 1 and 2:
   requirement's body takes the links once, as the project's own structures label its
   parts; a goal, a journey's step lines and an actor's first sentence, which say a datum
   again, stay plain, and a link written there is extra;
+- **a view's closing section** — each view ends with what is built on its concepts: the
+  use cases, journeys and requirements whose bodies link a term it explains, written by
+  the command and the stamp, held by the check, and no part of the view's structure
+  (#2104);
 - **one name, one concept** — validation refuses two terms in force of one name, a
   plural among the names, and a name another term replaces, within an analysis and
   across the analyses it builds on, two of those included, whatever any rule's status.
@@ -27,6 +31,7 @@ Held to software-analysis DEC-004 point 7 and DEC-001 points 1 and 2:
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 from collections.abc import Sequence
@@ -127,8 +132,20 @@ def _view(linked: bool) -> str:
     )
 
 
+#: The sentence that opens a view's closing section, as the command writes it.
+CLOSING_OPENING = (
+    "Each concept below lists the use cases, journeys and requirements whose text links its term."
+)
+
+#: The view's closing section where nothing in the analysis links a term it explains, as
+#: the command writes it (DEC-004 point 7).
+CLOSING_NONE = (
+    f"\n## What is built on these concepts\n\n{CLOSING_OPENING}\n\n"
+    "**Order:** None.\n\n**Payment:** None.\n"
+)
+
 VIEW_BODY = _view(linked=False)
-VIEW_LINKED = _view(linked=True)
+VIEW_LINKED = _view(linked=True) + CLOSING_NONE
 
 #: Each term's entry below its heading, as a writer fills it, by its id: the example and
 #: the distinctions, the term's link to its section left as the stamp wrote it.
@@ -276,7 +293,7 @@ def test_the_command_links_each_first_mention_with_every_safeguard(project: Adop
     completed = link(project)
     assert completed.stdout.splitlines() == [
         f"linked {GLOSSARY} (5 link(s) written or mended)",
-        f"linked {VIEW} (8 link(s) written or mended)",
+        f"linked {VIEW} (9 link(s) written or mended)",
     ]
     assert _body(project, VIEW) == VIEW_LINKED
     for term, (example, distinctions) in ENTRIES_LINKED.items():
@@ -294,11 +311,18 @@ def test_the_check_reports_each_link_missing_extra_or_stale_and_names_the_comman
     it would not write, and one whose target is stale are each reported, with the line,
     and mended by the command (DEC-004 point 7)."""
     found = _validate(project)
-    assert len(found) == 13, "\n".join(f"{where} | {m}" for where, m in found)
+    assert len(found) == 14, "\n".join(f"{where} | {m}" for where, m in found)
     assert all(
         m.endswith("run `pkit analysis link`, which writes the links (DEC-004 point 7)")
         for _l, m in found
     )
+    assert (
+        VIEW,
+        "the view ends with no section `## What is built on these concepts`: the view's one "
+        "closing section, at its end, lists under each concept it explains each use case, "
+        "journey and requirement in force of its analysis that links the concept's term — run "
+        "`pkit analysis link`, which writes the links (DEC-004 point 7)",
+    ) in found
     assert (
         VIEW,
         "line 33: `customer` is the first mention of TERM-customer in its section, and takes "
@@ -1085,6 +1109,190 @@ def test_the_check_holds_the_links_of_the_four_kinds_and_a_link_on_a_datum_is_ex
     for rel, body in BODIES_LINKED.items():
         assert _body(kinds, rel) == body, rel
     assert _validate(kinds) == []
+
+
+# --- a view's closing section: what is built on its concepts (DEC-004 point 7) -----------------
+
+#: Each artefact of `kinds` the closing sections list, by its id: its line there.
+_ITEM = {
+    "UC-001": "- [UC-001 — Place an order](../use-case-model/use-cases/UC-001-place-order.md)",
+    "UC-002": "- [UC-002 — Pay for an order](../use-case-model/use-cases/UC-002-pay-order.md)",
+    "JRN-001": (
+        "- [JRN-001 — Place and pay for a first order]"
+        "(../use-case-model/journeys/JRN-001-first-order.md)"
+    ),
+    "REQ-001": (
+        "- [REQ-001 · Quality · Settle a payment quickly]"
+        "(../requirements/quality/REQ-001-settle-quickly.md)"
+    ),
+    "REQ-002": (
+        "- [REQ-002 · Functional · Settle each order once]"
+        "(../requirements/functional/REQ-002-settle-once.md)"
+    ),
+}
+
+
+def _under(label: str, *ids: str) -> str:
+    """One concept's part of a closing section: its label, then each artefact's line."""
+    return f"**{label}:**\n\n" + "".join(f"{_ITEM[i]}\n" for i in ids)
+
+
+#: The view's closing section in `kinds`, as the command writes it: under each concept the
+#: view explains, each use case, journey and requirement whose body links its term. The
+#: second requirement links `order` and no `payment`, and the constraint links `payment
+#: method` alone, so it is under neither.
+KINDS_CLOSING = (
+    f"## What is built on these concepts\n\n{CLOSING_OPENING}\n\n"
+    + _under("Order", "UC-001", "UC-002", "JRN-001", "REQ-001", "REQ-002")
+    + "\n"
+    + _under("Payment", "UC-001", "UC-002", "JRN-001", "REQ-001")
+)
+
+#: The heading of a view's closing section, as the command writes it.
+CLOSING_HEADING = "## What is built on these concepts"
+
+
+def _closing_of(repo: AdopterRepo, rel: str = VIEW) -> str:
+    """A view's closing section, from its heading to the file's end."""
+    return CLOSING_HEADING + _read(repo, rel).split(f"\n{CLOSING_HEADING}", 1)[1]
+
+
+def test_a_view_ends_with_where_its_concepts_are_used(kinds: AdopterRepo) -> None:
+    """The command ends the view with its closing section: under each concept it explains,
+    each use case, journey and requirement in force whose body, as the command links it,
+    links the concept's term, the use cases first, each by its id and title, linked by a
+    path from the view's folder in the form the views' places declare. The section is no
+    part of the view's structure, so the check passes with the format rule binding (DEC-004
+    points 2 and 7)."""
+    link(kinds)
+    assert _closing_of(kinds) == KINDS_CLOSING
+    assert _body(kinds, VIEW).endswith("**Always true:** None.\n\n" + KINDS_CLOSING)
+    targets = re.findall(r"\]\(([^)]+)\)", KINDS_CLOSING)
+    assert targets and all(re.fullmatch(links.CLOSING_TARGET, t) for t in targets), targets
+    kinds.write(accepting_san(kinds))
+    assert _validate(kinds) == []
+
+
+def test_the_check_holds_the_closing_section_and_the_command_mends_it(kinds: AdopterRepo) -> None:
+    """Whatever any rule's status, the check reports a closing section missing, or stale: a
+    use case retitled or withdrawn, a section moved off the view's end, or held twice. The
+    command writes it anew, last, and a second run writes nothing (DEC-004 point 7)."""
+    link(kinds)
+    linked = _read(kinds, VIEW)
+    kinds.write({VIEW: linked.split(f"\n{CLOSING_HEADING}", 1)[0] + "\n"})
+    (missing,) = [m for where, m in _validate(kinds) if where == VIEW]
+    assert missing.startswith(f"the view ends with no section `{CLOSING_HEADING}`")
+    link(kinds)
+    assert _read(kinds, VIEW) == linked
+
+    retitled = _read(kinds, PAY).replace("title: Pay for an order", "title: Pay for it", 1)
+    withdrawn = _read(kinds, ONCE).replace("status: active", "status: withdrawn", 1)
+    kinds.write({PAY: retitled, ONCE: withdrawn})
+    (stale,) = [m for where, m in _validate(kinds) if where == VIEW]
+    heading = linked.split("\n").index(CLOSING_HEADING) + 1
+    assert stale.startswith(
+        f"line {heading} heads the view's section `{CLOSING_HEADING}`, which is stale: "
+    )
+    link(kinds)
+    closing = _closing_of(kinds)
+    assert "[UC-002 — Pay for it]" in closing and "REQ-002" not in closing
+    kinds.write({PAY: retitled.replace("title: Pay for it", "title: Pay for an order", 1)})
+    kinds.write({ONCE: withdrawn.replace("status: withdrawn", "status: active", 1)})
+    link(kinds)
+    assert _read(kinds, VIEW) == linked
+
+    # Off the view's end, or held twice: stale, and written once, last.
+    head, tail = linked.split(f"\n{CLOSING_HEADING}", 1)
+    order, payment = head.split("\n## Payment\n", 1)
+    moved = f"{order}\n{CLOSING_HEADING}{tail}\n## Payment\n{payment}\n"
+    for text in (moved, f"{linked}\n{CLOSING_HEADING}{tail}"):
+        kinds.write({VIEW: text})
+        assert any("which is stale" in m for where, m in _validate(kinds) if where == VIEW)
+        link(kinds)
+        assert _read(kinds, VIEW) == linked
+    assert link(kinds).stdout.strip() == "Every link is as it should be; nothing written."
+
+
+def test_the_stamp_ends_a_new_view_with_where_its_concepts_are_used(
+    kinds: AdopterRepo,
+) -> None:
+    """A new view's closing section lists what links its terms already, as the command
+    would write it, so the command leaves the new view as the stamp wrote it."""
+    link(kinds)
+    stamped(kinds, "view", "customers", "--number", "020", "--explains", "TERM-customer")
+    view = f"{DOMAIN_MODEL}/020-customers.md"
+    assert _closing_of(kinds, view) == (
+        f"{CLOSING_HEADING}\n\n{CLOSING_OPENING}\n\n"
+        + _under("Customer", "UC-001", "UC-002", "JRN-001", "REQ-002")
+    )
+    assert view not in link(kinds).stdout
+
+
+def test_where_a_closing_section_lies_and_what_the_command_makes_of_it() -> None:
+    """A closing section runs from its heading, outside fenced code, to the next heading of
+    its level or the end. A new view ends with one after its last line that is not blank."""
+    lines = ["# V", "", "## Order", "", "x", "", CLOSING_HEADING, "", "y", ""]
+    assert links.closing_spans(lines, 0) == [(6, 10)]
+    fenced = ["# V", "```", CLOSING_HEADING, "```", "## Order", ""]
+    assert links.closing_spans(fenced, 0) == []
+    middle = [CLOSING_HEADING, "", "y", "", "## Order", "", "x", ""]
+    assert links.closing_spans(middle, 0) == [(0, 4)]
+    assert links.closing_lines(middle) == {0, 1, 2, 3}
+    closing = [CLOSING_HEADING, "", "**Order:** None."]
+    assert links.ending_with("# V\n\nx\n\n\n", closing) == (
+        f"# V\n\nx\n\n{CLOSING_HEADING}\n\n**Order:** None.\n"
+    )
+
+
+def test_the_terms_a_body_links_are_read_below_its_front_matter_outside_code() -> None:
+    """An artefact uses a term where its body links the term's entry, by the target the
+    command writes from the artefact's folder; front matter, code and other links are no
+    use."""
+    path = "tech-docs/analysis/use-case-model/use-cases/UC-1.md"
+    text = (
+        "---\nnote: '[payment](../../glossary.md#term-payment--payment)'\n---\n\n"
+        f"An [order]({_to(ORDER)}). `[payment]({_to(PAYMENT)})` and [a payment](#elsewhere).\n"
+    )
+    vocabulary = _vocabulary(ORDER, PAYMENT)
+    assert links.terms_linked(text, path, vocabulary) == frozenset({"TERM-order"})
+
+
+def test_each_concept_lists_its_uses_by_a_path_in_the_declared_form() -> None:
+    """Under each concept, in the order the view explains them, each use listed is linked
+    by a path from the view's folder, an area's folder or a component's included, which
+    the views' places declare: the use cases first, then the requirements. A concept
+    nothing links reads `None.`, and a title's brackets are escaped."""
+    view = "tech-docs/analysis/core/domain-model/010-orders.md"
+    path = "tech-docs/analysis/core/use-case-model/use-cases/010-run/UC-007-run.md"
+    case = model.Artefact(
+        "use-case", "UC-007", path, path, False, {"title": "Run [fast]"}, {}, folder="core"
+    )
+    req = dataclasses.replace(
+        case,
+        kind="constraint",
+        id="REQ-003",
+        path="tech-docs/analysis/core/requirements/constraints/REQ-003-local.md",
+        fields={"title": "Local"},
+    )
+    used = {"UC-007": {"TERM-order"}, "REQ-003": {"TERM-order"}}
+    headings = {"TERM-order": "Order", "TERM-line": "Line"}
+    written = links.closing(
+        view, ["TERM-order", "TERM-line"], headings, [case, req], used, {"constraint": "Constraint"}
+    )
+    assert written == [
+        CLOSING_HEADING,
+        "",
+        CLOSING_OPENING,
+        "",
+        "**Order:**",
+        "",
+        "- [UC-007 — Run \\[fast\\]](../use-case-model/use-cases/010-run/UC-007-run.md)",
+        "- [REQ-003 · Constraint · Local](../requirements/constraints/REQ-003-local.md)",
+        "",
+        "**Line:** None.",
+    ]
+    for target in re.findall(r"\]\(([^)]+)\)", "\n".join(written)):
+        assert re.fullmatch(links.CLOSING_TARGET, target), target
 
 
 model, structure = load_lib("model", "structure")
