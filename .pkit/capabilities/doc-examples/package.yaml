@@ -1,0 +1,7 @@
+schema_version: 1
+component:
+  kind: capability
+  name: doc-examples
+  version: 0.1.0
+description: Executed documentation checks — a page's console examples run as tests, so a change in behaviour fails wherever it comes from.
+requires_backbone: ">=1.149.0,<2.0.0"
