@@ -195,7 +195,7 @@ For clarifications, scope tweaks, or refinements where the original decision sta
 
 - **An edit that changes it** adds to what the record decides, narrows it, widens it, or retires part of it. It is a decision of its own. Like accepting the record, it stays a person's (COR-064 point 6).
 - **An edit that does not** leaves every choice as it stood. Examples are a typo fixed, a citation updated after a rename, and a fact corrected where the decision stands.
-- **What a change edits in an accepted record** is listed by `pkit decisions check-diff`, for whoever judges the edits ("Checking a change's numbering" below). It names each point the change edits, and each other part of the record, without quoting the words, so the judge reads the edit in the change itself.
+- **What a change edits in an accepted record** is listed by `pkit decisions check-diff`, for whoever judges the edits ("Checking a change's numbering" below). It names each point and each other part of the record that the change edits, without quoting the words, so the judge reads the edit in the change itself.
 
 **Editing in place means editing in place.** A correction is folded into the body so the record simply states what is true; it is not appended as an amendment section, a dated correction marker, or a "previously we believed" passage. Those turn a record into a changelog with a statement buried in it, and each one looks like diligence, so the habit spreads by imitation. If a record was wrong about a fact and the decision has not changed, fix the sentence. If the decision was overturned, in whole or in part, supersede.
 
@@ -272,7 +272,7 @@ A renumbered point misleads every citation of it, and a record's state alone can
   - a record in list form at the branch point or at the head, as a whole, since its points are not told apart
   - a record the change removes, or moves where no record at the head pairs with it
   - nothing for a record proposed at the branch point, or one the change adds
-- **`--head <rev>`** reads the records of that commit from git objects, instead of the working tree's. Where the ADR folder is, and which records your project receives by sync, still come from the working tree. **`--json`** prints the findings and the list as one document, for a command that shows the list, such as a landing command. It exits as the human view does.
+- **`--head <rev>`** reads the records of that commit from git objects, instead of the working tree's. Where the ADR folder is, and which records your project receives by sync, come from the working tree either way. **`--json`** prints the findings and the list as one document, for a command that shows the list, such as a landing command. It exits as the human view does.
 - **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point the default branch holds under that id with the change's very text, or a record it holds at the change's own path, is the change's own work landed, such as a parent branch's, and is no clash. A parent's point edited since fails, and merging the default branch in clears it.
 
 ## Adding a record
