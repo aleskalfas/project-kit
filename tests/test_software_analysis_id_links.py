@@ -350,6 +350,30 @@ def test_a_mention_of_an_id_is_read_whole_and_first(text: str, linked: str) -> N
     assert _linked(text) == linked
 
 
+def test_an_id_names_the_artefact_that_spells_it_so_first() -> None:
+    """Of two artefacts whose numbers are one, which validation refuses, a mention names
+    the one whose id it spells as written, and another spelling the one that writes its
+    number in its one spelling (DEC-001 points 3 and 13)."""
+    alias = "tech-docs/analysis/use-case-model/use-cases/020-read/UC-0008-alias.md"
+    path = "tech-docs/analysis/model.md"
+    analysis = model.Analysis(
+        location="tech-docs/analysis",
+        places={},
+        artefacts=(
+            model.Artefact("use-case", "UC-0008", alias, alias, False, {}, {}),
+            model.Artefact("use-case", "UC-008", path, path, False, {}, {}),
+        ),
+        strays=(),
+        unreadable={},
+        files={},
+        records=(),
+    )
+    named = id_links.named(analysis, links.analyses.Listing(), None)
+    assert named.of(None, "UC-008").path == path
+    assert named.of(None, "UC-0008").path == alias
+    assert named.of(None, "UC-8").path == path
+
+
 def test_an_id_written_with_an_analysis_names_one_it_builds_on() -> None:
     """`core:UC-021` names the core's use case where the text's analysis builds on the
     core; an id of another analysis written alone, or of one it does not build on, takes no

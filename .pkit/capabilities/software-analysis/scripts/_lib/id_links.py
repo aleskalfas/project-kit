@@ -104,10 +104,10 @@ class Named:
     built_on: Mapping[str, Mapping[str, Target]]
 
     def of(self, analysis: str | None, artefact_id: str) -> Target | None:
-        """The artefact a mention names, written with `analysis` or alone; `None` where it
-        names none."""
+        """The artefact a mention names, written with `analysis` or alone: the one whose id
+        it spells as written, else the one its number names; `None` where it names none."""
         table = self.own if analysis is None else self.built_on.get(analysis, {})
-        return table.get(identity(artefact_id))
+        return table.get(artefact_id) or table.get(identity(artefact_id))
 
 
 def named(analysis: Analysis, listing: analyses.Listing, folder: str | None) -> Named:
@@ -124,10 +124,12 @@ def named(analysis: Analysis, listing: analyses.Listing, folder: str | None) -> 
 
 
 def _held(analysis: Analysis, folder: str | None) -> dict[str, Target]:
-    """Each artefact of the analysis in `folder`, by its id: a term at its entry's anchor,
-    the slug of its heading, and none that gives no name. Of two that share an id, which
-    validation refuses, the first."""
-    found: dict[str, Target] = {}
+    """Each artefact of the analysis in `folder`, by its id as written and by its id as
+    `model.identity` spells it: a term at its entry's anchor, the slug of its heading, and
+    none that gives no name. Of two that share an id, which validation refuses, a mention
+    names the one whose id it spells as written, and any other spelling the one whose id is
+    in its one spelling, else the first."""
+    targets: list[Target] = []
     for artefact in analysis.artefacts:
         if artefact.folder != folder or not artefact.id:
             continue
@@ -137,7 +139,12 @@ def _held(analysis: Analysis, folder: str | None) -> dict[str, Target]:
             if not isinstance(name, str) or not name.strip():
                 continue
             anchor = forms.heading_slug(f"{artefact.id} — {name}")
-        found.setdefault(identity(artefact.id), Target(artefact.id, artefact.path, anchor))
+        targets.append(Target(artefact.id, artefact.path, anchor))
+    found: dict[str, Target] = {}
+    for target in targets:
+        found.setdefault(target.id, target)
+    for target in targets:
+        found.setdefault(identity(target.id), target)
     return found
 
 

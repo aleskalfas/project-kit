@@ -45,6 +45,7 @@ from tests.analysis_repo import (
     fill,
     front,
     installed,
+    link,
     load,
     load_lib,
     prepare,
@@ -160,14 +161,17 @@ def test_a_use_case_main_numbered_too_takes_the_next_free_number_with_every_refe
 ) -> None:
     """`topic` numbers UC-002, steps a journey through it, names it in a record and in
     main's UC-001; main numbers UC-002 meanwhile. Renumbered, `topic`'s takes UC-003, and
-    every mention follows: the check and the number comparison pass, and so does the
-    check once main is merged in."""
+    every mention follows, the links of its id to its file included (DEC-001 point 13):
+    the check and the number comparison pass, and so does the check once main is merged
+    in."""
     assert stamped(branched, "use-case", "mine", "--actor", "ACT-tester") == "UC-002"
     steps = ("--step", "UC-001", "--step", "UC-002")
     assert stamped(branched, "journey", "both", "--actor", "ACT-tester", *steps) == "JRN-001"
     fill(branched)
     one = f"{USE_CASES}/UC-001-one.md"
     branched.write({one: text(branched, one) + "\nIt hands over to UC-002.\n"})
+    link(branched)
+    assert text(branched, one).endswith("\nIt hands over to [UC-002](UC-002-mine.md).\n")
     recorded = run_script(
         branched,
         NEW,
@@ -202,8 +206,8 @@ def test_a_use_case_main_numbered_too_takes_the_next_free_number_with_every_refe
         "renumber UC-002 as UC-003 (DEC-001 point 3):",
         f"  rename    {ours} → {renamed}, 2 mentions",
         f"  rewrite   {record}, 4 mentions",
-        f"  rewrite   {journey}, 3 mentions",
-        f"  rewrite   {one}, 1 mention",
+        f"  rewrite   {journey}, 4 mentions",
+        f"  rewrite   {one}, 2 mentions",
     ]
     assert dry.stdout.endswith("dry run: nothing is written.\n")
     assert branched.git("status", "--porcelain").stdout == ""
@@ -221,12 +225,12 @@ def test_a_use_case_main_numbered_too_takes_the_next_free_number_with_every_refe
     walked = front(branched, journey)
     assert walked["steps"] == ["UC-001", "UC-003"]
     assert "UC-003" in walked["pkit"]["friction"]["anchors"]["artefact"]
-    assert "2. UC-003 — Mine" in text(branched, journey)
+    assert "2. [UC-003](../use-cases/UC-003-mine.md) — Mine" in text(branched, journey)
     assert front(branched, record)["outcomes"] == {"UC-003": "gap-found"}
     assert "- **UC-003:** The export was undescribed. **Resolution:** UC-003 written." in text(
         branched, record
     )
-    assert text(branched, one).endswith("\nIt hands over to UC-003.\n")
+    assert text(branched, one).endswith("\nIt hands over to [UC-003](UC-003-mine.md).\n")
     assert "UC-002" not in "".join(text(branched, rel) for rel in (renamed, journey, record, one))
     assert errors(branched) == []
     assert run_script(branched, NUMBERS, "--base", MAIN).returncode == 0
@@ -288,7 +292,8 @@ def test_a_requirement_takes_the_number_named_and_what_refines_it_follows(
 
 def test_another_analysis_s_qualified_mention_follows(project: AdopterRepo) -> None:
     """Ids are unique across a repository's analyses (DEC-001 point 3), so billing's
-    mention of the core's use case, `core:UC-003`, names it, and follows it."""
+    mention of the core's use case, `core:UC-003`, names it, and follows it, its link to the
+    core's file included (DEC-001 point 13)."""
     listed = (
         SETTINGS_TEXT + "analyses:\n  - {component: core, folder: core}\n"
         "  - component: billing\n    folder: billing\n    builds-on:\n      - {analysis: core}\n"
@@ -309,6 +314,9 @@ def test_another_analysis_s_qualified_mention_follows(project: AdopterRepo) -> N
     project.write(
         {invoice: text(project, invoice) + "\nThe clerk exports it, as core:UC-003 does.\n"}
     )
+    link(project)
+    to_core = "../../../core/use-case-model/use-cases"
+    assert text(project, invoice).endswith(f"as [core:UC-003]({to_core}/UC-003-export.md) does.\n")
     project.commit("UC-003 on topic")
     project.checkout(MAIN)
     stamped(project, "use-case", "theirs", "--actor", "ACT-tester", "--analysis", "core")
@@ -322,9 +330,9 @@ def test_another_analysis_s_qualified_mention_follows(project: AdopterRepo) -> N
     assert done.stdout.splitlines()[:3] == [
         "renumber UC-003 as UC-004 (DEC-001 point 3):",
         f"  rename    {core}/UC-003-export.md → {core}/UC-004-export.md, 2 mentions",
-        f"  rewrite   {invoice}, 1 mention",
+        f"  rewrite   {invoice}, 2 mentions",
     ]
-    assert text(project, invoice).endswith("\nThe clerk exports it, as core:UC-004 does.\n")
+    assert text(project, invoice).endswith(f"as [core:UC-004]({to_core}/UC-004-export.md) does.\n")
     assert errors(project) == []
 
 
