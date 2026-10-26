@@ -347,3 +347,62 @@ A checkbox is a box in an [issue](../glossary.md#term-issue--issue)'s body besid
 
 - An issue with an unticked checkbox cannot close (DEC-007).
 - A tick is never checked again at the close (DEC-007).
+
+## What is built on these concepts
+
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
+**Issue:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+- [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/UC-061-move-issue.md)
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md)
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md)
+- [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
+
+**Milestone:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+- [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/UC-061-move-issue.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md)
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md)
+- [REQ-040 · Constraint · project-management works on GitHub alone, through an authenticated gh](../requirements/constraints/REQ-040-github-and-gh.md)
+
+**Close trigger:**
+
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md)
+
+**Milestone category:**
+
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md)
+
+**EPIC:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+- [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/UC-061-move-issue.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md)
+
+**Feature:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+
+**Umbrella:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+
+**Task:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+- [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/UC-061-move-issue.md)
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md)
+
+**Parent reference:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+
+**Checkbox:**
+
+- [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/UC-061-move-issue.md)
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md)

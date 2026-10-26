@@ -75,11 +75,27 @@ wrote it, is unwritten first and then written again where it belongs, so a link
 written by hand is held as the command's. Another link is the writer's, and its
 text is skipped.
 
-The rewrite reads a body only to place its links, and takes its data from front
-matter and the declared structures alone: each term's id, name, noun forms and other
-senses, each view's `explains`, whether an actor gives a `summary`, and the labels that
-open each part (DEC-001 point 1). It never changes the number of a body's lines, but
-where it adds a section's link to its term, or takes out a line in that form.
+**A view's closing section** (`closing`). Each view in force ends with a section headed
+`What is built on these concepts`, which opens with one sentence that says what it lists
+(`CLOSING_OPENING`). Under each concept it explains, labelled by its section's heading,
+it lists each use case, journey and requirement in force of its analysis that links the
+concept's term: the use cases first, then the journeys, then
+the requirements, each in the order of their numbers, linked by its id and its title as
+the overview links it. A concept nothing links reads `None.` An artefact links a term
+where its body, as the command writes it, holds a link to the term's entry
+(`terms_linked`). An analysis that builds on this one is never read, since dependencies
+run one way. The section is no part of the view's structure: its heading, outside fenced
+code, opens it, and it runs to the next heading of its level or the file's end
+(`closing_spans`). The command writes it last, in place of any it held, and reads none
+of it for a mention.
+
+The rewrite reads a body only to place its links, and the links back from each view
+to what uses its terms, and takes its data from front matter and the declared
+structures alone: each term's id, name, noun forms and other senses, each view's
+`explains`, whether an actor gives a `summary`, and the labels that open each part
+(DEC-001 point 1). It never changes the number of a body's lines, but where it adds a
+section's link to its term, takes out a line in that form, or writes a view's closing
+section.
 """
 
 from __future__ import annotations
@@ -93,7 +109,7 @@ from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, S
 from dataclasses import dataclass
 from pathlib import Path
 
-from _lib import analyses, citations, forms, project_structure, structure
+from _lib import analyses, citations, forms, project_structure, structure, views
 from _lib.model import (
     ACTOR,
     EXPLAINS,
@@ -105,6 +121,7 @@ from _lib.model import (
     VIEW,
     Analysis,
     Artefact,
+    number_in,
 )
 
 #: The kinds whose bodies take the mentions' links one part at a time, beside the glossary
@@ -124,6 +141,27 @@ ESCAPE = "<!-- pkit:not-the-term -->"
 
 #: What a section's link to its term opens with.
 DEFINED = "Defined in"
+
+#: The heading of a view's closing section, which links what uses its concepts (DEC-004
+#: point 7), and the kinds it lists under each concept, in their order.
+CLOSING = "What is built on these concepts"
+LISTED: tuple[str, ...] = (USE_CASE, JOURNEY, *REQUIREMENTS)
+
+#: The sentence that opens a view's closing section, before its concepts' lists.
+CLOSING_OPENING = (
+    "Each concept below lists the use cases, journeys and requirements whose text links its term."
+)
+
+#: A line that heads a view's closing section, its spaces as any.
+_CLOSING_LINE = re.compile(rf"^##[ \t]+{re.escape(CLOSING)}[ \t]*$")
+
+#: The target of each link a view's closing section writes, a path from the view's folder
+#: to a use case's, a journey's or a requirement's file: the form the views' places
+#: declare, so friction reads each such link as its words alone (COR-050 point 5).
+CLOSING_TARGET = (
+    r"(?:\.\./)+(?:use-case-model/(?:use-cases|journeys)|requirements/"
+    r"(?:quality|functional|constraints))/[^()\s:#]*\.md"
+)
 
 #: How a written link departs from what the command writes, and a citation that takes no
 #: link since it resolves to nothing (DEC-001 point 13).
@@ -848,6 +886,7 @@ class Departure:
     defined: bool = False
     cited: bool = False
     received: bool = False
+    closing: bool = False  # the view's closing section, missing or stale
 
 
 @dataclass(frozen=True)
@@ -894,25 +933,34 @@ def view(
     text: str,
     vocabulary: Vocabulary,
     cites: Cites | None = None,
+    closing: Sequence[str] | None = None,
 ) -> Linked:
     """A view in force, LF `text`, with each section's link to its term and the links of
     its mentions and its citations written: its opening and each section below its
     heading. A line in the form of a section's link to its term in the opening is taken
-    out, as one below a section's own link is."""
+    out, as one below a section's own link is. Its closing section is written last, as
+    `closing` gives its lines, in place of any it holds, and read for no mention and no
+    citation; where `closing` is `None`, what is built on its concepts is not known here,
+    and the section it holds is kept as written."""
     path = artefact.path
-    written = text.split("\n")
-    start = body_start(written)
+    whole = text.split("\n")
+    start = body_start(whole)
+    spans = closing_spans(whole, start)
+    # The concepts' sections are read with each closing section blank, so each departure
+    # gives its line in the text as written, and rewritten with each one taken out.
+    written = _blanked(whole, spans)
+    bare = [line for index, line in enumerate(whole) if not _within(index, spans)]
     explains = artefact.fields.get(EXPLAINS)
     listed = [t for t in explains if isinstance(t, str)] if isinstance(explains, list) else []
-    parts = view_sections(written, start)
-    concept = parts[1:]
     wanted_lines: list[str | None] = []
-    for k in range(len(concept)):
+    for k in range(len(view_sections(bare, start)) - 1):
         term_id = listed[k] if k < len(listed) else None
         term = vocabulary.term(term_id) if term_id is not None else None
         wanted_lines.append(defined(term, path) if term is not None else None)
-    owners: list[str | None] = [None, *(listed[: len(concept)])]
-    lines, held = with_definitions(written, parts, owners, [None, *wanted_lines])
+    owners: list[str | None] = [None, *(listed[: len(wanted_lines)])]
+    _lines, held = with_definitions(
+        written, view_sections(written, start), owners, [None, *wanted_lines]
+    )
     departures = [
         Departure(artefact.location, how, number, line or "", line, want, None, True)
         for how, number, line, want in held
@@ -921,15 +969,178 @@ def view(
     # there, and written on the text with each section's link to its term in place.
     departures += [
         _departure(artefact.location, d)
-        for _rewritten, found in _parts(written, parts, owners, vocabulary, path, cites)
+        for _rewritten, found in _parts(
+            written, view_sections(written, start), owners, vocabulary, path, cites
+        )
         for d in found
     ]
+    lines = with_definitions(bare, view_sections(bare, start), owners, [None, *wanted_lines])[0]
     pieces = _parts(lines, view_sections(lines, start), owners, vocabulary, path, cites)
     linked: list[str] = list(lines[:start])
     for rewritten, _found in pieces:
         linked += rewritten.split("\n")
+    held_closing = [whole[first:past] for first, past in spans]
+    want = list(closing) if closing is not None else _trimmed(held_closing[0] if spans else [])
+    if closing is not None:
+        departures += _closing_departures(artefact.location, whole, spans, want)
     departures.sort(key=lambda d: (d.line, d.how))
-    return Linked(path, text, "\n".join(linked), tuple(departures))
+    return Linked(path, text, "\n".join(_closed(linked, want, whole, spans)), tuple(departures))
+
+
+# --- a view's closing section ------------------------------------------------------------------
+
+
+def closing_spans(lines: Sequence[str], start: int) -> list[tuple[int, int]]:
+    """Where each closing section of a view lies among `lines`, the body starting at index
+    `start`: from its heading, outside fenced code, to the next heading of its level or
+    the end, each as the index of its first line and the index past its last."""
+    body = lines[start:]
+    headings = [
+        start + index
+        for index, (line, fenced) in enumerate(zip(body, _fenced(body), strict=True))
+        if not fenced and re.match(r"^##(?:[ \t]|$)", line)
+    ]
+    found: list[tuple[int, int]] = []
+    for k, first in enumerate(headings):
+        if _CLOSING_LINE.match(lines[first]):
+            found.append((first, headings[k + 1] if k + 1 < len(headings) else len(lines)))
+    return found
+
+
+def closing_lines(body: Sequence[str]) -> set[int]:
+    """The indices of the lines of a view's `body`, below its front matter, that lie in a
+    closing section, which is no part of the view's structure (DEC-004 point 2)."""
+    return {index for first, past in closing_spans(body, 0) for index in range(first, past)}
+
+
+def _within(index: int, spans: Sequence[tuple[int, int]]) -> bool:
+    return any(first <= index < past for first, past in spans)
+
+
+def _blanked(lines: Sequence[str], spans: Sequence[tuple[int, int]]) -> list[str]:
+    """`lines` with each line of `spans` blank, their number kept."""
+    return ["" if _within(index, spans) else line for index, line in enumerate(lines)]
+
+
+def _trimmed(lines: Sequence[str]) -> list[str]:
+    """`lines` without the blank lines that end them."""
+    out = list(lines)
+    while out and not out[-1].strip():
+        out.pop()
+    return out
+
+
+def ending_with(text: str, closing: Sequence[str]) -> str:
+    """A new view's LF `text` ending with its closing section, `closing`: after its last
+    line that is not blank, a blank line between, and a line end after it."""
+    return "\n".join([*_trimmed(text.split("\n")), "", *closing, ""])
+
+
+def _closed(
+    linked: Sequence[str],
+    closing: Sequence[str],
+    whole: Sequence[str],
+    spans: Sequence[tuple[int, int]],
+) -> list[str]:
+    """A view's `linked` lines, its closing sections taken out, with `closing` written
+    last: in the place of the one it held where it held one alone, at its end, the lines
+    before it kept as written; else after its last line that is not blank, a blank line
+    between. No closing section is written where `closing` holds none."""
+    if not closing:
+        return list(linked)
+    if len(spans) == 1 and spans[0][1] == len(whole):
+        before = list(linked)
+        if before and before[-1].strip():
+            before.append("")
+        return [*before, *closing, ""]
+    return [*_trimmed(linked), "", *closing, ""]
+
+
+def _closing_departures(
+    location: str,
+    whole: Sequence[str],
+    spans: Sequence[tuple[int, int]],
+    wanted: Sequence[str],
+) -> list[Departure]:
+    """How a view's closing section departs from `wanted`: missing, or stale where it is
+    not the view's one closing section, at its end after a blank line, or holds other
+    lines."""
+    if not spans:
+        at = len(_trimmed(whole)) + 1
+        return [Departure(location, MISSING, at, CLOSING, None, None, None, closing=True)]
+    first, past = spans[0]
+    alone = len(spans) == 1 and past == len(whole)
+    apart = first == 0 or not whole[first - 1].strip()
+    if alone and apart and list(whole[first:past]) == [*wanted, ""]:
+        return []
+    return [Departure(location, STALE, first + 1, CLOSING, None, None, None, closing=True)]
+
+
+def terms_linked(text: str, path: str, vocabulary: Vocabulary) -> frozenset[str]:
+    """The ids of the terms the body of `text`, the file at `path`, links to, below its
+    front matter, by a link to the term's entry outside code and comments, as the
+    command writes one: its target from the file's folder (`Term.target`)."""
+    targets = {term.target(path): term.id for term in vocabulary.terms}
+    lines = text.split("\n")
+    _plain, found = _strip("\n".join(lines[body_start(lines) :]), ())
+    return frozenset(targets[f.target] for f in found if f.target in targets)
+
+
+def listed_in_closing(analysis: Analysis, folder: str | None) -> list[Artefact]:
+    """The artefacts a view's closing section may list: each use case, journey and
+    requirement in force of the analysis in `folder`, the use cases first, then the
+    journeys, then the requirements, each in the order of their numbers."""
+    return sorted(
+        (
+            a
+            for a in analysis.artefacts
+            if a.kind in LISTED and a.folder == folder and not a.withdrawn and a.id
+        ),
+        key=_in_order,
+    )
+
+
+def _in_order(artefact: Artefact) -> tuple[int, int, str, str]:
+    spelt = number_in(str(artefact.id))
+    rank = min(LISTED.index(artefact.kind), LISTED.index(REQUIREMENTS[0]))
+    return rank, int(spelt.split("-", 1)[1]) if spelt else 0, str(artefact.id), artefact.path
+
+
+def closing(
+    view_path: str,
+    explains: Sequence[str],
+    headings: Mapping[str, str],
+    listed: Sequence[Artefact],
+    used: Mapping[str, Collection[str]],
+    shown_as: Mapping[str, str],
+) -> list[str]:
+    """The lines of the closing section of the view at `view_path`: its opening sentence,
+    then, for each term of `explains`, in its order, under its section's heading as
+    `headings` gives it by its id, each of `listed` whose body links it, as `used` gives
+    the terms each links by its id, linked by a path from the view's folder. A requirement
+    shows its kind beside its id, as `shown_as` names it. A concept nothing links reads
+    `None.`"""
+    out = [f"## {CLOSING}", "", CLOSING_OPENING]
+    here = posixpath.dirname(view_path) or "."
+    for term_id in dict.fromkeys(explains):
+        users = [a for a in listed if term_id in used.get(str(a.id), ())]
+        out += ["", f"**{headings.get(term_id, term_id)}:**" + ("" if users else " None.")]
+        if users:
+            out.append("")
+            out += [f"- [{_label(a, shown_as)}]({_relative(a.path, here)})" for a in users]
+    return out
+
+
+def _label(artefact: Artefact, shown_as: Mapping[str, str]) -> str:
+    """`<id> — <title>`, and `<id> · <kind> · <title>` for a requirement, as the overview
+    and its heading show it, its brackets escaped."""
+    title = artefact.fields.get("title")
+    if artefact.kind in REQUIREMENTS:
+        shown = f"{artefact.id} · {shown_as.get(artefact.kind, artefact.kind)}"
+        label = shown + (f" · {title}" if isinstance(title, str) else "")
+    else:
+        label = f"{artefact.id} — {title}" if isinstance(title, str) else str(artefact.id)
+    return label.replace("[", "\\[").replace("]", "\\]")
 
 
 #: A line that opens a part of an artefact: a bold label that opens the line, or a list
@@ -1182,10 +1393,11 @@ def plan(
     answered (DEC-001 point 13). In one that keeps a domain model, the glossary and each
     view in force take the links between terms too, and so does each actor, use case,
     journey and requirement in force, read as `kinds` gives their parts (`parted`),
-    save where `kinds` is `None` (DEC-004 point 7). `read` gives each file's text by its
-    path, LF line ends, `None` where it cannot be read, which is left out. `asked`, where
-    given, gathers what the citations ask the lookup, so a pass with no `lookups` says
-    what to look up."""
+    save where `kinds` is `None` (DEC-004 point 7). Each view's closing section is
+    written from the documents as the command writes them, and kept as written where
+    `kinds` is `None`. `read` gives each file's text by its path, LF line ends, `None`
+    where it cannot be read, which is left out. `asked`, where given, gathers what the
+    citations ask the lookup, so a pass with no `lookups` says what to look up."""
     folders = [a.folder for a in listing.analyses] if listing.several else [None]
     found: list[Linked] = []
     for folder in folders:
@@ -1202,31 +1414,85 @@ def plan(
             text = read.get(path)
             if text is not None:
                 found.append(glossary(path, text, held, words, cites))
-        for artefact in sorted(analysis.of_kind(VIEW), key=lambda v: v.path):
-            if artefact.folder != folder or artefact.withdrawn or words is None:
-                continue
-            text = read.get(artefact.path)
-            if text is not None:
-                found.append(view(artefact, text, words, cites))
-        for artefact in sorted(_documents(analysis, folder), key=lambda a: a.path):
-            text = read.get(artefact.path)
-            if text is not None:
-                kind = (kinds or {}).get(artefact.kind)
-                found.append(document(artefact, text, words, kind, cites))
+        documents = _documents(analysis, folder, read, words, kinds, cites)
+        if words is not None:
+            found += _views(analysis, folder, read, words, kinds, cites, documents)
+        found += [linked for _artefact, linked in documents]
         if asked is not None:
             asked |= cites.asked
     return found
 
 
-def _documents(analysis: Analysis, folder: str | None) -> list[Artefact]:
-    """The artefacts in force of the analysis in `folder` that take the links of their
-    citations alone, each a file of its own."""
-    return [
-        a
-        for kind in _DOCUMENT_KINDS
-        for a in analysis.of_kind(kind)
-        if a.folder == folder and not a.withdrawn and not a.entry
-    ]
+def _views(
+    analysis: Analysis,
+    folder: str | None,
+    read: Mapping[str, str | None],
+    words: Vocabulary,
+    kinds: Mapping[str, structure.Kind] | None,
+    cites: Cites,
+    documents: Sequence[tuple[Artefact, Linked]],
+) -> list[Linked]:
+    """Each view in force of the analysis in `folder` whose text `read` gives, with its
+    links as the command writes them, and its closing section written from `documents`,
+    as the command writes their links; kept as written where `kinds` is `None`."""
+    used = {
+        str(artefact.id): terms_linked(linked.linked, artefact.path, words)
+        for artefact, linked in documents
+    }
+    listed = listed_in_closing(analysis, folder)
+    shown_as = {name: kind.shown_as or name for name, kind in (kinds or {}).items()}
+    found: list[Linked] = []
+    for artefact in sorted(analysis.of_kind(VIEW), key=lambda v: v.path):
+        if artefact.folder != folder or artefact.withdrawn:
+            continue
+        text = read.get(artefact.path)
+        if text is None:
+            continue
+        explained = _explained(artefact)
+        headings = {term_id: views.heading(analysis, term_id) for term_id in explained}
+        closed = (
+            closing(artefact.path, explained, headings, listed, used, shown_as)
+            if kinds is not None
+            else None
+        )
+        found.append(view(artefact, text, words, cites, closed))
+    return found
+
+
+def _document_artefacts(analysis: Analysis, folder: str | None) -> list[Artefact]:
+    """The artefacts in force of the analysis in `folder` of the kinds with a file of their
+    own, but the view (`_DOCUMENT_KINDS`), in the order of their paths."""
+    return sorted(
+        (
+            a
+            for kind in _DOCUMENT_KINDS
+            for a in analysis.of_kind(kind)
+            if a.folder == folder and not a.withdrawn and not a.entry
+        ),
+        key=lambda a: a.path,
+    )
+
+
+def _documents(
+    analysis: Analysis,
+    folder: str | None,
+    read: Mapping[str, str | None],
+    words: Vocabulary | None,
+    kinds: Mapping[str, structure.Kind] | None,
+    cites: Cites | None = None,
+) -> list[tuple[Artefact, Linked]]:
+    """Each of `_document_artefacts` of the analysis in `folder` whose text `read` gives,
+    with its links as the command writes them (`document`): the links of its citations,
+    given `cites`, and, given `words`, the mentions' links of each actor, use case,
+    journey and requirement, read as `kinds` gives its parts, none where `kinds` is
+    `None`."""
+    found: list[tuple[Artefact, Linked]] = []
+    for artefact in _document_artefacts(analysis, folder):
+        text = read.get(artefact.path)
+        if text is not None:
+            kind = (kinds or {}).get(artefact.kind)
+            found.append((artefact, document(artefact, text, words, kind, cites)))
+    return found
 
 
 def asked(
@@ -1244,6 +1510,32 @@ def asked(
     return gathered
 
 
+def _explained(view_artefact: Artefact) -> list[str]:
+    """The term ids a view's `explains` lists, as written."""
+    explains = view_artefact.fields.get(EXPLAINS)
+    return [t for t in explains if isinstance(t, str)] if isinstance(explains, list) else []
+
+
+def uses(
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+    read: Mapping[str, str | None],
+    kinds: Mapping[str, structure.Kind],
+) -> dict[str, frozenset[str]]:
+    """The terms each use case, journey and requirement in force of the analysis in
+    `folder` links, by its id, as the command writes its links (`terms_linked`), whether
+    or not the analysis keeps a domain model yet: what a new view's closing section is
+    written from. `read` gives each file's text by its path, LF line ends. The citations
+    are not looked up here: a citation the command links is a link, read for no mention
+    either way."""
+    words = vocabulary(analysis, listing, folder)
+    return {
+        str(artefact.id): terms_linked(linked.linked, artefact.path, words)
+        for artefact, linked in _documents(analysis, folder, read, words, kinds)
+    }
+
+
 def files(analysis: Analysis, listing: analyses.Listing) -> list[str]:
     """The paths `plan` reads: in every analysis, each glossary that holds a term in force
     and each artefact in force of another kind, and each view in force where it keeps a
@@ -1256,5 +1548,5 @@ def files(analysis: Analysis, listing: analyses.Listing) -> list[str]:
             paths |= {
                 v.path for v in analysis.of_kind(VIEW) if v.folder == folder and not v.withdrawn
             }
-        paths |= {a.path for a in _documents(analysis, folder)}
+        paths |= {a.path for a in _document_artefacts(analysis, folder)}
     return sorted(paths)

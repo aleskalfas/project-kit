@@ -529,7 +529,8 @@ def test_software_analysis_declares_the_link_commands_own_form() -> None:
     """The glossary's form is the command's target; every other place's, its branch by a
     path, since only the glossary links an entry by its anchor alone: the views, the actors,
     the use cases, the journeys and the three kinds of requirement. Beside it, every place
-    declares the target the command writes for a citation (DEC-001 point 13)."""
+    declares the target the command writes for a citation (DEC-001 point 13). The views'
+    places also declare the form of their closing section's links (#2104)."""
     links, citations = load_lib("links", "citations")
     entry_form: str = links._ENTRY
     cited: str = citations.TARGET
@@ -537,7 +538,7 @@ def test_software_analysis_declares_the_link_commands_own_form() -> None:
         assert _declared(place) == [entry_form, cited]
     by_path = entry_form.split("|", 1)[0]
     for place in ("domain-model", "*/domain-model/**"):
-        assert _declared(place) == [by_path, cited]
+        assert _declared(place) == [by_path, cited, links.CLOSING_TARGET]
     for folder in (
         "use-case-model/actors",
         "use-case-model/use-cases",

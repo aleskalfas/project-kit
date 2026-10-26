@@ -142,5 +142,21 @@ The merge gate is the set of conditions project-management holds a [pull request
 **Always true:**
 
 - The merge is pinned to the head the gate judged (DEC-028).
-- A gate that passes gives no [authorisation](../glossary.md#term-authorisation--authorisation) to merge, which stays the person's ([DEC-055 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
-- A person bypasses one required reviewer only with a reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records ([DEC-050](../../../../.pkit/capabilities/project-management/decisions/DEC-050-per-reviewer-override.md)).
+- A gate that passes gives no [authorisation](../glossary.md#term-authorisation--authorisation) to merge, which stays the person's (DEC-055 point 3).
+- A person bypasses one required reviewer only with a reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records (DEC-050).
+
+## What is built on these concepts
+
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
+**Verdict:**
+
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md)
+
+**Required reviewer:**
+
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md)
+
+**Merge gate:**
+
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md)

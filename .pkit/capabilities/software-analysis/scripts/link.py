@@ -21,8 +21,10 @@ heading, and links the first mention of each term in each section to the term's
 entry in the glossary: in a view's opening and its sections, in each glossary entry
 below its heading, and in each part of an actor's, a use case's, a journey's and a
 requirement's body. A goal, a journey's step lines and an actor's first sentence say
-a datum again, and stay plain. `_lib/links.py` states what a mention is, and the
-safeguards that keep a link from naming the wrong term.
+a datum again, and stay plain. Each view ends with its closing section, `## What is
+built on these concepts`, which lists under each concept it explains each use case,
+journey and requirement whose body links the concept's term. `_lib/links.py` states what a
+mention is, and the safeguards that keep a link from naming the wrong term.
 
 It reads the analysis in the working tree through the backbone's discovery, `pkit
 friction artefacts --json`, and takes its data from front matter and the declared
@@ -64,8 +66,9 @@ def main() -> int:
             "DEC-001 point 13); in each analysis that keeps a domain model, each view "
             "section's link to its term, and the first mention of each term in each section "
             "linked to its glossary entry, in the views, the glossary entries, and each part "
-            "of the actors, use cases, journeys and requirements (DEC-004 point 7). Writes "
-            "only where a link changes; `pkit analysis validate` holds the links."
+            "of the actors, use cases, journeys and requirements (DEC-004 point 7). Each view "
+            "ends with where its concepts are used. Writes only where a link changes; `pkit "
+            "analysis validate` holds the links."
         ),
     ).parse_args()
 

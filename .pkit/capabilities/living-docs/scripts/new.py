@@ -23,10 +23,16 @@ it wrote and refuses when the write brings an error the project did not have.
 `_lib/stamp.py` states the rules. `--dry-run` makes the checks before the write,
 prints each file it would write, and writes nothing.
 
+Asked for a space, or a page of the user or technical space, while the two
+documentation roots are one folder, each first offers to set the internal root
+apart, at `tech-docs` or the folder `--internal-root` names, through `pkit config
+set docs.internal`. That command asks at a terminal, and `--yes` consents off one.
+
 Usage:
   pkit living-docs new page <file> --space <space> --kind <kind> --reader <id> --title <text>
-      [--path <glob>]... [--record <id>]... [--artefact <id>]... [--source <name>]... [--dry-run]
-  pkit living-docs new space <space> [--set <NAME>] [--dry-run]
+      [--path <glob>]... [--record <id>]... [--artefact <id>]... [--source <name>]...
+      [--internal-root <path>] [--yes] [--dry-run]
+  pkit living-docs new space <space> [--set <NAME>] [--internal-root <path>] [--yes] [--dry-run]
 
 Exit codes:
   0  stamped, or the dry run's checks passed, with any warning on standard error
@@ -37,6 +43,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import shlex
 import sys
 from pathlib import Path
 
@@ -86,6 +93,7 @@ def _parser() -> argparse.ArgumentParser:
             metavar=metavar,
             help=f"An anchor: {what} (repeatable).",
         )
+    _separation(page)
     _dry_run(page)
 
     space = forms.add_parser(
@@ -101,8 +109,24 @@ def _parser() -> argparse.ArgumentParser:
         metavar="NAME",
         help="The rule set's name (default: the id in upper case, its hyphens dropped).",
     )
+    _separation(space)
     _dry_run(space)
     return parser
+
+
+def _separation(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--internal-root",
+        metavar="PATH",
+        help="Where the two documentation roots are one folder, the folder the internal root "
+        f"is set to first (default: {stamp.RECOMMENDED_INTERNAL_ROOT}).",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Consent without a prompt to setting the internal root apart, where the roots are "
+        "one folder (COR-048 point 5). The stamp's own writes take no consent.",
+    )
 
 
 def _dry_run(parser: argparse.ArgumentParser) -> None:
@@ -117,26 +141,7 @@ def main() -> int:
     args = _parser().parse_args()
     root = project_root()
     try:
-        if args.form == PAGE:
-            stamped = stamp.stamp_page(
-                root,
-                stamp.PageRequest(
-                    file=args.file,
-                    space=args.space,
-                    kind=args.kind,
-                    reader=args.reader,
-                    title=args.title,
-                    paths=tuple(args.paths),
-                    records=tuple(args.records),
-                    artefacts=tuple(args.artefacts),
-                    sources=tuple(args.sources),
-                ),
-                dry_run=args.dry_run,
-            )
-        else:
-            stamped = stamp.stamp_space(
-                root, stamp.SpaceRequest(args.space, args.set_name), dry_run=args.dry_run
-            )
+        stamped = _stamped(root, args)
     except stamp.Refused as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 1
@@ -153,6 +158,41 @@ def main() -> int:
     for warning in stamped.warnings:
         print(f"warning: {warning}", file=sys.stderr)
     return 0
+
+
+def _stamped(root: Path, args: argparse.Namespace) -> stamp.Stamped:
+    """The stamp `args` ask for, after setting the roots apart where they are one folder."""
+    rerun = " ".join(["pkit", "living-docs", "new", *map(shlex.quote, sys.argv[1:])])
+    separation = stamp.Separation(args.internal_root, args.yes)
+    pending = stamp.separate_roots(
+        root,
+        args.space,
+        separation,
+        rerun=rerun,
+        defines=args.form == SPACE,
+        dry_run=args.dry_run,
+    )
+    if pending is not None:
+        return pending
+    if args.form == PAGE:
+        return stamp.stamp_page(
+            root,
+            stamp.PageRequest(
+                file=args.file,
+                space=args.space,
+                kind=args.kind,
+                reader=args.reader,
+                title=args.title,
+                paths=tuple(args.paths),
+                records=tuple(args.records),
+                artefacts=tuple(args.artefacts),
+                sources=tuple(args.sources),
+            ),
+            dry_run=args.dry_run,
+        )
+    return stamp.stamp_space(
+        root, stamp.SpaceRequest(args.space, args.set_name), dry_run=args.dry_run
+    )
 
 
 if __name__ == "__main__":

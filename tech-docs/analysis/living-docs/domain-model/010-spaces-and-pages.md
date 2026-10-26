@@ -107,7 +107,7 @@ A documentation space is the collection of pages written for one audience. Every
 
 **Always true:**
 
-- Two roots that are one folder give no space until onboarding separates them (DEC-001 point 1).
+- Two roots that are one folder give no space until they are set apart (DEC-001 point 1). The command that stamps a space, or a page of the user or technical space, offers to set them apart first (DEC-001 point 2).
 - A place outside every root that holds a document nothing else claims belongs to exactly one space, the one assigned to it. An untyped place of [rule sets](../../core/glossary.md#term-rule-set--rule-set) owes no assignment, and is passed over until it has one (DEC-001 point 1).
 - A synced tree is never a place of a space (DEC-001 point 1).
 
@@ -261,3 +261,51 @@ An unclassified document is a file in a space's places that is neither a [page](
 **States:** It stays unclassified until onboarding makes it a page, or leaves it outside the spaces' rules (DEC-001 points 4 and [8](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 
 **Always true:** [Validation](../../core/glossary.md#term-validation--validation) reports it for onboarding to classify (DEC-001 point 4).
+
+## What is built on these concepts
+
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
+**Documentation space:**
+
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
+
+**Space definition:**
+
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+
+**Page:**
+
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+- [REQ-022 · Functional · The living-docs agent proposes each change, and applies none](../requirements/functional/REQ-022-agent-proposes-only.md)
+- [REQ-024 · Functional · Validation checks a part of an LDOC rule only where the rule binds](../requirements/functional/REQ-024-checks-where-rule-binds.md)
+
+**Page kind:**
+
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+
+**Reader:**
+
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+- [REQ-024 · Functional · Validation checks a part of an LDOC rule only where the rule binds](../requirements/functional/REQ-024-checks-where-rule-binds.md)
+
+**Captured source:**
+
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md)
+
+**Unclassified document:**
+
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
