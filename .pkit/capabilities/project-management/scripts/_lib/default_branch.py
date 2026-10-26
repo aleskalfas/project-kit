@@ -66,13 +66,16 @@ class Unanswered(Exception):
 
 @dataclass(frozen=True)
 class Branch:
-    """The default branch as the backbone declares and resolves it."""
+    """The default branch as the backbone declares and resolves it. `unborn` when
+    it has no commit yet, so a reader of what it holds reads nothing (COR-054
+    point 4)."""
 
     name: str
     declared: bool
     ref: str | None
     commit: str | None
     problem: str | None
+    unborn: bool = False
 
 
 @dataclass(frozen=True)
@@ -225,6 +228,7 @@ def _reading(document: Any) -> Reading | None:
             ref=_text(branch_doc.get("ref")),
             commit=_text(branch_doc.get("commit")),
             problem=_text(branch_doc.get("problem")),
+            unborn=branch_doc.get("unborn") is True,
         ),
         Base(
             ref=ref,

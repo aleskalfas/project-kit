@@ -634,12 +634,64 @@ A **state issue** holds one piece of shared state that changes while agents work
 - **A comment counts only from an author who may write:** a member where the membership gate is closed, and otherwise an account GitHub records as having write access or more. The access is read once for each author in a run
 - **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out. Every listing of issues runs through the one read of issues, which leaves state issues out
 
-`scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. The commands that create, take, release and list seats come later, so no command creates a state issue yet.
+`scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. `create-seats` creates the state issues of a topology's seats (below). The commands that take, release and list seats come later.
 
 Two things no code enforces, for a person to watch once seats are in use:
 
 - **After an account loses its access or is deleted,** its comments stop counting. A seat's holder may then change, since a void claim may hold, or an earlier holder return. Check the listing of seats, and release by force each seat whose holder changed
 - **A Task that a board's automation moves back to In Progress** renews no claim, since only an ownership event renews one, and a board's automation posts none. Once claims lapse ([project-management:DEC-059-topology-of-seats] point 9), such a Task's claim may lapse at once
+
+#### Topologies of seats — `create-seats` / `check-topology` (per [project-management:DEC-059-topology-of-seats])
+
+A project that runs several agents at once, each in a clone of its own, declares a **topology**: a list of seats in `project/topology.yaml`. Every clone reads the topology from the default branch, at the commit the backbone resolves it to, and never from its own branch. So a change to the topology binds once it merges. Where the default branch cannot be resolved, no clone takes a seat.
+
+```yaml
+# project/topology.yaml
+schema_version: 1
+settings:
+  release_mode: tolerant      # the only mode built
+seats:
+  - name: planner             # unique, and never renamed
+    role: planner             # planner, worker or lead
+    organizer: true           # at most one seat
+    state_issue: 2210         # written by create-seats
+  - name: tester
+    role: worker
+    agent: project-manager    # the default
+    scope:
+      types: [test]           # workstreams, types of the type axis, or both
+    state_issue: 2211
+  - name: old-worker
+    role: worker
+    retired: true             # stays in its place
+    state_issue: 2190
+```
+
+- **A seat's number is its place in the list,** counted from one. New seats go at the end, and a seat that leaves stays in its place, marked `retired: true`, so no number moves. Renaming a seat retires it and adds a new seat at the end
+- **A scope narrows the work of its own seat,** and reserves nothing for that seat. It names workstreams that `project/workstreams.yaml` declares, values of the type axis, or both
+- **The organizer seat's clone** may release another seat by force. At most one seat is the organizer seat
+- **Each seat names its state issue,** which says who holds the seat. The topology never says who holds a seat
+
+**Adding seats.** Add the seats at the end of the file on a branch, and run `pkit pm create-seats` there. The command creates a state issue for each seat that names none and is not retired. It writes each issue's number into that seat's entry. Commit the file with the change, so the change lands with its state issues.
+
+- **A second run repeats nothing.** A seat that names its state issue is left alone. A state issue that an earlier run created is found by its marker among the open issues, and one left half done is finished
+- **Each number is written as soon as its state issue exists,** so a run that stops keeps what it wrote
+- **Who may write on a state issue** comes from the members the default branch holds. A run that cannot resolve the default branch creates nothing, and a state issue that does not read back as the seat's gets no number
+- **The run stops on any other problem in the file,** such as a seat name used twice, before it creates anything
+
+**Checking a change.** `pkit pm check-topology` checks the file against the topology of the default branch, or of the base `--base` names, and says which commit it read. Each of these fails the check:
+
+- a shape that `schemas/topology.schema.json` refuses
+- a seat name used twice, or more than one organizer seat
+- a seat that is not retired and names no state issue, or two seats that name one
+- a scope that names a workstream or a type the project does not declare
+- the `label` substrate in `project/instance-ownership.yaml`, since a label cannot carry what a claim names
+- a seat of the base deleted or moved rather than retired
+- a base that cannot be resolved, while the working tree holds a topology
+
+The check compares a change with a base, so it is no member of `pkit validate`, which takes no base. Run it among the checks of a pull request. It reads no GitHub.
+
+`scripts/_lib/topology.py` is the one reader of the topology. Every command that acts as a seat reads the topology through it, from the default branch. `schemas/topology.schema.json` holds the file's shape.
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 

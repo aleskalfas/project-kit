@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "topology.schema.json",
+  "title": "The topology of seats",
+  "description": "Formal shape of `.pkit/capabilities/project-management/project/topology.yaml` (DEC-059 points 1 to 3): the seats a project that runs agents in parallel declares, in its committed configuration, and the settings they share. Every clone reads it from the default branch. A seat's number is its place in `seats`, counted from one, retired seats included. `scripts/_lib/topology.py` reads it and `check-topology` checks it, adding what this schema cannot see: a seat name used twice, more than one organizer seat, a seat with no state issue, a scope naming what the project does not declare, the `label` ownership substrate, and a seat deleted or moved against the default branch. Companion per COR-018.",
+  "type": "object",
+  "required": ["schema_version", "seats"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "binds_to": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Repo-relative globs matching the adopter-data files this schema validates (COR-023 fallback binding). Present on the kit-shipped binding carrier; absent from adopter data files."
+    },
+    "pkit_schema": {
+      "type": "string",
+      "description": "Self-describing adopter-data binding tag, `project-management:topology` (COR-023)."
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The settings the seats share (DEC-059 point 2).",
+      "properties": {
+        "release_mode": {
+          "type": "string",
+          "enum": ["tolerant"],
+          "description": "The mode in which a seat is released (DEC-059 point 5). `tolerant`, the default and the only mode built: a seat stays taken until its clone releases it, or until a release by force."
+        }
+      }
+    },
+    "seats": {
+      "type": "array",
+      "description": "The seats, in their order. New seats are added at the end, and a seat that leaves stays, marked retired, so no seat's number moves (DEC-059 point 6).",
+      "items": {
+        "type": "object",
+        "required": ["name", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z](?:[a-z0-9-]{0,38}[a-z0-9])?$",
+            "description": "Unique in the topology, and the identity of the clone that holds the seat. It never changes: renaming a seat retires it and adds a new one."
+          },
+          "role": {
+            "type": "string",
+            "enum": ["planner", "worker", "lead"],
+            "description": "A planner slices the work and files it; a worker takes ready work and builds it; a lead plans and builds within its scope."
+          },
+          "agent": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "description": "The agent definition the seat's agent follows. Default `project-manager` (DEC-059 point 8)."
+          },
+          "scope": {
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "description": "Optional. Narrows the work this seat's agent takes, and reserves nothing (DEC-059 point 7). A Task falls in the scope where it matches each part the scope names.",
+            "properties": {
+              "workstreams": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "description": "Workstreams `project/workstreams.yaml` declares."
+              },
+              "types": {
+                "type": "array",
+                "items": { "type": "string", "minLength": 1 },
+                "description": "Values of the type axis, such as `test` or `docs`."
+              }
+            }
+          },
+          "organizer": {
+            "type": "boolean",
+            "description": "Whether this is the organizer seat, whose clone may release other seats by force. At most one seat is."
+          },
+          "state_issue": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "The number of the seat's state issue, which `pkit pm create-seats` writes on the change that adds the seat (DEC-059 point 3)."
+          },
+          "retired": {
+            "type": "boolean",
+            "description": "Whether the seat has left the topology. A retired seat stays in its place and cannot be taken."
+          }
+        }
+      }
+    }
+  }
+}

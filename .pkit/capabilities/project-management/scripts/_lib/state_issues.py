@@ -29,10 +29,10 @@ author who may write names the kind and key. It counts each event comment for
 that key whose author may write, and folds them (:func:`fold`): the first claim
 on a free state holds, another clone's claim on a held state is void, and stays
 void after a release. A read that finds the description's marker gone restores
-it, the one write a read makes. :func:`find` reads, in number order, the state
-issues the one read of issues (``_lib/issue_list``) left out of a listing of open
-issues, where their description's marker names the key. The issue GitHub
-numbered first holds the state.
+it, the one write a read makes. :func:`list_open` asks the one read of issues
+(``_lib/issue_list``) for the state issues it left out of a listing of open
+issues, and :func:`find` reads, in number order, those whose description's
+marker names the key. The issue GitHub numbered first holds the state.
 
 Who may write is the caller's to pass (:class:`Writers`): the members, where the
 membership gate is closed, or anyone GitHub records as having write access or
@@ -483,13 +483,56 @@ class Found:
     cause: str | None = None
 
 
+#: How many open issues one listing of state issues reads.
+OPEN_LIMIT = 1000
+
+
+@dataclass(frozen=True)
+class Listed:
+    """The open state issues the one read of issues left out of its listing.
+
+    ``rows`` is None where the listing failed, and ``cause`` says why.
+    ``cut`` says that the listing reached its limit, so a state issue past it
+    was not read."""
+
+    rows: tuple[dict[str, Any], ...] | None
+    cause: str | None = None
+    cut: bool = False
+
+
+def list_open(run: StateRun, *, limit: int = OPEN_LIMIT) -> Listed:
+    """Ask the one read of issues for the state issues among the open ones
+    (ADR-071 point 2), never GitHub's search, whose results lag."""
+    try:
+        from _lib import issue_list
+    except ImportError:  # pragma: no cover - a test that puts `_lib` itself on the path
+        import issue_list  # type: ignore[no-redef]
+
+    def gh_call(argv: list[str], _config: Any, **_kwargs: Any) -> Any:
+        return run.gh(argv)
+
+    try:
+        listing = issue_list.list_issues(
+            {}, ["--state", "open", "--limit", str(limit)], fields="number", gh_call=gh_call
+        )
+    except FileNotFoundError:
+        return Listed(None, "`gh` is not on PATH")
+    if listing.rows is None:
+        said = listing.stderr.strip().splitlines()
+        return Listed(
+            None, f"the open issues could not be listed: {said[-1] if said else 'no list'}"
+        )
+    rows = tuple(row for row in listing.state_rows if isinstance(row, dict))
+    return Listed(rows, cut=listing.returned >= limit)
+
+
 def find(kind: str, key: str, rows: Iterable[dict[str, Any]], run: StateRun) -> Found:
     """Find the state issue for ``kind`` and ``key`` among ``rows``.
 
     ``rows`` are the state issues the one read of issues left out of a listing
-    of open issues (``IssueListing.state_rows``), each with its ``number`` and
-    ``body``. Those whose description's marker names the kind and key are read
-    by number, lowest first. A caller that claims lists again
+    of open issues (:func:`list_open`, ``IssueListing.state_rows``), each with
+    its ``number`` and ``body``. Those whose description's marker names the kind
+    and key are read by number, lowest first. A caller that claims lists again
     before it claims, and again when it reads after claiming, and writes only to
     the first (DEC-058 point 2).
     """
