@@ -1,0 +1,43 @@
+# project-kit's configuration of the doc-examples run (doc-examples DEC-001
+# points 3 to 5). Project-owned. Shape: ../schemas/config.schema.json.
+#
+# The pages are the documents of living-docs' page type, the default, so no
+# `types` is named. The scratch project is a repository with project-kit
+# installed from this checkout and committed, as project-kit's first runner
+# built it (#1807). `pkit` is this checkout's: the run is started through
+# `uv run`, which puts the checkout's environment first on the caller's PATH.
+
+pkit_schema: doc-examples:config
+schema_version: 1
+
+# Git reads only the scratch home's configuration, which signs nothing and
+# allows no SSH, and the install is committed so a page's `git` commands see a
+# clean tree.
+setup:
+  - git config --global user.name "Doc Examples"
+  - git config --global user.email doc-examples@example.invalid
+  - git config --global init.defaultBranch main
+  - git config --global commit.gpgsign false
+  - git config --global tag.gpgsign false
+  - git config --global protocol.ssh.allow never
+  - git init -q
+  - pkit init --root .
+  - git add -A
+  - git commit -q -m "Install project-kit"
+
+# uv gets a cache of its own, which fills from the network once for each run,
+# and fetches no Python. No Python run writes bytecode, so nothing a command
+# imports from this checkout writes in the repository.
+environment:
+  UV_CACHE_DIR: <scratch>/uv-cache
+  UV_PYTHON_DOWNLOADS: never
+  GIT_CONFIG_NOSYSTEM: "1"
+  GIT_CONFIG_GLOBAL: <home>/.gitconfig
+  PYTHONUTF8: "1"
+  PYTHONDONTWRITEBYTECODE: "1"
+  PKIT_NO_ROUTE: "1"
+
+# The version project-kit's commands print, such as `pkit upgrade`'s: this
+# checkout's.
+placeholders:
+  VERSION: cat "$DOC_EXAMPLES_REPOSITORY/.pkit/VERSION"
