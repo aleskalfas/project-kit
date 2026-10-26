@@ -18,6 +18,13 @@ The same file keeps the clone's **key**, which the clone generates the first
 time it claims on a state issue (DEC-035 point 1, refined for
 [project-management:DEC-058-state-issues]). Writing or clearing the instance id
 keeps the key.
+
+In a project with a topology of seats it also keeps the name of the seat the
+clone took, as a **hint** of where to look ([project-management:
+DEC-059-topology-of-seats] point 6). The hint never says that the clone holds
+the seat: a command reads the seat's state issue, by the clone's key, before it
+acts as the seat's instance. Writing or clearing the hint keeps the key and the
+instance id.
 """
 
 from __future__ import annotations
@@ -125,6 +132,41 @@ def ensure_clone_key(capability_root: Path) -> str:
     key = secrets.token_hex(_KEY_BYTES)
     _write_field(capability_root, "key", key)
     return key
+
+
+# ---- the seat's hint (DEC-059 point 6) ----------------------------------------
+
+
+def read_seat_hint(capability_root: Path) -> str | None:
+    """The name of the seat this clone took, or ``None`` when it took none.
+
+    A hint of where to look, never proof that the clone holds the seat. A file
+    that cannot be read holds no hint."""
+    data = _read_data(identity_path(capability_root))
+    seat = data.get("seat") if data is not None else None
+    return seat if isinstance(seat, str) and seat else None
+
+
+def write_seat_hint(capability_root: Path, seat: str) -> Path:
+    """Keep ``seat`` as the seat this clone took; return the file path written."""
+    if not seat:
+        raise ValueError("a seat's name is not empty")
+    return _write_field(capability_root, "seat", seat)
+
+
+def clear_seat_hint(capability_root: Path) -> bool:
+    """Forget the seat this clone took. ``True`` where a hint was removed. The
+    key and the instance id stay."""
+    path = identity_path(capability_root)
+    data = _read_data(path)
+    if data is None or "seat" not in data:
+        return False
+    del data["seat"]
+    if data:
+        path.write_text(json.dumps(data) + "\n", encoding="utf-8")
+    else:
+        path.unlink()
+    return True
 
 
 def _read_data(path: Path) -> dict | None:

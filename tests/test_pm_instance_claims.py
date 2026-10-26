@@ -20,7 +20,14 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.pm_ownership_support import FakeGitHub, topology_with
+from tests.pm_ownership_support import (
+    FakeGitHub,
+    seat_issue,
+    seat_snapshot,
+    snapshot_with,
+    topology_with,
+)
+from tests.pm_state_issue_fakes import FakeRepo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -33,6 +40,12 @@ def ic():
         yield importlib.import_module("_lib.instance_claims")
     finally:
         sys.path.remove(str(SCRIPTS))
+
+
+@pytest.fixture
+def no_topology(ic, monkeypatch) -> None:
+    """The default branch declares no topology, as one run's snapshot reads it."""
+    monkeypatch.setattr(ic, "_snapshot", lambda _root, _config, _login: None)
 
 
 @pytest.fixture
@@ -82,7 +95,7 @@ def test_no_instance_id_means_no_clone(ic, root: Path) -> None:
     assert ic.this_clone(root, "me") is None
 
 
-def test_an_instance_id_activates_with_the_comment_default(ic, root: Path) -> None:
+def test_an_instance_id_activates_with_the_comment_default(ic, root: Path, no_topology) -> None:
     importlib.import_module("_lib.instance_identity").write_instance_id(root, 2)
     clone = ic.this_clone(root, "me")
     assert clone == ic.Clone(2, "comment", "me", root)
@@ -100,13 +113,13 @@ def test_a_clone_id_outside_the_tests_own_folders_reads_as_unset(ic) -> None:
         assert ic.this_clone(capability, "me") is None
 
 
-def test_the_settings_file_selects_the_label_substrate(ic, root: Path) -> None:
+def test_the_settings_file_selects_the_label_substrate(ic, root: Path, no_topology) -> None:
     importlib.import_module("_lib.instance_identity").write_instance_id(root, 3)
     (root / "project" / "instance-ownership.yaml").write_text("substrate: label\n")
     assert ic.this_clone(root, "me").substrate == "label"
 
 
-def test_an_unreadable_settings_file_falls_back_to_comment(ic, root: Path) -> None:
+def test_an_unreadable_settings_file_falls_back_to_comment(ic, root: Path, no_topology) -> None:
     importlib.import_module("_lib.instance_identity").write_instance_id(root, 3)
     (root / "project" / "instance-ownership.yaml").write_text("substrate: [unclosed\n")
     assert ic.this_clone(root, "me").substrate == "comment"
@@ -585,7 +598,9 @@ def test_a_clone_in_a_seat_takes_its_number_and_the_comment_log(ic, root, monkey
     (root / "project" / "instance-ownership.yaml").write_text("substrate: label\n")
     holders = {"worker-2": _held(ic, key=key)}
     seat = ic.Seat("worker-2", 2, ic.WORKER)
-    monkeypatch.setattr(ic, "read_topology", lambda _root, _config: ic.Topology(seat, holders))
+    monkeypatch.setattr(
+        ic, "read_topology", lambda _root, _config, **_kw: ic.Topology(seat, holders)
+    )
     clone = ic.this_clone(root, "me")
     assert clone == ic.Clone(2, "comment", "me", root, seat, key, holders)
     assert clone.named() == "seat worker-2, instance 2"
@@ -605,9 +620,14 @@ def test_a_clone_in_a_seat_with_no_key_takes_no_part(ic, root, monkeypatch) -> N
     assert ic.this_clone(root, "me") is None
 
 
-def test_with_no_topology_no_project_has_one(ic, root: Path) -> None:
-    """#2141 wires the reading to `_lib/topology`; until then DEC-035 stands."""
-    assert ic.read_topology(root, {}) is None
+def test_where_the_default_branch_declares_no_topology_dec_035_stands(
+    ic, root: Path, no_topology
+) -> None:
+    """A project with no topology behaves as before: the typed number, the
+    selected substrate, no seat and no holders."""
+    importlib.import_module("_lib.instance_identity").write_instance_id(root, 2)
+    assert ic.read_topology(root, {}, login="me") is None
+    assert ic.this_clone(root, "me") == ic.Clone(2, "comment", "me", root)
 
 
 @pytest.mark.parametrize(("role", "claims"), [("planner", False), ("worker", True), ("lead", True)])
@@ -744,3 +764,230 @@ def test_a_release_judges_claims_as_the_claim_and_the_guard_do(ic, root) -> None
     assert result.outcome == ic.RELEASED
     assert result.line == "[ok] ownership: #7 released (instance 2, instance 3)."
     assert _events(gh, 7) == ["claim 1", "claim 2", "claim 3", "release 2", "release 3"]
+
+
+# ---- the topology read from the default branch, and the seat confirmed ---------
+#
+# One run's snapshot (`_lib/topology`) over seats whose state issues an in-memory
+# GitHub holds (`tests/pm_state_issue_fakes.FakeRepo`). This clone is `me`, with
+# the key `k2`, and took `worker-2`, the topology's third seat.
+
+
+def _doc(*, retired: bool = False) -> dict:
+    seats = [
+        {"name": "planner", "role": "planner", "organizer": True, "state_issue": 11},
+        {"name": "worker-1", "role": "worker", "state_issue": 12},
+        {"name": "worker-2", "role": "worker", "state_issue": 13, "retired": retired},
+    ]
+    return {"schema_version": 1, "seats": seats}
+
+
+def _seated(ic, holder: tuple[str, str] | None = ("me", "k2"), *, retired: bool = False):
+    """The snapshot, and the GitHub that holds its seats: worker-1 held by
+    `me`'s clone `k1`, and worker-2 by `holder`."""
+    repo = FakeRepo()
+    seat_issue(ic, repo, 11, "planner")
+    seat_issue(ic, repo, 12, "worker-1", ("me", "k1"))
+    seat_issue(ic, repo, 13, "worker-2", holder)
+    return seat_snapshot(ic, _doc(retired=retired), repo), repo
+
+
+def _views(repo: FakeRepo) -> list[int]:
+    return [int(argv[3]) for argv in repo.calls if argv[1:3] == ["issue", "view"]]
+
+
+def test_a_clone_that_took_no_seat_and_set_no_id_reads_nothing(ic, root, monkeypatch) -> None:
+    def no_read(*_args):
+        raise AssertionError("a clone that takes no part reads no topology")
+
+    monkeypatch.setattr(ic, "_snapshot", no_read)
+    assert ic.this_clone(root, "me") is None
+
+
+def test_the_seat_is_confirmed_on_its_state_issue_and_numbered_by_its_place(
+    ic, root, monkeypatch
+) -> None:
+    """DEC-059 point 6: the seat's name and number, from the topology, once its
+    state issue shows this clone, by its account and key, as the holder."""
+    snap, repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    clone = ic.this_clone(root, "me")
+    assert clone is not None
+    assert (clone.seat, clone.instance, clone.key) == (ic.Seat("worker-2", 3, "worker"), 3, "k2")
+    assert clone.substrate == "comment" and clone.named() == "seat worker-2, instance 3"
+    assert _views(repo) == [13]
+
+
+def test_each_seats_holder_is_read_once_when_a_claim_names_it(ic, root, monkeypatch) -> None:
+    """ADR-071 point 8: a seat's state issue is read when a claim names it, and
+    the run judges every claim against what it read."""
+    snap, repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    clone = ic.this_clone(root, "me")
+    assert clone is not None and clone.holders is not None
+    held = ic.ownership.Holder(ic.ownership.SEAT_HELD, "me", "k1")
+    assert clone.holders["worker-1"] == held and clone.holders.get("worker-1") == held
+    assert clone.holders["planner"] == ic.ownership.Holder(ic.ownership.SEAT_FREE)
+    assert clone.holders.get("worker-9") is None
+    assert _views(repo) == [13, 12, 11]
+
+
+def test_the_guard_judges_claims_against_the_holders_it_reads(ic, root, monkeypatch) -> None:
+    """A claim whose clone holds its seat refuses, and a claim of a clone that
+    no longer holds it is no claim (DEC-059 points 5 and 9)."""
+    snap, _repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    clone = ic.this_clone(root, "me")
+    assert clone is not None
+    held = FakeGitHub()
+    held.add(7)
+    held.post(7, _seat_stamp(ic, "worker-1", 2, "k1"))
+    assert _guard(ic, held, clone).refused
+    gone = FakeGitHub()
+    gone.add(7)
+    gone.post(7, _seat_stamp(ic, "worker-1", 2, "k0"))
+    assert _guard(ic, gone, clone).outcome == ic.PASSED
+
+
+@pytest.mark.parametrize(
+    ("holder", "said"),
+    [
+        pytest.param(("me", "k9"), "held by @me, clone k9", id="another-clone"),
+        pytest.param(("you", "k2"), "held by @you, clone k2", id="another-account"),
+        pytest.param(None, "shows it free", id="free"),
+    ],
+)
+def test_a_seat_this_clone_no_longer_holds_refuses(ic, root, monkeypatch, holder, said) -> None:
+    """DEC-058 point 5: a command that acts as the holder refuses a clone that
+    does not hold the seat, such as after a release by force."""
+    snap, _repo = _seated(ic, holder)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    with pytest.raises(ic.Unconfirmed, match="no longer holds the seat worker-2") as caught:
+        ic.this_clone(root, "me")
+    assert said in str(caught.value) and "#13" in str(caught.value)
+
+
+def test_a_seat_whose_state_issue_cannot_be_read_refuses(ic, root, monkeypatch) -> None:
+    snap, repo = _seated(ic)
+    repo.failing.add("view")
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    with pytest.raises(ic.Unconfirmed, match="worker-2, could not be confirmed"):
+        ic.this_clone(root, "me")
+
+
+def test_a_seat_the_topology_does_not_hold_refuses(ic, root, monkeypatch) -> None:
+    snap, _repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-9")
+    with pytest.raises(ic.Unconfirmed, match="the seat worker-9, which the topology at"):
+        ic.this_clone(root, "me")
+
+
+@pytest.mark.parametrize(
+    ("login", "key", "said"),
+    [("me", "", "keeps no key"), ("", "k2", "GitHub account could not be resolved")],
+)
+def test_a_clone_with_no_key_or_account_cannot_confirm_its_seat(
+    ic, root, monkeypatch, login, key, said
+) -> None:
+    _snap, repo = _seated(ic)
+    snap = seat_snapshot(ic, _doc(), repo, login=login, key=key)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2", key=key or None)
+    with pytest.raises(ic.Unconfirmed, match=said):
+        ic.this_clone(root, login or None)
+
+
+def test_a_retired_seat_is_released_at_its_clones_next_command(
+    ic, root, monkeypatch, capsys
+) -> None:
+    """DEC-059 point 5: released as its clone would release it, and the clone
+    then acts as no instance. A dry run releases nothing."""
+    snap, repo = _seated(ic, retired=True)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    assert ic.this_clone(root, "me", dry_run=True) is None
+    assert repo.writes() == []
+    assert ic.this_clone(root, "me") is None
+    after = ic.state_issues.read(13, "seat", "worker-2", snap.run)
+    assert after.fold is not None and after.fold.free
+    assert [ev.type for ev in after.fold.events] == ["state-claim", "state-release"]
+    err = capsys.readouterr().err
+    assert "[dry-run] ownership: the seat worker-2 is retired" in err
+    assert "the seat worker-2 is retired, so this clone released it on #13" in err
+
+
+def test_a_typed_number_is_not_used_where_the_project_has_a_topology(
+    ic, root, monkeypatch, capsys
+) -> None:
+    """DEC-059 point 6: a clone that took no seat takes no part, whatever number
+    was typed into it."""
+    importlib.import_module("_lib.instance_identity").write_instance_id(root, 5)
+    snap, repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint=None)
+    assert ic.this_clone(root, "me") is None
+    assert repo.calls == []
+    assert "the number 5 typed into this clone is not used" in capsys.readouterr().err
+
+
+def test_without_the_default_branch_a_seat_cannot_be_confirmed(ic, root, monkeypatch) -> None:
+    """DEC-059 point 1: no clone acts as a seat without the default branch."""
+
+    def unresolved(*_args):
+        raise ic.topology.Unresolved("origin/main is not fetched")
+
+    monkeypatch.setattr(ic, "_snapshot", unresolved)
+    monkeypatch.setattr(ic, "read_seat_hint", lambda _root: "worker-2")
+    with pytest.raises(ic.Unconfirmed, match="origin/main is not fetched"):
+        ic.this_clone(root, "me")
+
+
+def test_without_the_default_branch_a_typed_number_stands(ic, root, monkeypatch, capsys) -> None:
+    """A clone that took no seat keeps DEC-035's number, with a note, since no
+    topology was read to refuse it."""
+
+    def unresolved(*_args):
+        raise ic.topology.Unresolved("origin/main is not fetched")
+
+    importlib.import_module("_lib.instance_identity").write_instance_id(root, 2)
+    monkeypatch.setattr(ic, "_snapshot", unresolved)
+    assert ic.this_clone(root, "me") == ic.Clone(2, "comment", "me", root)
+    assert "acts as the instance number typed into it" in capsys.readouterr().err
+
+
+def test_an_unconfirmed_seat_is_refused_with_its_reason(ic, capsys) -> None:
+    assert ic.say_unconfirmed("move-issue", 42, ic.Unconfirmed("why.")) == 1
+    assert capsys.readouterr().err == "[refused] move-issue #42: why. Nothing was written.\n"
+
+
+# Every command that writes as an instance: the clash guard's six, the claim at
+# filing and the release on close.
+_WRITE_COMMANDS = (
+    "create-issue.py",
+    "start-work.py",
+    "review-work.py",
+    "done-work.py",
+    "promote-issue.py",
+    "edit-issue.py",
+    "move-issue.py",
+    "close-issue.py",
+)
+_OWNERSHIP_WRITES = ("instance_claims.guard(", "instance_claims.claim(", "instance_claims.release(")
+
+
+def test_the_write_commands_are_every_script_that_writes_ownership() -> None:
+    writers = {
+        p.name
+        for p in SCRIPTS.glob("*.py")
+        if any(w in p.read_text(encoding="utf-8") for w in _OWNERSHIP_WRITES)
+    }
+    assert writers == set(_WRITE_COMMANDS)
+
+
+@pytest.mark.parametrize("script", _WRITE_COMMANDS)
+def test_every_write_command_confirms_the_seat_where_the_guard_runs(script: str) -> None:
+    """DEC-059 point 6: one function confirms the clone's seat, and each write
+    command asks it once, before its first ownership write, and handles its
+    refusal."""
+    source = (SCRIPTS / script).read_text(encoding="utf-8")
+    assert source.count("instance_claims.this_clone(") == 1
+    assert "except instance_claims.Unconfirmed" in source
+    first = min(source.index(w) for w in _OWNERSHIP_WRITES if w in source)
+    assert source.index("instance_claims.this_clone(") < first

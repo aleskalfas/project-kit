@@ -48,7 +48,9 @@ Side-effects:
     unclaimed. After a bypass it claims nothing, whichever account's instance
     owned the issue. With no id set, nothing of this runs. In a project with a
     topology, a clone claims for the seat it holds, its number the seat's, and
-    a clone that holds no seat claims nothing (DEC-059 points 6 and 7).
+    a clone that holds no seat claims nothing (DEC-059 points 6 and 7). A
+    clone that took a seat confirms it on the seat's state issue before
+    anything is written, and the start refuses where it cannot (point 6).
   - Composes over `move-issue.py --to in-progress`. If that move still fails
     after the branch / assignee were written (a network error, or a state
     that changed since the check so the move is no longer legal), the run
@@ -60,7 +62,8 @@ Exit codes:
   2  usage error / gate failure / illegal transition / gh failure / another
      instance claimed the issue in the same instant and keeps it, so this
      clone withdrew its claim and did not move the issue / the clash guard
-     refused an issue another instance owns
+     refused an issue another instance owns / this clone's seat could not be
+     confirmed
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -257,7 +260,14 @@ def main() -> int:
 
     # Instance ownership (DEC-035): None unless this clone set an instance id,
     # or holds a seat of a topology (DEC-059), and then nothing below changes.
-    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    # A seat is confirmed on its state issue before anything is written.
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        instance_claims.say_unconfirmed("start-work", args.issue_number, exc)
+        return 2
 
     # The clash guard (DEC-035 point 6), before anything is written: an issue
     # another instance owns is refused, unless a bypass posts its reason.

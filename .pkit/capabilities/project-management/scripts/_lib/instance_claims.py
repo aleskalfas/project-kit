@@ -18,15 +18,27 @@ substrate is read only once an id is set, from the adopter's
 **A project with a topology of seats** (DEC-059). There a clone takes part by
 holding a seat, and its number is the seat's, never a typed one (point 6). The
 run's reading of the topology, this clone's seat and each seat's holder, comes
-from :func:`read_topology`, which #2141 wires to ``_lib/topology``. The clone's
-key is read from its runtime file (``_lib/instance_identity``). A clone that
-holds no seat marks no issue and is guarded by nothing. A claim names the seat,
-its number and the clone's key, in the audit-log facility's stamp (point 9). It
-counts only while that clone holds that seat, judged when it is read, so a
-seat's release frees its clone's claims with no write (point 5). A planner's
-seat files with no owner, so its work enters the shared pool, and every other
-seat claims at filing; a worker claims at ``start-work`` (point 7). Renewal,
-lapse and parking are not built yet.
+from :func:`read_topology`, through one run's snapshot (``_lib/topology``,
+ADR-071 point 1). The clone's key and the name of the seat it took are read from
+its runtime file (``_lib/instance_identity``). A clone that holds no seat marks
+no issue and is guarded by nothing. A claim names the seat, its number and the
+clone's key, in the audit-log facility's stamp (point 9). It counts only while
+that clone holds that seat, judged when it is read, so a seat's release frees
+its clone's claims with no write (point 5). A planner's seat files with no
+owner, so its work enters the shared pool, and every other seat claims at
+filing; a worker claims at ``start-work`` (point 7). Renewal, lapse and parking
+are not built yet.
+
+**The seat is confirmed before each write** (DEC-059 point 6). Every command
+that acts as an instance asks :func:`this_clone` before it writes, where the
+clash guard runs, and :func:`confirm_seat` is the one function that confirms the
+clone's seat. It reads the state issue of the seat the clone took, by the
+clone's key. A seat retired while the clone holds it is released there (point
+5), and the clone then holds no seat. A seat whose state issue shows another
+holder, or none, or cannot be read, and a topology that cannot be read, raise
+:class:`Unconfirmed`. The command then refuses and writes nothing, since it
+cannot act as an instance it is not (DEC-058 point 5). A clone that took no
+seat, and set no instance id, reads nothing at all.
 
 **Every write is the seam's.** The ownership-event comment, the ``instance:N``
 label and its lazy creation, and the owner mirror in the issue description are
@@ -55,10 +67,11 @@ claims only an issue assigned to its own account, so a marker the fold trusts
 is authored by the assignee (DEC-043 point 3). An issue filed for another person
 is not claimed (DEC-035 point 5).
 
-**A release clears every owner** the issue carries, whichever clone closes it:
-an event per owning instance in ``comment`` mode, and each ``instance:N`` label
-removed. A comment marker is released only by its own account's clone, since
-the fold trusts no other author. In ``comment`` mode an ``instance:N`` label
+**A release clears every owner** the issue carries that this clone can release,
+whichever clone closes it: an event per owning instance in ``comment`` mode, and
+each ``instance:N`` label removed. A comment marker another account's clone
+wrote is left for that account's clone to release, since the fold trusts no
+other author. In ``comment`` mode an ``instance:N`` label
 beside a comment marker is residual, left from a label-mode past, and a claim
 removes it (ADR-041 point 2). With no marker beside it, the seam reads the label
 as the owner, so it is no residue. Where the lowest such label is this clone's,
@@ -81,7 +94,7 @@ import contextlib
 import json
 import sys
 import tempfile
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -89,10 +102,15 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib import audit, provenance
+from _lib import audit, provenance, state_issues, topology
 from _lib import instance_ownership as ownership
 from _lib.comment import post_audit_once
-from _lib.instance_identity import read_clone_key, read_instance_id
+from _lib.instance_identity import (
+    clear_seat_hint,
+    read_clone_key,
+    read_instance_id,
+    read_seat_hint,
+)
 
 #: The adopter's substrate selector, in the marker's own schema home (DEC-043
 #: point 2), relative to the capability root.
@@ -235,18 +253,41 @@ def say_guard(decision: Guard) -> None:
     print(decision.line, file=stream)
 
 
+class Unconfirmed(Exception):
+    """This clone's seat could not be confirmed on its state issue, so a command
+    that acts as an instance refuses before it writes (DEC-059 point 6). The
+    message says why, and what to run, as a clause a refusal carries."""
+
+
+def say_unconfirmed(verb: str, issue_number: int | None, exc: Unconfirmed) -> int:
+    """Print the refusal of ``verb`` on ``issue_number`` for an unconfirmed seat,
+    on standard error, and return the exit code 1."""
+    target = f" #{issue_number}" if issue_number is not None else ""
+    print(f"[refused] {verb}{target}: {exc} Nothing was written.", file=sys.stderr)
+    return 1
+
+
 def this_clone(
-    capability_root: Path, login: str | None, config: dict | None = None
+    capability_root: Path,
+    login: str | None,
+    config: dict | None = None,
+    *,
+    dry_run: bool = False,
 ) -> Clone | None:
     """This clone, or ``None`` when it takes no part in instance ownership.
 
     ``None`` is the no-op: the caller does nothing more than it did before
-    instance ownership existed. In a project with a topology, the clone takes
-    part only while it holds a seat, and its number is the seat's (DEC-059
-    point 6). Its key is the one its runtime file keeps, which a clone that holds
-    a seat has. Otherwise an instance id must be set, and the substrate selector
-    is read only then."""
-    topology = read_topology(capability_root, config or {})
+    instance ownership existed. A clone that took no seat and set no instance id
+    reads nothing more. In a project with a topology, the clone takes part only
+    while it holds a seat, confirmed on the seat's state issue, and its number is
+    the seat's (DEC-059 point 6). Otherwise an instance id must be set, and the
+    substrate selector is read only then. Raises :class:`Unconfirmed` where the
+    clone took a seat and the seat cannot be confirmed; ``dry_run`` releases no
+    retired seat (:func:`confirm_seat`)."""
+    instance = read_instance_id(capability_root)
+    if instance is None and read_seat_hint(capability_root) is None:
+        return None
+    topology = read_topology(capability_root, config or {}, login=login, dry_run=dry_run)
     if topology is not None:
         key = read_clone_key(capability_root) if topology.seat is not None else None
         if topology.seat is None or key is None:
@@ -260,22 +301,185 @@ def this_clone(
             key=key,
             holders=topology.holders,
         )
-    instance = read_instance_id(capability_root)
     if instance is None:
         return None
     substrate = ownership.resolve_substrate(_read_settings(capability_root))
     return Clone(instance, substrate, login, capability_root)
 
 
-def read_topology(capability_root: Path, config: dict) -> Topology | None:
+def read_topology(
+    capability_root: Path,
+    config: dict,
+    *,
+    login: str | None = None,
+    dry_run: bool = False,
+) -> Topology | None:
     """This run's reading of the project's topology, or ``None`` where the
-    project declares none.
+    default branch declares none.
 
-    ``_lib/topology`` reads the topology from the default branch. #2141 builds
-    this reading from it once for each run, with each seat's holder from its
-    state issue (ADR-071 point 1). Until then this answers ``None`` for every
-    project, and every command keeps DEC-035's behaviour."""
-    return None
+    The reading comes from one run's snapshot (``_lib/topology``, ADR-071 point
+    1): this clone's seat, confirmed on its state issue by :func:`confirm_seat`,
+    and each seat's holder, read from its state issue the first time a claim
+    names the seat. Where the default branch cannot be read, a clone that took a
+    seat cannot confirm it, and :class:`Unconfirmed` is raised (DEC-059 point 1).
+    A clone that took none keeps the number typed into it, with a note, since no
+    topology was read to refuse it."""
+    try:
+        snap = _snapshot(capability_root, config, login)
+    except topology.Unresolved as exc:
+        if read_seat_hint(capability_root) is not None:
+            raise Unconfirmed(
+                "this clone took a seat, and the topology could not be read from the default "
+                f"branch to confirm it ({exc}). No clone acts as a seat without the default "
+                "branch (DEC-059 point 1)."
+            ) from exc
+        print(
+            f"[note] ownership: the topology could not be read from the default branch "
+            f"({exc}), so this clone acts as the instance number typed into it.",
+            file=sys.stderr,
+        )
+        return None
+    if snap is None:
+        return None
+    seat = confirm_seat(snap, capability_root, dry_run=dry_run)
+    return Topology(seat, SeatHolders(snap))
+
+
+def _snapshot(capability_root: Path, config: dict, login: str | None) -> topology.Snapshot | None:
+    """This run's snapshot, each state-issue call through the gh helper (DEC-023)."""
+    return topology.snapshot(
+        capability_root,
+        gh=state_issues.runner(config),
+        account=login,
+        key=read_clone_key(capability_root),
+    )
+
+
+def confirm_seat(
+    snapshot: topology.Snapshot, capability_root: Path, *, dry_run: bool = False
+) -> Seat | None:
+    """This clone's seat, confirmed on the seat's state issue by the clone's key,
+    or ``None`` where the clone holds no seat (DEC-059 point 6).
+
+    The one check every command that acts as an instance runs before it writes.
+    The name of the seat the clone took is only a hint of where to look. With no
+    hint, the clone holds no seat, and an instance number typed into it is not
+    used, with a note. A seat retired while the clone holds it is released here,
+    as its clone would release it, and the clone then holds no seat (point 5). A
+    dry run says so and releases nothing. Raises :class:`Unconfirmed` where the
+    seat is gone from the topology, its state issue cannot be read, or another
+    clone, or none, holds it."""
+    hint = read_seat_hint(capability_root)
+    if hint is None:
+        instance = read_instance_id(capability_root)
+        if instance is not None:
+            print(
+                f"[note] ownership: the number {instance} typed into this clone is not used, "
+                f"since {snapshot.topology.where()} holds a topology: a clone takes part by "
+                "taking a seat (`pkit pm take-seat`, DEC-059 point 6).",
+                file=sys.stderr,
+            )
+        return None
+    if not (snapshot.clone.account and snapshot.clone.key):
+        lacks = "GitHub account could not be resolved" if snapshot.clone.key else "keeps no key"
+        raise Unconfirmed(
+            f"this clone took the seat {hint}, and its {lacks}, so its seat cannot be "
+            "confirmed on the seat's state issue."
+        )
+    state = snapshot.state(hint)
+    if state is None:
+        raise Unconfirmed(
+            f"this clone took the seat {hint}, which the topology at "
+            f"{snapshot.topology.where()} does not hold. Take a seat it holds (`pkit pm "
+            "take-seat`), or stop acting as a seat (`pkit pm release-seat`)."
+        )
+    if state.state == topology.UNREAD:
+        raise Unconfirmed(
+            f"this clone's seat, {hint}, could not be confirmed, since {state.cause}. Run "
+            "this again once its state issue can be read."
+        )
+    if not state.held_by(snapshot.clone):
+        issue = f"#{state.seat.state_issue}"
+        raise Unconfirmed(
+            f"this clone no longer holds the seat {hint}: its state issue {issue} shows it "
+            f"{state.said()}. Take a seat again (`pkit pm take-seat`), or stop acting as "
+            "a seat (`pkit pm release-seat`)."
+        )
+    if state.seat.retired:
+        _release_retired(snapshot, state, capability_root, dry_run=dry_run)
+        return None
+    return Seat(state.seat.name, state.seat.number, state.seat.role)
+
+
+def _release_retired(
+    snapshot: topology.Snapshot,
+    state: topology.SeatState,
+    capability_root: Path,
+    *,
+    dry_run: bool,
+) -> None:
+    """Release the retired seat this clone holds, as its clone would (DEC-059
+    point 5), and forget it once it is free of this clone."""
+    seat = state.seat
+    if dry_run:
+        print(
+            f"[dry-run] ownership: the seat {seat.name} is retired, so this clone's next "
+            "command releases it. This run acts as no instance.",
+            file=sys.stderr,
+        )
+        return
+    assert seat.state_issue is not None  # a seat that is held names its state issue
+    released = state_issues.release(
+        seat.state_issue, topology.SEAT_KIND, seat.name, snapshot.clone, snapshot.run
+    )
+    after = snapshot.learn(seat, released.read)
+    if released.outcome == state_issues.RELEASED or not after.held_by(snapshot.clone):
+        clear_seat_hint(capability_root)
+        print(
+            f"[note] ownership: the seat {seat.name} is retired, so this clone released it "
+            f"on #{seat.state_issue}, and acts as no instance. Each claim it made as that "
+            "seat stops counting.",
+            file=sys.stderr,
+        )
+        return
+    print(
+        f"[warn] ownership: the seat {seat.name} is retired, and its release on "
+        f"#{seat.state_issue} failed ({released.cause or released.outcome}). This run acts "
+        "as no instance, and the next command tries again.",
+        file=sys.stderr,
+    )
+
+
+class SeatHolders(Mapping[str, ownership.Holder]):
+    """Each seat's holder, as the ownership fold takes it from its caller
+    (ADR-041 point 7). A seat's state issue is read the first time a claim names
+    the seat, and the run keeps what it read (ADR-071 point 8). A seat the
+    topology does not hold is missing, so a claim naming it cannot be judged."""
+
+    def __init__(self, snapshot: topology.Snapshot) -> None:
+        self._snapshot = snapshot
+
+    def __getitem__(self, name: str) -> ownership.Holder:
+        state = self._snapshot.state(name)
+        if state is None:
+            raise KeyError(name)
+        return holder_of(state)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(seat.name for seat in self._snapshot.topology.seats)
+
+    def __len__(self) -> int:
+        return len(self._snapshot.topology.seats)
+
+
+def holder_of(state: topology.SeatState) -> ownership.Holder:
+    """A seat's state as the ownership fold reads it: held by a clone, by its
+    account and key, free, or unread."""
+    if state.state == topology.HELD and state.holder is not None:
+        return ownership.Holder(ownership.SEAT_HELD, state.holder.account, state.holder.clone)
+    if state.state == topology.FREE:
+        return ownership.Holder(ownership.SEAT_FREE)
+    return ownership.Holder(ownership.SEAT_UNREAD)
 
 
 def _read_settings(capability_root: Path) -> dict[str, Any] | None:

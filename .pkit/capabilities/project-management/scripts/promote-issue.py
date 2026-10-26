@@ -38,7 +38,9 @@ Gates per DEC-026:
     is qualified per DEC-046, since `--reason` already carries the bypass of
     the move's own gate. In a project with a topology, a claim whose clone no
     longer holds its seat is no claim, and one that cannot be judged refuses
-    (DEC-059 point 9).
+    (DEC-059 point 9). Before the guard, a clone that took a seat confirms it
+    on the seat's state issue, and the promotion refuses where it cannot
+    (DEC-059 point 6).
 
 Composes over `move-issue.py`: this wrapper invokes `move-issue --to backlog`,
 **threading `--reason` to move-issue's `--bypass-reason`**, then attaches the
@@ -57,7 +59,7 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  promoted
   1  membership refusal / the clash guard refused an issue another instance
-     owns
+     owns / this clone's seat could not be confirmed
   2  usage error / gate failure / gh failure
 """  # noqa: E501 — a usage line is a command, kept whole
 
@@ -204,8 +206,14 @@ def main() -> int:
     # milestone is attached: an issue another instance owns is refused, unless a
     # bypass posts its reason. The move this run composes is handed the same
     # reason, and finds its audit comment posted.
+    # A seat is confirmed on its state issue first (DEC-059 point 6).
     owner_bypass: str | None = None
-    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return instance_claims.say_unconfirmed("promote-issue", args.issue_number, exc)
     if clone is not None:
         decision = instance_claims.guard(
             args.issue_number,

@@ -46,7 +46,9 @@ filed for another person (`--assignee`) is not claimed (DEC-035 point 5). A
 claim that fails is a warning, and the issue stays filed. With no id set,
 nothing of this runs. In a project with a topology of seats, a clone in a
 planner's seat files with no owner, so the issue enters the shared pool, and a
-clone in any other seat claims what it files for its seat (DEC-059 point 7).
+clone in any other seat claims what it files for its seat (DEC-059 point 7). A
+clone that took a seat confirms it on the seat's state issue before anything is
+written, and the command refuses where it cannot (DEC-059 point 6).
 
 Membership predicate per DEC-021 runs at startup; closed mode refuses
 non-members with the standard structured refusal.
@@ -68,7 +70,7 @@ loudly with the exact remediation command and exits 4.
 
 Exit codes:
   0  issue created
-  1  membership refusal
+  1  membership refusal, or this clone's seat could not be confirmed
   2  usage error / validation refusal
   3  gh failure (auth, network, repo not found, ...)
   4  issue created, but --from-report link failed (issue NOT rolled back;
@@ -736,7 +738,13 @@ def main() -> int:
     print(f"  labels:     {', '.join(labels)}")
     # Instance ownership (DEC-035): None unless this clone set an instance id,
     # or holds a seat of a topology (DEC-059), and then nothing below changes.
-    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    # A seat is confirmed on its state issue before anything is written.
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return instance_claims.say_unconfirmed("create-issue", None, exc)
     if clone is not None:
         print(f"  ownership:  {instance_claims.claim_plan(clone, assignee, filing=True)}")
     if args.from_report is not None:
