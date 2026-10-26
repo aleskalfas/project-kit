@@ -107,7 +107,10 @@ pkit:
 > [!WARNING]
 > **Not built yet:** nothing reads a topology. DEC-059 point 1 decides that every clone reads it from the default branch, and #2140 tracks it.
 
-5. The system posts a comment on the seat's [state issue](../../../glossary.md#term-state-issue--state-issue) that takes the seat. The comment names the account, the clone's key and where the clone lies, such as its machine and folder ([DEC-058 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)). The clone generated its key when it first took a seat, and keeps the key in a file that is never committed ([DEC-035 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
+5. The system takes the seat with a comment on the seat's [state issue](../../../glossary.md#term-state-issue--state-issue). The clone generated its key when it first took a seat, and keeps the key in a file that is never committed ([DEC-035 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)). The comment names these ([DEC-058 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)):
+   - the account
+   - the clone's key
+   - where the clone lies, such as its machine and folder
 
 > [!WARNING]
 > **Not built yet:** no command writes to a state issue, and no clone has a key. DEC-058 point 5 decides how a clone takes what a state issue holds, and #2138 tracks it.
@@ -148,7 +151,7 @@ pkit:
 > **Not built yet:** nothing reads a topology. DEC-059 point 1 decides that no clone takes a seat without the default branch, and #2140 tracks it.
 
 - **3a.** The seat's agent plans and builds, as a lead agent does, and the request does not show which of the two the request asks for. The agent asks, and goes on once it is told (`project-manager.md`).
-- **3b.** The seat names another [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition), such as a specialist's. That agent takes the seat, takes the seat's work and lands that work through the same procedures of the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([DEC-059 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill)).
+- **3b.** The seat names another [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition), such as a specialist's. That agent takes the seat and the seat's work, and lands that work through the same procedures of the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([DEC-059 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill)).
 
 > [!WARNING]
 > **Not built yet:** the `pm` skill holds no procedure for an agent of another definition to follow. DEC-059 point 8 decides that every agent a seat names follows the same procedures, and #2136 tracks it.
@@ -168,7 +171,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no seat can be retired. DEC-059 point 5 decides that a retired seat is released at its clone's next command, and #2141 tracks it.
 
-- **5a.** Another clone took the seat first. This clone's taking counts for nothing, so the clone holds no seat, and writes nothing more ([DEC-058 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#6-the-first-claim-on-a-free-state-holds)). Its agent takes another free seat of the kind it asked for, or stops, as it judges ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
+- **5a.** Another clone took the seat first. This clone's taking counts for nothing, so the clone holds no seat, and writes nothing more ([DEC-058 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#6-the-first-claim-on-a-free-state-holds)). Its agent takes another free seat that matches what it asked for, or stops, as it judges ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 
 > [!WARNING]
 > **Not built yet:** nothing reads a state issue. DEC-058 point 6 decides that the first taking of a free seat holds, and #2138 tracks it.
@@ -186,9 +189,9 @@ pkit:
 
 What the agent needs here that no accepted record decides yet:
 
-- **A seat's identity in a linked worktree.** A helper agent that a lead agent starts acts as the lead's [instance](../../../glossary.md#term-instance--instance). How a linked worktree of the clone reads that identity is left undecided by [project-management DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology). #1140 proposes that a worktree reads its clone's number.
+- **A seat's identity in a linked worktree.** A helper agent that a lead agent starts acts as the lead's [instance](../../../glossary.md#term-instance--instance). How a linked worktree of the clone reads that identity is left undecided by [project-management DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology). #1140 proposes that a linked worktree reads its clone's number.
 - **Stricter modes.** In the first mode, the one decided, a [seat](../../../glossary.md#term-seat--seat) stays taken until it is released ([project-management DEC-059 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#5-in-the-first-mode-a-seat-stays-taken-until-it-is-released)). Modes that free a seat after its clone's silence are named, and no record decides one yet.
 
 ## Sources
 
-The goal rests on [project-management DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat). It holds the maintainer's decision of 26 October that a clone takes a [seat](../../../glossary.md#term-seat--seat) of the [topology](../../../glossary.md#term-topology--topology), and acts as that seat's agent.
+The goal rests on [project-management DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat). That point holds the maintainer's decision of 26 October that a clone takes a [seat](../../../glossary.md#term-seat--seat) of the [topology](../../../glossary.md#term-topology--topology), and acts as that seat's agent.

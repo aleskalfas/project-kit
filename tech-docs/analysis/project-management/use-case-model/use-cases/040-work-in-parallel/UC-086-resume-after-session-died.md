@@ -82,7 +82,7 @@ pkit:
 
 3. For each [Task](../../../glossary.md#term-task--task) In Progress, the worker finds the Task's branch, whose name carries the Task's number, and checks it out ([DEC-013](../../../../../../.pkit/capabilities/project-management/decisions/DEC-013-branch-and-pr-conventions.md)).
 4. The worker reads the branch's commits, and the Task's [pull request](../../../../core/glossary.md#term-pull-request--pull-request) where one is open, to see what was done.
-5. The worker goes on from there, and builds the rest of the Task, as `UC-084` describes from its step 7.
+5. The worker goes on from there, and builds the rest of the Task, as `UC-084` steps 9, 7 and 8 describe.
 
 **Variants:**
 
@@ -120,4 +120,4 @@ pkit:
 What the worker needs here that no accepted record decides yet:
 
 - **Where the work was heading,** beyond what the branch shows. No record decides how a session leaves its next step on the [issue](../../../glossary.md#term-issue--issue). The pilot analysis's intent notes proposed one, under [EPIC](../../../glossary.md#term-epic--epic) #943.
-- **A session in a linked worktree** of the clone. [project-management DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) leaves undecided how a linked worktree reads its clone's identity. Today a worktree reads no number of its clone, and #1140 proposes that a worktree reads its clone's number.
+- **A session in a linked worktree** of the clone. [project-management DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) leaves undecided how a linked worktree reads its clone's identity. Today a linked worktree reads no number of its clone, and #1140 proposes that a linked worktree reads its clone's number.

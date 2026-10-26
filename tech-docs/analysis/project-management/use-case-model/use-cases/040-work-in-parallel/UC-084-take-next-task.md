@@ -144,7 +144,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no ownership lapses, and the release of a seat frees nothing. DEC-059 point 9 decides when an ownership stops counting, and #2136 tracks it.
 
-- **3a.** The worker chooses a Task that only another seat may take, so that seat is the Task's expected owner. The system warns that the other seat is expected to take it, and goes on ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-045 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#5-ownership-derivation-feeds-the-pm-layer-guard-only-and-degrades-gracefully)).
+- **3a.** The worker chooses a Task that only another seat may take. The system warns that the other seat is expected to take it, and goes on ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-045 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#5-ownership-derivation-feeds-the-pm-layer-guard-only-and-degrades-gracefully)).
 
 > [!WARNING]
 > **Not built yet:** nothing reads which seat alone may take a Task, so nothing warns. DEC-045 point 5 decides the warning, and #2136 tracks it.

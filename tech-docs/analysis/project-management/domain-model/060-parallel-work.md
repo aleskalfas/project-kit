@@ -234,7 +234,7 @@ The owner of an [issue](../glossary.md#term-issue--issue) is the [instance](../g
 **Relations:**
 
 - An issue has at most one owner once a clash is resolved ([DEC-035 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
-- An instance that files work owns all of it, the parents and the Tasks under them ([DEC-035 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The planning agent's seat files with no owner, so its work joins the ready Tasks that every seat shares ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+- An instance that files work owns all of it, the parents and the Tasks under them ([DEC-035 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The planning agent files with no owner, so its work joins the ready Tasks that every seat shares ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 
 **States:** An issue has no owner until an instance files it or starts it. A hand-over moves the owner to another instance, and a close, or a new assignee, clears it (DEC-035 points 3 to 5). In a project with a topology, an ownership of a [Task](../glossary.md#term-task--task) In Progress lapses once the work stops renewing it. Any ownership stops counting once its seat is released (DEC-059 point 9).
 
@@ -262,7 +262,7 @@ A state issue holds one piece of shared data that changes while agents work, nam
 
 **Relations:**
 
-- Each seat has one, which the [topology](../glossary.md#term-topology--topology) names by its number ([DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
+- Each seat has one, which the [topology](../glossary.md#term-topology--topology) names by the state issue's number ([DEC-059 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
 - It is no issue of work: it takes none of the four types, and has no parent and no children ([DEC-058 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#3-it-sits-outside-the-work-hierarchy-and-the-lifecycle)).
 
 **States:** A state issue is open while its data is in use, and closed once the data leaves use. One closed by hand while its data is in use is reopened by the next command that writes to it (DEC-058 point 3).

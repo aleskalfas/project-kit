@@ -79,7 +79,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `create-issue` writes no owner. DEC-035 point 3 decides that the instance that files an issue owns it, and #519 tracks it.
 
-- **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task, as may every seat that builds with no scope ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task, and so may the agent of every seat that builds with no scope ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 > [!WARNING]
 > **Not built yet:** no seat gives a scope, so no seat keeps to one kind of work. DEC-059 point 7 decides that a scope may name kinds of work, and #2142 tracks it.
