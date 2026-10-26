@@ -15,17 +15,12 @@ shortfalls:
   - at: 1
     issue: "#521"
     record: project-management:DEC-059#6
-  - at: 3
-    issue: "#2141"
-    record: project-management:DEC-059#3
-  - at: "3a"
-    issue: "#2141"
-    record: project-management:DEC-059#3
 pkit:
   friction:
     anchors:
       path:
         - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
+        - .pkit/capabilities/project-management/scripts/seats.py
       record:
         - project-management:DEC-006
         - project-management:DEC-035#1
@@ -68,18 +63,12 @@ pkit:
 > **Not built yet:** no owner carries a seat's name. DEC-059 point 6 decides that an instance is named by its seat, and #521 tracks it.
 
 2. For each owned [Task](../../../glossary.md#term-task--task), the planner reads the Task's state in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), In Progress or Review. The Task itself carries that state ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
-3. The planner lists the seats of the [topology](../../../glossary.md#term-topology--topology), each seat with the clone that holds the seat ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). Each holder is read from the seat's [state issue](../../../glossary.md#term-state-issue--state-issue) ([DEC-058 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#4-the-comments-are-the-record-and-the-description-shows-the-current-state)).
-
-> [!WARNING]
-> **Not built yet:** no command lists the seats. DEC-059 point 3 decides the listing of the seats, and #2141 tracks it.
+3. The planner lists the seats of the [topology](../../../glossary.md#term-topology--topology): `pkit pm seats`. The listing shows each seat, whether the seat's agent plans, builds or does both, and the clone that holds the seat ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). Each holder is read from the seat's [state issue](../../../glossary.md#term-state-issue--state-issue) ([DEC-058 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#4-the-comments-are-the-record-and-the-description-shows-the-current-state)).
 
 **Variants:**
 
 - **1a.** The planner lists from a clone that holds no [seat](../../../glossary.md#term-seat--seat). The listing signs nothing, since only an [instance](../../../glossary.md#term-instance--instance) signs its listings ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and [DEC-035 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)). The planner lists from an instance instead.
 - **3a.** A [change](../../../../core/glossary.md#term-change--change) that added seats was closed unmerged. The listing of the seats names each [state issue](../../../glossary.md#term-state-issue--state-issue) that no seat names, for a person to close ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
-
-> [!WARNING]
-> **Not built yet:** no command lists the seats. DEC-059 point 3 decides that the listing names each state issue no seat names, and #2141 tracks it.
 
 **Postconditions:** The planner knows which [instance](../../../glossary.md#term-instance--instance) works on each open [issue](../../../glossary.md#term-issue--issue), and how far each owned [Task](../../../glossary.md#term-task--task) has come, without visiting any agent. The planner knows too which clone holds each [seat](../../../glossary.md#term-seat--seat).
 

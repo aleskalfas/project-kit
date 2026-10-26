@@ -15,9 +15,6 @@ shortfalls:
   - at: 2
     issue: "#520"
     record: project-management:DEC-035#6
-  - at: 2
-    issue: "#2141"
-    record: project-management:DEC-059#6
   - at: 3
     issue: "#520"
     record: project-management:DEC-035#6
@@ -85,10 +82,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `start-work` reads no owner. DEC-035 point 6 decides that an ordinary command reads the owner first, and #520 tracks it.
 
-> [!WARNING]
-> **Not built yet:** no command confirms a clone's seat. DEC-059 point 6 decides that every command acting as an [instance](../../../glossary.md#term-instance--instance) confirms the clone's seat before writing, and #2141 tracks it.
-
-3. Another instance owns the Task. The system refuses the start, names that instance, and writes nothing (DEC-035 point 6).
+3. Another [instance](../../../glossary.md#term-instance--instance) owns the Task. The system refuses the start, names that instance, and writes nothing (DEC-035 point 6).
 
 > [!WARNING]
 > **Not built yet:** `start-work` starts the Task again for a second instance under the same account. DEC-035 point 6 decides the refusal, and #520 tracks it.
