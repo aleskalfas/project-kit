@@ -1238,6 +1238,134 @@ Cites `.pkit/does-not-exist.md`.
     assert any("missing path" in i.diagnosis and "does-not-exist" in i.diagnosis for i in issues)
 
 
+def _record(path: Path, record_id: str, status: str, body: str = "") -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"---\nid: {record_id}\ntitle: t\nstatus: {status}\ndate: 2026-01-01\nauthor: a\n---\n\n"
+        + body,
+        encoding="utf-8",
+    )
+    return path
+
+
+def _cap_record(root: Path, cap: str, num: str, slug: str, status: str, body: str = "") -> Path:
+    path = root / ".pkit" / "capabilities" / cap / "decisions" / f"DEC-{num}-{slug}.md"
+    return _record(path, f"DEC-{num}", status, body)
+
+
+def _resting(kit_target: Path) -> list[refs.Issue]:
+    return [i for i in refs.find_rot(kit_target, []) if "proposed record" in i.diagnosis]
+
+
+def test_status_index_holds_capability_decisions(kit_target: Path) -> None:
+    """A capability's decision is indexed by its capability and its number."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    index = refs._index_decision_statuses(kit_target)
+    assert index["cap-a:DEC-001"] == "proposed"
+    assert index["COR-001"] == "accepted"
+    assert "DEC-001" not in index
+
+
+def test_rot_flags_accepted_record_citing_proposed_one_bare_in_its_capability(
+    kit_target: Path,
+) -> None:
+    """A bare `DEC-NNN` inside a capability's record cites that capability's decision."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(
+        kit_target, "cap-a", "002", "instances", "accepted", "Per DEC-001.\n\nAgain DEC-001.\n"
+    )
+    issues = _resting(kit_target)
+    assert len(issues) == 1, issues
+    assert issues[0].location == ".pkit/capabilities/cap-a/decisions/DEC-002-instances.md"
+    assert "'cap-a:DEC-001'" in issues[0].diagnosis
+    assert "lines 9, 11" in issues[0].diagnosis
+
+
+def test_rot_flags_accepted_record_citing_proposed_one_qualified(kit_target: Path) -> None:
+    """`[<capability>:DEC-NNN-slug]` cites that capability's decision from any record."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _record(
+        kit_target / ".pkit" / "decisions" / "core" / "COR-001-thing.md",
+        "COR-001",
+        "accepted",
+        "Builds on [cap-a:DEC-001-lanes].\n",
+    )
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/decisions/core/COR-001-thing.md"]
+    assert "'cap-a:DEC-001'" in issues[0].diagnosis
+    assert "line 9" in issues[0].diagnosis
+
+
+def test_rot_flags_accepted_record_citing_proposed_record_of_another_namespace(
+    kit_target: Path,
+) -> None:
+    _record(kit_target / ".pkit" / "decisions" / "project" / "PRJ-001-x.md", "PRJ-001", "proposed")
+    _cap_record(kit_target, "cap-a", "001", "lanes", "accepted", "Rests on PRJ-001.\n")
+    issues = _resting(kit_target)
+    assert [i.location for i in issues] == [".pkit/capabilities/cap-a/decisions/DEC-001-lanes.md"]
+    assert "'PRJ-001'" in issues[0].diagnosis
+
+
+def test_rot_reads_only_accepted_records_and_proposed_grounds(kit_target: Path) -> None:
+    """A proposed record may cite a proposed one; an accepted one citing accepted is clean."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(kit_target, "cap-a", "002", "draft", "proposed", "Per DEC-001.\n")
+    _cap_record(kit_target, "cap-a", "003", "base", "accepted")
+    _cap_record(kit_target, "cap-a", "004", "on-base", "accepted", "Per DEC-003 and DEC-004.\n")
+    _cap_record(kit_target, "cap-a", "005", "old", "superseded", "Per DEC-001.\n")
+    assert _resting(kit_target) == []
+
+
+def test_rot_attributes_a_citation_to_the_capability_it_names(kit_target: Path) -> None:
+    """A qualified citation, or a bare id after another capability's name, is not the
+    citing record's own capability's decision."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(kit_target, "cap-b", "001", "base", "accepted")
+    _cap_record(
+        kit_target,
+        "cap-a",
+        "002",
+        "on-b",
+        "accepted",
+        "Per [cap-b:DEC-001-base], and cap-b DEC-001 point 1.\n",
+    )
+    assert _resting(kit_target) == []
+
+
+def test_rot_skips_citations_in_code_blocks_and_comments(kit_target: Path) -> None:
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(
+        kit_target,
+        "cap-a",
+        "002",
+        "quoted",
+        "accepted",
+        "```\nDEC-001\n```\n\n<!-- DEC-001 -->\n\n~~DEC-001~~\n",
+    )
+    assert _resting(kit_target) == []
+
+
+def test_rot_flags_artifact_citing_superseded_capability_decision(kit_target: Path) -> None:
+    """The superseded check reads capability citations too, now that they are indexed."""
+    _cap_record(kit_target, "cap-a", "001", "lanes", "superseded")
+    body = "---\nname: skill-a\ndescription: t\n---\n# A\nPer [cap-a:DEC-001-lanes].\n"
+    _write_skill(kit_target, "core", "skill-a", body)
+    issues = refs.find_rot(kit_target, refs.load_artifacts(kit_target))
+    assert any("superseded" in i.diagnosis and "cap-a:DEC-001" in i.diagnosis for i in issues), (
+        issues
+    )
+
+
+def test_cli_refs_rot_reports_a_proposed_ground_and_exits_zero(kit_target: Path) -> None:
+    _cap_record(kit_target, "cap-a", "001", "lanes", "proposed")
+    _cap_record(kit_target, "cap-a", "002", "instances", "accepted", "Per DEC-001.\n")
+    result = CliRunner().invoke(main, ["refs", "rot"])
+    assert result.exit_code == 0, result.output
+    assert "DEC-002-instances.md" in result.output
+    assert "cites proposed record 'cap-a:DEC-001'" in result.output
+
+
 def test_rot_clean_corpus_returns_no_issues(kit_target: Path) -> None:
     """Accepted records + existing files + no superseded refs = no rot."""
     _write_decision(kit_target, "core", "COR", "001", "thing")
