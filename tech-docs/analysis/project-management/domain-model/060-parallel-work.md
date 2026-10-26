@@ -25,6 +25,8 @@ pkit:
 
 Several AI agents may work on one [project](../../core/glossary.md#term-project--project) at the same time, each in a clone of its own and often under one person's account. Each must know its own job, and no two may work on one [issue](../glossary.md#term-issue--issue). A [topology](../glossary.md#term-topology--topology) names the agents and gives each a [scope](../glossary.md#term-scope--scope). Each agent works in an [instance](../glossary.md#term-instance--instance), and the [owner](../glossary.md#term-owner--owner) of an issue says which instance works on it (DEC-035 and DEC-045).
 
+These concepts serve the use cases of the area [040-work-in-parallel](../overview/README.md#040-work-in-parallel), and the journey [JRN-004](../use-case-model/journeys/JRN-004-direct-parallel-work.md) tells that area's story from start to end.
+
 ```mermaid
 classDiagram
   accTitle: Parallel work
