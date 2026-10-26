@@ -18,6 +18,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with, use
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "create-issue.py"
@@ -399,8 +401,11 @@ def _linked(ci):
     return SimpleNamespace(ok=True, detail="", outcome=ci.LinkOutcome.LINKED, refused=False)
 
 
-def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[str]]]:
-    """Run create-issue main() for a Task titled ``title``; return (rc, every argv run)."""
+def _file_task(
+    ci, tmp_path, monkeypatch, title: str, extra: tuple[str, ...] = ()
+) -> tuple[int, list[list[str]]]:
+    """Run create-issue main() for a Task titled ``title``, with ``extra`` options;
+    return (rc, every argv run)."""
     root = _stage_filing_tree(tmp_path)
     calls: list[list[str]] = []
 
@@ -435,6 +440,7 @@ def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[st
             "--capability-root",
             str(root),
             "--yes",
+            *extra,
         ],
     )
     return ci.main(), calls
@@ -442,6 +448,105 @@ def _file_task(ci, tmp_path, monkeypatch, title: str) -> tuple[int, list[list[st
 
 def _issue_created(calls: list[list[str]]) -> bool:
     return any("issue" in c and "create" in c for c in calls)
+
+
+# --- instance ownership: the claim at filing (DEC-035 point 3) ------------
+# With an instance id set, the filed issue (#55 here) is claimed for this clone
+# right after it is filed. The claim's `gh` calls reach an in-memory GitHub.
+
+_CLEAN_TITLE = "Evidence points are keyed so two providers can report one"
+
+
+def _file_with_instance(
+    ci, tmp_path, monkeypatch, *, instance: int | None, extra: tuple[str, ...] = ()
+) -> tuple[int, list[list[str]], FakeGitHub]:
+    github = FakeGitHub(author="filer-login")
+    assignee = extra[extra.index("--assignee") + 1] if "--assignee" in extra else "filer-login"
+    github.add(55, assignees=(assignee,))
+    clone_with(ci.instance_claims, monkeypatch, instance)
+    use(ci.instance_claims, monkeypatch, github)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE, extra)
+    return rc, calls, github
+
+
+def test_with_no_instance_id_filing_is_unchanged(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, _calls, github = _file_with_instance(ci, tmp_path, monkeypatch, instance=None)
+    assert rc == 0
+    assert github.calls == []
+    captured = capsys.readouterr()
+    assert "ownership" not in captured.out + captured.err
+
+
+def test_the_filed_issue_is_claimed_for_this_clone(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, calls, github = _file_with_instance(ci, tmp_path, monkeypatch, instance=2)
+    assert rc == 0
+    assert _issue_created(calls)
+    assert [argv[2] for argv in github.writes()] == ["comment", "edit"]
+    claim = github.issues[55].comments[0]["body"]
+    assert "event=claim instance=2 " in claim
+    out = capsys.readouterr().out
+    assert "  ownership:  claimed for instance 2 (comment substrate)" in out
+    assert "[ok] ownership: #55 claimed for instance 2 (comment substrate)." in out
+
+
+def test_an_issue_filed_for_another_person_is_not_claimed(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """DEC-035 point 5: the creating clone's marker does not stick to an issue
+    assigned to someone else."""
+    rc, _calls, github = _file_with_instance(
+        ci, tmp_path, monkeypatch, instance=2, extra=("--assignee", "someone-else")
+    )
+    assert rc == 0
+    assert github.calls == []
+    assert "  ownership:  not claimed: assigned to @someone-else" in capsys.readouterr().out
+
+
+def _file_from_seat(ci, tmp_path, monkeypatch, role: str) -> tuple[int, list, FakeGitHub]:
+    """File from a clone that holds the topology's first seat, of `role`
+    (DEC-059), with the key `k1`."""
+    github = FakeGitHub(author="filer-login")
+    github.add(55, assignees=("filer-login",))
+    claims = ci.instance_claims
+    ownership = claims.ownership
+    holder = ownership.Holder(ownership.SEAT_HELD, "filer-login", "k1")
+    seat = claims.Seat("seat-1", 1, role)
+    topology_with(claims, monkeypatch, claims.Topology(seat, {"seat-1": holder}), key="k1")
+    use(claims, monkeypatch, github)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
+    return rc, calls, github
+
+
+def test_a_planners_seat_files_with_no_owner(ci, tmp_path, monkeypatch, capsys) -> None:
+    """DEC-059 point 7: the planner's work enters the shared pool."""
+    rc, calls, github = _file_from_seat(ci, tmp_path, monkeypatch, "planner")
+    assert rc == 0
+    assert _issue_created(calls)
+    assert github.calls == []
+    assert (
+        "  ownership:  not claimed: seat seat-1, instance 1 is a planner's seat, which files "
+        "with no owner, so the issue enters the shared pool"
+    ) in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("role", ["worker", "lead"])
+def test_any_other_seat_claims_what_it_files(ci, tmp_path, monkeypatch, capsys, role) -> None:
+    rc, _calls, github = _file_from_seat(ci, tmp_path, monkeypatch, role)
+    assert rc == 0
+    claim = github.issues[55].comments[0]["body"]
+    assert "event=claim instance=1 seat=seat-1 seat_number=1 clone=k1 " in claim
+    assert "#55 claimed for seat seat-1, instance 1" in capsys.readouterr().out
+
+
+def test_a_failed_claim_leaves_the_issue_filed(ci, tmp_path, monkeypatch, capsys) -> None:
+    github = FakeGitHub(author="filer-login", failing={"comment"})
+    github.add(55, assignees=("filer-login",))
+    clone_with(ci.instance_claims, monkeypatch, 2)
+    use(ci.instance_claims, monkeypatch, github)
+    rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
+    assert rc == 0
+    assert _issue_created(calls)
+    assert "[warn] ownership: the claim on #55 failed" in capsys.readouterr().err
 
 
 def test_filing_refuses_a_conventional_commits_title_before_gh(

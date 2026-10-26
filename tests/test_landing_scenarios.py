@@ -41,7 +41,7 @@ import sys
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import click
@@ -2472,11 +2472,16 @@ class _Allowed:
     refusal_message = None
 
 
+#: The invoker, in the shape `resolve_invoker_identity` returns: an identity
+#: with a login and an email, which done-work's clash guard reads the login of.
+_INVOKER = SimpleNamespace(github_login="octocat", email=None)
+
+
 def _stub_gates(monkeypatch: pytest.MonkeyPatch, module: ModuleType, cap: Path) -> None:
     """The gates a pm verb runs before its own, stubbed as the verbs' tests stub them."""
     monkeypatch.setattr(module, "resolve_capability_root", lambda arg: cap)
     monkeypatch.setattr(module, "load_adopter_config", lambda root: dict(_CONFIG))
-    monkeypatch.setattr(module, "resolve_invoker_identity", lambda config=None: "octocat")
+    monkeypatch.setattr(module, "resolve_invoker_identity", lambda config=None: _INVOKER)
     monkeypatch.setattr(module, "check_membership", lambda members, invoker: _Allowed())
 
 

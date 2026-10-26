@@ -76,8 +76,9 @@ Each kind of thing a record, an agent or a skill cites has one written form, and
 
 `pkit refs lookup` prints where a citation lies, and resolves a point of a record and a rule's heading too. The way back, from a file to the records its anchors lead to, is in "Finding the records a path leads to" below.
 - **A point of a record,** written as an anchor's value, prints its record's file and the anchor GitHub gives its heading: `pkit refs lookup COR-050#14`. A retired point gives its stub's heading. A record whose points are still a list gives a point no heading, so it prints the file alone. An id the record neither holds nor retires does not resolve.
+- **A point of a record that another record overturns in part** also prints the record's top line, *Partially superseded by …*, after the point's place. The point stays as it stood, so a reader sent to the point lands below that line (COR-058 point 5). The line names the overturning record, but not whether this point is among what that record overturns.
 - **A rule** prints its place, and `--json` gives its heading's anchor too.
-- **With `--json`,** the document answers the ids in the order given. Each answer also gives the file in `path`, the anchor in `anchor`, and in `received` whether the file arrives as a synced copy.
+- **With `--json`,** the document answers the ids in the order given. Each answer also gives the file in `path`, the anchor in `anchor`, and in `received` whether the file arrives as a synced copy. A point's answer gives that top line in `partial_supersession`. The key is `null` where the record has no such line, and in every answer that is not a point's.
 
 ## The no-shared-files invariant
 

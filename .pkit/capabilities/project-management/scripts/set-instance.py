@@ -13,8 +13,10 @@ marking, no clash guard, no signed listing). The presence of the id is the sole
 activation gate.
 
 This sets *which clone am I* only. It does not touch any issue — the per-issue
-ownership marker is written by the lifecycle commands (create-issue / start-work /
-handoff-issue), which read this id.
+ownership marker is written by the lifecycle commands, which read this id:
+create-issue claims each issue it files, start-work claims an issue no instance
+owns, and close-issue releases the owner as the issue closes (done-work through
+the close-issue it runs). handoff-issue does not move the marker yet.
 
 Usage:
   set-instance <N>       set this clone's instance id (positive integer)

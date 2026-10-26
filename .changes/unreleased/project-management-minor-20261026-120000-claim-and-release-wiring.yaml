@@ -1,0 +1,20 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A clone that set its instance id with `set-instance` now marks the issues it
+  owns (DEC-035, #519). `create-issue` claims each issue it files for the
+  clone, unless it is filed for another person with `--assignee`. `start-work`
+  claims an issue no instance owns once it has set the assignee, and reads the
+  issue again: where a lower-numbered instance claimed in the same instant, it
+  withdraws its claim and stops before the move with exit code 2, naming the
+  branch it cut. `close-issue` releases every owner once it has closed the
+  issue, in each mode, and `done-work` releases through the `close-issue` it
+  runs for each issue its merge closed. Every write goes through the ownership
+  seam on the substrate `project/instance-ownership.yaml` selects (DEC-043): by
+  default an event comment, with the current owner rewritten into the issue's
+  description above the provenance footer, or the `instance:N` label, created
+  on first use. A claim or a release that fails is a warning, and the
+  command's own work stands. A clone with no instance id set writes and prints
+  exactly what it did before.

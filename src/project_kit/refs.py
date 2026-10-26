@@ -45,7 +45,7 @@ import re
 from collections.abc import Collection
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import click
 from ruamel.yaml import YAML
@@ -55,6 +55,9 @@ from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
 from project_kit.line_breaks import universal_newlines
 from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
 from project_kit.validators import Finding, Outcome, Severity, counts_line, location_of
+
+if TYPE_CHECKING:
+    from project_kit.document_parts import Body
 
 Kind = Literal["agent", "skill"]
 Namespace = Literal["core", "project"]
@@ -566,6 +569,11 @@ class Lookup:
     - `received`: whether `path` arrives in the repository as a synced copy, which the
       project receives and does not write, as validation tells one
       (`decisions_validate.synced_record_test`, COR-055 point 1).
+    - `partial_supersession`: with a point that resolves, its record's top line where
+      it reads *Partially superseded by …* (`partial_supersession`), else `None`. A
+      point another record overturns stays as it stood, and only that line says so
+      (COR-058 point 5), so a reader sent to the point would read past it. The line
+      names the overturning record, not whether this point is among what it overturns.
     """
 
     id: str
@@ -574,6 +582,7 @@ class Lookup:
     path: str | None = None
     anchor: str | None = None
     received: bool = False
+    partial_supersession: str | None = None
 
     @property
     def resolved(self) -> bool:
@@ -588,7 +597,38 @@ class Lookup:
             "path": self.path,
             "anchor": self.anchor,
             "received": self.received,
+            "partial_supersession": self.partial_supersession,
         }
+
+
+#: How a partly superseded record's top line opens, its emphasis aside (the decisions
+#: README, "To supersede").
+_PARTIAL_SUPERSESSION = re.compile(r"^[*_]*Partially superseded by\b")
+
+
+def partial_supersession(body: Body) -> str | None:
+    """A record's top line where it reads *Partially superseded by …*, else `None`.
+
+    The top line is the first paragraph of the record's body before its first section
+    (`Body.lead`), after a first-level heading that titles the body: a quote's marks
+    dropped, and a paragraph wrapped over several lines joined into one line. It is
+    given as the record writes it, emphasis and links kept.
+    """
+    lead = body.lead()
+    start = lead.start
+    if body.headings and body.headings[0].level == 1 and body.headings[0].start == start:
+        start = body.text.find("\n", start) + 1 or lead.end
+    paragraph: list[str] = []
+    for line in body.text[start : max(start, lead.end)].split("\n"):
+        text = line.strip()
+        if text.startswith(">"):
+            text = text[1:].strip()
+        if text:
+            paragraph.append(text)
+        elif paragraph:
+            break
+    line = " ".join(paragraph)
+    return line if _PARTIAL_SUPERSESSION.match(line) else None
 
 
 def lookup(target_root: Path, record_id: str) -> Lookup:
@@ -615,7 +655,9 @@ def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Look
     A record's points are read as validation reads them (`record_points`, COR-058
     point 7): a live point gives its heading's anchor, the first where two share its
     id; a retired id gives its stub's; a record whose points are a list gives none;
-    and an id the record neither holds nor retires is a problem. The rule sets are
+    and an id the record neither holds nor retires is a problem. A point that resolves
+    comes with its record's partial-supersession line, where the record has one
+    (`Lookup.partial_supersession`). The rule sets are
     discovered once, and each record read once, however many citations name it. Each
     file found says whether it arrives as a synced copy (`Lookup.received`).
     """
@@ -708,7 +750,15 @@ def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Look
             heading = stub.extent.heading if stub is not None else None
         anchor = anchor_of(heading.start, points.body) if heading is not None else None
         located = f"{rel}#{anchor}" if anchor else rel
-        found.append(Lookup(citation, (located,), path=rel, anchor=anchor))
+        found.append(
+            Lookup(
+                citation,
+                (located,),
+                path=rel,
+                anchor=anchor,
+                partial_supersession=partial_supersession(points.body),
+            )
+        )
     is_synced = synced_record_test(target_root)
     return [replace(f, received=is_synced(f.path)) if f.path else f for f in found]
 
