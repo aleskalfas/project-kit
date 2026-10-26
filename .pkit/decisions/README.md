@@ -12,7 +12,7 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-019, COR-025, COR-041, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3"]
+      record: [COR-001, COR-019, COR-025, COR-041, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5"]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
