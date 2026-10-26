@@ -1,7 +1,7 @@
 ---
 id: ADR-071
 title: A state issue is read and written through one seam of its own, beside the ownership seam
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
