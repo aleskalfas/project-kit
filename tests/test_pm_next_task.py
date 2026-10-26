@@ -22,7 +22,15 @@ from typing import Any
 
 import pytest
 
-from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with
+from tests.pm_ownership_support import (
+    FakeGitHub,
+    clone_with,
+    seat_issue,
+    seat_snapshot,
+    snapshot_with,
+    topology_with,
+)
+from tests.pm_state_issue_fakes import FakeRepo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -117,16 +125,19 @@ def _stamp(nt, instance: int, event: str = "claim") -> str:
 
 @pytest.fixture
 def run(nt, monkeypatch: pytest.MonkeyPatch):
-    """Returns `run(pool, instance=None, extra=(), start=None) -> (rc, starts)`.
-    `instance` is this clone's instance id (none by default). `start` stands in
-    for `start-work`; by default it records each start and answers 0. `starts`
-    holds `(number, dry_run)` for each start."""
+    """Returns `run(pool, instance=None, extra=(), start=None, seated=None) ->
+    (rc, starts)`. `instance` is this clone's instance id (none by default).
+    `start` stands in for `start-work`; by default it records each start and
+    answers 0. `seated` is the run's snapshot of the topology and the seat this
+    clone took, where it took one. `starts` holds `(number, dry_run)` for each
+    start."""
 
     def go(
         pool: Pool,
         instance: int | None = None,
         extra: tuple[str, ...] = (),
         start: Any = None,
+        seated: tuple[Any, str] | None = None,
     ) -> tuple[int, list[tuple[int, bool]]]:
         starts: list[tuple[int, bool]] = []
 
@@ -135,6 +146,9 @@ def run(nt, monkeypatch: pytest.MonkeyPatch):
             return 0 if start is None else start(number, dry_run=dry_run)
 
         clone_with(nt.instance_claims, monkeypatch, instance)
+        if seated is not None:
+            snapshot, hint = seated
+            snapshot_with(nt.instance_claims, monkeypatch, snapshot, hint=hint)
         monkeypatch.setattr(nt.instance_claims, "_gh", lambda args, _c: pool.github(args))
         monkeypatch.setattr(nt, "_gh", pool.list)
         monkeypatch.setattr(sys, "argv", ["next-task", "--yes", *extra])
@@ -421,6 +435,66 @@ def test_a_clone_that_holds_no_seat_takes_nothing(run, nt, monkeypatch, capsys) 
     rc, starts = run(pool, instance=2)
     assert (rc, starts) == (2, [])
     assert "this clone holds no seat of the project's topology" in capsys.readouterr().err
+
+
+def _scoped_topology(nt, holder: tuple[str, str] | None = ("me", "k2"), *, retired: bool = False):
+    """The run's snapshot of a topology whose second seat, `tester`, takes only
+    Tasks of the type `test`, and the in-memory GitHub of its state issues.
+    `tester` is held by `holder`, and this clone took it."""
+    claims = nt.instance_claims
+    repo = FakeRepo()
+    seat_issue(claims, repo, 11, "planner")
+    seat_issue(claims, repo, 12, "tester", holder)
+    seats = [
+        {"name": "planner", "role": "planner", "organizer": True, "state_issue": 11},
+        {
+            "name": "tester",
+            "role": "worker",
+            "state_issue": 12,
+            "retired": retired,
+            "scope": {"types": ["test"]},
+        },
+    ]
+    doc = {"schema_version": 1, "seats": seats}
+    return (seat_snapshot(claims, doc, repo), "tester"), repo
+
+
+def test_a_seat_takes_within_the_scope_its_topology_gives_it(run, nt, capsys) -> None:
+    """DEC-059 point 7: the scope is the one the default branch's topology gives
+    the seat this clone took, confirmed on the seat's state issue."""
+    pool = Pool()
+    pool.add(20, priority="High", kind="feature")
+    pool.add(21, priority="Low", kind="test")
+    seated, _repo = _scoped_topology(nt)
+    rc, starts = run(pool, seated=seated)
+    assert (rc, starts) == (0, [(21, False)])
+    assert (
+        "1 Task is ready for seat tester, instance 2, within the scope of types test"
+        in capsys.readouterr().out
+    )
+
+
+def test_a_seat_that_cannot_be_confirmed_takes_nothing(run, nt, capsys) -> None:
+    """DEC-059 point 6: a seat another clone holds now is refused before the
+    listing is read."""
+    pool = Pool()
+    pool.add(21, kind="test")
+    seated, _repo = _scoped_topology(nt, ("me", "k9"))
+    rc, starts = run(pool, seated=seated)
+    assert (rc, starts) == (2, [])
+    err = capsys.readouterr().err
+    assert "[refused] next-task: this clone no longer holds the seat tester" in err
+    assert pool.listed == []
+
+
+def test_a_dry_run_releases_no_retired_seat(run, nt) -> None:
+    """A retired seat is released at its clone's next command, but not by a dry run."""
+    pool = Pool()
+    pool.add(21, kind="test")
+    seated, repo = _scoped_topology(nt, retired=True)
+    rc, starts = run(pool, extra=("--dry-run",), seated=seated)
+    assert (rc, starts) == (2, [])
+    assert repo.writes() == []
 
 
 # ---- two clones at once (DEC-035 point 6, DEC-059 point 7) ----------------------------

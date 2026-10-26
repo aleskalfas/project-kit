@@ -286,23 +286,37 @@ def this_clone(
     substrate selector is read only then. Raises :class:`Unconfirmed` where the
     clone took a seat and the seat cannot be confirmed; ``dry_run`` releases no
     retired seat (:func:`confirm_seat`)."""
-    instance = read_instance_id(capability_root)
-    if instance is None and read_seat_hint(capability_root) is None:
+    if read_instance_id(capability_root) is None and read_seat_hint(capability_root) is None:
         return None
-    topology = read_topology(capability_root, config or {}, login=login, dry_run=dry_run)
-    if topology is not None:
-        key = read_clone_key(capability_root) if topology.seat is not None else None
-        if topology.seat is None or key is None:
-            return None
-        return Clone(
-            topology.seat.number,
-            "comment",
-            login,
-            capability_root,
-            seat=topology.seat,
-            key=key,
-            holders=topology.holders,
-        )
+    reading = read_topology(capability_root, config or {}, login=login, dry_run=dry_run)
+    if reading is not None:
+        return seat_clone(reading, capability_root, login)
+    return numbered_clone(capability_root, login)
+
+
+def seat_clone(reading: Topology, capability_root: Path, login: str | None) -> Clone | None:
+    """This clone in a project with a topology, from the run's ``reading`` of it:
+    the seat it holds, numbered by its place, or ``None`` where it holds none
+    (DEC-059 point 6)."""
+    key = read_clone_key(capability_root) if reading.seat is not None else None
+    if reading.seat is None or key is None:
+        return None
+    return Clone(
+        reading.seat.number,
+        "comment",
+        login,
+        capability_root,
+        seat=reading.seat,
+        key=key,
+        holders=reading.holders,
+    )
+
+
+def numbered_clone(capability_root: Path, login: str | None) -> Clone | None:
+    """This clone in a project with no topology: the instance number typed into
+    it, or ``None`` where none is (DEC-035). The substrate selector is read only
+    where a number is typed."""
+    instance = read_instance_id(capability_root)
     if instance is None:
         return None
     substrate = ownership.resolve_substrate(_read_settings(capability_root))
@@ -322,10 +336,12 @@ def read_topology(
     The reading comes from one run's snapshot (``_lib/topology``, ADR-071 point
     1): this clone's seat, confirmed on its state issue by :func:`confirm_seat`,
     and each seat's holder, read from its state issue the first time a claim
-    names the seat. Where the default branch cannot be read, a clone that took a
-    seat cannot confirm it, and :class:`Unconfirmed` is raised (DEC-059 point 1).
-    A clone that took none keeps the number typed into it, with a note, since no
-    topology was read to refuse it."""
+    names the seat. The seat carries its scope in :attr:`Seat.scope`, which
+    ``next-task`` narrows its pool by. Where the default branch cannot be read,
+    a clone that took a seat cannot confirm it, and :class:`Unconfirmed` is
+    raised (DEC-059 point 1). A clone that took none keeps the number typed into
+    it, or acts as no instance where none is, with a note, since no topology was
+    read to refuse it."""
     try:
         snap = _snapshot(capability_root, config, login)
     except topology.Unresolved as exc:
@@ -335,9 +351,14 @@ def read_topology(
                 f"branch to confirm it ({exc}). No clone acts as a seat without the default "
                 "branch (DEC-059 point 1)."
             ) from exc
+        acts = (
+            "no instance"
+            if read_instance_id(capability_root) is None
+            else "the instance number typed into it"
+        )
         print(
             f"[note] ownership: the topology could not be read from the default branch "
-            f"({exc}), so this clone acts as the instance number typed into it.",
+            f"({exc}), so this clone acts as {acts}.",
             file=sys.stderr,
         )
         return None
@@ -361,7 +382,8 @@ def confirm_seat(
     snapshot: topology.Snapshot, capability_root: Path, *, dry_run: bool = False
 ) -> Seat | None:
     """This clone's seat, confirmed on the seat's state issue by the clone's key,
-    or ``None`` where the clone holds no seat (DEC-059 point 6).
+    with the scope the topology gives it (point 7), or ``None`` where the clone
+    holds no seat (DEC-059 point 6).
 
     The one check every command that acts as an instance runs before it writes.
     The name of the seat the clone took is only a hint of where to look. With no
@@ -410,7 +432,7 @@ def confirm_seat(
     if state.seat.retired:
         _release_retired(snapshot, state, capability_root, dry_run=dry_run)
         return None
-    return Seat(state.seat.name, state.seat.number, state.seat.role)
+    return Seat(state.seat.name, state.seat.number, state.seat.role, state.seat.scope)
 
 
 def _release_retired(

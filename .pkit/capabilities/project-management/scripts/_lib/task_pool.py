@@ -141,24 +141,30 @@ class Taker:
         return self.clone is not None and self.clone.holders is not None
 
 
-def taker(capability_root: Path, login: str | None, config: dict) -> Taker:
+def taker(
+    capability_root: Path, login: str | None, config: dict, *, dry_run: bool = False
+) -> Taker:
     """This clone as a taker from the pool, and the scope of its seat.
 
-    Outside a topology, a clone with an instance id, or with none, takes with no
-    scope. In a project with a topology, a clone takes only from the seat it
-    holds: one that holds none may not take, nor may a planner's seat, which
-    builds none of the work (DEC-059 point 2)."""
-    clone = instance_claims.this_clone(capability_root, login, config)
+    The topology is read once, and the clone's seat confirmed on its state issue
+    (``instance_claims.read_topology``), which raises ``Unconfirmed`` where the
+    seat cannot be confirmed. ``dry_run`` releases no retired seat. Outside a
+    topology, a clone with an instance id, or with none, takes with no scope. In
+    a project with a topology, a clone takes only from the seat it holds: one
+    that holds none may not take, nor may a planner's seat, which builds none of
+    the work (DEC-059 point 2)."""
+    reading = instance_claims.read_topology(capability_root, config, login=login, dry_run=dry_run)
+    if reading is None:
+        return Taker(instance_claims.numbered_clone(capability_root, login))
+    clone = instance_claims.seat_clone(reading, capability_root, login)
     if clone is None:
-        if instance_claims.read_topology(capability_root, config) is not None:
-            return Taker(
-                None,
-                refusal=(
-                    "this clone holds no seat of the project's topology, so it takes no work "
-                    "from the shared pool (DEC-059 points 4 and 6). Take a seat first."
-                ),
-            )
-        return Taker(None)
+        return Taker(
+            None,
+            refusal=(
+                "this clone holds no seat of the project's topology, so it takes no work "
+                "from the shared pool (DEC-059 points 4 and 6). Take a seat first."
+            ),
+        )
     seat = clone.seat
     if seat is not None and seat.role == instance_claims.PLANNER:
         return Taker(

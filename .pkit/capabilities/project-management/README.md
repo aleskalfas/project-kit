@@ -782,7 +782,7 @@ What else holds a Task back:
 
 **Two clones at once never both start one Task.** Where `start-work` fails and the Task is now another instance's, the first claim held. This clone then takes the next ready Task. Any other failure of `start-work` stops the run, with its exit code.
 
-**Who takes.** Outside a topology, a clone takes with no scope, and a clone with no instance id reads no owner. In a project with a topology, a clone that holds no seat takes nothing, and nor does a planner's seat, which builds none of the work. The seat's scope comes from the reading of the topology, and no command reads the topology for instance ownership yet.
+**Who takes.** Outside a topology, a clone takes with no scope, and a clone with no instance id reads no owner. In a project with a topology, a clone that holds no seat takes nothing, and nor does a planner's seat, which builds none of the work. The seat's scope is the one the topology on the default branch gives the seat. A clone whose seat cannot be confirmed on its state issue takes nothing either.
 
 `--dry-run` says which Task it would start, and runs `start-work --dry-run` on it. The command asks before it starts a Task, unless `--yes` is given. A listing that reaches `--limit`, 1000 open issues by default, refuses, since a dependency it did not return could be open.
 
@@ -790,7 +790,7 @@ What else holds a Task back:
 |---|---|
 | 0 | A Task was started, or a dry run said which it would start |
 | 1 | Membership refused, or the foreign-repo guard did |
-| 2 | A clone that holds no seat, or a planner's seat, or a listing that reached `--limit` |
+| 2 | A clone that holds no seat, a planner's seat or a seat that cannot be confirmed, or a listing that reached `--limit` |
 | 3 | The open issues could not be read, or a ready Task's owner could not be read and no other Task was free |
 | 5 | No Task is ready for this clone, so nothing was started |
 | other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |

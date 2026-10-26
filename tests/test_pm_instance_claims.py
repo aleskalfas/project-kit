@@ -773,23 +773,32 @@ def test_a_release_judges_claims_as_the_claim_and_the_guard_do(ic, root) -> None
 # the key `k2`, and took `worker-2`, the topology's third seat.
 
 
-def _doc(*, retired: bool = False) -> dict:
+def _doc(*, retired: bool = False, scope: dict | None = None) -> dict:
+    worker_2 = {"name": "worker-2", "role": "worker", "state_issue": 13, "retired": retired}
+    if scope is not None:
+        worker_2["scope"] = scope
     seats = [
         {"name": "planner", "role": "planner", "organizer": True, "state_issue": 11},
         {"name": "worker-1", "role": "worker", "state_issue": 12},
-        {"name": "worker-2", "role": "worker", "state_issue": 13, "retired": retired},
+        worker_2,
     ]
     return {"schema_version": 1, "seats": seats}
 
 
-def _seated(ic, holder: tuple[str, str] | None = ("me", "k2"), *, retired: bool = False):
+def _seated(
+    ic,
+    holder: tuple[str, str] | None = ("me", "k2"),
+    *,
+    retired: bool = False,
+    scope: dict | None = None,
+):
     """The snapshot, and the GitHub that holds its seats: worker-1 held by
-    `me`'s clone `k1`, and worker-2 by `holder`."""
+    `me`'s clone `k1`, and worker-2 by `holder`, with `scope` where given."""
     repo = FakeRepo()
     seat_issue(ic, repo, 11, "planner")
     seat_issue(ic, repo, 12, "worker-1", ("me", "k1"))
     seat_issue(ic, repo, 13, "worker-2", holder)
-    return seat_snapshot(ic, _doc(retired=retired), repo), repo
+    return seat_snapshot(ic, _doc(retired=retired, scope=scope), repo), repo
 
 
 def _views(repo: FakeRepo) -> list[int]:
@@ -816,6 +825,21 @@ def test_the_seat_is_confirmed_on_its_state_issue_and_numbered_by_its_place(
     assert (clone.seat, clone.instance, clone.key) == (ic.Seat("worker-2", 3, "worker"), 3, "k2")
     assert clone.substrate == "comment" and clone.named() == "seat worker-2, instance 3"
     assert _views(repo) == [13]
+
+
+def test_the_confirmed_seat_carries_the_scope_the_topology_gives_it(ic, root, monkeypatch) -> None:
+    """DEC-059 point 7: the scope `next-task` narrows by is the topology seat's,
+    and a seat the topology gives no scope has none."""
+    snap, _repo = _seated(ic, scope={"workstreams": ["cli"], "types": ["bug"]})
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    scoped = ic.this_clone(root, "me")
+    assert scoped is not None and scoped.seat is not None
+    assert scoped.seat.scope == ic.topology.Scope(workstreams=("cli",), types=("bug",))
+    snap, _repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    unscoped = ic.this_clone(root, "me")
+    assert unscoped is not None and unscoped.seat is not None
+    assert unscoped.seat.scope is None
 
 
 def test_each_seats_holder_is_read_once_when_a_claim_names_it(ic, root, monkeypatch) -> None:
@@ -1043,10 +1067,3 @@ def test_read_owner_of_an_issue_it_cannot_read_is_none(ic, root: Path) -> None:
     gh = FakeGitHub(failing={"view"})
     gh.add(7)
     assert ic.read_owner(7, _clone(ic, root), {}, run=gh) is None
-
-
-def test_a_seat_has_no_scope_unless_the_topology_gives_one(ic) -> None:
-    """#2141's reading of the topology fills the scope next-task narrows by."""
-    assert ic.Seat("worker-2", 2, ic.WORKER).scope is None
-    scope = importlib.import_module("_lib.topology").Scope(workstreams=("cli",))
-    assert ic.Seat("worker-2", 2, ic.WORKER, scope).scope is scope

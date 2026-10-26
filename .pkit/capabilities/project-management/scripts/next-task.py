@@ -24,9 +24,10 @@ its docstring says which references the section is read for.
 Steps:
   - The gates `start-work` runs: the bootstrap gate, membership (DEC-021) and
     the foreign-repo guard, whose confirmation is handed on to `start-work`.
-  - Who takes: in a project with a topology, the clone's seat, whose scope
-    narrows the pool. A clone that holds no seat, or holds a planner's seat,
-    takes nothing. Outside a topology a clone takes with no scope.
+  - Who takes: in a project with a topology, the clone's seat, confirmed on
+    its state issue, whose scope the topology gives and which narrows the pool.
+    A clone that holds no seat, holds a planner's seat or whose seat cannot be
+    confirmed takes nothing. Outside a topology a clone takes with no scope.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
     state issues out. The ready Tasks are ranked from it.
   - Where the clone takes part in instance ownership, the owner of each Task in
@@ -41,8 +42,9 @@ Steps:
 Exit codes:
   0  a Task was started, or a dry run said which it would start
   1  membership refusal / foreign-repo refusal
-  2  usage error / a clone that holds no seat, or a planner's seat / the
-     listing reached its limit, so an open dependency could be missed
+  2  usage error / a clone that holds no seat, or a planner's seat / this
+     clone's seat could not be confirmed / the listing reached its limit, so
+     an open dependency could be missed
   3  the open issues could not be read, or a ready Task's owner could not be
      read and no other Task was free
   5  no Task is ready for this clone, so nothing was started
@@ -137,7 +139,12 @@ def main() -> int:
     if not passage:
         return 1
 
-    taker = task_pool.taker(capability_root, invoker.github_login, config)
+    # The seat is confirmed on its state issue before the pool is read.
+    try:
+        taker = task_pool.taker(capability_root, invoker.github_login, config, dry_run=args.dry_run)
+    except instance_claims.Unconfirmed as exc:
+        instance_claims.say_unconfirmed("next-task", None, exc)
+        return 2
     if taker.refusal is not None:
         print(f"[refused] next-task: {taker.refusal}", file=sys.stderr)
         return 2

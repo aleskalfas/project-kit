@@ -14,4 +14,6 @@ body: >
   and names the state issues no seat names. In a project with a topology, every
   command that writes as an instance now confirms the clone's seat on its state
   issue first, and refuses where it cannot, and `set-instance` refuses a typed
-  number. A project with no topology behaves as before.
+  number. `next-task` narrows the shared pool by the scope the topology gives
+  the clone's seat, and refuses a seat it cannot confirm. A project with no
+  topology behaves as before.
