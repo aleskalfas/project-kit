@@ -92,7 +92,7 @@ pkit:
 **Assumptions:**
 
 - A [reviewer](../../../glossary.md#term-reviewer--reviewer) the [project](../../../glossary.md#term-project--project) chooses, other than the agent that wrote the answers, checks them. Nothing in the check tells whether the reviewer read them (COR-050 [point](../../../glossary.md#term-point--point) 3).
-- An agent writes no [answer](../../../glossary.md#term-answer--answer) the [change](../../../glossary.md#term-change--change) does not owe until a person accepts its words. A delegate a person named may decide it instead (COR-064 point 1). Nothing at run time stops it (COR-050 point 3 and core rule 20).
+- An agent writes no [answer](../../../glossary.md#term-answer--answer) the [change](../../../glossary.md#term-change--change) does not owe until a person accepts its words. A delegate a person named may decide such an answer instead (COR-064 point 1). Nothing at run time stops an agent writing one (COR-050 point 3 and core rule 20).
 - The branch is up to date with its [base](../../../glossary.md#term-base--base), or a merge queue runs the check again on the merge (COR-050 point 6).
 
 **Trigger:** The developer, or the agent making the [change](../../../glossary.md#term-change--change), is about to push the change's branch.
