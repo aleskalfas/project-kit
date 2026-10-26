@@ -13,7 +13,6 @@ import pytest
 from project_kit import (
     command_runner,
     default_branch,
-    friction_validate,
     migrations,
     project_config,
     run_cache,
@@ -29,6 +28,7 @@ from tests.adopter_repo import (
     refusing_global_config,
     stub_adapter_primitives,
 )
+from tests.friction_documents import settled_commit, settled_write
 
 #: What a run of the command runner sets in the environment of what it runs.
 RUN_VARIABLES = (command_runner.DEADLINE_ENV, command_runner.STRAYS_ENV, run_cache.CACHE_ENV)
@@ -93,12 +93,13 @@ def at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture
-def answers_in_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Validation leaves out its finding on an answer in an artefact's block, for a module
-    whose fixtures still write answers there, where they lived before the move (COR-062
-    points 10 and 11). Such a module judges the other findings it tests. #2032 writes
-    those answers in answer files and removes this fixture with the last user."""
-    monkeypatch.setattr(friction_validate, "_block_answer_findings", lambda *_args: [])
+def answers_in_files(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each write and commit of an adopter repository takes the answers out of the blocks
+    of the artefacts it writes into answer files, as a change writes them (COR-062 point 1;
+    `friction_documents.settle_answers`), and each commit stages them. For a module whose
+    documents say an artefact's answers beside its anchors (`friction_documents.document`)."""
+    monkeypatch.setattr(AdopterRepo, "write", settled_write)
+    monkeypatch.setattr(AdopterRepo, "commit", settled_commit)
 
 
 @pytest.fixture(scope="session", autouse=True)

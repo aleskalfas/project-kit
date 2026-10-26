@@ -1283,11 +1283,13 @@ def test_altered_reads_a_named_head_and_the_cli_gives_the_document(repo: Adopter
     assert human.exit_code == 0 and f"changed   {GUIDES}/c.md" in human.output
 
 
+@pytest.mark.usefixtures("answers_in_files")
 def test_the_change_check_and_the_command_share_one_pairing(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """One function pairs and compares for both (ADR-057 point 2), and the change check's
-    answer on a move is what it was: the move needs a revalidation."""
+    answer on a move is what it was: the move needs a revalidation. The guide's answers
+    live in an answer file, where the change check reads them (COR-062 point 1)."""
     _start(repo)
     repo.rename(A, f"{GUIDES}/moved/a.md")
     calls: list[str] = []

@@ -8,6 +8,10 @@ pkit:
         - .pkit/skills/core/capability-author.md
       record: [COR-028, COR-047, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-016, ADR-021, ADR-025, ADR-032]
       artefact:
+        - ACT-operator
+        - UC-027
+        - UC-030
+        - UC-033
         - .pkit/permissions/README.md#grants-and-verdicts
         - .pkit/permissions/README.md#profiles
         - .pkit/permissions/README.md#privileges-and-how-they-are-recognized
@@ -114,7 +118,7 @@ What the output proves, claim by claim:
 
 ### Compared with the harness's own settings
 
-Claude Code's own settings, used alone, are better on setup and on the cost of a call. Both hold a deny in every mode, and the model is better on the rest. The cost is the hook, which runs for every call ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)):
+Claude Code's own settings, used alone, are better on setup and on the cost of a call. The settings and the model both hold a deny in every mode. **The model is better on the other four points, as [the commands above](#what-the-model-does-instead) prove.** The cost is the hook, which runs for every call ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)):
 
 | What you need | Claude Code's settings alone | The permission model |
 | --- | --- | --- |
@@ -128,7 +132,7 @@ Claude Code's own settings, used alone, are better on setup and on the cost of a
 
 ### When you do not need it
 
-The model earns its setup once agents work with nobody watching each call. You do not need it in these cases:
+The model is meant for agents that work with nobody watching each call. You do not need it in these cases:
 
 - **You work alone, and few calls prompt you.** In a session you drive yourself, Claude Code's own prompts and deny rules are enough, with no setup.
 - **Every agent may do the same.** A rule in the harness's settings says it once, for the whole session.

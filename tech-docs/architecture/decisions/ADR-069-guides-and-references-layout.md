@@ -41,7 +41,7 @@ A README that is a page leads its folder. Maintainers' sub-READMEs, such as thos
 
 ### 4. The page rules live in the spaces' rule sets
 
-How pages are written, named and linked is kept as rules of `USER` and `TECH`, which the rule-set reviewer enforces (COR-051). During the rework the user pages' rules sit in the interim set `REWORK`, scoped as `USER` is; each binds once accepted (COR-051 point 4).
+How pages are written, named and linked is kept as rules of `USER` and `TECH`, which the rule-set reviewer enforces (COR-051). During the rework the user pages' rules sit in the interim set `REWORK`, whose scope lists the reworked pages one by one. Each rule binds once accepted (COR-051 point 4).
 - **Every user page,** reference, guide or the top-level `README.md`, follows `LDOC`, `USER`'s own rules, `WRITE`, which `REWORK` inherits, and the rules below.
 - **Guides and the top-level `README.md`** also follow the style rules: problem first, proof, comparison, when not to use it, highlights. A scope belongs to a set (COR-051 point 2), so these sit in a set of their own, scoped to `docs/**` and `README.md`.
 - **Names:** pages and subfolders read in order are numbered in tens, `010-`, `020-`, and lookup pages take a topic name. A test declared as the rule's check (COR-051 point 2) holds each README's list to the numbers.

@@ -71,6 +71,10 @@ from tests.test_software_analysis_term_links import (
     _kinds,
 )
 
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
 DERIVER = "deriver"
 NOTE = "notes/source.md"
 RECORD = ".pkit/decisions/project/PRJ-900-pointed.md"

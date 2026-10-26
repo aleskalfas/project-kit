@@ -24,9 +24,6 @@ shortfalls:
   - at: 7
     issue: "#1765"
     record: ADR-034#1
-  - at: 7
-    issue: "#2032"
-    record: COR-062#1
   - at: "3b"
     issue: "#1765"
     record: ADR-034#1
@@ -104,9 +101,6 @@ pkit:
 
 > [!WARNING]
 > **Not built yet:** `pkit friction revalidate` and `pkit friction defer` run no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
-
-> [!WARNING]
-> **Not built yet:** where the artefact's own `friction` block already holds an answer, each answer is written there instead, until those answers move out. COR-062 point 1 decides that a change writes its answers in answer files of its own, and #2032 tracks it.
 
 5. The developer lands the answers in a change of their own. Its [change check](../../../glossary.md#term-change-check--change-check) flags each answer the change was not asked for as `not asked for by this change`.
 6. The next [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) finds each answered artefact `current`, or `deferred` where the developer deferred it.

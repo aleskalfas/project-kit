@@ -59,10 +59,21 @@ from project_kit.cli import main
 from project_kit.manifest import read_backbone_manifest, write_backbone_manifest
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import ASKED, HANGING, RESOLVER, RESOLVING, register_kinds
-from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
+from tests.friction_documents import (
+    CONFIG,
+    SOURCE,
+    T1,
+    T2,
+    blocks_in_history,
+    document,
+    friction_config,
+    guide,
+    own_entry,
+)
 
-#: The fixtures here still write answers in blocks, until #2032 moves them.
-pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 # One whose source may be kept in two files: `sources/<value>.md` and an annex.
 SEVERAL = (
@@ -1101,14 +1112,17 @@ def test_a_deferral_of_a_registered_kind_validates_and_one_naming_no_anchor_dang
     _start(repo, {"docs/guide.md": deferred, **CAPTURED})
     assert fv.validate_friction(repo.root).findings == ()
 
+    # Left in a block, as history before the move holds it, the dangling deferral is judged
+    # there, beside the block's own failure (COR-062 point 10).
     dangling = guide(anchors=SOURCE_ANCHORS, deferred=[("source", "iso-9999", "no such anchor")])
-    repo.write({"docs/guide.md": dangling})
-    [error] = fv.validate_friction(repo.root).errors
-    assert error.kind is fv.FrictionFindingKind.DANGLING_DEFERRAL
+    with blocks_in_history():
+        repo.write({"docs/guide.md": dangling})
+    errors = fv.validate_friction(repo.root).errors
+    [error] = [e for e in errors if e.kind is fv.FrictionFindingKind.DANGLING_DEFERRAL]
     assert "deferral names source anchor 'iso-9999'" in error.message
 
 
-def test_the_writers_write_a_block_carrying_an_anchor_of_a_registered_kind(
+def test_the_writers_answer_an_artefact_carrying_an_anchor_of_a_registered_kind(
     repo: AdopterRepo,
 ) -> None:
     _sources(repo)
@@ -1123,12 +1137,15 @@ def test_the_writers_write_a_block_carrying_an_anchor_of_a_registered_kind(
         [artefact] = fd.discover_artefacts(repo.root).artefacts
         return artefact.friction
 
+    def answers() -> dict[str, Any]:
+        return own_entry(repo.root, "docs/guide.md")
+
     friction("revalidate", "docs/guide.md", "--outcome", "unchanged", "--because", "still ISO 8601")
-    assert block()["revalidated"]["unchanged-because"] == "still ISO 8601"
+    assert answers()["revalidated"]["unchanged-because"] == "still ISO 8601"
     friction(
         "defer", "docs/guide.md", "--anchor", "source:iso-8601", "--reason", "the 2019 edition"
     )
-    assert block()["revalidated"]["deferred"] == [
+    assert answers()["revalidated"]["deferred"] == [
         {"anchor": {"kind": "source", "value": "iso-8601"}, "reason": "the 2019 edition"}
     ]
     head = repo.commit("revalidate and defer", files=None)
@@ -1137,14 +1154,13 @@ def test_the_writers_write_a_block_carrying_an_anchor_of_a_registered_kind(
     assert fv.validate_friction(repo.root).findings == ()
 
 
-def test_a_writer_writes_a_block_whose_kind_nothing_resolves(repo: AdopterRepo) -> None:
+def test_a_writer_answers_an_artefact_whose_kind_nothing_resolves(repo: AdopterRepo) -> None:
     """The report is no refusal: with the capability uninstalled the artefact can still
     be revalidated — to drop the anchor, say."""
     _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
     fw.write(fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because="as before"))
-    [artefact] = fd.discover_artefacts(repo.root).artefacts
-    assert artefact.revalidated is not None
-    assert artefact.revalidated["unchanged-because"] == "as before"
+    revalidated = own_entry(repo.root, "docs/guide.md")["revalidated"]
+    assert revalidated["unchanged-because"] == "as before"
 
 
 # --- provisioning ---------------------------------------------------------------------------

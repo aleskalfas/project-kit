@@ -4,45 +4,44 @@
 Reading never writes; writing is always one of these four explicit
 commands, each naming what it writes and writing only with consent (point 13):
 
-- `revalidate` rewrites the `revalidated` block: a fresh `at`, the outcome,
-  and — for `unchanged` — an `unchanged-because` that must differ from the one
-  already written (point 3), and that holds no placeholder left unfilled. It
-  re-states the deferrals the person keeps: each kept one is named on the
-  command line (`--keep`) or confirmed at the prompt; every other entry is
-  removed (point 4).
-- `defer` writes the `deferred` list inside `revalidated` — one entry added,
-  or an existing entry's reason reworded — and never touches `at`: a deferral
-  is not a revalidation (point 4). An anchor the artefact does not carry is
-  refused, and so is a reason that holds a placeholder left unfilled.
-- `revisit` writes the `revisited` list — the entry for one target of a link
-  the artefact's places declare, added or rewritten, with its outcome,
-  `unchanged` or `deferred`, and its reason — and never touches `at`: an
-  entry is no revalidation of the source (point 16). A target no link of the
-  artefact lists is refused, and so is a reason that holds a placeholder.
+- `revalidate` writes a revalidation: a fresh `at`, the outcome, and — for
+  `unchanged` — an `unchanged-because` that must differ from that of each
+  revalidation it reads (point 3), and that holds no placeholder left unfilled.
+  It re-states the deferrals the person keeps: each kept one is named on the
+  command line (`--keep`) or confirmed at the prompt; every other live one is
+  dropped (point 4).
+- `defer` writes one deferral — added, or a live one's reason reworded — and
+  never touches `at`: a deferral is not a revalidation (point 4). An anchor the
+  artefact does not carry is refused, and so is a reason that holds a placeholder
+  left unfilled.
+- `revisit` writes the revisit entry for one target of a link the artefact's
+  places declare, with its outcome, `unchanged` or `deferred`, and its reason —
+  and never touches `at`: an entry is no revalidation of the source (point 16). A
+  target no link of the artefact lists is refused, and so is a reason that holds
+  a placeholder.
 - `record-status` writes the tool-written `last-check` block from the
   whole-repository check at HEAD, only when the state it records changes
   (point 10): `as-of` moving on alone is no change, so a status that holds is
   never rewritten.
 
-**Where an answer is written** (COR-062 points 1, 4 and 10; ADR-068 point 3). An
-artefact whose block holds no answer — no `revalidated` block and no `revisited`
-list — gets `revalidate`'s, `defer`'s and `revisit`'s answer in an answer file of
-the change's own (`_OwnFile`): the one answer file in the working tree that no
-commit of the checkout holds and the move did not write, else a new one named for
-its UTC time and eight random hexadecimal digits. Its entry for the artefact names, in `read`, every
-other answer file present that answers the artefact. Two such uncommitted files
-that each answer the artefact refuse the write, naming both. A revalidation
-re-states the deferrals it keeps in its own entry. An artefact whose block holds
-an answer gets it in the block, as below, until the move takes every answer out of
-the blocks (`friction_move`): an artefact is read from one home, and written in
-it. `record-status` always writes the block: `last-check` is status, not an
-answer. An artefact the project receives by sync is refused: it owes the project
-no answer (point 9).
+**Where an answer is written** (COR-062 points 1, 4 and 10; ADR-068 point 3).
+`revalidate`'s, `defer`'s and `revisit`'s answer goes in an answer file of the
+change's own (`_OwnFile`): the one answer file in the working tree that no commit
+of the checkout holds and the move did not write, else a new one named for its UTC
+time and eight random hexadecimal digits. Its entry for the artefact names, in
+`read`, every other answer file present that answers the artefact. Two such
+uncommitted files that each answer the artefact refuse the write, naming both. A
+revalidation re-states the deferrals it keeps in its own entry. An artefact whose
+own block still holds an answer is refused, naming the move: validation fails such
+a block (points 10 and 11), and no writer writes an answer in a block.
+`record-status` writes the block: `last-check` is status, not an answer. An
+artefact the project receives by sync is refused: it owes the project no answer
+(point 9).
 
-**Only the block changes.** Each writer replaces one key of the artefact's
-`friction` block — the lines from that key through the end of its value, or,
-in a block written in flow style, that key's characters — and leaves every
-other byte of the file as it was. Before anything is written the result is
+**Only the block's status changes.** `record-status` replaces one key of the
+artefact's `friction` block — the lines from that key through the end of its
+value, or, in a block written in flow style, that key's characters — and leaves
+every other byte of the file as it was. Before anything is written the result is
 read back: the front matter must parse to exactly what it held with that one
 key replaced, and the artefact must pass validation's per-artefact judgments
 (`friction_validate.block_findings`), so a writer never writes what `pkit
@@ -50,10 +49,11 @@ validate` would refuse. The edit is made in the file read with `\\n` line
 breaks, as discovery reads it, and written back in the one line break the
 file is written with — a `\\r\\n` file stays one, byte for byte outside the
 key; a file that mixes them is refused, since no one line break would keep
-its other bytes, and validation reports it. Entries are kept in one order — deferrals by anchor
-kind, then value; keys in the schema's order (`anchors`, `unanchored-because`,
-`revalidated`, `revisited`, `last-check`; `at`, `outcome`, `unchanged-because`,
-`deferred`) — so the same input always writes the same bytes.
+its other bytes, and validation reports it. An answer file's entries are kept in
+one order — deferrals and revisit entries by anchor kind, then value; keys in the
+schema's order (`artefact`, `read`, `revalidated`, `revisited`; `at`, `outcome`,
+`unchanged-because`, `deferred`) — so the same input always writes the same
+bytes.
 
 **Consent.** `--yes`; or, on a terminal, a confirmation shown with the diff;
 `--dry-run` shows the diff and writes nothing; a non-interactive run with
@@ -91,9 +91,8 @@ from project_kit import answer_files as af
 from project_kit import backbone_schemas as bs
 from project_kit import cli_render
 from project_kit import friction_repository as fr
-from project_kit.answer_files import block_holds_answers
 from project_kit.document_parts import split_front_matter
-from project_kit.friction_check import REVISIT_OUTCOMES, anchors_of, parsed_at
+from project_kit.friction_check import REVISIT_OUTCOMES, anchors_of
 from project_kit.friction_discovery import (
     FRICTION_KEY,
     REVISITED_KEY,
@@ -364,11 +363,6 @@ def _entry_anchor(entry: Any) -> Anchor | None:
     return None
 
 
-def _entry_reason(entry: Any) -> str:
-    reason = entry.get("reason") if isinstance(entry, Mapping) else None
-    return reason if isinstance(reason, str) else ""
-
-
 #: The keys of a deferral entry, and of a revisit entry, in the schema's order.
 DEFERRAL_KEYS: tuple[str, ...] = ("anchor", "reason")
 REVISIT_KEYS: tuple[str, ...] = ("anchor", "outcome", "reason")
@@ -440,14 +434,15 @@ def plan_revalidate(
 ) -> Plan:
     """The write of `pkit friction revalidate` (COR-050 points 3 and 4).
 
-    The block is rewritten whole: `at` from `now` (a second later when that
-    would equal the `at` written, since `at` changes on every revalidation),
-    the outcome, the justification for `unchanged`, and the kept deferrals.
-    A deferral is kept when `keep` names it or `confirm_keep` says so; the
-    rest are removed. Refused: an unknown outcome, `unchanged` without a
-    justification, with the one already written or with a placeholder left
-    unfilled (`PLACEHOLDER`), a justification with `updated`, and keeping a
-    deferral the artefact does not carry or whose anchor it no longer declares.
+    The revalidation is written whole in an answer file of the change's own
+    (`_OwnFile.revalidate`): `at` from `now` (a second later while that would
+    equal an `at` it reads, since `at` changes on every revalidation), the
+    outcome, the justification for `unchanged`, and the kept deferrals. A
+    deferral is kept when `keep` names it or `confirm_keep` says so; the rest
+    are dropped. Refused: an unknown outcome, `unchanged` without a
+    justification, with one a revalidation it reads gives or with a placeholder
+    left unfilled (`PLACEHOLDER`), a justification with `updated`, keeping a
+    deferral that is not live, and an artefact whose block still holds an answer.
     """
     if outcome not in OUTCOMES:
         raise FrictionWriteError(f"the outcome is `updated` or `unchanged`, not {outcome!r}.")
@@ -469,106 +464,14 @@ def plan_revalidate(
     source, discovery = _source(target_root, reference)
     artefact = source.artefact
     _friction_block(artefact)
-    if not block_holds_answers(artefact):
-        own = _own_file(target_root, source, discovery)
-        return own.revalidate(
-            outcome=outcome,
-            justification=justification,
-            keep=keep,
-            confirm_keep=confirm_keep,
-            now=now or datetime.now(UTC),
-        )
-    previous = artefact.revalidated if isinstance(artefact.revalidated, Mapping) else {}
-    if outcome == UNCHANGED and _fold(justification) == _fold(previous.get(BECAUSE)):
-        raise FrictionWriteError(
-            "the justification is the one already written; `unchanged-because` must change "
-            "with every revalidation — say why the content holds against *this* change "
-            "(COR-050 point 3). Nothing was written."
-        )
-
-    stamp = (now or datetime.now(UTC)).astimezone(UTC).replace(microsecond=0)
-    if parsed_at(artefact) == stamp:
-        stamp += timedelta(seconds=1)
-    at = stamp.strftime(_AT_FORMAT)
-
-    kept, items = _kept_deferrals(artefact, previous, keep, confirm_keep)
-    value: dict[str, Any] = {AT: at, OUTCOME: outcome}
-    if outcome == UNCHANGED:
-        value[BECAUSE] = justification
-    if kept:
-        value[DEFERRED] = kept
-
-    was = previous.get(AT)
-    lines = [
-        f"at: {at}" + (f"   (was {was})" if isinstance(was, str) else ""),
-        f"outcome: {outcome}",
-    ]
-    if outcome == UNCHANGED:
-        lines.append(f"unchanged-because: {justification}")
-    lines.extend(items)
-    return _plan(
-        target_root,
-        "revalidate",
-        source,
-        (FRICTION_KEY,),
-        REVALIDATED,
-        value,
-        tuple(lines),
+    own = _own_file(target_root, source, discovery)
+    return own.revalidate(
+        outcome=outcome,
+        justification=justification,
+        keep=keep,
+        confirm_keep=confirm_keep,
+        now=now or datetime.now(UTC),
     )
-
-
-def _kept_deferrals(
-    artefact: Artefact,
-    previous: Mapping[str, Any],
-    keep: Sequence[str],
-    confirm_keep: Callable[[Anchor, str], bool] | None,
-) -> tuple[list[Any], list[str]]:
-    """The deferrals a revalidation re-states, sorted, and a line for each kept or removed."""
-    raw = previous.get(DEFERRED)
-    entries: list[Any] = list(raw) if isinstance(raw, list) else []
-    deferred = [a for a in (_entry_anchor(e) for e in entries) if a is not None]
-    declared = anchors_of(artefact)
-
-    named: set[Anchor] = set()
-    for text in keep:
-        anchor = _named_anchor(text, deferred, "deferral")
-        if anchor is None:
-            raise FrictionWriteError(
-                f"{artefact.location} has no deferral of {text!r} to keep (its deferrals: "
-                f"{_anchor_list(deferred)}). Nothing was written."
-            )
-        if anchor not in declared:
-            raise FrictionWriteError(
-                f"the deferral of {anchor.kind}:{anchor.value} cannot be kept: {artefact.location} "
-                f"no longer declares that anchor, so the entry would dangle (COR-050 point 4). "
-                f"Nothing was written."
-            )
-        named.add(anchor)
-
-    kept: list[Any] = []
-    items: list[str] = []
-    seen: set[Anchor] = set()
-    for entry in sorted(entries, key=_sort_key):
-        anchor = _entry_anchor(entry)
-        if anchor is None:
-            items.append("removes a malformed deferral entry")
-            continue
-        if anchor in seen:
-            items.append(f"removes a second entry for {anchor.kind}:{anchor.value}")
-            continue
-        seen.add(anchor)
-        label = f"{anchor.kind}:{anchor.value}"
-        reason = _entry_reason(entry)
-        if anchor not in declared:
-            items.append(
-                f"removes deferral {label}   (the artefact no longer declares that anchor)"
-            )
-        elif anchor in named or (confirm_keep is not None and confirm_keep(anchor, reason)):
-            kept.append(in_order(entry))
-            items.append(f"keeps deferral {label}   ({reason})")
-        else:
-            items.append(f"removes deferral {label}   ({reason})")
-    return kept, items
 
 
 def plan_defer(
@@ -581,14 +484,12 @@ def plan_defer(
 ) -> Plan:
     """The write of `pkit friction defer` (COR-050 point 4).
 
-    Adds one entry to `deferred` — or rewords the reason of the entry already
-    deferring that anchor, which keeps its deferral point — and keeps the
-    list sorted. `at`, `outcome` and `unchanged-because` are left byte for
-    byte: a deferral is not a revalidation, and an artefact never revalidated
-    gets a `revalidated` block holding `deferred` alone. Refused: an empty
-    anchor or reason, a reason with a placeholder left unfilled, and an anchor
-    the artefact does not carry. An artefact whose block holds no answer gets
-    its deferral in an answer file of the change's own (`_OwnFile.defer`).
+    Adds one deferral — or rewords the reason of the live one deferring that
+    anchor, which keeps its deferral point — in an answer file of the change's
+    own (`_OwnFile.defer`). `at`, `outcome` and `unchanged-because` are never
+    written: a deferral is not a revalidation. Refused: an empty anchor or
+    reason, a reason with a placeholder left unfilled, an anchor the artefact
+    does not carry, and an artefact whose block still holds an answer.
     """
     anchor_text = anchor.strip()
     text = reason.strip()
@@ -605,7 +506,7 @@ def plan_defer(
 
     source, discovery = _source(target_root, reference)
     artefact = source.artefact
-    block = _friction_block(artefact)
+    _friction_block(artefact)
     carried = anchors_of(artefact)
     named = _named_anchor(anchor_text, carried, "anchor")
     if named is None:
@@ -614,49 +515,8 @@ def plan_defer(
             f"{_anchor_list(carried)}); a deferral must name one of them (COR-050 point 4). "
             f"Nothing was written."
         )
-    if not block_holds_answers(artefact):
-        own = _own_file(target_root, source, discovery)
-        return own.defer(named, text, now=now or datetime.now(UTC))
-
-    revalidated = block.get(REVALIDATED)
-    if revalidated is not None and not isinstance(revalidated, Mapping):
-        raise FrictionWriteError(
-            f"{artefact.location}: its `{REVALIDATED}` is not a mapping; fix it first — "
-            f"`pkit validate` reports it. Nothing was written."
-        )
-    raw = revalidated.get(DEFERRED) if isinstance(revalidated, Mapping) else None
-    if raw is not None and not isinstance(raw, list):
-        raise FrictionWriteError(
-            f"{artefact.location}: its `{DEFERRED}` is not a list; fix it first — "
-            f"`pkit validate` reports it. Nothing was written."
-        )
-    entries: list[Any] = list(raw or [])
-    existing = [e for e in entries if _entry_anchor(e) == named]
-    new_entry = {"anchor": {"kind": named.kind, "value": named.value}, "reason": text}
-    label = f"{named.kind}:{named.value}"
-    if len(existing) == 1 and _fold(_entry_reason(existing[0])) == _fold(text):
-        return _unchanged(
-            "defer",
-            source,
-            _target((FRICTION_KEY, REVALIDATED), DEFERRED),
-            f"{label} is already deferred with this reason",
-        )
-    others = [
-        in_order(e) if isinstance(e, Mapping) else e for e in entries if _entry_anchor(e) != named
-    ]
-    value = sorted([*others, new_entry], key=_sort_key)
-    if existing:
-        item = f"rewords the deferral of {label}: {text}   (its deferral point does not move)"
-    else:
-        item = f"adds deferral {label}: {text}"
-    items = (item, "at: not changed — a deferral is not a revalidation")
-    if isinstance(revalidated, Mapping):
-        return _plan(
-            target_root, "defer", source, (FRICTION_KEY, REVALIDATED), DEFERRED, value, items
-        )
-    return _plan(
-        target_root, "defer", source, (FRICTION_KEY,), REVALIDATED, {DEFERRED: value}, items
-    )
+    own = _own_file(target_root, source, discovery)
+    return own.defer(named, text, now=now or datetime.now(UTC))
 
 
 def plan_revisit(
@@ -678,8 +538,9 @@ def plan_revisit(
     placeholder left unfilled, and a target no link of the artefact takes. An
     entry already written with this outcome and reason writes nothing: an entry
     answers only the change that writes it, so a later change needs new words.
-    An artefact whose block holds no answer gets its entry in an answer file of
-    the change's own (`_OwnFile.revisit`).
+    The entry is written in an answer file of the change's own
+    (`_OwnFile.revisit`), and an artefact whose block still holds an answer is
+    refused.
     """
     if outcome not in REVISIT_OUTCOMES:
         raise FrictionWriteError(
@@ -701,7 +562,7 @@ def plan_revisit(
 
     source, discovery = _source(target_root, reference)
     artefact = source.artefact
-    block = _friction_block(artefact)
+    _friction_block(artefact)
     targets = list(dict.fromkeys(a for link in source.links for a in link_targets(artefact, link)))
     if not source.links:
         raise FrictionWriteError(
@@ -715,56 +576,8 @@ def plan_revisit(
             f"{links_said(source.links)} (its targets: {_anchor_list(targets)}) (COR-050 "
             f"point 16). Nothing was written."
         )
-    if not block_holds_answers(artefact):
-        own = _own_file(target_root, source, discovery)
-        return own.revisit(named, outcome, text, now=now or datetime.now(UTC))
-
-    raw = block.get(REVISITED_KEY)
-    if raw is not None and not isinstance(raw, list):
-        raise FrictionWriteError(
-            f"{artefact.location}: its `{REVISITED_KEY}` is not a list; fix it first — "
-            f"`pkit validate` reports it. Nothing was written."
-        )
-    entries: list[Any] = list(cast(list[Any], raw or []))
-    existing = [e for e in entries if _entry_anchor(e) == named]
-    label = f"{named.kind}:{named.value}"
-    if (
-        len(existing) == 1
-        and _entry_outcome(existing[0]) == outcome
-        and _fold(_entry_reason(existing[0])) == _fold(text)
-    ):
-        return _unchanged(
-            "revisit",
-            source,
-            _target((FRICTION_KEY,), REVISITED_KEY),
-            f"{label} is already revisited `{outcome}` with this reason; an entry answers only "
-            f"the change that writes it, so a later change needs new words",
-        )
-    others = [
-        in_order(cast(Mapping[str, Any], e), REVISIT_KEYS) if isinstance(e, Mapping) else e
-        for e in entries
-        if _entry_anchor(e) != named
-    ]
-    new_entry = {
-        "anchor": {"kind": named.kind, "value": named.value},
-        "outcome": outcome,
-        "reason": text,
-    }
-    value = sorted([*others, new_entry], key=_sort_key)
-    verb = "rewrites the revisit entry of" if existing else "adds revisit entry"
-    items = (
-        f"{verb} {label}: {outcome} — {text}",
-        "at: not changed — an entry is no revalidation of the source",
-    )
-    return _plan(target_root, "revisit", source, (FRICTION_KEY,), REVISITED_KEY, value, items)
-
-
-def _entry_outcome(entry: Any) -> str | None:
-    """A revisit entry's outcome as written, when it is text."""
-    if not isinstance(entry, Mapping):
-        return None
-    outcome = cast(Mapping[str, Any], entry).get("outcome")
-    return outcome if isinstance(outcome, str) else None
+    own = _own_file(target_root, source, discovery)
+    return own.revisit(named, outcome, text, now=now or datetime.now(UTC))
 
 
 def plan_record_status(target_root: Path, reference: str) -> Plan:
@@ -782,13 +595,13 @@ def plan_record_status(target_root: Path, reference: str) -> Plan:
     source, _discovery = _source(target_root, reference)
     artefact = source.artefact
     block = _friction_block(artefact)
-    if not anchors_of(artefact) and not artefact.deferrals:
-        raise FrictionWriteError(
-            f"{artefact.location} has no anchors or deferrals, so the check finds no state to "
-            f"record. Nothing was written."
-        )
     result = fr.run_repository_check(target_root)
     reports = [r for r in result.artefact_reports if r.location == artefact.location]
+    if not reports and not anchors_of(artefact):
+        raise FrictionWriteError(
+            f"{artefact.location} has no anchors or live deferrals, so the check finds no state "
+            f"to record. Nothing was written."
+        )
     if not reports or result.head is None:
         raise FrictionWriteError(
             f"{artefact.location} is not in HEAD as it stands: the status is the whole-repository "
@@ -935,11 +748,9 @@ def _plan(
 
 # --- answers in an answer file of the change's own -----------------------------------
 #
-# An artefact whose block holds no answer gets its answers in an answer file (COR-062
-# points 1 and 4; ADR-068 point 3): the one answer file in the working tree that no
-# commit of the checkout holds, a new one where there is none. Until the move, an
-# artefact whose block holds an answer keeps getting them there (`block_holds_answers`),
-# as the reading of a state reads it from one home.
+# An artefact gets its answers in an answer file (COR-062 points 1 and 4; ADR-068 point
+# 3): the one answer file in the working tree that no commit of the checkout holds, a new
+# one where there is none. An artefact whose block still holds an answer is refused.
 
 #: The commits whose answer files a writer never writes into: HEAD's, and those of a
 #: merge, a cherry-pick, a revert or a rebase in progress, which another line of work
@@ -975,8 +786,19 @@ def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnF
     refuse the write, naming both: each would have to name the other (COR-062 point 10).
     A file the move writes is never a writer's own, committed or not: its name is the
     hash of its content (ADR-068 point 1), so the writer adds a file of its own beside it.
+
+    An artefact whose own block still holds an answer is refused, naming the move:
+    validation fails such a block, and no answer is written beside it (COR-062 points
+    1, 10 and 11).
     """
     artefact = source.artefact
+    if af.block_holds_answers(artefact):
+        raise FrictionWriteError(
+            f"{artefact.location}: its block still holds answers, which `pkit validate` fails, "
+            f"since answers live in answer files (COR-062 points 1 and 10). Run the move from "
+            f"the project's root, `{af.MOVE_COMMAND}`, which takes them out into an answer "
+            f"file, then run the command again. Nothing was written."
+        )
     present = af.working_tree_files(target_root)
     at_head = af.head_names(target_root)
     held = at_head.union(*(af.head_names(target_root, ref) for ref in _NOT_OWN[1:]))
