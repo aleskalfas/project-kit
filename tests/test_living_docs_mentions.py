@@ -287,6 +287,46 @@ def test_a_mark_that_passes_over_nothing_is_reported(project: AdopterRepo) -> No
     assert errors(document) == []
 
 
+def _whys(document: Mapping[str, Any]) -> list[tuple[str, str]]:
+    """Each idle mark's location and why it passes nothing over."""
+    return [
+        (loc, msg.split("since ", 1)[1].split(". ", 1)[0])
+        for loc, msg in _reports(document)
+        if loc.startswith(f"{GUIDE}:")
+    ]
+
+
+def test_a_mark_after_a_name_that_is_no_mention_is_reported_never_moved(
+    project: AdopterRepo,
+) -> None:
+    """A mark left after a record no longer resolved, a file no longer held or the page
+    itself passes nothing over, and never falls back to an earlier mention on its
+    line, which is still read."""
+    body = (
+        "See COR-999 <!-- unanchored: only a name -->.\n\n"
+        "`src/app.py` and COR-999 <!-- unanchored: only a name -->.\n\n"
+        "`src/app.py` and `src/gone.py` <!-- unanchored: only a name -->.\n\n"
+        "This [guide](guide.md) <!-- unanchored: the page itself -->."
+    )
+    document = _guide(project, _page(body), **{"src/app.py": "x\n"})
+    assert errors(document) == []
+    assert _whys(document) == [
+        (f"{GUIDE}:8", "the name it follows, `COR-999`, names no record the backbone resolves"),
+        (f"{GUIDE}:10", "the name it follows, `COR-999`, names no record the backbone resolves"),
+        (f"{GUIDE}:12", "the name it follows, `src/gone.py`, names no file the repository holds"),
+        (f"{GUIDE}:14", "the name it follows, `docs/guide.md`, is the page's own file"),
+    ]
+    assert _listed(project) == ["10: path `src/app.py` → path: [src/app.py]"]
+    assert "0 passage(s) marked unanchored on purpose" in _mention_line(document)
+
+
+def test_a_mark_after_a_rule_nothing_resolves_is_reported(project: AdopterRepo) -> None:
+    document = _guide(project, _page("Read [living-docs:RS-LDOC-999] <!-- unanchored: gone -->."))
+    assert _whys(document) == [
+        (f"{GUIDE}:8", "the name it follows, `RS-LDOC-999`, names no rule the backbone resolves")
+    ]
+
+
 # --- a rule ---------------------------------------------------------------------------
 
 
@@ -296,6 +336,11 @@ def test_a_rule_is_grounded_by_an_anchor_on_the_rule(project: AdopterRepo) -> No
     assert _listed(project) == ["8: rule `RS-LDOC-003` → artefact: [RS-LDOC-003]"]
     assert _reports(_guide(project, _anchored(body, "{artefact: [RS-LDOC-003]}"))) == []
     assert _reports(_guide(project, _page("No such rule: RS-LDOC-999."))) == []
+
+
+def test_two_rules_of_one_set_are_two_mentions(project: AdopterRepo) -> None:
+    document = _guide(project, _page("RS-LDOC-001 and RS-LDOC-003, and RS-LDOC-001 again."))
+    assert "2 mention(s)" in _mention_line(document)
 
 
 # --- where it binds -------------------------------------------------------------------

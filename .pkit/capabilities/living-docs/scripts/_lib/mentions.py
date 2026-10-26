@@ -37,14 +37,18 @@ strikethrough (`formats.prose`):
   otherwise.
 
 A record is mentioned only where the backbone's resolver of records resolves it
-(`pkit refs lookup`), and a rule only where the backbone's discovery reads it
-among the artefacts (`artefacts`). A page's own file is no mention.
+(`pkit refs lookup --json`, its first path where `resolved` is true), and a rule
+only where the backbone's discovery reads it among the artefacts (`artefacts`).
+A page's own file is no mention.
 
 **What stands on each**, among the page's anchors as the backbone resolves them
-(`artefacts`: the files each path anchor stands on, and each part an anchor
-names): a file is anchored whole by a path anchor standing on it, an artefact
-anchor on the whole document, or a record anchor on the whole record whose file
-it is; a part by an anchor on a section, the lead, a point or a rule.
+in `pkit friction artefacts --json` (`artefacts`): the files each path anchor
+stands on, its `path_anchors`, and each part an anchor names, its
+`part_anchors`. A file is anchored whole by a path anchor standing on it, an
+artefact anchor on the whole document, or a record anchor on the whole record
+whose file it is; a part by an anchor on a section, the lead, a point or a rule.
+A finding names an artefact anchor for a document of the places, and a path
+anchor for any other file, such as the CLI reference in most projects.
 
 - A path is covered by an anchor on its file, or, where a link names a section,
   on the whole file or that section.
@@ -57,16 +61,22 @@ it is; a part by an anchor on a section, the lead, a point or a rule.
   implemented by the script its package metadata registers. Its section is the
   heading whose code span opens with the most of the command's words: in the
   CLI reference for a backbone command, in its capability's README for a
-  capability's, and in any page where the span opens with `pkit`. Where no
+  capability's, where the span may leave out `pkit` and the capability's name or
+  alias, and in any page where the span opens with `pkit`. Where no
   heading names it, a section the page anchors whose text names it covers it. On
   the page that documents it only the script does, and where no script is known
   it is no mention there.
 
 **A mark.** An HTML comment `<!-- unanchored: <reason> -->` written after a
-mention, on its line, passes over the last mention before it there and after any
-earlier comment. It marks that one passage, so a later passage that rests on the
-same thing is still read. A mark that follows no mention, follows one the page's
-anchors cover, or gives no reason, passes nothing over and is reported.
+mention, on its line, passes over the mention it follows: the last name before
+it there, after any earlier comment, written in one of the forms above. It marks
+that one passage, so a later passage that rests on the same thing is still
+read. A mark passes nothing over, and is reported, where it follows no mention:
+where no such name comes before it, or the name is no mention, such as a path to
+no file, an id nothing resolves or the page's own file. So does a mark that
+follows a mention the page's anchors cover, or that gives no reason. A mark never
+falls back to an earlier mention, so one left behind when what it named was
+renamed or removed is reported, never moved.
 """
 
 from __future__ import annotations
@@ -310,15 +320,20 @@ def read(
         artefact = pages[rel]
         if artefact is not None and artefact.anchors is not None:
             ids.update(value.split("#", 1)[0] for value in artefact.anchors.get(RECORD, ()))
-    resolved = lookup(sorted(ids))
+    resolved = {
+        id: location.split("#", 1)[0] if location is not None else None
+        for id, location in lookup(sorted(ids)).items()
+    }
     for rel, (found, idle) in read_pages.items():
         report.pages += 1
         report.idle.extend(idle)
         grounds = _grounds(pages[rel], resolved, documents)
         seen: set[tuple[Any, ...]] = set()
         named: set[str] = set()
-        for mention in _resolved(found, resolved, documents.rules):
-            key = (mention.kind, mention.file, mention.section, mention.points, mention.words)
+        kept, dropped = _resolved(rel, found, resolved, documents.rules)
+        report.idle.extend(dropped)
+        for mention in kept:
+            key = (mention.kind, mention.name, mention.file, mention.section, mention.points)
             if key not in seen:
                 seen.add(key)
                 report.mentions += 1
@@ -335,12 +350,22 @@ def read(
             if unanchored.name not in named:
                 named.add(unanchored.name)
                 report.unanchored.append(unanchored)
+    report.idle.sort(key=lambda idle: (idle.page, idle.line))
     return report
 
 
 _FOLLOWS_NOTHING = "it follows no mention on its line"
 _COVERED = "the mention it follows is one the page's anchors cover"
 _NO_REASON = "it gives no reason after `unanchored:`"
+#: Why a name a mark follows is no mention, by what it is written as.
+_NO_FILE = "names no file the repository holds"
+_UNRESOLVED = "names no {kind} the backbone resolves"
+_ITSELF = "is the page's own file"
+
+
+def _no_mention(mention: Mention, what: str) -> str:
+    """Why a mark after `mention`, a name that is no mention, passes nothing over."""
+    return f"the name it follows, `{mention.name}`, {what}"
 
 
 # --- what a page mentions -----------------------------------------------------
@@ -349,9 +374,10 @@ _NO_REASON = "it gives no reason after `unanchored:`"
 def _mentions(
     root: Path, page: str, text: str, installed: Sequence[Command]
 ) -> tuple[list[Mention], list[Idle]]:
-    """Every mention of the page at `page`, in the order of its lines, each with the
-    mark after it, and the marks that follow no mention. A record's or a rule's id is
-    the one written, which `_resolved` looks up."""
+    """Every name of the page at `page` written as a mention is, in the order of its
+    lines, each with the mark after it, and the marks that follow no such name. A
+    record's or a rule's id is the one written, and a path the one a span or a link
+    names, which `_resolved` keeps only where it is a mention."""
     found: list[Mention] = []
     idle: list[Idle] = []
     capability = _capability_of(page)
@@ -369,7 +395,7 @@ def _mentions(
             if not image:
                 path = _link_path(root, page, target)
                 if path is not None:
-                    on_line.append(_path_mention(path[0], path[1], line, link.start()))
+                    on_line.append(_path_mention(*path, line, link.start()))
             # The link reads as its label, so a point written after it follows the id.
             readable = (
                 readable[: link.start()]
@@ -386,12 +412,12 @@ def _mentions(
                 continue
             path = _span_path(root, page, content)
             if path is not None:
-                on_line.append(_path_mention(path[0], path[1], line, span.start()))
+                on_line.append(_path_mention(*path, line, span.start()))
         on_line.extend(_records(readable, line, capability, known))
         on_line.extend(_rules(readable, line))
         on_line.sort(key=lambda m: m.start)
         found.extend(_marked(page, line, on_line, comments, idle))
-    return [m for m in found if m.file != page], idle
+    return found, idle
 
 
 def _blank(text: str, matches: Iterable[re.Match[str]]) -> str:
@@ -408,8 +434,9 @@ def _marked(
     comments: Sequence[re.Match[str]],
     idle: list[Idle],
 ) -> list[Mention]:
-    """The line's mentions, each mark given to the last mention before it and after
-    any earlier comment; a mark that follows none is idle."""
+    """The line's names, each mark given to the last name before it and after any
+    earlier comment, whether or not that name proves a mention; a mark that follows
+    none is idle."""
     marked = list(on_line)
     after = 0
     for comment in comments:
@@ -436,47 +463,59 @@ def _capability_of(page: str) -> str | None:
     return None
 
 
-def _path_mention(path: str, section: str | None, line: int, start: int) -> Mention:
-    """A path, or the record whose file it is, read from the file's own name."""
-    core = _RECORD_FILE.match(PurePosixPath(path).name)
-    decision = _DECISION_FILE.match(path)
+def _path_mention(
+    written: str, file: str | None, section: str | None, line: int, start: int
+) -> Mention:
+    """A path, or the record whose file it is, read from the file's own name. A path
+    written to no file the repository holds is a name `_resolved` drops."""
+    if file is None:
+        return Mention(PATH, written, line, start, section=section)
+    core = _RECORD_FILE.match(PurePosixPath(file).name)
+    decision = _DECISION_FILE.match(file)
     if core is not None:
         record = core.group(1)
     elif decision is not None:
         record = f"{decision.group(1)}:{decision.group(2)}"
     else:
-        return Mention(PATH, path, line, start, file=path, section=section)
-    return Mention(RECORD, record, line, start, file=path, record=record)
+        return Mention(PATH, file, line, start, file=file, section=section)
+    return Mention(RECORD, record, line, start, file=file, record=record)
 
 
-def _span_path(root: Path, page: str, text: str) -> tuple[str, str | None] | None:
-    """The file a code span names, and the section, read from the root and failing
-    that from the page's folder; `None` where it names none."""
+def _span_path(root: Path, page: str, text: str) -> tuple[str, str | None, str | None] | None:
+    """The path a code span is written as, the file it names, read from the root and
+    failing that from the page's folder, or `None` where the repository holds none,
+    and the section; `None` where the span is written as no path."""
     if "/" not in text or text.endswith("/") or _NOT_A_PATH.search(text):
         return None
     target, _, section = text.partition("#")
     target = _LINE_SUFFIX.sub("", target)
     if target.startswith("/"):
-        return _held(root, target.lstrip("/"), section)
-    folder = PurePosixPath(page).parent
-    return _held(root, target, section) or _held(root, f"{folder}/{target}", section)
+        file = _held(root, target.lstrip("/"))
+    else:
+        file = _held(root, target) or _held(root, f"{PurePosixPath(page).parent}/{target}")
+    return target, file, section or None
 
 
-def _link_path(root: Path, page: str, target: str) -> tuple[str, str | None] | None:
-    """The file a link's target names, and the section, read from the page's folder,
-    or from the root where it opens with `/`; `None` for a URL or no file."""
+def _link_path(root: Path, page: str, target: str) -> tuple[str, str | None, str | None] | None:
+    """The path a link's target is written as, the file it names, read from the page's
+    folder, or from the root where it opens with `/`, or `None` where the repository
+    holds none, and the section; `None` for a URL or a link within the page."""
     if not target or target.startswith("#") or _NOT_A_PATH.search(target.split("#")[0]):
         return None
     path, _, section = unquote(target).partition("#")
     path = path.split("?")[0]
+    if not path:
+        return None
     if path.startswith("/"):
-        return _held(root, path.lstrip("/"), section)
-    return _held(root, f"{PurePosixPath(page).parent}/{path}", section)
+        file = _held(root, path.lstrip("/"))
+    else:
+        file = _held(root, f"{PurePosixPath(page).parent}/{path}")
+    return path, file, section or None
 
 
-def _held(root: Path, path: str, section: str) -> tuple[str, str | None] | None:
+def _held(root: Path, path: str) -> str | None:
     """`path` as a repository-relative file the repository holds — a regular file
-    inside it, never a link nor in `.git` — with the section; `None` otherwise."""
+    inside it, never a link nor in `.git`; `None` otherwise."""
     rel = os.path.normpath(path).replace(os.sep, "/")
     if rel in (".", "..") or rel.startswith(("../", "/")):
         return None
@@ -488,7 +527,7 @@ def _held(root: Path, path: str, section: str) -> tuple[str, str | None] | None:
         return None
     if not stat.S_ISREG(mode):
         return None
-    return rel, (section or None)
+    return rel
 
 
 def _command(text: str, line: int, start: int) -> Mention | None:
@@ -548,28 +587,47 @@ def _points(after: str) -> tuple[str, ...]:
 
 
 def _resolved(
-    found: Iterable[Mention], resolved: Mapping[str, str | None], rules: Mapping[str, str]
-) -> list[Mention]:
-    """The mentions with each record's and rule's file, as the backbone resolves it: a
-    record through its resolver, a rule as its discovery reads it among the artefacts.
-    A record or a rule it does not resolve is no mention, and a link to a file no
-    record resolves to is a path again."""
+    page: str,
+    found: Iterable[Mention],
+    resolved: Mapping[str, str | None],
+    rules: Mapping[str, str],
+) -> tuple[list[Mention], list[Idle]]:
+    """The mentions of the page at `page` among the names `found`, each record's and
+    rule's with its file, as the backbone resolves it: a record through its
+    resolver, a rule as its discovery reads it among the artefacts. A path to no
+    file, a record or a rule it does not resolve, and the page's own file are no
+    mention, and a link to a file no record resolves to is a path again. Each mark
+    such a name carries passes nothing over: the second list."""
     kept: list[Mention] = []
+    idle: list[Idle] = []
+
+    def drop(mention: Mention, what: str) -> None:
+        if mention.mark is not None:
+            idle.append(Idle(page, mention.line, _no_mention(mention, what)))
+
     for mention in found:
-        if mention.kind not in (RECORD, RULE):
-            kept.append(mention)
+        if mention.kind == PATH and mention.file is None:
+            drop(mention, _NO_FILE)
             continue
-        if mention.kind == RULE:
-            file = rules.get(mention.name)
-        else:
-            location = resolved.get(mention.record or "")
-            file = location.split("#", 1)[0] if location is not None else None
-        if file is None or (mention.file is not None and mention.file != file):
-            if mention.file is not None:
-                kept.append(replace(mention, kind=PATH, name=mention.file, record=None))
+        if mention.kind in (RECORD, RULE):
+            if mention.kind == RULE:
+                file = rules.get(mention.name)
+            else:
+                file = resolved.get(mention.record or "")
+            if file is None and mention.file is None:
+                drop(mention, _UNRESOLVED.format(kind=mention.kind))
+                continue
+            if file is None or (mention.file is not None and mention.file != file):
+                mention = replace(
+                    mention, kind=PATH, name=mention.file or mention.name, record=None
+                )
+            else:
+                mention = replace(mention, file=file)
+        if mention.file == page:
+            drop(mention, _ITSELF)
             continue
-        kept.append(replace(mention, file=file))
-    return kept
+        kept.append(mention)
+    return kept, idle
 
 
 # --- what stands on a mention ---------------------------------------------------
@@ -790,7 +848,10 @@ class _Homes:
                 words = words[1:]
             elif own is not None and not prefixed:
                 owner = own
-            elif not prefixed and path != CLI_REFERENCE:
+            elif not prefixed and path == CLI_REFERENCE:
+                # The reference's own headings name backbone commands alone.
+                owner = None
+            elif not prefixed:
                 continue
             named = _command_words(words)
             if named:
@@ -868,7 +929,7 @@ def _command_words(words: Sequence[str]) -> tuple[str, ...]:
 
 def _text(root: Path, path: str) -> str | None:
     """The text of a file the repository holds, or `None`."""
-    if _held(root, path, "") is None:
+    if _held(root, path) is None:
         return None
     try:
         return (root / path).read_text(encoding="utf-8")
