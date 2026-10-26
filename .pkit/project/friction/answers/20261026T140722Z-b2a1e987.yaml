@@ -1,0 +1,185 @@
+answers:
+  - artefact: .pkit/skills/README.md
+    read:
+      - moved-e0ed2ab4bd21.yaml
+    revalidated:
+      at: 2026-10-26T14:07:22Z
+      outcome: updated
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - moved-300b8204a467.yaml
+    revalidated:
+      at: 2026-10-26T14:07:25Z
+      outcome: updated
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T174422Z-ea676633.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T202350Z-6a1bd668.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221052Z-9302b480.yaml
+      - 20261025T234102Z-0231f155.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - moved-69dea4023970.yaml
+    revalidated:
+      at: 2026-10-26T14:07:29Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-067
+          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-053
+          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - moved-0fe260ad4d42.yaml
+    revalidated:
+      at: 2026-10-26T14:07:34Z
+      outcome: unchanged
+      unchanged-because: The decisions README gains a section on how a record is written, and its acceptance gate, which this term defines, is as it was.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-skill
+    read:
+      - moved-e1441ee14b28.yaml
+    revalidated:
+      at: 2026-10-26T14:07:37Z
+      outcome: unchanged
+      unchanged-because: The skills README changes only how it describes the decision-author skill, and what a skill is, which this term defines, is as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - moved-bca813b8718e.yaml
+    revalidated:
+      at: 2026-10-26T14:07:40Z
+      outcome: unchanged
+      unchanged-because: The capability-author skill drops its read of CONTRIBUTING.md and names where the record disciplines live, and how it pairs with pkit new capability, which this use case describes, is as it was.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-26T14:07:42Z
+      outcome: unchanged
+      unchanged-because: The decisions README and decision-author change how a record is written, and a drafted record still binds only once the merge authoriser accepts it.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-26T14:07:46Z
+      outcome: unchanged
+      unchanged-because: The skills README changes only its line on decision-author, and how a project writes and deploys its own skill or agent is as it was.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - moved-7bd9bf62ec3a.yaml
+      - moved-a08ed9a38659.yaml
+    revalidated:
+      at: 2026-10-26T14:07:49Z
+      outcome: unchanged
+      unchanged-because: The capability-author skill changes only its disciplines pointer and its reads, and its step 6b, which pairs with pkit permissions scaffold, is as it was.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261025T214334Z-3176bb1a.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+    revalidated:
+      at: 2026-10-26T14:07:52Z
+      outcome: unchanged
+      unchanged-because: The capability-author skill changes only its disciplines pointer and its reads, and its steps 6b and 8, which the page names, are as they were.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-26T14:07:55Z
+      outcome: unchanged
+      unchanged-because: decision-author now leads with PRJ and ADR records and picks a kind by COR-025, as step 1 does, and the decisions README gains a section on writing a record. The stamp, its checks and the agent's part are as they were.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-26T14:07:58Z
+      outcome: unchanged
+      unchanged-because: CONTRIBUTING.md's section still names the disciplines a core record follows, now stated in the decisions README it points to, and the reviewer still judges the same disciplines.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-methodology-maintainer.md
+    read:
+      - moved-48d6ee71f2ab.yaml
+    revalidated:
+      at: 2026-10-26T14:08:01Z
+      outcome: unchanged
+      unchanged-because: CONTRIBUTING.md's section still gives the maintainer the disciplines of a core record, through the decisions README it points to, and the actor's role and needs are as they were.
