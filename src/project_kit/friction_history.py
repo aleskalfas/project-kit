@@ -27,6 +27,12 @@ another line — are each a point. Which came first is read from ancestry,
 never from timestamps or the log's date order. Without `at`, the marker is the
 block itself.
 
+**Where an artefact starts** (point 3; `Walker.added`). The newest version of its
+file that holds it where no parent's file does: for a document, where its file was
+last added, and for a collection entry, where the entry was last added to its file.
+The answer reader reads no answer and no point from before it (`answer_files`,
+COR-062 point 6), so an entry removed and added back starts its answers again.
+
 **The deferral point** (point 4; `Walker.deferral_point`). The newest version
 that introduced the entry on the anchor — present there, absent at every
 parent — unless that introduction puts back an entry the artefact carried
@@ -708,6 +714,8 @@ class Walker:
         self._parsed: dict[tuple[str, str, SetAside], _Parsed] = {}
         self._bytes: dict[str, _Bytes] = {}
         self._recent: OrderedDict[str, bytes | None] = OrderedDict()
+        self._added: dict[tuple[str, str | None], int | None] = {}
+        self._held: dict[tuple[str, str], bool] = {}
 
     # --- one version --------------------------------------------------------------
 
@@ -801,6 +809,48 @@ class Walker:
 
     def _after(self, version: Version) -> TreeEntry | None:
         return version.entry.after
+
+    # --- where the artefact starts ------------------------------------------------
+
+    def added(self, like: Artefact) -> int | None:
+        """Where the artefact `like` names was last added (COR-050 point 3): the log index
+        of the newest version of its file that holds it where no parent's file does. For a
+        document, that is where its file was last added (`History.versions`). For a
+        collection entry, it is where the entry was last added to its file, so an entry
+        removed and added back starts again there. `None` where no commit of this history
+        touches its file.
+
+        A parent is read from its bytes, as `_entry_gone` reads one: a blob that holds the
+        entry's id is taken to hold the entry, which errs only toward reading the history
+        further back. A merge that took the file whole from a side adds nothing, as it is
+        no version of the file, so an entry a line of work removed where the merge kept it
+        keeps its start."""
+        key = (like.path, like.id if like.kind is ArtefactKind.ENTRY else None)
+        if key in self._added:
+            return self._added[key]
+        versions = list(self.history.versions(like.path))
+        found = versions[-1].index if versions else None
+        if like.kind is ArtefactKind.ENTRY:
+            for version in versions:
+                if any(self._holds_id(state, like.id) for state, _name in version.parents()):
+                    continue
+                if self._holds_id(self._after(version), like.id) and (
+                    self.same_at(version, like) is not None
+                ):
+                    found = version.index
+                    break
+        self._added[key] = found
+        return found
+
+    def _holds_id(self, state: TreeEntry | None, entry_id: str) -> bool:
+        """Whether the blob of `state` holds `entry_id` (`holds`), asked once per blob."""
+        if state is None:
+            return False
+        key = (state[1], entry_id)
+        found = self._held.get(key)
+        if found is None:
+            found = self._held[key] = self.holds(state, (entry_id,))
+        return found
 
     # --- the revalidation point ---------------------------------------------------
 
