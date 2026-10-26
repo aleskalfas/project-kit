@@ -695,8 +695,8 @@ def create_args(title: str, path: str) -> list[str]:
 
 
 def lock_args(number: int) -> list[str]:
-    """The ``gh`` call that locks a state issue's conversation, so only an
-    account with write access comments on it."""
+    """The ``gh`` call that locks a state issue's conversation, so GitHub lets
+    fewer accounts comment on it, such as those with write access."""
     return ["gh", "issue", "lock", str(number)]
 
 
@@ -856,10 +856,10 @@ def create(kind: str, key: str, title: str, run: StateRun) -> Outcome:
     """Create a state issue for ``kind`` and ``key``, then complete it.
 
     The issue takes ``title``, for people, and the description, and no type,
-    parent, label, assignee or milestone. Its conversation is locked to
-    collaborators before any comment, then the marker's comment is posted first,
-    and DEC-041's filing comment after it. A lock that fails is said in the
-    outcome's cause and stops nothing, since the seam judges every author.
+    parent, label, assignee or milestone. Its conversation is locked before any
+    read or comment. The marker's comment is then posted first, and DEC-041's
+    filing comment after it. A lock that fails is said in the outcome's cause
+    and stops nothing, since the seam judges every author.
     """
     body = description(kind, key, Fold(None), run.versions)
     proc, cause = _with_file(body, lambda path: run.gh(create_args(title, path)))
@@ -868,7 +868,11 @@ def create(kind: str, key: str, title: str, run: StateRun) -> Outcome:
     match = _ISSUE_URL.search(str(getattr(proc, "stdout", "") or "").strip())
     if match is None:
         return Outcome(FAILED, None, cause="`gh issue create` printed no issue's URL")
-    done = _complete(int(match.group(1)), kind, key, run, lock=True)
+    number = int(match.group(1))
+    lock_note = _lock(number, run)
+    done = _complete(number, kind, key, run, lock=False)
+    if lock_note is not None:
+        done = replace(done, cause=", and ".join(c for c in (lock_note, done.cause) if c))
     return replace(done, outcome=CREATED) if done.outcome == FINISHED else done
 
 
@@ -879,8 +883,8 @@ def finish(number: int, kind: str, key: str, run: StateRun) -> Outcome:
     comment where it is missing.
 
     NO_STATE_ISSUE, with nothing written, where an author who may not write
-    opened the issue, or an account GitHub no longer has, so no issue such an
-    author opened is adopted as a state issue. NO_STATE_ISSUE too where an
+    opened the issue, or an account GitHub no longer has, so ``finish`` adopts
+    no issue such an author opened. NO_STATE_ISSUE too where an
     earlier marker comment names another key. FAILED where the issue could not
     be read, and INCOMPLETE where its opener could not be judged.
     """
@@ -915,10 +919,9 @@ def _complete(number: int, kind: str, key: str, run: StateRun, *, lock: bool) ->
     ):
         return Outcome(NO_STATE_ISSUE, number, cause=f"#{number} holds another state")
     notes: list[str] = []
-    if lock:
-        locked = _run_write(lock_args(number), run)
-        if locked.outcome != WROTE:
-            notes.append(f"the lock failed: {locked.cause}")
+    lock_note = _lock(number, run) if lock else None
+    if lock_note is not None:
+        notes.append(lock_note)
     if not accepted:
         posted = _run_write(comment_args(number, marker_comment(kind, key, run.versions)), run)
         if posted.outcome != WROTE:
@@ -950,6 +953,15 @@ def _opened(number: int, run: StateRun) -> tuple[str | None, bool, str | None]:
     user = data.get("user")
     login = user.get("login") if isinstance(user, dict) else None
     return (login if isinstance(login, str) and login else None), data.get("locked") is True, None
+
+
+def _lock(number: int, run: StateRun) -> str | None:
+    """Lock the issue's conversation: None once locked, else a note that says
+    what failed and what a person does, since no later run locks it."""
+    locked = _run_write(lock_args(number), run)
+    if locked.outcome == WROTE:
+        return None
+    return f"the lock failed ({locked.cause}), so lock #{number} on GitHub"
 
 
 def _authored_by_writer(comment: comment_log.LogComment, run: StateRun) -> bool:

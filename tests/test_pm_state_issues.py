@@ -213,8 +213,8 @@ def test_create_makes_the_issue_then_its_marker_comment_then_the_filing_comment(
 
 
 def test_create_locks_the_conversation_to_collaborators_before_its_first_comment() -> None:
-    """A new state issue is locked, so only an account with write access
-    comments on it (#2149). The seam still judges every author."""
+    """A new state issue is locked before any read or comment, so GitHub lets
+    fewer accounts comment on it (#2149). The seam still judges every author."""
     repo = FakeRepo()
     out = si.create("seat", "planner", "Seat planner", _run(repo))
     number = _some(out.number)
@@ -222,7 +222,7 @@ def test_create_locks_the_conversation_to_collaborators_before_its_first_comment
     assert repo.issues[number].locked
     verbs = [argv[2] for argv in repo.writes()]
     assert verbs == ["create", "lock", "comment", "comment"]
-    assert si.lock_args(number) in repo.writes()
+    assert repo.calls[1] == si.lock_args(number)  # right after the create
 
 
 def test_a_lock_that_fails_is_said_and_the_creation_goes_on() -> None:
@@ -232,6 +232,7 @@ def test_a_lock_that_fails_is_said_and_the_creation_goes_on() -> None:
     out = si.create("seat", "planner", "Seat planner", _run(repo))
     number = _some(out.number)
     assert out.outcome == si.CREATED and "the lock failed" in (out.cause or "")
+    assert f"lock #{number} on GitHub" in (out.cause or "")
     assert not repo.issues[number].locked
     assert si.read(number, "seat", "planner", _run(repo)).outcome == si.READ
 
