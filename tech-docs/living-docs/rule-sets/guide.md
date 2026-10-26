@@ -80,12 +80,11 @@ The rules that project-kit's guides in `docs/` and its entry README, `README.md`
 - **What it does not inherit:**
   - `USER`, whose scope selects every page this one does, so its rules bind there without a pin
   - `REWORK`, whose rules bind only on the pages its own scope lists, whoever inherits it (COR-051 point 7)
-- **What binds from the start:** `WRITE`'s and `LDOC`'s accepted rules, on every page the scope selects, the entry README included.
-- **Proposed:** every rule of this set's own is proposed, and binds nothing until the maintainer accepts it (COR-051 point 4). The maintainer adopted the style they write down on 25 October, after research into how well-known projects state their advantages (#2022).
+- **Accepted:** every rule of this set's own is accepted, and binds now beside `WRITE`'s and `LDOC`'s accepted rules (COR-051 point 4). They bind on every page the scope selects, the entry README included. The maintainer adopted the style they write down on 25 October, after research into how well-known projects state their advantages (#2022). RS-GUIDE-002 dates from 26 October, when he set its first step for a claim with no proof, a look for a gap (#1928).
 - **How a rule reads:** a statement, then *How*, then examples, as in `WRITE`. Its reason is the `why` of its origin, in the front matter.
 - **What binds:** a rule's statement and its *How*. The examples only illustrate them, and so do a "such as" phrase, a sentence that starts "An instance is", and a rule's *Note*.
 - **The examples:** *Breaks the rule* quotes the permissions README's first pilot pass, at commit `fe244502` of PR #2018, unless it names another source. *Keeps the rule* quotes the permissions guide, `docs/permissions/README.md`, or the entry README, as this change leaves them. An example on no branch says so.
-- **Accepting a rule:** it then binds on every page the scope selects, all at once. A break the rule's text settles on any of them withholds the rule-set reviewer's approval (COR-060 point 1). So the change that accepts it mends the pages that break it, or first leaves them out of the scope (COR-060 point 2).
+- **Accepting a rule added later:** it then binds on every page the scope selects, all at once. A break the rule's text settles on any of them withholds the rule-set reviewer's approval (COR-060 point 1). So the change that accepts it mends the pages that break it, or first leaves them out of the scope (COR-060 point 2).
 - **Leaving a page out:** a page the scope leaves out loses `WRITE` and `LDOC` through this set too. `LDOC` still reaches it through `USER`.
 - **Note:** whether any of these rules belongs in `LDOC` is a later question, once they have been tried on more pages.
 
