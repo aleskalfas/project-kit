@@ -38,7 +38,7 @@ A choice that binds nothing beyond its own change, such as a name or an order in
 
 ### 4. A disagreement is read first as the projection falling short
 
-Where the system and an accepted record disagree, the first question is whether the system falls short of the record. If it does, the system is changed, or the shortfall is tracked as open work and, where an artefact states the decision, made visible there as point 6 says. The record changes only through a change under point 3. Rewording a record so that it decides what was built is such a change. Correcting a fact or a citation where the record's decision stands is not, as the specification's rule on refining an accepted record says.
+Where the system and an accepted record disagree, the first question is whether the system falls short of the record. If it does, the system is changed, or the shortfall is recorded as open work and, where an artefact states the decision, made visible there as point 6 says. The record changes only through a change under point 3. Rewording a record so that it decides what was built is such a change. Correcting a fact or a citation where the record's decision stands is not, as the specification's rule on refining an accepted record says.
 
 ### 5. A record holds the choice, and the projection holds the detail
 
@@ -48,7 +48,7 @@ A record need not anchor what carries it out. The artefacts that state its decis
 
 ### 6. An artefact that states a record's decision anchors it, and shows where the projection lags
 
-An artefact other than a record, held in a declared place ([COR-050](COR-050-anchors-and-friction.md) point 1), that states what an accepted record decides anchors that record, so a change to the record reaches it. Where such an artefact states something an accepted record decides that the system does not yet carry out, it says so to its readers, in its own text, naming the record and what tracks the work. The change that carries the work out removes that line. A record's text says nothing of how far the system carries it out. A project that keeps no such artefact owes none of this.
+An artefact other than a record, held in a declared place ([COR-050](COR-050-anchors-and-friction.md) point 1), that states what an accepted record decides anchors that record, so a change to the record reaches it. Where such an artefact states something an accepted record decides that the system does not yet carry out, it says so to its readers, in its own text, naming the record and the open work that will carry it out. The change that carries the work out removes that line. A record's text says nothing of how far the system carries it out. A project that keeps no such artefact owes none of this.
 
 ### 7. Records are read to change the system, not loaded to run it
 

@@ -13,7 +13,7 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6"]
+      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", "COR-065", "COR-066#1"]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -178,7 +178,7 @@ Supersession is always within a single namespace.
 
 ## The acceptance gate
 
-Implementation work — code, content, tooling, downstream decisions — depends only on **accepted** decisions. Proposed records are draft hypotheses, useful for discussion but not authoritative. Authoring work that would cite a still-proposed record violates the gate; either accept the record first (a one-line status flip and a commit) or pause the implementation. A person accepts a record in the change that proposes it, before work in that change rests on it, and an agent writes `accepted` only once a person has. Work in that change, or in a change built on it that lands no earlier, may then rest on the record.
+Implementation work — code, content, tooling, downstream decisions — depends only on **accepted** decisions. Proposed records are draft hypotheses, useful for discussion but not authoritative. Authoring work that would cite a still-proposed record violates the gate; either accept the record first (a one-line status flip and a commit) or pause the implementation. A person accepts a record in the change that proposes it, before work in that change rests on it, and an agent writes `accepted` only once a person has. Work in that change, or in a change built on it that lands no earlier, may then rest on the record ([COR-066](core/COR-066-accepted-before-landing.md) point 1).
 
 The gate applies to every kind of dependent work:
 
@@ -286,7 +286,7 @@ The recommended path is the kit's authoring command (specified in `.pkit/cli/REA
 pkit new decision project <slug>
 ```
 
-This stamps `PRJ-NNN-slug.md` with the schema's frontmatter, the four section headers and a first point heading, `### 1. Point title`, under `## Decision`. You fill in the body and flip status to `accepted` once agreed.
+This stamps `PRJ-NNN-slug.md` with the schema's frontmatter, the four section headers and a first point heading, `### 1. Point title`, under `## Decision`. You fill in the body, and a person accepts the record in its change, before it lands.
 
 The stamped heading puts the record's points in the heading form from the start ("Schema" above):
 

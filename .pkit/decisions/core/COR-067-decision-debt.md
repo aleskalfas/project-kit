@@ -1,12 +1,12 @@
 ---
 id: COR-067
-title: Each point of an accepted record is marked where it is carried out, and the decision debt is listed
+title: Each accepted point is marked where the system carries it out
 status: proposed
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** once a record is accepted, each of its points is marked where the system carries it out. An artefact, such as a document, names the point as one it carries out, beside its anchors on what carries it out. A reviewer checks each mark, and friction asks again whenever what it anchors changes. A point that needs nothing to carry it out says so in its record, and a person accepts that with the record. One command lists the decision debt: what is proposed on the default branch, each accepted point neither marked nor named so, and each mark gone stale. A project chooses when it starts tracking.
+**In plain terms:** once a record is accepted, each of its points is marked where the system carries it out. An artefact, such as a document, names the point as one it carries out, beside its anchors on what carries it out. A reviewer checks each mark, and friction, the check that asks whether an artefact still holds when what it rests on changes, asks again whenever what the mark anchors changes. A point that needs nothing to carry it out says so in its record, and a person accepts that with the record. One command lists the decision debt: what is proposed on the default branch, each accepted point neither marked nor named so, and each mark gone stale. A project chooses when it starts tracking.
 
 ## Context
 
@@ -32,7 +32,7 @@ A mark is not a proof. It says where its writer judged the point is carried out.
 
 ### 2. A point that needs nothing to carry it out is named in its record
 
-A point of an accepted record that needs nothing to carry it out, because it decides a principle no artefact carries, is named in the record's front matter as having **nothing to carry out**, with a sentence saying why. A record tracked whole is named so only where none of it needs carrying out. A person accepts each name with the record, or, for a name added to an accepted record, in the change that adds it, which lists it among that record's edits.
+A point of an accepted record that needs nothing to carry it out, because it decides a principle no artefact carries, is named in the record's front matter as having **nothing to carry out**, with a sentence saying why. A record tracked whole is named so only where none of it needs carrying out. A person accepts each name with the record, or, for a name added to an accepted record, in the change that adds it, whose check of a change on records lists the name among that record's edits.
 
 A point with a heading that a later accepted record overturns whole owes nothing while that record stands: the overturning record names it in its own front matter. A point overturned in part is not named, and owes a mark for what stands. The overturned record gains only the top line the specification gives it. A record tracked whole stays tracked whole when part of it is overturned.
 
@@ -44,7 +44,7 @@ A rule is not marked: the checks that enforce it, where a project runs them (COR
 
 The **decision debt** of a project is derived from its records, the artefacts that mark them, and their history, each time it is read, and kept nowhere (COR-050 point 9). One command lists it:
 
-- each proposed record or rule of the project's own on the default branch, with its age;
+- each proposed record or rule of the project's own on the default branch, with its age, which COR-066 points 1 and 4 have a person settle;
 - each point of an accepted record of the project's own that is tracked (point 4), or each such record tracked whole, that no artefact marks and no record names, with the age since it was accepted;
 - each mark whose artefact is stale on one of the mark's anchors, or deferred, as friction reports it.
 
@@ -62,7 +62,7 @@ A point or record accepted before the line is listed apart, as accepted before t
 
 **Why a mark is declared, not read from any anchor.** An anchor on a point carries other relations: a design written before the code anchors the point it plans, and a requirement anchors the decisions that answer it. Counting every anchor as a mark would clear the debt before the work is done. A mark names the anchors on what carries its point out, so a decision carried out and later undone asks again when that content changes. A reviewer checks the mark, and each point is tracked on its own. The record stays free of paths, and a change to busy code asks for answers only from the artefacts that describe it. Marks also lead from a changed path to the points it carries out, for the reading COR-065 point 7 asks.
 
-**Why the name sits in the record.** That a point needs nothing to carry it out says what kind of choice it is, not how far the system has got. It changes only when the point does, so it sits with the point's text and is accepted with it, by a person, never by an agent alone. These names change nothing an artefact resting on the record relies on, so they are not text an anchor on the record stands on. A person asked to read many such names at once would stamp them, so the list of points accepted before tracking is cleared as changes touch its records, not all at once. A point a later record overturns is named in that record, since a record whose points have no headings could otherwise only be named whole, falsely.
+**Why the name sits in the record.** That a point needs nothing to carry it out says what kind of choice it is, not how far the system has got. It changes only when the point does, so it sits with the point's text and is accepted with it, by a person, never by an agent alone. These names change nothing an artefact resting on the record relies on, so they are not text an anchor on the record stands on. A person asked to read many such names at once would stamp them, so the list of points accepted before tracking is cleared as changes touch its records, not all at once. A point a later record overturns is named in that record, since the overturning is that record's decision, and the overturned record gains only the top line the specification gives it.
 
 **Why a point not yet carried out has no entry.** It is the debt, and the list shows it with its age. A line in an artefact saying the work is still to come informs that artefact's readers (COR-065 point 6); the list is where the lag is tracked.
 
@@ -77,7 +77,7 @@ A point or record accepted before the line is listed apart, as accepted before t
 - **The record anchors the code that carries it out.** Rejected: a record's anchors cover the whole record, so a record carried out in part leaves the debt; a change to busy code would ask for answers from every record anchoring it; and code a record anchors would count as described when no document describes it.
 - **A field in the record that marks it carried out.** Rejected: it is state inside the choice, and it never goes stale when the code changes. A name for a point needing nothing is not state, so it stays.
 - **Names kept in the project's answer folder** ([COR-062](COR-062-answers-in-own-files.md) point 2). Rejected: a name is part of the choice the person accepts, so it belongs with the record's text and its acceptance.
-- **The overturned record names its overturned points.** Rejected: a record whose points have no headings would have to be named whole, falsely.
+- **The overturned record names its overturned points.** Rejected: it would carry, beside its top line, a decision another record made.
 
 ## Implications
 
