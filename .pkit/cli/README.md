@@ -1380,7 +1380,7 @@ Prints the CLI's own version (`pkit <version>`) — the version of the checkout 
 Bumps `.pkit/VERSION` per the policy in PRJ-002. `<segment>` is `patch`, `minor`, `major` or `pre`:
 
 - **`patch`** — backward-compatible bug fix to existing surface.
-- **`minor`** — new surface added (new command, new principle, new area). Pre-1.0, this is the typical bump and may carry breaking changes per semver convention for `0.x` releases.
+- **`minor`** — new surface added (new command, new principle, new area).
 - **`major`** — a breaking change to existing surface. It moves the version to the next major, before 1.0 as after it: `0.5.0` to `1.0.0`, `1.4.2` to `2.0.0`.
 - **`pre`** — the next pre-release of the current line, `1.2.0rc1` to `1.2.0rc2`, printing `Bumped pre-release counter: <old> -> <new>`. It refuses a version with no pre-release suffix, and refuses `--pre` beside it.
 
