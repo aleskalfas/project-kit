@@ -4,7 +4,15 @@ A journey is an end-to-end path one actor takes across several use cases, includ
 
 ## 1. Is it a journey?
 
-Write one when an actor's real goal spans use cases — onboarding, a first release, a month-end close — and what carries over from one use case to the next can break. A single use case with variants is not a journey.
+Write one for each path the use cases make ([software-analysis:DEC-005-finding-functionality] point 2). A path is an end-to-end path: a goal one actor reaches only through several of its own use cases, taken in turn, such as onboarding, a first release or a month-end close. Each step takes up what an earlier one left, and that hand-over can break.
+
+- **A sign, never proof.** A precondition that an earlier use case of the same actor makes true is a sign of a path. Ask whether the actor takes the two in turn toward one goal of its own.
+- **From content, never by count.** Judge from what the use cases do, never from how many the actor has.
+- **No path:** a single use case with variants, and use cases the actor never takes in turn toward one goal.
+- **One journey for the whole path.** A stretch of it needs no journey of its own. A shorter path the actor sometimes takes is a variant of the journey, such as one that skips a step.
+- **Another actor's use case** on the way is no step. List it with `--relies-on` (step 2).
+- **Across areas.** A path's steps may lie in several areas. Its journey is one, whichever areas it passes through.
+- **Part of building.** Once the use cases of a path are written, the path takes its journey in the same change, never as an extra afterwards (`build-analysis.md`, step 4). A change that withdraws or shortens a journey, or changes a use case's actor or goal, checks that no path is left untold.
 
 ## 2. Name the actor and the steps
 

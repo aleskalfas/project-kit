@@ -4,7 +4,7 @@ A use case is one actor's goal and how the system fulfils it. It is a file, `UC-
 
 ## 1. One actor, one goal
 
-Two actors with the same goal are two use cases, or the goal belongs to a third actor they both are. A goal that takes the actor through several use cases, with seams between them, is a journey over those use cases — write the use cases first.
+Two actors with the same goal are two use cases, or the goal belongs to a third actor they both are. A goal that takes the actor through several use cases, with seams between them, is a journey over those use cases. Write the use cases first, then the journey (`journey.md`).
 
 ## 2. Name the actor, and the other actors
 
@@ -16,7 +16,11 @@ Name each other actor who takes part with `--other-actor <ACT-id>`: one the use 
 
 - **Slug** — the goal, verb first: `run-suite`, `export-report`. It names the file only.
 - **`--title`** — the goal as the heading reads it: `Export the report as a file`. The heading is `# UC-NNN — <title>`, and the check keeps the two in step.
-- **`--area <word>`** — a folder per functional area, when the project groups use cases. Moving a use case to another area later never changes its id; a move renames the file, so revalidate it in the same change (COR-050 point 3). The word may open with a number and a hyphen, such as `010-develop`. The number gives one valid order in which the areas build on each other, and is no part of the id (DEC-001 point 2).
+- **`--area <word>`** — the functional area whose goal the use case is a step toward. Every use case lies in one, so always pass it ([software-analysis:DEC-005-finding-functionality] point 1).
+  - **Which area.** The one whose function the use case serves, never one chosen by its actor or by how full an area is. Where no area's goal fits, the plan lacks a function: go back to `build-analysis.md`, step 3, for a new area or a goal drawn again.
+  - **Its number.** The word may open with a number and a hyphen, such as `010-develop`. The number gives one valid order in which the areas build on each other, and is no part of the id (DEC-001 point 2).
+  - **A move.** Moving a use case to another area never changes its id. A move renames the file, so revalidate it in the same change (COR-050 point 3).
+  - **A path it completes.** Where the use case takes up what an earlier use case of its actor left, toward one goal, the path takes its journey (`journey.md`).
 
 ## 4. Decide what it rests on
 
@@ -32,7 +36,7 @@ The anchor to each actor and to each requirement is written by the stamp.
 ## 5. Stamp it
 
 ```
-pkit analysis new use-case <slug> --actor <ACT-id> [--other-actor <ACT-id>]... [--requirement <REQ-id>]... [--title "<Title>"] [--area <area>] [--path <glob>]... [--record <id>]...
+pkit analysis new use-case <slug> --actor <ACT-id> --area <area> [--other-actor <ACT-id>]... [--requirement <REQ-id>]... [--title "<Title>"] [--path <glob>]... [--record <id>]...
 ```
 
 It takes the next free number on the default branch and in the working tree.
