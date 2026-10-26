@@ -5,8 +5,9 @@ contents list of its second-level sections near its top. This script writes each
 list, and fails where one is stale, so nobody keeps a list by hand.
 
 - **Which pages:** every artefact of living-docs' page type, `living-docs:page`, as
-  the backbone's discovery types it, wherever it lies, as the console fences' run
-  chooses them (`scripts/console_fences.py`).
+  the backbone's discovery types it, wherever it lies. These are the pages the
+  doc-examples run reads by default (doc-examples DEC-001 point 3), and the script
+  selects them by the same type itself.
 - **How a page opts in:** it holds the two markers, `<!-- pkit:contents -->` and
   below it `<!-- /pkit:contents -->`, each alone on its line, outside fenced code.
   Both are HTML comments, which a host renders as nothing. A page holds one pair

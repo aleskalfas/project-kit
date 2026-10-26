@@ -62,6 +62,7 @@ friction:
     - {path: .pkit/adapters/claude-code/README.md, type: living-docs:page}
     - {path: .pkit/agents/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/demo-recording/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/doc-examples/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/evidence/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/living-docs/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/project-management/README.md, type: living-docs:page}

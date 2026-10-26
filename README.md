@@ -182,10 +182,10 @@ $ grep "^tools:" .claude/agents/critic.md .claude/agents/*-reviewer.md
 
 ```console
 $ grep backbone_version .pkit/manifest.yaml
-backbone_version: <version>
+backbone_version: <VERSION>
 $ pkit upgrade
-Already at backbone v<version>; nothing to upgrade.
-Pinned project-kit to <version> (.pkit/version-pin).
+Already at backbone v<VERSION>; nothing to upgrade.
+Pinned project-kit to <VERSION> (.pkit/version-pin).
 ```
 
 ### Your files stay yours
