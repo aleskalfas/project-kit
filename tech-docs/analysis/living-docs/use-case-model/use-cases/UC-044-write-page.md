@@ -80,7 +80,7 @@ pkit:
 - The [backbone](../../../core/glossary.md#term-backbone--backbone) reads the [page](../../glossary.md#term-page--page)'s anchors, and its [change check](../../../core/glossary.md#term-change-check--change-check) asks the page for an [answer](../../../core/glossary.md#term-answer--answer) whenever what an [anchor](../../../core/glossary.md#term-anchor--anchor) names changes (COR-050 point 6). It resolves a `source` anchor through living-docs' resolver, `pkit living-docs resolve-source` (COR-050 point 2).
 - A `source` anchor that no captured file answers is a dead anchor. The core's checks report it, and fail it where a change adds it (COR-050 point 7 and core:REQ-020).
 - The backbone resolves the [readers](../../glossary.md#term-reader--reader) [data point](../../../core/glossary.md#term-data-point--data-point) from its default, the project's file and each [capability](../../../core/glossary.md#term-capability--capability) that fills it (COR-052). It answers where each [rule](../../../core/glossary.md#term-rule--rule) binds (COR-051 point 7).
-- Nothing checks, as the page is written, that its anchors ground each statement it makes. A [reader-review](../../glossary.md#term-reader-review--reader-review) judges it, as `UC-046` describes (DEC-001 points 3 and 6).
+- Nothing checks, as the page is written, that its anchors ground each statement it makes. A [reader-review](../../glossary.md#term-reader-review--reader-review) judges it, as `UC-046` describes (DEC-001 points 3 and 6). [Validation](../../../core/glossary.md#term-validation--validation) only reports what the page mentions and does not anchor (12f).
 
 **Trigger:** The developer has something to explain to one [reader](../../glossary.md#term-reader--reader) of a space, such as a new command its users run.
 
@@ -141,6 +141,7 @@ pkit:
 - **12c.** The page's kind declares no structure, such as a kind the project adds. Validation reports the page with its kind, and never fails it (DEC-001 point 3).
 - **12d.** `RS-LDOC-008` is proposed, so it binds on no page, and the summary says so. Where it binds, validation fails a `mermaid` fence of the page that lacks an `accTitle` or an `accDescr` (DEC-002 points 8 and 10).
 - **12e.** A `source` anchor of the page names no captured file. Validation reports it, and never fails it (DEC-001 point 4).
+- **12f.** The page mentions a file, a record, a rule or a command that its anchors do not cover. Where `RS-LDOC-001` binds, validation reports the page and lists each mention with an anchor that would cover it, never failing it. The developer anchors what the page rests on, or marks a passage that only names a thing with `<!-- unanchored: <reason> -->` (DEC-001 point 6).
 
 **Postconditions:** The [page](../../glossary.md#term-page--page) lies in its space. It names its [reader](../../glossary.md#term-reader--reader) and its [page kind](../../glossary.md#term-page-kind--page-kind), and its anchors name what its statements rest on. Where the space's rules bind on it, [validation](../../../core/glossary.md#term-validation--validation) holds its reader and its structure.
 
