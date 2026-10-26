@@ -52,15 +52,15 @@ pkit:
 2. UC-090 — See which agent works on which issue, without visiting each agent
    - **Needs from step 1 (UC-082):** each agent's clone with a number of its own, which makes the clone an [instance](../../glossary.md#term-instance--instance) (DEC-035 point 1). A clone that sets no number marks no [issue](../../glossary.md#term-issue--issue), so its agent's issues show in the listing with no [owner](../../glossary.md#term-owner--owner).
    - **Needs from UC-083 (outside this journey):** the Tasks the planning agent filed for each scope, each owned by the planning agent's instance (DEC-035 point 3). Until #519 is done, `create-issue` writes no owner, so these Tasks show with none.
-   - **Needs from UC-084 (outside this journey):** each [Task](../../glossary.md#term-task--task) a worker agent took, owned by that agent's instance (DEC-035 point 3). Until #519 is done, `start-work` writes no owner either. So the listing tells a Task in work from one that nobody took only by its state.
+   - **Needs from UC-084 (outside this journey):** each [Task](../../glossary.md#term-task--task) a worker agent took, owned by that agent's instance (DEC-035 point 3). Until #519 is done, `start-work` writes no owner either. So the listing tells a Task in flight from one that nobody took only by each Task's state.
    - **Needs from UC-087 (outside this journey):** each finished piece's Task closed, which clears the Task's owner, and each Task handed to another instance, owned by that instance (DEC-035 point 4). Until #521 is done, `handoff-issue` hands an issue from one person to another only, so no hand-over between instances shows.
 3. UC-091 — Measure one topology against another on comparable work
    - **Needs from step 1 (UC-082):** each [topology](../../glossary.md#term-topology--topology) to compare, set up in turn. GitHub records no topology beside a [pull request](../../../core/glossary.md#term-pull-request--pull-request), so the director keeps which topology did which work.
-   - **Needs from UC-089 (outside this journey):** each Task's pull request merged, with the [verdict](../../glossary.md#term-verdict--verdict) of each review round naming the [head](../../../core/glossary.md#term-head--head) it reviewed (DEC-028). A pull request still open gives no time to its merge, so all the work compared must have landed.
+   - **Needs from UC-089 (outside this journey):** each Task's pull request merged, with the [verdict](../../glossary.md#term-verdict--verdict) of each review round naming the [head](../../../core/glossary.md#term-head--head) that round reviewed (DEC-028). A pull request still open gives no time to its merge, so all the work compared must have landed.
 
 **Variants:**
 
-- **2a.** The listing shows Tasks of a [scope](../../glossary.md#term-scope--scope) that no agent takes, or one agent with far more work than the others. The director alters the [topology](../../glossary.md#term-topology--topology), and the path rejoins at step 1.
+- **2a.** The listing shows a [scope](../../glossary.md#term-scope--scope) whose Tasks no agent takes, or one agent with far more work than the others. The director alters the [topology](../../glossary.md#term-topology--topology), and the path rejoins at step 1.
 - **3a.** The director runs one topology only, and has none to compare it with. The path ends after step 2.
 
 **Postconditions:** The director knows which [instance](../../glossary.md#term-instance--instance) works on each open [issue](../../glossary.md#term-issue--issue). For each [topology](../../glossary.md#term-topology--topology), the director holds the time from its first [pull request](../../../core/glossary.md#term-pull-request--pull-request) to its last merge, and each pull request's review rounds.
@@ -72,4 +72,4 @@ pkit:
 
 ## Sources
 
-The goal rests on DEC-045, which decides the [topology](../../glossary.md#term-topology--topology) and the [scope](../../glossary.md#term-scope--scope) it gives each agent. It rests on DEC-035 point 7 too, which decides the listing of issues signed with their [owner](../../glossary.md#term-owner--owner). Measuring one topology against another is a goal that #2096 names, as the sources of UC-091 say.
+The goal rests on DEC-045, which decides the [topology](../../glossary.md#term-topology--topology) and the [scope](../../glossary.md#term-scope--scope) the topology gives each agent. It rests on DEC-035 point 7 too, which decides the listing of issues signed with their [owner](../../glossary.md#term-owner--owner). Measuring one topology against another is a goal that #2096 names, as the sources of UC-091 say.
