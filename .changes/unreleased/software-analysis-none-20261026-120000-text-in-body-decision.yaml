@@ -2,7 +2,7 @@ component: software-analysis
 kind: none
 body: >
   Design-ahead: the new record [software-analysis:DEC-006-text-in-body],
-  proposed, moves an analysis artefact's text into its body as its only home:
+  accepted, moves an analysis artefact's text into its body as its only home:
   a term's definition, a requirement's statement, measure and scope, and an
   actor's needs. An actor's summary goes. A requirement's revisits fire on
   `obligation`, a versioned fingerprint of its three texts. DEC-002 is partly
