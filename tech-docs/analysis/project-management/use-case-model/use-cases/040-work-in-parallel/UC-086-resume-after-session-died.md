@@ -64,7 +64,7 @@ pkit:
 
 **Assumptions:**
 
-- The harness hosts a new session in the same clone, which still holds what the clone's last session committed ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
+- The harness hosts a new session in the same clone. The clone still holds what the clone's last session committed ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 
 **Trigger:** The operator starts a new session in the worker's clone after the clone's last session died, such as at a usage limit or a crash.
 

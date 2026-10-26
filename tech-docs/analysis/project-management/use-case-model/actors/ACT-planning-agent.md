@@ -24,6 +24,10 @@ An AI agent of a topology that slices a project's work and files the work for th
 
 **Occasions:** whenever the planner gives the planning agent an intent to plan.
 
-**Context:** the planner's intent, the [topology](../../glossary.md#term-topology--topology)'s scopes, and the [project](../../../core/glossary.md#term-project--project)'s use cases where the project keeps them ([DEC-054](../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md)).
+**Context:**
+
+- the planner's intent
+- the [topology](../../glossary.md#term-topology--topology)'s scopes
+- the [project](../../../core/glossary.md#term-project--project)'s use cases, where the project keeps use cases ([DEC-054](../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md))
 
 **Note:** the planning agent is not the planner, the person whose intent the planning agent plans and who approves the planning agent's plan ([DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md)). The planning agent is an AI agent (`core:ACT-ai-agent`) with its own job in a [topology](../../glossary.md#term-topology--topology).

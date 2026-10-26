@@ -52,7 +52,10 @@ pkit:
 
 What the adopter needs here that no accepted record decides yet:
 
-- **How the topologies get comparable work.** One way is a copy of the [project](../../../../core/glossary.md#term-project--project) for each [topology](../../../glossary.md#term-topology--topology). Another way runs the topologies one after the other on comparable backlogs, and a third splits one backlog between the topologies.
+- **How the topologies get comparable work,** in one of three ways:
+  - a copy of the [project](../../../../core/glossary.md#term-project--project) for each [topology](../../../glossary.md#term-topology--topology)
+  - the topologies run one after the other on comparable backlogs
+  - one backlog split between the topologies
 - **What else to record:**
   - the topology and the [seat](../../../glossary.md#term-seat--seat) behind each event. An ownership names its seat ([project-management DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)), and no other event names a seat
   - the time from a plan's approval to its last merge

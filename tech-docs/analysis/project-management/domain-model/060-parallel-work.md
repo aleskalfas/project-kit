@@ -100,9 +100,9 @@ flowchart LR
 flowchart LR
   accTitle: How a seat is taken and released
   accDescr: A seat is free until a clone takes the seat on the seat's state issue, where the first taking of a free seat holds. The clone holds the seat until the clone releases the seat, or until a release by force. A seat retired from the topology stays in the topology's list, and a seat retired while held is released first.
-  free[Seat free] --> taken([Taken by a clone on its state issue])
+  free[Seat free] --> taken([Taken by a clone on the seat's state issue])
   taken --> held[Held by that clone]
-  held --> released([Released by its clone, or by force])
+  held --> released([Released by the seat's clone, or by force])
   released --> free
   free --> retired[Retired, kept in the topology]
   released --> retired
@@ -139,7 +139,7 @@ Defined in [TERM-seat](../glossary.md#term-seat--seat).
 
 **Why:** Each clone runs with a job of its own, and the other clones must see which jobs are held. Which seats exist, and what each does, is what a person decides and reviews ([DEC-059](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
 
-A seat is one place in a [topology](../glossary.md#term-topology--topology), which one clone holds at a time. The seat says whether the clone's agent plans, builds or does both, and which [agent definition](../../core/glossary.md#term-agent-definition--agent-definition) that agent follows. A clone takes a seat, and the clone's agent then acts as the seat says (DEC-059 points [2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [4](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
+A seat is one place in a [topology](../glossary.md#term-topology--topology), and one clone holds the seat at a time. The seat says whether the clone's agent plans, builds or does both, and which [agent definition](../../core/glossary.md#term-agent-definition--agent-definition) that agent follows. A clone takes a seat, and the clone's agent then acts as the seat says (DEC-059 points [2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [4](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 
 **Attributes:**
 

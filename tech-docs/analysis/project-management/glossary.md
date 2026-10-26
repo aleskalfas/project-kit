@@ -315,7 +315,7 @@ TERM-seat:
   name: seat
   noun-forms: [seats]
   status: active
-  definition: "place in a topology that one clone holds, saying whether the clone's agent plans, builds or does both, and which agent definition that agent follows"
+  definition: "place in a topology, held by one clone, saying whether the clone's agent plans, builds or does both, and which agent definition that agent follows"
   pkit:
     friction:
       anchors:
@@ -573,14 +573,14 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#instance).
 
-**Example:** `set-instance 2` makes a clone instance 2 of its person's instances. A session that starts in that clone after a crash works as instance 2 again.
+**Example:** `set-instance 2` makes a clone instance 2 of the instances of the clone's person. A session that starts in that clone after a crash works as instance 2 again.
 
 **Distinctions:**
 
 - **Session:** one run of an AI agent in a clone. A session ends or dies, and the instance's number stays, held by a file in the clone ([DEC-035 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
 - **A clone with no number:** a clone that never set a number. Such a clone marks nothing and is guarded by nothing, as before instances existed (DEC-035 point 1).
 - **A linked worktree:** a further working tree of a clone. Whether a linked worktree reads the clone's identity, or may set a separate identity, is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
-- **Seat:** a place in a [topology](#term-topology--topology), which a clone takes. The clone's name and number are then the [seat](#term-seat--seat)'s, and never typed (DEC-059 point 6).
+- **Seat:** a place in a [topology](#term-topology--topology), taken by a clone. The clone's name and number are then the [seat](#term-seat--seat)'s, and never typed (DEC-059 point 6).
 
 ## TERM-issue — issue
 
@@ -736,8 +736,8 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#topology).
 **Distinctions:**
 
 - **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists the person's [instances](#term-instance--instance) and the workstreams each instance handles ([DEC-045 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). [DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) overturns that file: a topology is the project's committed configuration.
-- **Seat:** one place in a topology, which one clone holds. The topology says nothing of who holds a seat now, which the seat's [state issue](#term-state-issue--state-issue) shows.
-- **Instance:** one clone of the project, which takes a seat of the topology by the seat's name, or the first free one ([DEC-059 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
+- **Seat:** one place in a topology, held by one clone. The topology says nothing of who holds a seat now. The seat's [state issue](#term-state-issue--state-issue) shows the holder.
+- **Instance:** one clone of the project. The clone takes a seat of the topology by the seat's name, or the first free seat ([DEC-059 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 - **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says what is worked on.
 
 ## TERM-umbrella — Umbrella

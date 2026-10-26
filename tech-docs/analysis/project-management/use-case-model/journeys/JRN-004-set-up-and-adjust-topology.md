@@ -42,7 +42,7 @@ pkit:
 
 # JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure
 
-**Goal:** Run several AI agents on my project at once, each in a separate seat, and adjust the topology on my measures of the agents' work.
+**Goal:** Run several AI agents on my project at once, each in a separate seat, and adjust the topology on the figures of the agents' work.
 
 **Steps:**
 
@@ -72,4 +72,4 @@ pkit:
 
 ## Sources
 
-The goal rests on [project-management DEC-059](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md), which decides the [topology](../../glossary.md#term-topology--topology), the topology's [seats](../../glossary.md#term-seat--seat) and each seat's [scope](../../glossary.md#term-scope--scope). Measuring one topology against another is a goal that #2096 names, as the sources of [UC-091](../use-cases/040-work-in-parallel/UC-091-measure-topologies.md) say. Adjusting the topology on what the measure shows is setting the topology up again, as [UC-082](../use-cases/040-work-in-parallel/UC-082-set-up-topology.md) describes.
+The goal rests on [project-management DEC-059](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md), which decides the [topology](../../glossary.md#term-topology--topology), the topology's [seats](../../glossary.md#term-seat--seat) and each seat's [scope](../../glossary.md#term-scope--scope). Measuring one topology against another is a goal that #2096 names, as the sources of [UC-091](../use-cases/040-work-in-parallel/UC-091-measure-topologies.md) say. Adjusting the topology on the figures is setting the topology up again, as [UC-082](../use-cases/040-work-in-parallel/UC-082-set-up-topology.md) describes.

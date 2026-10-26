@@ -6,7 +6,7 @@ summary: "An AI agent of a topology that takes ready Tasks one at a time, and bu
 needs:
   - Take my next ready Task, one that no other agent works on, and build it up to its merge.
   - Never work on a Task that another agent already works on.
-  - Hand the next piece of the work to the scope that does that piece, with what that piece needs from mine.
+  - Hand the next piece of the work to the scope that does that piece, with what that piece needs from my piece.
   - Take up my instance's work in flight after my session died, without losing what that session had done.
   - Land my finished Task on the default branch while other agents land theirs, each merge judged at its own head.
 pkit:

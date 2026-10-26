@@ -45,7 +45,7 @@ pkit:
 
 # UC-087 — Hand the next piece of the work to the scope that does that piece
 
-**Goal:** Hand the next piece of the work to the scope that does that piece, with what that piece needs from mine.
+**Goal:** Hand the next piece of the work to the scope that does that piece, with what that piece needs from my piece.
 
 **Other actors:** **Planning agent** (`ACT-planning-agent`): filed the next piece's [Task](../../../glossary.md#term-task--task) in that Task's own [scope](../../../glossary.md#term-scope--scope). The `## Dependencies` section of the next piece's Task names this piece's Task (`batch-plan.md`).
 
@@ -94,6 +94,6 @@ pkit:
 
 What the worker needs here that no accepted record decides yet:
 
-- **A checked hand-over between stages,** so that the next piece starts only from what this piece declared done. The core's [processes](../../../../core/glossary.md#term-process--process) can declare a hand-over that a check reports on, which [COR-042](../../../../../../.pkit/decisions/core/COR-042-process-health.md) calls a hand-off contract. None is declared between stages of the work.
+- **A checked hand-over between stages,** so that the next piece starts only from what this piece declared done. The core's [processes](../../../../core/glossary.md#term-process--process) can declare a hand-over that a check reports on. [COR-042](../../../../../../.pkit/decisions/core/COR-042-process-health.md) calls such a hand-over a hand-off contract. None is declared between stages of the work.
 - **A scope by a discipline that no kind of work carries,** such as design, for the [seat](../../../glossary.md#term-seat--seat) that does that discipline's work. A [scope](../../../glossary.md#term-scope--scope) names testing by the kind of work `test` (variant 4b). [project-management DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) leaves a discipline with no kind to a record that decides how a [Task](../../../glossary.md#term-task--task) carries the discipline.
 - **How the next piece's agent learns that the next piece's Task can start.** While `## Dependencies` is prose, that agent reads the section of each Task. Typed `Blocked by:` lines are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s, which is proposed.

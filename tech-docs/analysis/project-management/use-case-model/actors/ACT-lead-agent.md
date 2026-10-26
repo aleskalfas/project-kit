@@ -23,7 +23,11 @@ An AI agent of a topology that plans and builds the work of the agent's scope, d
 
 **Occasions:** whenever its [scope](../../glossary.md#term-scope--scope) holds work to plan or to build.
 
-**Context:** its [scope](../../glossary.md#term-scope--scope), its [instance](../../glossary.md#term-instance--instance)'s number, and the harness's limit on how deep agents may start further agents ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+**Context:**
+
+- its [scope](../../glossary.md#term-scope--scope)
+- its [instance](../../glossary.md#term-instance--instance)'s number
+- the harness's limit on how deep agents may start further agents ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md))
 
 **Note:**
 
