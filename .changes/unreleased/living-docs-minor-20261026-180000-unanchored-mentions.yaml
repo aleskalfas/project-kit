@@ -1,0 +1,14 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  `pkit living-docs validate` reports what a page mentions and its anchors do
+  not cover, where the rule on grounding (RS-LDOC-001) binds: a path to a file
+  the repository holds, a decision record's or a rule's id, and a `pkit`
+  command. `pkit validate` shows one report per page, and the human view lists
+  each mention with an anchor that would cover it. It never fails. A passage
+  that only names a thing is marked with `<!-- unanchored: <reason> -->` right
+  after the mention, and a mark that passes nothing over is reported (DEC-001
+  point 6).

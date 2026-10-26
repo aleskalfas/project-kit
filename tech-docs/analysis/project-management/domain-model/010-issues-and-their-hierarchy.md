@@ -38,7 +38,7 @@ pkit:
 
 # VIEW-issues-and-their-hierarchy — Issues and their hierarchy
 
-A team's work needs grouping between long-term outcomes and the changes that each land on their own. Too flat, and the work becomes a wall of undifferentiated items. Too deep, and filing becomes a structural debate (DEC-004).
+A team's work needs grouping between long-term outcomes and the changes that each land on their own. Too flat, and the work becomes a wall of undifferentiated items. Too deep, and filing becomes a structural debate ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md)).
 
 An [issue](../glossary.md#term-issue--issue) is the item of work, and its type sets its level: [EPIC](../glossary.md#term-epic--epic), [Feature](../glossary.md#term-feature--feature), [Umbrella](../glossary.md#term-umbrella--umbrella) or [Task](../glossary.md#term-task--task).
 
@@ -103,23 +103,23 @@ flowchart LR
 
 Defined in [TERM-issue](../glossary.md#term-issue--issue).
 
-**Why:** A team's work needs one kind of item that the hosting service already shows, links and searches. GitHub's issues give it, with sub-issues, [Milestones](../glossary.md#term-milestone--milestone) and labels that the [methodology](../../core/glossary.md#term-methodology--methodology) would otherwise have to specify in its own terms (DEC-003).
+**Why:** A team's work needs one kind of item that the hosting service already shows, links and searches. GitHub's issues give it, with sub-issues, [Milestones](../glossary.md#term-milestone--milestone) and labels that the [methodology](../../core/glossary.md#term-methodology--methodology) would otherwise have to specify in its own terms ([DEC-003](../../../../.pkit/capabilities/project-management/decisions/DEC-003-github-bound-substrate.md)).
 
 An issue is one item of work a [project](../../core/glossary.md#term-project--project) tracks on GitHub. project-management files each issue as one of four types, and each type sits at its own level of the hierarchy.
 
 **Attributes:**
 
-- its title, which opens with its type's prefix, such as `[Task]` (DEC-004)
-- its body, whose first line is its [parent reference](../glossary.md#term-parent-reference--parent-reference) (DEC-005 and DEC-010)
+- its title, which opens with its type's prefix, such as `[Task]` ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md))
+- its body, whose first line is its [parent reference](../glossary.md#term-parent-reference--parent-reference) ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md) and [DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
 - its labels, such as the one that gives its kind of work (DEC-003)
 
 **Relations:**
 
 - It is an [EPIC](../glossary.md#term-epic--epic), a [Feature](../glossary.md#term-feature--feature), an [Umbrella](../glossary.md#term-umbrella--umbrella) or a [Task](../glossary.md#term-task--task) (DEC-004).
-- It sits in at most one Milestone at a time (DEC-016).
+- It sits in at most one Milestone at a time ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 - Its parent is another issue or a Milestone. GitHub's sub-issue link holds the parent, and the parent reference names it (DEC-005).
 
-**States:** An issue is open until it closes. It closes only once each of its [checkboxes](../glossary.md#term-checkbox--checkbox) is ticked (DEC-007).
+**States:** An issue is open until it closes. It closes only once each of its [checkboxes](../glossary.md#term-checkbox--checkbox) is ticked ([DEC-007](../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 **Always true:**
 
@@ -129,7 +129,7 @@ An issue is one item of work a [project](../../core/glossary.md#term-project--pr
 
 Defined in [TERM-milestone](../glossary.md#term-milestone--milestone).
 
-**Why:** Teams plan in different cadences, such as a sprint, a release wave or a quarter. So each [project](../../core/glossary.md#term-project--project) declares what its Milestones mean, rather than one meaning for every project. A date-based Milestone models a sprint: it ends on its date, and its unfinished work goes on in the next (DEC-016).
+**Why:** Teams plan in different cadences, such as a sprint, a release wave or a quarter. So each [project](../../core/glossary.md#term-project--project) declares what its Milestones mean, rather than one meaning for every project. A date-based Milestone models a sprint: it ends on its date, and its unfinished work goes on in the next ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 A Milestone is GitHub's own container, kept apart from issues. It holds the issues of one delivery window, or of one bundle of outcomes that close together. Its description opens with the line that says when it closes.
 
@@ -142,7 +142,7 @@ A Milestone is GitHub's own container, kept apart from issues. It holds the issu
 **Relations:**
 
 - It holds issues, each in at most one Milestone at a time (DEC-016).
-- It holds [EPICs](../glossary.md#term-epic--epic) directly. Where the project skips the EPIC, it holds Features, Umbrellas and Tasks directly too (DEC-004).
+- It holds [EPICs](../glossary.md#term-epic--epic) directly. Where the project skips the EPIC, it holds Features, Umbrellas and Tasks directly too ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md)).
 - It holds no other Milestone (DEC-016).
 - It belongs to one Milestone category (DEC-016).
 
@@ -156,7 +156,7 @@ A Milestone is GitHub's own container, kept apart from issues. It holds the issu
 
 Defined in [TERM-close-trigger](../glossary.md#term-close-trigger--close-trigger).
 
-**Why:** When a [Milestone](../glossary.md#term-milestone--milestone) closes must be declared and readable by a machine, so nothing is inferred while the line is there. The line mirrors the [parent reference](../glossary.md#term-parent-reference--parent-reference) on an [issue](../glossary.md#term-issue--issue)'s first line, and people see it where they read the Milestone (DEC-016).
+**Why:** When a [Milestone](../glossary.md#term-milestone--milestone) closes must be declared and readable by a machine, so nothing is inferred while the line is there. The line mirrors the [parent reference](../glossary.md#term-parent-reference--parent-reference) on an [issue](../glossary.md#term-issue--issue)'s first line, and people see it where they read the Milestone ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 A close trigger is the first line of a Milestone's description, such as `Close trigger: date-based`. A `date-based` Milestone closes at its due date, and its open issues roll forward. A `content-based` one closes once its issues have closed, and one marked `either` closes at whichever comes first.
 
@@ -179,7 +179,7 @@ A close trigger is the first line of a Milestone's description, such as `Close t
 
 Defined in [TERM-milestone-category](../glossary.md#term-milestone-category--milestone-category).
 
-**Why:** Teams plan in different cadences, and the [methodology](../../core/glossary.md#term-methodology--methodology) prescribes none of them. So a [project](../../core/glossary.md#term-project--project) declares what its [Milestones](../glossary.md#term-milestone--milestone) mean before it creates the first one. Readers then see which kinds it supports, without reading the record (DEC-016).
+**Why:** Teams plan in different cadences, and the [methodology](../../core/glossary.md#term-methodology--methodology) prescribes none of them. So a [project](../../core/glossary.md#term-project--project) declares what its [Milestones](../glossary.md#term-milestone--milestone) mean before it creates the first one. Readers then see which kinds it supports, without reading the record ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 A Milestone category is one kind of Milestone a project uses, such as a sprint or a bundle of outcomes. Its title format, with an optional number, shows which category a Milestone belongs to.
 
@@ -205,19 +205,19 @@ A Milestone category is one kind of Milestone a project uses, such as a sprint o
 
 Defined in [TERM-epic](../glossary.md#term-epic--epic).
 
-**Why:** Planning needs a level for long-term outcomes, above the work that delivers them. The EPIC is that level, the first of the hierarchy's three structural levels (DEC-004).
+**Why:** Planning needs a level for long-term outcomes, above the work that delivers them. The EPIC is that level, the first of the hierarchy's three structural levels ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md)).
 
 An EPIC states one outcome that spans several quarters. The work that delivers the outcome is filed under the EPIC. The EPIC closes once its success criteria are met.
 
 **Attributes:**
 
-- its outcome, under `## Outcome` (DEC-010)
+- its outcome, under `## Outcome` ([DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
 - its success criteria, as [checkboxes](../glossary.md#term-checkbox--checkbox) under `## Success criteria` (DEC-010)
 
 **Relations:**
 
 - It sits directly under a [Milestone](../glossary.md#term-milestone--milestone), or under none while it is not scheduled (DEC-004 and DEC-010).
-- It holds Features, Umbrellas and Tasks (DEC-005).
+- It holds Features, Umbrellas and Tasks ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 **States:** None.
 
@@ -229,19 +229,19 @@ An EPIC states one outcome that spans several quarters. The work that delivers t
 
 Defined in [TERM-feature](../glossary.md#term-feature--feature).
 
-**Why:** Between an outcome and its changes, planning needs to know which pieces of functionality ship. A Feature claims one, and its criteria check the claim. Without it, that signal is lost (DEC-004).
+**Why:** Between an outcome and its changes, planning needs to know which pieces of functionality ship. A Feature claims one, and its criteria check the claim. Without it, that signal is lost ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md)).
 
 A Feature is an [issue](../glossary.md#term-issue--issue) for one coherent piece of functionality, which several Tasks deliver. Its acceptance criteria say how the claim is checked.
 
 **Attributes:**
 
-- what it claims, under `## What` (DEC-010)
+- what it claims, under `## What` ([DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
 - its acceptance criteria, as [checkboxes](../glossary.md#term-checkbox--checkbox) (DEC-010)
 
 **Relations:**
 
 - It sits under an [EPIC](../glossary.md#term-epic--epic) or an [Umbrella](../glossary.md#term-umbrella--umbrella), or straight under a [Milestone](../glossary.md#term-milestone--milestone) where the [project](../../core/glossary.md#term-project--project) skips the EPIC (DEC-004).
-- It holds Tasks, and no Feature or Umbrella (DEC-005).
+- It holds Tasks, and no Feature or Umbrella ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 **States:** None.
 
@@ -253,13 +253,13 @@ A Feature is an [issue](../glossary.md#term-issue--issue) for one coherent piece
 
 Defined in [TERM-umbrella](../glossary.md#term-umbrella--umbrella).
 
-**Why:** Some related work shares a theme and claims no functionality. An Umbrella groups it without that claim, so the claim a [Feature](../glossary.md#term-feature--feature) makes keeps its meaning (DEC-004 and DEC-005).
+**Why:** Some related work shares a theme and claims no functionality. An Umbrella groups it without that claim, so the claim a [Feature](../glossary.md#term-feature--feature) makes keeps its meaning ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 An Umbrella is a bucket of related work. Its body says what holds that work together, and it carries no acceptance criteria.
 
 **Attributes:**
 
-- its purpose, under `## Purpose` (DEC-010)
+- its purpose, under `## Purpose` ([DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
 
 **Relations:**
 
@@ -276,7 +276,7 @@ An Umbrella is a bucket of related work. Its body says what holds that work toge
 
 Defined in [TERM-task](../glossary.md#term-task--task).
 
-**Why:** The lowest structural level of planning is the unit of work that lands as one [change](../../core/glossary.md#term-change--change). A Task is that unit (DEC-004).
+**Why:** The lowest structural level of planning is the unit of work that lands as one [change](../../core/glossary.md#term-change--change). A Task is that unit ([DEC-004](../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md)).
 
 A Task is an [issue](../glossary.md#term-issue--issue) for one unit of implementation work, which one [pull request](../../core/glossary.md#term-pull-request--pull-request) delivers. Its body says these:
 
@@ -286,14 +286,14 @@ A Task is an [issue](../glossary.md#term-issue--issue) for one unit of implement
 
 **Attributes:**
 
-- what changes, under `## What` (DEC-010)
+- what changes, under `## What` ([DEC-010](../../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md))
 - its acceptance criteria, as [checkboxes](../glossary.md#term-checkbox--checkbox) (DEC-010)
 - the documents that change with it, under `## Doc impact` (DEC-010)
 
 **Relations:**
 
 - It sits under a [Feature](../glossary.md#term-feature--feature), an [Umbrella](../glossary.md#term-umbrella--umbrella) or an [EPIC](../glossary.md#term-epic--epic), or straight under a [Milestone](../glossary.md#term-milestone--milestone) where the [project](../../core/glossary.md#term-project--project) skips the EPIC (DEC-004).
-- It holds no issue. Its sub-tasks are checkboxes in its body (DEC-005).
+- It holds no issue. Its sub-tasks are checkboxes in its body ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 **States:** None.
 
@@ -305,7 +305,7 @@ A Task is an [issue](../glossary.md#term-issue--issue) for one unit of implement
 
 Defined in [TERM-parent-reference](../glossary.md#term-parent-reference--parent-reference).
 
-**Why:** A child must name its parent where GitHub's interface does not show the link, such as in a diff or an exported [issue](../glossary.md#term-issue--issue). The parent reference names it there, and survives wherever the body is copied (DEC-005).
+**Why:** A child must name its parent where GitHub's interface does not show the link, such as in a diff or an exported [issue](../glossary.md#term-issue--issue). The parent reference names it there, and survives wherever the body is copied ([DEC-005](../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 A parent reference is the first line of an issue's body, such as `EPIC: #1643`. Its form depends on the issue's type, and GitHub's sub-issue link holds the same parent.
 
@@ -327,7 +327,7 @@ A parent reference is the first line of an issue's body, such as `EPIC: #1643`. 
 
 Defined in [TERM-checkbox](../glossary.md#term-checkbox--checkbox).
 
-**Why:** Checkboxes in a body are either decoration or gates. Soft warnings drifted into decoration in practice, so a checkbox is a gate: it makes a claim carry weight (DEC-007).
+**Why:** Checkboxes in a body are either decoration or gates. Soft warnings drifted into decoration in practice, so a checkbox is a gate: it makes a claim carry weight ([DEC-007](../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 A checkbox is a box in an [issue](../glossary.md#term-issue--issue)'s body beside one claim, such as an acceptance criterion. Whoever ticks it has checked the claim at that moment, and nothing checks the claim again at the close.
 

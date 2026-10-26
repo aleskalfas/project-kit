@@ -29,7 +29,7 @@ pkit:
 
 # VIEW-the-issue-lifecycle — The issue lifecycle
 
-An agent makes most of an [issue](../glossary.md#term-issue--issue)'s moves, but the start and the end of work are commitments a person must authorise. Without fixed states, and a way for the issues above to follow, what the agent does is not deterministic (DEC-006).
+An agent makes most of an [issue](../glossary.md#term-issue--issue)'s moves, but the start and the end of work are commitments a person must authorise. Without fixed states, and a way for the issues above to follow, what the agent does is not deterministic ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 The [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) fixes the states and the moves between them. An [authorisation](../glossary.md#term-authorisation--authorisation) is a person's decision on a move they hold. The [cascade](../glossary.md#term-cascade--cascade) brings the issues above along with each move. A [bypass](../glossary.md#term-bypass--bypass) overrides a check with a person's reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records.
 
@@ -77,7 +77,7 @@ flowchart LR
 
 Defined in [TERM-issue-lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle).
 
-**Why:** Every [issue](../glossary.md#term-issue--issue) moves from filing to closure, and an agent makes most of the moves. Fixed states, with fixed moves between them, make what the agent does deterministic. The moves that start and end work are the ones a person holds (DEC-006).
+**Why:** Every [issue](../glossary.md#term-issue--issue) moves from filing to closure, and an agent makes most of the moves. Fixed states, with fixed moves between them, make what the agent does deterministic. The moves that start and end work are the ones a person holds ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 The issue lifecycle is the [process](../../core/glossary.md#term-process--process) every issue moves through: Todo, Backlog, In Progress, Review and Done. Who moves an issue:
 
@@ -93,7 +93,7 @@ The issue lifecycle is the [process](../../core/glossary.md#term-process--proces
 **Relations:**
 
 - Each issue moves through it, and only a [Task](../glossary.md#term-task--task) enters Review (DEC-006).
-- The core's engine checks each move against its definition (DEC-033).
+- The core's engine checks each move against its definition ([DEC-033](../../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 
 **States:** An issue is in Todo when it is filed, and in Backlog once a person schedules it. It is in In Progress once its work starts, and a Task is in Review while its [pull request](../../core/glossary.md#term-pull-request--pull-request) is open. An issue is in Done once it closes (DEC-006).
 
@@ -121,15 +121,15 @@ stateDiagram-v2
 
 Defined in [TERM-authorisation](../glossary.md#term-authorisation--authorisation).
 
-**Why:** The start and the end of work are commitments an agent must not make on its own. Held as refusals the agent cannot pass, the gates turn the [methodology](../../core/glossary.md#term-methodology--methodology)'s authority into something enforced rather than trusted (DEC-006).
+**Why:** The start and the end of work are commitments an agent must not make on its own. Held as refusals the agent cannot pass, the gates turn the [methodology](../../core/glossary.md#term-methodology--methodology)'s authority into something enforced rather than trusted ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 An authorisation is a person's decision on one move they hold. Scheduling an [issue](../glossary.md#term-issue--issue) needs one, and so does merging a [Task](../glossary.md#term-task--task)'s [pull request](../../core/glossary.md#term-pull-request--pull-request). Closing an issue as won't do, or a finished parent issue, needs one too. The person gives it in the session, for the issue at hand, and it never stands for a later move.
 
 **Attributes:**
 
 - the move it is for, and the issue (DEC-006)
-- a reason, where the move is refused unless a person overrides it, such as scheduling with no [Milestone](../glossary.md#term-milestone--milestone) (DEC-006 and DEC-014)
-- for a merge, the [head](../../core/glossary.md#term-head--head) of the pull request it covers (DEC-055 point 3)
+- a reason, where the move is refused unless a person overrides it, such as scheduling with no [Milestone](../glossary.md#term-milestone--milestone) (DEC-006 and [DEC-014](../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md))
+- for a merge, the [head](../../core/glossary.md#term-head--head) of the pull request it covers ([DEC-055 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation))
 
 **Relations:**
 
@@ -141,14 +141,14 @@ An authorisation is a person's decision on one move they hold. Scheduling an [is
 **Always true:**
 
 - A move a person holds is never made without its authorisation (DEC-006).
-- A [bypass](../glossary.md#term-bypass--bypass)'s reason goes into an [audit comment](../glossary.md#term-audit-comment--audit-comment) before the move, where the [project](../../core/glossary.md#term-project--project)'s settings keep such comments (DEC-014 and DEC-049).
+- A [bypass](../glossary.md#term-bypass--bypass)'s reason goes into an [audit comment](../glossary.md#term-audit-comment--audit-comment) before the move, where the [project](../../core/glossary.md#term-project--project)'s settings keep such comments (DEC-014 and [DEC-049](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 - An authorisation to merge is the person's, and no [reviewer](../../core/glossary.md#term-reviewer--reviewer)'s approval gives it (DEC-055 point 3).
 
 ## Cascade
 
 Defined in [TERM-cascade](../glossary.md#term-cascade--cascade).
 
-**Why:** A parent's progress follows from its children's, never the other way round. So a parent [issue](../glossary.md#term-issue--issue) behind the work under it is brought level, on nobody's say-so. Closing a parent is a commitment, so the cascade stops at each one for a person to authorise its close (DEC-006).
+**Why:** A parent's progress follows from its children's, never the other way round. So a parent [issue](../glossary.md#term-issue--issue) behind the work under it is brought level, on nobody's say-so. Closing a parent is a commitment, so the cascade stops at each one for a person to authorise its close ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 The cascade is what one issue's move does to the issues above it. Moving forward, it brings each one that is behind up to the issue's state, as far as In Progress. When a child closes, the cascade makes a parent whose children are all done eligible to close, and never closes that parent.
 
@@ -166,20 +166,20 @@ The cascade is what one issue's move does to the issues above it. Moving forward
 - It moves an issue above only forward, and never past In Progress (DEC-006).
 - It never moves a child because its parent moved (DEC-006).
 - A move to Done from Todo or Backlog, a won't-do close, moves no issue above (DEC-006).
-- A parent issue closes only once its [checkboxes](../glossary.md#term-checkbox--checkbox) are ticked and its children are done (DEC-034).
+- A parent issue closes only once its [checkboxes](../glossary.md#term-checkbox--checkbox) are ticked and its children are done ([DEC-034](../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)).
 
 ## Audit comment
 
 Defined in [TERM-audit-comment](../glossary.md#term-audit-comment--audit-comment).
 
-**Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which version made an edit (DEC-049).
+**Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which version made an edit ([DEC-049](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
 
 An audit comment is one the system posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). At the default setting it records each [bypass](../glossary.md#term-bypass--bypass) with its reason. At the fullest setting it records each write the system governs too.
 
 **Attributes:**
 
-- the reason, where it records a bypass (DEC-014)
-- at the fullest setting, the versions that made the write (DEC-049 point 2)
+- the reason, where it records a bypass ([DEC-014](../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md))
+- at the fullest setting, the versions that made the write ([DEC-049 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#2-github-comments-are-a-configurable-provenance-stamped-projection-with-three-intensities))
 
 **Relations:**
 
@@ -190,32 +190,32 @@ An audit comment is one the system posts on an [issue](../glossary.md#term-issue
 **Always true:**
 
 - The [project](../../core/glossary.md#term-project--project)'s settings choose among no audit comments, those of overrides alone, and one for each governed write (DEC-049 point 2).
-- One command alone posts the comment of a move, once for each move (DEC-049 point 4).
+- One command alone posts the comment of a move, once for each move ([DEC-049 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#4-format--single-poster-rules)).
 
 ## Bypass
 
 Defined in [TERM-bypass](../glossary.md#term-bypass--bypass).
 
-**Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person override such a check with a reason. The reason is posted before the write, so it survives a step that fails (DEC-014).
+**Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person override such a check with a reason. The reason is posted before the write, so it survives a step that fails ([DEC-014](../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)).
 
 A bypass overrides one check that refuses by default, such as scheduling an [issue](../glossary.md#term-issue--issue) with no [Milestone](../glossary.md#term-milestone--milestone). The person gives the reason with the command, and the system records it before it goes on.
 
 **Attributes:**
 
-- the check it overrides (DEC-046 point 1)
+- the check it overrides ([DEC-046 point 1](../../../../.pkit/capabilities/project-management/decisions/DEC-046-override-flag-convention.md#1---bypass-gate--the-sanctioned-override-of-a-bypassable-with-audit-gate))
 - its reason, which may not be empty (DEC-014)
 
 **Relations:**
 
 - An [audit comment](../glossary.md#term-audit-comment--audit-comment) records its reason, before the write it allows (DEC-014).
-- It is how a person authorises a move that the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) refuses unless a person overrides it (DEC-006).
+- It is how a person authorises a move that the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) refuses unless a person overrides it ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 **States:** None.
 
 **Always true:**
 
 - A bypass with no reason is refused (DEC-014).
-- A check that guards what must never happen takes no bypass. Only an operator's `--force` overrides it (DEC-046 point 2).
+- A check that guards what must never happen takes no bypass. Only an operator's `--force` overrides it ([DEC-046 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-046-override-flag-convention.md#2---force--the-operators-override-of-a-hard-reject-finding-or-a-hard-precondition)).
 
 ## What is built on these concepts
 

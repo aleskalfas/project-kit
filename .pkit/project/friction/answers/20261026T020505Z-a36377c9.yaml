@@ -1,0 +1,551 @@
+answers:
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T174422Z-ea676633.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T202350Z-6a1bd668.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221052Z-9302b480.yaml
+      - 20261025T234102Z-0231f155.yaml
+      - moved-69dea4023970.yaml
+    revalidated:
+      at: 2026-10-26T02:05:05Z
+      outcome: unchanged
+      unchanged-because: The decisions README gains Looking a citation up, on what pkit refs lookup prints for a point and a rule, and anchors document_parts.py. Main's answers, read here, judged WRITE's note on GUIDE and REWORK and RS-WRITE-016's rename of a linked heading. What CONTRIBUTING says of authoring and citing records, and of WRITE's rules, holds against both.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-067
+          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-053
+          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T02:05:12Z
+      outcome: unchanged
+      unchanged-because: This change gives pkit refs lookup a point's file, its heading's anchor and whether the file is a synced copy, in refs.py and in the command's help in cli.py. The README shows no lookup, and the actors, journeys and REQ-021 it rests on change only in links to the records they cite. Main's revalidations, read here, judged the README's rewritten claims and fences, which this change leaves as they are.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261025T214334Z-3176bb1a.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+    revalidated:
+      at: 2026-10-26T02:05:19Z
+      outcome: unchanged
+      unchanged-because: The Surface table of the command reference now says pkit refs lookup gives a point's file and heading anchor, and whether the file is a synced copy. This guide shows no lookup. Main's revision of its comparison and of its anchors on the use cases, read here, is untouched by that row, so the guide holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-26T02:07:58Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-bca813b8718e.yaml
+    revalidated:
+      at: 2026-10-26T02:08:04Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-82a9f92cf8a6.yaml
+    revalidated:
+      at: 2026-10-26T02:08:09Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-e74c084a6ef5.yaml
+    revalidated:
+      at: 2026-10-26T02:08:13Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-14cab8fa596f.yaml
+    revalidated:
+      at: 2026-10-26T02:08:19Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-26T02:08:24Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-50d19a823f20.yaml
+    revalidated:
+      at: 2026-10-26T02:08:29Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-26T02:08:34Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-66d5b1529575.yaml
+    revalidated:
+      at: 2026-10-26T02:08:39Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-828a24ebf347.yaml
+    revalidated:
+      at: 2026-10-26T02:08:43Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-c6041f71d67c.yaml
+    revalidated:
+      at: 2026-10-26T02:08:48Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-26T02:08:53Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-26T02:08:59Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-26T02:09:04Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-c95d6fad77f9.yaml
+    revalidated:
+      at: 2026-10-26T02:09:10Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-26T02:09:15Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-26T02:09:20Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-26T02:09:24Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-26T02:09:29Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-525e5f95da00.yaml
+    revalidated:
+      at: 2026-10-26T02:09:35Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-26T02:09:40Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-677ab7326b1b.yaml
+    revalidated:
+      at: 2026-10-26T02:09:45Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-26T02:09:50Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-26T02:09:55Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-012-report-problem.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-16225f01f42e.yaml
+    revalidated:
+      at: 2026-10-26T02:10:00Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-013-link-reports.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-441b89549614.yaml
+    revalidated:
+      at: 2026-10-26T02:10:04Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-26T02:10:11Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-26T02:10:16Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-26T02:10:21Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-26T02:10:26Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-26T02:10:32Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-c023390f2be9.yaml
+    revalidated:
+      at: 2026-10-26T02:10:37Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-4859ed958bd4.yaml
+    revalidated:
+      at: 2026-10-26T02:10:42Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, which now give a cited point's file, its heading's anchor and whether the file is a synced copy. This use case runs no lookup of a citation, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-26T02:10:49Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, and the decisions README gains Looking a citation up, on what that lookup prints for a point and a rule. Recording a decision, as this use case walks it, runs no lookup, and the README's schema, statuses and acceptance gate are as they were, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-26T02:10:54Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only pkit refs lookup's help and its JSON, and the decisions README gains Looking a citation up, on what that lookup prints for a point and a rule. Accepting a record through review, as this use case walks it, runs no lookup, and the README's statuses and acceptance gate are as they were, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-26T02:11:07Z
+      outcome: unchanged
+      unchanged-because: "refs.py and cli.py change only pkit refs lookup: it now resolves a record's point to its file and heading anchor, and says whether the file is a synced copy. pkit refs validate, which checks the references this use case's skill or agent declares, is as it was, so it holds."
+  - artefact: tech-docs/analysis/core/domain-model/010-the-system-and-its-methodology.md
+    read:
+      - moved-172e742805fb.yaml
+    revalidated:
+      at: 2026-10-26T02:11:36Z
+      outcome: unchanged
+      unchanged-because: TERM-point now lists extension point and entry point among its other senses, so neither phrase links the term. Its entry is otherwise as it was, and what this view explains of a point, one decision of a record under a permanent id, holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    read:
+      - moved-0fe260ad4d42.yaml
+    revalidated:
+      at: 2026-10-26T02:11:42Z
+      outcome: unchanged
+      unchanged-because: The decisions README gains Looking a citation up, on what pkit refs lookup prints for a point and a rule, and anchors document_parts.py. Its account of the acceptance gate is as it was, so the entry holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-bcae90c061e0.yaml
+    revalidated:
+      at: 2026-10-26T02:11:49Z
+      outcome: unchanged
+      unchanged-because: test_refs.py's test of pkit refs lookup now also reads each answer's file and anchor. The lookup only reads, so it owes no dry run, and the previews this requirement rests on are tested as they were.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/010-analyses-and-use-cases.md
+    revalidated:
+      at: 2026-10-26T02:11:56Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes, reading a body only at a mention or a citation. How analyses, their artefacts and their ids move together, as this view explains, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/020-revalidations.md
+    read:
+      - moved-9593b9f5285b.yaml
+    revalidated:
+      at: 2026-10-26T02:12:03Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes, reading a body only at a mention or a citation. How a revalidation is proposed, decided and recorded, as this view explains, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/030-kinds-and-structures.md
+    read:
+      - moved-47cbe686e4db.yaml
+    revalidated:
+      at: 2026-10-26T02:12:10Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes, reading a body only at a mention or a citation. What this view explains of kinds, their parts and their declared structures is untouched.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    revalidated:
+      at: 2026-10-26T02:12:16Z
+      outcome: unchanged
+      unchanged-because: The kinds' declared structures change only their hints' examples, which now cite a project's own record such as PRJ-003. DEC-001 point 1 now says the link command also links each citation a body makes. What an artefact kind is holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T02:12:22Z
+      outcome: unchanged
+      unchanged-because: The kinds' declared structures change only their hints' examples, which now cite a project's own record such as PRJ-003. DEC-001 point 1 now says the link command also links each citation a body makes. What a declared structure is holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-candidate
+    read:
+      - moved-a9ec29110af1.yaml
+    revalidated:
+      at: 2026-10-26T02:12:29Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. What a candidate is, and how a project chooses its parts from one, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-hint
+    revalidated:
+      at: 2026-10-26T02:12:35Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes, and the shipped examples cite a project's own record. What a hint is holds.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-shortfall
+    revalidated:
+      at: 2026-10-26T02:12:43Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. What a shortfall is, and the record it rests on, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-tightening
+    revalidated:
+      at: 2026-10-26T02:12:49Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. What a tightening is, and the rule it names, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-use-case
+    revalidated:
+      at: 2026-10-26T02:12:55Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now says the command that links terms also links each citation a body makes. What a use case is, and the parts it carries, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-revalidation-proposal
+    read:
+      - moved-8e5538b29006.yaml
+    revalidated:
+      at: 2026-10-26T02:13:02Z
+      outcome: unchanged
+      unchanged-because: The resolver's commands for an analysis-stale outcome now run pkit analysis link first, which links what the edit cites and, with a domain model, its terms. What a revalidation proposal holds, and that a person writes each answer it lists, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T02:13:09Z
+      outcome: unchanged
+      unchanged-because: The resolver's commands now run pkit analysis link before an updated answer, and the authoring skill's second step links what a body cites, in every analysis. DEC-001 point 1 says the link command links citations too. The agent still proposes and a person still decides each answer, as this requirement asks.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T02:13:16Z
+      outcome: unchanged
+      unchanged-because: check.py now holds the links of citations, whatever any rule's status, as it holds the links to terms, and DEC-001 point 1 says the link command links citations too. A body is still held to its declared structure only where the format rule binds, and a record's body always, so this requirement holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    revalidated:
+      at: 2026-10-26T02:13:23Z
+      outcome: unchanged
+      unchanged-because: The shipped examples of the hints now cite a project's own record, such as PRJ-003, and DEC-001 point 1 says the link command links each citation a body makes. Choosing each kind's parts from a candidate, as this use case walks it, is untouched.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-074-free-uncited-ids.md
+    read:
+      - moved-cac80ba8834a.yaml
+    revalidated:
+      at: 2026-10-26T02:13:29Z
+      outcome: unchanged
+      unchanged-because: The authoring skill's second step now runs pkit analysis link in every analysis, to link what a body cites, and says to name the capability before a DEC-NNN it warns of. Freeing the ids of artefacts nothing cites, as this use case walks it, is untouched.

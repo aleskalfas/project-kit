@@ -29,14 +29,14 @@ pkit:
 
 **Other actors:**
 
-- **Operator** (`ACT-operator`): keeps the [harness](../../../glossary.md#term-harness--harness)'s settings under which the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration says the requirement holds. The operator's `pkit harness report` reads only the support declarations. So it resolves the requirement `indeterminate`, with the adapter's grade and cost, and never as met (COR-047 points 3 and 4).
+- **Operator** (`ACT-operator`): keeps the [harness](../../../glossary.md#term-harness--harness)'s settings under which the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration says the requirement holds. The operator's `pkit harness report` reads only the support declarations. So it resolves the requirement `indeterminate`, with the adapter's grade and cost, and never as met (COR-047 points [3](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction) and [4](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#4-every-requirement-names-its-observation-point-what-cannot-be-observed-is-reported-not-passed)).
 
-**Preconditions:** **From UC-014, UC-019 or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the [project](../../../glossary.md#term-project--project)'s [harness](../../../glossary.md#term-harness--harness) answers the harness requirement `delegated-result-complete` with a grade and any cost (COR-047 [point](../../../glossary.md#term-point--point) 2).
+**Preconditions:** **From UC-014, UC-019 or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the [project](../../../glossary.md#term-project--project)'s [harness](../../../glossary.md#term-harness--harness) answers the harness requirement `delegated-result-complete` with a grade and any cost ([COR-047 point 2](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 **Assumptions:**
 
-- Where the agent meets the cost the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration names, the [harness](../../../glossary.md#term-harness--harness) delivers the delegated agent's whole result, with no further exchange needed. The [methodology](../../../glossary.md#term-methodology--methodology) states this as the harness requirement `delegated-result-complete`, whose truth only an agent inside a session can see (COR-047 [point](../../../glossary.md#term-point--point) 4).
-- No [operational rule](../../../glossary.md#term-operational-rule--operational-rule) of the core tells the agent that cost, and nothing at run time holds the agent to it (COR-047 point 2).
+- Where the agent meets the cost the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration names, the [harness](../../../glossary.md#term-harness--harness) delivers the delegated agent's whole result, with no further exchange needed. The [methodology](../../../glossary.md#term-methodology--methodology) states this as the harness requirement `delegated-result-complete`, whose truth only an agent inside a session can see ([COR-047 point 4](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#4-every-requirement-names-its-observation-point-what-cannot-be-observed-is-reported-not-passed)).
+- No [operational rule](../../../glossary.md#term-operational-rule--operational-rule) of the core tells the agent that cost, and nothing at run time holds the agent to it ([COR-047 point 2](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 **Trigger:** The agent's work calls for another agent's judgement, such as a review of its draft.
 
@@ -50,8 +50,8 @@ pkit:
 **Variants:**
 
 - **1a.** The agent dispatches the delegated agent without meeting the cost, such as with a `name` while Claude Code's agent teams are on. The [harness](../../../glossary.md#term-harness--harness) cuts the result, at 4064 characters in the measurement the requirement cites (`.pkit/schemas/harness-requirements.yaml`). The part that arrives reads as a complete result, and nothing in the [system](../../../glossary.md#term-system--system) detects the cut.
-- **3a.** The support declaration grades the requirement `not-achievable`, with `harness_versions: unbounded`. No delegation brings the whole result back, and `pkit harness report` resolves the requirement `unsatisfied`, `computed` (COR-047 [point](../../../glossary.md#term-point--point) 2).
+- **3a.** The support declaration grades the requirement `not-achievable`, with `harness_versions: unbounded`. No delegation brings the whole result back, and `pkit harness report` resolves the requirement `unsatisfied`, `computed` ([COR-047 point 2](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#2-each-adapter-declares-its-support-graded-and-may-bound-it-by-harness-version)).
 
 **Postconditions:** The agent holds the delegated agent's whole result, and acts on all of it.
 
-**Minimal guarantees:** A requirement that the support declaration leaves unanswered, or that no reading can observe, is never reported as met (COR-047 points 3 and 4).
+**Minimal guarantees:** A requirement that the support declaration leaves unanswered, or that no reading can observe, is never reported as met (COR-047 points [3](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction) and [4](../../../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#4-every-requirement-names-its-observation-point-what-cannot-be-observed-is-reported-not-passed)).

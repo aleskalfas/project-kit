@@ -38,7 +38,7 @@ pkit:
 **Preconditions:**
 
 - **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
-- **From UC-015 or UC-048, or Environment:** The [capability](../../../glossary.md#term-capability--capability)'s [package metadata](../../../glossary.md#term-package-metadata--package-metadata) is on the machine. The project authors the capability, or the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI ships it (COR-053 [point](../../../glossary.md#term-point--point) 8).
+- **From UC-015 or UC-048, or Environment:** The [capability](../../../glossary.md#term-capability--capability)'s [package metadata](../../../glossary.md#term-package-metadata--package-metadata) is on the machine. The project authors the capability, or the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI ships it ([COR-053 point 8](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 
 **Assumptions:** None.
 
@@ -48,7 +48,7 @@ pkit:
 
 1. The adopter runs `pkit status`.
 2. Where the [project](../../../glossary.md#term-project--project)'s wiring has an unmet need, the [system](../../../glossary.md#term-system--system) suggests each [capability](../../../glossary.md#term-capability--capability) of the local catalogue that would meet it. It never uses the network (REQ-011). Such a need is a [data point](../../../glossary.md#term-data-point--data-point) nothing fills, a [role](../../../glossary.md#term-role--role) nobody provides or an upstream not installed.
-3. The system prints `suggested          <n> from local catalogues (nothing is installed):`, then a line for each, such as `<point> (unfilled point): <name> (kit-shipped) contributes to it at version 1`. Each line names `pkit capabilities show <name>`, and a suggestion installs nothing (COR-053 [point](../../../glossary.md#term-point--point) 8).
+3. The system prints `suggested          <n> from local catalogues (nothing is installed):`, then a line for each, such as `<point> (unfilled point): <name> (kit-shipped) contributes to it at version 1`. Each line names `pkit capabilities show <name>`, and a suggestion installs nothing ([COR-053 point 8](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly)).
 4. The adopter runs `pkit capabilities show <name>`.
 5. The system finds the capability in the local catalogue: installed, authored in the project, or shipped with the running CLI. It reads the capability's [package metadata](../../../glossary.md#term-package-metadata--package-metadata) alone.
 6. The system prints the roles the capability provides, the data points it accepts and offers, and its extensions. Under `What connects here`, it gives the wiring the project would have with the capability installed.
@@ -72,5 +72,5 @@ pkit:
 
 **Minimal guarantees:**
 
-- Neither command writes anything, and a suggestion is never an action (COR-053 [point](../../../glossary.md#term-point--point) 8 and `capability_plans.py`).
-- Under a CLI at another [version](../../../glossary.md#term-version--version) than the [project](../../../glossary.md#term-project--project) records, the plan stops, and never shows another [release](../../../glossary.md#term-release--release)'s wiring (ADR-065 point 7).
+- Neither command writes anything, and a suggestion is never an action ([COR-053 point 8](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#8-discovery-a-plan-predicts-the-wiring-exactly) and `capability_plans.py`).
+- Under a CLI at another [version](../../../glossary.md#term-version--version) than the [project](../../../glossary.md#term-project--project) records, the plan stops, and never shows another [release](../../../glossary.md#term-release--release)'s wiring ([ADR-065 point 7](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#7-syncs-guard-stops-a-command-that-would-propagate-under-another-version)).
