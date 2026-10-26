@@ -519,7 +519,7 @@ def guard(
         first = min(resolution.claimants)
         if account == clone.login and first == clone.instance and first in resolution.owners:
             return Guard(PASSED)
-        whose = "" if account == clone.login else f" of @{account}"
+        whose = f" of @{account}" if account and account != clone.login else ""
         why = f"#{n} is owned by {_owner(resolution, first)}{whose}"
     me = clone.named()
     reason = (bypass or "").strip()

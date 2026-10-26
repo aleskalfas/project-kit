@@ -484,6 +484,18 @@ def test_the_guard_refuses_an_instance_of_another_account(ic, root: Path) -> Non
     assert "#7 is owned by instance 2 of @someone-else" in decision.line
 
 
+def test_the_guard_names_no_account_on_an_unassigned_issue(ic, root: Path) -> None:
+    """An unassigned issue that a label owns names its instance alone, never `@None`."""
+    gh = FakeGitHub()
+    gh.add(7, assignees=(), labels=("instance:3",))
+    decision = _guard(ic, gh, _clone(ic, root, substrate="label"))
+    assert decision.refused
+    assert decision.line.startswith(
+        "[refused] edit-issue #7: #7 is owned by instance 3, and this clone is instance 2."
+    )
+    assert "@None" not in decision.line
+
+
 def test_in_a_same_instant_clash_the_guard_refuses_the_higher_instance(ic, root: Path) -> None:
     gh = FakeGitHub()
     gh.add(7)
