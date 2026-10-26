@@ -1,12 +1,13 @@
 ---
 name: pm
-description: Work with the project-management capability — file a new issue against the methodology's body shape, validate an existing issue body, or transition an issue through the lifecycle state machine. Composite skill per COR-020; dispatches to per-operation sub-procedures.
+description: Work with the project-management capability — file a new issue against the methodology's body shape, validate an existing issue body, transition an issue through the lifecycle state machine, or take a seat of the project's topology and run its role's loop. Composite skill per COR-020; dispatches to per-operation sub-procedures.
 composes:
   - create-issue.md
   - validate-body.md
   - transition-state.md
   - batch-plan.md
   - fix-drift.md
+  - work-loop.md
 gates:
   - COR-008
   - COR-017
@@ -37,6 +38,7 @@ reads:
     - .pkit/capabilities/project-management/skills/pm/transition-state.md
     - .pkit/capabilities/project-management/skills/pm/batch-plan.md
     - .pkit/capabilities/project-management/skills/pm/fix-drift.md
+    - .pkit/capabilities/project-management/skills/pm/work-loop.md
     - .pkit/capabilities/project-management/agents/project-manager/storyboard.md
     - .pkit/capabilities/project-management/project/workstreams.yaml
 ---
@@ -91,8 +93,9 @@ The three operations don't overlap — they answer different questions. Pick by 
 | **Validate an existing issue body** | An existing issue's body is being edited, or the project-manager is checking an inherited issue at first interaction. Walks every body rule the methodology mandates and surfaces issues by severity. Used as a pre-check before any transition. | validate-body |
 | **Transition an issue's state** | Move an issue forward (Todo → Backlog → In Progress → Review) or close it (Review → Done via PR merge; any-state → Done via won't-do; cascade-eligibility close for parents). Runs the cascade after every state change. Its review step requests the reviewer verdicts on the PR of an issue in Review. | transition-state |
 | **Run the fixers after a merge** | A pull request merged into the default branch: start the granted fixers on what it left out of date, bring their proposals to the person in one batch, record what the person refuses or answers, and apply what they accept through an ordinary pull request ([project-management:DEC-056-drift-fixers]). Also when the person asks what the fixers proposed. | fix-drift |
+| **Take a seat and run its role** | At the start of each session: take a seat of the project's topology where the session was started for one, and while the clone holds one, run its role's loop. A planner slices and files work with no owner, through batch-plan. A worker takes the next ready Task, builds it in its clone and opens its pull request ([project-management:DEC-059-topology-of-seats]). | work-loop |
 
-The project-manager typically invokes them in sequence: create-issue (file) → validate-body (after any edit) → transition-state (advance/close). After each merge into the default branch, it runs fix-drift in the same session. For one-off operator use, pick the single relevant one. After picking, open the matching sub-procedure file in this folder and follow its walkthrough.
+The project-manager typically invokes them in sequence: create-issue (file) → validate-body (after any edit) → transition-state (advance/close). A project-manager session first runs work-loop's first step, and a session that holds a seat then runs its role's loop, which composes the others. After each merge into the default branch, it runs fix-drift in the same session. For one-off operator use, pick the single relevant one. After picking, open the matching sub-procedure file in this folder and follow its walkthrough.
 
 ## Shared framing (applies to all three operations)
 

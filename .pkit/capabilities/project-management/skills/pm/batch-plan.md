@@ -6,6 +6,7 @@ Sub-procedure of the pm composite skill (`pm.md` in this folder). The `project-m
 
 - The user provides intent + at least one reference artifact and asks the agent to plan / scope / slice the work.
 - The agent infers batch-planning from request shape per step 3 of `project-manager.md`'s `How you work` — the user does not name "batch-plan mode" explicitly.
+- A planner's seat runs it for each round of its loop ([work-loop](work-loop.md)), on the intent the person gives, or on the slices an EPIC's second plan waits for.
 
 When the request is **single-issue** ("file this one bug", "create the EPIC for X"), use [create-issue](create-issue.md) directly instead.
 
@@ -19,6 +20,7 @@ Six sequential steps. The agent narrates each step's start to the user per the s
 - Read every reference artifact the user points at, using the `Read` tool. Common shapes: a scratchpad note under `.pkit/scratchpad/`, a handoff document, a related GitHub issue (fetch via `gh issue view`), a decision record, or a verbal description from earlier in the session.
 - If any reference cannot be resolved (path not found, issue not accessible), surface the gap before proposing a slicing — do not guess content.
 - If the user's intent has missing inputs that prevent slicing (no reference at all; scope too vague), ask at most two clarifying questions per the storyboard's Scenario 2 — not a sequence of single-question turns.
+- **Where the project declares a topology, read the seats too:** `pkit pm seats` lists each seat on the default branch, with its role and its scope ([project-management:DEC-059-topology-of-seats] point 1). The slicing uses them to see which seats may take each Task, and the gate names each Task that no seat may take.
 
 ### 2. Walk the use cases (while the use-case point is not off)
 
@@ -42,14 +44,34 @@ Per [project-management:DEC-054-use-case-validation], a slicing is checked again
 
 ### 3. Propose the slicing
 
-Apply the methodology's typing rules to the work units implied by intent + references:
+**First, name the shared choices.** Name each choice that two or more Tasks would otherwise make each for itself ([project-management:DEC-060-foundation-before-slices] point 1). The Tasks that could share one include the work's Tasks, the work the plan says will follow, and the open Tasks, which `pkit pm show-tree` lists. Examples are the architecture, a library, the layout of the code, the contract between layers, and the shape each of a repeated kind takes.
+
+Judge each choice:
+
+- **Settled:** an accepted record decides it, or merged code shows a pattern the Tasks can follow. Say which record, or which code.
+- **In hand:** an open foundation's Feature lists it under its `## Shared choices`. Plan no foundation of your own for it, and plan the slices once that Feature closes.
+- **Open:** nothing settles it, so the work needs a foundation. Say whether the foundation settles it by a record or by its walking skeleton.
+
+Where every choice is settled, slice the work at once, as the rest of this step says. Otherwise this plan is the first of two, and files an EPIC even for a single deliverable (DEC-060 points 2 to 4):
+
+- **The EPIC** for the work holds the intent in its body, and an outline of the slices under `## Outline of the slices` ([project-management:DEC-004-six-level-hierarchy]). The outline names each foundation's Feature the slices wait for. No slice is filed.
+- **The foundation's Feature,** where a choice is open, sits under the EPIC. Its body lists the choices it settles under `## Shared choices`, so that any later filer finds them.
+- **The records come first.** The Feature's first Task holds a record of each architectural choice. The architect agent authors the records where the project deploys it, and the builder otherwise. The person's acceptance of each record is one of that Task's acceptance criteria, so the Task cannot close on a draft.
+- **Then the walking skeleton:** one thin slice that runs end to end through each layer the work touches, built on the accepted records. Its merged code settles the choices of convention, such as the layout of the code and of its tests.
+- **One Task at a time, at High priority.** Each Task of the foundation names the one before it in its `## Dependencies` section, so one is ready at a time. Each takes High priority, since the slices wait for them. Where one agent builds all the work in order, the person may fold the skeleton into the first slice: the foundation is then the records' Task and that slice, and the records still come first.
+- **The Tasks filed already.** A Task in Todo or Backlog that would make one of the foundation's choices gains the foundation's Feature in its `## Dependencies` section. A Task In Progress or in Review that already makes one goes on: the foundation's first Task names it among its dependencies, and its records start from what that Task chose.
+
+The second plan starts once each foundation's Feature the EPIC's outline names has closed, a close the person authorises. It reads the EPIC's body, and slices the work against the accepted records and the skeleton's code, under that EPIC. It names the shared choices again, and a choice still open plans a foundation of its own. Once its slices are filed, the outline names each slice by number.
+
+Then apply the methodology's typing rules to the work units implied by intent + references:
 
 - **Hierarchy choice** — [project-management:DEC-004-six-level-hierarchy] gives the Umbrella / EPIC / Feature / Task / Milestone taxonomy. Choose the smallest type that contains the work; do not over-nest. A multi-deliverable arc → EPIC with Feature children; a single deliverable → standalone Feature (no EPIC wrapper) per the small-adopter shortcut.
+- **Slice vertically** where the project declares a topology, so that one agent can finish a Task, or a Feature, across the software's layers ([project-management:DEC-059-topology-of-seats] point 7). Workstreams as layers of the software are not the partition. A seat's scope narrows that seat's own work, and reserves none of it. Slices that edit the same files are still built one at a time, as the same-module rule below says.
 - **Classification per ticket** — [project-management:DEC-012-classification-axes] specifies workstream / priority / kind labels. Read the adopter's `project/workstreams.yaml` for allowed workstream values; the kind axis maps to `type:*` labels per the script's enforcement. Default priority is Medium unless intent signals otherwise.
 - **Parent-refs** — [project-management:DEC-005-linking-and-containment] specifies the `Milestone: #N` / `EPIC: #N` / `Feature: #N` / `Task: #N` body-first-line format. The slicing must produce a consistent reference graph (no cycles; each child has the correct parent type per `issue-types.yaml`'s containment graph).
 - **Dependency chain** — express ordering between issues either implicitly (via parent-refs) or explicitly (as Dependencies sections in the body). Flag tight coupling in the body's Approach / Notes section.
 - **Same-module Tasks are built one at a time** — two Tasks are in the same module when the source files their bodies' implementation notes name overlap. The later one names the earlier in its `## Dependencies` section (one of the recommended sections in [project-management:DEC-010-issue-body-minimum-structure]; the relation is textual, per [project-management:DEC-005-linking-and-containment]), whether the earlier is in this plan or already open, and is dispatched once the earlier has merged — a scheduling constraint, because the two change the same files, not a dependency of one outcome on the other. Tasks in different modules run in parallel. Each landing in a shared module sends every other open PR there through another review round, which is why parallel work inside one module costs more than it saves.
-- **Milestone resolution** — if the adopter's config or the intent names a milestone, attach it. If neither, prompt before the approval gate. A follow-up a reviewer produced takes the scope decision in [create-issue](create-issue.md)'s intent recognition instead, which can leave it without a Milestone.
+- **Milestone resolution** — if the adopter's config or the intent names a milestone, it is the one the scheduled issues take. If neither, prompt before the approval gate. A follow-up a reviewer produced takes the scope decision in [create-issue](create-issue.md)'s intent recognition instead, which can leave it without a Milestone.
 - **Use cases per ticket** (only when step 2 walked a set) — name the use cases each Feature and Task serves, citing only ids the point holds. A Feature or Task that serves none — an internal refactor, a chore — shows `none`. Only Feature and Task bodies carry the section, so every other type shows `—`.
 - **Over an empty set: the prerequisite Task** (only when step 2 read an empty set). Decide it once the slicing stands, and again on every revision, since step 5 returns here:
   1. **Judge each planned Feature and Task: does it touch what users do?** Work touches what users do when it serves a goal someone using (not building) the software reaches, which a use case would describe. Internal work serves none: the build, tests, CI, refactors, tooling, and documentation of how the software is built and worked on. For a library or a command-line program, using it is calling or running it to reach the user's goal; building, testing or releasing it is internal. It is the judgement the walk over a set with entries makes for the second kind of gap: whether the plan builds behaviour a use case would describe.
@@ -71,7 +93,7 @@ Render the slicing as a single table the user can scan at a glance (the Use case
 
 Per [project-management:DEC-029-project-manager-agent-shape]'s reviewer-invocation discipline:
 
-- **Multi-issue arcs (≥3 issues to file)** invoke the `critic` agent against the proposed slicing. Pass the slicing table + the source reference document.
+- **Multi-issue arcs (≥3 issues to file)** invoke the `critic` agent against the proposed slicing. Pass the slicing table, the shared choices with their judgements, and the source reference document.
 - **Cross-component work (≥3 components touched, or any work introducing a new abstraction)** additionally invoke the `architect` agent.
 - **Narrow single-issue work** skips the reviewer pass.
 
@@ -83,6 +105,10 @@ Present the slicing to the user as a single message:
 
 - The slicing table.
 - The dependency chain (explicit ordering).
+- Where step 3 named shared choices: each shared choice with its judgement. A settled choice says where it is settled, one in hand names its foundation's Feature, and an open one says whether the foundation's records or its skeleton settle it. The person may overrule any judgement. A first plan says that the slices wait for a second plan, once the foundation's Feature closes ([project-management:DEC-060-foundation-before-slices] point 3).
+- A first plan's edits to issues already filed: each Task that gains the foundation's Feature among its dependencies, and each Task In Progress or in Review that the foundation's first Task names.
+- Which issues the plan schedules into Backlog on approval, with their Milestone, and which stay in Todo. A Task in Backlog may be taken by a worker at once. The approval authorises each of those moves ([project-management:DEC-006-state-machine-and-cascade]).
+- Where the project declares a topology, each Task that no seat may take.
 - Reviewer findings summary (which were incorporated, which are noted, which need user resolution).
 - When step 2 walked a set: the use-case mapping (the table's column) and both kinds of gap — each use case the intent touches that no planned issue names, and the behaviour the plan builds that no use case describes. Over a partly checked set: that the set may be incomplete, which filler did not answer, and the second kind as possible gaps. Where the walk went by titles alone, that too.
 - Over an empty set, the table's Use cases column and one of these lines:
@@ -107,6 +133,9 @@ Over an empty set, tell a decline from a correction:
 
 In dependency order (parents before children so parent-ref values are available):
 
+- **A first plan** files the EPIC, then the foundation's Feature, then its Tasks in their order, so that each names the one before by number. It then names the Feature in the EPIC's `## Outline of the slices`, with `edit-issue`. It adds the Feature to the `## Dependencies` section of each Task already filed that the gate listed, and names each Task In Progress or in Review in the first Task's section.
+- **An edit the clash guard refuses,** on a Task another instance owns, is never bypassed: name the Task to the user, who settles it with that Task's owner.
+- **From a planner's seat,** `create-issue` files with no owner, so each Task enters the pool that every seat shares once it is in Backlog ([work-loop](work-loop.md)).
 - For each ticket: call `scripts/create-issue.py` with `--type`, `--title`, `--kind`, `--workstream`, `--priority`, `--parent` (if any), `--yes` — and, when the plan originated from a feedback/change-request report #N, `--from-report N` so each filed issue is auto-linked into #N's `## Tracked by` (per [project-management:DEC-048-from-report-auto-link]; a link failure exits 4 with a remediation command and never rolls the issue back).
 - Parse the script's `[ok] created: <URL>` line for the new issue number.
 - Immediately call `scripts/edit-issue.py --body-file <tmp> --yes` to overwrite the auto-generated template body with the planned body content (the create-issue.py script produces a placeholder body; the real content is what was approved at the gate). When a Feature or Task names use cases, its body lists them in a `## Use cases` section, one per line (`- UC-003 — <the use case's title>`); an issue that serves none has no such section, and neither has a body of another type.
@@ -117,13 +146,13 @@ In dependency order (parents before children so parent-ref values are available)
   - **The Task was left out on a kept answer:** keep nothing; the kept answer is not renewed.
   - **Whenever the Task is left out on the user's answer**, given at this gate or kept, the plan's topmost new issue says in prose that it was planned without use cases — or, where the plan files only under an existing issue, each filed issue does.
   - **Internal work only, or the Task removed because an open issue already plans the authoring:** keep nothing and write no such line. In the second case, the dependent issues name that open issue in their `## Dependencies` sections.
-- Attach milestone via `gh issue edit <number> -R <repo> --milestone "<title>"` per the workaround for issue #177 (the create-issue.py `--milestone NUM` path is broken pending that issue's fix).
+- **Schedule** each issue the gate listed as scheduled: `pkit pm promote-issue <N> --reason "<the user's approval of the plan>"`, with `--milestone <M>` where the plan names one. It moves the issue from Todo to Backlog with an audit comment ([project-management:DEC-006-state-machine-and-cascade]). A Milestone schedules the issue it is attached to, so attach none to an issue the plan leaves in Todo.
 - Handle each script's failure modes per [validate-body](validate-body.md)'s severity model: warnings emit and continue; hard-rejects pause and follow the storyboard's Scenario 4 walkthrough.
 
 After the filing loop completes:
 
 - Surface the final state to the user: filed issue numbers + URLs, skipped issues (if any), total mutations.
-- If state transitions were part of the plan (move issue from Triage to Backlog, etc.), invoke the [transition-state](transition-state.md) sub-procedure for each transition. Cascades fire per the workflow schema.
+- If the plan holds a state transition beyond the scheduling above, invoke the [transition-state](transition-state.md) sub-procedure for each. Cascades fire per the workflow schema.
 
 ## Handling failures during filing
 
@@ -132,6 +161,7 @@ Per the storyboard's Scenario 4: on hard-reject, surface the specific rule that 
 ## What this sub-procedure does NOT do
 
 - It does not architect *what* to build. Architectural and product decisions go to the user, the `architect` agent, or a human. Batch-planning takes the user's stated outcomes and slices them into tickets; it does not invent the outcomes.
+- It does not make the shared choices. It names them and judges whether each is settled, and plans the foundation's Tasks whose records and skeleton make them.
 - It does not write use cases. Over an empty set it plans their authoring as work — the prerequisite Task, ahead of the work that touches what users do — and a later plan walks them once they have settled.
 - It does not authorise itself to bypass the membership gate ([project-management:DEC-021-team-membership-gate]) or any hard-reject severity. The user authorises bypassable-with-audit overrides; hard-rejects are never bypassable.
 - It does not skip the single approval gate even when "the slicing seems obvious". The gate is the contract; the agent waits.

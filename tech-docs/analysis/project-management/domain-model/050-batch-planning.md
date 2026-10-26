@@ -11,6 +11,7 @@ pkit:
       record:
         - project-management:DEC-029
         - project-management:DEC-054
+        - project-management:DEC-060
       artefact:
         - TERM-use-case-entry
         - TERM-batch-plan
@@ -22,13 +23,16 @@ An intent becomes many issues, and slicing it well needs the [project](../../cor
 
 A [use-case entry](../glossary.md#term-use-case-entry--use-case-entry) names one goal of that account. A [batch plan](../glossary.md#term-batch-plan--batch-plan) is the outline the agent drafts against the entries. The person approves the outline, revises it or cancels it.
 
+Where the slices would share a choice that nothing settles yet, a first plan files only the work's foundation. A second plan files the slices once the foundation is done ([DEC-060](../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md)).
+
 ```mermaid
 classDiagram
   accTitle: Batch planning
-  accDescr: A batch plan outlines the issues to file for one intent, each with its parent. It maps the intent onto use-case entries. A use-case entry names one goal by its id, title and status.
+  accDescr: A batch plan outlines the issues to file for one intent, each with its parent. It judges each choice the slices would share. It maps the intent onto use-case entries. A use-case entry names one goal by its id, title and status.
   class BatchPlan["Batch plan"] {
     intent
     rows
+    shared choices
     gaps
   }
   class UseCaseEntry["Use-case entry"] {
@@ -45,11 +49,12 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a batch plan moves
-  accDescr: A batch plan is drafted against the active use-case entries, then waits for a person. Approved, its issues are filed, parents first. Revised, it is drafted again. Cancelled, nothing is filed.
+  accDescr: A batch plan is drafted against the active use-case entries, then waits for a person. Approved, its issues are filed, parents first. Revised, it is drafted again. Cancelled, nothing is filed. Once a first plan's foundation is done, a second plan is drafted for the slices.
   drafted([Batch plan drafted against the active entries]) --> waits[Waits for the person]
   waits -->|approved| filed([Its issues filed, parents first])
   waits -->|revised| drafted
   waits -->|cancelled| nothing([Nothing filed])
+  filed -->|a first plan's foundation done| drafted
 ```
 
 ## Use-case entry
@@ -91,19 +96,22 @@ A batch plan is the outline the project-manager agent drafts for an intent. It h
 
 - one row for each issue: its type, title, parent, [workstream](../glossary.md#term-workstream--workstream), [Milestone](../glossary.md#term-milestone--milestone), priority and use-case entries (DEC-029 and [DEC-054 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#5-the-planning-step))
 - the active entries the intent touches that no issue names, and the work that no entry describes (DEC-054 point 5)
+- each choice the slices would share, judged settled, in hand by an open foundation, or open ([DEC-060 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#3-the-first-plan-files-the-foundation-and-the-second-plans-the-slices))
 - the [findings](../../core/glossary.md#term-finding--finding) of the [reviewers](../../core/glossary.md#term-reviewer--reviewer) run on it (DEC-029)
 
 **Relations:**
 
 - It outlines the issues for one intent, parents before children (DEC-029).
 - It maps the intent onto the active use-case entries (DEC-054 point 5).
+- A first plan files the EPIC, with an outline of the slices, and the [Feature](../glossary.md#term-feature--feature) of the work's foundation. A second plan files the slices under that EPIC, once the foundation's Feature has closed (DEC-060 point 3).
 
-**States:** A batch plan is drafted, then waits for the person. Approved, its issues are filed, parents first. Revised, it is drafted again, and cancelled, nothing is filed (DEC-029).
+**States:** A batch plan is drafted, then waits for the person. Approved, its issues are filed, parents first. Revised, it is drafted again, and cancelled, nothing is filed (DEC-029). A first plan's slices wait for a second plan, drafted once the foundation's Feature closes (DEC-060 point 3).
 
 **Always true:**
 
 - None of its issues is filed before the person approves the whole plan (DEC-029).
 - It cites only ids the [data point](../../core/glossary.md#term-data-point--data-point) holds, and never suggests one (DEC-054 point 5).
+- A first plan files no slice (DEC-060 point 3).
 
 ## What is built on these concepts
 
