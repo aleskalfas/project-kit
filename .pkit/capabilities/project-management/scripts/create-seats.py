@@ -233,6 +233,7 @@ def state_issue_for(
                 None,
                 f"#{number}, a creation left half done, could not be finished: {done.cause}",
             )
+        print(f"  warn: seat {seat.name}: {done.cause}, and it is left alone", file=sys.stderr)
     created = state_issues.create(topology.SEAT_KIND, seat.name, title(seat), run)
     if created.outcome == state_issues.CREATED and created.number is not None:
         said = _with_note(f"created #{created.number}", created.cause)
