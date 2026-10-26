@@ -8,7 +8,9 @@ pkit:
         - .pkit/capabilities/doc-examples/scripts/**
         - .pkit/capabilities/doc-examples/schemas/**
         - .pkit/capabilities/doc-examples/permissions/**
-      record: ["doc-examples:DEC-001", COR-010, COR-017, COR-028, COR-030, COR-050, COR-055, COR-056, "living-docs:DEC-001", "living-docs:DEC-002"]
+        - .pkit/capabilities/doc-examples/package.yaml
+      record: ["doc-examples:DEC-001", COR-001, COR-010, COR-017, COR-028, COR-030, COR-050, COR-055, COR-056, "living-docs:DEC-001", "living-docs:DEC-002"]
+      artefact: [".pkit/permissions/README.md#grants-and-verdicts"]
 ---
 
 # doc-examples capability
@@ -44,7 +46,7 @@ The rule is in [doc-examples:DEC-001-console-examples-as-tests]. This page state
 - `scripts/pages.py`: `pkit doc-examples pages`, which lists the pages the run reads
 - `scripts/validate.py`: `pkit doc-examples validate`, which checks the run's configuration and the form of each fence ("Validation" below)
 - `schemas/config.yaml` and `schemas/config.schema.json`: the shape of your configuration ("The configuration" below)
-- `permissions/privilege-catalog.yaml`: the privilege `doc-examples:run-examples`, which recognizes a call to the run, with no grant of it ("The permission model" below)
+- `permissions/privilege-catalog.yaml`: the privilege `doc-examples:run-examples`, which recognizes a call to the run ("The permission model" below)
 
 ## Adopter setup
 
@@ -248,7 +250,7 @@ Add the step once your pages pass, after an update has written their output and 
 
 ## Changes to the contract
 
-What this page documents of the fences, how a fence runs, what is compared, the placeholders, the configuration, an update and the run is the capability's versioned surface (DEC-001 point 6).
+What this page documents of the fences, how a fence runs, what is compared, the placeholders, the configuration and an update is the capability's versioned surface. So are the run's exit statuses, path and options (DEC-001 point 6).
 
 - **A breaking change:** a change that would fail a page that passed, or pass a page that failed, is a new major of the capability (COR-010). A fix that brings the run back to this contract is no breaking change.
 - **Your pages after a breaking change:** where they can be rewritten mechanically, as for a renamed placeholder, the release ships a migration that rewrites them. Otherwise its notes say what to change, and the run's failures show where.
@@ -266,5 +268,4 @@ Inside this capability's own content, cite decisions by their filename stem: `[d
 
 - **Backbone:** `>=1.149.0,<2.0.0`.
 - **living-docs,** optional: its page type is the default selection (COR-030). Without it, name your pages' types.
-- **uv,** which runs the CLI's two queries, as it runs every capability's queries.
-- **The run:** Python 3.10 or later and `pkit`, with nothing else to install.
+- **uv,** which runs the CLI's two queries.
