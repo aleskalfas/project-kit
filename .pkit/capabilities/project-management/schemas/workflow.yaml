@@ -13,7 +13,8 @@
 # (`display_name`, `applies_to`, `command`, `pr_state_effect`,
 # `authorisation`, `executor`, `severity`, `notes`) are ignored by the
 # engine and consumed by pm's wrappers — the substrate stays content-free
-# (DEC-033 D3, amended by DEC-034: closure → shared slot; forward → local).
+# (DEC-033 D3: forward → local; DEC-034, partially superseding it: closure →
+# shared slot).
 # NOTE the two same-named `cascade` constructs are disambiguated by NESTING:
 # the engine reads ONLY `process.cascade` (the closure fold); the top-level
 # `cascade:` sibling (forward/downward) is wrapper-only. See the in-line note
@@ -353,9 +354,9 @@ process:
   #     as the engine's `data`, and the engine reads `data.get("cascade")`); and
   #   * the pm-LOCAL `cascade:` block below, a TOP-LEVEL sibling of `process:`
   #     (forward / downward only), which the engine never looks at.
-  # The CLOSURE sub-block was moved OUT of the local block into this shared
-  # declaration; forward / downward stay local and wrapper-driven (DEC-034
-  # amends DEC-033 D3: closure → shared slot; forward → stays local).
+  # The CLOSURE fold lives in this shared declaration, not in the local block;
+  # forward / downward stay local and wrapper-driven (DEC-034, which partially
+  # supersedes DEC-033 D3: closure → shared slot; forward → stays local).
   #
   # The fold supplies the CHILDREN-HALF of close-eligibility only. The full
   # close rule is the CONJUNCTION of (a) the `gate-checkboxes-ticked`
@@ -379,10 +380,10 @@ process:
                                    # indeterminate membership overrides on_empty — never fail-open).
 
 # --- pm-LOCAL blocks (engine ignores; pm wrappers consume) -----------------
-# DEC-033 D3 (amended by DEC-034): the FORWARD cascade + closure_triggers are
-# pm-domain semantics and stay capability-local so the shared substrate stays
-# content-free. The CLOSURE cascade moved onto the shared slot above
-# (process.cascade); only forward / downward remain here.
+# DEC-033 D3, partially superseded by DEC-034: the FORWARD cascade +
+# closure_triggers are pm-domain semantics and stay capability-local so the
+# shared substrate stays content-free. The CLOSURE cascade is the shared slot
+# above (process.cascade); only forward / downward live here.
 #
 # This top-level `cascade:` is a SIBLING of `process:` — NOT `process.cascade`
 # — so the engine never reads it (see the disambiguation note above).

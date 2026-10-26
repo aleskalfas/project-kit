@@ -17,12 +17,8 @@ guard: because the methodology drives its merge gate off comment *text* (a DEC-0
 verdict line, an `Approved`-prefix), a freeform comment is **refused if its first
 line would impersonate a structured one** — otherwise the verb would be a
 merge-gate bypass and a prompt-injection amplifier. It is a genuine new agent
-capability (the agent's direct `gh …comment` is denied today), made safe by that
+capability (the agent's direct `gh …comment` is denied), made safe by that
 refusal plus a positive `<!-- pkit-freeform -->` marker.
-
-> **Amended by [project-management:DEC-052-comment-house-style].** Pass-through freeform
-> comments carry the house-style **frame** (the per-kind marker + universal provenance footer)
-> around the user's untouched payload; the payload itself is never restyled.
 
 ## Context
 
@@ -73,8 +69,8 @@ does not replace or wrap them.
 
 Be honest about the delta: the
 capability's permission fragment *denies* the agent direct `gh issue comment` /
-`gh pr comment`, so today the agent cannot post any freeform comment at all.
-This verb gives it that ability. No permission-config line changes — the agent
+`gh pr comment`, so without these verbs the agent can post no freeform comment at
+all. This verb gives it that ability. No permission-config line changes — the agent
 still reaches `gh` only through a validated script, the same routing as
 `open-pr` / `merge-pr` — but unlike those (which enforce methodology gates on
 their *effect*), this verb's payload is author-supplied, so its validation is
@@ -102,7 +98,10 @@ trailing `<!-- pkit-freeform -->` marker — the write-side counterpart to point
 (`pkit-provenance` per [project-management:DEC-041-version-provenance-stamp],
 `pkit-hook` per [project-management:DEC-024-lifecycle-hooks]). It makes a
 freeform note positively distinguishable from a structured comment for any
-human or future parser, so the two can never be conflated from either side.
+human or future parser, so the two can never be conflated from either side. The
+marker and the universal provenance footer are the comment's house-style **frame**,
+around the user's untouched words, which are never restyled (refinement per
+[project-management:DEC-052-comment-house-style]).
 
 ## Rationale
 
@@ -147,11 +146,11 @@ freeform comments, under what guards, and why the guard exists.
   sentinel-namespace refusal + freeform marker are what make the verb safe to ship
   and are the load-bearing part of this decision, not an implementation detail.
 - **Belt-and-suspenders: mark *verdict* comments so the gate-checker counts only
-  marked ones.** A stronger closure would have `review-pr` stamp its DEC-028
-  verdicts with a provenance marker and `done-work`'s gate-checker require it, so a
-  sentinel line alone (however posted) never counts. Deferred — it changes the
-  DEC-028 verdict/gate mechanism (out of this verb's scope); the sentinel refusal
-  closes the hole from the write side today. Recorded as a follow-up.
+  marked ones, as this record's own guard.** Not this verb's to decide: it changes
+  the DEC-028 verdict/gate mechanism, and DEC-028 holds it. The gate counts a
+  verdict only when it carries the `<!-- pkit-verdict -->` marker the reviewer path
+  stamps ([project-management:DEC-028-agent-as-approver-paths], "The verdict
+  signal"), so a bare verdict line counts on neither side.
 
 ## Implications
 
@@ -162,8 +161,7 @@ freeform comments, under what guards, and why the guard exists.
 - No `schema_version` change, no file rename/removal, no CLI-signature break on an
   existing script — a pure addition, so no COR-010 migration.
 - Because this adds a new capability verb + a new principle (the agent's
-  freeform-comment authority), it is a surface change; promotion `proposed →
-  accepted` carries maintainer sign-off.
+  freeform-comment authority), it is a surface change.
 - The sentinel refusal + freeform marker live in the shared `_lib/comment.py`, so
   both subjects inherit them uniformly (the merge-gate spoof risk is concentrated
   on `comment-pr`, but the guard is applied to `comment-issue` too — cheaper and
@@ -175,6 +173,7 @@ freeform comments, under what guards, and why the guard exists.
   sentinel refusal (DEC-028 verdict grammar, `Approved`-prefix, audit templates),
   the idempotent freeform marker, and that the post targets `gh issue comment` /
   `gh pr comment` for the right subject.
-- **Follow-up (not this change):** stamp `review-pr`'s DEC-028 verdicts with a
-  provenance marker and have `done-work`'s gate-checker require it, closing the
-  sentinel-spoof from the read side as well.
+- **The read side is DEC-028's:** `review-pr` stamps each verdict with the
+  `<!-- pkit-verdict -->` marker and `done-work`'s gate-checker counts only a marked
+  verdict, so a sentinel line without the marker never satisfies the gate
+  ([project-management:DEC-028-agent-as-approver-paths], "The verdict signal").

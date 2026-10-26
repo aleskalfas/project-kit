@@ -3,7 +3,7 @@
 Focused on the wrapper-specific gates and helpers — the state-transition
 mechanics live in `move-issue.py` and are tested separately.
 
-Regression tests for #61 (optional --milestone, DEC-026 amendment):
+Regression tests for #61 (an optional --milestone, DEC-026 "The seven commands"):
   - milestone-omitted happy path (promote on --reason alone)
   - milestone-given happy path (resolve + attach, unchanged)
   - given-but-unresolvable milestone (still an error, never silently downgraded)

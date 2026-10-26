@@ -25,7 +25,7 @@ a `--bypass` override records its reason
 ([project-management:DEC-014-validation-severity-model]'s `bypassable-with-audit`
 template), a handoff records who passed work to whom (DEC-026), and — newly —
 instance-ownership claim / handoff / abandon / release events form an append-only log
-([project-management:DEC-043-ownership-substrate-selection] D3). Every one of these is
+([project-management:DEC-043-ownership-substrate-selection] point 3). Every one of these is
 "post a parseable, idempotent comment recording who did what, when, and why."
 
 Today each is a hand-rolled string with its own shape, and the idempotence
@@ -97,7 +97,7 @@ overridable template), not the final glyphs.
 The DEC-026 promote /
 handoff strings and the DEC-014 bypass template are re-expressed as events through
 this facility; their machine stamps preserve the parseable-prefix intent DEC-026
-called out. The **instance-ownership event log** (DEC-043 D3) is this facility
+called out. The **instance-ownership event log** (DEC-043 point 3) is this facility
 specialised with the ownership event types — it is *not* a parallel comment
 mechanism, and its per-object-atomic append semantics (one comment per event) are the
 facility's normal append behaviour.
@@ -166,7 +166,7 @@ freezing a look no one has seen rendered.
   any external parser depends on the *old* prefix (if so, the stamp carries a
   compatibility alias). Surface change → capability version bump per [pkit:PRJ-002];
   a migration is authored if any committed adopter artifact embeds the old format.
-- **The instance-ownership event log** (DEC-043 D3, contract [pkit:ADR-041]) is emitted
+- **The instance-ownership event log** (DEC-043 point 3, contract [pkit:ADR-041]) is emitted
   through this facility; the ownership-event comment sole-constructor ADR-041 names *is*
   this facility's builder specialised with ownership event types.
 - **Deferred (named, not built):** the confirmed default glyph set (validated live);
