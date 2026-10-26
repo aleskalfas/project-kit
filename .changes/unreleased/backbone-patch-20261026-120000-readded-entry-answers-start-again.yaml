@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A collection entry removed from its file and added back starts its answers
+  again, as COR-050 point 3 says its history does (#2063). An answer file
+  added before the entry was last added answers it no more. `pkit friction
+  check`, `check --all`, `debt` and `explain` give the entry no live answer
+  from before, and judge it from where it was added back. The check counts
+  such a file among those a prune would remove. A document deleted and
+  restored is read the same way, and an entry its file kept keeps its
+  answers.
