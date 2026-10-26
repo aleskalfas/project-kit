@@ -13,7 +13,7 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5"]
+      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6"]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -194,9 +194,15 @@ Acceptance is intentionally cheap — flipping `proposed → accepted` is one li
 
 ## Refining an accepted record
 
-For clarifications, scope tweaks, or refinements that do not invalidate the original decision: edit the record in place. Git history is the change log — the spec does not duplicate it inside the record itself. For changes that overturn the original, write a new superseding record instead.
+For clarifications, scope tweaks, or refinements where the original decision stands, narrowed or completed: edit the record in place. Git history is the change log — the spec does not duplicate it inside the record itself. For changes that overturn the original, in whole or in part, so that another record decides otherwise, write a new superseding record instead.
 
-**Editing in place means editing in place.** A correction is folded into the body so the record simply states what is true; it is not appended as an amendment section, a dated correction marker, or a "previously we believed" passage. Those turn a record into a changelog with a statement buried in it, and each one looks like diligence, so the habit spreads by imitation. If a record was wrong about a fact and the decision has not changed, fix the sentence. If the decision changed, supersede.
+**One test sorts the edits made in place: does the edit change what the record decides, in either direction?**
+
+- **An edit that changes it** adds to what the record decides, narrows it or widens it, as a point added, rewritten or retired in place can (step 2 below). It is a decision of its own. Like accepting the record, it stays a person's (COR-064 point 6).
+- **An edit that does not** leaves every choice as it stood. Examples are a typo fixed, a citation updated after a rename, and a fact corrected where the decision stands.
+- **What a change edits in an accepted record** is listed by `pkit decisions check-diff`, for whoever judges the edits ("Checking a change's numbering" below). It names each point and each other part of the record that the change edits, without quoting the words, so the judge reads the edit in the change itself.
+
+**Editing in place means editing in place.** A correction is folded into the body so the record simply states what is true; it is not appended as an amendment section, a dated correction marker, or a "previously we believed" passage. Those turn a record into a changelog with a statement buried in it, and each one looks like diligence, so the habit spreads by imitation. If a record was wrong about a fact and the decision has not changed, fix the sentence. If the decision was overturned, in whole or in part, supersede.
 
 To refine a record in place:
 
@@ -263,6 +269,15 @@ A renumbered point misleads every citation of it, and a record's state alone can
   - in a record the change converts, a point whose id differs from the bold number or label that opened it
   - a point added to a record in list form, or a new record in list form. You may keep the list under the refining rule above, or convert the record to point headings by hand first, so every number stays.
 - **Each finding names the record and the id,** as `<file>#<id>`, or `<file>` for a record id. The command exits 1 on an error and 0 on warnings alone.
+- **It lists, and fails nothing on,** each record accepted at the branch point that the change alters or removes, for whoever judges its edits ("Refining an accepted record" above):
+  - each point the head adds, alters or retires, with its title, and each it removes, which also fails. A point is compared without its id, its whitespace folded, so a reflowed point is no change.
+  - each of its title, status and supersession fields that changed
+  - a change to the text its points stand on: its preamble, its Summary and the Decision's text outside the points. A record with no points is read this way, its Decision being that text.
+  - a change to its other text, such as its Context, Rationale or Implications
+  - a record in list form at the branch point or at the head, as a whole, since its points are not told apart
+  - a record the change removes, or moves where no record at the head pairs with it
+  - nothing for a record proposed at the branch point, or one the change adds
+- **`--head <rev>`** reads the records of that commit from git objects, instead of the working tree's. Where the ADR folder is, and which records your project receives by sync, come from the working tree either way. **`--json`** prints the findings and the list as one document, for a command that shows the list, such as a landing command.
 - **Two changes that take one number:** the first to land keeps it. The other moves its point, or its record, to the next unused number, which the finding names. A point the default branch holds under that id with the change's very text, or a record it holds at the change's own path, is the change's own work landed, such as a parent branch's, and is no clash. A parent's point edited since fails, and merging the default branch in clears it.
 
 ## Adding a record

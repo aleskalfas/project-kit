@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The core agents `methodology-reviewer`, `critic` and `architect` no longer
+  read project-kit's own `CONTRIBUTING.md`, which no install writes, and point
+  to the decisions README's "Writing a record" instead (#2167). The
+  `capability-author` and `report-author` skills no longer cite records of
+  project-kit's own project, which no install writes either.
+  `capability-author` points to the project's own version-bump policy, by the
+  core rules' rule 10, and `report-author` to the CLI reference's "Report
+  commands". No migration.

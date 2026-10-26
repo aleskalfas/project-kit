@@ -349,6 +349,26 @@ class _Run:
     cover: bool = False
     cover_problem: str | None = None
     asked_cover: list[tuple[str, str, str]] = field(default_factory=list)
+    #: The accepted decision records the change alters at the head
+    #: (`accepted_records.derive`), or why they could not be read, and each (head,
+    #: base) they were derived for.
+    altered: list[Any] = field(default_factory=list)
+    altered_problem: str | None = None
+    altered_for: list[tuple[str, str]] = field(default_factory=list)
+    #: The list at a given head, where it is not `altered`; None for one that cannot
+    #: be read there.
+    altered_at: dict[str, list[Any] | None] = field(default_factory=dict)
+
+    def accepted(self, head: str, base: str) -> Any:
+        """`accepted_records.derive`, answered from this world."""
+        self.altered_for.append((head, base))
+        records = self.land.accepted_records
+        if self.altered_problem is not None:
+            return records.Derivation(problem=self.altered_problem)
+        found = self.altered_at.get(head, self.altered)
+        if found is None:
+            return records.Derivation(problem=f"`pkit decisions check-diff`: no {head[:7]}")
+        return records.Derivation(tuple(found))
 
     def covers(self, since: str, head: str, base: str) -> Any:
         """`friction_answers.covers`, answered from this world."""
@@ -511,6 +531,7 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         github.checks[github.head] = checks if checks is not None else [_GREEN]
         monkeypatch.setattr(land.friction_answers, "derive", run.derive)
         monkeypatch.setattr(land.friction_answers, "covers", run.covers)
+        monkeypatch.setattr(land.accepted_records, "derive", run.accepted)
         # The backbone's reading, stood in for: the default branch `main` (COR-054).
         settled = land.friction_answers.default_branch
         monkeypatch.setattr(settled, "_read", {})
@@ -3043,6 +3064,151 @@ def test_at_a_terminal_the_prompt_follows_the_findings(world, capsys, monkeypatc
     shown = printed.splitlines()
     at = shown.index(_person_lines("code-reviewer")[0])
     assert shown[at : at + 3] == [*_person_lines("code-reviewer"), f"{_FINDINGS}: 1, above"]
+
+
+# ---- the accepted records a change alters (#2161) ------------------------------------
+
+_ACCEPTED = ".pkit/decisions/project/PRJ-001-a.md"
+
+
+def _altered(run: _Run) -> Any:
+    """An accepted record the change alters: one point narrowed, one added."""
+    records = run.land.accepted_records
+    points = (records.Point("1", "altered", "Scope"), records.Point("4", "added", "Who"))
+    return records.Altered(_ACCEPTED, "PRJ-001", points)
+
+
+#: How land-work prints `_altered`, a finding a person judges.
+_ALTERED_LINE = (
+    f"  [accepted record] PRJ-001, `{_ACCEPTED}`: point 1 (Scope) altered and point 4 (Who) "
+    "added. Judge whether each edit changes what the record decides."
+)
+
+
+def test_an_accepted_record_the_change_alters_is_shown_as_a_finding_to_judge(world, capsys) -> None:
+    """The list is derived at the pinned head against the PR's base, printed among the
+    findings to judge before the answers, and counted on the `ready:` line."""
+    run = world()
+    head = run.github.head
+    run.altered = [_altered(run)]
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    at = lines.index(_ALTERED_LINE)
+    assert lines[at + 1] == f"{_FINDINGS}: 1, above"
+    assert at < lines.index(f"{_STEP}: none")
+    assert lines[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 finding to judge "
+        f"above; {_merge_line(run)}"
+    )
+    assert run.altered_for == [(head, "main")]
+    assert run.github.merges == []
+
+
+def test_a_change_that_alters_no_accepted_record_prints_no_finding(world, capsys) -> None:
+    run = world()
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert not any(line.startswith(_FINDINGS) for line in out.splitlines())
+
+
+def test_yes_for_the_head_merges_a_change_to_an_accepted_record(world, capsys) -> None:
+    """The records stand for the head and were there when the run started: the
+    authorisation for that head, given on the `ready:` stop that showed them, merges."""
+    run = world()
+    head = run.github.head
+    run.altered = [_altered(run)]
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    lines = out.splitlines()
+    assert lines.index(_ALTERED_LINE) < lines.index(f"merge: merged as {'c' * 7}")
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_covered_later_head_merges_on_the_records_the_earlier_head_showed(world, capsys) -> None:
+    """The list at the later head is the one at the head authorised, which the person
+    was shown: the authorisation covers it."""
+    run = world()
+    authorised = run.github.head
+    head = run.push_new_head("answers.txt")
+    run.github.checks[head] = [_GREEN]
+    run.cover = True
+    run.altered = [_altered(run)]
+    rc, out, err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == 0, out + err
+    assert _ALTERED_LINE in out.splitlines()
+    assert [merge[-1] for merge in run.github.merges] == [head]
+    assert run.altered_for == [(head, "main"), (authorised, "main")]
+
+
+@pytest.mark.parametrize(
+    ("at_authorised", "held"),
+    [
+        ([], "a change to accepted records other than the one at {earlier}"),
+        (None, "accepted records this change alters that could not be read at {earlier}"),
+    ],
+)
+def test_a_covered_later_head_with_another_list_of_accepted_records_stops_ready(
+    world, capsys, at_authorised, held
+) -> None:
+    """A merge of the base moves where the head left it, so a record the base accepted
+    meanwhile can join the list: a list nobody was shown at the head authorised, or one
+    that cannot be read there, needs the person."""
+    run = world()
+    authorised = run.github.head
+    head = run.push_new_head("answers.txt")
+    run.github.checks[head] = [_GREEN]
+    run.cover = True
+    run.altered = [_altered(run)]
+    run.altered_at[authorised] = at_authorised
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    reason = held.format(earlier=_short(authorised))
+    assert out.splitlines()[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 finding to judge "
+        f"above; the authorisation for {_short(authorised)} covers {_short(head)} only where "
+        f"nothing there needs a person, and it holds {reason}; {_merge_line(run)}"
+    )
+    assert run.github.merges == []
+
+
+def test_a_person_finding_and_an_accepted_record_are_counted_together_and_only_the_verdict_holds(
+    world, capsys
+) -> None:
+    run = world()
+    head = run.github.head
+    run.answers["code-reviewer"] = ("APPROVED", _PERSON)
+    run.altered = [_altered(run)]
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    at = lines.index(_person_lines("code-reviewer")[0])
+    assert lines[at : at + 4] == [
+        *_person_lines("code-reviewer"),
+        _ALTERED_LINE,
+        f"{_FINDINGS}: 2, above",
+    ]
+    assert lines[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 2 findings to judge "
+        "above (code-reviewer's verdict came after this run's --yes was given, so the --yes does "
+        f"not cover its finding); {_merge_line(run)}"
+    )
+
+
+def test_accepted_records_that_cannot_be_read_stop_the_run_before_the_list_is_written(
+    world, capsys
+) -> None:
+    run = world()
+    run.written = [INSTALL]
+    run.altered_problem = "`pkit decisions check-diff --json …`: it exited 2"
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE
+    assert out.splitlines()[-1] == (
+        f"{_FINDINGS}: the accepted records this change alters at {_short(run.github.head)} "
+        "could not be read — `pkit decisions check-diff --json …`: it exited 2. Nothing was "
+        f"merged; run `land-work {ISSUE}` again"
+    )
+    assert run.github.merges == [] and run.github.bodies == []
 
 
 # ---- the fixers' proposals that wait (DEC-056 point 6, #1744) ----------------------------

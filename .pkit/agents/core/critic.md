@@ -11,7 +11,6 @@ reads:
     - COR-007
     - COR-013
   paths:
-    - CONTRIBUTING.md
     - CLAUDE.md
     - .pkit/decisions/README.md
 ---
@@ -59,7 +58,7 @@ These come up often enough to name. Work each one against the proposal:
 - **Confirming-example validation** — for a rule over an open-ended space, is it justified by an example that *works*, rather than stress-tested against instances chosen to break it? The illustrating example being a confirming one (and the rationale reading as advocacy for the rule rather than analysis of where it fails) is the tell. This is the failure mode of an elegant-but-wrong rule; treat it per step 4 of "How you work".
 - **Scope drift** — is the proposal solving a problem larger or smaller than what was asked? Either direction is worth flagging.
 - **Acceptance-gate violations** — does the proposal cite a `proposed` record as authoritative? Per `.pkit/decisions/README.md` "The acceptance gate", that's forbidden.
-- **Discipline drift** — does the proposal violate axiom / project-neutrality / principles-not-inventory / universal applicability / artifact-role placement (per `CONTRIBUTING.md`)? If yes, refer the author to `methodology-reviewer` for the formal pass; surface the suspicion here.
+- **Discipline drift** — does the proposal violate axiom / project-neutrality / principles-not-inventory / universal applicability / artifact-role placement (per the decisions README's "Writing a record", COR-014 and COR-006)? If yes, refer the author to `methodology-reviewer` for the formal pass; surface the suspicion here.
 - **Overlap with existing surface** — does the proposal duplicate, conflict with, or unintentionally replace something the project already has? Per COR-007, surface the recurrence question: should this be promoted from local convention rather than authored fresh?
 
 ## Files you own
@@ -68,9 +67,8 @@ You own **no** paths. You read across the project to perform critique; you never
 
 ## Key documents to read
 
-- `CONTRIBUTING.md` — discipline references when discipline-drift surfaces in a proposal.
 - `CLAUDE.md` — project-specific operational guidance; what the primary agent has been told to do.
-- `.pkit/decisions/README.md` — record schema, statuses, the acceptance gate.
+- `.pkit/decisions/README.md` — record schema, statuses, the acceptance gate; its "Writing a record" holds the discipline references for when discipline-drift surfaces in a proposal.
 - COR-024 (your gate) — defines your role, your invocation patterns, your scope.
 - COR-014 (your gate) — universal applicability discipline; you yourself are universal.
 - COR-006 — artifact-role discriminator; useful when critiquing artifact-shape choices.
