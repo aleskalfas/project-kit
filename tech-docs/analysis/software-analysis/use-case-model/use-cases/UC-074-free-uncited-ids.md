@@ -39,9 +39,9 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in place where software-analysis is developed (COR-017 and COR-031).
-- What may cite an id is open-ended, such as other repositories, trackers and code, so no tool can check it all. A person judges that nothing cites the ids (DEC-001 point 3).
-- The [backbone](../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../core/glossary.md#term-default-branch--default-branch), whose history the [stamp](../../../core/glossary.md#term-stamp--stamp) and `pkit analysis check-numbers` read, and the [base](../../../core/glossary.md#term-base--base) that `check-numbers` compares with (COR-054 points 3 and 5).
+- The [project](../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in place where software-analysis is developed ([COR-017](../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-031](../../../../../.pkit/decisions/core/COR-031-capability-origin.md)).
+- What may cite an id is open-ended, such as other repositories, trackers and code, so no tool can check it all. A person judges that nothing cites the ids ([DEC-001 point 3](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)).
+- The [backbone](../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../core/glossary.md#term-default-branch--default-branch), whose history the [stamp](../../../core/glossary.md#term-stamp--stamp) and `pkit analysis check-numbers` read, and the [base](../../../core/glossary.md#term-base--base) that `check-numbers` compares with (COR-054 points [3](../../../../../.pkit/decisions/core/COR-054-default-branch.md#3-the-override-is-a-base-not-a-declaration) and [5](../../../../../.pkit/decisions/core/COR-054-default-branch.md#5-one-computation-exposed)).
 
 **Trigger:** [Artefacts](../../../core/glossary.md#term-artefact--artefact) that nothing cites, such as an abandoned pilot, hold ids that the developer wants the [analysis](../../glossary.md#term-analysis--analysis) to give again.
 
@@ -54,7 +54,7 @@ pkit:
    - a work item's list of the [use cases](../../glossary.md#term-use-case--use-case) it serves, or an open issue or [pull request](../../../core/glossary.md#term-pull-request--pull-request) that names the id
 2. The developer finds nothing that cites them.
 3. The developer deletes the artefacts' files in one commit, and lands it on the [default branch](../../../core/glossary.md#term-default-branch--default-branch).
-4. The developer adds an entry under `numbering.freed-by` in `.pkit/capabilities/software-analysis/project/config.yaml`. The entry names that commit by its full id, and lists the ids (DEC-001 point 3).
+4. The developer adds an entry under `numbering.freed-by` in `.pkit/capabilities/software-analysis/project/config.yaml`. The entry names that commit by its full id, and lists the ids ([DEC-001 point 3](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)).
 5. The developer runs `pkit analysis check-numbers`.
 6. The [system](../../../core/glossary.md#term-system--system) checks that the entry can be honoured. The commit lies on the default branch's history, and the default branch lost each listed file by it last. Every file an id was ever given is freed. The system lists the ids each entry frees, one line for each entry, and writes nothing (core:REQ-005).
 7. The developer opens the pull request that adds the entry. The pull request says where the developer looked and what they found, so a [reviewer](../../../core/glossary.md#term-reviewer--reviewer) can judge the declaration.
@@ -75,6 +75,6 @@ pkit:
 
 **Minimal guarantees:**
 
-- Only an id the [project](../../../core/glossary.md#term-project--project) lists is freed, and no tool infers one (DEC-001 point 3 and REQ-051).
+- Only an id the [project](../../../core/glossary.md#term-project--project) lists is freed, and no tool infers one ([DEC-001 point 3](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers) and REQ-051).
 - An entry that cannot be honoured stops the [stamp](../../../core/glossary.md#term-stamp--stamp) from numbering, so no id is given again on a wrong declaration (`numbering.py`).
 - `pkit analysis check-numbers` is a query, which changes no file of the project (core:REQ-005 and `check-numbers.py`).
