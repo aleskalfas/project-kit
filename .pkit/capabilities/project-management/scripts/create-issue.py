@@ -39,6 +39,15 @@ the configured Projects v2 board as the final step of filing. The
 default assignee is the resolved invoker identity per DEC-019's
 default_at_filing: filer.
 
+With an instance id set (`set-instance`, DEC-035 point 1), the new issue is
+claimed for this clone right after it is filed, so the clone owns the arc it
+files from birth (DEC-035 point 3), through `_lib/instance_claims`. An issue
+filed for another person (`--assignee`) is not claimed (DEC-035 point 5). A
+claim that fails is a warning, and the issue stays filed. With no id set,
+nothing of this runs. In a project with a topology of seats, a clone in a
+planner's seat files with no owner, so the issue enters the shared pool, and a
+clone in any other seat claims what it files for its seat (DEC-059 point 7).
+
 Membership predicate per DEC-021 runs at startup; closed mode refuses
 non-members with the standard structured refusal.
 
@@ -90,6 +99,7 @@ from _lib import (
     classification_rules,
     containment,
     decision_ids,
+    instance_claims,
     provenance,
     session_guard,
     title_rules,
@@ -724,6 +734,11 @@ def main() -> int:
         print(f"  milestone:  #{args.milestone}")
     print(f"  assignee:   {assignee}")
     print(f"  labels:     {', '.join(labels)}")
+    # Instance ownership (DEC-035): None unless this clone set an instance id,
+    # or holds a seat of a topology (DEC-059), and then nothing below changes.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    if clone is not None:
+        print(f"  ownership:  {instance_claims.claim_plan(clone, assignee, filing=True)}")
     if args.from_report is not None:
         print(
             f"  from-report: #{args.from_report}  "
@@ -791,6 +806,11 @@ def main() -> int:
         # One-time immutable filing-version comment (DEC-041): the
         # load-bearing record of the version this issue was born under.
         print(provenance.post_filing_comment(new_issue_number, capability_root, config))
+        # Claim the filed issue for this clone (DEC-035 point 3). An issue
+        # filed for another person is not this clone's (DEC-035 point 5), and
+        # a planner's seat files with no owner (DEC-059 point 7).
+        if clone is not None and instance_claims.claims_at_filing(clone, assignee):
+            instance_claims.say(instance_claims.claim(new_issue_number, clone, config))
     containment = axis_labels.containment_mode(substrate_map)
     if (
         parent_number is not None

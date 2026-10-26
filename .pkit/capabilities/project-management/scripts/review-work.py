@@ -10,7 +10,7 @@
 Transitions an issue In Progress → Review by opening a ready PR (or
 flipping a draft PR to ready) and assigning reviewers. Per DEC-026:
 
-    review-work <N> [--reviewer @<user>] [--require-human]
+    review-work <N> [--reviewer @<user>] [--require-human] [--bypass-owner "<reason>"]
 
 Gates per DEC-026:
   - Membership (open-mode degrades to no-op).
@@ -26,6 +26,18 @@ Gates per DEC-026:
     (`_lib/issue_position`, shared with start-work, #1242); move-issue reads
     it itself when it moves.
   - PR title is Conventional Commits.
+  - The clash guard (DEC-035 point 6), with an instance id set or a seat of
+    a topology held: an issue another instance owns is refused before any PR
+    is opened or made ready and before reviewers are requested, at
+    bypassable-with-audit (DEC-014), through `_lib/instance_claims`.
+    `--bypass-owner "<reason>"` posts the reason on the issue as an audit
+    comment first, and the composed move-issue is handed the same reason, so
+    it posts no second one. The flag is qualified per DEC-046, since the
+    validate-at-ready stop is a second gate: it refuses a finding declared
+    bypassable-with-audit as it refuses a hard-reject one, and `--force`
+    writes past it. In a project with a topology, a claim whose clone no
+    longer holds its seat is no claim, and one that cannot be judged refuses
+    (DEC-059 point 9).
 
 Side-effects:
   - Opens a ready PR via `gh pr create` if none exists for the branch.
@@ -41,7 +53,8 @@ Side-effects:
 Exit codes:
   0  PR ready + issue in Review (moved there, or already there)
   1  membership or foreign-repo refusal / PR body not ready for review
-     (validate-at-ready; --force overrides)
+     (validate-at-ready; --force overrides) / the clash guard refused an
+     issue another instance owns
   2  usage error / gate failure / illegal transition / issue not found
   3  gh failure: `gh pr create` could not open the PR, or `gh pr ready`
      could not make it ready
@@ -66,6 +79,7 @@ from _lib import (
     classification_rules,
     composed_move,
     default_branch,
+    instance_claims,
     issue_branch,
     issue_position,
     pr_validation,
@@ -138,6 +152,18 @@ def main() -> int:
             "findings (empty required section / checkbox / missing Doc impact). "
             "Drafts stay exempt; you normally fill a draft first (create-draft → "
             "edit-pr → review-work) or use open-pr --body-file."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses an issue another instance owns "
+            "(bypassable-with-audit per DEC-014, DEC-035 point 6): the reason is "
+            "posted on the issue as an audit comment before any PR is opened or "
+            "made ready. Qualified per DEC-046, since the validate-at-ready stop "
+            "is a second gate, which --force writes past."
         ),
     )
     session_guard.add_override_argument(parser)
@@ -233,6 +259,29 @@ def main() -> int:
     except default_branch.Unanswered as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+
+    # The clash guard (DEC-035 point 6), before the PR is opened or made ready
+    # and before reviewers are requested: an issue another instance owns is
+    # refused, unless a bypass posts its reason. The move this run composes is
+    # handed the same reason, and finds its audit comment posted.
+    owner_bypass: str | None = None
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="review-work",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 1
+        if decision.bypassed:
+            owner_bypass = args.bypass_owner
 
     print(f"review-work: #{args.issue_number}")
     print(f"  branch: {branch}")
@@ -337,6 +386,7 @@ def main() -> int:
         TARGET_STATE,
         capability_root_arg=args.capability_root,
         allow_foreign_repo=args.allow_foreign_repo,
+        **({"bypass_owner": owner_bypass} if owner_bypass else {}),
     )
     if rc != 0:
         print(

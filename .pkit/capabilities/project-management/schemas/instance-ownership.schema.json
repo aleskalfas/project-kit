@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "instance-ownership.schema.json",
   "title": "Instance-ownership substrate selector",
-  "description": "Formal shape of instance-ownership.yaml — the substrate that carries the DEC-035 instance-ownership marker (DEC-043 D2): `comment` (a label-free append-only event log plus a derived description mirror, the default) or `label` (the DEC-035 `instance:N` label, opt-in where labels are creatable). Resolution/write contract: ADR-041. Deliberately its own home, not a slot in classification.yaml and not substrate-map.yaml (DEC-036 emergent activation). Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
+  "description": "Formal shape of instance-ownership.yaml — the substrate that carries the DEC-035 instance-ownership marker (DEC-043 point 2): `comment` (a label-free append-only event log plus a derived description mirror, the default) or `label` (the DEC-035 `instance:N` label, opt-in where labels are creatable). Resolution/write contract: ADR-041. Deliberately its own home, not a slot in classification.yaml and not substrate-map.yaml (DEC-036 emergent activation). Document-shaped schema: the file IS the resource (no top-level id collection). Companion per COR-018.",
   "type": "object",
   "required": [
     "schema_version",
