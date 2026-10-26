@@ -72,14 +72,14 @@ STATE_ISSUE = "state-issue"
 @dataclass(frozen=True)
 class EventType:
     """One event type: its family, its payload fields in stamp order, the
-    fields it needs, and the icon and label of its payload line."""
+    fields it needs, and the icon of its payload line. The name is also its
+    kind in DEC-052's roster."""
 
     name: str
     family: str
     fields: tuple[str, ...]
     required: tuple[str, ...]
     icon: str
-    label: str
 
 
 _OWNER_FIELDS = ("instance", "seat", "seat_number", "clone", "name", "id")
@@ -90,24 +90,22 @@ _OWNER_FIELDS = ("instance", "seat", "seat_number", "clone", "name", "id")
 EVENT_TYPES: dict[str, EventType] = {
     t.name: t
     for t in (
-        EventType("claim", OWNERSHIP, _OWNER_FIELDS, ("instance",), "🔖", "claim"),
+        EventType("claim", OWNERSHIP, _OWNER_FIELDS, ("instance",), "🔖"),
         EventType(
             "handoff",
             OWNERSHIP,
             ("instance", "to", "seat", "seat_number", "clone", "name", "id"),
             ("instance", "to"),
             "🤝",
-            "handoff",
         ),
-        EventType("abandon", OWNERSHIP, _OWNER_FIELDS, ("instance",), "🚪", "abandon"),
-        EventType("release", OWNERSHIP, _OWNER_FIELDS, ("instance",), "✅", "release"),
+        EventType("abandon", OWNERSHIP, _OWNER_FIELDS, ("instance",), "🚪"),
+        EventType("release", OWNERSHIP, _OWNER_FIELDS, ("instance",), "✅"),
         EventType(
             "state-claim",
             STATE_ISSUE,
             ("key", "clone", "place", "id"),
             ("key", "clone", "place"),
             "🪑",
-            "state claim",
         ),
         EventType(
             "state-release",
@@ -115,7 +113,6 @@ EVENT_TYPES: dict[str, EventType] = {
             ("key", "clone", "place", "id"),
             ("key", "clone", "place"),
             "🪑",
-            "state release",
         ),
         EventType(
             "state-force-release",
@@ -123,7 +120,6 @@ EVENT_TYPES: dict[str, EventType] = {
             ("key", "clone", "place", "reason", "id"),
             ("key", "clone", "place", "reason"),
             "⚠️",
-            "state release by force",
         ),
     )
 }
@@ -228,7 +224,7 @@ def render(ev: Event) -> str:
     """The lines a person reads: the payload line, and a reason on its own
     paragraph where the event carries one (DEC-052)."""
     known = EVENT_TYPES[ev.type]
-    head = f"{known.icon} {known.label} — "
+    head = f"{known.icon} {known.name} — "
     if known.family == OWNERSHIP:
         head += _owner_payload(ev)
     else:

@@ -165,7 +165,8 @@ def test_create_makes_the_issue_then_its_marker_comment_then_the_filing_comment(
     assert provenance.MARKER_START in issue.body
     first, second = repo.bodies(out.number)
     assert si.read_marker(first).names("seat", "planner")
-    assert "<!-- pkit-state-issue -->" in first
+    assert "<!-- pkit-state-marker -->" in first
+    assert first.startswith("📌 state-marker — this issue holds the seat `planner`")
     assert provenance.FILING_MARKER in second
     # No type, parent, label, assignee or milestone.
     assert not {"--label", "--assignee", "--milestone", "--type"} & set(issue.args)

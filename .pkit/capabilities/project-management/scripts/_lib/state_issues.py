@@ -95,7 +95,7 @@ VIEW_BEGIN = "<!-- pkit:state-view:begin -->"
 VIEW_END = "<!-- pkit:state-view:end -->"
 
 #: The kind of the marker's comment in DEC-052's roster.
-MARKER_COMMENT_KIND = "state-issue"
+MARKER_COMMENT_KIND = "state-marker"
 
 #: The event types of a state issue, the audit-log facility's.
 CLAIM = "state-claim"
@@ -654,7 +654,7 @@ def marker_comment(kind: str, key: str, versions: Any) -> str:
     """The marker's comment, posted first on a new state issue."""
     return "\n".join(
         [
-            f"📌 state issue — holds the {kind} {_code(key)}",
+            f"📌 {MARKER_COMMENT_KIND} — this issue holds the {kind} {_code(key)}",
             "",
             marker_line(kind, key),
             audit_log.kind_marker(MARKER_COMMENT_KIND),
