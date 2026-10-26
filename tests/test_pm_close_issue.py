@@ -16,6 +16,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -945,7 +946,7 @@ def test_a_dry_run_releases_nothing(ci, monkeypatch, argv, issue, close) -> None
 def test_a_failed_release_leaves_the_close_standing(ci, monkeypatch, capsys) -> None:
     github = _claimed_42(ci)
     github.failing.add("comment")
-    argv, issue, close = HELD_CLOSES[0].values
+    argv, issue, close = cast("tuple[list[str], dict[str, Any], list[str]]", HELD_CLOSES[0].values)
     run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False, instance=2, github=github)
     assert run.rc == 0
     assert close in run.calls

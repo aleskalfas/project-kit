@@ -44,7 +44,7 @@ def root(tmp_path: Path) -> Path:
     return path
 
 
-def _clone(ic, root: Path, instance: int = 2, substrate: str = "comment", login="me"):
+def _clone(ic, root: Path, instance: int = 2, substrate: str = "comment", login: str | None = "me"):
     return ic.Clone(instance, substrate, login, root)
 
 
