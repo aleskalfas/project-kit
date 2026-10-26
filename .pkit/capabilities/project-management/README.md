@@ -620,6 +620,27 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 
 Setting the id touches no issue — the per-issue ownership *marker* is written by the lifecycle commands (`create-issue` / `start-work` / `handoff-issue`), which read this id. That marker's substrate is selectable (`comment` default, or `label`) per [project-management:DEC-043-ownership-substrate-selection]; the identity here is orthogonal to that choice.
 
+The same runtime file keeps the clone's **key**. The clone generates it the first time it claims on a state issue (below), and keeps it whatever its number. Setting or clearing the id keeps the key. Whoever copies a clone clears its runtime file, since two clones that share a key cannot be told apart.
+
+**How an ownership event reads.** The audit-log facility ([project-management:DEC-044-audit-log-facility], `scripts/_lib/audit_log.py`) builds each ownership event's comment. Its hidden stamp, `<!-- pkit:audit v=1 event=claim ... -->`, names the instance and carries an id made once for the act. In a project with a topology it also names the seat, the seat's number and the clone's key. The stamps written before the facility, `<!-- pkit:instance-owner v=1 ... -->`, still read as the same events, so an issue claimed under them keeps its owner. `schemas/audit-log.yaml` declares the stamp and every event type.
+
+#### State issues — shared state that changes while agents work (per [project-management:DEC-058-state-issues])
+
+A **state issue** holds one piece of shared state that changes while agents work, such as which clone holds a seat ([project-management:DEC-059-topology-of-seats]). It sits outside the work hierarchy: it has no type, no parent, no label, no assignee and no milestone. A hidden marker, `<!-- pkit:state-issue v=1 kind=<kind> key=<key> -->`, says which kind of state it holds and for which key. The marker sits in its first comment and in its description.
+
+- **The comments are the record.** Each change is one comment, built by the audit-log facility: a claim, a release, or a release by force with its reason
+- **The description shows the state.** A region of the description shows who holds the state, rewritten whole after each change. A stray edit to the region is rebuilt, and nothing is lost
+- **The first claim on a free state holds.** Another clone's claim on a held state counts for nothing, and stays void after the holder releases
+- **A comment counts only from an author who may write:** a member where the membership gate is closed, and otherwise an account GitHub records as having write access or more. The access is read once for each author in a run
+- **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out. Every listing of issues runs through the one read of issues, which leaves state issues out
+
+`scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. The commands that create, take, release and list seats come later, so no command creates a state issue yet.
+
+Two things no code enforces, for a person to watch once seats are in use:
+
+- **After an account loses its access or is deleted,** its comments stop counting. A seat's holder may then change, since a void claim may hold, or an earlier holder return. Check the listing of seats, and release by force each seat whose holder changed
+- **A Task that a board's automation moves back to In Progress** renews no claim, since only an ownership event renews one, and a board's automation posts none. Once claims lapse ([project-management:DEC-059-topology-of-seats] point 9), such a Task's claim may lapse at once
+
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 
 **`close-issue`** is *not* in the seven-command palette — it handles closure outside forward-progress flow. **`reopen-issue`** undoes a closure, and **`edit-issue`** changes an issue's title, body or milestone without moving it in the lifecycle.

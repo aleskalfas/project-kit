@@ -370,6 +370,25 @@ def test_read_items_with_option_keeps_the_cards_of_that_option_across_pages(bf) 
     assert "field=Workstream" in calls[0]
 
 
+def test_read_items_with_option_leaves_a_state_issues_card_out(bf) -> None:
+    """A state issue holds no work, so the board's read leaves its card out by
+    its marker (DEC-058 point 3, ADR-071 point 6)."""
+    state = _card("I9", 9, "opt_cli")
+    state["content"]["body"] = "<!-- pkit:state-issue v=1 kind=seat key=planner -->\n"
+    work = _card("I1", 1, "opt_cli")
+    work["content"]["body"] = "## What\n\nwork\n"
+    calls: list = []
+    read = bf.read_items_with_option(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Workstream",
+        option_id="opt_cli",
+        gh_call=_runner(_page([state, work]), calls=calls),
+    )
+    assert [i.number for i in read.items] == [1]
+    assert "number title body" in " ".join(calls[0]["args"])
+
+
 def test_read_items_with_option_fails_rather_than_counting_in_part(bf) -> None:
     read = bf.read_items_with_option(
         BOARD_CONFIG,

@@ -382,6 +382,32 @@ def test_board_item_ids_keyed_on_repo_and_number(bf, monkeypatch) -> None:
     assert item_ids[("other/repo", 42)] == "ITEM_OTHER_42"
 
 
+def test_board_item_ids_leave_a_state_issues_card_out(bf, monkeypatch) -> None:
+    """A state issue holds no work, so the board's read maps no card of one
+    (DEC-058 point 3, ADR-071 point 6)."""
+    queries: list[str] = []
+
+    def card(item_id: str, number: int, body: str) -> dict:
+        repo = {"nameWithOwner": TARGET_REPO}
+        return {"id": item_id, "content": {"number": number, "body": body, "repository": repo}}
+
+    def fake_gh_run(args, config, **kwargs):
+        queries.append(args[args.index("-f") + 1])
+        nodes = [
+            card("ITEM_STATE", 7, "<!-- pkit:state-issue v=1 kind=seat key=planner -->\n"),
+            card("ITEM_WORK", 8, "## What\n\nwork\n"),
+        ]
+        page = {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}
+        return subprocess.CompletedProcess(
+            args, 0, stdout=json.dumps({"data": {"node": {"items": page}}}), stderr=""
+        )
+
+    monkeypatch.setattr(bf, "gh_run", fake_gh_run)
+    item_ids = bf._resolve_board_item_ids({}, "PROJ_NODE", [{"number": 7}, {"number": 8}])
+    assert item_ids == {(TARGET_REPO, 8): "ITEM_WORK"}
+    assert "number body repository" in queries[0]
+
+
 def test_field_value_resolves_target_repo_item_not_a_colliding_one(bf) -> None:
     """End-to-end of the discriminator: with a colliding #42 on the board, the
     field write for the TARGET repo's #42 carries the target's item id — the other

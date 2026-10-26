@@ -154,16 +154,32 @@ def gh_get_issue(
     passes only the `--json` fields it actually needs so the GitHub API
     round-trip is minimal.
 
+    It is the capability's read of a single issue of work, so it refuses a
+    state issue ([project-management:DEC-058-state-issues] point 3): it asks
+    for the issue's body too, and returns None, with the reason printed,
+    where the body carries a state issue's marker. So no command of the
+    lifecycle acts on a state issue, and no check counts one as work. The
+    marker is read by the state-issue seam's one function (ADR-071 point 6).
+
     Canonical error-handling pattern shared across all pm scripts:
       - FileNotFoundError → gh is not on PATH; prints an error and returns None.
       - Non-zero exit → prints gh's stderr and returns None.
       - JSONDecodeError → prints a note and returns None.
+      - A state issue → prints why and returns None.
 
     Callers must not rely on keys beyond those they requested in `fields`.
     """
+    asked_body = "body" in (name.strip() for name in fields.split(","))
     try:
         proc = gh_run(
-            ["gh", "issue", "view", str(issue_number), "--json", fields],
+            [
+                "gh",
+                "issue",
+                "view",
+                str(issue_number),
+                "--json",
+                fields if asked_body else f"{fields},body",
+            ],
             config,
             check=False,
         )
@@ -177,13 +193,36 @@ def gh_get_issue(
         )
         return None
     try:
-        return json.loads(proc.stdout)
+        data = json.loads(proc.stdout)
     except json.JSONDecodeError:
         print(
             f"error: gh returned non-JSON for issue {issue_number}.",
             file=sys.stderr,
         )
         return None
+    if not isinstance(data, dict):
+        return data
+    if _is_state_issue(str(data.get("body") or "")):
+        print(
+            f"error: #{issue_number} is a state issue. It holds shared state, not work, "
+            "and no command of the lifecycle acts on it (DEC-058 point 3).",
+            file=sys.stderr,
+        )
+        return None
+    if not asked_body:
+        data.pop("body", None)
+    return data
+
+
+def _is_state_issue(body: str) -> bool:
+    """Whether `body` marks a state issue, by the state-issue seam's one
+    reader of the marker. Imported here, not at the top, since the seam's
+    module must load without this one."""
+    try:
+        from _lib.state_issues import is_state_issue
+    except ImportError:  # a test that puts `_lib` itself on the path
+        from state_issues import is_state_issue  # type: ignore[no-redef]
+    return is_state_issue(body)
 
 
 def gh_get_pr(
