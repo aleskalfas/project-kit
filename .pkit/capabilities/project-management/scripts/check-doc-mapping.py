@@ -23,7 +23,12 @@ and this check applies them to the diff:
   page's answer in the diff: a changed file matches its `document`, or the
   core change check (`pkit friction check --json`, run against the same base
   as the gate runs it) lists an answer the change adds on the page — updated,
-  unchanged or deferred — that it accepts. The change check compares the base
+  unchanged or deferred — that it accepts. A deferral the change rewrote, which
+  the change check lists as edited, meets the page where the change check counts
+  the deferral for its anchor and its reason names a follow-up that the host,
+  asked through `gh`, does not say is closed (COR-050 point 3). A follow-up the
+  host could not be asked about counts, with a warning, and the deferral's
+  reviewer checks it. The change check compares the base
   with the head, the one squash commit the pull request lands as (DEC-013), so
   an answer meets the obligation wherever it falls among the branch's commits:
   a fix round that edits an anchor after the commit that answered for it
@@ -172,13 +177,15 @@ def _matches(glob: str, path: str) -> bool:
     return spec.match_file(path)
 
 
-def _answered(base: str) -> dict[str, str]:
+def _answered(base: str, config: dict) -> dict[str, str]:
     """The pages the change's answers meet the obligation of, each with the file that
     holds its answer, from the change check against `base` as the gate runs it
     (DEC-053 point 2). The check compares the base with the head, the one squash
     commit the pull request lands as (DEC-013), so an answer meets the obligation
-    wherever it falls among the branch's commits. Where the check gives no list, it
-    says why and meets none: never a pass on an answer it could not read."""
+    wherever it falls among the branch's commits. A deferral the change rewrote meets
+    it where the check counts it and its follow-up is open, as the host says
+    (`_follow_up_state`). Where the check gives no list, it says why and meets none:
+    never a pass on an answer it could not read."""
     derived = friction_answers.written(base)
     if derived.problem is not None:
         print(
@@ -187,7 +194,54 @@ def _answered(base: str) -> dict[str, str]:
             file=sys.stderr,
         )
         return {}
-    return doc_check.answer_files(derived.answers)
+    findings = (derived.document or {}).get("findings")
+    return doc_check.answer_files(
+        derived.answers,
+        [f for f in findings if isinstance(f, dict)] if isinstance(findings, list) else [],
+        _follow_up_state(config),
+    )
+
+
+#: How long the host may take to say whether a follow-up is open.
+GH_TIMEOUT = 60
+
+
+def _follow_up_state(config: dict) -> doc_check.OpenFollowUp:
+    """Whether a follow-up a rewritten deferral names is open, as the host answers
+    through `gh` (DEC-023), each asked once a run. None where the host could not be
+    asked, such as with no `gh`, no token or no network, which a warning says: the
+    deferral then counts on its words, and its reviewer checks the follow-up is open
+    (COR-050 point 3). Any failure of `gh` counts as not asked, a number that is no
+    issue included, since its exit code does not tell them apart."""
+    states: dict[doc_check.FollowUp, bool | None] = {}
+
+    def state(follow_up: doc_check.FollowUp) -> bool | None:
+        if follow_up not in states:
+            states[follow_up] = _ask_host(follow_up, config)
+        return states[follow_up]
+
+    return state
+
+
+def _ask_host(follow_up: doc_check.FollowUp, config: dict) -> bool | None:
+    repo = ["--repo", follow_up.repo] if follow_up.repo else []
+    argv = ["gh", "issue", "view", str(follow_up.number), *repo, "--json", "state"]
+    try:
+        proc = gh_run([*argv, "--jq", ".state"], config, check=False, timeout=GH_TIMEOUT)
+    except (OSError, subprocess.SubprocessError) as exc:
+        why = f"`gh` could not be run: {exc}"
+    else:
+        if proc.returncode == 0:
+            return proc.stdout.strip() == "OPEN"
+        said = (proc.stderr or "").strip().splitlines()
+        why = f"`gh issue view` exited {proc.returncode}" + (f": {said[-1]}" if said else "")
+    print(
+        f"warn: could not ask whether {follow_up} is open ({why}); a rewritten deferral "
+        "naming it counts on its words, and its reviewer checks the follow-up "
+        "(COR-050 point 3).",
+        file=sys.stderr,
+    )
+    return None
 
 
 def main() -> int:
@@ -331,7 +385,7 @@ def main() -> int:
             print(f"  ✓ [{source}] {page} → answered in the diff")
             continue
         if answered is None:
-            answered = _answered(base.ref)
+            answered = _answered(base.ref, config)
         # The answer's location is the page's exactly: read as a pattern, `README.md`
         # would take an answer on any README in the tree for the root's.
         file = answered.get(page)

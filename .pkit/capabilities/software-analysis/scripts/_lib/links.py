@@ -1,7 +1,17 @@
-"""The links between an analysis's terms and its views (DEC-004 point 7).
+"""The links between an analysis's terms and its views (DEC-004 point 7), the links of the
+citations its text makes (DEC-001 point 13), and the links of the ids it names (DEC-001
+point 14).
+
+In every analysis, the first citation of each record, point and rule in each section links
+to what it cites (`citations`), and a citation holds no mention of a term. The first
+mention of each artefact by its id in each section links to that artefact (`id_links`):
+in the same sections as the links to terms, read in a bold label too, never in the
+artefact's own text, and plain where a goal or an actor's first sentence says a datum
+again. A journey's step line links its use case's id. A mention of an id is never a
+mention of a term, so `core` in `core:UC-021` takes no term's link.
 
 Where an analysis keeps a domain model — its `domain-model/` folder holds a view
-(`keeps_domain_model`) — its terms and its views link to each other. The term's
+(`keeps_domain_model`) — its terms and its views link to each other too. The term's
 link to the section that explains it is `_lib/views.py`'s. This module writes, and
 reads back, the two others:
 
@@ -29,11 +39,13 @@ holds it to the datum still holds (`_quiet`):
 
 - a use case's and a journey's goal, the part whose id is `goal`, which states a need
 - each step's line in a journey's steps, the part whose id is `steps`, which gives a
-  use case's title, its hand-overs read as any text
+  use case's title, its hand-overs read as any text: of the links to terms alone, since
+  the id of its use case links to that datum
 - the first sentence of an actor's opening, which gives its `summary` where the
   front matter gives one (`forms.first_sentence_end`)
 
-A link to a glossary entry written there by hand is extra, and the command takes it out.
+A link to a glossary entry, or of an id, written there by hand is extra, and the command
+takes it out.
 
 **The entry's anchor** is the slug of its heading, `## <id> — <name>`, as COR-050
 point 2 makes it (`Term.anchor`), so it changes only when the term is renamed. A
@@ -70,10 +82,12 @@ pair (DEC-001 points 1 and 2). The safeguards:
 **Once in each section:** only a term's first mention is linked, and a term is
 never linked in its own section or its own entry. The command's links are read
 back by their target: a Markdown link to a glossary entry, `glossary.md#term-…` by
-a path with no scheme, or `#term-…` alone (`_TERM_LINK`). Each such link, whoever
-wrote it, is unwritten first and then written again where it belongs, so a link
-written by hand is held as the command's. Another link is the writer's, and its
-text is skipped.
+a path with no scheme, or `#term-…` alone (`_ENTRY_TARGET`), whose text is no id. A
+link whose text is an id and whose target is a path is the link of that id
+(`id_links.is_held`). Each such link, whoever wrote it, is unwritten first and then
+written again where it belongs, so a link written by hand is held as the command's.
+Another link is the writer's, and its text is skipped. In an analysis that keeps no
+domain model, a link to a glossary entry is the writer's too.
 
 **A view's closing section** (`closing`). Each view in force ends with a section headed
 `What is built on these concepts`, which opens with one sentence that says what it lists
@@ -90,12 +104,12 @@ code, opens it, and it runs to the next heading of its level or the file's end
 of it for a mention.
 
 The rewrite reads a body only to place its links, and the links back from each view
-to what uses its terms, and takes its data from front matter and the declared
-structures alone: each term's id, name, noun forms and other senses, each view's
-`explains`, whether an actor gives a `summary`, and the labels that open each part
-(DEC-001 point 1). It never changes the number of a body's lines, but where it adds a
-section's link to its term, takes out a line in that form, or writes a view's closing
-section.
+to what uses its terms, and takes its data from front matter, the declared structures
+and where the backbone finds each artefact alone: each term's id, name, noun forms and
+other senses, each view's `explains`, whether an actor gives a `summary`, the labels
+that open each part, and each artefact's id and file (DEC-001 point 1). It never
+changes the number of a body's lines, but where it adds a section's link to its term,
+takes out a line in that form, or writes a view's closing section.
 """
 
 from __future__ import annotations
@@ -109,7 +123,7 @@ from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, S
 from dataclasses import dataclass
 from pathlib import Path
 
-from _lib import analyses, citations, forms, project_structure, structure, views
+from _lib import analyses, citations, forms, id_links, project_structure, structure, views
 from _lib.model import (
     ACTOR,
     EXPLAINS,
@@ -171,13 +185,13 @@ MISSING, EXTRA, STALE, UNRESOLVED = "missing", "extra", "stale", "unresolved"
 #: the anchor alone, `#term-…`.
 _ENTRY = r"(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*|#term-[^()\s]*"
 
-#: A Markdown link to a glossary entry, as the command writes one: its text, and its
-#: target.
-_TERM_LINK = re.compile(rf"(?<!!)\[(?P<text>[^\[\]]+)\]\((?P<target>{_ENTRY})\)")
-
 #: An inline Markdown link, its text holding brackets one deep: its text, and its target.
-#: The links of citations the command writes are those `citations.is_cited_link` reads so.
+#: Of those, the command's are: a link whose text is an id, the link of that id
+#: (`id_links.is_held`); one whose text holds no bracket and whose target is a glossary
+#: entry (`_ENTRY_TARGET`), a link to a term; and a link of a citation, as
+#: `citations.is_cited_link` reads one.
 _ANY_LINK = re.compile(r"(?<!!)\[(?P<text>(?:[^\[\]]|\[[^\[\]]*\])+)\]\((?P<target>[^()\s]+)\)")
+_ENTRY_TARGET = re.compile(_ENTRY)
 
 #: A line in the form of a section's link to its term, on its own: the term's id, and its
 #: link to a glossary entry. In a view, outside fenced code, it is read for no mention:
@@ -397,7 +411,9 @@ class Difference:
     written and the target wanted, and the term wanted, each `None` where there is none.
     `cited` marks a citation's link, or a citation that takes none (`UNRESOLVED`), whose
     `wanted` then says why (DEC-001 point 13); `received`, a link wanted into a file the
-    project receives as a synced copy, which the check only warns of."""
+    project receives as a synced copy, which the check only warns of. `of_id` marks the
+    link of an artefact's id (DEC-001 point 14), and `term` then gives the artefact
+    wanted."""
 
     how: str
     line: int
@@ -407,6 +423,11 @@ class Difference:
     term: str | None
     cited: bool = False
     received: bool = False
+    of_id: bool = False
+
+
+#: What a link the command writes is: a term's, a citation's, or an id's.
+_OF_TERM, _CITED, _OF_ID = "term", "cited", "id"
 
 
 @dataclass(frozen=True)
@@ -414,7 +435,7 @@ class _Found:
     start: int
     end: int
     target: str
-    cited: bool = False
+    kind: str = _OF_TERM
 
 
 @dataclass(frozen=True)
@@ -492,12 +513,19 @@ def _char(ch: str, *, first: bool) -> str:
 
 
 def _strip(
-    text: str, hide: Collection[int], *, terms: bool = True, cited: bool = False
+    text: str,
+    hide: Collection[int],
+    *,
+    terms: bool = True,
+    cited: bool = False,
+    ids: bool = False,
 ) -> tuple[str, list[_Found]]:
     """`text` with each link the command writes outside code and comments unwritten, its
     text kept, and each such link, by where its text lies in what is left; the lines
     `hide` gives are kept as written. With `terms`, a link to a glossary entry is the
-    command's; with `cited`, a link of a citation (`citations.is_cited_link`)."""
+    command's; with `cited`, a link of a citation (`citations.is_cited_link`); with `ids`,
+    a link of an id (`id_links.is_held`). A link whose text is an id is never a link to a
+    term."""
     hidden = _hidden_lines(text, hide)
     code = [
         (m.start(), m.end())
@@ -507,21 +535,35 @@ def _strip(
     out: list[str] = []
     found: list[_Found] = []
     at = 0
+    length = 0
     for match in _ANY_LINK.finditer(text):
         if match.start() < at or _overlaps(match.start(), match.end(), code):
             continue
-        link, target = match["text"], match["target"]
-        term = terms and _TERM_LINK.fullmatch(match.group(0)) is not None
-        record = not term and cited and citations.is_cited_link(link, target)
-        if not term and not record:
+        words, target = match["text"], match["target"]
+        kind = _kind(words, target, terms=terms, cited=cited, ids=ids)
+        if kind is None:
             continue
         out.append(text[at : match.start()])
-        start = sum(len(part) for part in out)
-        out.append(link)
-        found.append(_Found(start, start + len(link), target, record))
+        length += match.start() - at
+        out.append(words)
+        found.append(_Found(length, length + len(words), target, kind))
+        length += len(words)
         at = match.end()
     out.append(text[at:])
     return "".join(out), found
+
+
+def _kind(words: str, target: str, *, terms: bool, cited: bool, ids: bool) -> str | None:
+    """Which of the command's links a Markdown link with `words` and `target` is, among the
+    kinds asked for, `None` where it is the writer's own."""
+    if id_links.MENTION.fullmatch(words) is not None:
+        return _OF_ID if ids and id_links.is_held(words, target) else None
+    bare = "[" not in words and "]" not in words
+    if terms and bare and _ENTRY_TARGET.fullmatch(target) is not None:
+        return _OF_TERM
+    if cited and citations.is_cited_link(words, target):
+        return _CITED
+    return None
 
 
 def _hidden_lines(text: str, hide: Collection[int]) -> list[tuple[int, int]]:
@@ -573,14 +615,19 @@ def _masked(text: str, spans: Sequence[tuple[int, int]]) -> str:
     return "".join(chars)
 
 
-def _skipped(text: str, hide: Collection[int]) -> tuple[list[tuple[int, int]], list[int]]:
-    """The spans of `text` no mention is read in, and where each escape ends."""
+def _skipped(
+    text: str, hide: Collection[int], *, labels: bool = True
+) -> tuple[list[tuple[int, int]], list[int]]:
+    """The spans of `text` no mention is read in, and where each escape ends. A mention of
+    an id is read in a bold label, so `labels` false leaves labels out of the spans
+    (DEC-001 point 14)."""
     hidden = _hidden_lines(text, hide)
     masked = _masked(text, hidden)
     spans = list(hidden)
     for pattern in _INLINE:
         spans += [(m.start(), m.end()) for m in pattern.finditer(masked)]
-    spans += [(m.start(1), m.end(1)) for m in _LABEL.finditer(masked)]
+    if labels:
+        spans += [(m.start(1), m.end(1)) for m in _LABEL.finditer(masked)]
     escapes = [m.end() for m in _ESCAPE.finditer(masked)]
     return spans, escapes
 
@@ -600,12 +647,12 @@ def _chosen(
     text: str,
     vocabulary: Vocabulary,
     hide: Collection[int],
-    cited: Sequence[tuple[int, int]] = (),
+    skip: Sequence[tuple[int, int]] = (),
 ) -> tuple[list[_Mention], list[int]]:
-    """The mentions in `text`, the longest first, and where each escape ends. A citation,
-    each span of `cited`, holds no mention (DEC-001 point 13)."""
+    """The mentions in `text`, the longest first, and where each escape ends; none in a
+    span of `skip`, each a citation (DEC-001 point 13) or a mention of an id (point 14)."""
     skipped, escapes = _skipped(text, hide)
-    skipped += list(cited)
+    skipped += list(skip)
     blocked: dict[str, list[tuple[int, int]]] = {}
     for term in vocabulary.terms:
         for phrase in term.other_senses:
@@ -644,12 +691,13 @@ def _wanted(
     path: str,
     hide: Collection[int],
     plain: Sequence[tuple[int, int]] = (),
-    cited: Sequence[tuple[int, int]] = (),
+    skip: Sequence[tuple[int, int]] = (),
 ) -> list[_Wanted]:
     """The links the command writes in one section's `text`: the first mention of each term
     that is not the section's own, no escape marks, and lies outside each span of `plain`,
-    text that stays plain, and outside the spans of `cited`, the citations."""
-    mentions, escapes = _chosen(text, vocabulary, hide, cited)
+    text that stays plain. No mention lies in a span of `skip`, each a citation or a
+    mention of an id."""
+    mentions, escapes = _chosen(text, vocabulary, hide, skip)
     linked: set[str] = set()
     wanted: list[_Wanted] = []
     for mention in mentions:
@@ -676,6 +724,22 @@ def _render(text: str, wanted: Sequence[tuple[int, int, str]]) -> str:
     return out
 
 
+#: What says a datum again in a text, as spans of it (`_quiet`).
+Quiet = Callable[[str], Sequence[tuple[int, int]]]
+
+
+@dataclass(frozen=True)
+class Ids:
+    """What a section's ids are linked by (DEC-001 point 14): the artefacts its analysis's
+    text names, the id of the artefact that holds the text, whose own id takes no link,
+    and what says a datum again there, which stays plain."""
+
+    named: id_links.Named
+    own: str | None = None
+    quiet: Quiet | None = None
+    first: Quiet | None = None  # a journey's step lines, whose ids link first
+
+
 def section(
     text: str,
     own: str | None,
@@ -684,8 +748,10 @@ def section(
     first_line: int,
     hide: Collection[int] = (),
     cites: Cites | None = None,
-    quiet: Callable[[str], Sequence[tuple[int, int]]] | None = None,
+    quiet: Quiet | None = None,
     cuts: Collection[int] = (),
+    *,
+    ids: Ids | None = None,
 ) -> tuple[str, list[Difference]]:
     """One section's `text`, its links written as the command writes them, and how the
     links it holds depart from those; `first_line` is the line `text` starts on in the
@@ -695,12 +761,20 @@ def section(
 
     With a `vocabulary`, the first mention of each term takes its link (DEC-004 point 7).
     `quiet` gives the spans of the text, its links unwritten, that say a datum again:
-    they are read for no mention, and a link written in them is extra (`_quiet`). With
-    `cites`, the first citation of each record, point or rule takes its link, and a
-    citation that resolves to nothing is noted (DEC-001 point 13). Each line of `cuts`,
-    counted from 0, opens a new section of the citations. A citation holds no mention.
-    Without one of them, the links of its kind are the writer's, left as written."""
-    plain, found = _strip(text, hide, terms=vocabulary is not None, cited=cites is not None)
+    they are read for no mention of a term, and a link to a term written in them is extra
+    (`_quiet`). With `cites`, the first citation of each record, point or rule takes its
+    link, and a citation that resolves to nothing is noted (DEC-001 point 13). Each line
+    of `cuts`, counted from 0, opens a new section of the citations. With `ids`, the first
+    mention of each artefact by its id takes its link (DEC-001 point 14). A citation and a
+    mention of an id hold no mention of a term. Without one of them, the links of its kind
+    are the writer's, left as written."""
+    plain, found = _strip(
+        text,
+        hide,
+        terms=vocabulary is not None,
+        cited=cites is not None,
+        ids=ids is not None,
+    )
     placed = citations.Placed((), (), ())
     if cites is not None:
         skipped, _escapes = _skipped(plain, hide)
@@ -711,63 +785,98 @@ def section(
         placed = citations.placed(
             plain, skipped, hidden, cites.component, cites.lookups, path, opens
         )
+    by_id = id_links.mentions(plain, _skipped(plain, hide, labels=False)[0])
     terms: list[_Wanted] = []
     if vocabulary is not None:
         still = quiet(plain) if quiet is not None else ()
-        terms = _wanted(plain, own, vocabulary, path, hide, still, placed.spans)
+        skip = [*placed.spans, *((m.start, m.end) for m in by_id)]
+        terms = _wanted(plain, own, vocabulary, path, hide, still, skip)
+    of_ids: list[id_links.Wanted] = []
+    if ids is not None:
+        quiet_ids = ids.quiet(plain) if ids.quiet is not None else ()
+        first = ids.first(plain) if ids.first is not None else ()
+        of_ids = id_links.wanted(by_id, quiet_ids, ids.named, ids.own, path, first)
 
     def line(offset: int) -> int:
         return first_line + plain.count("\n", 0, offset)
 
-    # Each link wanted, by its span: its target, its term, whether a citation's, and
+    # Each link wanted, by its span: its target, its term or artefact, its kind, and
     # whether into a file the project receives.
-    wanted: dict[tuple[int, int], tuple[str, str | None, bool, bool]] = {
-        (w.start, w.end): (w.target, w.term, False, False) for w in terms
+    wanted: dict[tuple[int, int], tuple[str, str | None, str, bool]] = {
+        (w.start, w.end): (w.target, w.term, _OF_TERM, False) for w in terms
     }
-    wanted.update({(w.start, w.end): (w.target, None, True, w.received) for w in placed.links})
+    wanted.update({(w.start, w.end): (w.target, None, _CITED, w.received) for w in placed.links})
+    wanted.update({(w.start, w.end): (w.target, w.artefact, _OF_ID, False) for w in of_ids})
     held = {(f.start, f.end): f for f in found}
     differences: list[Difference] = []
     for key, link in sorted(held.items()):
         want = wanted.get(key)
         text_of = plain[link.start : link.end]
-        if want is None or want[2] != link.cited:
+        if want is None or want[2] != link.kind:
             differences.append(
-                Difference(EXTRA, line(link.start), text_of, link.target, None, None, link.cited)
+                _difference(EXTRA, line(link.start), text_of, link.target, None, None, link.kind)
             )
         elif want[0] != link.target:
             differences.append(
-                Difference(
+                _difference(
                     STALE,
                     line(link.start),
                     text_of,
                     link.target,
                     want[0],
                     want[1],
-                    link.cited,
-                    want[3],
+                    link.kind,
+                    received=want[3],
                 )
             )
-    for key, (target, term, cited, received) in sorted(wanted.items()):
+    for key, (target, term, kind, received) in sorted(wanted.items()):
         link = held.get(key)
-        if link is None or link.cited != cited:
+        if link is None or link.kind != kind:
             text_of = plain[key[0] : key[1]]
             differences.append(
-                Difference(MISSING, line(key[0]), text_of, None, target, term, cited, received)
+                _difference(
+                    MISSING, line(key[0]), text_of, None, target, term, kind, received=received
+                )
             )
     for note in placed.notes:
         differences.append(
-            Difference(
+            _difference(
                 UNRESOLVED,
                 line(note.start),
                 plain[note.start : note.end],
                 None,
                 note.why,
                 None,
-                True,
+                _CITED,
             )
         )
     differences.sort(key=lambda d: d.line)
     return _render(plain, [(s, e, w[0]) for (s, e), w in wanted.items()]), differences
+
+
+def _difference(
+    how: str,
+    line: int,
+    text: str,
+    written: str | None,
+    wanted: str | None,
+    term: str | None,
+    kind: str,
+    *,
+    received: bool = False,
+) -> Difference:
+    """A departure of a link of `kind`, as `Difference` marks it."""
+    return Difference(
+        how,
+        line,
+        text,
+        written,
+        wanted,
+        term,
+        cited=kind == _CITED,
+        received=received,
+        of_id=kind == _OF_ID,
+    )
 
 
 # --- a section's link to its term --------------------------------------------------------------
@@ -887,6 +996,7 @@ class Departure:
     cited: bool = False
     received: bool = False
     closing: bool = False  # the view's closing section, missing or stale
+    of_id: bool = False  # a link of an artefact's id, `term` the artefact (DEC-001 point 14)
 
 
 @dataclass(frozen=True)
@@ -906,10 +1016,12 @@ def glossary(
     entries: Sequence[Artefact],
     vocabulary: Vocabulary | None,
     cites: Cites | None = None,
+    named: id_links.Named | None = None,
 ) -> Linked:
     """The glossary at `path`, LF `text`, with the links of each of `entries`, the terms
     in force it holds, written: each entry's section as the backbone spans it, below its
-    heading. Its head takes none."""
+    heading. Its head takes none. The links of ids are written where `named` is given
+    (DEC-001 point 14), an entry's own id taking none."""
     lines = text.split("\n")
     departures: list[Departure] = []
     for entry in sorted(entries, key=lambda e: e.span or (0, 0), reverse=True):
@@ -919,8 +1031,9 @@ def glossary(
         body = lines[first : min(last, len(lines))]
         if not body:
             continue
+        ids = Ids(named, entry.id) if named is not None else None
         rewritten, found = section(
-            "\n".join(body), entry.id, vocabulary, path, first + 1, cites=cites
+            "\n".join(body), entry.id, vocabulary, path, first + 1, cites=cites, ids=ids
         )
         lines[first : first + len(body)] = rewritten.split("\n")
         departures += [_departure(entry.location, d) for d in found]
@@ -934,6 +1047,7 @@ def view(
     vocabulary: Vocabulary,
     cites: Cites | None = None,
     closing: Sequence[str] | None = None,
+    named: id_links.Named | None = None,
 ) -> Linked:
     """A view in force, LF `text`, with each section's link to its term and the links of
     its mentions and its citations written: its opening and each section below its
@@ -941,8 +1055,10 @@ def view(
     out, as one below a section's own link is. Its closing section is written last, as
     `closing` gives its lines, in place of any it holds, and read for no mention and no
     citation; where `closing` is `None`, what is built on its concepts is not known here,
-    and the section it holds is kept as written."""
+    and the section it holds is kept as written. The links of ids are written where
+    `named` is given (DEC-001 point 14), the view's own id taking none."""
     path = artefact.path
+    ids = Ids(named, artefact.id) if named is not None else None
     whole = text.split("\n")
     start = body_start(whole)
     spans = closing_spans(whole, start)
@@ -970,12 +1086,12 @@ def view(
     departures += [
         _departure(artefact.location, d)
         for _rewritten, found in _parts(
-            written, view_sections(written, start), owners, vocabulary, path, cites
+            written, view_sections(written, start), owners, vocabulary, path, cites, ids
         )
         for d in found
     ]
     lines = with_definitions(bare, view_sections(bare, start), owners, [None, *wanted_lines])[0]
-    pieces = _parts(lines, view_sections(lines, start), owners, vocabulary, path, cites)
+    pieces = _parts(lines, view_sections(lines, start), owners, vocabulary, path, cites, ids)
     linked: list[str] = list(lines[:start])
     for rewritten, _found in pieces:
         linked += rewritten.split("\n")
@@ -1079,7 +1195,8 @@ def _closing_departures(
 def terms_linked(text: str, path: str, vocabulary: Vocabulary) -> frozenset[str]:
     """The ids of the terms the body of `text`, the file at `path`, links to, below its
     front matter, by a link to the term's entry outside code and comments, as the
-    command writes one: its target from the file's folder (`Term.target`)."""
+    command writes one: its target from the file's folder (`Term.target`). A link whose
+    text is an id, a term's included, is no use of a term (DEC-001 point 14)."""
     targets = {term.target(path): term.id for term in vocabulary.terms}
     lines = text.split("\n")
     _plain, found = _strip("\n".join(lines[body_start(lines) :]), ())
@@ -1171,11 +1288,13 @@ def _parts(
     vocabulary: Vocabulary | None,
     path: str,
     cites: Cites | None,
+    ids: Ids | None = None,
 ) -> list[tuple[str, list[Difference]]]:
     """Each of `parts` of a body among `lines`, with its links written, and how the links
     it holds depart from those. A part's own term is `owners`' entry in its place: none
     for a view's opening. Its lines in the form of a section's link to its term are
-    `with_definitions`', and read for no mention and no citation."""
+    `with_definitions`', and read for no mention, no citation and no id. The links of ids
+    are written as `ids` gives them."""
     found: list[tuple[str, list[Difference]]] = []
     for k, (first, past) in enumerate(parts):
         if first == past:
@@ -1183,7 +1302,7 @@ def _parts(
         own = owners[k] if k < len(owners) else None
         hide = [index - first for index in definition_lines(lines, first, past)]
         text = "\n".join(lines[first:past])
-        found.append(section(text, own, vocabulary, path, first + 1, hide, cites))
+        found.append(section(text, own, vocabulary, path, first + 1, hide, cites, ids=ids))
     return found
 
 
@@ -1261,12 +1380,14 @@ def _whole(text: str) -> list[tuple[int, int]]:
 
 def _quiet(
     artefact: Artefact, kind: structure.Kind, marks: Sequence[tuple[int, str, int, str] | None]
-) -> list[Callable[[str], Sequence[tuple[int, int]]] | None]:
+) -> list[tuple[Quiet | None, Quiet | None, Quiet | None]]:
     """For each part of a body, opened by the mark in its place (`None` for the text above
-    the first), what in it says a datum again and stays plain: a goal whole, each step's
-    line of a journey's steps, and the first sentence of an actor's opening where the
-    actor gives a summary. The opening is the part its first heading opens, or the text
-    above the first mark, before any label."""
+    the first), what in it says a datum again and stays plain, of the links to terms and
+    of the links of ids, and where the links of ids count first: a goal whole, and the
+    first sentence of an actor's opening where the actor gives a summary, plain of both;
+    each step's line of a journey's steps plain of the links to terms alone, since its use
+    case's id links to that datum, first (DEC-001 point 14). The opening is the part its
+    first heading opens, or the text above the first mark, before any label."""
     goal, steps = _texts(kind, GOAL), _texts(kind, STEPS)
     summary = artefact.fields.get(SUMMARY)
     opening: int | None = None
@@ -1276,17 +1397,17 @@ def _quiet(
                 break
             if mark is None or (mark[1] == structure.HEADING and mark[2] == 1):
                 opening = k
-    found: list[Callable[[str], Sequence[tuple[int, int]]] | None] = []
+    found: list[tuple[Quiet | None, Quiet | None, Quiet | None]] = []
     for k, mark in enumerate(marks):
         label = structure.comparable(mark[3]) if mark and mark[1] == structure.LABEL else None
         if label is not None and label in goal:
-            found.append(_whole)
+            found.append((_whole, _whole, None))
         elif label is not None and label in steps and kind.name == JOURNEY:
-            found.append(_step_lines)
+            found.append((_step_lines, None, _step_lines))
         elif k == opening:
-            found.append(_first_sentence)
+            found.append((_first_sentence, _first_sentence, None))
         else:
-            found.append(None)
+            found.append((None, None, None))
     return found
 
 
@@ -1296,6 +1417,7 @@ def document(
     vocabulary: Vocabulary | None,
     kind: structure.Kind | None,
     cites: Cites | None = None,
+    named: id_links.Named | None = None,
 ) -> Linked:
     """An artefact in force of a kind with a file of its own, but a view, LF `text`, with
     its links written.
@@ -1308,12 +1430,16 @@ def document(
       DEC-001 point 13), which open at each heading and at each bold label that opens a
       line or a list item at the top level, each part of the mentions' holding one or
       more of them.
+    - **The links of ids**, given `named` and the `kind`: in each part of the mentions',
+      the artefact's own id taking none, and plain where `_quiet` keeps them so (DEC-001
+      point 14).
     """
     lines = text.split("\n")
     start = body_start(lines)
     sections = part_sections(lines, start)
     words = vocabulary if kind is not None else None
-    if words is not None and kind is not None:
+    quiet: list[tuple[Quiet | None, Quiet | None, Quiet | None]]
+    if kind is not None:
         numbered = [(index + 1, lines[index]) for index in range(start, len(lines))]
         opened = structure.marks(numbered, kind)
         bounds = [start, *(start + index for index, *_rest in opened), len(lines)]
@@ -1322,13 +1448,15 @@ def document(
         quiet = _quiet(artefact, kind, marks)
     else:
         parts = sections
-        quiet = [None] * len(parts)
+        quiet = [(None, None, None)] * len(parts)
+    leads = named if kind is not None else None
     opens = [first for first, _past in sections]
     linked: list[str] = list(lines[:start])
     departures: list[Departure] = []
     for k, (first, past) in enumerate(parts):
         if first == past:
             continue
+        of_terms, of_ids, leading = quiet[k]
         rewritten, found = section(
             "\n".join(lines[first:past]),
             None,
@@ -1336,8 +1464,9 @@ def document(
             artefact.path,
             first + 1,
             cites=cites,
-            quiet=quiet[k],
+            quiet=of_terms,
             cuts=[index - first for index in opens if first < index < past],
+            ids=Ids(leads, artefact.id, of_ids, leading) if leads is not None else None,
         )
         linked += rewritten.split("\n")
         departures += [_departure(artefact.location, d) for d in found]
@@ -1365,6 +1494,7 @@ def _departure(location: str, difference: Difference) -> Departure:
         difference.term,
         cited=difference.cited,
         received=difference.received,
+        of_id=difference.of_id,
     )
 
 
@@ -1390,20 +1520,22 @@ def plan(
 ) -> list[Linked]:
     """Each file the links reach, as the command writes it. In every analysis, each
     artefact in force takes the links of its citations, from `lookups`, what the lookup
-    answered (DEC-001 point 13). In one that keeps a domain model, the glossary and each
-    view in force take the links between terms too, and so does each actor, use case,
-    journey and requirement in force, read as `kinds` gives their parts (`parted`),
-    save where `kinds` is `None` (DEC-004 point 7). Each view's closing section is
-    written from the documents as the command writes them, and kept as written where
-    `kinds` is `None`. `read` gives each file's text by its path, LF line ends, `None`
-    where it cannot be read, which is left out. `asked`, where given, gathers what the
-    citations ask the lookup, so a pass with no `lookups` says what to look up."""
-    folders = [a.folder for a in listing.analyses] if listing.several else [None]
+    answered (DEC-001 point 13), and the links of the ids its text names (DEC-001 point
+    14). In one that keeps a domain model, the glossary and each view in force take the
+    links between terms too, and so does each actor, use case, journey and requirement in
+    force, read as `kinds` gives their parts (`parted`), save where `kinds` is `None`
+    (DEC-004 point 7). The links of ids are read in those parts too, and left as written
+    where `kinds` is `None`. Each view's closing section is written from the documents as
+    the command writes them, and kept as written where `kinds` is `None`. `read` gives
+    each file's text by its path, LF line ends, `None` where it cannot be read, which is
+    left out. `asked`, where given, gathers what the citations ask the lookup, so a pass
+    with no `lookups` says what to look up."""
     found: list[Linked] = []
-    for folder in folders:
+    for folder in listing.kept():
         domain = keeps_domain_model(analysis, folder)
         words = vocabulary(analysis, listing, folder) if domain else None
         cites = Cites(lookups or {}, component(listing, folder))
+        named = id_links.named(analysis, listing, folder)
         entries = [
             t for t in analysis.of_kind(TERM) if t.folder == folder and not t.withdrawn and t.id
         ]
@@ -1413,10 +1545,10 @@ def plan(
         for path, held in sorted(by_glossary.items()):
             text = read.get(path)
             if text is not None:
-                found.append(glossary(path, text, held, words, cites))
-        documents = _documents(analysis, folder, read, words, kinds, cites)
+                found.append(glossary(path, text, held, words, cites, named))
+        documents = _documents(analysis, folder, read, words, kinds, cites, named)
         if words is not None:
-            found += _views(analysis, folder, read, words, kinds, cites, documents)
+            found += _views(analysis, folder, read, words, kinds, cites, named, documents)
         found += [linked for _artefact, linked in documents]
         if asked is not None:
             asked |= cites.asked
@@ -1430,6 +1562,7 @@ def _views(
     words: Vocabulary,
     kinds: Mapping[str, structure.Kind] | None,
     cites: Cites,
+    named: id_links.Named,
     documents: Sequence[tuple[Artefact, Linked]],
 ) -> list[Linked]:
     """Each view in force of the analysis in `folder` whose text `read` gives, with its
@@ -1455,7 +1588,7 @@ def _views(
             if kinds is not None
             else None
         )
-        found.append(view(artefact, text, words, cites, closed))
+        found.append(view(artefact, text, words, cites, closed, named))
     return found
 
 
@@ -1480,18 +1613,19 @@ def _documents(
     words: Vocabulary | None,
     kinds: Mapping[str, structure.Kind] | None,
     cites: Cites | None = None,
+    named: id_links.Named | None = None,
 ) -> list[tuple[Artefact, Linked]]:
     """Each of `_document_artefacts` of the analysis in `folder` whose text `read` gives,
     with its links as the command writes them (`document`): the links of its citations,
-    given `cites`, and, given `words`, the mentions' links of each actor, use case,
-    journey and requirement, read as `kinds` gives its parts, none where `kinds` is
-    `None`."""
+    given `cites`, and, read as `kinds` gives its parts, none where `kinds` is `None`, the
+    mentions' links of each actor, use case, journey and requirement given `words`, and
+    the links of ids given `named`."""
     found: list[tuple[Artefact, Linked]] = []
     for artefact in _document_artefacts(analysis, folder):
         text = read.get(artefact.path)
         if text is not None:
             kind = (kinds or {}).get(artefact.kind)
-            found.append((artefact, document(artefact, text, words, kind, cites)))
+            found.append((artefact, document(artefact, text, words, kind, cites, named)))
     return found
 
 
@@ -1540,9 +1674,8 @@ def files(analysis: Analysis, listing: analyses.Listing) -> list[str]:
     """The paths `plan` reads: in every analysis, each glossary that holds a term in force
     and each artefact in force of another kind, and each view in force where it keeps a
     domain model."""
-    folders = [a.folder for a in listing.analyses] if listing.several else [None]
     paths: set[str] = set()
-    for folder in folders:
+    for folder in listing.kept():
         paths |= {t.path for t in analysis.of_kind(TERM) if t.folder == folder and not t.withdrawn}
         if keeps_domain_model(analysis, folder):
             paths |= {

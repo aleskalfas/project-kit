@@ -74,9 +74,9 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) after each push to the [default branch](../../../glossary.md#term-default-branch--default-branch) and on a schedule. The check reports its [findings](../../../glossary.md#term-finding--finding) and never fails on them ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
 - **AI agent** (`ACT-ai-agent`): an agent an installed [capability](../../../glossary.md#term-capability--capability) ships for an [artefact](../../../glossary.md#term-artefact--artefact)'s type proposes each [answer](../../../glossary.md#term-answer--answer). It gives its evidence and the commands that write it. It runs none of those commands, since each answer is a person's decision ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
-- **Operator** (`ACT-operator`): is asked before a command that writes an answer changes a repository other than the session's own. So no such write happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before a command that writes an answer changes a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-034:** The [default branch](../../../glossary.md#term-default-branch--default-branch) holds [debt](../../../glossary.md#term-debt--debt): a [change](../../../glossary.md#term-change--change) that landed there left an [artefact](../../../glossary.md#term-artefact--artefact) stale, or deferred its [answer](../../../glossary.md#term-answer--answer).
+**Preconditions:** **From [UC-034](UC-034-land-change.md):** The [default branch](../../../glossary.md#term-default-branch--default-branch) holds [debt](../../../glossary.md#term-debt--debt): a [change](../../../glossary.md#term-change--change) that landed there left an [artefact](../../../glossary.md#term-artefact--artefact) stale, or deferred its [answer](../../../glossary.md#term-answer--answer).
 
 **Assumptions:**
 
@@ -97,7 +97,7 @@ pkit:
    - updating the [artefact](../../../glossary.md#term-artefact--artefact) and revalidating it `updated`
    - revalidating it `unchanged`, with why it still holds
    - deferring it to an open follow-up issue
-7. At its entry, each command that writes an [answer](../../../glossary.md#term-answer--answer) checks that the repository it would write in is the session's own. Where it is another, the command asks the operator (REQ-012). It writes the answer to an answer file of the change's own, as UC-002 does ([COR-062 point 1](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)).
+7. At its entry, each command that writes an [answer](../../../glossary.md#term-answer--answer) checks that the repository it would write in is the session's own. Where it is another, the command asks the operator ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)). It writes the answer to an answer file of the change's own, as [UC-002](UC-002-answer-stale.md) does ([COR-062 point 1](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)).
 
 > [!WARNING]
 > **Not built yet:** `pkit friction revalidate` and `pkit friction defer` run no such check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -109,11 +109,11 @@ pkit:
 
 - **1a.** The clone is shallow, and an [artefact](../../../glossary.md#term-artefact--artefact)'s revalidation point lies beyond the cut. The check reports the artefact `unreachable`, and does not judge it until `git fetch --unshallow` brings the history. The path goes on at step 2 for the other debts.
 - **1b.** An [anchor](../../../glossary.md#term-anchor--anchor)'s resolver gives no result, or the anchor names a kind that nothing installed resolves. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
-- **1c.** An anchor resolves to nothing at the latest commit, such as a path whose files were removed. The check reports it as a `dead-anchor`, an error it reports and never fails on, and judges the artefact on its other anchors (REQ-020). The path goes on at step 2.
+- **1c.** An anchor resolves to nothing at the latest commit, such as a path whose files were removed. The check reports it as a `dead-anchor`, an error it reports and never fails on, and judges the artefact on its other anchors ([REQ-020](../../../requirements/functional/030-change/REQ-020-dead-anchor-error.md)). The path goes on at step 2.
 - **3a.** An installed [capability](../../../glossary.md#term-capability--capability) ships an agent for the artefact's type. The developer dispatches that agent, which proposes the outcome with its evidence and the commands to run, and runs none ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). The path goes on at step 4.
 - **3b.** An agent that an installed capability ships for the artefact's type proposed the [answer](../../../glossary.md#term-answer--answer) before the developer reached the [debt](../../../glossary.md#term-debt--debt). The agent ran with nobody watching, through the [backbone](../../../glossary.md#term-backbone--backbone)'s run command, `pkit agents run`:
   - The command starts the runner the [adapter](../../../glossary.md#term-adapter--adapter) registers, confined to a clone at a pinned commit ([ADR-066 point 1](../../../../../architecture/decisions/ADR-066-unattended-agent-runner.md#1-the-runner-is-a-command-the-adapter-registers-and-the-backbone-runs-it)).
-  - At its entry, the command checks that the repository it would write in is the session's own. With nobody to ask, the command refuses another (REQ-012).
+  - At its entry, the command checks that the repository it would write in is the session's own. With nobody to ask, the command refuses another ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
   The developer reads the agent's proposal, a file the run handed back, and the path goes on at step 4.
 

@@ -25,8 +25,10 @@ changes meaning.
   of the project's groups adds, whatever its rule, ending the part before it.
   Both sides are read with that one kind. A step is known by its number, a
   variant by its step's number and its letter, in either case. Its text is what
-  follows, white space folded. The text at the merge-base is read from the
-  clone alone (`backbone.text_at`).
+  follows, white space folded, and a link around an id read as the id, so the
+  links `pkit analysis link` writes and moves change no step's text (DEC-001
+  point 14). The text at the merge-base is read from the clone alone
+  (`backbone.text_at`).
 - **What it reports,** for each step or variant the merge-base held:
   - **renumbered:** its text stands under another number or letter, one the
     merge-base did not give that text, and no longer under its own;
@@ -221,9 +223,15 @@ def read(text: str, kind: structure.Kind) -> Read:
         if element.added:
             continue
         if element.form in forms.STEP_FORMS and not steps:
-            steps = [Item(str(n), item.line, said) for n, item, said in forms.steps(part)]
+            steps = [
+                Item(str(n), item.line, forms.ids_read_plain(said))
+                for n, item, said in forms.steps(part)
+            ]
         elif element.form == forms.VARIANTS and not variants:
-            variants = [Item(key, item.line, said) for key, item, said in forms.variants(part)]
+            variants = [
+                Item(key, item.line, forms.ids_read_plain(said))
+                for key, item, said in forms.variants(part)
+            ]
     return Read(tuple(steps), tuple(variants))
 
 

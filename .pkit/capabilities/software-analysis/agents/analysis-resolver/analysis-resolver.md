@@ -80,7 +80,8 @@ pkit friction revalidate <artefact> --outcome unchanged --because "<why it still
 # holds — the code moved; after the person applies the anchor edit
 pkit friction revalidate <artefact> --outcome unchanged --because "<old path> moved to <new path>; anchor re-pointed."
 # analysis-stale — after the person applies the content edit, its links first: to what
-# it cites, and to terms where the analysis keeps a domain model (DEC-001 point 13)
+# it cites (DEC-001 point 13), to the artefacts its ids name (DEC-001 point 14), and to
+# terms where the analysis keeps a domain model (DEC-004 point 7)
 pkit analysis link
 pkit friction revalidate <artefact> --outcome updated
 # code-regressed — after the person reports the defect

@@ -319,10 +319,12 @@ def fill(repo: AdopterRepo) -> None:
     as a person fills each — the check fails an artefact still holding one. Each part's
     hint is written over with its example. An example cites a record of the example's
     project, which no adopter here holds, so its citation is left out: the check would
-    warn of one that resolves to nothing (software-analysis DEC-001 point 13). The
-    overview is generated, and holds nothing a person fills (DEC-003 point 8). An actor's
-    `summary` is drawn there, so where an overview is kept, it is written anew after, as a
-    person runs its command."""
+    warn of one that resolves to nothing (software-analysis DEC-001 point 13). Then the
+    links are written, as the authoring skill runs `pkit analysis link` after any artefact
+    is written: a journey's step lines name their use cases by id, which link to them
+    (DEC-001 point 14). The overview is generated, and holds nothing a person fills
+    (DEC-003 point 8). An actor's `summary` is drawn there, so where an overview is kept,
+    it is written anew after, as a person runs its command."""
     overviews = [
         p for p in (repo.root / ANALYSIS).rglob("README.md") if p.parent.name == "overview"
     ]
@@ -333,6 +335,8 @@ def fill(repo: AdopterRepo) -> None:
             lambda m: _EXAMPLE_CITATION.sub("", m["example"]), path.read_text(encoding="utf-8")
         )
         path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
+    linked = run_script(repo, LINK)
+    assert linked.returncode == 0, linked.stderr
     if overviews:
         written = run_script(repo, OVERVIEW_SCRIPT)
         assert written.returncode == 0, written.stderr

@@ -49,9 +49,9 @@ pkit:
 **Other actors:**
 
 - **Merge authoriser** (`ACT-merge-authoriser`): authorises the merge of one [head](../../../glossary.md#term-head--head). They read what the [change](../../../glossary.md#term-change--change) updated in the [pull request](../../../glossary.md#term-pull-request--pull-request)'s sentences, and what it leaves out of date in the [change check](../../../glossary.md#term-change-check--change-check)'s list. Where an agent commits straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), the person it works for is the merge authoriser. They are told the same before the commit ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
-- **Operator** (`ACT-operator`): is asked before the landing changes the hosting service for a repository other than the session's own. So no such change happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before the landing changes the hosting service for a repository other than the session's own. So no such change happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+**Preconditions:** **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 
 **Assumptions:**
 
@@ -65,9 +65,9 @@ pkit:
 
 **Main path:**
 
-1. The merge authoriser reads the [pull request](../../../glossary.md#term-pull-request--pull-request)'s sentence on each updated [artefact](../../../glossary.md#term-artefact--artefact), and the [change check](../../../glossary.md#term-change-check--change-check)'s list of answers (UC-002). They authorise the merge of the pull request at its [head](../../../glossary.md#term-head--head) ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+1. The merge authoriser reads the [pull request](../../../glossary.md#term-pull-request--pull-request)'s sentence on each updated [artefact](../../../glossary.md#term-artefact--artefact), and the [change check](../../../glossary.md#term-change-check--change-check)'s list of answers ([UC-002](UC-002-answer-stale.md)). They authorise the merge of the pull request at its [head](../../../glossary.md#term-head--head) ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 2. The developer runs `pkit pull-request land <n> --head <sha> --subject "<title>"`, with the head that was authorised and the pull request's title.
-3. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012 and [ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes)).
+3. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md) and [ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes)).
 4. The system reads the pull request once, for these:
    - its state
    - its head
@@ -112,6 +112,6 @@ pkit:
 
 - The landing merges nothing but `<sha>`. Each request is pinned to it, and a [pull request](../../../glossary.md#term-pull-request--pull-request) queued at another [head](../../../glossary.md#term-head--head) is taken out of the queue ([ADR-061 point 5](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#5-the-command-makes-requests-and-reports-facts-the-caller-decides) and `pull_request_landing.py`).
 - A merge is stated only once a reading says merged. A request with no usable response is never reported as not made (ADR-061 point 5).
-- In a repository other than the session's own, nothing is sent to the hosting service without the operator's yes or `--allow-foreign-repo` (REQ-012 and `session_guard.py`).
+- In a repository other than the session's own, nothing is sent to the hosting service without the operator's yes or `--allow-foreign-repo` ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md) and `session_guard.py`).
 - No request reaches a queue that would not make the squash commit [COR-009](../../../../../../.pkit/decisions/core/COR-009-pr-workflow.md) asks for ([ADR-061 point 8](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#8-cor-009s-landing-realised)).
 - The landing deletes no branch. `pkit pull-request delete-branch` deletes one only while its tip is the head that merged (ADR-061 point 5).

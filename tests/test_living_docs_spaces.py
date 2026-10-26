@@ -2556,6 +2556,24 @@ def test_a_line_inside_fenced_code_is_no_heading() -> None:
     assert _headings("```\n# never closed\n") == []
 
 
+def test_a_prose_line_is_one_fenced_code_and_a_comment_do_not_hide() -> None:
+    """What a page mentions is read from its prose lines (#2099): below the front
+    matter, outside fenced code and a comment that opens a line. A comment within a
+    line stays in it, since a mark is written there."""
+    text = (
+        "---\nkind: guide\n---\n"  # lines 1-3
+        "Run `pkit sync` <!-- unanchored: named -->.\n"  # 4
+        "```console\n$ pkit sync\n```\n"  # 5-7
+        "<!--\n`pkit sync`\n-->\n"  # 8-10
+        "> In a quote, `src/app.py`.\n"  # 11
+    )
+    assert formats.prose(text) == [
+        (4, "Run `pkit sync` <!-- unanchored: named -->."),
+        (11, "> In a quote, `src/app.py`."),
+        (12, ""),
+    ]
+
+
 @pytest.mark.parametrize(
     ("opening", "inside", "closing"),
     [

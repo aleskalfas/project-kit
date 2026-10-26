@@ -1703,7 +1703,7 @@ Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#pull-request).
 
-**Example:** the pull request that landed UC-008 targeted `main`, and its conventional title became the squash commit's subject.
+**Example:** the pull request that landed [UC-008](use-case-model/use-cases/040-release/UC-008-release-backbone.md) targeted `main`, and its conventional title became the squash commit's subject.
 
 **Distinctions:**
 

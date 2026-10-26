@@ -4380,7 +4380,10 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       resolves to (`_part_anchors`): an entry's section, a document's section
       or its lead, read through the one reading of an artefact anchor's part
       (`artefact_parts`), or a record's point, read through the one reading of
-      a record's points (`record_points`).
+      a record's points (`record_points`). And its `path_anchors`, added within
+      version 1 as well: each path anchor with the files it stands on at the
+      state, by the one rule both friction checks match a path pattern by
+      (`_path_anchors`).
     - `types`: every declared type by its full name — the backbone's own and
       each installed component's type registry — with its `component`,
       `name`, `description`, `kind_field` and `project_places`. Added within
@@ -4452,6 +4455,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     anchored_points = _AnchoredPoints(target_root, tree)
     listing = tree if tree is not None else working_tree(target_root)
     unplaced = unplaced_files(discovery, listing)
+    standing = _Standing(discovery, listing)
 
     return {
         "schema_version": ARTEFACTS_SCHEMA_VERSION,
@@ -4500,6 +4504,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
                 "fields": _own_fields(artefact.carrier),
                 "span": _span_entry(artefact.span),
                 "part_anchors": _part_anchors(discovery, artefact, anchored_points),
+                "path_anchors": standing.path_anchors(artefact),
                 "in_scope_of": list(in_scope_of.get(artefact.location, ())),
                 **_type_entry(types.of(artefact), index),
             }
@@ -4696,6 +4701,43 @@ def _part_anchors(
                 if part is not None:
                     found.append(part)
     return found
+
+
+class _Standing:
+    """The files each path anchor of the artefacts document stands on, at the state the
+    document reads (COR-050 points 2 and 7), so a script reads them and matches no
+    pattern itself (ADR-057 point 2).
+
+    They are matched by the one rule both friction checks match a path pattern by
+    (`friction_check.Listing.stands_on`): the files of the state's one listing the
+    pattern matches, less those its `friction.exclude` leaves out and the answer
+    files. A dead anchor stands on no file. A pattern several anchors write is
+    matched once.
+    """
+
+    def __init__(self, discovery: Discovery, listing: RepositoryTree) -> None:
+        self.discovery = discovery
+        self.tree = listing
+        self._listing: Any = None
+        self._files: dict[str, list[str]] = {}
+
+    def path_anchors(self, artefact: Artefact) -> list[dict[str, Any]]:
+        """Each path anchor of `artefact`, in the order its block writes them, with the
+        files it stands on, sorted: `{value, files}`."""
+        return [
+            {"value": value, "files": self._standing_on(value)}
+            for value in artefact.anchors_of_kind("path")
+        ]
+
+    def _standing_on(self, pattern: str) -> list[str]:
+        if pattern not in self._files:
+            if self._listing is None:
+                # The change check imports this module; its listing reads the state's one.
+                from project_kit.friction_check import Listing
+
+                self._listing = Listing(self.tree.files(), self.discovery.settings)
+            self._files[pattern] = list(self._listing.matching(pattern))
+        return self._files[pattern]
 
 
 class _AnchoredPoints:
