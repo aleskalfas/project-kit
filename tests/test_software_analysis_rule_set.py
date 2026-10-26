@@ -38,6 +38,9 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - the **consequence rule**, `RS-SAN-009`, asks each precondition to name the use
   cases that make it true, and the **one-way rule**, `RS-SAN-010`, lets an analysis
   name only the analyses its component depends on (#1809). Both stay proposed;
+- the **area rule**, `RS-SAN-014`, its origin DEC-005, asks each use case to lie in
+  its function's area, and a journey to tell each path, planned from content and
+  never from counts (#2106). It and its record stay proposed;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
   `pkit validate`, and the append-only rule `check-numbers`. The consequence rule
@@ -168,6 +171,19 @@ JUDGEMENT_RULES = {
         "where an accepted decision record decides it, and a box below it says so.",
         ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"],
     ),
+    "RS-SAN-014": (
+        "Each use case lies in a functional area whose goal it is a step toward, and no two "
+        "areas serve one function. Where one actor's use cases make a path, a journey tells it.",
+        [
+            "software-analysis:DEC-001#1",
+            "software-analysis:DEC-001#2",
+            "software-analysis:DEC-001#12",
+            "software-analysis:DEC-003#8",
+            "software-analysis:DEC-005#1",
+            "software-analysis:DEC-005#2",
+            "software-analysis:DEC-005#5",
+        ],
+    ),
 }
 #: Each judgement rule's origin, where a decision record holds it. The source rule's is
 #: the maintainer's decision of 17 October (#1648, choice 6), which no record holds.
@@ -182,8 +198,13 @@ ORIGINS = {
     "RS-SAN-011": "software-analysis:DEC-004",
     "RS-SAN-012": "software-analysis:DEC-001",
     "RS-SAN-013": "software-analysis:DEC-001",
+    "RS-SAN-014": "software-analysis:DEC-005",
 }
 SOURCE_RULE = "RS-SAN-007"
+#: The area rule (#2106): each use case in its function's area, a journey for each path.
+AREA_RULE = "RS-SAN-014"
+#: The record the area rule rests on, proposed until the maintainer accepts it.
+AREA_RECORD = f"{SA.as_posix()}/decisions/DEC-005-finding-functionality.md"
 #: The concept rule (#1784): what an artefact uses of the domain, the glossary defines.
 CONCEPT_RULE = "RS-SAN-008"
 ACTOR = actor_at("ACT-tester")
@@ -987,6 +1008,53 @@ def test_the_source_rule_cannot_be_accepted_without_its_why(project: AdopterRepo
     assert not rs.validate_rule_sets(project.root).errors
 
 
+def _with_its_record_accepted(project: AdopterRepo) -> None:
+    """The adopter's copy of the area rule's record, accepted: a fixture, not the
+    acceptance, which the maintainer makes (#2106)."""
+    text = (project.root / AREA_RECORD).read_text(encoding="utf-8")
+    assert text.count("\nstatus: proposed\n") == 1
+    project.write({AREA_RECORD: text.replace("\nstatus: proposed\n", "\nstatus: accepted\n")})
+
+
+def test_the_area_rule_cannot_be_accepted_before_its_record(project: AdopterRepo) -> None:
+    """The area rule's origin is DEC-005, proposed as it ships. An accepted rule cites an
+    accepted record (COR-051 point 5), so a copy that accepts the rule alone fails
+    validation on its origin, and passes once the record is accepted too."""
+    _with_an_actor_and_a_set_inheriting_san(project, major=2)
+    text = with_status((project.root / SAN_REL).read_text(encoding="utf-8"), AREA_RULE, "accepted")
+    project.write({SAN_REL: text.replace("version: 1.0.0", "version: 2.0.0", 1)})
+    (error,) = rs.validate_rule_sets(project.root).errors
+    assert error.location == f"{SAN_REL}#{AREA_RULE}"
+    assert error.kind == Kind.DECISION_NOT_ACCEPTED
+    _with_its_record_accepted(project)
+    assert not rs.validate_rule_sets(project.root).errors
+
+
+def test_the_area_rule_plans_from_content_and_leaves_a_path_to_a_reviewer() -> None:
+    """DEC-005 (#2106): an area is one function, one summary goal, cut by what its use
+    cases do and never by their number, and a journey tells each end-to-end path one
+    actor takes. A script can read only that a use case lies in an area's folder, which
+    a reviewer judges until `SAN` declares a check of it. A chain in `after` is a sign of
+    a path, never proof, so nothing reports it. Each break names the change that owns
+    it. The examples only illustrate, as the set's opening says."""
+    data, body = _shipped()
+    assert AREA_RULE not in data["checks"]
+    area = " ".join(_section(body, AREA_RULE).split())
+    assert "Their number cuts none." in area
+    assert "One summary goal, one level above the area's use cases" in area
+    assert "this rule judges none of its words." in area
+    assert "**A sign, never proof.**" in area
+    assert "which it takes in turn, end to end, toward one goal" in area
+    assert "whatever the area's goal says." in area
+    assert "The change that leaves the path untold owns that break." in area
+    assert "To judge it, a reviewer reads the use cases and the journeys" in area
+    assert "reports" not in area
+    assert "Until this set declares a check of it under `checks`, a reviewer judges it" in area
+    assert "- **Examples,** from an online shop:" in area
+    opening = " ".join(body.split("\n## RS-SAN-001")[0].split())
+    assert "and the items labelled *Examples* only illustrate." in opening
+
+
 def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
     project: AdopterRepo,
 ) -> None:
@@ -1001,6 +1069,9 @@ def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
     for rule_id in JUDGEMENT_RULES:
         text = with_status(text, rule_id, "accepted")
     project.write({SAN_REL: text.replace("version: 1.0.0", "version: 2.0.0", 1)})
+    # An accepted rule's origin record is accepted too (COR-051 point 5), so the copy
+    # accepts the area rule's record as its acceptance would.
+    _with_its_record_accepted(project)
     assert not rs.validate_rule_sets(project.root).errors
     assert _bound(project) == [
         "software-analysis:" + r for r in (RULE, STEPS_RULE, *JUDGEMENT_RULES)
