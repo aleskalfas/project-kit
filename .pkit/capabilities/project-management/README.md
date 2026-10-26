@@ -632,7 +632,7 @@ Outside a topology of seats, the instance id switches instance ownership on: wit
 |---|---|
 | `create-issue` | Claims each issue it files for this clone, so the clone owns the arc it files from birth. An issue filed for another person with `--assignee` is not claimed. |
 | `start-work` | Claims an issue no instance owns, once it has set the assignee and before the move to In Progress. An issue another instance owns is refused by the clash guard below, and `--bypass` starts it unclaimed. |
-| `close-issue` | Releases every owner of the issue once it has closed it, in each mode. `done-work` releases through the `close-issue --mode=pr-merge` it runs for each issue its merge closed. |
+| `close-issue` | Releases every owner of the issue once it has closed it, in each mode, except a comment marker another account's clone wrote, which only that account's clone can release. `done-work` releases through the `close-issue --mode=pr-merge` it runs for each issue its merge closed. |
 
 The owner is the assignee paired with an instance number. So a clone claims only an issue assigned to its own account. A claim or a release that fails is a warning, and the command's own work stands. `handoff-issue` does not move the marker between clones yet.
 
