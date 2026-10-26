@@ -33,12 +33,21 @@ takes `--reason` and posts an audit comment (from, to, why) before it writes,
 and the issue's type must be one `issue-types.yaml` lets sit under a
 milestone (#1016).
 
-Refuses on hard-reject validation findings; warns on warning-level
-findings. The `--force` flag is the operator override of a hard-reject
-finding (the `--force` layer per DEC-046 — distinct from the reason-based
-`--bypass` mechanism), recording an audit comment.
+Refuses on hard-reject validation findings, and on any a schema declares
+bypassable-with-audit (no rule it checks is today); warns on warning-level
+findings. The `--force` flag is the operator override of either refusal
+(the `--force` layer per DEC-046 — distinct from the reason-based `--bypass`
+mechanism), recording an audit comment.
 
 Membership gate per DEC-021 runs at startup.
+
+The clash guard (DEC-035 point 6) runs before anything is written, where this
+clone set an instance id or holds a seat of a topology: an edit of an issue
+another instance owns is refused at bypassable-with-audit (DEC-014), through
+`_lib/instance_claims`. `--bypass-owner "<reason>"` posts the reason on the
+issue as an audit comment first. In a project with a topology, a claim whose
+clone no longer holds its seat is no claim, and one that cannot be judged
+refuses (DEC-059 point 9).
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-issue.py 42 --body-file new-body.md
@@ -49,7 +58,8 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  edited (or dry-run reported, or nothing to change)
   1  membership refusal / validation refusal / a milestone edit that would
-     move the issue in the lifecycle or orphan its parent-ref
+     move the issue in the lifecycle or orphan its parent-ref / the clash
+     guard refused an issue another instance owns
   2  usage error (issue not found; no mode specified; milestone matches no
      open milestone)
   3  gh failure
@@ -79,6 +89,7 @@ from _lib import (
     body_rules,
     bootstrap_gate,
     decision_ids,
+    instance_claims,
     provenance,
     session_guard,
     title_rules,
@@ -203,10 +214,24 @@ def main() -> int:
         "--force",
         action="store_true",
         help=(
-            "Operator override of hard-reject validation findings, with an "
-            "audit comment (the `--force` layer per DEC-046 — a hard-reject "
-            "is force-overridable out of band, distinct from the "
-            "`--bypass` mechanism). Default: refuse on hard-reject."
+            "Operator override of the validation findings that refuse an edit, "
+            "hard-reject or bypassable-with-audit, with an audit comment (the "
+            "`--force` layer per DEC-046 — a hard-reject is force-overridable "
+            "out of band, distinct from the `--bypass` mechanism). Default: "
+            "refuse on either."
+        ),
+    )
+    parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses an edit of an issue another "
+            "instance owns (bypassable-with-audit per DEC-014, DEC-035 point 6): "
+            "the reason is posted on the issue as an audit comment before the edit. "
+            "Qualified per DEC-046, since the validation stop is a second gate: it "
+            "refuses a finding declared bypassable-with-audit as it refuses a "
+            "hard-reject one, and --force writes past both."
         ),
     )
     parser.add_argument(
@@ -410,6 +435,24 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+
+    # The clash guard (DEC-035 point 6), before anything is written: an edit of
+    # an issue another instance owns is refused, unless a bypass posts its reason.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="edit-issue",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 1
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")

@@ -12,6 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
+from tests.pm_ownership_support import FakeGitHub, clone_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "review-work.py"
@@ -293,11 +294,15 @@ def _last_failure(err: str) -> str:
 @pytest.fixture
 def run_main(rw, monkeypatch):
     """Returns `run(issue, *, pr=None, move_rc=0, reviewer=None, engine=None,
-    config=None, move=None, dry_run=False)` → `(rc, gh_calls, moves)`. `pr` is
-    the open PR on the branch (None: none yet); `engine` the process engine, a
-    `FakeEngine` (by default one that gives no answer); `config` the adopter
-    config. `move` runs the composed move-issue in process; without it the
-    move is recorded and answers `move_rc`."""
+    config=None, move=None, dry_run=False, instance=None, github=None,
+    extra=())` → `(rc, gh_calls, moves)`. `pr` is the open PR on the branch
+    (None: none yet); `engine` the process engine, a `FakeEngine` (by default
+    one that gives no answer); `config` the adopter config. `move` runs the
+    composed move-issue in process; without it the move is recorded and answers
+    `move_rc`. `instance` is this clone's instance id (none by default), and
+    `github` the in-memory GitHub its ownership calls reach; each ownership
+    write is recorded in `gh_calls` too, in its place among the PR calls.
+    `extra` adds to the command line."""
 
     def run(
         issue: dict,
@@ -309,9 +314,21 @@ def run_main(rw, monkeypatch):
         config: dict | None = None,
         move: MoveIssueInProcess | None = None,
         dry_run: bool = False,
+        instance: int | None = None,
+        github: FakeGitHub | None = None,
+        extra: tuple[str, ...] = (),
     ):
         gh_calls: list[list[str]] = []
         moves: list[str] = []
+        fake = github if github is not None else FakeGitHub()
+
+        def ownership_gh(args: list[str], _config: dict):
+            if args[1:3] != ["issue", "view"]:
+                gh_calls.append([str(a) for a in args])
+            return fake(args)
+
+        clone_with(rw.instance_claims, monkeypatch, instance)
+        monkeypatch.setattr(rw.instance_claims, "_gh", ownership_gh)
 
         def fake_gh_run(args, config, **kwargs):
             gh_calls.append(list(args))
@@ -333,6 +350,7 @@ def run_main(rw, monkeypatch):
             argv += ["--reviewer", reviewer]
         if dry_run:
             argv.append("--dry-run")
+        argv += list(extra)
         monkeypatch.setattr(sys, "argv", argv)
         monkeypatch.setattr(rw, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(rw.bootstrap_gate, "enforce", lambda *a, **k: True)
@@ -562,3 +580,63 @@ def test_a_value_in_the_environment_does_not_stand_in_for_the_labels(
     assert _pr_writes(gh_calls) == []
     assert moves == []
     assert "the issue is in 'backlog'" in capsys.readouterr().err
+
+
+# ---- the clash guard (DEC-035 point 6) ------------------------------------------
+#
+# With an instance id set, review-work reads the issue's owner before it opens a
+# PR, makes one ready or requests reviewers. The in-memory GitHub holds issue #42
+# with a claim of instance 3, and this clone is instance 2.
+
+
+def _owned_by_instance_3(rw) -> FakeGitHub:
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    github.post(42, rw.instance_claims.ownership.format_event_comment(event="claim", instance=3))
+    return github
+
+
+def test_the_clash_guard_refuses_before_any_pr_write(run_main, rw, capsys) -> None:
+    github = _owned_by_instance_3(rw)
+    rc, gh_calls, moves = run_main(
+        _task(["state:in-progress"]), reviewer="@alice", instance=2, github=github
+    )
+    assert rc == 1
+    assert gh_calls == []  # no PR read, opened, made ready or given reviewers
+    assert moves == []
+    assert github.writes() == []
+    err = capsys.readouterr().err
+    assert (
+        "[refused] review-work #42: #42 is owned by instance 3, and this clone is instance 2" in err
+    )
+    assert 'pass --bypass-owner "<reason>"' in err
+
+
+def test_bypass_owner_posts_its_reason_first_and_once(run_main, rw, monkeypatch, capsys) -> None:
+    """The audit comment comes before the PR is opened, and the composed
+    move-issue, run in process, is handed the reason and posts no second one."""
+    github = _owned_by_instance_3(rw)
+    move = MoveIssueInProcess(monkeypatch, _task(["state:review"]))
+    # The child runs as the same person as review-work, as a real child does.
+    me = SimpleNamespace(github_login="me")
+    monkeypatch.setattr(move.module, "resolve_invoker_identity", lambda config=None: me)
+    rc, gh_calls, _moves = run_main(
+        _task(["state:in-progress"]),
+        reviewer="@alice",
+        engine=FakeEngine(status_at("review")),
+        move=move,
+        instance=2,
+        github=github,
+        extra=("--bypass-owner", "instance 3's session is gone"),
+    )
+    assert rc == 0
+    writes = [c[1:3] for c in gh_calls if c[2] not in PR_READS]
+    assert writes == [["issue", "comment"], ["pr", "create"], ["pr", "edit"]]
+    assert move.runs[0][-2:] == ["--bypass-owner", "instance 3's session is gone"]
+    audits = [c["body"] for c in github.issues[42].comments if "pkit-audit-key" in c["body"]]
+    assert len(audits) == 1
+    assert "Bypassed by me: instance 3's session is gone" in audits[0]
+    captured = capsys.readouterr()
+    assert "--bypass-owner let this clone, instance 2, act on it" in captured.err
+    assert "audit comment already present; idempotent skip" in captured.out
+    assert captured.out.rstrip().endswith("[ok] PR ready; #42 in Review")

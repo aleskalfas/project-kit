@@ -119,12 +119,15 @@ def invoke_move_issue(
     *,
     capability_root_arg: Path | None,
     allow_foreign_repo: bool,
+    bypass_owner: str | None = None,
 ) -> int:
     """Run `move-issue <N> --to <target> --yes` and return its exit code.
 
     move-issue reads the issue's state itself, when it moves, and refuses a
     move that is not legal from what it reads. A confirmed foreign-repo
-    override is threaded through, so that gate is confirmed once."""
+    override is threaded through, so that gate is confirmed once. So is the
+    reason a bypass of the clash guard gave (DEC-035 point 6), whose audit
+    comment move-issue then finds posted."""
     cmd = [
         sys.executable,
         str(_SCRIPTS / "move-issue.py"),
@@ -135,6 +138,8 @@ def invoke_move_issue(
     ]
     if allow_foreign_repo:
         cmd.append("--allow-foreign-repo")
+    if bypass_owner:
+        cmd += ["--bypass-owner", bypass_owner]
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
     return subprocess.run(cmd, check=False).returncode

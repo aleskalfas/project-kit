@@ -1,0 +1,128 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - moved-c1c76fd062d5.yaml
+    revalidated:
+      at: 2026-10-26T12:44:26Z
+      outcome: unchanged
+      unchanged-because: Main's tests of close-issue gain one that a state issue is never an open child, and DEC-055 point 3 adds the delegate's decision. This change's tests of move-issue, done-work and close-issue gain the clash guard and the release of an owner, with stamps built by main's facility. Judged together, the tests that find each held move or close refused without the person's authorisation are as they were, so the requirement holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-060-file-task.md
+    read:
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - moved-a3323ce78e42.yaml
+    revalidated:
+      at: 2026-10-26T12:44:40Z
+      outcome: unchanged
+      unchanged-because: Main reads the containment corpus through the one read of issues, which leaves state issues out and gives each issue of work back as before. This change has create-issue claim the filed Task after step 12, only where the clone set an instance id. Judged together, no step, variant, postcondition or guarantee the use case states changes.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-061-move-issue.md
+    read:
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - moved-6e104fbc48be.yaml
+    revalidated:
+      at: 2026-10-26T12:44:43Z
+      outcome: unchanged
+      unchanged-because: Main's DEC-052 gains roster rows for the ownership and state-issue events, and leaves the move kind and its audit comment as they were. This change has start-work and move-issue refuse another instance's issue, and start-work claim an unowned one, only where the clone set an instance id. Judged together, each step and variant the use case states holds as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-063-plan-intent.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      at: 2026-10-26T12:44:49Z
+      outcome: unchanged
+      unchanged-because: Main gives the project manager a section on deciding as the delegate, and adds a seat's role to DEC-029 as an input to its direction. This change has edit-issue refuse to edit another instance's issue, where the clone set an instance id. Judged together, the batch plan and its one approval gate are as they were. The issues the agent files in step 8 are its own clone's or no instance's, so each step holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md
+    read:
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - moved-e8b5c957d8c2.yaml
+    revalidated:
+      at: 2026-10-26T12:44:52Z
+      outcome: unchanged
+      unchanged-because: Main reads the carriers of a workstream and the bodies a rename rewrites through the one read of issues, which leaves state issues out. This change has edit-issue refuse another instance's issue, unless --bypass-owner gives a reason, only where the clone set an instance id. Judged together, a milestone edit still never changes an issue's state, and each step and variant holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-062-review-and-land.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T050206Z-4a5c94ca.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - moved-a808f0db0388.yaml
+    revalidated:
+      at: 2026-10-26T12:44:54Z
+      outcome: unchanged
+      unchanged-because: "Main boxes step 9 until #2122, since land-work does not yet show what a change does to the delegate's name. DEC-055 point 3 adds the delegate's decision. Where the clone set an instance id, this change has done-work refuse another instance's issue before its gates, and release the owner through close-issue. Judged together, the landing's steps, its list of answers and its stop at a later head hold as main left them."
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T12:44:57Z
+      outcome: unchanged
+      unchanged-because: Main's answers, read here, judged the delegate that rule 20 and COR-050 name, pkit refs lookup's new fields and the regrouped status lines. Each left the README's commands and output as they are. This change has create-issue claim what it files only where the clone set an instance id, or holds a seat that is not a planner's. It still refuses to file before bootstrap has run, as the example shows, so the README holds.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T12:45:09Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
