@@ -821,8 +821,10 @@ class Walker:
         touches its file.
 
         A parent is read from its bytes, as `_entry_gone` reads one: a blob that holds the
-        entry's id is taken to hold the entry, which errs only toward reading the history
-        further back. A merge that took the file whole from a side adds nothing, as it is
+        entry's id is taken to hold the entry, which errs toward reading the history further
+        back. One that writes the id only in an escaped spelling, which YAML allows in a key,
+        is taken to hold none, so its child may read as the add. A merge that took the file
+        whole from a side adds nothing, as it is
         no version of the file, so an entry a line of work removed where the merge kept it
         keeps its start."""
         key = (like.path, like.id if like.kind is ArtefactKind.ENTRY else None)
