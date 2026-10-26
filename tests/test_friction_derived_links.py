@@ -525,14 +525,15 @@ def _declared(place: str) -> list[str]:
 def test_software_analysis_declares_the_link_commands_own_form() -> None:
     """The glossary's form is the command's target; every other place's, its branch by a
     path, since only the glossary links an entry by its anchor alone: the views, the actors,
-    the use cases, the journeys and the three kinds of requirement."""
+    the use cases, the journeys and the three kinds of requirement. The views' places also
+    declare the form of their closing section's links (#2104)."""
     (links,) = load_lib("links")
     entry_form: str = links._ENTRY
     for place in ("glossary.md", "*/glossary.md"):
         assert _declared(place) == [entry_form]
     by_path = entry_form.split("|", 1)[0]
     for place in ("domain-model", "*/domain-model/**"):
-        assert _declared(place) == [by_path]
+        assert _declared(place) == [by_path, links.CLOSING_TARGET]
     for folder in (
         "use-case-model/actors",
         "use-case-model/use-cases",

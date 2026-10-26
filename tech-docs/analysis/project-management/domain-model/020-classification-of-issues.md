@@ -107,3 +107,24 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 
 - The project's file of workstreams is authoritative, and a board's field reflects it (DEC-018).
 - Its slug is 2 to 40 lowercase letters, digits and single hyphens (DEC-018).
+
+## What is built on these concepts
+
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
+**Classification axis:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+
+**Workstream:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md)
+- [UC-082 — Set up the topology my project runs, so that every agent reads the same one](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md)
+- [UC-083 — Plan an intent into work for each scope of the topology](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md)
+- [UC-084 — Take my next Task from my scope, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md)
+- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
+- [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
+- [JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)

@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=4 fingerprint=sha256:880365426265f1e86d853323527f5ce713fc20f0a25df64f5ebee6eab1bd0ff8 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:7e39194c68ef3967cd0eb8a4d3206f91c90905a2aedad6c89d67865129485a0e -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -13,6 +13,13 @@ This analysis describes what project-management does: who uses it, what they do 
 Define the Milestones and workstreams a project's work falls into, and plan each intent into an EPIC and the work under it.
 
 **Builds on:** no other area.
+
+**Its concepts:**
+
+- [010 — Issues and their hierarchy](../domain-model/010-issues-and-their-hierarchy.md)
+- [020 — Classification of issues](../domain-model/020-classification-of-issues.md)
+- [030 — The issue lifecycle](../domain-model/030-the-issue-lifecycle.md)
+- [050 — Batch planning](../domain-model/050-batch-planning.md)
 
 **Its requirements:** none.
 
@@ -27,6 +34,13 @@ File each Task under its parent, and move each issue through its lifecycle, each
 
 **Builds on:** [010-plan](#010-plan).
 
+**Its concepts:**
+
+- [010 — Issues and their hierarchy](../domain-model/010-issues-and-their-hierarchy.md)
+- [020 — Classification of issues](../domain-model/020-classification-of-issues.md)
+- [030 — The issue lifecycle](../domain-model/030-the-issue-lifecycle.md)
+- [050 — Batch planning](../domain-model/050-batch-planning.md)
+
 **Its requirements:** none.
 
 **Its use cases:**
@@ -40,6 +54,12 @@ Have each pull request reviewed by the reviewers its change requires, and land i
 
 **Builds on:** [020-file-and-move](#020-file-and-move).
 
+**Its concepts:**
+
+- [010 — Issues and their hierarchy](../domain-model/010-issues-and-their-hierarchy.md)
+- [030 — The issue lifecycle](../domain-model/030-the-issue-lifecycle.md)
+- [040 — Reviews and the merge](../domain-model/040-reviews-and-the-merge.md)
+
 **Its requirements:** none.
 
 **Its use cases:**
@@ -51,6 +71,14 @@ Have each pull request reviewed by the reviewers its change requires, and land i
 Run several AI agents on one project at once, each on its own scope and never on another's issue, and see and measure their work.
 
 **Builds on:** [010-plan](#010-plan) and [020-file-and-move](#020-file-and-move).
+
+**Its concepts:**
+
+- [010 — Issues and their hierarchy](../domain-model/010-issues-and-their-hierarchy.md)
+- [020 — Classification of issues](../domain-model/020-classification-of-issues.md)
+- [030 — The issue lifecycle](../domain-model/030-the-issue-lifecycle.md)
+- [040 — Reviews and the merge](../domain-model/040-reviews-and-the-merge.md)
+- [060 — Parallel work](../domain-model/060-parallel-work.md)
 
 **Its requirements:**
 

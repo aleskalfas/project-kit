@@ -259,7 +259,7 @@ A use case's goal is one of its actor's needs.
 An analysis artefact's anchors name what its statements rest on. A use case's or a requirement's anchors also name the decisions that answer it and the architecture views that realise it.
 
 - **How:**
-  - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`.
+  - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`. A domain-model view's closing section is none (software-analysis DEC-004 point 7).
   - **Views.** A *view* named alone in this rule is an architecture view. A domain-model view is always named in full.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
     - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term.
@@ -352,7 +352,7 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - the names of the analysis's kinds and of their parts, such as "use case", "precondition" or "minimal guarantee"
     - words quoted from a person or a document, such as a decision quoted as a source, or the wording of a law
     - text in a code span or a fenced block, which quotes code. A Mermaid fence quotes no code. The labels its diagram shows, its `accTitle` and its `accDescr` are statements. An id the diagram never shows uses no concept.
-    - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's.
+    - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's. So is a domain-model view's closing section, which the links command writes (software-analysis DEC-004 point 7).
   - **The glossary's head.** Wherever this rule binds on a term, each need that the head of its glossary states beside a listed actor is a statement too.
   - **A domain-model view.** Each of its sections explains the concept that the term its heading names defines, in that term's sense.
     - **A break.** A section breaks this rule where what it states widens or narrows what the term's `definition` fits. It then holds of something the definition does not fit, or fails of something the definition fits.
@@ -423,7 +423,7 @@ A domain-model view names a concept that another view of its analysis explains o
 - **How:**
   - **A view's number.** The number its file's name opens with, compared as a number. Two views may share one, and then neither names a concept the other explains.
   - **What a view explains.** Each concept whose term its `explains` lists, while the view is in force.
-  - **What it names.** A concept whose term one of its statements uses, by the term's name or a form made from it, such as a plural. Its statements are its body, the labels of its diagrams included.
+  - **What it names.** A concept whose term one of its statements uses, by the term's name or a form made from it, such as a plural. Its statements are its body, the labels of its diagrams included, save its closing section, which states nothing (software-analysis DEC-004 point 7).
   - **The glossary first.** A view may name any term in force that no view of its analysis explains, since the glossary comes before the views.
   - **Another analysis.** A term the head of its glossary lists from another analysis is used as that analysis defines it. Whatever explains it there, this rule asks nothing of it.
   - So a relation between the concepts of two views is stated in the view with the higher number.
