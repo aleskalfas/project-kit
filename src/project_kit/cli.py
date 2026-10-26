@@ -665,8 +665,10 @@ def config_set(key: str, value: str, yes: bool) -> None:
     Setting `docs.internal` also adds the old root's `rule-sets/` to
     `friction.places` where a rule-set file there would go unfound under the
     new root, in the same write and under the same consent (COR-051 point 6).
+    It then names each recorded documentation location the old root held and
+    the new one does not; each stays where it is (COR-049 point 6).
     """
-    from project_kit import backbone_schemas, project_config
+    from project_kit import backbone_schemas, docs_roots, project_config
 
     target_root = find_target_root()
     if target_root is None:
@@ -692,6 +694,7 @@ def config_set(key: str, value: str, yes: bool) -> None:
     if unchanged:
         click.echo(f"{resolved.dotted} is already {typed}; nothing to write.")
         return
+    old_internal = docs_roots.resolve_roots(target_root).internal
     # A change of the internal root also declares the old rule-set folder as a
     # place, in the same write and under the same consent (COR-051 point 6).
     change = project_config.apply_config(
@@ -705,6 +708,10 @@ def config_set(key: str, value: str, yes: bool) -> None:
     )
     if change.kept_rule_sets is not None:
         click.echo(change.kept_rule_sets.notice())
+    # What the old internal root held stays there, named so no location is left
+    # behind in silence (COR-049 point 6).
+    for left in docs_roots.left_behind(target_root, old_internal):
+        click.echo(left.notice())
     # The `.pkit/.gitignore` render reads the configuration (the process
     # journal's ignore line, COR-033 point 7): follow the new value now rather
     # than at the next sync, naming each component entry the render now leaves out.
