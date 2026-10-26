@@ -76,7 +76,7 @@ By default, a worker takes the next ready Task from one pool that every seat sha
 
 How the pool is filled:
 
-- **The planner slices the work vertically,** so that one agent can finish a Task, or a Feature, across the software's layers. Workstreams as layers of the software are not the partition.
+- **The planner slices the work vertically,** so that one agent can finish a Task, or a Feature, across the software's layers. Workstreams as layers of the software are not the partition. Where the slices would share a choice that nothing settles yet, they are planned once a foundation settles it ([project-management:DEC-060-foundation-before-slices]).
 - **The planner files with no owner,** so its work enters the pool. A lead owns what it files, since it builds that work itself.
 
 A seat's scope is an optional filter on that seat's own pool, and reserves nothing for it:
