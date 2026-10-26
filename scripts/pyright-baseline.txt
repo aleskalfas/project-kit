@@ -156,10 +156,10 @@ src/project_kit/schemas_validate.py reportUnknownMemberType 11
 src/project_kit/schemas_validate.py reportUnknownParameterType 3
 src/project_kit/schemas_validate.py reportUnknownVariableType 27
 src/project_kit/scratchpads.py reportMissingTypeArgument 1
-src/project_kit/scratchpads.py reportUnknownArgumentType 3
-src/project_kit/scratchpads.py reportUnknownMemberType 9
+src/project_kit/scratchpads.py reportUnknownArgumentType 1
+src/project_kit/scratchpads.py reportUnknownMemberType 5
 src/project_kit/scratchpads.py reportUnknownParameterType 1
-src/project_kit/scratchpads.py reportUnknownVariableType 11
+src/project_kit/scratchpads.py reportUnknownVariableType 10
 src/project_kit/settings_consolidate.py reportUnknownArgumentType 1
 src/project_kit/settings_consolidate.py reportUnknownMemberType 2
 src/project_kit/settings_consolidate.py reportUnknownVariableType 6
