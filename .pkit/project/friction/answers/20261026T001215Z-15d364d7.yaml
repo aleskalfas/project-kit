@@ -1,0 +1,213 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-bcae90c061e0.yaml
+    revalidated:
+      at: 2026-10-26T00:12:15Z
+      outcome: unchanged
+      unchanged-because: With main merged, the install tests check init's closing next steps, and the resolve tests move a merge's block answers into answer files. Neither changed a test of a --dry-run preview, so the requirement holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-26T00:12:16Z
+      outcome: unchanged
+      unchanged-because: Main alters only init's closing next steps, and this change only the friction commands' help in cli.py. How the system copies an adapter and runs its scripts is untouched by both, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-26T00:12:18Z
+      outcome: unchanged
+      unchanged-because: Main alters only init's closing next steps, and this change only the friction commands' help in cli.py. Seeding the project's skills and agents folders and their deploy are untouched by both, so the use case holds.
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-26T00:12:19Z
+      outcome: unchanged
+      unchanged-because: Main alters only init's closing next steps, and this change only the friction commands' help in cli.py. How the core layer copies, registers and runs each adapter is untouched by both, so the README holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-26T00:12:20Z
+      outcome: unchanged
+      unchanged-because: Main alters only init's closing next steps, and this change only the friction commands' help in cli.py. The self-host sync, and how the source repository renders and deploys, are untouched by both, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-26T00:12:22Z
+      outcome: unchanged
+      unchanged-because: Main alters only init's closing next steps, and this change only the friction commands' help in cli.py. The project's own rules, skills, agents and settings, never written by sync, are as this use case says.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-26T00:12:23Z
+      outcome: unchanged
+      unchanged-because: Main alters only init's closing next steps, and this change only the friction commands' help in cli.py. Deploying agent definitions at install, which this use case relies on, is untouched by both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-26T00:12:25Z
+      outcome: unchanged
+      unchanged-because: Main's PRJ-004 changes only when init prints the latest-tagged install, and this change only the friction commands' help in cli.py. Releasing the backbone, its release tag and the move of latest are untouched by both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-26T00:12:26Z
+      outcome: unchanged
+      unchanged-because: Main's PRJ-004 changes only when init prints the install of pkit, and this change only the friction commands' help in cli.py. Releasing a component through changesets and the release step is untouched by both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-26T00:12:28Z
+      outcome: unchanged
+      unchanged-because: The CLI is still installed with uv tool install from the git URL at the tag latest, which main's PRJ-004 says init prints. This change rewords only the friction commands' help in cli.py, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-26T00:12:29Z
+      outcome: unchanged
+      unchanged-because: Main rewrote step 10 for init's closing next steps, and this change rewords only the friction commands' help in cli.py. No step of the use case as main left it reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-26T00:12:31Z
+      outcome: unchanged
+      unchanged-because: Main alters only init's closing next steps, and this change only the friction commands' help in cli.py. A fresh clone is still readied by sync, with init not run there, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-26T00:12:32Z
+      outcome: unchanged
+      unchanged-because: Main's PRJ-004 changes only when init prints the latest-tagged install, and this change only the friction commands' help in cli.py. The upgrade's tool step and its transition are untouched by both.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-26T00:12:34Z
+      outcome: unchanged
+      unchanged-because: Main's PRJ-004 changes only when init prints the install of pkit, and this change only the friction commands' help in cli.py. Running a pinned release through uvx from the git URL is untouched by both.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-40743155218d.yaml
+    revalidated:
+      at: 2026-10-26T00:12:35Z
+      outcome: unchanged
+      unchanged-because: Main changed only UC-049's step 10 and PRJ-004's sentence on when init prints the install of pkit. This change makes the change check read answers in answer files alone. What the journey needs of UC-048, UC-049 and step 4 is unchanged by both.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-26T00:12:37Z
+      outcome: unchanged
+      unchanged-because: "Main changed only UC-049's step 10, init's closing next steps. This change drops UC-002's and UC-007's boxes that waited on #2032, their steps as before, and the checks read answers in answer files alone. What each step needs of the one before is unchanged by both."
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T00:12:38Z
+      outcome: unchanged
+      unchanged-because: The README quotes no output of init, its install line names the tag latest, and init still backs up a settings file it finds. The writer still writes a revalidation into an answer file, which the change check reads, as the example shows. So the README holds against main and this change together.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T00:12:40Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."

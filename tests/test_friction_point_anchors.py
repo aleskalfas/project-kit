@@ -36,6 +36,10 @@ from tests.friction_documents import (
     pointed_record,
 )
 
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
 ON_POINT = {"record": ["PRJ-900#2"]}
 
 

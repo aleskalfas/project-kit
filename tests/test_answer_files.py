@@ -327,18 +327,17 @@ def test_an_artefact_whose_block_holds_no_answer_is_read_from_its_answer_file(
     ]
 
 
-def test_an_artefact_whose_block_holds_an_answer_is_read_from_its_block(
-    timeline: Timeline,
-) -> None:
-    base = timeline.start(
-        {GUIDE: bare_guide(at=T1, outcome="unchanged", because="the block answers")}
-    )
-    timeline.commit("an answer file beside", {answer_path("one"): answers(entry(at=T2))})
+def test_an_answer_left_in_a_block_is_read_only_in_history(timeline: Timeline) -> None:
+    """At HEAD an artefact's answers are read from the answer files alone, whatever its
+    block still holds, which validation fails (COR-062 points 1 and 10): the file's value
+    is new where the file first carried it."""
+    timeline.start({GUIDE: bare_guide(at=T1, outcome="unchanged", because="the block answers")})
+    filed = timeline.commit("an answer file beside", {answer_path("one"): answers(entry(at=T2))})
     result = _check(timeline)
-    assert _points(result) == [base]
+    assert _points(result) == [filed]
     report = _report(result)
-    assert report.answers is not None and report.answers["home"] == "block"
-    assert [r["file"] for r in report.answers["revalidations"]] == [None]
+    assert report.answers is not None and report.answers["home"] == "files"
+    assert [r["file"] for r in report.answers["revalidations"]] == ["one.yaml"]
 
 
 def test_a_value_moved_from_the_block_to_a_file_keeps_its_point(timeline: Timeline) -> None:

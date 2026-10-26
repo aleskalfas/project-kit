@@ -16,6 +16,7 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
+from project_kit import answer_files as af
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
 from project_kit import friction_git
@@ -33,12 +34,21 @@ from tests.friction_documents import (
     T1,
     T2,
     adr,
+    answer_file_names,
     document,
     friction_config,
     guide,
     notes,
     pointed_record,
 )
+
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
+#: The guide as a commit holds it: its answers in an answer file, its block holding its
+#: anchors alone.
+ANSWERED_ELSEWHERE = guide(at=None, outcome=None, because=None)
 
 
 @pytest.fixture
@@ -143,7 +153,9 @@ def test_a_pre_existing_deferral_does_not_cover_a_new_change(repo: AdopterRepo) 
     ("head", "reason"),
     [
         pytest.param(
-            guide(at=T2), "`unchanged-because` is the same as before", id="same-justification"
+            guide(at=T2),
+            "`unchanged-because` is the same as that of a revalidation it read",
+            id="same-justification",
         ),
         pytest.param(
             guide(at=T2, outcome="updated", because=None),
@@ -432,6 +444,12 @@ def _actors(*entries: str) -> str:
     return f"---\n{json.dumps(front, indent=2)}\n---\n\n{sections}"
 
 
+def _renamed(adopter: AdopterRepo) -> list[str]:
+    """The files git reads as renamed from `main` to HEAD, `old<TAB>new`."""
+    listed = adopter.git("diff", "-M", "--name-status", "main", "HEAD").stdout.splitlines()
+    return [line.split("\t", 1)[1] for line in listed if line.startswith("R")]
+
+
 def _actor(entry: str, **overrides: Any) -> str:
     """The actor `entry` as a document of its own: its id a field, its section its body —
     so its content differs from the entry's — and `_ACTOR_BLOCK` unless `overrides` say."""
@@ -470,8 +488,7 @@ def test_an_entry_whose_collection_git_pairs_with_its_document_needs_a_revalidat
         "ACT-1 becomes a document of its own",
         {"docs/actors.md": None, "docs/actors/ACT-1.md": _actor("ACT-1")},
     )
-    renamed = repo.git("diff", "-M", "--name-status", "main", "HEAD").stdout
-    assert renamed.startswith("R") and "docs/actors/ACT-1.md" in renamed
+    assert _renamed(repo) == ["docs/actors.md\tdocs/actors/ACT-1.md"]
     result = _run(repo)
     assert _summary(result) == [("friction", "docs/actors/ACT-1.md", None, None)]
     assert "moved here from docs/actors.md#ACT-1" in result.findings[0].message
@@ -493,7 +510,7 @@ def test_an_entry_become_a_document_starts_its_history_at_the_move(repo: Adopter
             "docs/actors/ACT-1.md": _actor("ACT-1", outcome="updated", because=None),
         },
     )
-    assert repo.git("diff", "-M", "--name-status", "main", "HEAD").stdout.startswith("R")
+    assert _renamed(repo) == ["docs/actors.md\tdocs/actors/ACT-1.md"]
     assert _summary(_run(repo)) == [("answered", "docs/actors/ACT-1.md", None, "updated")]
 
 
@@ -1298,10 +1315,15 @@ def test_uncommitted_work_is_part_of_the_diff(repo: AdopterRepo) -> None:
 
 def test_places_are_read_from_each_side(repo: AdopterRepo) -> None:
     _start(repo, {"notes/guide.md": guide()})
-    # Declaring the place makes the guide new at head, not stale.
+    # Declaring the place makes the guide new at head, not stale. Its answers, which its
+    # block held while no place took it, move into an answer file with it (COR-062 point 1).
     repo.commit(
         "declare notes as a place",
-        {CONFIG: friction_config(places=("docs", "notes")), "src/cli/main.py": "print('x')\n"},
+        {
+            CONFIG: friction_config(places=("docs", "notes")),
+            "notes/guide.md": guide(),
+            "src/cli/main.py": "print('x')\n",
+        },
     )
     assert _summary(_run(repo)) == [("answered", "notes/guide.md", None, "new")]
 
@@ -1521,8 +1543,18 @@ CORE = {"kind": "path", "value": "src/core/**"}
 HOLDS = "the CLI surface is as described"  # the guide's justification at the base
 
 
+#: How `_answers` names an answer file, whose name is the helper's (`settle_answers`).
+IN_ANSWER_FILE = "<an answer file>"
+
+
 def _answers(result: fc.ChangeCheck) -> list[dict[str, Any]]:
-    return [answer.as_json() for answer in result.answers]
+    """The answers list as the JSON document carries it, an answer file named
+    `IN_ANSWER_FILE`."""
+    found = [answer.as_json() for answer in result.answers]
+    for answer in found:
+        if af.is_answer_file(str(answer["file"])):
+            answer["file"] = IN_ANSWER_FILE
+    return found
 
 
 def _written(answer: str | None, reason: str | None, **fields: Any) -> dict[str, Any]:
@@ -1544,8 +1576,10 @@ def _written(answer: str | None, reason: str | None, **fields: Any) -> dict[str,
         "moved": False,
     }
     entry.update(fields)
-    # A block's answer is in its artefact's own file (COR-062 point 1).
-    entry.setdefault("file", str(entry["location"]).split("#", 1)[0])
+    # An answer is in an answer file, and a reason for having no anchors in its artefact's
+    # own file (COR-062 point 1).
+    own = str(entry["location"]).split("#", 1)[0]
+    entry.setdefault("file", own if answer == "unanchored" else IN_ANSWER_FILE)
     return entry
 
 
@@ -2011,9 +2045,17 @@ def test_a_reason_for_no_anchors_replaced_by_anchors_lists_the_revalidation(
 
 
 def test_what_the_change_removed_is_not_listed(repo: AdopterRepo) -> None:
+    """A deferral taken away with the answer file that holds it, as a revert takes it
+    (COR-062 point 8), and a page removed, list nothing."""
     deferred = [("path", "src/cli/**", "waiting on the rename")]
-    _start(repo, {"docs/guide.md": guide(deferred=deferred), "docs/old.md": document("old")})
-    repo.commit("drop a deferral and a page", {"docs/guide.md": guide(), "docs/old.md": None})
+    pages = {"docs/guide.md": guide(), "docs/old.md": document("old")}
+    repo.write({CONFIG: friction_config(), **SOURCE, **pages})
+    repo.commit("base", files=None)
+    revalidated = set(answer_file_names(repo.root))
+    repo.commit("defer the CLI", {"docs/guide.md": guide(deferred=deferred)})
+    (deferring,) = set(answer_file_names(repo.root)) - revalidated
+    repo.checkout("feature", create=True)
+    repo.commit("drop a deferral and a page", {af.path_of(deferring): None, "docs/old.md": None})
     assert _answers(_run(repo)) == []
 
 
@@ -2339,23 +2381,14 @@ def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_comm
     assert named.stdout == clean.stdout
 
     read = json.loads(named.stdout)
+    # The capability's rule arrives by sync, so its deferral is its source's answer, never
+    # the project's (COR-062 point 9): only the project's own rule lists one.
     assert read["answers"] == [
         {
             **_written("unanchored", "a rule of the method itself, anchored to nothing", new=True),
             "artefact": "RS-XS-001",
             "location": ".pkit/rule-sets/xs.md#RS-XS-001",
             "file": ".pkit/rule-sets/xs.md",
-        },
-        {
-            **_written(
-                "deferred",
-                "waiting on the source to be captured",
-                anchor={"kind": "source", "value": "alpha"},
-                new=True,
-            ),
-            "artefact": "RS-KS-001",
-            "location": ".pkit/capabilities/kinds/rule-sets/ks.md#RS-KS-001",
-            "file": ".pkit/capabilities/kinds/rule-sets/ks.md",
         },
     ]
     (unresolved,) = [f for f in read["findings"] if f["kind"] == "unresolved-kind"]
@@ -2485,7 +2518,7 @@ def test_a_commit_tree_reads_what_the_commit_held(repo: AdopterRepo) -> None:
     tree = fc.CommitTree(repo.root, base)
     assert "docs/guide.md" in tree.files()
     assert tree.read_bytes(["docs/guide.md", "missing.md"]) == {
-        "docs/guide.md": guide().encode(),
+        "docs/guide.md": ANSWERED_ELSEWHERE.encode(),
         "missing.md": None,
     }
 
@@ -2518,7 +2551,7 @@ def test_a_commit_tree_reads_the_same_through_an_open_reader(
     ]
     expected = fc.CommitTree(repo.root, commit).read_bytes(paths)
     assert expected == {
-        "docs/guide.md": guide().encode(),
+        "docs/guide.md": ANSWERED_ELSEWHERE.encode(),
         "docs/link.md": None,
         "vendor/sub": None,
         "docs/lost.md": None,
