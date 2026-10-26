@@ -11,10 +11,11 @@ pkit:
         - src/project_kit/decisions_proposed.py
         - src/project_kit/decisions_validate.py
         - src/project_kit/document_parts.py
+        - src/project_kit/github_issues.py
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6"]
+      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, "COR-043#5", COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", "ADR-061#3"]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -177,6 +178,8 @@ The **`waits-on`** field is optional, and only a proposed record carries it. It 
 - **`date: 2026-12-01`:** the date comes.
 - **`record: ADR-071`:** the record is accepted, or superseded since. A capability's decision is written as in an anchor's value, such as `project-management:DEC-059`.
 
+**An issue** is read through `gh` each time a command asks, and its state is stored nowhere. One that cannot be read is reported with why, and blocks nothing ([COR-043](core/COR-043-scratchpad-reported-state.md) point 5). The condition reads GitHub only, and is labelled so. project-kit keeps such GitHub-only acts in core under a label provisionally (its ADR-061 point 3), and [project-kit#1222](https://github.com/aleskalfas/project-kit/issues/1222) raises the question for a core decision.
+
 A project that tracks its issues elsewhere waits on a date or a record. A record that waits on several things names the one that settles last, or an issue that gathers them.
 
 `pkit validate` and `pkit decisions validate` fail on a `waits-on` that names no one condition of these kinds. They warn of one on an accepted record, which waits on nothing. Remove the field when you accept the record. The warning fails nothing, so the status flip alone still passes.
@@ -197,7 +200,7 @@ Supersession is always within a single namespace.
 - **Could not be read:** a record whose front matter or `waits-on` does not read, or whose issue GitHub gave no state for. So is a record that names no condition and whose `date` does not read. Each says why.
 - **Waiting:** the rest, each with what it waits on, or how long it has been proposed.
 
-The age of a proposal is read from its `date`. The threshold leaves room for a batch of acceptances, and still catches a record left for months. `--older-than DAYS` sets another. A record that arrives as a synced copy is settled where it is authored, so it is not listed.
+The age of a proposal is read from its `date`. The threshold leaves room for a batch of acceptances, and still catches a record left for months. A record that arrives as a synced copy is settled where it is authored, so it is not listed.
 
 The command reads GitHub only for a record that waits on an issue, and the rest from the working tree. It is a command of its own, outside validation, since its answer moves with the date and the tracker ([COR-055](core/COR-055-validation.md) point 2). Its options and output are in [the CLI reference](../cli/README.md).
 
