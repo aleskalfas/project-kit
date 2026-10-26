@@ -72,7 +72,7 @@ pkit:
 
 **Main path:**
 
-1. The adopter chooses the agents the [project](../../../../core/glossary.md#term-project--project) runs. For each agent, they choose a name and a [scope](../../../glossary.md#term-scope--scope). They also choose whether the agent plans, builds or does both.
+1. The adopter chooses the agents the [project](../../../../core/glossary.md#term-project--project) runs. For each agent, the adopter chooses a name, a [scope](../../../glossary.md#term-scope--scope), and whether the agent plans, builds or does both.
 2. In each agent's clone, the adopter or the operator sets the clone's number: `pkit pm set-instance <N>`. The system writes the number to a file of the clone that is never committed (DEC-035 point 1).
 3. The system writes the agent's name beside the number, such as `api` (DEC-045 point 1).
 

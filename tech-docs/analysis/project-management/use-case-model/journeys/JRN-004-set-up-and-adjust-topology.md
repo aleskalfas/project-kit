@@ -1,6 +1,6 @@
 ---
 id: JRN-004
-title: Set up the AI agents my project runs at once, and adjust their topology on what I measure
+title: Set up the topology my project runs, and adjust it on what I measure
 status: active
 actor: core:ACT-adopter
 steps:
@@ -35,7 +35,7 @@ pkit:
         - UC-089
 ---
 
-# JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure
+# JRN-004 — Set up the topology my project runs, and adjust it on what I measure
 
 **Goal:** Run several AI agents on my project at once, each on its own scope, and adjust their topology on what I measure of their work.
 

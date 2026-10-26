@@ -25,7 +25,7 @@ pkit:
 
 Several AI agents may work on one [project](../../core/glossary.md#term-project--project) at the same time, each in a clone of its own and often under one person's account. Each must know its own job, and no two may work on one [issue](../glossary.md#term-issue--issue). A [topology](../glossary.md#term-topology--topology) names the agents and gives each a [scope](../glossary.md#term-scope--scope). Each agent works in an [instance](../glossary.md#term-instance--instance), and the [owner](../glossary.md#term-owner--owner) of an issue says which instance works on it (DEC-035 and DEC-045).
 
-These concepts serve the use cases in [040-work-in-parallel](../overview/README.md#040-work-in-parallel). The journey [JRN-004](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md) follows the adopter across those use cases, from setting up the agents to measuring the agents' work.
+These concepts serve the use cases in [040-work-in-parallel](../overview/README.md#040-work-in-parallel). The journey [JRN-004](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md) follows the adopter across those use cases, from setting up the topology to adjusting it on what the adopter measures.
 
 ```mermaid
 classDiagram
@@ -180,7 +180,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
-- [JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [JRN-004 — Set up the topology my project runs, and adjust it on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 **Scope:**
 
@@ -190,7 +190,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
-- [JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [JRN-004 — Set up the topology my project runs, and adjust it on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 **Instance:**
 
@@ -215,5 +215,5 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
-- [JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [JRN-004 — Set up the topology my project runs, and adjust it on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 - [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md)

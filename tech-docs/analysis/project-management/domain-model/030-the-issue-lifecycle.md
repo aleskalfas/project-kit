@@ -230,7 +230,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md)
 - [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md)
-- [JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+- [JRN-004 — Set up the topology my project runs, and adjust it on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 **Authorisation:**
 

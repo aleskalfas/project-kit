@@ -97,7 +97,7 @@ pkit:
 > **Not built yet:** no command writes an owner or reads the Task back, so both instances go on. DEC-035 point 6 decides that the higher number gives the Task up, and #519 tracks it.
 
 - **2b.** The Task is assigned to another person's account. `start-work` refuses, points to `handoff-issue`, and changes nothing (`start-work.py`).
-- **3a.** The developer decides that the worker takes the Task all the same. The worker sets the refusal aside with the developer's reason, which an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records before the start (DEC-035 point 6 and DEC-014).
+- **3a.** The developer decides that the worker takes the Task all the same, and sets the refusal aside with a reason. The worker passes that reason with its start, and an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) records it before the start (DEC-035 point 6 and DEC-014).
 
 > [!WARNING]
 > **Not built yet:** there is no refusal to set aside. DEC-035 point 6 decides that the refusal yields to a reason, and #520 tracks it.

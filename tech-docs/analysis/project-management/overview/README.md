@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:7e39194c68ef3967cd0eb8a4d3206f91c90905a2aedad6c89d67865129485a0e -->
+<!-- pkit:overview reads=5 fingerprint=sha256:081e8f4bafcf9059f1aff5c25705bdb12d7a793df532aede8ecf14c570697524 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -136,11 +136,11 @@ Each view of the domain model explains a group of related concepts:
 
 ### Journeys
 
-#### [JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+#### [JRN-004 — Set up the topology my project runs, and adjust it on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 ```mermaid
 flowchart LR
-  accTitle: JRN-004 — Set up the AI agents my project runs at once, and adjust their topology on what I measure
+  accTitle: JRN-004 — Set up the topology my project runs, and adjust it on what I measure
   accDescr: The flow of JRN-004: core:ACT-adopter takes 3 steps in order, UC-082, UC-091, UC-082. It relies on 5 use cases outside the journey, drawn apart with no arrow.
   core_ACT_adopter["core:ACT-adopter"]
   step_1(["1. UC-082 — Set up the topology my project runs, so that every agent reads the same one"])
