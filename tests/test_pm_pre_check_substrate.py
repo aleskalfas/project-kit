@@ -425,3 +425,24 @@ def test_title_prefix_present_map_carries_exclusion_note(pc, axis_labels, monkey
     results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, _auj_map(axis_labels))
     assert all(r.status != "fail" for r in results)
     assert any("1 report-channel issue(s) excluded" in r.detail for r in results)
+
+
+def test_title_prefix_never_samples_a_state_issue(pc, axis_labels, monkeypatch) -> None:
+    """#2139: the sample is read through the one read of issues, which leaves a
+    state issue out (DEC-058 point 3). Its title, which carries no prefix, is no
+    drift, and it is not counted as sampled."""
+    state = {
+        "number": 512,
+        "title": "Seat planner",
+        "labels": [],
+        "body": "<!-- pkit:state-issue v=1 key=seat-planner -->\n## Current state\n",
+    }
+    _stub_issue_list(
+        pc,
+        monkeypatch,
+        [{"number": 12, "title": "[Task] real work item", "labels": [], "body": ""}, state],
+    )
+    results = pc._check_title_prefix_alignment(_LIVE_CAP_ROOT, None)
+    assert not any("512" in r.detail for r in results)
+    assert [r.status for r in results] == ["ok"]
+    assert "all 1 sampled" in results[0].detail

@@ -132,6 +132,7 @@ friction:
   places: [docs/**/*.md]
   surface: [docs/**]
   exclude: [docs/guide.md]
+  delegate: project-manager
 connections:
   providers:
     pkit::work-tracking: project-management
@@ -322,6 +323,85 @@ def test_friction_mode_value_is_checked(make_adopter_repo: MakeAdopterRepo) -> N
     _write_config(repo, "friction:\n  mode: off\n  status-job: weekly\n")
     report = _run(repo)
     assert _paths(report, cv.Severity.ERROR) == ["/friction/mode", "/friction/status-job"]
+
+
+# --- the delegate (COR-064 point 2) ----------------------------------------
+
+
+def test_delegate_naming_a_capability_agent_validates(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _write_config(repo, "friction:\n  delegate: project-manager\n")
+    assert _run(repo).findings == ()
+
+
+def test_delegate_naming_a_project_agent_that_takes_the_role_validates(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    own = repo.pkit / "agents" / "project" / "answers-keeper"
+    own.mkdir(parents=True)
+    (own / "answers-keeper.md").write_text(
+        "---\nname: answers-keeper\nreads:\n  records:\n    - COR-050\n    - COR-064\n---\n",
+        encoding="utf-8",
+    )
+    _write_config(repo, "friction:\n  delegate: answers-keeper\n")
+    assert _run(repo).findings == ()
+
+
+@pytest.mark.parametrize(
+    "front_matter",
+    [
+        None,  # the critic, as core ships it: it reads no record of the role
+        "---\nname: answers-keeper\n---\n",
+        "---\nname: answers-keeper\nreads: [COR-064]\n---\n",
+        "no front matter at all\n",
+        "---\nname: [unclosed\n---\n",
+    ],
+)
+def test_delegate_whose_definition_does_not_take_the_role_is_a_warning(
+    make_adopter_repo: MakeAdopterRepo, front_matter: str | None
+) -> None:
+    """An agent that says nothing of when it decides as the delegate makes no agent
+    decide (COR-064 point 2): a warning, which fails nothing."""
+    repo = make_adopter_repo()
+    name = "critic"
+    if front_matter is not None:
+        name = "answers-keeper"
+        own = repo.pkit / "agents" / "project"
+        own.mkdir(parents=True, exist_ok=True)
+        (own / f"{name}.md").write_text(front_matter, encoding="utf-8")
+    _write_config(repo, f"friction:\n  delegate: {name}\n")
+    report = _run(repo)
+    assert report.errors == ()
+    assert _paths(report, cv.Severity.WARNING) == ["/friction/delegate"]
+    assert "does not declare that it reads COR-064" in report.findings[0].message
+
+
+def test_delegate_naming_no_agent_of_the_project_is_an_error(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # project-manager ships with project-management, which is not installed here.
+    repo = make_adopter_repo()
+    _write_config(repo, "friction:\n  delegate: project-manager\n")
+    report = _run(repo)
+    assert [(f.path, f.severity) for f in report.findings] == [
+        ("/friction/delegate", cv.Severity.ERROR)
+    ]
+    assert "names no agent of the project" in report.errors[0].message
+    assert "COR-064 point 2" in report.errors[0].message
+
+
+def test_delegate_that_is_not_an_agent_name_is_refused_once(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    _write_config(repo, "friction:\n  delegate: Project Manager\n")
+    report = _run(repo)
+    # The shape pass refuses it, and the agent check does not judge it again.
+    assert [(f.path, f.severity) for f in report.findings] == [
+        ("/friction/delegate", cv.Severity.ERROR)
+    ]
+    assert "does not match" in report.errors[0].message
 
 
 # --- process journal logging (COR-033 point 7) -----------------------------

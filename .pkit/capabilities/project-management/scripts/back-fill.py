@@ -223,6 +223,7 @@ from _lib import (
     back_fill_apply,
     board_fields,
     bootstrap_gate,
+    issue_list,
     session_guard,
     substrate_writes,
 )
@@ -634,8 +635,7 @@ def _derive_plan(
         # travel out with the empty result and the caller reports them.
         return None, False, intent_errors
 
-    issues = _enumerate_corpus(config, limit=args.limit, state=args.state)
-    truncated = len(issues) == args.limit
+    issues, truncated = _enumerate_corpus(config, limit=args.limit, state=args.state)
     target_repo = _resolve_repo_name_with_owner(config)
     item_ids = _resolve_board_item_ids(config, project_node_id, issues)
     proposed = _build_proposed_changes(
@@ -1277,8 +1277,11 @@ def _workstream_default_note(
 # ----- corpus enumeration --------------------------------------------
 
 
-def _enumerate_corpus(config: dict[str, Any], *, limit: int, state: str) -> list[dict[str, Any]]:
-    """List the corpus issues with the fields the report needs (a READ).
+def _enumerate_corpus(
+    config: dict[str, Any], *, limit: int, state: str
+) -> tuple[list[dict[str, Any]], bool]:
+    """List the corpus issues with the fields the report needs (a READ), and
+    whether the listing reached ``limit``.
 
     Pulls ``number``, ``title``, ``milestone`` (for value-equality annotation of
     the milestone intent) and ``labels`` (for the axis-label intent's
@@ -1289,32 +1292,25 @@ def _enumerate_corpus(config: dict[str, Any], *, limit: int, state: str) -> list
     The field set is fixed rather than varied by which intents resolved: it is one
     request either way, and a plan whose shape depends on which fields a previous
     step happened to ask for is harder to reason about than one extra JSON key.
+
+    The listing runs through the capability's one read of its issues, which
+    leaves state issues out (DEC-058 point 3), so the plan never back-fills a
+    state issue. Whether it reached ``limit`` is judged by what ``gh`` returned,
+    state issues included, since the issues past a full page were never read.
     """
     try:
-        proc = gh_run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--state",
-                state,
-                "--limit",
-                str(limit),
-                "--json",
-                "number,title,milestone,labels",
-            ],
+        listing = issue_list.list_issues(
             config,
+            ["--state", state, "--limit", str(limit)],
+            fields="number,title,milestone,labels",
+            gh_call=gh_run,
             check=False,
         )
     except FileNotFoundError:
-        return []
-    if proc.returncode != 0:
-        return []
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return []
-    return data if isinstance(data, list) else []
+        return [], False
+    if listing.rows is None:
+        return [], False
+    return list(listing.rows), listing.returned == limit
 
 
 def _resolve_project_node_id(config: dict[str, Any]) -> str | None:

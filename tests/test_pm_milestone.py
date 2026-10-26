@@ -10,6 +10,8 @@ previously only accepted one form each.
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -114,3 +116,27 @@ def test_resolve_milestone_handles_concatenated_arrays(milestone_mod) -> None:
         m7 = milestone_mod.resolve_milestone("7", {})
     assert m6 is not None and m6.title == "M1"
     assert m7 is not None and m7.title == "M2"
+
+
+def test_a_state_issue_is_never_a_milestone_child(milestone_mod, monkeypatch) -> None:
+    """#2139: the children are read through the one read of issues, which leaves
+    a state issue out (DEC-058 point 3), even one carrying the Milestone both ways."""
+    native = {"number": 6, "title": "M1"}
+    rows = [
+        {"number": 10, "title": "[Task] work", "state": "OPEN", "body": "", "milestone": native},
+        {
+            "number": 11,
+            "title": "Seat planner",
+            "state": "OPEN",
+            "body": "Milestone: [#6](../milestone/6)\n"
+            "<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+            "milestone": native,
+        },
+    ]
+
+    def fake_gh(args, config):
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+
+    monkeypatch.setattr(milestone_mod.containment, "_gh_call", fake_gh)
+    children = milestone_mod.list_milestone_children(6, "M1", {}, {"types": {}})
+    assert [child["number"] for child in children] == [10]

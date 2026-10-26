@@ -412,6 +412,25 @@ def test_all_open_examines_every_open_issue_and_only_those(lp, tmp_path, monkeyp
     assert "link-parent: 9 issue(s)" in out.out
 
 
+def test_a_state_issue_is_never_examined_or_linked(lp, tmp_path, monkeypatch, capsys):
+    """#2139: the issues are read through the one read of issues, which leaves a
+    state issue out (DEC-058 point 3). An open one is not among `--all-open`, even
+    with a first line that names a parent, and naming it is refused as no issue."""
+    state = _issue(
+        120, "Seat planner", "Feature: #90\n<!-- pkit:state-issue v=1 key=seat-planner -->\n"
+    )
+    fake = FakeGitHub([*_tracker(), state], native={90: {102}})
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path), fake, "--all-open", "--yes")
+    assert rc == 0
+    assert fake.posts == [(80, 90), (90, 101), (90, 108)]
+    assert "#120" not in out.out
+    assert "link-parent: 9 issue(s)" in out.out
+
+    rc, out, _ = _run(lp, monkeypatch, capsys, _stage(tmp_path / "again"), fake, "120", "--yes")
+    assert rc == 2
+    assert "not an issue in this repository: #120" in out.err
+
+
 # --- consent -----------------------------------------------------------------
 
 

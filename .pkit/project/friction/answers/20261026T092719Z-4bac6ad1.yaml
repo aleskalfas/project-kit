@@ -1,0 +1,202 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T060235Z-5c9353ec.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+    revalidated:
+      at: 2026-10-26T09:27:19Z
+      outcome: unchanged
+      unchanged-because: DEC-006 makes an artefact's texts parts of its body and drops an actor's summary. Main's answers, read here, judged the hints' examples citing a project's record, and the links of citations and of ids (DEC-001 points 13 and 14). None adds or removes a kind, a place or a layout of parts, so the entry holds against all of them.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T060235Z-5c9353ec.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T09:27:30Z
+      outcome: unchanged
+      unchanged-because: DEC-006 adds the moved texts to the kinds' structures as parts, each with a permanent id a tool reads. Main's answers, read here, judged the examples citing a project's record and the forms reading a linked id as the id (DEC-001 point 14). A declared structure still lists in order the parts each member carries, with ids, labels and examples, so the entry holds against both.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T060235Z-5c9353ec.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T09:27:37Z
+      outcome: unchanged
+      unchanged-because: DEC-006 makes an artefact's texts parts of its body and drops an actor's summary, and says nothing of who records them. Main's answers, read here, judged the resolver and the skill running the link command, which now links ids too (DEC-001 point 14). The agent still proposes, and a person still decides each candidate and answer, against both.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T060235Z-5c9353ec.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T09:27:45Z
+      outcome: unchanged
+      unchanged-because: DEC-006 makes the moved texts parts of a body, whose presence and form bind where the format rule binds. Main's answers, read here, judged the check holding the links of citations and of ids whatever any rule's status (DEC-001 points 13 and 14). A body is still held to its structure only where the format rule binds, and a record's always, against both.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T060235Z-5c9353ec.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+    revalidated:
+      at: 2026-10-26T09:27:52Z
+      outcome: unchanged
+      unchanged-because: DEC-006 makes an artefact's texts parts of its body, each shown in the template with its hint and example, as every part is. Main's answers, read here, judged the examples citing a project's record and the other actors' example writing its id plain, to take its link (DEC-001 point 14). Choosing each kind's parts from the template holds against both.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T09:28:00Z
+      outcome: unchanged
+      unchanged-because: DEC-006 makes a term's definition and a requirement's texts parts of the body, which step 7 fills as it fills each part, and DEC-004 point 7 links them there. Main updated this use case, read here, so that step 7's link run links each id a candidate names (DEC-001 point 14). Describing an existing project's candidates, linking each and confirming it, holds against both.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T060235Z-5c9353ec.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T09:28:07Z
+      outcome: unchanged
+      unchanged-because: DEC-006 makes an artefact's texts parts of its body a tool reads by permanent id, and drops an actor's summary. Main's updates, read here, run the link command before every updated answer and link this use case's ids (DEC-001 point 14). The agent's revalidation after a change, how it is recorded and what a person decides hold against both.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-001
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - moved-cfb5a5e6377e.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001
+          reason: "DEC-006 drops an actor's summary and makes the texts parts of the body, while the checkable part still names the summary's form and the texts' fields. Main's answers, read here, judged the links of citations and of ids, whose forms read a linked id as the id (DEC-001 points 13 and 14). Neither ends the data home. #2072 ends it and rewrites the rule."
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T060235Z-5c9353ec.yaml
+      - 20261026T073302Z-7332228c.yaml
+      - 20261026T074457Z-1390af7a.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001
+          reason: "DEC-006 makes an actor's needs and a term's definition texts of the body, read through their parts, and drops the summary. The README still describes them as front-matter fields. Main's sections on linking citations and ids, read here, still keep an actor's first sentence plain where it gives its summary. #2069 and #2072 build the move and rewrite them."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-002
+          reason: "DEC-006 partly supersedes DEC-002, so a requirement's statement, measure and scope become texts of its body, its revisits firing on a fingerprint of them. The README still reads the three from front matter. Main's sections on linking citations and ids, read here, leave that as it was. #2069 and #2072 build it and rewrite them."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-003
+          reason: "DEC-006 has the overview show the first sentence of each actor's opening, read from the body (DEC-003 point 8). The README still says it shows the actor's summary. Main's sections on linking citations and ids, read here, leave that passage as it was. #2069 and #2072 build it and rewrite it."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-004
+          reason: "DEC-006 has a term's definition, a requirement's texts and an actor's first sentence take links in the body (DEC-004 point 7). The README still says they stay plain as data. Main's section on linking ids, read here, also keeps that first sentence plain where it gives a summary. #2069 and #2072 build it and rewrite them."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-005
+          reason: "DEC-006 has the overview read each actor's first sentence from the body (DEC-005 point 3). The README still says it reads a summary from front matter. Main's sections on linking citations and ids, read here, leave that passage as it was. #2069 builds it and rewrites it."

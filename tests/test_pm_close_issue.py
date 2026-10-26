@@ -11,6 +11,7 @@ which reads the engine's fold over the parent's children.
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -208,6 +209,29 @@ def test_find_open_children_refuses_a_truncated_corpus(ci, monkeypatch) -> None:
     children = ci._find_open_children(5, {})
     assert children.open == ()
     assert "not enumerated to exhaustion" in children.incomplete
+
+
+def test_a_state_issue_is_never_an_open_child(ci, monkeypatch) -> None:
+    """#2139: the corpus comes through the one read of issues, which leaves a
+    state issue out, so an open state issue whose first line names the parent
+    neither holds the close nor is named (DEC-058 point 3). Stubbed at `gh`."""
+    rows = [
+        {"number": 10, "state": "CLOSED", "body": "Feature: #5\n\n## What"},
+        {
+            "number": 11,
+            "state": "OPEN",
+            "body": "Feature: #5\n<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+        },
+    ]
+
+    def fake_gh(args, config):
+        if args[1] == "api":  # the native sub-issues read: absent here
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+
+    monkeypatch.setattr(ci.containment, "_gh_call", fake_gh)
+    children = ci._find_open_children(5, {})
+    assert (children.open, children.unread, children.incomplete) == ((), (), None)
 
 
 # ---- regression #60 — label reconciliation on close --------------------

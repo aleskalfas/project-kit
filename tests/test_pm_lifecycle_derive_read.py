@@ -40,6 +40,8 @@ it. That engine-side registration is the adopter-workflow / Feature concern
 from __future__ import annotations
 
 import itertools
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -536,6 +538,32 @@ def test_parent_active_descendant_map_aware(monkeypatch: pytest.MonkeyPatch) -> 
     out = predicates.parent_has_active_descendant(10)
     assert out["result"] is True
     assert out["detail"]["active_descendants"] == [11]
+
+
+def test_a_state_issue_is_never_an_active_descendant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """#2139: the walk reads the issues through the one read of issues, which
+    leaves a state issue out (DEC-058 point 3). An open state issue whose first
+    line names the parent is no descendant. Stubbed at `gh`."""
+    rows = [
+        {
+            "number": 12,
+            "body": "Feature: #10\n<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+            "state": "OPEN",
+            "milestone": None,
+            "labels": [],
+        },
+    ]
+
+    def fake_gh(args, config):
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+
+    monkeypatch.setattr(predicates, "_capability_root", lambda: REPO_ROOT)
+    monkeypatch.setattr(predicates, "_config", lambda _root: {})
+    monkeypatch.setattr(predicates.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(predicates.axis_labels, "load_substrate_map", lambda _root: DERIVE_MAP)
+    out = predicates.parent_has_active_descendant(10)
+    assert out["result"] is False
+    assert out["detail"]["active_descendants"] == []
 
 
 def test_state_is_active_handles_derived_ids() -> None:

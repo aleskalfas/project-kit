@@ -53,6 +53,7 @@ pkit:
         - COR-062#4
         - COR-062#5
         - COR-062#7
+        - COR-064#1
         - COR-062#10
         - ADR-034#1
         - ADR-068#6
@@ -91,7 +92,7 @@ pkit:
 **Assumptions:**
 
 - A [reviewer](../../../glossary.md#term-reviewer--reviewer) the [project](../../../glossary.md#term-project--project) chooses, other than the agent that wrote the answers, checks them. Nothing in the check tells whether the reviewer read them ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
-- An agent writes no [answer](../../../glossary.md#term-answer--answer) the [change](../../../glossary.md#term-change--change) does not owe until a person accepts its words. Nothing at run time stops it (COR-050 point 3 and core rule 20).
+- An agent writes no [answer](../../../glossary.md#term-answer--answer) the [change](../../../glossary.md#term-change--change) does not owe until a person accepts its words. A delegate a person named may decide such an answer instead ([COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides)). Nothing at run time stops an agent writing one (COR-050 point 3 and core rule 20).
 - The branch is up to date with its [base](../../../glossary.md#term-base--base), or a merge queue runs the check again on the merge ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
 
 **Trigger:** The developer, or the agent making the [change](../../../glossary.md#term-change--change), is about to push the change's branch.
@@ -125,7 +126,7 @@ pkit:
 - **3c.** The change added an anchor that resolves to nothing, or removed what an anchor named. The check reports a `dead-anchor`, an error ([REQ-020](../../../requirements/functional/030-change/REQ-020-dead-anchor-error.md)). The developer mends the anchor, and the path rejoins at step 1.
 - **5a.** The artefact can wait for a later change. They run `pkit friction defer <artefact> --anchor <anchor> --reason "<reason>"`, the reason naming an open follow-up issue. The path goes on at step 11.
 - **5b.** The artefact still describes what is wanted, and the change broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
-- **5c.** An artefact the change was not asked about needs an [answer](../../../glossary.md#term-answer--answer) too. That answer is a person's decision. The agent making the change writes it only once the person has seen every word and accepted it. Where it cannot ask, it names the answer and its command in its hand-off, and runs none ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and core rule 20).
+- **5c.** An artefact the change was not asked about needs an [answer](../../../glossary.md#term-answer--answer) too. That answer is a person's decision, or the decision of the delegate a person named ([COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides)). The agent making the change writes it only once the person has seen every word and accepted it, or the delegate decided it. Where it can ask neither, it names the answer and its command in its hand-off, and runs none ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and core rule 20).
 - **5d.** `--because` repeats the justification already written, or still holds a placeholder such as `<why it still holds>`. The [system](../../../glossary.md#term-system--system) refuses it and writes nothing. The path rejoins at step 5.
 - **5e.** The artefact carries deferrals. The revalidation re-states only those `--keep` names, or those a prompt at a terminal keeps. It reads the rest and replaces them ([COR-062 point 5](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#5-what-an-answer-replaces)). The revalidation itself then answers what each replaced deferral had put off ([COR-050 point 4](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
 

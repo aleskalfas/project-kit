@@ -81,6 +81,11 @@
         "exclude": {
           "description": "Paths or globs, relative to the repository root, that the friction checks leave out. Default: none.",
           "$ref": "#/$defs/repo-relative-patterns"
+        },
+        "delegate": {
+          "description": "The delegate: the agent a person who decides what reaches the default branch named to decide, in a person's place, the answers no change owes (COR-064 point 1). Those are an answer on an artefact a change was not asked about, a revisit entry the change check does not ask for, and a reason for having no anchors. One agent, by its name, as its definition's file is named. Written only on that person's own word, under the consent the configuration asks (COR-048 point 5), and counted where the default branch holds it (COR-064 point 2). Validation fails a name that no agent of the project carries: none the project, a capability or the methodology ships. It warns of an agent whose definition does not declare that it reads COR-064 (`reads.records`), since that agent says nothing of when it decides. Default: none, and a person decides each such answer (COR-050 point 3).",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
         }
       }
     },
