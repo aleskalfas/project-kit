@@ -553,3 +553,45 @@ def test_dry_run_plans_when_the_repository_resolves(bs, installed, monkeypatch, 
     assert "+ create label `type:bug`" in out
     assert "no GitHub mutations" in out
     assert all(c[1] in {"repo", "label"} for c in fake.calls)
+
+
+# --- the starter EPIC is found among the issues of work (#2139) ---------------
+# The search for it runs through the one read of issues, which leaves a state
+# issue out by its marker (DEC-058 point 3).
+
+
+def _issue_list_answers(bs, monkeypatch, rows: list[dict]) -> list[list[str]]:
+    """Answer `gh issue list` with `rows`, refuse any other `gh` call, and
+    return the calls made."""
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, *args, **kwargs):
+        calls.append(list(cmd))
+        if list(cmd[:3]) == ["gh", "issue", "list"]:
+            return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps(rows), stderr="")
+        raise AssertionError(f"unexpected call: {cmd}")
+
+    monkeypatch.setattr(bs.subprocess, "run", fake_run)
+    return calls
+
+
+def test_the_starter_epic_filed_already_is_found(bs, monkeypatch) -> None:
+    epic = {"number": 4, "title": bs._STARTER_EPIC_TITLE, "state": "OPEN", "body": "## Outcome\n"}
+    calls = _issue_list_answers(bs, monkeypatch, [epic])
+    assert bs._starter_epic_already_filed() is True
+    action = bs._file_starter_epic(dry_run=True)
+    assert (action.status, action.detail) == ("exists", "already filed as #4 (state: OPEN)")
+    assert "--search" in calls[0]
+
+
+def test_a_state_issue_is_never_taken_for_the_starter_epic(bs, monkeypatch) -> None:
+    state = {
+        "number": 3,
+        "title": bs._STARTER_EPIC_TITLE,
+        "state": "OPEN",
+        "body": "<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+    }
+    _issue_list_answers(bs, monkeypatch, [state])
+    assert bs._starter_epic_already_filed() is False
+    action = bs._file_starter_epic(dry_run=True)
+    assert (action.status, action.detail) == ("created", "(dry-run) would file")

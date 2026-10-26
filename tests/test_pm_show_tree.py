@@ -611,6 +611,48 @@ def test_an_unreadable_native_panel_labels_the_render(st, monkeypatch, capsys) -
     assert json.loads(capsys.readouterr().out)["complete"] is False
 
 
+def _numbers(node) -> set[int]:
+    """Every issue number a rendered JSON tree names."""
+    if isinstance(node, dict):
+        found = {node["number"]} if isinstance(node.get("number"), int) else set()
+        return found.union(*(_numbers(value) for value in node.values()))
+    if isinstance(node, list):
+        return set().union(*(_numbers(item) for item in node))
+    return set()
+
+
+def test_a_state_issue_is_not_in_the_tree(st, monkeypatch, capsys) -> None:
+    """#2139: the tree is read through the one read of issues, which leaves a
+    state issue out, so it is neither a node, a child nor an orphan (DEC-058
+    point 3), even when its first line names a parent."""
+    rows = [
+        {"number": 1, "title": "[EPIC] e", "body": "## What", "state": "OPEN"},
+        {"number": 2, "title": "[Feature] f", "body": "EPIC: #1\n", "state": "OPEN"},
+        {
+            "number": 3,
+            "title": "Seat planner",
+            "body": "EPIC: #1\n<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+            "state": "OPEN",
+        },
+    ]
+
+    def fake_gh(args, config, **kwargs):
+        if "issue" in args and "list" in args:
+            full = [{**row, "labels": [], "milestone": None} for row in rows]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(full), stderr="")
+        if "sub_issues" in " ".join(args):
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 410: Gone")
+        return subprocess.CompletedProcess(args, 0, stdout="[]", stderr="")
+
+    monkeypatch.setattr(st, "gh_run", fake_gh)
+    monkeypatch.setattr(st.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(sys, "argv", ["show-tree", "--format", "json", "--limit", "500"])
+    st.main()
+    rendered = json.loads(capsys.readouterr().out)
+    assert _numbers(rendered) == {1, 2}
+    assert rendered["complete"] is True
+
+
 def test_a_truncated_view_reports_truncation_not_its_consequence(st) -> None:
     """When both causes hold, name the root one.
 
