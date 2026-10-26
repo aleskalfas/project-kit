@@ -11,7 +11,7 @@ pkit:
         - .pkit/capabilities/software-engineering/scripts/**
         - .pkit/capabilities/software-engineering/schemas/**
         - .pkit/capabilities/software-engineering/skills/**
-      record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, "COR-064#1", "COR-064#2", "COR-064#4", ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
+      record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, "COR-064#1", "COR-064#2", "COR-064#4", ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055", "project-management:DEC-060"]
 ---
 
 # software-engineering capability
@@ -22,12 +22,13 @@ Formalises the discipline of **authoring code under a project's own conventions*
 
 When an adopter runs `pkit capabilities install software-engineering`:
 
-- `agents/software-engineer.md` — the producer agent. Reads the project's conventions corpus (the overlay-resolved `<project-conventions>` category) and conforms to it; carries no coding opinions of its own; self-checks conformance and defers judgment to the reviewer stack (`critic` / `architect` / `convention-compliance-reviewer`). Its project-level definition shadows the harness's generic same-named agent.
+- `agents/software-engineer.md` — the producer agent. Reads the project's conventions corpus (the overlay-resolved `<project-conventions>` category) and conforms to it; carries no coding opinions of its own; self-checks conformance and defers judgment to the reviewer stack (`critic` / `architect` / `convention-compliance-reviewer`). When it builds a walking skeleton, it drafts the conventions the skeleton sets into the corpus, for a person to accept ("A foundation fills the corpus" below). Its project-level definition shadows the harness's generic same-named agent.
 - `agents/code-reviewer.md`, `agents/security-reviewer.md`, `agents/docs-reviewer.md` — the **code-review panel** (see below).
 - `review-contributions.yaml` — registers the panel into the project-management merge gate through the reviewer-contribution socket ([project-management:DEC-032]).
 - `decisions/DEC-001-producer-agent-and-conventions-seam.md` — the producer discipline's invariant: the conventions-thin producer, the overlay-resolved seam, the producer/checker boundary, empty-tolerance.
 - `decisions/DEC-002-code-review-panel.md` — the panel decision: its three agents, its home, the per-agent block-threshold and knowledge-split disciplines, and `docs-reviewer`'s check of a change's answers.
 - `decisions/DEC-003-purpose.md` — what the capability is for: code that agents write follows the project's own conventions in every session, and code is reviewed, with its documentation, before the merge gate lets it through.
+- `decisions/DEC-004-skeleton-conventions-in-corpus.md` — the conventions a walking skeleton sets are written into the conventions corpus, and a person accepts them before the skeleton's code is built on them.
 
 It deliberately ships **no conventions content** — the conventions corpus is adopter-owned and accretes over time (see Adopter setup).
 
@@ -87,6 +88,16 @@ After install:
 - **The agents deploy and work immediately — defining conventions is optional enrichment.** The panel and the producer read the project conventions corpus through the `<project-conventions>` overlay category, but that category is an **optional read** ([ADR-052](../../../tech-docs/architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)): with it undefined the agents still deploy and act as careful generalists. `pkit agents reconcile` surfaces `project-conventions` as an *optional* category — framed "the agent already deploys without this" — never as a blocker.
 - **Define where your conventions live to enrich the agents.** Add a `project-conventions` category to `.pkit/agents/project/overlay.yaml`, pointing at the path(s) where you keep your code conventions (or uncomment the stub `reconcile` appends and fill in the paths). The resolved path is delivered into each agent's frontmatter via `<project-conventions>` placeholder resolution ([ADR-013](../../../tech-docs/architecture/decisions/ADR-013-conventions-discovery-seam.md) D1); the agents then read whatever it resolves to.
 - **An empty corpus is fine to start.** With no conventions defined yet, the agents behave as careful generalists and say so. Conventions accrete over time (e.g. via a generate → catch → encode loop); the agents pick them up as the corpus fills — no re-install needed.
+
+### A foundation fills the corpus
+
+New work whose Tasks would share a choice nothing settles yet is planned in two stages ([project-management:DEC-060]). Its foundation comes first: accepted records of its architectural choices, then a walking skeleton. The skeleton is one thin slice, end to end, whose code sets the conventions the later slices share. Its builder also writes those conventions into the corpus, so every later slice reads them as the project's rules ([software-engineering:DEC-004-skeleton-conventions-in-corpus]).
+
+- **Drafted before the code.** The builder drafts an entry for each convention the skeleton settles, such as the layout of the code and its tests. A person accepts the entries before the skeleton's code is built on them. An entry the code later disproves is changed and accepted again before the merge.
+- **Accepted by a person.** Accepting is an act of its own on the entries' text, and authorising the merge accepts none. In a corpus that gives its entries a status, such as a rule set, the builder leaves each one proposed.
+- **Where they go.** An entry goes where the corpus already keeps the project's own conventions, in the form it gives them. In an empty corpus, the builder proposes a form and a place with the entries.
+- **No place, no entries.** The builder writes none where the corpus offers no single place the project owns for them. Examples are a corpus that names nothing, and one that names only a rule set a component ships. It says so before it builds, and lists the conventions in its hand-off, so you can name a place before the slices are planned.
+- **A foundation's conventions only.** A Task that changes a convention a foundation set changes its entry with the code. Beyond a foundation's conventions, nothing here has the software-engineer write to the corpus.
 
 ## Citing this capability's decisions
 
