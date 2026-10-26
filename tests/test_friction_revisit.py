@@ -20,6 +20,7 @@ import pytest
 from click.testing import CliRunner
 from ruamel.yaml import YAML
 
+from project_kit import answer_files as af
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
 from project_kit import friction_validate as fv
@@ -744,6 +745,23 @@ def test_revisit_rewrites_the_entry_already_there(written: AdopterRepo) -> None:
     )
     assert not again.changes
     assert "a later change needs new words" in (again.unchanged or "")
+
+
+def test_revisit_reads_the_answers_at_the_path_its_source_had(repo: AdopterRepo) -> None:
+    """A source moved with `git mv`, the move not yet committed, keeps the answers at its old
+    path: the entry the writer adds names them in `read` (COR-062 points 4 and 10; #2108)."""
+    _start(repo)
+    (base_file,) = af.head_names(repo.root)
+    moved = "reqs/area/latency.md"
+    (repo.root / moved).parent.mkdir()
+    repo.git("mv", SOURCE_DOC, moved)
+    plan = fw.plan_revisit(
+        repo.root, "REQ-1", target=TEST_FILE, outcome="unchanged", reason="the move keeps it"
+    )
+    (written,) = YAML(typ="safe").load(plan.after)["answers"]
+    assert written["artefact"] == moved
+    assert written["read"] == [base_file]
+    assert written["revisited"] == [entry("unchanged", "the move keeps it")]
 
 
 @pytest.mark.parametrize(
