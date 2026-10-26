@@ -217,7 +217,9 @@ def snapshot_with(
 ) -> None:
     """Every `this_clone` of the loaded `instance_claims` reads `snapshot` as the
     run's snapshot (None: the default branch declares no topology), `hint` as the
-    seat its runtime file names and `key` as its key."""
+    seat its runtime file names and `key` as its key. The run starts with no
+    commit named, and the commit it names is forgotten after the test."""
+    monkeypatch.setenv(module.topology.NAMED_ENV, "")
     monkeypatch.setattr(module, "_snapshot", lambda _root, _config, _login: snapshot)
     monkeypatch.setattr(module, "read_seat_hint", lambda _root: hint)
     monkeypatch.setattr(module, "read_clone_key", lambda _root: key)

@@ -591,3 +591,48 @@ def test_what_a_write_found_replaces_what_the_run_read(tmp_path: Path) -> None:
     state = snap.learn(seat, claimed.read)
     assert state.held_by(snap.clone) and snap.state("worker-1") is state
     assert snap.learn(seat, None).state == tp.UNREAD
+
+
+# ---- the commit a run names (DEC-059 point 1) -----------------------------------------
+
+
+def test_a_run_names_the_commit_it_read_once() -> None:
+    """A clone says which commit of the default branch it read, and a second
+    reading of the same commit in the run says it no more."""
+    env: dict[str, str] = {}
+    tree = tp.parse(_doc(PLANNER), ref="origin/main", commit=TIP)
+    assert tp.name_once(tree, env) == f"origin/main at {TIP}"
+    assert env == {tp.NAMED_ENV: TIP}
+    assert tp.name_once(tree, env) is None
+
+
+def test_a_reading_of_another_commit_names_that_commit() -> None:
+    """The default branch moved between two readings of one run: the second
+    names the commit it read."""
+    env = {tp.NAMED_ENV: TIP}
+    moved = tp.parse(_doc(PLANNER), ref="origin/main", commit="beef")
+    assert tp.name_once(moved, env) == "origin/main at beef"
+    assert tp.name_once(moved, env) is None
+
+
+def test_a_topology_read_at_no_commit_names_nothing() -> None:
+    env: dict[str, str] = {}
+    assert tp.name_once(tp.Topology(), env) is None
+    assert env == {}
+
+
+def test_the_commit_named_reaches_each_command_the_run_starts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The commit is kept in this process's environment, so a command that this
+    one runs, such as the `move-issue` that `start-work` runs, inherits it."""
+    monkeypatch.setenv(tp.NAMED_ENV, "")
+    tree = tp.parse(_doc(PLANNER), ref="origin/main", commit=TIP)
+    assert tp.name_once(tree) == f"origin/main at {TIP}"
+    child = subprocess.run(
+        [sys.executable, "-c", f"import os; print(os.environ[{tp.NAMED_ENV!r}])"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert child.stdout.strip() == TIP
