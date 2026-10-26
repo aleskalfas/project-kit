@@ -1,0 +1,17 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit pm next-task` takes the next ready Task from the shared pool of
+  DEC-059 point 7 (#2142) and starts it, claimed, through `start-work`. A ready
+  Task is an open Task in Backlog with no owner, not assigned to another
+  account, whose `## Dependencies` section names no open issue by `#N`. In a
+  project with a topology it may also be a Task In Progress whose claim no
+  longer counts. The highest in priority goes first, within the scope of the
+  seat the clone holds, and a clone with no seat, or a planner's seat, takes
+  nothing there. Where another instance claims the Task first, the first claim
+  holds, and the clone takes the next ready Task. It exits 5 when no Task is
+  ready. `start-work` now also stops before the move when its claim finds
+  another instance's claim made after the clash guard passed, so two clones
+  never both start one Task.

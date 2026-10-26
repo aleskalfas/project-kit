@@ -84,7 +84,7 @@ import tempfile
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -93,6 +93,9 @@ from _lib import audit, provenance
 from _lib import instance_ownership as ownership
 from _lib.comment import post_audit_once
 from _lib.instance_identity import read_clone_key, read_instance_id
+
+if TYPE_CHECKING:
+    from _lib import topology
 
 #: The adopter's substrate selector, in the marker's own schema home (DEC-043
 #: point 2), relative to the capability root.
@@ -138,11 +141,13 @@ Run = Callable[[list[str]], Any]
 @dataclass(frozen=True)
 class Seat:
     """A seat of the topology, as this clone holds it: its name, its number,
-    which is its place in the topology, and its role (DEC-059 points 2 and 6)."""
+    which is its place in the topology, its role, and the scope that narrows its
+    own pool of work, where it has one (DEC-059 points 2, 6 and 7)."""
 
     name: str
     number: int
     role: str
+    scope: topology.Scope | None = None
 
 
 @dataclass(frozen=True)
@@ -273,8 +278,10 @@ def read_topology(capability_root: Path, config: dict) -> Topology | None:
 
     ``_lib/topology`` reads the topology from the default branch. #2141 builds
     this reading from it once for each run, with each seat's holder from its
-    state issue (ADR-071 point 1). Until then this answers ``None`` for every
-    project, and every command keeps DEC-035's behaviour."""
+    state issue (ADR-071 point 1), and the scope of this clone's seat in
+    :attr:`Seat.scope`, which ``next-task`` narrows its pool by. Until then this
+    answers ``None`` for every project, and every command keeps DEC-035's
+    behaviour."""
     return None
 
 
@@ -552,6 +559,30 @@ def guard(
         f"[warn] ownership: {why}, and {flag} let this clone, {me}, act on it. "
         "The reason is on the issue.",
     )
+
+
+# ---- the owner, as the shared pool reads it (DEC-059 point 7) ------------------
+
+
+def read_owner(
+    issue_number: int, clone: Clone, config: dict, *, run: Run | None = None
+) -> ownership.OwnershipResolution | None:
+    """The issue's owners, folded by the seam as the clash guard folds them:
+    the markers of this clone's account where it is an assignee, else of the
+    first assignee. None where the issue could not be read. Writes nothing."""
+    gh = run or _runner(config)
+    issue = _read(gh, issue_number)
+    if issue is None:
+        return None
+    assignees = _assignees(issue)
+    account = clone.login if clone.login in assignees else (assignees[0] if assignees else None)
+    return _resolve(issue, account, clone)
+
+
+def owner_named(resolution: ownership.OwnershipResolution, instance: int) -> str:
+    """How a line names the owner ``instance`` of a folded issue: its seat, where
+    its claim names one, and why its claim could not be judged, where it could not."""
+    return _owner(resolution, instance)
 
 
 # ---- release ----------------------------------------------------------------
