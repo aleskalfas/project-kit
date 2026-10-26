@@ -107,7 +107,7 @@ pkit:
 3. Where the worker's seat gives the worker a [scope](../../../glossary.md#term-scope--scope), the worker keeps the ready Tasks that fall in the scope. The worker chooses the highest in priority (DEC-059 point 7 and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 > [!WARNING]
-> **Not built yet:** no seat gives a scope, and nothing reads a scope. DEC-059 point 7 decides that a scope narrows the ready Tasks of the scope's seat, and #2142 tracks it.
+> **Not built yet:** nothing narrows the ready Tasks to a seat's scope. DEC-059 point 7 decides that a scope narrows the ready Tasks of the scope's seat, and #2142 tracks it.
 
 4. The worker starts the chosen Task: `pkit pm start-work <N>`. The system checks the move, cuts the Task's branch, assigns the worker's account and moves the Task to In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 5. The system makes the worker's instance the Task's owner ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The ownership names the worker's seat, the seat's number and the clone's key ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).

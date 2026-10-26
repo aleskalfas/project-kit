@@ -14,9 +14,6 @@ requirements:
 after:
   - [UC-064]
 shortfalls:
-  - at: 1
-    issue: "#2140"
-    record: project-management:DEC-059#2
   - at: 2
     issue: "#2141"
     record: project-management:DEC-059#6
@@ -29,18 +26,9 @@ shortfalls:
   - at: 5
     issue: "#2136"
     record: project-management:DEC-059#7
-  - at: 6
-    issue: "#2140"
-    record: project-management:DEC-059#3
-  - at: 7
-    issue: "#2140"
-    record: project-management:DEC-059
   - at: 8
-    issue: "#2140"
+    issue: "#2141"
     record: project-management:DEC-059#1
-  - at: "1a"
-    issue: "#2140"
-    record: project-management:DEC-059#6
   - at: "2c"
     issue: "#2141"
     record: project-management:DEC-059#6
@@ -50,11 +38,8 @@ shortfalls:
   - at: "6a"
     issue: "#2141"
     record: project-management:DEC-059#3
-  - at: "7a"
-    issue: "#2140"
-    record: project-management:DEC-059#9
   - at: "8a"
-    issue: "#2140"
+    issue: "#2141"
     record: project-management:DEC-059#1
 pkit:
   friction:
@@ -62,6 +47,9 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/set-instance.py
         - .pkit/capabilities/project-management/scripts/_lib/instance_identity.py
+        - .pkit/capabilities/project-management/scripts/_lib/topology.py
+        - .pkit/capabilities/project-management/scripts/create-seats.py
+        - .pkit/capabilities/project-management/scripts/check-topology.py
       record:
         - project-management:DEC-045#1
         - project-management:DEC-045#3
@@ -109,13 +97,10 @@ pkit:
 
 **Main path:**
 
-1. The adopter chooses the [seats](../../../glossary.md#term-seat--seat) of the [topology](../../../glossary.md#term-topology--topology), and writes the seats into the [project](../../../../core/glossary.md#term-project--project)'s configuration for project-management, on a branch. Each seat says whether the seat is the organizer seat, and may give the seat's agent a [scope](../../../glossary.md#term-scope--scope) (DEC-059 points [1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) and [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)). Each seat also holds these:
+1. The adopter chooses the [seats](../../../glossary.md#term-seat--seat) of the [topology](../../../glossary.md#term-topology--topology), and writes the seats into the [project](../../../../core/glossary.md#term-project--project)'s configuration for project-management, `project/topology.yaml`, on a branch. Each seat says whether the seat is the organizer seat, and may give the seat's agent a [scope](../../../glossary.md#term-scope--scope) (DEC-059 points [1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) and [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)). Each seat also holds these:
    - the seat's name
    - whether the seat's agent plans, builds or does both
    - the [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) that agent follows
-
-> [!WARNING]
-> **Not built yet:** no configuration of project-management holds a topology. DEC-059 point 2 decides what each seat declares, and #2140 tracks it.
 
 2. The system derives each seat's number from the seat's place in the topology's list, counted from one. Nobody types a number into a clone, so no two clones take one number ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 
@@ -130,39 +115,30 @@ pkit:
 4. The system walks the adopter through each [workstream](../../../glossary.md#term-workstream--workstream), asking which seats' scopes name the workstream. Each scope names workstreams and changes none of the workstreams (DEC-045 points [3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#6-a-guided-assignment-script--local-idempotent-drift-reconciling)). The system writes the scopes into the topology, for a [change](../../../../core/glossary.md#term-change--change) a person reviews ([DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
 
 > [!WARNING]
-> **Not built yet:** nothing walks the adopter through the workstreams, and no topology holds a scope. DEC-045 point 6 decides the guided assignment, and #512 tracks it.
+> **Not built yet:** nothing walks the adopter through the workstreams, or writes the scopes into the topology. DEC-045 point 6 decides the guided assignment, and #512 tracks it.
 
 5. The system warns of a workstream that no seat may take, and refuses nothing. Several seats that may take one workstream draw no warning, since those seats share the ready Tasks ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 
 > [!WARNING]
-> **Not built yet:** nothing reads the seats' scopes, so nothing warns. DEC-059 point 7 decides the warning, and #2136 tracks it.
+> **Not built yet:** nothing warns of a workstream that no seat may take. DEC-059 point 7 decides the warning, and #2136 tracks it.
 
-6. The adopter runs the command that creates the [state issue](../../../glossary.md#term-state-issue--state-issue) of each new seat, on the change that adds the seats. The system creates a state issue for each new seat, keyed by the seat's name ([DEC-058 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#2-a-state-issue-holds-one-piece-of-state-named-by-its-key)). The system writes each state issue's number into the topology ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). At the command's entry, the system checks the project's prerequisites, and that the repository is the session's own ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
+6. The adopter runs `pkit pm create-seats`, the command that creates the [state issue](../../../glossary.md#term-state-issue--state-issue) of each new seat, on the change that adds the seats. The system creates a state issue for each new seat, keyed by the seat's name ([DEC-058 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#2-a-state-issue-holds-one-piece-of-state-named-by-its-key)). The system writes each state issue's number into the topology ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). At the command's entry, the system checks the project's prerequisites, and that the repository is the session's own ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-> [!WARNING]
-> **Not built yet:** no command creates a state issue. DEC-059 point 3 decides that the change adding seats lands with the seats' state issues, and #2140 tracks it.
-
-7. The system checks the topology, and reports each of these (DEC-059):
+7. The adopter runs the topology's check, `pkit pm check-topology`, on the change. The check compares the change's topology with the topology of the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and says which commit the check read. The check reports each of these (DEC-059):
    - a seat's name held twice
    - more than one organizer seat
    - a seat whose state issue is not named
    - a scope that names an unknown workstream or kind of work
-   - a seat deleted or moved against the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), rather than retired
-
-> [!WARNING]
-> **Not built yet:** no check reads a topology. DEC-059 decides what the topology's check reports, and #2140 tracks it.
+   - a seat deleted or moved against the default branch, rather than retired
 
 8. A person reviews the change, and the change merges like any other. The topology binds once the topology is on the default branch. Every clone reads the topology from there, never from the clone's own branch or working tree (DEC-059 point 1).
 
 > [!WARNING]
-> **Not built yet:** nothing reads a topology. DEC-059 point 1 decides that every clone reads the topology from the default branch, and #2140 tracks it.
+> **Not built yet:** no command takes a seat, so no clone reads the topology to act as a seat. DEC-059 point 1 decides that every clone reads the topology from the default branch, and #2141 tracks it.
 
 **Variants:**
 
-- **1a.** The adopter alters a [topology](../../../glossary.md#term-topology--topology) already in place. A new [seat](../../../glossary.md#term-seat--seat) goes at the end of the list, and a seat that leaves stays in the list, marked retired. Renaming a seat retires the seat and adds a new seat, so no seat's number moves (DEC-059 points [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
-
-> [!WARNING]
-> **Not built yet:** no topology exists to alter. DEC-059 point 6 decides that seats are only added and retired, and #2140 tracks it.
+- **1a.** The adopter alters a [topology](../../../glossary.md#term-topology--topology) already in place. A new [seat](../../../glossary.md#term-seat--seat) goes at the end of the list, and a seat that leaves stays in the list, marked retired. Renaming a seat retires the seat and adds a new seat, so no seat's number moves (DEC-059 points [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)). The topology's check of step 7 reports a seat deleted or moved against the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), rather than retired.
 
 - **2a.** A clone holds no seat. The clone marks no [issue](../../../glossary.md#term-issue--issue) and is guarded by nothing, as a clone with no number ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 - **2b.** The adopter asks a clone for the clone's number: `pkit pm set-instance --show` prints the number, or `unset` (`set-instance.py`).
@@ -183,13 +159,10 @@ pkit:
 
 - **7a.** The project writes the [owner](../../../glossary.md#term-owner--owner) of each issue as a label. The topology's check refuses the topology, since a label cannot carry what an ownership names ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again) and [DEC-043 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#2-a-selector-in-instance-ownerships-own-schema-home)).
 
-> [!WARNING]
-> **Not built yet:** no check reads a topology. DEC-059 point 9 decides that a project with a topology keeps each issue's owner in the log of comments, and #2140 tracks it.
-
-- **8a.** A clone has not fetched the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) since the change merged. The clone reads the topology the clone last fetched, and says which commit the clone read ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
+- **8a.** A clone has not fetched the default branch since the change merged. The clone reads the topology the clone last fetched, and says which commit the clone read ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
 
 > [!WARNING]
-> **Not built yet:** nothing reads a topology, nor names the commit read. DEC-059 point 1 decides that a clone names the commit the clone read, and #2140 tracks it.
+> **Not built yet:** no command takes a seat, so no clone reads the topology to act as a seat, nor names the commit read. DEC-059 point 1 decides that a clone names the commit the clone read, and #2141 tracks it.
 
 **Postconditions:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares each [seat](../../../glossary.md#term-seat--seat), with the seat's number, [state issue](../../../glossary.md#term-state-issue--state-issue) and [scope](../../../glossary.md#term-scope--scope), where the seat has a scope. Each scope names the [workstreams](../../../glossary.md#term-workstream--workstream) or the kinds of work that the agent of the scope's seat takes work from.
 

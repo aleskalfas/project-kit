@@ -14,7 +14,7 @@ shortfalls:
     issue: "#2141"
     record: project-management:DEC-059#4
   - at: 2
-    issue: "#2140"
+    issue: "#2141"
     record: project-management:DEC-059#1
   - at: 3
     issue: "#2143"
@@ -32,10 +32,10 @@ shortfalls:
     issue: "#2141"
     record: project-management:DEC-059#4
   - at: "2a"
-    issue: "#2140"
+    issue: "#2141"
     record: project-management:DEC-059#3
   - at: "2b"
-    issue: "#2140"
+    issue: "#2141"
     record: project-management:DEC-059#1
   - at: "3b"
     issue: "#2136"
@@ -105,7 +105,7 @@ pkit:
 2. The system reads the [topology](../../../glossary.md#term-topology--topology) from the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and prints the commit the system read. The system takes only a free seat whose [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) is the definition the session follows (DEC-059 points [1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) and 4).
 
 > [!WARNING]
-> **Not built yet:** nothing reads a topology. DEC-059 point 1 decides that every clone reads the topology from the default branch, and #2140 tracks it.
+> **Not built yet:** no command takes a seat, so nothing reads the topology to take one. DEC-059 point 1 decides that every clone reads the topology from the default branch, and #2141 tracks it.
 
 5. The system takes the seat with a comment on the seat's [state issue](../../../glossary.md#term-state-issue--state-issue). The clone's key was generated when the clone first took a seat. The clone keeps the key in a file that is never committed ([DEC-035 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)). The comment names these ([DEC-058 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)):
    - the account
@@ -146,12 +146,12 @@ pkit:
 - **2a.** The topology names no [state issue](../../../glossary.md#term-state-issue--state-issue) for the seat, or the state issue cannot be read. The seat cannot be taken until a reviewed [change](../../../../core/glossary.md#term-change--change) names a state issue for the seat ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
 
 > [!WARNING]
-> **Not built yet:** no topology names a state issue. DEC-059 point 3 decides that a seat without a state issue cannot be taken, and #2140 tracks it.
+> **Not built yet:** no command takes a seat, so nothing refuses a seat whose state issue is not named or cannot be read. DEC-059 point 3 decides that a seat without a state issue cannot be taken, and #2141 tracks it.
 
 - **2b.** The [default branch](../../../../core/glossary.md#term-default-branch--default-branch) cannot be resolved. The system takes no seat, and the use case ends ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
 
 > [!WARNING]
-> **Not built yet:** nothing reads a topology. DEC-059 point 1 decides that no clone takes a seat without the default branch, and #2140 tracks it.
+> **Not built yet:** no command takes a seat, so no command stops where the default branch cannot be resolved. DEC-059 point 1 decides that no clone takes a seat without the default branch, and #2141 tracks it.
 
 - **3a.** The seat's agent plans and builds, as a lead agent does, and the request does not show which of the two the request asks for. The agent asks, and goes on once the agent is told (`project-manager.md`).
 - **3b.** The seat names another [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition), such as a specialist's. That agent takes the seat and the seat's work, and lands that work through the same procedures of the `pm` [skill](../../../../core/glossary.md#term-skill--skill) ([DEC-059 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#8-the-agent-a-seat-names-runs-the-seats-role-through-the-pm-skill)).

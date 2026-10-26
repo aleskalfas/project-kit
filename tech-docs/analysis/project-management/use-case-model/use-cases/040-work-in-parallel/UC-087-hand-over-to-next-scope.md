@@ -82,7 +82,7 @@ pkit:
 - **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task, and so may the agent of every seat that builds with no scope ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 > [!WARNING]
-> **Not built yet:** no seat gives a scope, so no seat keeps to one kind of work. DEC-059 point 7 decides that a scope may name kinds of work, and #2142 tracks it.
+> **Not built yet:** nothing narrows the ready Tasks to a seat's scope, so no seat keeps to one kind of work. DEC-059 point 7 decides that a scope may name kinds of work, and #2142 tracks it.
 
 **Postconditions:** What the next piece needs from this piece has landed on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and the next piece's [Task](../../../glossary.md#term-task--task) can start.
 
