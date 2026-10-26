@@ -39,7 +39,8 @@ analysis location. Its front matter comes from its kind's template in
   its own analysis that no view in force explains yet (point 5). It anchors
   each, and the records `--record` names, never code. Its body holds one
   section for each, headed by the term's name in sentence case, its first
-  letter capitalized (point 2). The stamp also writes each
+  letter capitalized (point 2), and ends with its closing section on what is
+  built on its concepts, as `pkit analysis link` writes it. The stamp also writes each
   term's link to its section, under the term's heading in the glossary, and
   writes the two files whole, or neither (point 7; `_lib/views.py`).
 
@@ -76,6 +77,8 @@ measure and where it holds — and each body part. The check fails each until it
 is written.
 It writes a journey's step lines under *Steps*, each use case's id and title
 as the form asks, and leaves the part's hint above them for the hand-overs.
+Each id it writes links to its artefact as `pkit analysis link` writes it, a
+step line's to its use case (DEC-001 point 14, `_ids_linked`).
 It refuses a journey with a step that is a use case of another actor: a
 journey is one actor's path across use cases (point 1), and the check holds a
 journey in force to the same. It refuses a use case naming its own actor among
@@ -130,6 +133,7 @@ from _lib import (
     backbone,
     forms,
     history,
+    id_links,
     links,
     markdown,
     numbering,
@@ -159,6 +163,7 @@ from _lib.model import (
     USE_CASE,
     VIEW,
     Analysis,
+    Artefact,
     Unreadable,
     identity,
     number_of,
@@ -284,6 +289,7 @@ def stamp(
         text = _defined(
             _document(root, kind, new_id, request, analysis), location, request, analysis
         )
+        text = _closed(root, text, location, request, analysis, listing, folder)
         recorded, linked = _write_view(root, target, location, text, request, analysis, record)
         notes += [line for line in (recorded,) if line]
         notes.append(linked)
@@ -294,15 +300,16 @@ def stamp(
         text = _added_entry(root, target, place, kind, new_id, request, analysis)
         location = f"{place}#{new_id}"
     else:
-        folder = f"{place}/{request.area}" if request.area else place
+        area = f"{place}/{request.area}" if request.area else place
         # An actor's id is its slug, so its file is named by the id alone.
         name = new_id if kind == ACTOR else f"{new_id}-{request.slug}"
-        location = f"{folder}/{name}.md"
+        location = f"{area}/{name}.md"
         target = root / location
         refuse_links(root, target, location)
         if target.exists():
             raise Refused(f"{location} exists already")
         text = _document(root, kind, new_id, request, analysis)
+        text = _ids_linked(root, text, location, kind, new_id, analysis, Within(listing, folder))
 
     recorded = write_and_record(root, target, location, text, record)
     if recorded:
@@ -850,6 +857,63 @@ def _defined(text: str, location: str, request: Request, analysis: Analysis) -> 
         term = links.term_of(artefact) if artefact is not None else None
         wanted.append(links.defined(term, location) if term is not None else None)
     return "\n".join(links.with_definitions(lines, sections, request.explains, wanted)[0])
+
+
+def _closed(
+    root: Path,
+    text: str,
+    location: str,
+    request: Request,
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+) -> str:
+    """A new view's `text` ending with its closing section: each use case, journey and
+    requirement in force of its analysis whose body links a term it explains, as `pkit
+    analysis link` writes their links (DEC-004 point 7). Refused where a body or the
+    kinds' declared structure cannot be read, since the section would be a guess."""
+    try:
+        kinds = links.parted(root)
+    except structure.Unreadable as exc:
+        raise Refused(f"the kinds' declared structure could not be read: {exc}") from exc
+    listed = links.listed_in_closing(analysis, folder)
+    read: dict[str, str | None] = {}
+    for artefact in listed:
+        try:
+            held = (root / artefact.path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            raise Refused(f"{artefact.path} could not be read: {exc}") from exc
+        read[artefact.path] = held.replace("\r\n", "\n")
+    used = links.uses(analysis, listing, folder, read, kinds)
+    shown_as = {name: kind.shown_as or name for name, kind in kinds.items()}
+    headings = {term_id: views.heading(analysis, term_id) for term_id in request.explains}
+    closing = links.closing(location, request.explains, headings, listed, used, shown_as)
+    return links.ending_with(text, closing)
+
+
+def _ids_linked(
+    root: Path,
+    text: str,
+    location: str,
+    kind: str,
+    new_id: str,
+    analysis: Analysis,
+    within: Within,
+) -> str:
+    """A new actor's, use case's, journey's or requirement's `text` with each id it names
+    linked as `pkit analysis link` writes it, such as a journey's step lines to their use
+    cases (DEC-001 point 14). Its parts hold hints, which name no id, so only what the
+    stamp writes from data takes a link. Refused where the kinds' declared structure
+    cannot be read, since the parts would be a guess."""
+    if kind not in links.PARTED:
+        return text
+    try:
+        parted = links.parted(root)
+    except structure.Unreadable as exc:
+        raise Refused(f"the kinds' declared structure could not be read: {exc}") from exc
+    artefact = Artefact(kind, new_id, location, location, False, {}, {}, folder=within.folder)
+    named = id_links.named(analysis, within.listing, within.folder)
+    return links.document(artefact, text, None, parted[kind], named=named).linked
 
 
 def _write_view(

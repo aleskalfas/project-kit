@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  Changing the internal root with `pkit config set docs.internal` now names each recorded documentation
+  location that the old internal root held and the new one does not, such as
+  the overlay's `adr-records` on a fresh project (#2084). Each stays where it
+  is (COR-049 point 6), and the command prints two lines for it: `kept
+  <location> = <path>  (<file>)`, then where it was recorded and how to move it.
+  Nothing else changes, and no migration.

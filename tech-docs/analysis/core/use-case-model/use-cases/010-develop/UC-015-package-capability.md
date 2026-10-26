@@ -34,24 +34,24 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): runs the [stamp](../../../glossary.md#term-stamp--stamp) of step 1 for the author through the `capability-author` [skill](../../../glossary.md#term-skill--skill), which pairs with it (COR-005). It writes the [capability](../../../glossary.md#term-capability--capability)'s files as the author directs.
+- **AI agent** (`ACT-ai-agent`): runs the [stamp](../../../glossary.md#term-stamp--stamp) of step 1 for the author through the `capability-author` [skill](../../../glossary.md#term-skill--skill), which pairs with it ([COR-005](../../../../../../.pkit/decisions/core/COR-005-bundle-pattern.md)). It writes the [capability](../../../glossary.md#term-capability--capability)'s files as the author directs.
 
 **Preconditions:**
 
-- **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+- **From [UC-014](UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 
 **Assumptions:** None.
 
-**Trigger:** A discipline has recurred in the [project](../../../glossary.md#term-project--project)'s work, and suits only some projects. So the author decides to package it as a [capability](../../../glossary.md#term-capability--capability) of its own (COR-007 and COR-017).
+**Trigger:** A discipline has recurred in the [project](../../../glossary.md#term-project--project)'s work, and suits only some projects. So the author decides to package it as a [capability](../../../glossary.md#term-capability--capability) of its own ([COR-007](../../../../../../.pkit/decisions/core/COR-007-pattern-extraction.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 
 **Main path:**
 
 1. The author runs `pkit new capability <name>`, or has an AI agent run it through the `capability-author` [skill](../../../glossary.md#term-skill--skill).
 2. The [system](../../../glossary.md#term-system--system) checks the name. It must be kebab-case, and neither a reserved word, such as `core` or `backbone`, nor a [backbone](../../../glossary.md#term-backbone--backbone) command's name. No [adapter](../../../glossary.md#term-adapter--adapter) may hold it, and no [capability](../../../glossary.md#term-capability--capability) folder of the [project](../../../glossary.md#term-project--project) may have it.
-3. The system writes the capability's subtree, `.pkit/capabilities/<name>/`. It holds `package.yaml`, a `README.md`, and the empty folders `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/` and `migrations/` (COR-017).
+3. The system writes the capability's subtree, `.pkit/capabilities/<name>/`. It holds `package.yaml`, a `README.md`, and the empty folders `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/` and `migrations/` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 4. The [package metadata](../../../glossary.md#term-package-metadata--package-metadata) gives `version: 0.1.0`, and a [range](../../../glossary.md#term-range--range) on the backbone from the [version](../../../glossary.md#term-version--version) the project records, such as `requires_backbone: ">=1.149.0,<2.0.0"`.
 5. The system prints `Stamped: .pkit/capabilities/<name>/`, and registers nothing.
-6. The author writes the discipline into the subtree, from the [methodology](../../../glossary.md#term-methodology--methodology)'s primitives. Its [decision records](../../../glossary.md#term-decision-record--decision-record) come from `pkit new decision <name> <slug>`, and its [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) come from `pkit new agent <name> <agent>`. Its skills, its schemas and its scripts sit in their folders (COR-017 and COR-018).
+6. The author writes the discipline into the subtree, from the [methodology](../../../glossary.md#term-methodology--methodology)'s primitives. Its [decision records](../../../glossary.md#term-decision-record--decision-record) come from `pkit new decision <name> <slug>`, and its [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) come from `pkit new agent <name> <agent>`. Its skills, its schemas and its scripts sit in their folders (COR-017 and [COR-018](../../../../../../.pkit/decisions/core/COR-018-capability-schemas.md)).
 7. The author writes the capability's description in `package.yaml` and in its README, and edits no file outside the subtree.
 
 **Variants:**

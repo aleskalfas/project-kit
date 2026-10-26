@@ -37,15 +37,15 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): the `software-engineer` agent, and the reviewer agents that judge its change. The engineer never invents a convention the corpus lacks (software-engineering DEC-001 point 5).
+- **AI agent** (`core:ACT-ai-agent`): the `software-engineer` agent, and the reviewer agents that judge its change. The engineer never invents a convention the corpus lacks ([software-engineering DEC-001 point 5](../../../../../.pkit/capabilities/software-engineering/decisions/DEC-001-producer-agent-and-conventions-seam.md#5-empty-tolerance)).
 
 **Preconditions:** None.
 
 **Assumptions:**
 
-- The project has the software-engineering capability installed, and the adapter has deployed its `software-engineer` agent definition. The core provides both: a capability is installed, or registered in place where it is developed (COR-017, COR-031), and an adapter deploys its agents (COR-013).
-- The running agent finds the corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent definition's text keeps `<project-conventions>` (ADR-052 points 3 and 6).
-- Nothing at run time holds the agent to the corpus. Where the project runs the code-review panel, its agents read the corpus too (software-engineering DEC-002 point 4).
+- The project has the software-engineering capability installed, and the adapter has deployed its `software-engineer` agent definition. The core provides both: a capability is installed, or registered in place where it is developed ([COR-017](../../../../../.pkit/decisions/core/COR-017-capability-pattern.md), [COR-031](../../../../../.pkit/decisions/core/COR-031-capability-origin.md)), and an adapter deploys its agents ([COR-013](../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
+- The running agent finds the corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent definition's text keeps `<project-conventions>` (ADR-052 points [3](../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md#3-undefined-optional-resolves-to-a-dropped-item-the-agent-deploys) and [6](../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md#6-the-agents-return-to-the-angle-bracket-form)).
+- Nothing at run time holds the agent to the corpus. Where the project runs the code-review panel, its agents read the corpus too ([software-engineering DEC-002 point 4](../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#4-knowledge-split)).
 - The change builds only on accepted decision records (core rule 2).
 - The agent asks before a destructive operation, such as `git push --force` or deleting files outside `project/` (core rule 8).
 - The agent works within the permission model, never around it (core rules 14 and 15).
@@ -62,9 +62,9 @@ pkit:
 2. The agent reads the conventions corpus the project names, before it writes any code.
 3. The agent writes the change's code, applying the corpus to each choice it settles, such as naming, layout and error handling.
 4. The agent reads its diff again against the corpus, and corrects what does not conform.
-5. The agent hands the change on for review, and invokes no reviewer itself (COR-024).
-6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires (project-management DEC-032). Where the project runs the code-review panel, the panel's `security-reviewer` judges the change's code against REQ-060: a secret never goes on a command line.
-7. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered. A finding marked for a person waits for that person (project-management DEC-028).
+5. The agent hands the change on for review, and invokes no reviewer itself ([COR-024](../../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
+6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires ([project-management DEC-032](../../../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md)). Where the project runs the code-review panel, the panel's `security-reviewer` judges the change's code against [REQ-060](../../requirements/quality/REQ-060-secret-off-command-line.md): a secret never goes on a command line.
+7. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered. A finding marked for a person waits for that person ([project-management DEC-028](../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
 
 **Variants:**
 
@@ -76,4 +76,4 @@ pkit:
 
 **Minimal guarantees:**
 
-- A project that names no corpus still gets the agent definition deployed. The deployed definition drops the read, and the agent works as a generalist (ADR-052 points 3 and 6, and `_resolve_agent.py`).
+- A project that names no corpus still gets the agent definition deployed. The deployed definition drops the read, and the agent works as a generalist (ADR-052 points [3](../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md#3-undefined-optional-resolves-to-a-dropped-item-the-agent-deploys) and [6](../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md#6-the-agents-return-to-the-angle-bracket-form), and `_resolve_agent.py`).

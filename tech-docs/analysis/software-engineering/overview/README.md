@@ -1,6 +1,6 @@
 # Overview of the analysis of software-engineering
 
-<!-- pkit:overview reads=4 fingerprint=sha256:9fc5add8a911801d9ed875b4498bd8421d3a9489af629c8f6ba5aa61d317f51b -->
+<!-- pkit:overview reads=5 fingerprint=sha256:6bb57172907c9fc66dd0ea70b7099a8347c793fae1835ccee6ea08bf017549ab -->
 
 [software-engineering exists so code that agents write follows a project's own conventions, and code is reviewed before it merges](../../../../.pkit/capabilities/software-engineering/decisions/DEC-003-purpose.md).
 

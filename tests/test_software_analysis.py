@@ -376,8 +376,13 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
     }
     body = (seeded.root / JOURNEYS / "JRN-001-first-run.md").read_text(encoding="utf-8")
     assert "# JRN-001 — First run\n" in body
-    # The step lines, each use case's id and title as the form of *Steps* asks (#1366).
-    assert "\n\n1. UC-001 — Run suite\n2. UC-002 — Read report\n\n**Variants:** " in body
+    # The step lines, each use case's id and title as the form of *Steps* asks (#1366),
+    # each id linked to its use case (#2109). Its variants' list follows its label, after a
+    # blank line (#2088).
+    assert (
+        "\n\n1. [UC-001](../use-cases/UC-001-run-suite.md) — Run suite\n"
+        "2. [UC-002](../use-cases/UC-002-read-report.md) — Read report\n\n**Variants:**\n\n"
+    ) in body
     assert "UC-000" not in body
     title = ("--title", "Export: the report as a file")
     area = stamped(

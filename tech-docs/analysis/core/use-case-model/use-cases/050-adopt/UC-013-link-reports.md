@@ -43,27 +43,27 @@ pkit:
 
 **Other actors:**
 
-- **Adopter** (`ACT-adopter`): filed the [report](../../../glossary.md#term-report--report), and sees each tracked fix with that fix's state, from their own [project](../../../glossary.md#term-project--project) (UC-012).
-- **Operator** (`ACT-operator`): is asked before a command changes the hosting service for a repository other than the session's own. So no such write happens silently (REQ-012).
+- **Adopter** (`ACT-adopter`): filed the [report](../../../glossary.md#term-report--report), and sees each tracked fix with that fix's state, from their own [project](../../../glossary.md#term-project--project) ([UC-012](UC-012-report-problem.md)).
+- **Operator** (`ACT-operator`): is asked before a command changes the hosting service for a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-012:** Adopters' reports arrive as issues on the [report](../../../glossary.md#term-report--report) target, project-kit's own repository, each with its [versions](../../../glossary.md#term-version--version) attached.
+**Preconditions:** **From [UC-012](UC-012-report-problem.md):** Adopters' reports arrive as issues on the [report](../../../glossary.md#term-report--report) target, project-kit's own repository, each with its [versions](../../../glossary.md#term-version--version) attached.
 
 **Assumptions:**
 
-- `gh` is signed in, as a maintainer who may comment on and close the [report](../../../glossary.md#term-report--report) target's issues (PRJ-008).
+- `gh` is signed in, as a maintainer who may comment on and close the [report](../../../glossary.md#term-report--report) target's issues ([PRJ-008](../../../../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 
 **Trigger:** Adopters' reports arrive on the [report](../../../glossary.md#term-report--report) target, project-kit's own repository.
 
 **Main path:**
 
 1. The maintainer runs `pkit report inbox` in a clone of the [report](../../../glossary.md#term-report--report) target.
-2. The [system](../../../glossary.md#term-system--system) lists the reports on the report target, by any author, newest first, with each one's number, kind, state and title. It reads at most the latest 100 issues of each search it runs (`report.py`). It writes nothing (REQ-005).
+2. The [system](../../../glossary.md#term-system--system) lists the reports on the report target, by any author, newest first, with each one's number, kind, state and title. It reads at most the latest 100 issues of each search it runs (`report.py`). It writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).
 3. The maintainer reads a report on the hosting service, with the [versions](../../../glossary.md#term-version--version) its environment block gives.
 4. The maintainer files the issue that will fix the report, or finds one that exists.
 5. The maintainer runs `pkit report link <report> <fix>`. The system adds `- [ ] #<fix>` under the report's `## Tracked by` heading, which makes that issue one of the report's tracked fixes. The system prints `Linked #<fix> into #<report>'s Tracked by.`
 
 > [!WARNING]
-> **Not built yet:** `pkit report link` checks only that the repository of the working directory is the report target, never that it is the session's own. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes checks the session's own repository first, and #1765 tracks it.
+> **Not built yet:** `pkit report link` checks only that the repository of the working directory is the report target, never that it is the session's own. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes checks the session's own repository first, and #1765 tracks it.
 
 6. Once the tracked fixes close, the maintainer runs `pkit report inbox --resolved`. The system lists each open `feedback` or `change-request` report whose tracked fixes are all closed.
 7. For each listed report, the system asks `Post a closing comment on #<n> and close it?`. On a yes, the system comments that all the report's tracked fixes are closed, and closes the report.
@@ -75,10 +75,10 @@ pkit:
 **Variants:**
 
 - **1a.** The maintainer runs the command outside a clone of the [report](../../../glossary.md#term-report--report) target. The [system](../../../glossary.md#term-system--system) refuses with `the maintainer side (inbox/link/unlink) runs only inside the report target repo (<target>). Cd into it and retry.` The use case ends.
-- **1b.** The maintainer passes `--kind <kind>` to see one kind of report. Or the maintainer passes `--group-by project`, to group the reports by the [project](../../../glossary.md#term-project--project) each one names (ADR-050 [point](../../../glossary.md#term-point--point) 3).
+- **1b.** The maintainer passes `--kind <kind>` to see one kind of report. Or the maintainer passes `--group-by project`, to group the reports by the [project](../../../glossary.md#term-project--project) each one names ([ADR-050 point 3](../../../../../architecture/decisions/ADR-050-report-context-sourcing.md#3-both-values-are-body-content-not-target-repo-labels)).
 - **5a.** The maintainer linked the wrong issue. `pkit report unlink <report> <fix>` removes that issue from the report's tracked fixes.
 - **5b.** The issue is one of the report's tracked fixes already. The system changes nothing, and still prints `Linked #<fix> into #<report>'s Tracked by.`
-- **5c.** One issue fixes several reports. The maintainer links that issue to each of them, since one issue may be a tracked fix of several reports (PRJ-008).
+- **5c.** One issue fixes several reports. The maintainer links that issue to each of them, since one issue may be a tracked fix of several reports ([PRJ-008](../../../../../../.pkit/decisions/project/PRJ-008-report-command.md)).
 - **6a.** The report is of the `bug` kind, or has no tracked fix. `--resolved` never lists such a report, so the maintainer closes the report by other means.
 - **6b.** The maintainer passes `--yes`. The system lists the reports and closes none, since closing needs a person to confirm each one.
 - **7a.** The maintainer declines. The system prints `Skipped #<n>.`, and the report stays open.
@@ -87,5 +87,5 @@ pkit:
 
 **Minimal guarantees:**
 
-- No [report](../../../glossary.md#term-report--report) is closed unless the maintainer confirms it, one report at a time (PRJ-008).
-- The maintainer's commands edit only issues of the report target, the repository the commands run in (ADR-047 [point](../../../glossary.md#term-point--point) 4).
+- No [report](../../../glossary.md#term-report--report) is closed unless the maintainer confirms it, one report at a time ([PRJ-008](../../../../../../.pkit/decisions/project/PRJ-008-report-command.md)).
+- The maintainer's commands edit only issues of the report target, the repository the commands run in ([ADR-047 point 4](../../../../../architecture/decisions/ADR-047-report-cross-repo-write.md#4-the-maintainer-side-is-same-repo--no-cross-repo-machinery)).

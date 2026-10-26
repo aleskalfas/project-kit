@@ -27,6 +27,12 @@ another line — are each a point. Which came first is read from ancestry,
 never from timestamps or the log's date order. Without `at`, the marker is the
 block itself.
 
+**Where an artefact starts** (point 3; `Walker.added`). The newest version of its
+file that holds it where no parent's file does: for a document, where its file was
+last added, and for a collection entry, where the entry was last added to its file.
+The answer reader reads no answer and no point from before it (`answer_files`,
+COR-062 point 6), so an entry removed and added back starts its answers again.
+
 **The deferral point** (point 4; `Walker.deferral_point`). The newest version
 that introduced the entry on the anchor — present there, absent at every
 parent — unless that introduction puts back an entry the artefact carried
@@ -40,13 +46,6 @@ hold none of what the walk looks for — the value, in any spelling YAML's
 timestamp grammar allows (`stamps_in`), the block's key, every word of a
 deferral's reason (`reason_words`) — carries none of it, so it is never
 parsed.
-
-**The times a file's history wrote** (`read_writes`). Where the change check
-must tell a written-back `at` from a new one, one `git log -p` of the
-artefact's file lists, for every time it ever held, the commits that changed
-how often it holds it — `git log -S` for every spelling at once, each time
-read as the UTC instant it denotes — so a write-back is never missed for how
-its stamp was typed, and one reading serves every artefact of a collection.
 
 **A shallow clone.** The boundary commit is listed as adding every file. A
 value — or a deferral entry — the file already carries there has its point
@@ -140,10 +139,6 @@ _INSTANT = "%Y-%m-%dT%H:%M:%S"
 
 # The bytes every version carrying a `friction` block holds.
 _BLOCK_KEY = b"friction"
-
-# Lines of context `read_writes` reads around each change: a time written across lines,
-# its zone on a third, is read whole wherever one of its lines changed.
-_CONTEXT = 2
 
 # How many blobs the walker keeps in memory between a prefilter and a parse.
 _RECENT = 16
@@ -556,147 +551,6 @@ def shallow_commits(root: Path) -> frozenset[str]:
         return frozenset()
 
 
-# --- the times a file's history wrote ------------------------------------------------
-
-# Every byte a time `_STAMP` reads can be written with: a cut between two others leaves
-# no time on both sides of it.
-_STAMP_BYTES = frozenset(b"0123456789-+:.TtZ \t\r\n\f\v")
-
-
-# How many bytes `_shared` compares at a time before it narrows down.
-_STRIDE = 4096
-
-
-def _shared(a: bytes, b: bytes) -> int:
-    """How many bytes `a` and `b` share at their start: compared a stride at a time, then
-    narrowed down by halving the stride that differs."""
-    limit = min(len(a), len(b))
-    low = 0
-    while low + _STRIDE <= limit and a[low : low + _STRIDE] == b[low : low + _STRIDE]:
-        low += _STRIDE
-    high = min(low + _STRIDE, limit)
-    while low < high:  # a[:low] == b[:low] holds throughout
-        mid = (low + high + 1) // 2
-        low, high = (mid, high) if a[low:mid] == b[low:mid] else (low, mid - 1)
-    return low
-
-
-def _apart(was: bytes, now: bytes) -> tuple[bytes, bytes]:
-    """`was` and `now` without what they share at either end, each cut moved off any byte
-    a time can be written with: a time on the shared stretch is held as often by both,
-    and none straddles a cut, so how often each time is held differs between the two
-    exactly as between the whole texts — read in a fraction of the bytes where one line
-    holds a whole collection's front matter."""
-    start = _shared(was, now)
-    while start and was[start - 1] in _STAMP_BYTES:
-        start -= 1
-    finish = min(_shared(was[::-1], now[::-1]), len(was) - start, len(now) - start)
-    while finish and was[len(was) - finish] in _STAMP_BYTES:
-        finish -= 1
-    return was[start : len(was) - finish], now[start : len(now) - finish]
-
-
-@dataclass(frozen=True)
-class Writes:
-    """Which commits of a file's history changed how often it holds each time, and its
-    block's key (`read_writes`): only those can have written a value there, since a
-    write makes the file hold it once more.
-
-    `stamps` maps each instant (`stamp`) to those commits; `block` lists the commits
-    that changed how often the file holds the block's key.
-    """
-
-    stamps: Mapping[str, frozenset[str]]
-    block: frozenset[str]
-
-    def of(self, value: Any) -> frozenset[str] | None:
-        """The commits that can have written `value` — a parsed `at`, or `BLOCK` — into
-        the file, empty where none can; `None` for a value no reading tells, an `at` that
-        is no aware time, which the walk alone can judge."""
-        if value is BLOCK:
-            return self.block
-        if isinstance(value, datetime) and value.tzinfo is not None:
-            return self.stamps.get(stamp(value), frozenset())
-        return None
-
-
-def read_writes(root: Path, head: str, path: str) -> Writes:
-    """`git log -p` of the file at `path` from `head` — renames followed, a merge diffed
-    against each parent, the root's whole file read as added — read for the times it
-    writes (`Writes`).
-
-    What `git log -S` lists for one fixed spelling, for every time and every spelling
-    at once: each hunk is read as the two slices of the file it shows, before and
-    after, and a commit is listed for a time where the two hold it a different number
-    of times, each time read as the instant it denotes (`stamps_in`) — so a stamp
-    reformatted in place is no write, and one typed with a space, a lowercase `t` or
-    unpadded fields is found as readily as the canonical form. Each change is read
-    with `_CONTEXT` lines around it, so a time written across lines is read whole.
-    One process serves every artefact of the file.
-    """
-    raw = run_git(
-        root,
-        "log",
-        "-m",
-        "--follow",
-        "--root",
-        "-p",
-        f"-U{_CONTEXT}",
-        "--text",
-        "--no-color",
-        "--no-ext-diff",
-        "--no-textconv",
-        "--no-show-signature",
-        f"--format={_RECORD_START}%H",
-        head,
-        "--",
-        path,
-    ).stdout
-    stamps: dict[str, set[str]] = {}
-    block: set[str] = set()
-    sha = ""
-    before: list[bytes] = []
-    after: list[bytes] = []
-
-    def hunk_read() -> None:
-        if not before and not after:
-            return
-        was, now = b"\n".join(before), b"\n".join(after)
-        before.clear()
-        after.clear()
-        if was.count(_BLOCK_KEY) != now.count(_BLOCK_KEY):
-            block.add(sha)
-        was, now = _apart(was, now)
-        net = stamps_in(now)
-        net.subtract(stamps_in(was))
-        for instant, count in net.items():
-            if count:
-                stamps.setdefault(instant, set()).add(sha)
-
-    in_hunk = False
-    for line in raw.split(b"\n"):
-        if line.startswith(_RECORD_START.encode()):
-            hunk_read()
-            sha, in_hunk = line[1:].decode(), False
-        elif line.startswith(b"@@"):
-            hunk_read()
-            in_hunk = True
-        elif not in_hunk:
-            continue  # a file's header lines
-        elif line.startswith(b"diff "):  # no line of a hunk starts so: the next file's header
-            hunk_read()
-            in_hunk = False
-        elif line.startswith(b" "):
-            before.append(line[1:])
-            after.append(line[1:])
-        elif line.startswith(b"-"):
-            before.append(line[1:])
-        elif line.startswith(b"+"):
-            after.append(line[1:])
-    hunk_read()
-    return Writes({k: frozenset(v) for k, v in stamps.items()}, frozenset(block))
-
-
 # --- what the walk finds -------------------------------------------------------
 
 
@@ -860,6 +714,8 @@ class Walker:
         self._parsed: dict[tuple[str, str, SetAside], _Parsed] = {}
         self._bytes: dict[str, _Bytes] = {}
         self._recent: OrderedDict[str, bytes | None] = OrderedDict()
+        self._added: dict[tuple[str, str | None], int | None] = {}
+        self._held: dict[tuple[str, str], bool] = {}
 
     # --- one version --------------------------------------------------------------
 
@@ -954,9 +810,53 @@ class Walker:
     def _after(self, version: Version) -> TreeEntry | None:
         return version.entry.after
 
+    # --- where the artefact starts ------------------------------------------------
+
+    def added(self, like: Artefact) -> int | None:
+        """Where the artefact `like` names was last added (COR-050 point 3): the log index
+        of the newest version of its file that holds it where no parent's file does. For a
+        document, that is where its file was last added (`History.versions`). For a
+        collection entry, it is where the entry was last added to its file, so an entry
+        removed and added back starts again there. `None` where no commit of this history
+        touches its file.
+
+        A parent is read from its bytes, as `_entry_gone` reads one: a blob that holds the
+        entry's id is taken to hold the entry, which errs toward reading the history further
+        back. One that writes the id only in an escaped spelling, which YAML allows in a key,
+        is taken to hold none, so its child may read as the add. A merge that took the file
+        whole from a side adds nothing, as it is
+        no version of the file, so an entry a line of work removed where the merge kept it
+        keeps its start."""
+        key = (like.path, like.id if like.kind is ArtefactKind.ENTRY else None)
+        if key in self._added:
+            return self._added[key]
+        versions = list(self.history.versions(like.path))
+        found = versions[-1].index if versions else None
+        if like.kind is ArtefactKind.ENTRY:
+            for version in versions:
+                if any(self._holds_id(state, like.id) for state, _name in version.parents()):
+                    continue
+                if self._holds_id(self._after(version), like.id) and (
+                    self.same_at(version, like) is not None
+                ):
+                    found = version.index
+                    break
+        self._added[key] = found
+        return found
+
+    def _holds_id(self, state: TreeEntry | None, entry_id: str) -> bool:
+        """Whether the blob of `state` holds `entry_id` (`holds`), asked once per blob."""
+        if state is None:
+            return False
+        key = (state[1], entry_id)
+        found = self._held.get(key)
+        if found is None:
+            found = self._held[key] = self.holds(state, (entry_id,))
+        return found
+
     # --- the revalidation point ---------------------------------------------------
 
-    def carried(self, like: Artefact, value: Any, among: frozenset[int] | None = None) -> Carried:
+    def carried(self, like: Artefact, value: Any) -> Carried:
         """Where the file of `like` first carried `value` — a parsed `at`, or `BLOCK` —
         for the artefact `like` names (COR-050 point 3; see the module docstring).
 
@@ -964,19 +864,14 @@ class Walker:
         entry, where a write has an earlier carrying of the value among its
         ancestors, back to where the entry was last added to the file, so a
         value it carried before it was removed and restored is no earlier
-        carrying. `among`, where given, are the only commits that can have
-        written the value — those the file's reading lists for it
-        (`read_writes`), since a write changes how often the file holds it — so
-        no other version is read.
+        carrying.
         """
-        found = self.block_writes(like, value, among)
+        found = self.block_writes(like, value)
         if found.unreachable:
             return found
         return self.first_carried(like, found.points, cut=found.cut)
 
-    def block_writes(
-        self, like: Artefact, value: Any, among: frozenset[int] | None = None
-    ) -> Carried:
+    def block_writes(self, like: Artefact, value: Any) -> Carried:
         """Every write of `value` in the file of `like`, newest first, as `Carried.points`:
         each version that carries it where no parent of its commit did, read in the
         artefact's own block alone (`carried` keeps the first of them). The answer reader
@@ -993,8 +888,6 @@ class Walker:
         cut = False
         for version in self.history.versions(like.path):
             at_cut = self.history.is_cut(version.index)
-            if among is not None and not at_cut and version.index not in among:
-                continue
             here = carries(self._after(version), version.path)
             if at_cut:
                 # Listed as added, its parent beyond the clone: what came before cannot be told.
@@ -1124,48 +1017,6 @@ class Walker:
             start = introduction(self.history.ancestors(held))
 
     # --- both, for one artefact ---------------------------------------------------
-
-    def points(
-        self,
-        artefact: Artefact,
-        carried: Callable[[Artefact, Any], Carried] | None = None,
-    ) -> Points:
-        """The revalidation points and every deferral point of `artefact`, from its file's
-        history back to where it was last added (COR-050 points 3 and 4), its file's
-        names, and the renames no revalidation point reaches (`Points.moves`).
-
-        `carried`, where given, finds where a value was first carried in place of
-        `carried` here: the answer reader's, which reads the artefact's answer files
-        beside its block (COR-062 point 6)."""
-        at = parsed_at(artefact)
-        value = BLOCK if at is None else at
-        versions = list(self.history.versions(artefact.path))
-        wanted = [d.anchor for d in artefact.deferrals]
-        if not versions:
-            return self.unwalked(artefact, tuple((a, None) for a in wanted))
-        found = (carried or self.carried)(artefact, value)
-        unreachable = "its revalidation point" if found.unreachable else None
-        revalidations = found.points
-        if not revalidations and unreachable is None:
-            # No listed version shows the value: the file's history, as git's rename
-            # detection pairs it, ends first. Its oldest state is the point.
-            revalidations = (versions[-1].index,)
-        deferrals: list[tuple[Anchor, int | None]] = []
-        for anchor in wanted:
-            deferred = self.deferral_point(artefact, anchor)
-            if deferred.unreachable:
-                unreachable = unreachable or f"the deferral point of {anchor.kind} {anchor.value}"
-            point = deferred.point
-            if point is None and not deferred.unreachable:
-                point = versions[-1].index
-            deferrals.append((anchor, point))
-        return self.walked(
-            artefact,
-            revalidations,
-            tuple(deferrals),
-            unreachable=unreachable,
-            cut=found.cut and unreachable is None,
-        )
 
     def unwalked(
         self, artefact: Artefact, deferrals: tuple[tuple[Anchor, int | None], ...]
@@ -1737,7 +1588,6 @@ __all__ = [
     "Points",
     "Version",
     "Walker",
-    "Writes",
     "carrier",
     "changed",
     "changed_since",
@@ -1747,7 +1597,6 @@ __all__ = [
     "line_changes",
     "origin",
     "read_history",
-    "read_writes",
     "reason_words",
     "shallow_commits",
     "stamp",

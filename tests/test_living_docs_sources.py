@@ -63,6 +63,10 @@ from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import T1, document
 
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
 LD = Path(".pkit") / "capabilities" / "living-docs"
 SCRIPTS = LD / "scripts"
 RESOLVER = SCRIPTS / "resolve-source.py"

@@ -43,18 +43,26 @@ everything about them:
   reaches a deferral only where it keeps it in its own entry or read its file
   (`Liveness.kept`). Two live revalidations of one artefact were made apart
   (`Liveness.apart`).
-- **The reading of a state** (`StateAnswers.answers`). Until every answer has
-  moved out of the blocks, an artefact whose block holds an answer is read wholly
-  from its block, as before; one whose block holds none is read wholly from the
-  answer files. A whole artefact is read from one home, never kinds mixed across
-  homes. This is the one transitional rule: the move removes it.
+- **Answers older than their artefact** (`Starts`; COR-050 point 3, COR-062 point
+  6). An artefact's history starts where it was last added, its file or its entry.
+  An answer file no commit of which descends from there names an earlier artefact
+  at the same location, so none of its entries names the artefact. An entry removed
+  from its file and added back starts its answers again.
+- **The reading of a state** (`StateAnswers.answers`). A state checked — HEAD, the
+  working tree, the commit a check names — is read from the answer files alone
+  (COR-062 point 1). A state of history, such as a change's base, reads an artefact
+  whose block holds an answer wholly from its block, as it was read when it was made,
+  and any other from the answer files, never kinds mixed across homes. A state
+  checked whose answers have not moved — no answer file, and a block holding answers
+  — is refused, the move named once (`refuse_unmoved`; point 11).
 - **Points across homes** (`AnswerHistory`; COR-062 point 6). A value's point is
   the commit where the artefact's answers — its block in history, and every answer
   file naming it — first carried it; a version carrying it in one home where a
   parent carried it in the other is no write. A deferral that replaces one it read
   keeps that one's point; one put back, or moved out of a block, keeps its point
-  by anchor and reason. The walk back stops where the artefact was last added,
-  never where an answer file was added. `friction_history` supplies the walk.
+  by anchor and reason. The walk back stops where the artefact was last added, its
+  file or its entry (`Walker.added`), never where an answer file was added.
+  `friction_history` supplies the walk.
 - **The first commit holding two answers made apart** (`AnswerHistory.
   first_holding`), where their debt originates (COR-050 point 9, COR-062 point 7).
 - **What a prune would remove** (`StateAnswers.prunable`): each answer file in
@@ -122,6 +130,7 @@ from project_kit.friction_history import (
     Points,
     Walker,
     carrier,
+    read_history,
 )
 from project_kit.working_tree import working_tree
 
@@ -192,6 +201,38 @@ MOVED_PREFIX = "moved-"
 #: again from the project's root.
 MOVE_MIGRATION = ".pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh"
 MOVE_COMMAND = f"ROOT=. bash {MOVE_MIGRATION}"
+
+
+def unmoved(artefacts: Iterable[Artefact], files: Collection[str]) -> int:
+    """How many of the project's own artefacts hold answers in their own block where the
+    state holds no answer file: the project's answers have not moved (COR-062 point 11).
+    None where any answer file exists, so an answer left in one block after the move is
+    validation's finding alone. An artefact the project receives by sync is left out:
+    its source moves its answers (point 9)."""
+    if files:
+        return 0
+    return sum(1 for a in artefacts if not a.received and block_holds_answers(a))
+
+
+def not_moved_message(count: int) -> str:
+    """What a reader and validation say, once, of a state whose answers have not moved
+    (`unmoved`): how many artefacts hold them, and the move that takes them out (COR-062
+    point 11)."""
+    return (
+        f"{count} artefact{'' if count == 1 else 's'} hold{'s' if count == 1 else ''} "
+        f"answers in {'its' if count == 1 else 'their'} own block, and no answer file "
+        f"exists, so the project's answers have not moved into answer files: run the move "
+        f"from the project's root, `{MOVE_COMMAND}`, which takes them out (COR-062 points "
+        f"10 and 11). `pkit friction move-plan` shows what it writes."
+    )
+
+
+def refuse_unmoved(artefacts: Iterable[Artefact], files: Collection[str]) -> None:
+    """Refuse to read a state whose answers have not moved (`unmoved`): a reader says so
+    once and names the move, never reporting each answer as missing (COR-062 point 11)."""
+    count = unmoved(artefacts, files)
+    if count:
+        raise FrictionCheckError(f"{not_moved_message(count)} `pkit validate` reports it.")
 
 
 def new_name(now: datetime) -> str:
@@ -550,6 +591,28 @@ class HistoryNames:
         return found
 
 
+class Starts:
+    """Which answer files are older than the artefact they name (COR-050 point 3, COR-062
+    points 5 and 6), from a history read from the state's commit. Where the artefact was
+    last added is `Walker.added`, and where an answer file was added, `HistoryNames.adds`."""
+
+    def __init__(self, names: HistoryNames, walker: Walker) -> None:
+        self._names = names
+        self._walker = walker
+
+    def predates(self, artefact: Artefact, name: str) -> bool:
+        """Whether no commit that added the answer file `name` descends from where `artefact`
+        was last added. Its answers then name an earlier artefact at the same location,
+        such as an entry removed from its file and added back, and answer nothing. A file
+        no commit of the history added, an uncommitted one, is never older."""
+        adds = self._names.adds(name)
+        start = self._walker.added(artefact) if adds else None
+        if start is None:
+            return False
+        since = self._walker.history.descendants(start)
+        return not any(index in since for index in adds)
+
+
 class WorkingNames:
     """Whether a name in `read` is honoured in the working tree: a name an uncommitted
     entry carries is honoured where HEAD holds the named file (COR-062 point 5); one the
@@ -703,8 +766,8 @@ def liveness(
 
 def block_holds_answers(artefact: Artefact) -> bool:
     """Whether the artefact's own block holds an answer: a `revalidated` block or a
-    `revisited` list, whatever it holds. Until the move, such an artefact is read wholly
-    from its block (`StateAnswers.answers`)."""
+    `revisited` list, whatever it holds. Validation fails such a block, a writer refuses
+    it, and only a state of history reads it (`StateAnswers.answers`)."""
     block = artefact.friction
     return isinstance(block, Mapping) and (
         REVALIDATED_KEY in block or REVISITED_KEY in cast(Mapping[str, Any], block)
@@ -746,10 +809,10 @@ class LiveRevisit:
 
 @dataclass(frozen=True)
 class Answers:
-    """An artefact's answers at a state, read wholly from one home (`home`): its block, or
-    the answer files. `apart` holds, for answers read from answer files, each pair of
-    files whose revalidations were made apart (COR-062 point 7). `liveness` is the
-    judgment of its answer files where they were read."""
+    """An artefact's answers at a state, read wholly from one home (`home`): the answer
+    files, or, in a state of history, its block. `apart` holds, for answers read from
+    answer files, each pair of files whose revalidations were made apart (COR-062 point
+    7). `liveness` is the judgment of its answer files where they were read."""
 
     home: str
     revalidations: tuple[LiveRevalidation, ...] = ()
@@ -826,7 +889,11 @@ class StateAnswers:
     every location an answer may name the artefact by — its location under each
     name its file had, so an answer follows the renames of its file (COR-062 point
     10). An entry moved between collection files starts again where it lands, so its
-    old location is none of these.
+    old location is none of these. `predates(artefact, name)`, where given, says an
+    answer file is older than where the artefact was last added (`Starts`): an entry
+    removed and added back starts again there too, so no entry of such a file names
+    it. `history` marks a state of history, such as a change's base, which reads a
+    block's answers as it was read when it was made.
     """
 
     def __init__(
@@ -834,10 +901,15 @@ class StateAnswers:
         files: Mapping[str, AnswerFile],
         honoured: Callable[[str, str], bool],
         locations: Callable[[Artefact], Collection[str]],
+        *,
+        history: bool = False,
+        predates: Callable[[Artefact, str], bool] | None = None,
     ) -> None:
         self.files = dict(files)
+        self.history = history
         self._honoured = honoured
         self._locations = locations
+        self._predates = predates
         self._by_location: dict[str, list[Entry]] = {}
         for answer_file in self.files.values():
             for entry in answer_file.entries:
@@ -851,12 +923,15 @@ class StateAnswers:
 
     def entries(self, artefact: Artefact) -> tuple[Entry, ...]:
         """Every entry of the state's answer files naming `artefact`: none, its locations
-        unread, where the state holds no entry."""
+        unread, where the state holds no entry. An entry of a file older than the artefact
+        names an earlier one (`predates`)."""
         if not self._by_location:
             return ()
         found: list[Entry] = []
         for location in dict.fromkeys(self._locations(artefact)):
             found.extend(self._by_location.get(location, ()))
+        if self._predates is not None and found:
+            found = [e for e in found if not self._predates(artefact, e.file)]
         return tuple(found)
 
     def liveness(self, artefact: Artefact, discovery: Discovery | None = None) -> Liveness:
@@ -890,10 +965,10 @@ class StateAnswers:
         return found
 
     def answers(self, artefact: Artefact, discovery: Discovery | None = None) -> Answers:
-        """The artefact's answers at this state, read wholly from one home: its block,
-        where the block holds an answer, else the answer files (the transitional rule,
-        until the move)."""
-        if block_holds_answers(artefact):
+        """The artefact's answers at this state, from the answer files alone (COR-062 point
+        1). A state of history (`history`) reads an artefact whose block holds an answer
+        wholly from its block, as it was read when it was made."""
+        if self.history and block_holds_answers(artefact):
             return block_answers(artefact)
         judged = self.liveness(artefact, discovery)
         return Answers(
@@ -1018,6 +1093,64 @@ def head_locations(history: History | None) -> Callable[[Artefact], tuple[str, .
 
     def locations(artefact: Artefact) -> tuple[str, ...]:
         names = (artefact.path,) if history is None else history.names(artefact.path)
+        return tuple(location_of(artefact, name) for name in names)
+
+    return locations
+
+
+def working_renames(target_root: Path) -> Mapping[str, str]:
+    """By its path in the working tree, the path HEAD holds of each file the working tree
+    renamed: git's own rename detection over the tracked files, as the change check reads
+    a working tree's diff. None where HEAD names no commit."""
+    listed = run_git(
+        target_root,
+        "diff",
+        "-M",
+        "--name-status",
+        "-z",
+        "--no-color",
+        "HEAD",
+        "--",
+        accept=(0, 128),
+    )
+    if listed.returncode != 0:
+        return {}
+    tokens = [t for t in listed.stdout.decode("utf-8", "surrogateescape").split("\0") if t]
+    return {e.path: e.old_path for e in parse_name_status(tokens) if e.old_path is not None}
+
+
+def working_locations(target_root: Path) -> Callable[[Artefact], tuple[str, ...]]:
+    """`StateAnswers.locations` for the working tree, as the change check reads it: the
+    artefact's location under every name its file had in HEAD's history (`History.names`),
+    its own first, and, where the working tree renamed the file, under every name the path
+    it was renamed from had (COR-062 point 10). A move is followed whether or not it is
+    committed. An entry moved between collection files is not: its old location is none of
+    these. HEAD's history is read once, on the first call; before the first commit, or
+    outside a git repository, the artefact's own location alone."""
+    read: list[tuple[History, Mapping[str, str]] | None] = []
+
+    def locations(artefact: Artefact) -> tuple[str, ...]:
+        if not read:
+            listed = run_git(
+                target_root,
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                "HEAD^{commit}",
+                accept=(0, 1, 128),
+            )
+            head = listed.stdout.decode().strip() if listed.returncode == 0 else ""
+            read.append(
+                (read_history(target_root, head), working_renames(target_root)) if head else None
+            )
+        found = read[0]
+        if found is None:
+            return (location_of(artefact),)
+        history, moved_from = found
+        names = dict.fromkeys(history.names(artefact.path))
+        earlier = moved_from.get(artefact.path)
+        if earlier is not None:
+            names.update(dict.fromkeys(history.names(earlier)))
         return tuple(location_of(artefact, name) for name in names)
 
     return locations
@@ -1151,6 +1284,7 @@ class AnswerHistory:
         self.blobs = blobs
         self.trees = TreeReader(blobs)
         self.names = HistoryNames(history, blobs)
+        self.starts = Starts(self.names, walker)
         self.paths = tuple(p for p in history.paths if is_answer_file(p))
         self._parsed: dict[str, AnswerFile] = {}
         self._naming: dict[str, bool] = {}
@@ -1202,14 +1336,20 @@ class AnswerHistory:
             }
         return found
 
-    def state(self, files: Mapping[str, AnswerFile]) -> StateAnswers:
+    def state(self, files: Mapping[str, AnswerFile], *, history: bool = False) -> StateAnswers:
         """The state whose answer files are `files`, read with this history."""
-        return StateAnswers(files, self.names.honoured, head_locations(self.history))
+        return StateAnswers(
+            files,
+            self.names.honoured,
+            head_locations(self.history),
+            history=history,
+            predates=self.starts.predates,
+        )
 
-    def head(self, head_sha: str) -> StateAnswers:
+    def head(self, head_sha: str, *, history: bool = False) -> StateAnswers:
         """HEAD's answer files, judged with this history."""
         files = {name: self.parsed(entry, name) for name, entry in self.files_at(head_sha).items()}
-        return self.state(files)
+        return self.state(files, history=history)
 
     # --- whether a commit's answers carry something --------------------------------
 
@@ -1291,10 +1431,10 @@ class AnswerHistory:
         return writes, False
 
     def _since_added(self, like: Artefact) -> frozenset[int] | None:
-        versions = list(self.history.versions(like.path))
-        if not versions:
-            return None
-        return self.history.descendants(versions[-1].index)
+        """The commits since the artefact was last added, its file or its entry
+        (`Walker.added`); `None` where no commit touches its file."""
+        start = self.walker.added(like)
+        return None if start is None else self.history.descendants(start)
 
     def _file_candidates(self, like: Artefact, in_entry: Callable[[Entry], bool]) -> set[int]:
         locations = self._names_artefact(like)
@@ -1397,17 +1537,11 @@ class AnswerHistory:
     # --- one artefact --------------------------------------------------------------
 
     def points(self, like: Artefact, answers: Answers) -> AnswerPoints:
-        """The points of an artefact's answers (COR-050 points 3 and 4, COR-062 point 6):
-        read from its block, its block's walk, each value found across homes; read from
-        answer files, every live revalidation's points — the block's own where none is
-        live — and every live deferral's, with whether a revalidation reaches it."""
-        if not answers.from_files:
-            points = self.walker.points(like, self.carried)
-            return AnswerPoints(
-                points,
-                tuple(() if p is None else (p,) for _a, p in points.deferrals),
-                tuple(points.revalidations for _ in answers.revalidations),
-            )
+        """The points of an artefact's answers, read from answer files (COR-050 points 3 and
+        4, COR-062 point 6): every live revalidation's points, each value found across
+        homes — the block's own where none is live — and every live deferral's, with
+        whether a revalidation reaches it."""
+        assert answers.from_files, "a state's answers are read from answer files"
         versions = list(self.history.versions(like.path))
         if not versions:
             unwalked = self.walker.unwalked(
@@ -1425,6 +1559,10 @@ class AnswerHistory:
                 tuple(() for _ in answers.deferrals),
                 tuple(() for _ in answers.revalidations),
             )
+        # Where the artefact was last added, its file or its entry: the point of what
+        # no answer within its history carries (COR-050 point 3).
+        start = self.walker.added(like)
+        assert start is not None
         unreachable: str | None = None
         cut = False
         revalidations: set[int] = set()
@@ -1437,7 +1575,7 @@ class AnswerHistory:
             per_revalidation.append(found.points)
             cut = cut or found.cut
         if not revalidations and unreachable is None:
-            revalidations.add(versions[-1].index)
+            revalidations.add(start)
         per_deferral: list[tuple[int, ...]] = []
         flat: list[tuple[Anchor, int | None]] = []
         kept: list[bool] = []
@@ -1450,7 +1588,7 @@ class AnswerHistory:
                 anchor = deferral.anchor
                 unreachable = unreachable or f"the deferral point of {anchor.kind} {anchor.value}"
             if not found_points and not beyond:
-                found_points = (versions[-1].index,)
+                found_points = (start,)
             per_deferral.append(found_points)
             for point in found_points or (None,):
                 flat.append((deferral.anchor, point))
@@ -1528,6 +1666,7 @@ __all__ = [
     "Moved",
     "Revalidation",
     "RevisitAnswer",
+    "Starts",
     "StateAnswers",
     "WorkingNames",
     "block_answers",
@@ -1545,7 +1684,12 @@ __all__ = [
     "name_of",
     "name_time",
     "new_name",
+    "not_moved_message",
     "path_of",
     "read_answer_file",
+    "refuse_unmoved",
+    "unmoved",
+    "working_locations",
+    "working_renames",
     "working_tree_files",
 ]

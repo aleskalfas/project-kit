@@ -1,18 +1,20 @@
 """The friction writers write a change's answers into answer files of its own (COR-062
 points 1, 4 and 10; ADR-068 point 3; #1873).
 
-An artefact whose block holds no answer gets `revalidate`'s, `defer`'s and
-`revisit`'s answer in the one answer file in the working tree that no commit
-holds, a new one where there is none. Its entry names every other answer file
-present that answers the artefact in `read`. An artefact whose block holds an
-answer keeps getting it in the block (`test_friction_write.py`). Every test stands
-up a real adopter repository; the ones the checks read commit real history.
+`revalidate`, `defer` and `revisit` write their answer in the one answer file in
+the working tree that no commit holds, a new one where there is none. Its entry
+names every other answer file present that answers the artefact in `read`. An
+artefact whose block still holds an answer is refused, naming the move (#2032).
+Every test stands up a real adopter repository; the ones the checks read commit
+real history.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -285,6 +287,97 @@ def test_a_deferral_beside_the_changes_revalidation_keeps_what_its_read_gains(
     ]
 
 
+# --- a moved artefact ---------------------------------------------------------------------
+
+#: Where the guide moves to, inside the same place.
+MOVED = "docs/area/guide.md"
+
+#: The base's answer on the guide at its old path: a revalidation and one deferral.
+BASE_ANSWER = answers(
+    entry(at=T1, because="the CLI still holds", deferred=((Anchor("path", "src/core/**"), "#12"),))
+)
+
+
+def _moved(repo: AdopterRepo, *, committed: bool) -> None:
+    """`main` holds the guide at its old path, answered there in `a0`; the branch `feature`
+    moves it with `git mv`, the move left uncommitted or committed."""
+    repo.write({CONFIG: friction_config(mode="enforcing"), answer_path("a0"): BASE_ANSWER})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    (repo.root / MOVED).parent.mkdir()
+    repo.git("mv", GUIDE, MOVED)
+    if committed:
+        repo.git("commit", "-q", "-m", "move the guide")
+
+
+@pytest.mark.parametrize("committed", [False, True], ids=["uncommitted", "committed"])
+@pytest.mark.parametrize(
+    "write",
+    [
+        pytest.param(
+            lambda root: fw.plan_revalidate(
+                root, "guide", outcome="unchanged", because="the move keeps its words", now=NOW
+            ),
+            id="revalidate",
+        ),
+        pytest.param(
+            lambda root: fw.plan_defer(root, "guide", anchor="src/cli/**", reason="#13", now=NOW),
+            id="defer",
+        ),
+    ],
+)
+def test_an_answer_on_a_moved_artefact_reads_the_answers_at_its_old_path(
+    repo: AdopterRepo, committed: bool, write: Callable[[Path], fw.Plan]
+) -> None:
+    """The writer reads an artefact's answers at every path its file had, as the history
+    walk does, a move not yet committed included (COR-062 points 4 and 10; #2108)."""
+    _moved(repo, committed=committed)
+    plan = write(repo.root)
+    (written,) = _entries(plan.after)
+    assert written["artefact"] == MOVED
+    assert written["read"] == ["a0.yaml"]
+    assert "read: a0.yaml" in plan.items
+
+
+def test_a_revalidation_of_a_moved_artefact_judges_the_answers_at_its_old_path(
+    repo: AdopterRepo,
+) -> None:
+    """The answers at the old path are live for the moved artefact: a deferral there can be
+    kept, and its revalidation's justification cannot be given again (COR-050 points 3
+    and 4, COR-062 point 5)."""
+    _moved(repo, committed=False)
+    with pytest.raises(fw.FrictionWriteError, match="must differ from that of each revalidation"):
+        fw.plan_revalidate(
+            repo.root, "guide", outcome="unchanged", because="the CLI still holds", now=NOW
+        )
+    plan = fw.plan_revalidate(repo.root, "guide", outcome="updated", keep=["src/core/**"], now=NOW)
+    assert "keeps deferral path:src/core/**   (#12)" in plan.items
+    (written,) = _entries(plan.after)
+    assert written["revalidated"]["deferred"] == [
+        {"anchor": {"kind": "path", "value": "src/core/**"}, "reason": "#12"}
+    ]
+
+
+def test_the_change_check_passes_a_move_answered_through_the_writer_alone(
+    repo: AdopterRepo,
+) -> None:
+    """A move answered through the writer, with no hand edit, names the answers at the old
+    path, so the change check fails nothing once it is committed (#2108)."""
+    _moved(repo, committed=False)
+    fw.write(
+        fw.plan_revalidate(
+            repo.root, "guide", outcome="unchanged", because="the move keeps its words", now=NOW
+        )
+    )
+    repo.commit("move the guide and answer it", files=None)
+    result = fc.run_change_check(repo.root, "main")
+    assert not result.failed, [(f.kind, f.message) for f in result.findings]
+    assert fc.FindingKind.READ_INCOMPLETE not in [f.kind for f in result.findings]
+    assert [(f.kind, f.location) for f in result.findings if f.answer is not None] == [
+        (fc.FindingKind.ANSWERED, MOVED)
+    ]
+
+
 # --- what is refused --------------------------------------------------------------------
 
 
@@ -304,11 +397,32 @@ def test_an_own_file_that_does_not_read_is_refused(repo: AdopterRepo) -> None:
         fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW)
 
 
-def test_a_block_holding_an_answer_is_written_as_before(repo: AdopterRepo) -> None:
+@pytest.mark.parametrize(
+    "write",
+    [
+        pytest.param(
+            lambda root: fw.plan_revalidate(root, "guide", outcome="updated", now=NOW),
+            id="revalidate",
+        ),
+        pytest.param(
+            lambda root: fw.plan_defer(root, "guide", anchor="src/cli/**", reason="r", now=NOW),
+            id="defer",
+        ),
+    ],
+)
+def test_a_block_still_holding_an_answer_is_refused_naming_the_move(
+    repo: AdopterRepo, write: Callable[[Path], fw.Plan]
+) -> None:
+    """No writer writes an answer in a block, nor beside one a block still holds: validation
+    fails such a block, and the move takes it out (COR-062 points 1, 10 and 11)."""
     repo.write({GUIDE: guide()})
-    plan = fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW)
-    assert not plan.answer_file and plan.rel == GUIDE
-    assert plan.target == "pkit.friction.revalidated"
+    before = (repo.root / GUIDE).read_bytes()
+    with pytest.raises(fw.FrictionWriteError) as refused:
+        write(repo.root)
+    assert "its block still holds answers" in str(refused.value.message)
+    assert af.MOVE_COMMAND in str(refused.value.message)
+    assert (repo.root / GUIDE).read_bytes() == before
+    assert _answer_files(repo) == {}
 
 
 # --- the command, and the checks that read what it wrote ------------------------------------

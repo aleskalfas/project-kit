@@ -1371,6 +1371,11 @@ def test_roots_that_are_one_folder_are_reported_not_failed(project: AdopterRepo)
     separation = [f for f in document["findings"] if f["location"] == f"{CONFIG}:/docs"]
     assert [f["severity"] for f in separation] == ["report"]
     assert "both documentation roots are 'docs'" in separation[0]["message"]
+    # It names the command that sets them apart, and the folder it recommends (#2084).
+    assert (
+        "`pkit living-docs new space user` offers to set the internal root apart, at "
+        "'tech-docs', before it creates the space"
+    ) in separation[0]["message"]
 
 
 # --- the package metadata ----------------------------------------------------------------
@@ -2549,6 +2554,24 @@ def test_a_line_inside_fenced_code_is_no_heading() -> None:
     )
     assert _headings(text) == [(2, "Read", 10)]
     assert _headings("```\n# never closed\n") == []
+
+
+def test_a_prose_line_is_one_fenced_code_and_a_comment_do_not_hide() -> None:
+    """What a page mentions is read from its prose lines (#2099): below the front
+    matter, outside fenced code and a comment that opens a line. A comment within a
+    line stays in it, since a mark is written there."""
+    text = (
+        "---\nkind: guide\n---\n"  # lines 1-3
+        "Run `pkit sync` <!-- unanchored: named -->.\n"  # 4
+        "```console\n$ pkit sync\n```\n"  # 5-7
+        "<!--\n`pkit sync`\n-->\n"  # 8-10
+        "> In a quote, `src/app.py`.\n"  # 11
+    )
+    assert formats.prose(text) == [
+        (4, "Run `pkit sync` <!-- unanchored: named -->."),
+        (11, "> In a quote, `src/app.py`."),
+        (12, ""),
+    ]
 
 
 @pytest.mark.parametrize(

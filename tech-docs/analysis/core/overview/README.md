@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:1386e741fc335d4fd31823cdf7562b0a3e18e1b6f5d248bd079e9c178f575116 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:72b8e83b1d0d57ac6d496ec597252fb5e3b66d80f10e5c825c307d5468692356 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -13,6 +13,17 @@ This analysis describes what core does: who uses it, what they do with it, and w
 Develop the methodology in its own source repository, and extend it with capabilities, adapters, and a project's own skills and agent definitions.
 
 **Builds on:** no other area.
+
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
 
@@ -33,6 +44,17 @@ Develop the methodology in its own source repository, and extend it with capabil
 Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits.
 
 **Builds on:** [010-develop](#010-develop).
+
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
 
@@ -63,6 +85,17 @@ Record a project's decisions and rules, and check, answer and land each change t
 
 **Builds on:** [010-develop](#010-develop) and [020-set-up](#020-set-up).
 
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
+
 **Its requirements:**
 
 - [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/030-change/REQ-001-migration-runs-again.md)
@@ -74,7 +107,7 @@ Record a project's decisions and rules, and check, answer and land each change t
 
 **Its use cases:**
 
-- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md) ([not built yet](#not-built-yet): step 11, step 6, variant 5e, variant 9b)
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md) ([not built yet](#not-built-yet): step 11, variant 9b)
 - [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
@@ -96,6 +129,14 @@ Release the backbone and each component on its own version, so projects can move
 
 **Builds on:** [010-develop](#010-develop) and [030-change](#030-change).
 
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+
 **Its requirements:** none.
 
 **Its use cases:**
@@ -108,6 +149,17 @@ Release the backbone and each component on its own version, so projects can move
 Put the system on a machine and into another project, run each project at the version it pins and keep it current, and report what goes wrong with it, each report linked to its fix.
 
 **Builds on:** [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change) and [040-release](#040-release).
+
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
 
@@ -244,14 +296,11 @@ flowchart LR
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
 - [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md): step 11, decided by `ADR-034#1`, tracked in `#1765`
-- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md): step 6, decided by `COR-062#1`, tracked in `#2032`
-- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md): variant 5e, decided by `COR-062#5`, tracked in `#2032`
 - [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md): variant 9b, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md): step 8, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md): variant 1d, decided by `COR-004`, tracked in `#1884`
 - [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md): variant 3d, decided by `COR-062#4`, tracked in `#1867`
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): step 7, decided by `ADR-034#1`, tracked in `#1765`
-- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): step 7, decided by `COR-062#1`, tracked in `#2032`
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): variant 3b, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md): variant 1a, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md): variant 1c, decided by `COR-004`, tracked in `#1884`

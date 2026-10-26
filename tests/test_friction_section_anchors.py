@@ -47,8 +47,9 @@ from tests.friction_documents import (
     pointed_record,
 )
 
-#: The fixtures here still write answers in blocks, until #2032 moves them.
-pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 ON_SECTION = {"artefact": ["docs/manual.md#using"]}
 ON_LEAD = {"artefact": ["docs/manual.md#"]}

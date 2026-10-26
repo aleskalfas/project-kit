@@ -27,7 +27,15 @@ from ruamel.yaml import YAML
 
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import RESOLVING, register_kinds
-from tests.friction_documents import CONFIG, SOURCE, T1, document, friction_config, guide
+from tests.friction_documents import (
+    CONFIG,
+    SOURCE,
+    T1,
+    blocks_in_history,
+    document,
+    friction_config,
+    guide,
+)
 from tests.test_friction_revisit import (
     DECISION,
     SOURCE_DOC,
@@ -36,6 +44,10 @@ from tests.test_friction_revisit import (
     requirement,
 )
 from tests.test_friction_revisit import entry as revisit_entry
+
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -1156,6 +1168,40 @@ def test_enforcing_modes_exit_1_still_carries_the_document(
     ]
 
 
+def test_the_answers_as_the_gate_reads_them_name_no_head_and_fetch_nothing(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`written` runs the change check as the project's gate runs it: the base named,
+    no `--head`, so the backbone reads HEAD and `$PKIT_CHECK_HEAD` itself, routing off,
+    and nothing fetched first. Enforcing mode's exit 1 still carries the list."""
+    seen: list[tuple[list[str], str | None]] = []
+    document = {"schema_version": 1, "answers": [{"location": "docs/guide.md"}]}
+
+    def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        seen.append((argv, kwargs["env"].get("PKIT_NO_ROUTE")))
+        return subprocess.CompletedProcess(argv, 1, json.dumps(document), "")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    found = fa.written("origin/main")
+    assert (found.problem, found.answers) == (None, ({"location": "docs/guide.md"},))
+    assert seen == [(["pkit", "friction", "check", "--json", "--base", "origin/main"], "1")]
+
+
+def test_answers_the_gate_cannot_read_are_a_problem_never_an_empty_list(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def run(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 2, "", "Error: the base main does not resolve\n")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    found = fa.written("main")
+    assert found.answers == ()
+    assert found.problem == (
+        "`pkit friction check --json --base main`: it exited 2: "
+        "Error: the base main does not resolve"
+    )
+
+
 def test_the_check_runs_unrouted_with_the_base_named_whatever_the_environment(
     fa: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -1810,10 +1856,11 @@ def test_the_backbone_says_a_later_head_of_answers_is_covered(
     found = fa.covers(main, head, "main")
     assert (found.covered, found.problem) == (False, None)
     assert found.outside == (f"src/cli/main.py ({changed[:7]}: not an answer file)",)
-    in_block = repo.commit(
-        "answer in the block",
-        {"docs/guide.md": guide(at="2026-10-04T10:00:00Z", because=BECAUSE)},
-    )
+    with blocks_in_history():  # an answer left in the block, which validation fails
+        in_block = repo.commit(
+            "answer in the block",
+            {"docs/guide.md": guide(at="2026-10-04T10:00:00Z", because=BECAUSE)},
+        )
     found = fa.covers(head, in_block, "main")
     assert found.outside == (f"docs/guide.md ({in_block[:7]}: not an answer file)",)
 

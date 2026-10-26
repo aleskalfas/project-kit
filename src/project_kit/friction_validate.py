@@ -117,12 +117,12 @@ settings that declare them, this pass reports:
   dormant or not;
 - **an answer left in an artefact's own block** (`_block_answer_findings`; COR-062
   points 10 and 11) — a `revalidated` block or a `revisited` list, whatever it
-  holds, since the reading of a state still reads such an artefact wholly from its
-  block. An error naming the move, the backbone migration that takes it out into a
-  new answer file. Where no answer file exists, the project's answers have not
-  moved: one error says so and names the move, never one per artefact. In a file
-  the project receives by sync, a report, never an error: the project cannot mend
-  it there, and its source moves it (point 9).
+  holds, which no check reads at the head, only in history. An error naming the
+  move, the backbone migration that takes it out into a new answer file. Where no
+  answer file exists, the project's answers have not moved: one error says so and
+  names the move, never one per artefact. In a file the project receives by sync,
+  a report, never an error: the project cannot mend it there, and its source moves
+  it (point 9).
 
 These fail validation in either mode, because the project can fix them. A
 rule-set file is claimed before the container rule (ADR-056 point 2): its
@@ -1302,18 +1302,13 @@ def _block_answer_findings(
         return findings
     move = f"run the move from the project's root, `{answer_files.MOVE_COMMAND}`"
     if not files:
-        count = len(own)
         findings.append(
             FrictionFinding(
                 answer_files.FOLDER,
                 "",
                 Severity.ERROR,
                 FrictionFindingKind.ANSWERS_NOT_MOVED,
-                f"{count} artefact{'' if count == 1 else 's'} hold{'s' if count == 1 else ''} "
-                f"answers in {'its' if count == 1 else 'their'} own block, and no answer file "
-                f"exists, so the project's answers have not moved into answer files: {move}, "
-                f"which takes them out (COR-062 points 10 and 11). `pkit friction move-plan` "
-                f"shows what it writes.",
+                answer_files.not_moved_message(len(own)),
             )
         )
         return findings

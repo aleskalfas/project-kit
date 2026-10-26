@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  COR-027 no longer cites a pre-1.0 policy that PRJ-002 does not hold, and the
+  command reference's entry for `pkit version bump` no longer says that a minor
+  bump before 1.0 may carry breaking changes, which no record decides. A
+  documentation refinement: the command is unchanged.

@@ -14,7 +14,7 @@ Until the readers point resolves, the living-docs agent reads the space's pages 
 
 The scope is written from where the space's pages lie, so declare that first.
 
-- **The roots are separate.** Two roots that are one folder give no space.
+- **The roots are separate.** Two roots that are one folder give no space. The stamp offers to set them apart, as the shared framing's "Roots that are one folder" says.
 - **The places are declared.** Each place that holds the space's pages outside its root is declared under `places` in the friction key of `.pkit/project/config.yaml`. A place outside every root gives the page type, `{path: <place>, type: living-docs:page}`, since the definition selects by type.
 - **Each place is assigned** to its space under `places` in `.pkit/capabilities/living-docs/project/config.yaml`.
 

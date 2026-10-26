@@ -128,6 +128,17 @@ What is checked, each against the record's words:
   and each part of an actor, a use case, a journey and a requirement, against what
   `pkit analysis link` writes (`_lib/links.py`) — a link missing, extra or stale,
   the message naming the command.
+- **The links of citations** (DEC-001 point 13), whatever any rule's status, in
+  every analysis: the first citation of each record, point and rule in each
+  section of an artefact in force, against what `pkit analysis link` writes from
+  `pkit refs lookup` — a link missing, extra or stale fails, naming the command;
+  one missing or stale into a file the project receives as a synced copy, a
+  citation that resolves to nothing, or a point its record does not hold, and a
+  `DEC-NNN` that names no capability, are warned of (`_lib/citations.py`).
+- **The links of ids** (point 14), whatever any rule's status, in every analysis:
+  each first mention of an artefact by its id in each section, in the same files and
+  parts, against what `pkit analysis link` writes — a link missing, extra or stale,
+  the message naming the command.
 - **One name, one concept** (points 1 and 2), whatever any rule's status, as a
   shared id is refused: no two terms in force of an analysis share a name, a
   noun form counted, and none takes a name another replaces; no term takes a
@@ -234,7 +245,8 @@ And where the format rule binds, at its status:
   withdrawn artefact is never failed for a part it lacks or for a form, since
   either may have come after its withdrawal. A document's missing title
   heading is the heading check's, above, which holds it whatever the rule's
-  status.
+  status. A part that still holds its hint is the placeholder check's, above,
+  so it is reported once, never again as empty or missing (#2088).
 - **Where the rule binds.** `SAN` takes no scope, so its rules bind only
   through a set of the project's own that inherits it, as the backbone's one
   reading of where rules bind says (`pkit rule-sets reach`, COR-051 point 7).
@@ -321,6 +333,7 @@ from _lib import (
     analyses,
     backbone,
     chain,
+    citations,
     evidence,
     links,
     markdown,
@@ -1536,32 +1549,59 @@ def _senses(own: Sequence[Artefact]) -> list[Finding]:
 
 
 def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
-    """Each section's link to its term, and the mentions' links, in every analysis that
-    keeps a domain model (DEC-004 point 7), whatever any rule's status: a link missing,
-    one extra and one whose target is stale, each against what `pkit analysis link`
-    writes (`_lib/links.py`), in the glossary, the views, and the actors, use cases,
-    journeys and requirements. An analysis whose folder of views holds none is not read.
-    Where the kinds' declared structure cannot be read, which the structure check
-    reports, the four kinds' parts are not read either."""
+    """The links `pkit analysis link` writes (`_lib/links.py`), whatever any rule's
+    status: in every analysis, the links of citations (DEC-001 point 13) and the links of
+    the ids its text names (DEC-001 point 14); in every analysis that keeps a domain
+    model, each section's link to its term and the mentions' links, in the glossary, the
+    views, and the actors, use cases, journeys and requirements (DEC-004 point 7). A link
+    missing, one extra and one whose target is stale fail; a citation that resolves to
+    nothing is warned of. Where the lookup cannot be run, that fails, and no link is held.
+    Where the kinds' declared structure cannot be read, which the structure check reports,
+    the four kinds' parts are not read for mentions nor for ids."""
     try:
         kinds: Mapping[str, structure.Kind] | None = links.parted(root)
     except structure.Unreadable:
         kinds = None
     texts: dict[str, str | None] = {}
     read: dict[str, str | None] = {}
-    for rel in links.files(analysis, listing, kinds):
+    for rel in links.files(analysis, listing):
         text = _cached(root, rel, texts)
         read[rel] = text.replace("\r\n", "\n") if text is not None else None
+    try:
+        lookups = backbone.lookup(root, links.asked(analysis, listing, read, kinds))
+    except Unreadable as exc:
+        return [
+            Finding(
+                ERROR,
+                ".",
+                f"the citations of the analysis could not be looked up, so no link is held: "
+                f"{exc} (DEC-001 point 13)",
+            )
+        ]
     found: list[Finding] = []
-    for linked in links.plan(analysis, listing, read, kinds):
+    for linked in links.plan(analysis, listing, read, kinds, lookups):
         for d in linked.departures:
-            found.append(Finding(ERROR, d.location, _link_message(d)))
+            warned = d.how == links.UNRESOLVED or (d.received and d.how != links.EXTRA)
+            found.append(Finding(WARNING if warned else ERROR, d.location, _link_message(d)))
     return found
 
 
 def _link_message(d: links.Departure) -> str:
     """What a departure of a link says, and what mends it."""
     mend = "run `pkit analysis link`, which writes the links (DEC-004 point 7)"
+    if d.cited:
+        return _cited_message(d)
+    if d.closing:
+        what = (
+            f"the view ends with no section `## {links.CLOSING}`"
+            if d.how == links.MISSING
+            else f"line {d.line} heads the view's section `## {links.CLOSING}`, which is stale"
+        )
+        return (
+            f"{what}: the view's one closing section, at its end, lists under each concept it "
+            f"explains each use case, journey and requirement in force of its analysis that "
+            f"links the concept's term — {mend}"
+        )
     if d.defined:
         if d.how == links.MISSING:
             return (
@@ -1578,6 +1618,8 @@ def _link_message(d: links.Departure) -> str:
             f"`{d.written}`: a section's one link to its term is its first line below its "
             f"heading, to its own term while that term is in force — {mend}"
         )
+    if d.of_id:
+        return _id_link_message(d)
     if d.how == links.MISSING:
         return (
             f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
@@ -1592,6 +1634,58 @@ def _link_message(d: links.Departure) -> str:
         f"line {d.line}: `{d.text}` links to a glossary entry, `{d.written}`, where no link "
         f"belongs: only the first mention of a term in force in each section takes one, never "
         f"in its own section, nor after `{links.ESCAPE}` — {mend}"
+    )
+
+
+def _cited_message(d: links.Departure) -> str:
+    """What a departure of a citation's link says, and what mends it (DEC-001 point 13). A
+    link into a file the project receives as a synced copy says why it is only warned of."""
+    mend = "run `pkit analysis link`, which writes the links (DEC-001 point 13)"
+    if d.received:
+        mend = (
+            "run `pkit analysis link`; it is warned of, since the project receives that file as "
+            "a synced copy (DEC-001 point 13)"
+        )
+    if d.how == links.UNRESOLVED:
+        return (
+            f"line {d.line}: `{d.text}` takes no link, since {d.wanted} — mend the citation, "
+            f"or mark one that is no citation with `{citations.ESCAPE}` (DEC-001 point 13)"
+        )
+    if d.how == links.MISSING:
+        return (
+            f"line {d.line}: `{d.text}` is the first citation of what it cites in its "
+            f"section, and takes a link to it, `{d.wanted}` — {mend}"
+        )
+    if d.how == links.STALE:
+        return (
+            f"line {d.line}: `{d.text}` links to `{d.written}`, and what it cites lies at "
+            f"`{d.wanted}`, as `pkit refs lookup` finds it — {mend}"
+        )
+    return (
+        f"line {d.line}: `{d.text}` links to `{d.written}` where no link belongs: only the "
+        f"first citation of each record, point or rule in each section takes one, never one "
+        f"that resolves to nothing, nor after `{citations.ESCAPE}` — {mend}"
+    )
+
+
+def _id_link_message(d: links.Departure) -> str:
+    """What a departure of an id's link says, and what mends it (DEC-001 point 14)."""
+    mend = "run `pkit analysis link`, which writes the links (DEC-001 point 14)"
+    if d.how == links.MISSING:
+        return (
+            f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
+            f"takes a link to it, `{d.wanted}` — {mend}"
+        )
+    if d.how == links.STALE:
+        return (
+            f"line {d.line}: `{d.text}` links to `{d.written}`, and {d.term} is `{d.wanted}` "
+            f"— {mend}"
+        )
+    return (
+        f"line {d.line}: `{d.text}` links to `{d.written}`, where no link belongs: only the "
+        f"first mention of an artefact of the analysis, or of one it builds on, by its id in "
+        f"each section takes one, never in the artefact itself, a goal or an actor's first "
+        f"sentence — {mend}"
     )
 
 
@@ -3296,9 +3390,17 @@ def _artefact_structure(
             else structure.body_lines(text)
         )
         if artefact.kind == VIEW:
-            # A section's link to its term is no content of its explanation (DEC-004 point 7).
-            lines = [(n, "" if links.DEFINED_LINE.match(t) else t) for n, t in lines]
-        departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
+            # A section's link to its term is no content of its explanation, and the
+            # closing section is no part of the view (DEC-004 points 2 and 7).
+            closing = links.closing_lines([t for _n, t in lines])
+            lines = [
+                (n, "" if index in closing or links.DEFINED_LINE.match(t) else t)
+                for index, (n, t) in enumerate(lines)
+            ]
+        # A part still holding its hint is `_placeholders`', which reports it once (#2088).
+        departing = structure.departures(
+            lines, kind, fields=artefact.fields, titles=titles, hints_checked=True
+        )
     found: list[tuple[Finding, tuple[object, ...]]] = [
         (
             Finding(

@@ -178,13 +178,19 @@ def test_after_the_move_every_value_keeps_its_point_and_nothing_is_asked(
 ) -> None:
     """Moving every answer out of the blocks moves no point (COR-062 point 6), and each
     answer the move adds is listed apart as moved, asking nobody (point 3)."""
+    base = repo.head()
     repo.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
-    before = _points(repo)
     repo.checkout("move", create=True)
     _apply(repo, fm.plan_move(repo.root))
     assert validate_friction(repo.root).errors == ()
     repo.commit("move the answers", files=None)
-    assert _points(repo) == before
+    # Each value's point is still the commit whose block first carried it, read in history.
+    assert _points(repo) == {
+        GUIDE: (fr.ArtefactState.STALE, [base]),
+        f"{TERMS}#TERM-a": (fr.ArtefactState.CURRENT, [base]),
+        f"{TERMS}#TERM-b": (fr.ArtefactState.STALE, [base]),
+        PLAIN: (fr.ArtefactState.STALE, [base]),
+    }
     result = fc.run_change_check(repo.root, "main")
     assert result.answers == ()
     assert {m.location for m in result.moved} == {GUIDE, f"{TERMS}#TERM-a"}
@@ -415,6 +421,45 @@ def test_validation_names_the_move_once_where_no_answer_file_exists(repo: Adopte
     assert "2 artefacts hold answers in their own block" in finding.message
     assert af.MOVE_COMMAND in finding.message and "pkit friction move-plan" in finding.message
     assert REPO_ROOT / af.MOVE_MIGRATION == MIGRATION
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param(("check", "--base", "HEAD"), id="change-check"),
+        pytest.param(("check", "--all"), id="whole-repository-check"),
+        pytest.param(("debt",), id="debt"),
+        pytest.param(("explain", GUIDE), id="explain"),
+    ],
+)
+def test_a_reader_refuses_once_where_the_answers_have_not_moved(
+    repo: AdopterRepo, command: tuple[str, ...]
+) -> None:
+    """Every reader reads answers from answer files alone, and none exists: it says so once
+    and names the move, never reporting each answer as missing (COR-062 point 11)."""
+    result = CliRunner().invoke(main, ["friction", *command])
+    assert result.exit_code != 0
+    assert "2 artefacts hold answers in their own block" in result.output
+    assert af.MOVE_COMMAND in result.output
+    assert "stale" not in result.output
+
+
+def test_a_reader_reads_no_answer_left_in_a_block_once_the_answers_moved(repo: AdopterRepo) -> None:
+    """After the move a block's answer is read only in history: the plain page's answer,
+    written in its block and never moved, answers nothing at HEAD, so the page is judged
+    by the answer files alone (COR-062 point 1)."""
+    _apply(repo, fm.plan_move(repo.root))
+    repo.commit("move the answers", files=None)
+    repo.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
+    answered = document("plain", anchors={"path": ["src/cli/**"]}, at=T2, outcome="updated")
+    repo.commit("answer the plain page in its block", {PLAIN: answered})
+    states = {r.location: r.state for r in fr.run_repository_check(repo.root).artefact_reports}
+    assert states[PLAIN] is fr.ArtefactState.STALE
+    check = fr.run_artefact_check(
+        repo.root, lambda found: next(a for a in found.artefacts if a.location == PLAIN)
+    )
+    assert check is not None and check.answers is not None
+    assert check.answers.revalidations == ()
 
 
 def test_an_answer_written_in_a_block_beside_the_move_fails_until_the_move_runs_again(

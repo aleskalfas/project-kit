@@ -36,6 +36,10 @@ from tests.friction_documents import (
     guide,
 )
 
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
 ALICE = Author("Alice", "alice@example.com")
 BOB = Author("Bob", "bob@example.com")
 CAROL = Author("Carol", "carol@example.com")
@@ -788,7 +792,7 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
     # Its live answers with their points, and the answer folder's path (COR-062): a
     # component reads `at` here, never from the file.
     assert doc["answers_folder"] == ".pkit/project/friction/answers"
-    assert doc["answers"]["home"] == "block"
+    assert doc["answers"]["home"] == "files"
     assert [
         (r["at"], [p["commit"] for p in r["points"]]) for r in doc["answers"]["revalidations"]
     ] == [(T1, [base])]

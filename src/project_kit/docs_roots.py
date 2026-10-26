@@ -511,6 +511,71 @@ def inside_root(target_root: Path, roots: Roots | None = None) -> list[RecordedL
     return [r for r in recorded_locations(target_root) if is_within(r.path, roots.internal)]
 
 
+@dataclass(frozen=True)
+class LeftBehind:
+    """A recorded location a change of the internal root left behind: it lay under
+    the old internal root, lies outside the new one, and stays where it was chosen
+    (COR-049 point 6). `home` is where it would derive under the new root, `None`
+    where it derives from nothing the reading can place."""
+
+    location: RecordedLocation
+    old_root: Path
+    home: Path | None
+
+    def notice(self) -> str:
+        """What the command that changed the root says of it: what stays, in which
+        file it is recorded, and how to move it — two lines, no trailing newline."""
+        rec = self.location
+        if rec.component == BACKBONE:
+            what, file, then = (
+                rec.name,
+                _OVERLAY_RELPATH.as_posix(),
+                "edit that entry, then pkit sync",
+            )
+        else:
+            what = f"{rec.component} {rec.name}"
+            file, then = capability_locations_relpath(rec.component).as_posix(), "edit that line"
+        to = f" to {self.home.as_posix()}" if self.home is not None else ""
+        return (
+            f"kept {what} = {rec.path.as_posix()}  ({file})\n"
+            f"  recorded under the internal root before this change, {self.old_root.as_posix()}; "
+            f"it stays there (COR-049 point 6). To move it: move what it holds{to}, {then}."
+        )
+
+
+def left_behind(
+    target_root: Path, old_internal: str | Path, roots: Roots | None = None
+) -> list[LeftBehind]:
+    """The recorded locations a change of the internal root from `old_internal`
+    left behind: each lay in or under the old root, and lies outside the current
+    one (COR-049 point 6). Nothing moves; the command that changed the root names
+    each, with where it would derive under the new root. Empty when the root did
+    not change. Sorted as `recorded_locations` sorts."""
+    roots = roots if roots is not None else resolve_roots(target_root)
+    old = normalise(old_internal)
+    if old == roots.internal:
+        return []
+    return [
+        LeftBehind(rec, old, _home(target_root, rec, roots))
+        for rec in recorded_locations(target_root)
+        if is_within(rec.path, old) and not is_within(rec.path, roots.internal)
+    ]
+
+
+def _home(target_root: Path, rec: RecordedLocation, roots: Roots) -> Path | None:
+    """Where a recorded location would derive under `roots`: a backbone category
+    from the internal root and its conventional sub-path, a capability's from the
+    root its declaration names. `None` when nothing declares it."""
+    if rec.component == BACKBONE:
+        derived = derive_location(roots.internal, rec.name)
+        return derived.path if derived is not None else None
+    declared = capability_subpaths(target_root, rec.component).get(rec.name)
+    if declared is None:
+        return None
+    root, _source = roots.for_audience(declared.root)
+    return root / normalise(declared.path)
+
+
 def _entries(value: Any) -> list[str]:
     if isinstance(value, str):
         return [value] if value.strip() else []

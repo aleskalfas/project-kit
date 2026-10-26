@@ -30,6 +30,7 @@ reads:
     - .pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md
     - .pkit/capabilities/software-analysis/decisions/DEC-002-analysis-requirements.md
     - .pkit/capabilities/software-analysis/decisions/DEC-004-domain-model-views.md
+    - .pkit/capabilities/software-analysis/decisions/DEC-005-finding-functionality.md
     - .pkit/capabilities/software-analysis/README.md
     - .pkit/project/config.yaml
 ---
@@ -73,7 +74,7 @@ Verify each record in `gates:` is `accepted`; halt if any is `proposed` or `supe
 
 A kind's parts are chosen before its first artefact or record is written, with `choose-templates.md`. The shipped parts are a starting point the project reviews, never a default it skips (DEC-001 point 1).
 
-For a part of the product not yet described, follow `build-analysis.md`, which builds it from its concepts up (DEC-001 point 12): the glossary, the domain-model views and the actors first, the journeys last. Open the matching sub-procedure in this folder and follow it. The framing below applies to all of them.
+For a part of the product not yet described, follow `build-analysis.md`, which builds it from its concepts up (DEC-001 point 12): the glossary, the domain-model views and the actors first, the journeys last. It plans the use cases' functional areas, and writes a journey for each path, as part of building ([software-analysis:DEC-005-finding-functionality]). Open the matching sub-procedure in this folder and follow it. The framing below applies to all of them.
 
 Judging whether existing artefacts still hold after a change is the capability's `analysis-resolver` agent's work. This skill writes what it, or you, decided.
 
@@ -150,7 +151,10 @@ An actor, a term or a requirement with nothing to anchor is stamped with `--unan
 ### After stamping
 
 1. **Fill each part as its hint says.** Write in each hint's place what it asks for, and delete the hint. A part with nothing to say reads `None.`, where its hint says so. Fill an actor's `summary` and `needs`, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to` the same way. This skill lists no kind's parts: a part's hint is its one description, in the kind's declared structure (DEC-001 point 1).
-2. **Link its terms.** Where the analysis keeps a domain model, run `pkit analysis link`. It links the first mention of each term in each part of what you wrote (DEC-004 point 7). A goal, a journey's step lines and an actor's first sentence stay plain, since each says a datum again.
+2. **Link it.** Run `pkit analysis link`. It links each record, point and rule your text cites, and the first mention of each id in each part, in every analysis (DEC-001 points 13 and 14). Where the analysis keeps a domain model, it also links the first mention of each term in each part of what you wrote (DEC-004 point 7).
+   - **What stays plain.** A goal and an actor's first sentence stay plain, since each says a datum again. A journey's step line links only its use case's id.
+   - **What is built on the concepts.** It also writes each view's closing section, which lists what is built on its concepts. Then run `pkit analysis overview`, since each area's concepts are read from those links (DEC-003 point 8).
+   - **A `DEC-NNN` it warns of** names no capability, so write the capability's name before it.
 3. **Check what you wrote** with `pkit analysis validate --preview`, and read its findings on your artefact. Then run `pkit friction check`, the core's change check. An artefact new in a change counts as revalidated, and an anchor that resolves to nothing fails.
    - **Why `--preview`.** It runs the capability's check, with its findings and its exit status. It adds what a proposed rule would report where it would bind, as reports that open `preview:` and never fail. So it shows what you wrote against its kind's structure even while the format rule is proposed. `pkit validate` runs the same check with no preview.
    - **Its structure.** The check holds the body to its kind's structure: each part present, in order, not empty, and of its form. Each message gives the part's hint and example.

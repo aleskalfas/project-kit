@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=4 fingerprint=sha256:acc2eef51fb1773e9640a98f97d80eeea9150a2a246ef6dc04f4b45f9162912e -->
+<!-- pkit:overview reads=5 fingerprint=sha256:2e212f88b16fb605819df1ab9b70f1b55658894577b3f609e0e54f88cddd0744 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 

@@ -14,7 +14,8 @@ calls instead of re-reading the declarations or walking the places itself:
   the span of its section, exactly the text friction compares, and each
   artefact with the rule sets whose scope covers it (#1361) and the span each
   of its part anchors resolves to: an entry's section (#1414), or a record's
-  point, read through the one reading of a record's points (#1552);
+  point, read through the one reading of a record's points (#1552), and the
+  files each of its path anchors stands on (#2099);
 - every **folder of held documents**, declared as a place is, and every file it
   holds, with the places that left it out — never a file or an artefact of any
   place (#1130);
@@ -456,6 +457,50 @@ def _page(**anchors: list[str]) -> str:
     """A page in a project place, its anchors by kind in the order given."""
     lines = "".join(f"      {kind}: [{', '.join(values)}]\n" for kind, values in anchors.items())
     return f"---\nid: page\npkit:\n  friction:\n    anchors:\n{lines}---\n\n# Page\n"
+
+
+# --- the files each path anchor stands on (#2099) ---------------------------------------------
+
+
+def _path_anchors(document: dict[str, Any], location: str) -> list[dict[str, Any]]:
+    (artefact,) = [a for a in document["artefacts"] if a["location"] == location]
+    return artefact["path_anchors"]
+
+
+def test_each_path_anchor_gives_the_files_it_stands_on(adopter: AdopterRepo) -> None:
+    """Beside each path anchor, the files it stands on, matched by the one rule both
+    friction checks match a path pattern by: what `friction.exclude` leaves out is not
+    among them, and a dead anchor stands on none. So a script reads what an anchor
+    covers and matches no pattern itself (ADR-057 point 2)."""
+    adopter.write(
+        {
+            "src/a.py": "a\n",
+            "src/deep/b.py": "b\n",
+            "notes/page.md": _page(path=["src/**", "notes/old.md", "gone/**", "src/a.py"]),
+        }
+    )
+    document = _document()
+    assert document["schema_version"] == 1  # a key added within the document's version
+    assert _path_anchors(document, "notes/page.md") == [
+        {"value": "src/**", "files": ["src/a.py", "src/deep/b.py"]},
+        {"value": "notes/old.md", "files": []},  # friction.exclude leaves it out
+        {"value": "gone/**", "files": []},  # dead
+        {"value": "src/a.py", "files": ["src/a.py"]},
+    ]
+    assert all(isinstance(a["path_anchors"], list) for a in document["artefacts"])
+    assert _path_anchors(document, "notes/rules.md#RS-CMN-001") == [
+        {"value": "src/**", "files": ["src/a.py", "src/deep/b.py"]}
+    ]
+
+
+def test_at_a_commit_a_path_anchor_s_files_are_that_state_s(adopter: AdopterRepo) -> None:
+    adopter.write({"src/a.py": "a\n", "notes/page.md": _page(path=["src/**"])})
+    adopter.commit("page")
+    adopter.write({"src/new.py": "n\n"})
+    now = _path_anchors(_document(), "notes/page.md")
+    at_head = _path_anchors(json.loads(_run("--at", "HEAD", "--json").output), "notes/page.md")
+    assert now == [{"value": "src/**", "files": ["src/a.py", "src/new.py"]}]
+    assert at_head == [{"value": "src/**", "files": ["src/a.py"]}]
 
 
 def test_an_anchor_on_a_record_s_point_gives_the_span_of_the_point_s_section(

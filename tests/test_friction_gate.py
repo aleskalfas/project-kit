@@ -29,6 +29,10 @@ import pytest
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, guide
 
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
 PAGE = "docs/guide.md"
 # Block style, as project-kit writes its own configuration: the mode is one line.
 ENFORCING = "name: adopter\nfriction:\n  mode: enforcing\n  places:\n    - docs\n"

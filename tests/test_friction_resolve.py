@@ -29,7 +29,7 @@ from project_kit import friction_write as fw
 from project_kit.cli import main
 from project_kit.document_parts import split_front_matter
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import CONFIG, SOURCE, friction_config, guide
+from tests.friction_documents import CONFIG, SOURCE, friction_config, guide, move_answers
 from tests.test_friction_revisit import declare_linker, entry, requirement
 
 PAGE = "docs/guide.md"
@@ -249,8 +249,9 @@ def test_a_body_only_the_base_side_changed_is_unchanged_for_this_branch(
 def test_the_named_answer_is_the_one_the_change_check_accepts(
     repo: AdopterRepo, outcome: str
 ) -> None:
-    """Run as named once the merge is committed, the answer clears the friction this
-    branch's change of an anchor raises — never a bump."""
+    """Run as named once the merge is committed and its answers moved, as a line open at the
+    move catches up (COR-062 point 11), the answer clears the friction this branch's
+    change of an anchor raises — never a bump."""
     this = _page(T1, "updated", None, body="The CLI takes two flags.\n")
     if outcome == "unchanged":
         this = THIS
@@ -264,6 +265,8 @@ def test_the_named_answer_is_the_one_the_change_check_accepts(
     (owed,) = json.loads(result.output)["files"][0]["owed"]
     assert owed["outcome"] == outcome
     repo.git("commit", "-q", "--no-edit")
+    move_answers(repo.root)
+    repo.commit("move the answers", files=None)
 
     before = fc.run_change_check(repo.root, "main")
     assert fc.FindingKind.FRICTION in {f.kind for f in before.findings if f.location == PAGE}
@@ -655,6 +658,8 @@ def test_an_entry_both_sides_wrote_takes_the_base_sides_and_the_check_asks_again
     assert REVISIT_COMMAND in result.output
     assert "writes each `revisited` entry both sides wrote" in result.output
     repo.git("commit", "-q", "--no-edit")
+    move_answers(repo.root)  # as a line open at the move catches up (COR-062 point 11)
+    repo.commit("move the answers", files=None)
 
     assert ("unrevisited", TEST_FILE, None) in _revisited_findings(repo)
     fw.write(

@@ -119,6 +119,20 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"]
+  RS-SAN-014:
+    status: proposed
+    origin: {decision: "software-analysis:DEC-005"}
+    pkit:
+      friction:
+        anchors:
+          record:
+            - "software-analysis:DEC-001#1"
+            - "software-analysis:DEC-001#2"
+            - "software-analysis:DEC-001#12"
+            - "software-analysis:DEC-003#8"
+            - "software-analysis:DEC-005#1"
+            - "software-analysis:DEC-005#2"
+            - "software-analysis:DEC-005#5"
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -130,7 +144,7 @@ rules:
 # only where its rule binds. Whoever judges the rest of a rule leaves that part
 # to the check. Where a project's rule tightens a structure, the project's set
 # declares what the check enforces of that rule. RS-SAN-003 to RS-SAN-008,
-# RS-SAN-010 to RS-SAN-013 declare no check: a reviewer judges each.
+# RS-SAN-010 to RS-SAN-014 declare no check: a reviewer judges each.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
@@ -181,9 +195,9 @@ checks:
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 5, 9, 11 and 12, and DEC-002 points 4 to 8. They also rest on DEC-003 point 10 and DEC-004 points 3 to 6. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 5, 9, 11 and 12, and DEC-002 points 4 to 8. They also rest on DEC-003 points 8 and 10, DEC-004 points 3 to 6 and DEC-005 points 1, 2 and 5. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
-A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a sentence that starts with "So" only illustrate.
+A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase, a sentence that starts with "So" and the items labelled *Examples* only illustrate.
 
 ## RS-SAN-001 — An analysis artefact carries its kind's structure
 
@@ -245,7 +259,7 @@ A use case's goal is one of its actor's needs.
 An analysis artefact's anchors name what its statements rest on. A use case's or a requirement's anchors also name the decisions that answer it and the architecture views that realise it.
 
 - **How:**
-  - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`.
+  - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`. A domain-model view's closing section is none (software-analysis DEC-004 point 7).
   - **Views.** A *view* named alone in this rule is an architecture view. A domain-model view is always named in full.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
     - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term.
@@ -338,7 +352,7 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - the names of the analysis's kinds and of their parts, such as "use case", "precondition" or "minimal guarantee"
     - words quoted from a person or a document, such as a decision quoted as a source, or the wording of a law
     - text in a code span or a fenced block, which quotes code. A Mermaid fence quotes no code. The labels its diagram shows, its `accTitle` and its `accDescr` are statements. An id the diagram never shows uses no concept.
-    - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's.
+    - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's. So is a domain-model view's closing section, which the links command writes (software-analysis DEC-004 point 7).
   - **The glossary's head.** Wherever this rule binds on a term, each need that the head of its glossary states beside a listed actor is a statement too.
   - **A domain-model view.** Each of its sections explains the concept that the term its heading names defines, in that term's sense.
     - **A break.** A section breaks this rule where what it states widens or narrows what the term's `definition` fits. It then holds of something the definition does not fit, or fails of something the definition fits.
@@ -409,7 +423,7 @@ A domain-model view names a concept that another view of its analysis explains o
 - **How:**
   - **A view's number.** The number its file's name opens with, compared as a number. Two views may share one, and then neither names a concept the other explains.
   - **What a view explains.** Each concept whose term its `explains` lists, while the view is in force.
-  - **What it names.** A concept whose term one of its statements uses, by the term's name or a form made from it, such as a plural. Its statements are its body, the labels of its diagrams included.
+  - **What it names.** A concept whose term one of its statements uses, by the term's name or a form made from it, such as a plural. Its statements are its body, the labels of its diagrams included, save its closing section, which states nothing (software-analysis DEC-004 point 7).
   - **The glossary first.** A view may name any term in force that no view of its analysis explains, since the glossary comes before the views.
   - **Another analysis.** A term the head of its glossary lists from another analysis is used as that analysis defines it. Whatever explains it there, this rule asks nothing of it.
   - So a relation between the concepts of two views is stated in the view with the higher number.
@@ -449,3 +463,36 @@ A use case describes a step or a variant the system has never carried out only w
   - **Only what is in force.** A proposed record decides nothing yet, and a superseded one no longer does. Nor does a point another record overturns.
   - **A step that is built.** A box below a step or a variant the system carries out breaks this rule. So the change that builds the behaviour removes the box and its entry.
   - **History.** This rule judges a use case in force. A withdrawn use case is history.
+
+## RS-SAN-014 — Each use case lies in its function's area, and a journey tells each path
+
+Each use case lies in a functional area whose goal it is a step toward, and no two areas serve one function. Where one actor's use cases make a path, a journey tells it.
+
+- **How:**
+  - **A functional area.** A folder of use cases, below the use cases' place, that serve one function of the component. A use case's area is the folder it lies in.
+  - **One function.** One summary goal, one level above the area's use cases, which are the steps toward it (software-analysis DEC-003 point 8). The area's goal in software-analysis's project configuration states it. A use case is a step toward it where what its part whose id is `goal` states brings the actor nearer to that goal.
+    - **Read, never judged.** The area's goal is a setting, so this rule judges none of its words. It reads the goal to judge whether a use case is a step toward it. How many functions an area holds, its use cases decide.
+    - **No goal.** Where that configuration gives none, the area's function is the one summary goal its use cases serve together, as a reader names it.
+    - **Two areas, one function.** Two areas serve one function where one area's goal is a step toward the other's, or a reader cannot tell the two goals apart.
+  - **What cuts an area.** What its use cases do. Their number cuts none. Nor does their actor, a concept they act on or the code that carries them out, unless that is also what they do together.
+  - **A path.** Several of one actor's own use cases, which it takes in turn, end to end, toward one goal that none of them reaches alone. Each step takes up what an earlier one left, such as a state its postconditions make true.
+    - **A sign, never proof.** A precondition that an earlier use case of the same actor makes true is a sign of a path. The actor may still never take the two toward one goal.
+    - **No path.** A single use case with its variants makes none. Nor do use cases the actor never takes in turn toward one goal, however many it has.
+    - **Another actor's use case** on the way is no step of the path. The journey relies on it.
+  - **Told.** A journey in force of the path's actor tells the path where its `steps`, or the steps one of its variants takes, run through the path's use cases in their order. So a stretch of a longer path is told by the journey of that path. Its steps may lie in several areas.
+  - **A break.**
+    - A use case breaks this rule while it lies in no area, or while it is no step toward its area's goal.
+    - Each use case of an area breaks it while the area's use cases serve more than one summary goal one level above them, whatever the area's goal says. So an area cut by actor, by concept or by the code breaks it, unless that is also what its use cases do together.
+    - Each use case of an area breaks it while that area serves one function with another area.
+    - The change that adds a use case to an area, or moves one into it, owns the breaks of that area and of the area it shares a function with. To judge them, a reviewer reads the goals of the analysis's other areas.
+    - Each use case of a path breaks it while no journey in force tells the path. The change that leaves the path untold owns that break. Such a change adds a use case that completes the path, or edits what a use case takes up or leaves, such as its preconditions. It may also withdraw or shorten the journey that told the path, or change a use case's `actor` or goal. To judge it, a reviewer reads the use cases and the journeys of each actor whose use case or journey the change adds or alters.
+    - A journey breaks it while its steps make no path.
+  - **A goal changed.** A change to an area's goal alters no artefact, so it brings none of the area's use cases before a reviewer. Whoever changes a goal reads the area's use cases against it.
+  - **What a check can hold.** A script can read, from its path, that each use case in force lies in an area's folder. Until this set declares a check of it under `checks`, a reviewer judges it too.
+  - **Its limits.** No script reads what a use case does. So a reviewer judges whether two goals name one function, whether a use case is a step toward its area's goal, and whether use cases make a path. The overview's list of each area's journeys shows where a path may be untold, and settles nothing.
+  - **Examples,** from an online shop:
+    - Areas `010-catalogue`, `020-ordering` and `030-delivery`, whose goals read "Find a product and compare it", "Place an order and pay for it" and "Deliver an order to its customer", keep this rule.
+    - An area `customer`, which holds every use case whose actor is the customer, breaks it, since its use cases serve all three summary goals. So does an area `025-payment` beside `020-ordering`, whose goal "Pay for an order" is a step toward "Place an order and pay for it".
+    - The customer's "Buy a product" is a path: find a product, place an order, pay for it and track its delivery, across the three areas. Each step takes up what the one before left, so a journey tells it. Comparing two products hands nothing on to a later step, so it is no step of that path.
+  - **History.** This rule judges a use case and a journey in force. A withdrawn one is history.
+  - **Note:** software-analysis DEC-005 calls this the rule on areas and journeys.

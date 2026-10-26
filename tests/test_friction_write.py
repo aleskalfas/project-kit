@@ -1,13 +1,17 @@
-"""Tests for the friction writers — `revalidate`, `defer`, `record-status` (Task #992, COR-050).
+"""Tests for the friction writers — `revalidate`, `defer`, `record-status` (Task #992, COR-050,
+COR-062).
 
 Every test stands up a real adopter repository (`make_adopter_repo`) with a
 place declared and writes documents in block-style YAML, so a test can say
-exactly which bytes a writer may touch: the expected file is the original
-with one block's lines replaced, compared whole. The status tests commit
-real history, since `record-status` runs the whole-repository check at HEAD.
-The last test is property-style: seeded random documents — both forms, block
-and flow style, awkward texts — put through random writes, each read back by
-discovery and passed through validation.
+exactly which bytes a writer may touch. `revalidate` and `defer` write the
+change's own answer file and leave the artefact's file byte for byte, its
+answers already taken into an answer file (`answers_in_files`). `record-status`
+replaces one key of the block, the expected file the original with that key's
+lines replaced, compared whole. The status tests commit real history, since
+`record-status` runs the whole-repository check at HEAD. The property-style test
+puts seeded random documents — both forms, block and flow style, awkward texts —
+through random writes, each read back by the answer reader and passed through
+validation.
 """
 
 from __future__ import annotations
@@ -15,15 +19,17 @@ from __future__ import annotations
 import copy
 import json
 import random
+import shutil
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from click.testing import CliRunner, Result
 from ruamel.yaml import YAML
 
+from project_kit import answer_files as af
 from project_kit import backbone_schemas as bs
 from project_kit import friction_check as fc
 from project_kit import friction_repository as fr
@@ -33,10 +39,17 @@ from project_kit.document_parts import split_front_matter
 from project_kit.friction_discovery import Anchor, discover_artefacts
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import CONFIG, SOURCE, friction_config
+from tests.friction_documents import (
+    CONFIG,
+    SOURCE,
+    friction_config,
+    own_answer_file,
+    own_entry,
+)
 
-#: The fixtures here still write answers in blocks, until #2032 moves them.
-pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 NOW = datetime(2026, 10, 5, 10, 0, 0, tzinfo=UTC)
 
@@ -72,9 +85,12 @@ Body.
 
 GUIDE = HEAD + REVALIDATED + TAIL
 
+#: The guide as its file holds it once its answers are in an answer file (COR-062 point 1).
+ANSWERED = HEAD + TAIL
+
 RULE_SET_PATH = "docs/rule-sets/cmn.md"
 
-#: A rule set whose one rule's block holds a revalidation, so the writers write in it.
+#: A rule set whose one rule is revalidated.
 RULE_SET = (
     "---\n"
     "name: cmn\n"
@@ -120,10 +136,28 @@ def _block(repo: AdopterRepo, location: str = GUIDE_PATH) -> Any:
     return artefact.friction
 
 
+def _own_name(repo: AdopterRepo) -> str:
+    return own_answer_file(repo.root)
+
+
+def _own_entry(repo: AdopterRepo, location: str = GUIDE_PATH) -> dict[str, Any]:
+    return own_entry(repo.root, location)
+
+
+def _entries_of(repo: AdopterRepo, location: str) -> list[dict[str, Any]]:
+    """Every entry for `location` in the answer files of the working tree, as written."""
+    return [
+        dict(e)
+        for found in af.working_tree_files(repo.root).values()
+        for e in cast(list[dict[str, Any]], found.document[af.ANSWERS_KEY])
+        if e[af.ARTEFACT_KEY] == location
+    ]
+
+
 # --- revalidate ------------------------------------------------------------------------
 
 
-def test_revalidate_unchanged_rewrites_the_block_and_nothing_else(repo: AdopterRepo) -> None:
+def test_revalidate_unchanged_writes_its_answer_file_and_nothing_else(repo: AdopterRepo) -> None:
     _put(repo, GUIDE)
     plan = fw.plan_revalidate(
         repo.root,
@@ -134,28 +168,23 @@ def test_revalidate_unchanged_rewrites_the_block_and_nothing_else(repo: AdopterR
     )
     fw.write(plan)
 
-    assert (
-        _read(repo)
-        == HEAD
-        + (
-            "    revalidated:\n"
-            "      at: 2026-10-05T10:00:00Z\n"
-            "      outcome: unchanged\n"
-            "      unchanged-because: a refactor; nothing the guide says moved\n"
-        )
-        + TAIL
-    )
-    assert (plan.first_line, plan.last_line) == (8, 11)
-    assert plan.target == "pkit.friction.revalidated"
+    assert _read(repo) == ANSWERED
+    assert _own_entry(repo)["revalidated"] == {
+        "at": "2026-10-05T10:00:00Z",
+        "outcome": "unchanged",
+        "unchanged-because": "a refactor; nothing the guide says moved",
+    }
+    assert plan.answer_file and plan.target == "answers[docs/guide.md].revalidated"
     assert _validation_errors(repo) == []
 
 
 def test_revalidate_refuses_the_justification_already_written(repo: AdopterRepo) -> None:
     _put(repo, GUIDE)
+    written = af.working_tree_files(repo.root)
     for same in ("the CLI surface is as described", "  the CLI   surface is\nas described "):
-        with pytest.raises(fw.FrictionWriteError, match="must change"):
+        with pytest.raises(fw.FrictionWriteError, match="must differ"):
             fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because=same)
-    assert _read(repo) == GUIDE
+    assert _read(repo) == ANSWERED and af.working_tree_files(repo.root) == written
 
 
 def test_revalidate_unchanged_needs_a_justification_and_updated_takes_none(
@@ -186,29 +215,25 @@ def test_a_placeholder_left_unfilled_is_refused_and_code_in_brackets_is_not(
         fw.plan_defer(repo.root, "guide", anchor="src/cli/**", reason="<why it can wait>")
     result = _cli("revalidate", "guide", "--outcome", "unchanged", "--because", shown[1], "--yes")
     assert result.exit_code != 0 and "'<the defect reference>'" in result.output
-    assert _read(repo) == GUIDE
+    assert _read(repo) == ANSWERED
 
     code = "parse() now returns Vec<u8> and a Map<String, int>; a < b and c > d still hold"
     fw.write(fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because=code, now=NOW))
-    assert _block(repo)["revalidated"]["unchanged-because"] == code
+    assert _own_entry(repo)["revalidated"]["unchanged-because"] == code
 
 
 def test_revalidate_updated_drops_the_old_justification(repo: AdopterRepo) -> None:
     _put(repo, GUIDE)
     fw.write(fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW))
-    assert (
-        _read(repo)
-        == HEAD
-        + ("    revalidated:\n      at: 2026-10-05T10:00:00Z\n      outcome: updated\n")
-        + TAIL
-    )
+    assert _read(repo) == ANSWERED
+    assert _own_entry(repo)["revalidated"] == {"at": "2026-10-05T10:00:00Z", "outcome": "updated"}
 
 
 def test_at_moves_on_every_revalidation(repo: AdopterRepo) -> None:
     _put(repo, GUIDE)
     same_instant = datetime(2026, 10, 1, 9, 0, 0, 400_000, tzinfo=UTC)
     plan = fw.plan_revalidate(repo.root, "guide", outcome="updated", now=same_instant)
-    assert "at: 2026-10-01T09:00:01Z   (was 2026-10-01T09:00:00Z)" in plan.items
+    assert "at: 2026-10-01T09:00:01Z" in plan.items
 
 
 def test_revalidate_keeps_named_deferrals_and_removes_the_rest(repo: AdopterRepo) -> None:
@@ -231,43 +256,41 @@ def test_revalidate_keeps_named_deferrals_and_removes_the_rest(repo: AdopterRepo
         now=NOW,
     )
     fw.write(plan)
-    assert (
-        _read(repo)
-        == HEAD
-        + (
-            "    revalidated:\n"
-            "      at: 2026-10-05T10:00:00Z\n"
-            "      outcome: unchanged\n"
-            "      unchanged-because: checked against the new flags\n"
-            "      deferred:\n"
-            "        - anchor:\n"
-            "            kind: path\n"
-            "            value: src/cli/**\n"
-            "          reason: waiting on the CLI redesign\n"
-        )
-        + TAIL
-    )
+    assert _read(repo) == ANSWERED
+    assert _own_entry(repo)["revalidated"] == {
+        "at": "2026-10-05T10:00:00Z",
+        "outcome": "unchanged",
+        "unchanged-because": "checked against the new flags",
+        "deferred": [
+            {
+                "anchor": {"kind": "path", "value": "src/cli/**"},
+                "reason": "waiting on the CLI redesign",
+            }
+        ],
+    }
     assert "keeps deferral path:src/cli/**   (waiting on the CLI redesign)" in plan.items
-    assert "removes deferral path:src/core/**   (the core rewrite lands next sprint)" in plan.items
+    assert "drops deferral path:src/core/**   (the core rewrite lands next sprint)" in plan.items
     assert _validation_errors(repo) == []
 
 
-def test_revalidate_refuses_to_keep_what_is_not_deferred_or_would_dangle(
+def test_revalidate_refuses_to_keep_what_is_not_deferred_or_answers_nothing(
     repo: AdopterRepo,
 ) -> None:
+    """A deferral of an anchor the artefact no longer declares answers nothing, so it is
+    not live, and keeping it is refused as keeping one never written is (COR-062 point
+    5). Not kept, it is not written again, and validation fails nothing."""
     dangling = (
         "      deferred:\n"
         "      - anchor: {kind: record, value: COR-050}\n"
         "        reason: the record is being amended\n"
     )
     _put(repo, HEAD + REVALIDATED + dangling + TAIL)
-    with pytest.raises(fw.FrictionWriteError, match=r"no deferral of 'src/cli/\*\*' to keep"):
+    with pytest.raises(fw.FrictionWriteError, match=r"no live deferral of 'src/cli/\*\*' to keep"):
         fw.plan_revalidate(repo.root, "guide", outcome="updated", keep=["src/cli/**"])
-    with pytest.raises(fw.FrictionWriteError, match="would dangle"):
+    with pytest.raises(fw.FrictionWriteError, match="answers nothing"):
         fw.plan_revalidate(repo.root, "guide", outcome="updated", keep=["record:COR-050"])
-    # Not kept, the dangling entry is removed — which is what validation asks for.
     plan = fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW)
-    assert any("no longer declares that anchor" in item for item in plan.items)
+    assert not any("COR-050" in item for item in plan.items)
     fw.write(plan)
     assert _validation_errors(repo) == []
 
@@ -290,39 +313,32 @@ def test_revalidate_asks_about_each_deferral_on_a_terminal(
     )
     assert result.exit_code == 0, result.output
     assert "Keep the deferral of path:src/cli/** — cli?" in result.output
-    assert "+++ b/docs/guide.md" in result.output  # the diff comes before the confirmation
-    deferred = _block(repo)["revalidated"]["deferred"]
+    assert f"+++ b/{af.FOLDER}/" in result.output  # the diff comes before the confirmation
+    deferred = _own_entry(repo)["revalidated"]["deferred"]
     assert deferred == [{"anchor": {"kind": "path", "value": "src/cli/**"}, "reason": "cli"}]
 
 
 # --- defer --------------------------------------------------------------------------------
 
 
-def test_defer_adds_a_sorted_entry_and_leaves_at_byte_for_byte(repo: AdopterRepo) -> None:
+def test_defer_adds_a_sorted_entry_and_leaves_at_as_it_was(repo: AdopterRepo) -> None:
     existing = (
         "      deferred:\n      - anchor: {kind: path, value: src/core/**}\n        reason: core\n"
     )
     _put(repo, HEAD + REVALIDATED + existing + TAIL)
     plan = fw.plan_defer(repo.root, "guide", anchor="path:src/cli/**", reason="the redesign")
     fw.write(plan)
-    assert (
-        _read(repo)
-        == HEAD
-        + REVALIDATED
-        + (
-            "      deferred:\n"
-            "        - anchor:\n"
-            "            kind: path\n"
-            "            value: src/cli/**\n"
-            "          reason: the redesign\n"
-            "        - anchor:\n"
-            "            kind: path\n"
-            "            value: src/core/**\n"
-            "          reason: core\n"
-        )
-        + TAIL
-    )
-    assert plan.target == "pkit.friction.revalidated.deferred"
+    assert _read(repo) == ANSWERED
+    assert _own_entry(repo)["revalidated"] == {
+        "at": "2026-10-01T09:00:00Z",
+        "outcome": "unchanged",
+        "unchanged-because": "the CLI surface is as described",
+        "deferred": [
+            {"anchor": {"kind": "path", "value": "src/cli/**"}, "reason": "the redesign"},
+            {"anchor": {"kind": "path", "value": "src/core/**"}, "reason": "core"},
+        ],
+    }
+    assert plan.target == "answers[docs/guide.md].revalidated.deferred"
     assert "at: not changed — a deferral is not a revalidation" in plan.items
     assert _validation_errors(repo) == []
 
@@ -337,7 +353,7 @@ def test_defer_refuses_an_anchor_the_artefact_does_not_carry(repo: AdopterRepo) 
         fw.plan_defer(repo.root, "guide", anchor="  ", reason="later")
     with pytest.raises(fw.FrictionWriteError, match="carries its reason"):
         fw.plan_defer(repo.root, "guide", anchor="src/cli/**", reason="")
-    assert _read(repo) == GUIDE
+    assert _read(repo) == ANSWERED
 
 
 def test_defer_rewords_a_reason_and_the_same_reason_writes_nothing(repo: AdopterRepo) -> None:
@@ -346,9 +362,9 @@ def test_defer_rewords_a_reason_and_the_same_reason_writes_nothing(repo: Adopter
     again = fw.plan_defer(repo.root, "guide", anchor="src/cli/**", reason="  first ")
     assert not again.changes and "already deferred with this reason" in (again.unchanged or "")
     reworded = fw.plan_defer(repo.root, "guide", anchor="src/cli/**", reason="second")
-    assert any("does not move" in item for item in reworded.items)
+    assert any("keeps its deferral point" in item for item in reworded.items)
     fw.write(reworded)
-    assert _block(repo)["revalidated"]["deferred"] == [
+    assert _own_entry(repo)["revalidated"]["deferred"] == [
         {"anchor": {"kind": "path", "value": "src/cli/**"}, "reason": "second"}
     ]
 
@@ -385,7 +401,7 @@ def test_revalidate_and_defer_answer_the_change_check(repo: AdopterRepo) -> None
         (fc.FindingKind.ANSWERED, fc.Answer.DEFERRED)
     ]
 
-    _put(repo, GUIDE)
+    (repo.root / af.path_of(_own_name(repo))).unlink()  # the deferral taken back
     fw.write(
         fw.plan_revalidate(
             repo.root, "guide", outcome="unchanged", because="the new flag is internal"
@@ -430,9 +446,9 @@ def test_record_status_writes_last_check_on_its_own_lines_only_when_it_changes(
     assert result.exit_code == 0, result.output
     assert _last_check(repo) == {"state": "stale", "as-of": head, "since": origin}
     written = _read(repo)
-    status_lines = written.split(REVALIDATED, 1)[1].split(TAIL, 1)[0]
+    status_lines = written.split(HEAD, 1)[1].split(TAIL, 1)[0]
     assert status_lines.splitlines()[0] == "    last-check:"
-    assert written.startswith(HEAD + REVALIDATED) and written.endswith(TAIL)
+    assert written.startswith(HEAD) and written.endswith(TAIL)
     # The status is container bookkeeping: the change check sees nothing to answer.
     assert fc.run_change_check(repo.root, head).findings == ()
 
@@ -452,7 +468,7 @@ def test_record_status_writes_last_check_on_its_own_lines_only_when_it_changes(
 def test_record_status_refuses_what_has_no_status(repo: AdopterRepo) -> None:
     _commit_base(repo)
     _put(repo, "---\nid: bare\npkit:\n  friction: {}\n---\nBody.\n", "docs/bare.md")
-    with pytest.raises(fw.FrictionWriteError, match="no anchors or deferrals"):
+    with pytest.raises(fw.FrictionWriteError, match="no anchors or live deferrals"):
         fw.plan_record_status(repo.root, "bare")
     _put(repo, GUIDE.replace("id: guide", "id: fresh"), "docs/fresh.md")
     with pytest.raises(fw.FrictionWriteError, match="commit it first"):
@@ -492,20 +508,22 @@ def test_without_consent_an_answer_is_refused_with_no_ready_made_yes(
     """An answer may be a person's decision (COR-050 point 3): the refusal names the
     dry run and says what `--yes` does, and prints no command that writes."""
     _put(repo, GUIDE)
+    own = f"{af.FOLDER}/{_own_name(repo)}"
     result = _cli(*command)
     assert result.exit_code == 1
     rerun = fw.command_line("pkit", "friction", *command)
-    assert result.output.endswith(
-        "refusing to write docs/guide.md without consent: stdin is not a terminal and --yes "
-        "was not given (COR-050 point 13). Nothing was written.\n"
+    refusal = (
+        f"refusing to write {own}, the answer on {GUIDE_PATH}, without consent: stdin is not a "
+        "terminal and --yes was not given (COR-050 point 13). Nothing was written.\n"
         "To see the change first, run:\n"
         f"  {rerun} --dry-run\n"
         "`--yes` writes without asking. An answer on an artefact may be a person's decision "
         "(COR-050 point 3).\n"
     )
+    assert result.output[-len(refusal) :] == refusal
     assert f"{rerun} --yes" not in result.output
     assert not any(line.strip().endswith("--yes") for line in result.output.splitlines())
-    assert _read(repo) == GUIDE
+    assert _read(repo) == ANSWERED
 
 
 def test_without_consent_record_status_refuses_and_names_the_command(repo: AdopterRepo) -> None:
@@ -527,25 +545,30 @@ def test_without_consent_record_status_refuses_and_names_the_command(repo: Adopt
 
 def test_dry_run_shows_the_diff_and_writes_nothing(repo: AdopterRepo) -> None:
     _put(repo, GUIDE)
+    own = f"{af.FOLDER}/{_own_name(repo)}"
+    written = _read(repo, own)
     result = _cli("defer", "guide", "--anchor", "src/cli/**", "--reason", "later", "--dry-run")
     assert result.exit_code == 0, result.output
-    assert "Writes pkit.friction.revalidated.deferred in docs/guide.md" in result.output
+    assert f"Writes answers[docs/guide.md].revalidated.deferred in {own}" in result.output
     assert "+      deferred:" in result.output
     assert "Dry run: nothing written." in result.output
-    assert _read(repo) == GUIDE
+    assert (_read(repo), _read(repo, own)) == (ANSWERED, written)
 
 
 def test_a_terminal_confirms_after_the_diff_and_declining_writes_nothing(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _put(repo, GUIDE)
+    own = f"{af.FOLDER}/{_own_name(repo)}"
+    written = _read(repo, own)
     monkeypatch.setattr(fw, "interactive", lambda: True)
     declined = _cli("defer", "guide", "--anchor", "src/cli/**", "--reason", "later", input="n\n")
-    assert declined.exit_code == 1 and "Write this to docs/guide.md?" in declined.output
-    assert _read(repo) == GUIDE
+    assert declined.exit_code == 1 and f"Write this to {own}?" in declined.output
+    assert _read(repo, own) == written
     accepted = _cli("defer", "guide", "--anchor", "src/cli/**", "--reason", "later", input="y\n")
-    assert accepted.exit_code == 0 and "Wrote pkit.friction.revalidated.deferred" in accepted.output
-    assert _read(repo) != GUIDE
+    assert accepted.exit_code == 0
+    assert "Wrote answers[docs/guide.md].revalidated.deferred" in accepted.output
+    assert _read(repo, own) != written and _read(repo) == ANSWERED
 
 
 def test_yes_and_dry_run_exclude_each_other(repo: AdopterRepo) -> None:
@@ -586,41 +609,41 @@ Beta body.
 """
 
 
-def test_an_entry_is_written_alone_in_its_collection(repo: AdopterRepo) -> None:
+#: Each entry's revalidation in `COLLECTION`, as its block wrote it.
+_ENTRY_REVALIDATED = (
+    "      revalidated:\n        at: 2026-10-01T09:00:00Z\n        outcome: updated\n"
+)
+
+
+def test_an_entry_is_answered_alone_in_its_collection(repo: AdopterRepo) -> None:
     _put(repo, COLLECTION, "docs/rules.md")
+    written = _read(repo, "docs/rules.md")
     fw.write(fw.plan_defer(repo.root, "docs/rules.md#alpha", anchor="src/cli/**", reason="x"))
-    assert _read(repo, "docs/rules.md") == COLLECTION.replace(
-        "      anchors: {path: [src/cli/**]}\n"
-        "      revalidated:\n"
-        "        at: 2026-10-01T09:00:00Z\n"
-        "        outcome: updated\n",
-        "      anchors: {path: [src/cli/**]}\n"
-        "      revalidated:\n"
-        "        at: 2026-10-01T09:00:00Z\n"
-        "        outcome: updated\n"
-        "        deferred:\n"
-        "          - anchor:\n"
-        "              kind: path\n"
-        "              value: src/cli/**\n"
-        "            reason: x\n",
-    )
+    assert written == COLLECTION.replace(_ENTRY_REVALIDATED, "")
+    assert _read(repo, "docs/rules.md") == written
+    # Each entry is answered in an answer file of its own here (`answers_in_files`).
+    (alpha,) = _entries_of(repo, "docs/rules.md#alpha")
+    assert alpha["revalidated"] == {
+        "at": "2026-10-01T09:00:00Z",
+        "outcome": "updated",
+        "deferred": [{"anchor": {"kind": "path", "value": "src/cli/**"}, "reason": "x"}],
+    }
+    (beta,) = _entries_of(repo, "docs/rules.md#beta")
+    assert "deferred" not in beta["revalidated"]
     assert _validation_errors(repo) == []
 
 
-def test_a_rule_is_written_inside_its_rule_set(repo: AdopterRepo) -> None:
+def test_a_rule_is_answered_by_its_place_in_its_rule_set(repo: AdopterRepo) -> None:
     _put(repo, RULE_SET, RULE_SET_PATH)
     plan = fw.plan_defer(repo.root, "RS-CMN-001", anchor="COR-050", reason="being amended")
     assert plan.artefact == "docs/rule-sets/cmn.md#RS-CMN-001"
     fw.write(plan)
     assert _read(repo, RULE_SET_PATH) == RULE_SET.replace(
-        "          outcome: updated\n",
-        "          outcome: updated\n"
-        "          deferred:\n"
-        "            - anchor:\n"
-        "                kind: record\n"
-        "                value: COR-050\n"
-        "              reason: being amended\n",
+        "        revalidated:\n          at: 2026-10-01T09:00:00Z\n          outcome: updated\n", ""
     )
+    assert _own_entry(repo, plan.artefact)["revalidated"]["deferred"] == [
+        {"anchor": {"kind": "record", "value": "COR-050"}, "reason": "being amended"}
+    ]
 
 
 def test_a_reference_must_name_exactly_one_artefact(repo: AdopterRepo) -> None:
@@ -640,20 +663,21 @@ def test_an_artefact_without_a_friction_block_is_refused(repo: AdopterRepo) -> N
 
 
 def test_a_block_that_would_not_validate_is_not_written(repo: AdopterRepo) -> None:
-    broken = GUIDE.replace("    anchors:\n", "    anchor-typo: 1\n    anchors:\n")
-    _put(repo, broken)
+    """`record-status` writes the block, and never one validation would refuse."""
+    broken = ANSWERED.replace("    anchors:\n", "    anchor-typo: 1\n    anchors:\n")
+    _commit_base(repo, broken)
     with pytest.raises(fw.FrictionWriteError, match="would not validate"):
-        fw.plan_revalidate(repo.root, "guide", outcome="updated")
+        fw.plan_record_status(repo.root, "guide")
     assert _read(repo) == broken
 
 
 def test_a_reason_for_no_anchors_beside_anchors_is_not_written_over(repo: AdopterRepo) -> None:
     """Validation refuses `unanchored-because` beside anchors (COR-050 point 12), so a
-    writer reading its result back refuses to write over the pair."""
-    beside = GUIDE.replace("    anchors:\n", "    unanchored-because: Stale.\n    anchors:\n")
-    _put(repo, beside)
+    writer of the block, reading its result back, refuses to write over the pair."""
+    beside = ANSWERED.replace("    anchors:\n", "    unanchored-because: Stale.\n    anchors:\n")
+    _commit_base(repo, beside)
     with pytest.raises(fw.FrictionWriteError, match="stands beside anchors"):
-        fw.plan_revalidate(repo.root, "guide", outcome="updated")
+        fw.plan_record_status(repo.root, "guide")
     assert _read(repo) == beside
 
 
@@ -728,18 +752,27 @@ def test_a_crlf_file_is_written_back_with_crlf_byte_for_byte(
     options: dict[str, Any],
 ) -> None:
     """The write a writer plans for the `\\n` file, planned for its `\\r\\n` twin: the
-    same key, the same lines, and every line ending `\\r\\n` — each other byte as it was."""
+    same key, the same lines, and every line ending `\\r\\n` — each other byte as it was.
+    A writer of an answer file writes the same answer file for both, and leaves the
+    artefact's `\\r\\n` file as it was."""
     _put(repo, text, rel)
     repo.commit("base", files=None, date=HISTORY_EPOCH)  # record-status reads HEAD
+    at_head = _read(repo, rel)
     lf = _PLANNERS[command](repo.root, reference, **options)
     assert lf.changes
 
     _put(repo, _crlf(text), rel)
+    written = _read(repo, rel)
+    assert written == _crlf(at_head)
     crlf = _PLANNERS[command](repo.root, reference, **options)
     fw.write(crlf)
 
-    assert _read(repo, rel) == _crlf(lf.after)
-    assert crlf.before == _crlf(text)
+    if crlf.answer_file:
+        assert _read(repo, rel) == written
+        assert crlf.after == lf.after
+    else:
+        assert _read(repo, rel) == _crlf(lf.after)
+        assert crlf.before == written
     assert (crlf.target, crlf.first_line, crlf.last_line, crlf.items) == (
         lf.target,
         lf.first_line,
@@ -753,15 +786,16 @@ def test_a_link_planted_beside_the_file_takes_no_write(repo: AdopterRepo, tmp_pa
     """The rewrite goes through a temporary file of a fresh name: a link a branch plants
     where an older writer put its temporary file leads nowhere."""
     _put(repo, GUIDE)
+    own = f"{af.FOLDER}/{_own_name(repo)}"
     outside = tmp_path / "outside.txt"
-    (repo.root / f"{GUIDE_PATH}.pkit-tmp").symlink_to(outside)
+    (repo.root / f"{own}.pkit-tmp").symlink_to(outside)
     fw.write(fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW))
     assert not outside.exists()
-    assert not (repo.root / GUIDE_PATH).is_symlink()
-    assert "outcome: updated" in _read(repo)
-    assert sorted(p.name for p in (repo.root / "docs").iterdir()) == [
-        "guide.md",
-        "guide.md.pkit-tmp",
+    assert not (repo.root / own).is_symlink()
+    assert "outcome: updated" in _read(repo, own)
+    assert sorted(p.name for p in (repo.root / af.FOLDER).iterdir()) == [
+        af.name_of(own),
+        f"{af.name_of(own)}.pkit-tmp",
     ]
 
 
@@ -931,19 +965,25 @@ def _sorted_deferrals(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(entries, key=lambda e: (e["anchor"]["kind"], e["anchor"]["value"]))
 
 
-# Slow by design: 40 random documents, each written four times, read back and validated.
-def test_written_blocks_read_back_identically_and_validate(repo: AdopterRepo) -> None:
+# Slow by design: 40 random documents, each answered four times, read back and validated.
+def test_written_answers_read_back_identically_and_validate(repo: AdopterRepo) -> None:
+    """Each random document's answers are taken into an answer file of the change's own,
+    then written four times at random: the artefact's file stays byte for byte, the
+    answer file reads back as the model, and validation passes."""
     for seed in range(40):
+        shutil.rmtree(repo.root / af.FOLDER, ignore_errors=True)  # each seed answers anew
         rng = random.Random(seed)
         text, reference, carrier_keys = _random_document(rng)
         _put(repo, text, "docs/doc.md")
         location = "docs/doc.md" if not carrier_keys else reference
-        model = copy.deepcopy(_block(repo, location))
+        anchors = _block(repo, location)["anchors"]
+        revalidated: dict[str, Any] = copy.deepcopy(
+            _own_entry(repo, location).get("revalidated") or {}
+        )
+        written = _read(repo, "docs/doc.md")
         now = NOW
         for step in range(4):
-            before = _read(repo, "docs/doc.md")
-            carried = [(k, v) for k, values in model["anchors"].items() for v in values]
-            revalidated = model.get("revalidated") or {}
+            carried = [(k, v) for k, values in anchors.items() for v in values]
             if rng.random() < 0.5:
                 kind, value = rng.choice(carried)
                 reason = f"{rng.choice(AWKWARD)} {seed}-{step}"
@@ -969,27 +1009,16 @@ def test_written_blocks_read_back_identically_and_validate(repo: AdopterRepo) ->
                     keep=[f"{e['anchor']['kind']}:{e['anchor']['value']}" for e in keep],
                     now=now,
                 )
-                revalidated: dict[str, Any] = {
-                    "at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "outcome": outcome,
-                }
+                revalidated = {"at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "outcome": outcome}
                 if because is not None:
                     revalidated["unchanged-because"] = because.strip()
                 if keep:
                     revalidated["deferred"] = _sorted_deferrals(keep)
             fw.write(plan)
-            model["revalidated"] = revalidated
-            after = _read(repo, "docs/doc.md")
 
-            context = f"seed {seed}, step {step}:\n{before}\n---->\n{after}"
-            assert _block(repo, location) == model, context
-            expected = _parsed_front_matter(before)
-            holder = expected
-            for key in carrier_keys:
-                holder = holder[key]
-            holder["pkit"]["friction"] = model
-            assert _parsed_front_matter(after) == expected, context
-            assert _changed_region_is_front_matter(before, after), context
+            context = f"seed {seed}, step {step}:\n{text}\n---->\n{plan.after}"
+            assert _read(repo, "docs/doc.md") == written, context
+            assert _own_entry(repo, location).get("revalidated") == revalidated, context
             assert _validation_errors(repo) == [], context
             if "deferred" in revalidated and plan.command == "defer":
                 last = revalidated["deferred"][-1]
@@ -1014,12 +1043,11 @@ def test_the_read_back_reads_a_role_block_against_the_wiring(repo: AdopterRepo) 
     role_block = (
         "  documentation:\n    reading-evidence:\n      schema_version: 1\n      last-run: never\n"
     )
-    _put(repo, HEAD + REVALIDATED + role_block + TAIL)
-    plan = fw.plan_defer(repo.root, "guide", anchor="path:src/cli/**", reason="the redesign")
-    fw.write(plan)
+    _commit_base(repo, HEAD + REVALIDATED + role_block + TAIL)
+    fw.write(fw.plan_record_status(repo.root, "guide"))
     text = _read(repo)
     assert role_block in text
-    assert "reason: the redesign" in text
+    assert "    last-check:\n" in text
 
 
 # --- where a block is written: under the keys discovery reads (#1750) -----------------

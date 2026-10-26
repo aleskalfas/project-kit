@@ -33,13 +33,15 @@ from tests.friction_documents import (
     POINTED,
     POINTS,
     adr,
+    blocks_in_history,
     document,
     listed_record,
     pointed_record,
 )
 
-#: The fixtures here still write answers in blocks, until #2032 moves them.
-pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 CONFIG = ".pkit/project/config.yaml"
 
@@ -119,11 +121,15 @@ def _kinds(result: fv.FrictionValidation) -> list[fv.FrictionFindingKind]:
 # --- discovery -------------------------------------------------------------
 
 
-def test_document_with_valid_block_is_discovered_and_clean(adopter: AdopterRepo) -> None:
-    adopter.write({CONFIG: _config(["docs"]), "docs/guide.md": VALID_DOCUMENT})
+def test_document_with_valid_block_is_discovered_and_read_whole(adopter: AdopterRepo) -> None:
+    """A block as history before the move holds it, answers and all, is read whole, as
+    the walk of history reads it (COR-062 point 6). Its only error is that its answers
+    have not moved (point 11)."""
+    with blocks_in_history():
+        adopter.write({CONFIG: _config(["docs"]), "docs/guide.md": VALID_DOCUMENT})
     result = fv.validate_friction(adopter.root)
 
-    assert result.errors == (), [f.message for f in result.errors]
+    assert _kinds(result) == [fv.FrictionFindingKind.ANSWERS_NOT_MOVED]
     assert not result.is_dormant
     (artefact,) = result.discovery.artefacts
     assert artefact.kind is fd.ArtefactKind.DOCUMENT
@@ -929,23 +935,26 @@ def test_a_held_folder_leaving_the_repository_through_a_link_is_a_finding(
 
 
 def test_dangling_deferral_is_an_error_naming_the_anchor(adopter: AdopterRepo) -> None:
-    adopter.write(
-        {
-            CONFIG: _config(["docs"]),
-            "docs/guide.md": _document(
-                "guide",
-                anchors={"path": ["src/**"]},
-                revalidated={
-                    "deferred": [
-                        {"reason": "no anchor at all"},  # malformed: the block check reports it
-                        {"anchor": {"kind": "path", "value": "lib/**"}, "reason": "later"},
-                        {"anchor": {"kind": "record", "value": "COR-050"}, "reason": "later"},
-                        {"anchor": {"kind": "path", "value": "src/**"}, "reason": "kept"},
-                    ]
-                },
-            ),
-        }
-    )
+    """A block left holding deferrals, as history before the move holds them, has them
+    judged beside its own failure (COR-062 point 10)."""
+    with blocks_in_history():
+        adopter.write(
+            {
+                CONFIG: _config(["docs"]),
+                "docs/guide.md": _document(
+                    "guide",
+                    anchors={"path": ["src/**"]},
+                    revalidated={
+                        "deferred": [
+                            {"reason": "no anchor at all"},  # malformed: the block check says so
+                            {"anchor": {"kind": "path", "value": "lib/**"}, "reason": "later"},
+                            {"anchor": {"kind": "record", "value": "COR-050"}, "reason": "later"},
+                            {"anchor": {"kind": "path", "value": "src/**"}, "reason": "kept"},
+                        ]
+                    },
+                ),
+            }
+        )
     result = fv.validate_friction(adopter.root)
 
     dangling = [f for f in result.errors if f.kind is fv.FrictionFindingKind.DANGLING_DEFERRAL]
@@ -961,25 +970,26 @@ def test_dangling_deferral_is_an_error_naming_the_anchor(adopter: AdopterRepo) -
 def test_an_anchor_deferred_twice_is_an_error_at_each_later_entry(adopter: AdopterRepo) -> None:
     """COR-050 point 4: one entry per anchor. The first entry stands; each later one for
     the same kind and value is the finding — another anchor's entry between them, or the
-    same value under another kind, is no repeat."""
-    adopter.write(
-        {
-            CONFIG: _config(["docs"]),
-            "docs/guide.md": _document(
-                "guide",
-                anchors={"path": ["src/**", "COR-050"], "record": ["COR-050"]},
-                revalidated={
-                    "deferred": [
-                        {"anchor": {"kind": "path", "value": "src/**"}, "reason": "old words"},
-                        {"anchor": {"kind": "record", "value": "COR-050"}, "reason": "later"},
-                        {"anchor": {"kind": "path", "value": "COR-050"}, "reason": "a path"},
-                        {"anchor": {"kind": "path", "value": "src/**"}, "reason": "new words"},
-                        {"anchor": {"kind": "path", "value": "src/**"}, "reason": "third"},
-                    ]
-                },
-            ),
-        }
-    )
+    same value under another kind, is no repeat. Judged in a block history holds."""
+    with blocks_in_history():
+        adopter.write(
+            {
+                CONFIG: _config(["docs"]),
+                "docs/guide.md": _document(
+                    "guide",
+                    anchors={"path": ["src/**", "COR-050"], "record": ["COR-050"]},
+                    revalidated={
+                        "deferred": [
+                            {"anchor": {"kind": "path", "value": "src/**"}, "reason": "old words"},
+                            {"anchor": {"kind": "record", "value": "COR-050"}, "reason": "later"},
+                            {"anchor": {"kind": "path", "value": "COR-050"}, "reason": "a path"},
+                            {"anchor": {"kind": "path", "value": "src/**"}, "reason": "new words"},
+                            {"anchor": {"kind": "path", "value": "src/**"}, "reason": "third"},
+                        ]
+                    },
+                ),
+            }
+        )
     result = fv.validate_friction(adopter.root)
 
     repeated = [f for f in result.errors if f.kind is fv.FrictionFindingKind.DUPLICATE_DEFERRAL]
@@ -992,7 +1002,11 @@ def test_an_anchor_deferred_twice_is_an_error_at_each_later_entry(adopter: Adopt
         "path anchor 'src/**' is deferred again: entry 0 defers it already, and the list holds "
         "one entry per anchor"
     )
-    assert _kinds(result) == [fv.FrictionFindingKind.DUPLICATE_DEFERRAL] * 2
+    assert _kinds(result) == [
+        fv.FrictionFindingKind.DUPLICATE_DEFERRAL,
+        fv.FrictionFindingKind.DUPLICATE_DEFERRAL,
+        fv.FrictionFindingKind.ANSWERS_NOT_MOVED,
+    ]
 
 
 def test_unanchored_because_alone_is_accepted_and_beside_anchors_is_an_error(
@@ -1514,21 +1528,22 @@ def test_dormant_when_no_artefact_carries_the_container(adopter: AdopterRepo) ->
 
 
 def test_results_are_deterministic_across_runs(adopter: AdopterRepo) -> None:
-    adopter.write(
-        {
-            CONFIG: _config(["docs", "notes/*.md"]),
-            "docs/z.md": _document("Z", anchors={"artefact": ["Y"]}),
-            "docs/y.md": _document("Y", anchors={"artefact": ["Z"]}),
-            "docs/rules.md": COLLECTION,
-            "notes/n.md": _document(
-                "N",
-                anchors={"path": ["src/**"]},
-                revalidated={
-                    "deferred": [{"anchor": {"kind": "path", "value": "x"}, "reason": "r"}]
-                },
-            ),
-        }
-    )
+    with blocks_in_history():
+        adopter.write(
+            {
+                CONFIG: _config(["docs", "notes/*.md"]),
+                "docs/z.md": _document("Z", anchors={"artefact": ["Y"]}),
+                "docs/y.md": _document("Y", anchors={"artefact": ["Z"]}),
+                "docs/rules.md": COLLECTION,
+                "notes/n.md": _document(
+                    "N",
+                    anchors={"path": ["src/**"]},
+                    revalidated={
+                        "deferred": [{"anchor": {"kind": "path", "value": "x"}, "reason": "r"}]
+                    },
+                ),
+            }
+        )
     first = fv.validate_friction(adopter.root)
     second = fv.validate_friction(adopter.root)
 
@@ -1544,6 +1559,7 @@ def test_results_are_deterministic_across_runs(adopter: AdopterRepo) -> None:
         fv.FrictionFindingKind.MALFORMED_BLOCK,
         fv.FrictionFindingKind.DANGLING_DEFERRAL,
         fv.FrictionFindingKind.CYCLE,
+        fv.FrictionFindingKind.ANSWERS_NOT_MOVED,
     ]
 
 

@@ -6,6 +6,8 @@ date: 2026-07-07
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [DEC-059](DEC-059-topology-of-seats.md).** The topology is the project's committed configuration, a list of seats that every clone reads from the default branch, and work reaches agents through one shared pool. Overturned: point 2's per-user file, every passage that places the topology in it, and the parts of points 4 to 8 that assume it. Among what stands: a clone's name, references to workstreams that never rebind them, the warning of a workstream no one takes, and the expected owner's three cases. DEC-059's "What this overturns, and what stands" lists each passage.
+
 **In plain terms:** [project-management:DEC-035-instance-ownership] tells one person's
 concurrent clones apart by an *interchangeable number*. In practice a person runs
 clones with *distinct jobs* — a "data" clone, a "map" clone — and wants each clone to
@@ -64,7 +66,9 @@ marking or clash mechanics.**
 git-ignored, clone-local runtime identity carries a **display name** (e.g. `data`,
 `map`, `main`) alongside the numeric id. The name is a self-awareness affordance and a
 routing key; the numeric id and the `(assignee, instance:N)` owner from DEC-035 are
-unchanged underneath.
+unchanged underneath. Where the project's topology declares seats, a clone's name is
+the name of the seat it holds, which no person types (refinement per
+[project-management:DEC-059-topology-of-seats]).
 
 ### 2. A per-user, machine-local topology file — not committed, not team-shared
 

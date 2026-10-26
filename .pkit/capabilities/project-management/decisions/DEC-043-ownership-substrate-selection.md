@@ -69,7 +69,9 @@ that a repo opting into label-free ownership does not trip DEC-036's emergent-ac
 degrade its unlisted axes. **The default is `comment`** (the universally-safe substrate); `label`
 is the opt-in for repos whose operator knows labels are creatable. The default is deliberately
 *not* keyed off the presence of a substrate-map, because the motivating repo — label-locked but
-otherwise greenfield — has no substrate-map at all yet still cannot use labels.
+otherwise greenfield — has no substrate-map at all yet still cannot use labels. A project with a
+topology of seats takes `comment`, since a claim there names its seat, its clone's key and its time,
+which a label cannot carry (refinement per [project-management:DEC-059-topology-of-seats]).
 
 ### 3. In `comment` mode the source of truth is a per-instance, append-only ownership event log
 
@@ -175,7 +177,11 @@ substrate and making `label` the opt-in fails safe.
   ownership event log is that facility specialised with ownership event types, and the existing
   promote / bypass / handoff audit strings migrate onto it rather than running parallel.
 - **Read cost stays one call** — the description mirror is returned inline by
-  `gh issue list --json body`; the comment log is read only to reconcile or show history.
+  `gh issue list --json body`; the comment log is read only to reconcile or show history. In a
+  project with a topology of seats, a claim lapses by the time of reading, so the guard and the
+  shared pool fold the comment log of each Task In Progress, the only claims that lapse. The
+  ownership seam pages a long log, so a fold never reads one cut short (refinement per
+  [project-management:DEC-059-topology-of-seats]).
 - **Implementation is gated** — this is a surface change (new selector, new substrate, new schema
   home, schema formats) and bumps the capability version on landing per [pkit:PRJ-002]; a
   migration is unnecessary because greenfield (label) behaviour is byte-unchanged and the new

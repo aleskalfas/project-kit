@@ -9,10 +9,11 @@ pkit:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_check_diff.py
         - src/project_kit/decisions_validate.py
+        - src/project_kit/document_parts.py
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-019, COR-025, COR-041, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3"]
+      record: [COR-001, COR-019, COR-025, COR-041, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5"]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -52,7 +53,7 @@ Validation checks your own records only. A record that arrives as a synced copy 
 
 ### Rule sets — a separate family with the same guarantees
 
-Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, and each rule's statement sits in the body, in a section headed by the rule's id. Rules form their own identifier family, **`RS-<SET>-NNN`** — the family prefix, the rule set's name, a number — so a rule id can never collide with a record id. Ids are permanent: a rule is never renumbered, and a retired id is never reused.
+Rules are not decision records, but they share their guarantees ([COR-051](core/COR-051-rule-sets.md)). A **rule set** is one file holding many one-paragraph rules: the data sits in front matter, never in a sidecar beside the file ([COR-063](core/COR-063-document-sidecars.md)), and each rule's statement sits in the body, in a section headed by the rule's id. Rules form their own identifier family, **`RS-<SET>-NNN`** — the family prefix, the rule set's name, a number — so a rule id can never collide with a record id. Ids are permanent: a rule is never renumbered, and a retired id is never reused.
 
 - **Statuses.** A rule without a status is **`proposed`** and binds nothing. **`accepted`** rules bind. A **`superseded`** rule names its successor — in the same rule set, or in one that inherits it — and binds nothing. Rules add **`withdrawn`**, which only rules have: a rule retired without a successor, binding nothing. Superseded and withdrawn rules stay in place with their ids.
 - **The acceptance gate** applies per rule, wherever the rule set lives. That includes project-owned rule sets outside this folder, under the project's internal documentation root by default. A proposed rule binds nothing, and accepting one is a reviewed change.
@@ -69,6 +70,13 @@ Each kind of thing a record, an agent or a skill cites has one written form, and
 - **A point of a record** by the record and the point's id: "COR-050 point 11" in prose, and `COR-050#11` as an anchor's value ([COR-050](core/COR-050-anchors-and-friction.md) point 2). A labelled point is named by its label, as in `COR-033#P3`. A capability's record keeps its brackets in prose, "[project-management:DEC-055] point 3", and drops them in an anchor's value, `project-management:DEC-055#3`. A point written as a heading keeps its id for good, so its citations stay on it (see "Schema" below). A record whose points are still a list holds no point an anchor can name, since its numbers move (COR-050 point 7).
 - **A rule** by its rule id, as "Rule sets" above describes: `RS-CMN-003`, `[living-docs:RS-LDOC-003]`.
 - **A role or a point of a connection** by its address, in brackets ([COR-019](core/COR-019-schema-reference-form.md), [COR-053](core/COR-053-connection-points.md)): `[pkit::documentation]` names the documentation role and `[pkit::documentation:readers]` its readers point. The double colon marks an address; `[issue-types:task]`, with a single colon, stays a schema reference. An address resolves to what an installed capability declares in its package metadata. `pkit refs validate` reports an address that names no declared role or point, and reports a bracketed token with a double colon that is not an address — `[::documentation:readers]`, with no publisher — as malformed. `pkit refs lookup '[pkit::documentation:readers]'` prints where the point is declared.
+
+### Looking a citation up
+
+`pkit refs lookup` prints where a citation lies, and resolves a point of a record and a rule's heading too.
+- **A point of a record,** written as an anchor's value, prints its record's file and the anchor GitHub gives its heading: `pkit refs lookup COR-050#14`. A retired point gives its stub's heading. A record whose points are still a list gives a point no heading, so it prints the file alone. An id the record neither holds nor retires does not resolve.
+- **A rule** prints its place, and `--json` gives its heading's anchor too.
+- **With `--json`,** the document answers the ids in the order given. Each answer also gives the file in `path`, the anchor in `anchor`, and in `received` whether the file arrives as a synced copy.
 
 ## The no-shared-files invariant
 
@@ -100,7 +108,7 @@ Examples: `COR-001-init-vs-synced-lifecycle.md` (kit-owned, read-only), `PRJ-001
 
 ## Schema
 
-Each record is a Markdown file with YAML frontmatter and four required sections:
+Each record is a Markdown file with YAML frontmatter and four required sections, as below. A record keeps its frontmatter in its own file. Some other documents may keep theirs in a sidecar, a separate file beside the document, but a record never does ([COR-063](core/COR-063-document-sidecars.md)).
 
 ```markdown
 ---

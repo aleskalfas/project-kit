@@ -665,8 +665,10 @@ def config_set(key: str, value: str, yes: bool) -> None:
     Setting `docs.internal` also adds the old root's `rule-sets/` to
     `friction.places` where a rule-set file there would go unfound under the
     new root, in the same write and under the same consent (COR-051 point 6).
+    It then names each recorded documentation location the old root held and
+    the new one does not; each stays where it is (COR-049 point 6).
     """
-    from project_kit import backbone_schemas, project_config
+    from project_kit import backbone_schemas, docs_roots, project_config
 
     target_root = find_target_root()
     if target_root is None:
@@ -692,6 +694,7 @@ def config_set(key: str, value: str, yes: bool) -> None:
     if unchanged:
         click.echo(f"{resolved.dotted} is already {typed}; nothing to write.")
         return
+    old_internal = docs_roots.resolve_roots(target_root).internal
     # A change of the internal root also declares the old rule-set folder as a
     # place, in the same write and under the same consent (COR-051 point 6).
     change = project_config.apply_config(
@@ -705,6 +708,10 @@ def config_set(key: str, value: str, yes: bool) -> None:
     )
     if change.kept_rule_sets is not None:
         click.echo(change.kept_rule_sets.notice())
+    # What the old internal root held stays there, named so no location is left
+    # behind in silence (COR-049 point 6).
+    for left in docs_roots.left_behind(target_root, old_internal):
+        click.echo(left.notice())
     # The `.pkit/.gitignore` render reads the configuration (the process
     # journal's ignore line, COR-033 point 7): follow the new value now rather
     # than at the next sync, naming each component entry the render now leaves out.
@@ -1758,8 +1765,8 @@ def connections_resolve(address: str, as_json: bool) -> None:
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
-    discovery finds, whether what changed since a commit lies inside
-    `revalidated` blocks and `revisited` lists, the plan of the move of the
+    discovery finds, whether what changed since a commit lies inside answer
+    files the change adds, the plan of the move of the
     answers into answer files — which never write, the writers — revalidate,
     defer, revisit, record-status — which write one answer or status, only with
     consent, and resolve, which resolves a merge's conflicting revalidations and
@@ -1848,10 +1855,9 @@ def friction_revalidate_command(
     """Write ARTEFACT's revalidation (COR-050 point 3): a fresh `at`, the outcome, and
     for `unchanged` a new `unchanged-because`.
 
-    Where ARTEFACT's block holds no answer, it writes into an answer file of this
-    change's own, which names every other answer file on ARTEFACT in `read`
-    (COR-062 points 1 and 4); where its block holds answers, it rewrites the
-    `revalidated` block and nothing else in the file. Re-states the deferrals
+    It writes into an answer file of this change's own, which names every other
+    answer file on ARTEFACT in `read` (COR-062 points 1 and 4). An ARTEFACT whose
+    block still holds answers is refused, naming the move. Re-states the deferrals
     kept — each named with --keep or confirmed at the prompt — and drops the
     rest (point 4). ARTEFACT is a location (`path`, or `path#id` for a
     collection entry) or an id.
@@ -1893,8 +1899,8 @@ def friction_defer_command(
     or reword the reason of the entry already there.
 
     Writes the `deferred` list and nothing else — never `at`: a deferral is
-    not a revalidation. Where ARTEFACT's block holds no answer, the list is in an
-    answer file of this change's own (COR-062 point 1). The entry covers the
+    not a revalidation. The list is in an answer file of this change's own, and an
+    ARTEFACT whose block still holds answers is refused (COR-062 point 1). The entry covers the
     anchor's changes up to the commit that introduces it; rewording its reason
     does not move that.
     """
@@ -1940,8 +1946,9 @@ def friction_revisit_command(
     change alters its trigger fields, each target changes in the same change or
     ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
     it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
-    an entry is no revalidation of ARTEFACT. Where ARTEFACT's block holds no
-    answer, the list is in an answer file of this change's own (COR-062 point 1).
+    an entry is no revalidation of ARTEFACT. The list is in an answer file of this
+    change's own, and an ARTEFACT whose block still holds answers is refused
+    (COR-062 point 1).
     """
     rerun = [
         "pkit",
@@ -2124,7 +2131,7 @@ def friction_check_command(
     included) — or, with --head, commit REV — against the merge-base of REF —
     by default $PKIT_CHECK_BASE, else the default branch (COR-054). An `at`
     the change writes back — a value the artefact carried before, read from
-    its file's history behind the base — answers nothing: the artefact is
+    its answers' history behind the base — answers nothing: the artefact is
     judged against that value's revalidation point. Reports
     friction, dead anchors of the change, bumps with nothing behind them and
     an outdated base, and lists last every answer the change wrote, word for
@@ -2134,8 +2141,10 @@ def friction_check_command(
     fails, nor a dead anchor it cannot lay at the change (dead-unattributed),
     nor an anchor on an id two artefacts share (shared-id).
 
-    Answers in answer files (.pkit/project/friction/answers/) are read too,
-    and what each one read is judged against the change's own head: the
+    Answers are read in answer files (.pkit/project/friction/answers/) alone,
+    a block's only in the base's history; a project whose answers have not
+    moved is refused, naming the move. What each answer file read is judged
+    against the change's own head: the
     working tree's HEAD, or $PKIT_CHECK_HEAD, a parent of HEAD such as the
     change's head where a host checks out its merge with the base. Exit 1 in
     enforcing mode on an answer file the change rewrites, a prune mixed with
@@ -5363,22 +5372,25 @@ def refs_who_references(target: str) -> None:
     "--json",
     "as_json",
     is_flag=True,
-    help="Print one document answering each id given, in order: where it lies, or why it "
-    "does not resolve. Exit 0 either way.",
+    help="Print one document answering each id given, in order: where it lies, the file and "
+    "the host's anchor of a cited point's or rule's heading, whether that file arrives as a "
+    "synced copy, or why it does not resolve. Exit 0 either way.",
 )
 def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
-    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a rule (`RS-CMN-001`,
-    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set,
-    or a role or point address (`[pkit::documentation]`, `[pkit::documentation:readers]`)
-    to where an installed capability declares it. With `--json`, several ids at once,
-    answered in one document."""
+    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a point of a record
+    (`COR-050#14`, `PRJ-002#D1`) to its file and the anchor a repository host gives its
+    heading, a rule (`RS-CMN-001`, `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to
+    its place in its rule set, or a role or point address (`[pkit::documentation]`,
+    `[pkit::documentation:readers]`) to where an installed capability declares it. With
+    `--json`, several ids at once, answered in one document."""
     import json
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if as_json:
-        click.echo(json.dumps(refs_mod.lookup_document(target_root, record_ids), indent=2))
+        document = refs_mod.lookup_document(target_root, record_ids)
+        click.echo(json.dumps(document, indent=2, ensure_ascii=False))
         return
     if len(record_ids) != 1:
         raise click.UsageError("several ids are looked up with --json, in one document.")
