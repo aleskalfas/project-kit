@@ -74,7 +74,7 @@ Every project that works with AI coding agents builds a way of working for them.
 
 - **Your agent forgets what the project decided.** Each session starts from the project's files, and last week's chat is not among them.
 - **The agent asks about every harmless command, or may run one it never should.** You approve prompts without reading them, or turn them off.
-- **Documentation goes stale silently.** The code changes, and the page that describes it still reads as true.
+- **Documentation goes stale silently.** The code changes, and the document that describes it still reads as true.
 - **Nobody but the agent checks the agent's work.** The project's rules live in someone's head, and a change merges unchecked.
 - **Each project's setup is a hand-made copy.** An improvement to the shared part has to be copied into every project by hand.
 - **Taking an update could overwrite your own edits.** So nobody takes one, and the copies drift apart.
@@ -85,7 +85,7 @@ project-kit writes the shared part once, as a methodology. Your project installs
 
 - **[Your rules load into every session, and tell agents to build only on accepted decisions](#your-rules-load-into-every-session).**
 - **[Routine commands run unasked, and dangerous ones are denied in their common forms](#routine-commands-run-unasked-and-dangerous-ones-are-denied).**
-- **[A change to what a page rests on can't merge until someone says whether the page still holds, once your CI enforces the check](#no-change-leaves-a-document-stale-without-saying-so).**
+- **[A change to what a document rests on can't merge until someone says whether the document still holds, once your CI enforces the check](#no-change-leaves-a-document-stale-without-saying-so).**
 - **[Reviewer agents come ready to call, each defined never to change the work it judges](#reviewer-agents-come-ready-to-call).**
 - **[The methodology upgrades like a dependency](#the-methodology-upgrades-like-a-dependency):** one command, then a pinned version.
 - **[Your files stay yours](#your-files-stay-yours):** a sync keeps the lines you added.
@@ -134,10 +134,10 @@ $ pkit permissions probe | grep -e "^\[" -e "ED —" | head -n 8
 
 ### No change leaves a document stale without saying so
 
-**A change to what a page rests on can't merge until someone says whether the page still holds, once your CI enforces the check.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up, and a reviewer your project chooses checks each reason. In the example:
+**A change to what a document rests on can't merge until someone says whether the document still holds, once your CI enforces the check.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up, and a reviewer your project chooses checks each reason. In the example:
 
 - `docs/` holds documents
-- a page there rests on `app.py`
+- a document there rests on `app.py`
 - the check fails (`enforcing`) where by default it warns
 
 ```console
@@ -151,7 +151,7 @@ pkit:
       path: [app.py]
 ---
 # Starting the app
-$ echo 'print("hello")' > app.py && git add . && git commit -qm "Add the app and its page"
+$ echo 'print("hello")' > app.py && git add . && git commit -qm "Add the app and its document"
 $ echo 'print("hello, world")' > app.py
 $ pkit friction check | grep -A 4 FINDINGS
 warning: the default branch 'main' is read from the local branch 'main': this repository has no remote to read the shared one from, and a local branch can lag it or carry work nobody pushed (COR-054 point 2)
@@ -330,9 +330,9 @@ $ pkit status | grep -e "Backbone version" -e deployed
 
 Think of pkit as a **package manager for your project's methodology**. Four ideas, and you can reason about the whole system:
 
-1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
+1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repository) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
-3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the ways below). **That's *why* a sync can't conflict with your edits, as [Your files stay yours](#your-files-stay-yours) shows.** The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these ways:
+3. **Two owners, never shared.** Every file belongs to *either* the methodology (synced — don't edit) *or* you (yours — never touched, apart from the ways below). **That's *why* a sync can't conflict with your edits, as [Your files stay yours](#your-files-stay-yours) shows.** The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these ways:
    - **`CLAUDE.md` and settings:** they add what is missing, and put back a methodology entry you removed, an allow included. `pkit init` first backs up an existing `.claude/settings.json` to `.claude/settings.json.pre-pkit`. The merge adds allows, such as `git`, `ssh`, `find`, `Edit` and `Write`, and denies.
    - **Elsewhere:**
      - an upgrade's migrations
@@ -346,7 +346,7 @@ The shape of `.pkit/`:
 
 ```
 .pkit/
-├── decisions/     # the "why" — records (COR-… kit-owned · PRJ-… yours)
+├── decisions/     # the "why" — records (COR-… the methodology's · PRJ-… yours)
 ├── rules/         # hard rules, auto-loaded into your CLAUDE.md
 ├── agents/        # roles your AI delegates to (deployed into the harness)
 ├── skills/        # authoring procedures the AI runs
@@ -380,8 +380,8 @@ $ pkit project-management create-issue --type task --title "Add the app" 2>&1 | 
 ```
 
 **By role:**
-- **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch/PR conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
-- **Developers** → [`software-engineering`](.pkit/capabilities/software-engineering/README.md): an agent that writes code to *your* conventions, plus a code-review panel on your PRs. When a pattern recurs, you can package it as a capability of your own, from the primitives already there: decisions, schemas, skills and agents.
+- **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch and pull-request conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
+- **Developers** → [`software-engineering`](.pkit/capabilities/software-engineering/README.md): an agent that writes code to *your* conventions, plus a code-review panel on your pull requests. When a pattern recurs, you can package it as a capability of your own, from the primitives already there: decisions, schemas, skills and agents.
 
 **What actually gates on day one,** with the defaults (honestly — no more than this), is the structural checks your CI can run:
 
@@ -394,7 +394,7 @@ The friction check stays dormant until you declare where your documents live. In
 
 ## Go deeper
 
-- **Adopting / navigating the kit:** [`.pkit/README.md`](.pkit/README.md) — maps every area. The foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
+- **Adopting / navigating the methodology:** [`.pkit/README.md`](.pkit/README.md) — maps every area. The foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
 - **The command surface:** [`.pkit/cli/README.md`](.pkit/cli/README.md).
 - **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - **Session instructions for AI agents:** [`CLAUDE.md`](CLAUDE.md).
