@@ -185,7 +185,7 @@ pkit:
 
 - A clone that holds no [seat](../../../glossary.md#term-seat--seat) marks no [issue](../../../glossary.md#term-issue--issue) and is guarded by nothing, as a clone with no number ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 - A clone holds at most one seat, and a seat is held by at most one clone ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
-- The clone's key never leaves the clone, so no commit carries the key ([DEC-058 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task) and [DEC-035 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
+- No commit carries the clone's key. The clone keeps the key in a file that is never committed ([DEC-035 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)). Only comments on issues name the key ([DEC-058 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
 - Every command that acts as an [instance](../../../glossary.md#term-instance--instance) confirms the clone's seat on the seat's [state issue](../../../glossary.md#term-state-issue--state-issue) before the command writes (DEC-059 point 6).
 
 ## Open for the design
