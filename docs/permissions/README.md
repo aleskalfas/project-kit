@@ -118,7 +118,7 @@ What the output proves, claim by claim:
 
 ### Compared with the harness's own settings
 
-Claude Code's own settings, used alone, are better on setup and on the cost of a call, and both hold a deny in every mode. **The model is better on the other four points, as [the commands above](#what-the-model-does-instead) prove.** The cost is the hook, which runs for every call ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)):
+Claude Code's own settings, used alone, are better on setup and on the cost of a call. The settings and the model both hold a deny in every mode. **The model is better on the other four points, as [the commands above](#what-the-model-does-instead) prove.** The cost is the hook, which runs for every call ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)):
 
 | What you need | Claude Code's settings alone | The permission model |
 | --- | --- | --- |
