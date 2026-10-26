@@ -7,7 +7,7 @@ other-actors: []
 requirements:
   - REQ-062
 after:
-  - [UC-082]
+  - [UC-082, UC-092]
 shortfalls:
   - at: 1
     issue: "#521"
@@ -38,7 +38,7 @@ pkit:
 
 **Other actors:** None.
 
-**Preconditions:** **From UC-082:** Each agent's clone has its number (DEC-035 point 1).
+**Preconditions:** **From UC-082, or UC-092:** Each agent's clone has its number (DEC-035 point 1).
 
 **Assumptions:**
 
@@ -69,7 +69,8 @@ pkit:
 
 What the planner needs here that no accepted record decides yet:
 
-- **Each instance's name in the listing,** such as `api`. DEC-045 point 1 gives a clone a name of its own, and only DEC-045 point 2's per-user file would name the other [instances](../../../glossary.md#term-instance--instance).
+- **Each owner's seat in the listing, decided.** DEC-045 point 1 gives a clone a name of its own, and only DEC-045 point 2's per-user file would name the other [instances](../../../glossary.md#term-instance--instance). The maintainer decided on 26 October that a clone's identity is its [seat](../../../glossary.md#term-seat--seat)'s name, such as `api-worker`. So the listing can name each [owner](../../../glossary.md#term-owner--owner) by its seat, once a project-management record on [topologies](../../../glossary.md#term-topology--topology) holds it (#512).
+- **Which clone holds which seat, decided.** Each seat's [state issue](../../../glossary.md#term-state-issue--state-issue) shows the clone that holds it, and logs each clone that took or released it (`UC-082`). So the planner sees the seats on GitHub, without visiting any agent. The maintainer decided it on 26 October, and no record holds it yet.
 - **The fixers' proposals across clones.** Each clone keeps the proposals its own runs made, and `land-work` prints only that clone's count (DEC-056 point 6). So the planner sees them only by visiting each agent.
 - **One view of all that waits on a person,** such as heads ready to merge and records waiting for acceptance. The maintainer decided on 17 October that one view lists all of that (#1682), and no record holds the decision yet.
 - **Where each agent is heading,** beside what it owns. The pilot analysis proposed a command for it, under [EPIC](../../../glossary.md#term-epic--epic) #943, and no record decides it.

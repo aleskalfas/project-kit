@@ -13,6 +13,7 @@ relies-on:
   - UC-084
   - UC-087
   - UC-089
+  - UC-092
 requirements: []
 pkit:
   friction:
@@ -33,23 +34,25 @@ pkit:
         - UC-084
         - UC-087
         - UC-089
+        - UC-092
 ---
 
 # JRN-004 — Set up the topology my project runs, and adjust it on what I measure
 
-**Goal:** Run several AI agents on my project at once, each on its own scope, and adjust their topology on what I measure of their work.
+**Goal:** Run several AI agents on my project at once, each in its own seat, and adjust their topology on what I measure of their work.
 
 **Steps:**
 
-1. UC-082 — Set up the topology my project runs, so that every agent reads the same one
-   - **Needs from UC-064 (outside this journey):** the [workstreams](../../glossary.md#term-workstream--workstream) the [project](../../../core/glossary.md#term-project--project) declares, which each agent's [scope](../../glossary.md#term-scope--scope) names (DEC-045 point 3). The Tasks of a workstream that no scope names reach no agent (UC-084 step 1). DEC-045 point 4 has the system warn of such a workstream, and UC-082 step 5 shows that nothing warns yet.
+1. UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats
+   - **Needs from UC-064 (outside this journey):** the [workstreams](../../glossary.md#term-workstream--workstream) the [project](../../../core/glossary.md#term-project--project) declares, which a [seat](../../glossary.md#term-seat--seat)'s [scope](../../glossary.md#term-scope--scope) may name (DEC-045 point 3). DEC-045 point 4 has the system warn of a workstream that two scopes name, or that none names. UC-082 step 5 shows that nothing warns yet.
 2. UC-091 — Measure one topology against another on comparable work
    - **Needs from step 1 (UC-082):** each [topology](../../glossary.md#term-topology--topology) to compare, set up in turn. GitHub records no topology beside a [pull request](../../../core/glossary.md#term-pull-request--pull-request), so the adopter keeps which topology did which work.
+   - **Needs from UC-092 (outside this journey):** each seat of the topology taken by a clone, whose agent acts as that seat's agent. A seat no clone takes does none of the topology's work.
    - **Needs from UC-083 (outside this journey):** the Tasks of each plan the planner approved, each filed with the workstream of its work. These Tasks are the work a topology does.
    - **Needs from UC-084 (outside this journey):** each [Task](../../glossary.md#term-task--task) a worker agent took and built, with its pull request open. A topology's time runs from its first pull request.
    - **Needs from UC-087 (outside this journey):** what each next piece of the work needs from an earlier piece, landed on the [default branch](../../../core/glossary.md#term-default-branch--default-branch). The next piece's Task can start only after that landing, so a topology's work reaches its last merge only once every piece is handed on.
    - **Needs from UC-089 (outside this journey):** each Task's pull request merged, with the [verdict](../../glossary.md#term-verdict--verdict) of each review round naming the [head](../../../core/glossary.md#term-head--head) that round reviewed (DEC-028). A pull request still open gives no time to its merge, so all the work compared must have landed.
-3. UC-082 — Set up the topology my project runs, so that every agent reads the same one
+3. UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats
    - **Needs from step 2 (UC-091):** each topology's figures, which show the one that serves the project better. The adopter sets that topology up again for the work that follows.
 
 **Variants:**
@@ -66,4 +69,4 @@ pkit:
 
 ## Sources
 
-The goal rests on DEC-045, which decides the [topology](../../glossary.md#term-topology--topology) and the [scope](../../glossary.md#term-scope--scope) the topology gives each agent. Measuring one topology against another is a goal that #2096 names, as the sources of UC-091 say. Adjusting the topology on what the measure shows is setting it up again, as UC-082 describes.
+The goal rests on DEC-045, which decides the [topology](../../glossary.md#term-topology--topology) and the [scope](../../glossary.md#term-scope--scope) it may give each agent. It rests too on the maintainer's decisions that `UC-082` quotes: on 26 October he decided that each agent works in a [seat](../../glossary.md#term-seat--seat) of the topology. Measuring one topology against another is a goal that #2096 names, as the sources of UC-091 say. Adjusting the topology on what the measure shows is setting it up again, as UC-082 describes.

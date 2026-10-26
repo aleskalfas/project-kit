@@ -30,7 +30,7 @@ builds-on:
       - id: ACT-adopter
         name: Adopter
         needs:
-          - Set up the topology my project runs, so that every agent of that topology reads the same one.
+          - Set up my project's topology in its committed configuration, so that every clone reads the same seats from the default branch.
           - Measure one topology against another on comparable work, by figures GitHub holds.
       - id: ACT-developer
         name: Developer
@@ -40,6 +40,8 @@ builds-on:
           - Have the reviewer agents my change requires review my pull request, each verdict standing only while I change nothing its reviewer checks.
       - id: ACT-ai-agent
         name: AI agent
+        needs:
+          - Take a seat of my project's topology, and act as that seat's agent.
       - id: ACT-ci-pipeline
         name: CI pipeline
       - id: ACT-merge-authoriser
@@ -305,6 +307,29 @@ TERM-scope:
         record:
           - project-management:DEC-045#3
           - project-management:DEC-018
+TERM-seat:
+  name: seat
+  noun-forms: [seats]
+  status: active
+  definition: "place in a topology that one clone holds, saying whether the clone's agent plans, builds or does both, and which agent definition it follows"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-045#1
+          - project-management:DEC-045#3
+          - project-management:DEC-029
+TERM-state-issue:
+  name: state issue
+  noun-forms: [state issues]
+  status: active
+  definition: "GitHub item outside the work's hierarchy, whose comments log each new value of one piece of shared data, and whose description shows the current one"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-043#3
+          - project-management:DEC-043#4
 TERM-task:
   name: Task
   status: active
@@ -320,7 +345,7 @@ TERM-topology:
   name: topology
   noun-forms: [topologies]
   status: active
-  definition: "set of AI agents a project runs at once, each with its name, its scope, and whether it plans, builds or does both"
+  definition: "set of seats a project declares for the AI agents that work on it at once"
   pkit:
     friction:
       anchors:
@@ -409,13 +434,14 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
-    - Set up the topology my project runs, so that every agent of that topology reads the same one.
+    - Set up my project's topology in its committed configuration, so that every clone reads the same seats from the default branch.
     - Measure one topology against another on comparable work, by figures GitHub holds.
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - File a Task under its parent, with its title and the sections its body needs checked as it is filed.
     - Move my issue through its lifecycle, with each move checked and the moves that need my authorisation never made without it.
     - Have the reviewer agents my change requires review my pull request, each verdict standing only while I change nothing its reviewer checks.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
+    - Take a seat of my project's topology, and act as that seat's agent.
   - **Actor:** [CI pipeline](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ci-pipeline.md)
   - **Actor:** [Merge authoriser](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md)
   - **Actor:** [Operator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-operator.md)
@@ -545,6 +571,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#instance).
 - **Session:** one run of an AI agent in a clone. A session ends or dies, and the instance keeps its number, which a file in the clone holds (DEC-035 point 1).
 - **A clone with no number:** a clone that never set one. It marks nothing and is guarded by nothing, as before instances existed (DEC-035 point 1).
 - **A linked worktree:** a further working tree of a clone. Whether it shares its clone's number, or may set one of its own, is not decided yet (#1140).
+- **Seat:** a place in a [topology](#term-topology--topology), which a clone takes. The maintainer decided on 26 October that the clone's number is then derived from the topology, never typed.
 
 ## TERM-issue — issue
 
@@ -643,7 +670,7 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
 
-**Example:** a worker agent whose scope is the [workstream](#term-workstream--workstream) `api` takes its Tasks from `api`. A scope by stage of the work, such as testing, has no form decided yet.
+**Example:** a worker agent whose [seat](#term-seat--seat)'s scope is the [workstream](#term-workstream--workstream) `api` takes its Tasks from `api`. A worker agent whose seat has no scope takes from all the [project](../core/glossary.md#term-project--project)'s ready Tasks. A scope by discipline, such as testing, has no form decided yet.
 
 **Distinctions:**
 
@@ -651,6 +678,31 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
 - **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone it is.
 - **The scope of a set of rules:** what selects the artefacts its rules bind on (COR-051). It is no part of a [topology](#term-topology--topology).
 - **The scope of a grant:** where an entry of the permission model allows or denies a privilege (COR-028). It is no part of a topology either.
+
+## TERM-seat — seat
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#seat).
+
+**Example:** the seat `api-worker` is held by a worker agent that follows the project-manager agent's definition. A clone that takes the seat works under the name `api-worker`, and its agent builds Tasks.
+
+**Distinctions:**
+
+- **Instance:** a clone with a number of its own. A clone takes a seat, and the maintainer decided on 26 October that the clone's identity is then the seat's name.
+- **Actor:** the planning agent, a worker agent and a lead agent are actors of this analysis. A seat says which of them the agent that holds it is.
+- **DEC-045's named instance:** a clone with a name, listed in one person's file with the [workstreams](#term-workstream--workstream) it handles (DEC-045 points 1 and 2). The maintainer decided on 26 October that the adopter writes seats in the [project](../core/glossary.md#term-project--project)'s committed configuration instead.
+- **Agent definition:** the file that defines an agent. A seat names the [agent definition](../core/glossary.md#term-agent-definition--agent-definition) its agent follows, the project-manager agent's by default.
+
+## TERM-state-issue — state issue
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#state-issue).
+
+**Example:** the [seat](#term-seat--seat) `api-worker` has a state issue. A comment on it records each clone that takes or releases the seat, and its description names the clone that holds the seat now.
+
+**Distinctions:**
+
+- **Issue:** an item of work, filed as one of four types. A state issue holds no work, takes none of the four types and sits under no parent.
+- **The owner's comment log:** the comments on an [issue](#term-issue--issue) of work that record its [owner](#term-owner--owner), with a summary in its description (DEC-043 points 3 and 4). A state issue keeps its own data the same way.
+- **Committed configuration:** what a person reviews before it changes, such as the [topology](#term-topology--topology). A state issue holds what changes while agents work, as the maintainer decided on 26 October.
 
 ## TERM-task — Task
 
@@ -668,12 +720,13 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#topology).
 
-**Example:** one [project](../core/glossary.md#term-project--project)'s topology holds a planning agent, and two worker agents whose scopes are the [workstreams](#term-workstream--workstream) `api` and `web`. Another project's holds three lead agents, one for each of its workstreams.
+**Example:** one [project](../core/glossary.md#term-project--project)'s topology holds a planning agent's [seat](#term-seat--seat), and two worker agents' seats with no [scope](#term-scope--scope). Another project's holds three lead agents' seats, whose scopes are its [workstreams](#term-workstream--workstream) `api`, `web` and `docs`.
 
 **Distinctions:**
 
 - **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists their [instances](#term-instance--instance) and the workstreams each handles (DEC-045 point 2). On 25 October the maintainer decided that a topology is shared through the project's committed configuration instead (#512).
-- **Instance:** one clone of the project, which an agent of the topology works in. How an instance learns which agent of the topology it is, is not decided yet.
+- **Seat:** one place in a topology, which one clone holds. The topology says nothing of who holds a seat now, which the seat's [state issue](#term-state-issue--state-issue) shows.
+- **Instance:** one clone of the project, which takes a seat of the topology. How a clone takes a seat is decided by no record yet (#512).
 - **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says what they work on.
 
 ## TERM-umbrella — Umbrella

@@ -13,6 +13,9 @@ shortfalls:
   - at: 2
     issue: "#521"
     record: project-management:DEC-035#7
+  - at: "2a"
+    issue: "#520"
+    record: project-management:DEC-035#6
 pkit:
   friction:
     anchors:
@@ -22,6 +25,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/start-work.py
       record:
         - project-management:DEC-035#1
+        - project-management:DEC-035#4
+        - project-management:DEC-035#6
         - project-management:DEC-035#7
         - project-management:DEC-043#4
         - project-management:DEC-013
@@ -61,6 +66,11 @@ pkit:
 **Variants:**
 
 - **1a.** The clone has set no number, such as a fresh clone. Nothing marks which Tasks were its own, and the worker finds them only among the issues assigned to its account (DEC-035 point 1).
+- **2a.** The clone holds a [Task](../../../glossary.md#term-task--task)'s branch, but another [instance](../../../glossary.md#term-instance--instance) owns the Task now. That instance took the Task over while the session was dead (DEC-035 point 4). The worker's ordinary commands on the Task refuse, and name that instance (DEC-035 point 6). The worker leaves the Task to its [owner](../../../glossary.md#term-owner--owner), as `UC-085` describes.
+
+> [!WARNING]
+> **Not built yet:** no ordinary command reads the owner, so the worker's commands on the Task go on. DEC-035 point 6 decides the refusal, and #520 tracks it.
+
 - **4a.** Work the dead session never committed is lost. The worker builds that part again.
 
 **Postconditions:** The worker goes on with each [Task](../../../glossary.md#term-task--task) its [instance](../../../glossary.md#term-instance--instance) owns, on that Task's branch, from what the branch holds.
@@ -74,5 +84,7 @@ pkit:
 
 What the worker needs here that no accepted record decides yet:
 
+- **The seat after a session died, decided.** In the first and most tolerant mode, a [seat](../../../glossary.md#term-seat--seat) stays taken until its clone releases it, or until a release by force. So a new session in the same clone finds its seat still held, and goes on as that seat's agent, as `UC-092` describes. The maintainer decided it on 26 October, and a project-management record on [topologies](../../../glossary.md#term-topology--topology) is to hold it (#512).
+- **The Tasks after a session died, decided.** The work renews a [Task](../../../glossary.md#term-task--task)'s ownership, and a generous limit ends an ownership the work no longer renews (`UC-085`). So a session that comes back late may find that another [instance](../../../glossary.md#term-instance--instance) owns the Task. It checks that before it writes, and parks its work where the Task is no longer its own. The maintainer decided it on 26 October, and no record holds it yet.
 - **Where the work was heading,** beyond what the branch shows. No record decides how a session leaves its next step on the [issue](../../../glossary.md#term-issue--issue). The pilot analysis's intent notes proposed one, under [EPIC](../../../glossary.md#term-epic--epic) #943.
 - **A session in a linked worktree** of the clone. Today it reads no number of its clone. #1140 proposes that it reads its clone's number, which refines DEC-035 point 1 and waits for the maintainer's sign-off.
