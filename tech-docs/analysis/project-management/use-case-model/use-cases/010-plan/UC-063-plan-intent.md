@@ -16,9 +16,6 @@ shortfalls:
   - at: 8
     issue: "#1761"
     record: project-management:DEC-014
-  - at: 9
-    issue: "#1761"
-    record: project-management:DEC-029
 pkit:
   friction:
     anchors:
@@ -43,6 +40,7 @@ pkit:
         - project-management:DEC-054#3
         - project-management:DEC-054#4
         - project-management:DEC-054#5
+        - project-management:DEC-060
         - COR-013
         - COR-017
         - COR-024
@@ -81,7 +79,7 @@ pkit:
 1. The planner gives the `project-manager` agent an intent, such as "let a [project](../../../../core/glossary.md#term-project--project) rename a [workstream](../../../glossary.md#term-workstream--workstream)", with its reference material.
 2. The agent reads the intent and each reference. Where the intent is unclear, it asks at most two questions, in one message (`batch-plan.md`).
 3. The agent reads the [use-case entries](../../../glossary.md#term-use-case-entry--use-case-entry) with `pkit connections resolve pkit::work-tracking:use-cases --json` ([DEC-054 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#3-the-states-the-rule-distinguishes)). It walks the active entries against the intent, reading each one's document where its path is given ([DEC-054 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#5-the-planning-step)).
-4. The agent slices the intent into an [EPIC](../../../glossary.md#term-epic--epic), Features, Umbrellas and Tasks. It gives each its parent, its value on each [classification axis](../../../glossary.md#term-classification-axis--classification-axis), and the use-case entries it serves ([DEC-004](../../../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md), [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md) and DEC-054 point 5).
+4. The agent slices the intent into an [EPIC](../../../glossary.md#term-epic--epic), Features, Umbrellas and Tasks. It gives each its parent, its value on each [classification axis](../../../glossary.md#term-classification-axis--classification-axis), and the use-case entries it serves ([DEC-004](../../../../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md), [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md) and DEC-054 point 5). Where the Tasks would share a choice nothing settles yet, the plan files only the EPIC, with an outline, and the foundation's [Feature](../../../glossary.md#term-feature--feature). The agent plans the slices in a second plan, once the planner closes that Feature ([DEC-060](../../../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md)).
 5. Where the plan holds three issues or more, the agent has the critic review it. Where its work crosses three [components](../../../../core/glossary.md#term-component--component) or more, or brings in a new abstraction, the architect reviews it too ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 6. The agent shows the [batch plan](../../../glossary.md#term-batch-plan--batch-plan): its rows, the order of the work, the [reviewers](../../../../core/glossary.md#term-reviewer--reviewer)' [findings](../../../../core/glossary.md#term-finding--finding) and the use-case entries each [issue](../../../glossary.md#term-issue--issue) serves. It names the active entries the intent touches that no issue names, and the work that no entry describes (DEC-054 point 5).
 7. The planner approves the plan (DEC-029).
@@ -90,11 +88,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** filing an issue and writing its body are two calls. A body refused after its issue is filed leaves the template's body there. [DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md) decides that no issue is left half filed, and #1761 tracks it.
 
-9. The agent attaches each issue the plan schedules to its [Milestone](../../../glossary.md#term-milestone--milestone) with `pkit pm promote-issue <n> --milestone <M>`, the planner's approval being its reason ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md) and DEC-029).
-
-> [!WARNING]
-> **Not built yet:** the `batch-plan` procedure attaches the Milestone with a raw `gh issue edit`. That leaves no [audit comment](../../../glossary.md#term-audit-comment--audit-comment) and no journal entry, and checks no repository. DEC-029 decides that the agent files through the [capability](../../../../core/glossary.md#term-capability--capability)'s own commands, and #1761 tracks it.
-
+9. The agent attaches each issue the plan schedules to its [Milestone](../../../glossary.md#term-milestone--milestone) with `pkit pm promote-issue <n> --milestone <M>`, the planner's approval being its reason ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md), DEC-029 and `batch-plan.md`).
 10. The agent reports each issue it filed, with its number and its link.
 
 **Variants:**
