@@ -27,7 +27,7 @@ VERSIONS = Versions(tree="1.2.3", capability="0.9.0", cli="1.2.3")
 def test_an_event_round_trips_through_its_comment() -> None:
     ev = audit_log.event("state-claim", key="planner", clone="k1", place="mac:/work/repo")
     parsed = audit_log.parse(audit_log.build(ev, versions=VERSIONS))
-    assert parsed == ev
+    assert parsed is not None and parsed == ev
     assert parsed.family == audit_log.STATE_ISSUE
 
 
@@ -55,9 +55,10 @@ def test_every_act_carries_an_id_of_its_own() -> None:
 
 def test_a_retry_finds_its_own_act_and_a_second_act_does_not() -> None:
     ev = audit_log.event("state-claim", key="k", clone="c", place="p")
+    again = audit_log.event("state-claim", key="k", clone="c", place="p")
+    assert ev.act is not None and again.act is not None
     bodies = ["hello", audit_log.build(ev)]
     assert audit_log.posted(bodies, ev.act)
-    again = audit_log.event("state-claim", key="k", clone="c", place="p")
     assert not audit_log.posted(bodies, again.act)
 
 

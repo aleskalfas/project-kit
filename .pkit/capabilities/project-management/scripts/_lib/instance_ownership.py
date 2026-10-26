@@ -307,7 +307,7 @@ def _label_owners(labels: Iterable[dict[str, Any] | str]) -> frozenset[int]:
 
 def resolve_owner(
     *,
-    comments: Iterable[dict[str, Any]],
+    comments: Iterable[Any],
     labels: Iterable[dict[str, Any] | str],
     assignee_login: str | None,
     selector: str = DEFAULT_SUBSTRATE,

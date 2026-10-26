@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import TypeVar
 
 import pytest
 
@@ -32,6 +33,19 @@ VERSIONS = provenance.Versions(tree="1.2.3", capability="0.9.0", cli="1.2.3")
 ME = si.Clone(account="me", key="key-me", place="laptop:/work/repo")
 OTHER = si.Clone(account="me", key="key-other", place="sandbox-2:/repo")
 BOB = si.Clone(account="bob", key="key-bob", place="bob-box:/repo")
+
+T = TypeVar("T")
+
+
+def _some(value: T | None) -> T:
+    """``value``, which the test expects the seam to have returned."""
+    assert value is not None
+    return value
+
+
+def _holder(read: si.StateRead) -> si.Holder:
+    """The holder of the state a read folded, which the test expects there."""
+    return _some(_some(read.fold).holder)
 
 
 def _run(repo: FakeRepo, writers: si.Writers | None = None) -> si.StateRun:
@@ -56,11 +70,12 @@ def _event(repo: FakeRepo, number: int, type_name: str, clone: si.Clone, **extra
 
 def test_the_marker_round_trips_whatever_the_key_holds() -> None:
     for key in ("planner", "Planner", "two words", "a-->b", "x--y", "50%"):
-        marker = si.read_marker(si.marker_line("seat", key))
+        marker = _some(si.read_marker(si.marker_line("seat", key)))
         assert marker == si.Marker("seat", key, si.MARKER_VERSION)
         assert marker.names("seat", key)
-    assert not si.read_marker(si.marker_line("seat", "planner")).names("seat", "Planner")
-    assert not si.read_marker(si.marker_line("seat", "planner")).names("lock", "planner")
+    planner = _some(si.read_marker(si.marker_line("seat", "planner")))
+    assert not planner.names("seat", "Planner")
+    assert not planner.names("lock", "planner")
 
 
 def test_the_marker_takes_the_form_the_one_read_of_issues_looks_for() -> None:
@@ -109,7 +124,7 @@ def test_no_version_a_hand_writes_makes_the_marker_reader_fail(version: str) -> 
 def test_a_key_cannot_put_a_line_ahead_of_the_marker() -> None:
     planted = si.marker_line("seat", "other")
     comment = si.marker_comment("seat", f"planner\n{planted}", VERSIONS)
-    assert si.read_marker(comment).key == f"planner\n{planted}"
+    assert _some(si.read_marker(comment)).key == f"planner\n{planted}"
 
 
 def test_a_comment_from_anyone_cannot_break_a_read() -> None:
@@ -119,7 +134,7 @@ def test_a_comment_from_anyone_cannot_break_a_read() -> None:
     repo.post(5, "<!-- pkit:state-issue v=² kind=seat key=planner -->", author="mallory")
     _event(repo, 5, si.CLAIM, ME)
     read = si.read(5, "seat", "planner", _run(repo))
-    assert read.outcome == si.READ and read.fold.holder.clone == "key-me"
+    assert read.outcome == si.READ and _holder(read).clone == "key-me"
 
 
 def test_a_marker_refuses_a_kind_it_cannot_carry_or_an_empty_key() -> None:
@@ -181,12 +196,13 @@ def test_create_makes_the_issue_then_its_marker_comment_then_the_filing_comment(
     repo = FakeRepo()
     out = si.create("seat", "planner", "Seat planner", _run(repo))
     assert out.outcome == si.CREATED
-    issue = repo.issues[out.number]
-    assert si.read_marker(issue.body).names("seat", "planner")
+    number = _some(out.number)
+    issue = repo.issues[number]
+    assert _some(si.read_marker(issue.body)).names("seat", "planner")
     assert si.VIEW_BEGIN in issue.body and "**Free.**" in issue.body
     assert provenance.MARKER_START in issue.body
-    first, second = repo.bodies(out.number)
-    assert si.read_marker(first).names("seat", "planner")
+    first, second = repo.bodies(number)
+    assert _some(si.read_marker(first)).names("seat", "planner")
     assert "<!-- pkit-state-marker -->" in first
     assert first.startswith("📌 state-marker — this issue holds the seat `planner`")
     assert provenance.FILING_MARKER in second
@@ -220,7 +236,7 @@ def test_a_read_accepts_the_earliest_marker_comment_from_an_author_who_may_write
     repo.post(5, si.marker_comment("seat", "worker", VERSIONS), author="mallory")
     repo.post(5, si.marker_comment("seat", "planner", VERSIONS), author="me")
     read = si.read(5, "seat", "planner", _run(repo))
-    assert read.outcome == si.READ and read.fold.free
+    assert read.outcome == si.READ and _some(read.fold).free
 
 
 def test_a_read_refuses_an_issue_whose_first_writers_marker_names_another_key() -> None:
@@ -237,8 +253,8 @@ def test_only_the_comments_of_an_author_who_may_write_count() -> None:
     _event(repo, 5, si.CLAIM, si.Clone("mallory", "k-m", "x"))
     _event(repo, 5, si.CLAIM, ME)
     read = si.read(5, "seat", "planner", _run(repo))
-    assert read.fold.holder == si.Holder("me", "key-me", ME.place)
-    assert [e.author for e in read.fold.events] == ["me"]
+    assert _holder(read) == si.Holder("me", "key-me", ME.place)
+    assert [e.author for e in _some(read.fold).events] == ["me"]
 
 
 def test_with_the_gate_open_each_author_is_asked_about_once_in_a_run() -> None:
@@ -250,7 +266,7 @@ def test_with_the_gate_open_each_author_is_asked_about_once_in_a_run() -> None:
     _event(repo, 5, si.CLAIM, BOB)
     run = _run(repo, si.Writers.open())
     read = si.read(5, "seat", "planner", run)
-    assert read.fold.holder == si.Holder("bob", "key-bob", BOB.place)
+    assert _holder(read) == si.Holder("bob", "key-bob", BOB.place)
     si.read(5, "seat", "planner", run)
     asked = [argv[2] for argv in repo.calls if "/collaborators/" in argv[-1]]
     assert sorted(asked) == sorted(set(asked))  # each author once, in both reads
@@ -266,7 +282,7 @@ def test_an_author_github_does_not_know_counts_as_one_who_may_not_write() -> Non
     _event(repo, 5, si.CLAIM, ME)
     read = si.read(5, "seat", "planner", _run(repo, si.Writers.open()))
     assert read.outcome == si.READ
-    assert read.fold.holder.clone == "key-me"
+    assert _holder(read).clone == "key-me"
 
 
 def test_a_failed_access_call_makes_the_read_incomplete_and_drops_nothing() -> None:
@@ -298,7 +314,7 @@ def test_a_long_log_is_read_whole(monkeypatch) -> None:
         _event(repo, 5, si.CLAIM, ME)
         _event(repo, 5, si.RELEASE, ME)
     _event(repo, 5, si.CLAIM, BOB)
-    assert si.read(5, "seat", "planner", _run(repo)).fold.holder.account == "bob"
+    assert _holder(si.read(5, "seat", "planner", _run(repo))).account == "bob"
 
 
 def test_a_read_restores_a_marker_a_hand_removed_from_the_description() -> None:
@@ -308,7 +324,7 @@ def test_a_read_restores_a_marker_a_hand_removed_from_the_description() -> None:
     issue.body = "Someone tidied this description."
     read = si.read(5, "seat", "planner", _run(repo))
     assert read.outcome == si.READ and read.restored == si.WROTE
-    assert si.read_marker(issue.body).names("seat", "planner")
+    assert _some(si.read_marker(issue.body)).names("seat", "planner")
     assert "key-me" in issue.body
     assert si.read(5, "seat", "planner", _run(repo)).restored is None
 
@@ -328,7 +344,7 @@ def test_find_takes_the_issue_github_numbered_first_and_names_the_rest() -> None
     repo.add(3, "## What\n\nA task.\n")
     rows = [{"number": n, "body": i.body} for n, i in repo.issues.items()]
     found = si.find("seat", "planner", rows, _run(repo))
-    assert found.outcome == si.READ and found.read.number == 8
+    assert found.outcome == si.READ and _some(found.read).number == 8
     assert found.duplicates == (12,)
     assert found.half_done == (10,)
 
@@ -347,10 +363,10 @@ def test_a_claim_on_a_free_state_holds_and_the_region_shows_it() -> None:
     repo = FakeRepo()
     issue = _state_issue(repo)
     out = si.claim(5, "seat", "planner", ME, _run(repo))
-    assert out.outcome == si.CLAIMED and out.holder.is_clone("me", "key-me")
+    assert out.outcome == si.CLAIMED and _some(out.holder).is_clone("me", "key-me")
     assert out.view == si.WROTE
     assert "**Held** by the account `me`, clone `key-me`" in issue.body
-    claim = audit_log.parse(repo.bodies(5)[-1])
+    claim = _some(audit_log.parse(repo.bodies(5)[-1]))
     assert (claim.type, claim.get("key"), claim.get("clone"), claim.get("place")) == (
         si.CLAIM,
         "planner",
@@ -376,7 +392,7 @@ def test_a_claim_that_another_clone_beat_loses_and_writes_nothing_more() -> None
         _event(repo, n, si.CLAIM, OTHER) if len(repo.bodies(n)) == 1 else None
     )
     out = si.claim(5, "seat", "planner", ME, _run(repo))
-    assert out.outcome == si.LOST and out.holder.is_clone("me", "key-other")
+    assert out.outcome == si.LOST and _some(out.holder).is_clone("me", "key-other")
     comments = [c for c in repo.writes() if c[2] == "comment"]
     assert len(comments) == 1  # the claim, and no release of the lost claim
 
@@ -422,7 +438,7 @@ def test_a_release_frees_the_state_its_clone_holds() -> None:
     si.claim(5, "seat", "planner", ME, run)
     out = si.release(5, "seat", "planner", ME, run)
     assert out.outcome == si.RELEASED and out.holder is None
-    assert out.freed.is_clone("me", "key-me")
+    assert _some(out.freed).is_clone("me", "key-me")
     assert "**Free.**" in issue.body
 
 
@@ -433,7 +449,7 @@ def test_a_release_by_another_clone_or_of_a_free_state_writes_nothing() -> None:
     assert si.release(5, "seat", "planner", ME, run).outcome == si.NOTHING
     _event(repo, 5, si.CLAIM, ME)
     out = si.release(5, "seat", "planner", OTHER, run)
-    assert out.outcome == si.NOT_HOLDER and out.holder.is_clone("me", "key-me")
+    assert out.outcome == si.NOT_HOLDER and _some(out.holder).is_clone("me", "key-me")
     assert repo.writes() == []
 
 
@@ -442,9 +458,9 @@ def test_a_release_by_force_frees_the_holder_and_carries_its_reason() -> None:
     _state_issue(repo)
     _event(repo, 5, si.CLAIM, ME)
     out = si.force_release(5, "seat", "planner", BOB, "the sandbox was deleted", _run(repo))
-    assert out.outcome == si.RELEASED and out.freed.is_clone("me", "key-me")
+    assert out.outcome == si.RELEASED and _some(out.freed).is_clone("me", "key-me")
     assert out.holder is None
-    ev = audit_log.parse(repo.bodies(5)[-1])
+    ev = _some(audit_log.parse(repo.bodies(5)[-1]))
     assert ev.type == si.FORCE_RELEASE and ev.get("reason") == "the sandbox was deleted"
     with pytest.raises(ValueError):
         si.force_release(5, "seat", "planner", BOB, "  ", _run(repo))
@@ -508,18 +524,18 @@ def test_construction_every_write_comes_from_the_seams_constructors() -> None:
     or the filing comment."""
     repo = FakeRepo()
     run = _run(repo)
-    made = si.create("seat", "planner", "Seat planner", run)
-    repo.issues[made.number].state = "CLOSED"
-    si.claim(made.number, "seat", "planner", ME, run)
-    si.release(made.number, "seat", "planner", ME, run)
-    si.claim(made.number, "seat", "planner", OTHER, run)
-    si.force_release(made.number, "seat", "planner", BOB, "stale", run)
-    si.close(made.number, run)
+    number = _some(si.create("seat", "planner", "Seat planner", run).number)
+    repo.issues[number].state = "CLOSED"
+    si.claim(number, "seat", "planner", ME, run)
+    si.release(number, "seat", "planner", ME, run)
+    si.claim(number, "seat", "planner", OTHER, run)
+    si.force_release(number, "seat", "planner", BOB, "stale", run)
+    si.close(number, run)
     writes = repo.writes()
     assert {argv[2] for argv in writes} == set(_WRITE_SHAPES)
     for argv in writes:
         assert _WRITE_SHAPES[argv[2]](argv), argv
-    for body in repo.bodies(made.number):
+    for body in repo.bodies(number):
         ev = audit_log.parse(body)
         assert (
             (ev is not None and ev.type in si.EVENTS)
