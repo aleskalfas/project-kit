@@ -2628,6 +2628,9 @@ def land(
         _stub_gates(monkeypatch, lw.done_work, cap)
         _stub_done_work(monkeypatch, lw.done_work, run)
         _the_change_wrote_no_answers(monkeypatch, lw.friction_answers)
+        # Nor does it alter an accepted decision record (#2161).
+        accepted = lw.accepted_records
+        monkeypatch.setattr(accepted, "derive", lambda head, base: accepted.Derivation())
         # The stub's change writes no answer and changes no grant list.
         monkeypatch.setattr(lw, "_grants_between", lambda *args: ())
         monkeypatch.setattr(lw, "_sleep", clock.sleep)
