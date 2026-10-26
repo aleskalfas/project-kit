@@ -1,0 +1,183 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+    revalidated:
+      at: 2026-10-26T07:44:57Z
+      outcome: unchanged
+      unchanged-because: Main's hints' examples now cite a project's own record, and the link command links citations (DEC-001 point 13). This change writes the example of a use case's other actors with its id plain, so it takes the link of an id (point 14). Neither adds or removes a kind, a place or a layout of parts, so what an artefact kind is holds against both.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T07:45:06Z
+      outcome: unchanged
+      unchanged-because: Main rewords hints and examples, which now cite a project's own record, and leaves a part still holding its hint to the placeholder check. This change writes the example of a use case's other actors with its id plain, and its forms read a linked id as the id. Each kind's parts, ids, labels and forms stay declared once as data, so what a declared structure is holds against both.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-revalidation-proposal
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - moved-8e5538b29006.yaml
+    revalidated:
+      at: 2026-10-26T07:45:09Z
+      outcome: unchanged
+      unchanged-because: The resolver's analysis-stale commands now run pkit analysis link first, which links what the edit cites (DEC-001 point 13), the ids it names (point 14) and, where the analysis keeps a domain model, its terms. What a revalidation proposal is, the agent's draft of each flagged artefact's result that a person answers from, holds against both.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T07:45:13Z
+      outcome: unchanged
+      unchanged-because: "The resolver's commands run pkit analysis link before an updated answer, the skill's second step links citations and ids in every analysis, and main's tests find a use case's hint below its Main path label. None of them changes who decides: the agent still proposes, and a person confirms each candidate or answer before it is written."
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T07:45:17Z
+      outcome: unchanged
+      unchanged-because: check.py now holds the links of citations and of ids, whatever any rule's status, as it holds the links to terms, and reports a part still holding its hint once, by the placeholder check. A body is still held to its declared structure only where the format rule binds, and a record's always, so the requirement holds against both.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-074-free-uncited-ids.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - moved-cac80ba8834a.yaml
+    revalidated:
+      at: 2026-10-26T07:45:20Z
+      outcome: unchanged
+      unchanged-because: The authoring skill's second step runs pkit analysis link in every analysis, which links citations and ids, and says to name the capability before a DEC-NNN it warns of. Freeing the ids of artefacts nothing cites, through the numbering setting, is untouched by both, so every step and variant holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+    revalidated:
+      at: 2026-10-26T07:45:24Z
+      outcome: unchanged
+      unchanged-because: The hints' shipped examples now cite a project's own record, the list hints are reworded with each example a list's first item, and the example of a use case's other actors writes its id plain. The template still shows each part with its hint and example, so choosing each kind's parts holds against both.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-001
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - moved-cfb5a5e6377e.yaml
+    revalidated:
+      at: 2026-10-26T07:45:28Z
+      outcome: unchanged
+      unchanged-because: DEC-001 gains point 13, which links citations, and point 14, which links ids, and point 1 lets the link command read a body to place them. The format rule asks each artefact to carry its kind's structure, which neither changes, and its checkable part reads a linked id as the id, so a linked step line still matches its data.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T07:45:32Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T07:45:35Z
+      outcome: updated
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052253Z-1eddb2b6.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T07:45:46Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
