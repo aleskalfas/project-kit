@@ -62,6 +62,10 @@ How a session relates to repos other than the one it is rooted in.
 
 21. **Retry once a step that failed for a cause outside your own work, then stop.** Such causes include a locked signing key, a service that is down or the network. Before the retry, check that the step did not take effect. If it fails again, stop your work and report what failed. Waiting on something pending is not a retry. Rationale: [project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648#issuecomment-6247728164).
 
+## Before changing files
+
+22. **Before you change files, look up the accepted records their anchors lead to.** Run `pkit refs records-for` once, with every file your change will commit, and read each record it lists as tied to them directly, at the points it names. Where it reaches a file only through another artefact, read that artefact, the narrowest first, and follow the records it rests on that bear on your change. An empty answer is no sign that no record governs a file. What the lookup reads, and why: the decisions README, "Finding the records a path leads to" ([project-kit#2165](https://github.com/aleskalfas/project-kit/issues/2165)).
+
 ## Where rationale lives
 
 Each rule cites the record or doc that owns its "why", or, where none does, the issue that decided it. The umbrella references:
