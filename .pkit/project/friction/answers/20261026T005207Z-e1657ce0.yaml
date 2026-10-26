@@ -1,0 +1,587 @@
+answers:
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T00:52:07Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: tech-docs/analysis/core/domain-model/030-capabilities-areas-and-connection-points.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T205437Z-a3b903e8.yaml
+      - moved-517cd38da793.yaml
+    revalidated:
+      at: 2026-10-26T00:52:08Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-c65929ef6b08.yaml
+    revalidated:
+      at: 2026-10-26T00:52:09Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-78477704a6e4.yaml
+    revalidated:
+      at: 2026-10-26T00:52:11Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-e11f83cef2b2.yaml
+    revalidated:
+      at: 2026-10-26T00:52:12Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-018-same-json-same-state.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-83533106223a.yaml
+    revalidated:
+      at: 2026-10-26T00:52:13Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-004-missing-answer-never-clean.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-97da208f5979.yaml
+    revalidated:
+      at: 2026-10-26T00:52:15Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-006-command-time-bound.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-4695bf771ed9.yaml
+    revalidated:
+      at: 2026-10-26T00:52:16Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-bcae90c061e0.yaml
+    revalidated:
+      at: 2026-10-26T00:52:18Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-40743155218d.yaml
+    revalidated:
+      at: 2026-10-26T00:52:19Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-26T00:52:20Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-26T00:52:22Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-bca813b8718e.yaml
+    revalidated:
+      at: 2026-10-26T00:52:23Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-82a9f92cf8a6.yaml
+    revalidated:
+      at: 2026-10-26T00:52:25Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-e74c084a6ef5.yaml
+    revalidated:
+      at: 2026-10-26T00:52:26Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-14cab8fa596f.yaml
+    revalidated:
+      at: 2026-10-26T00:52:28Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-26T00:52:29Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-26T00:52:30Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-50d19a823f20.yaml
+    revalidated:
+      at: 2026-10-26T00:52:32Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-26T00:52:33Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-66d5b1529575.yaml
+    revalidated:
+      at: 2026-10-26T00:52:34Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-828a24ebf347.yaml
+    revalidated:
+      at: 2026-10-26T00:52:36Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-c6041f71d67c.yaml
+    revalidated:
+      at: 2026-10-26T00:52:38Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-26T00:52:39Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-26T00:52:40Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-7a369d906fdb.yaml
+    revalidated:
+      at: 2026-10-26T00:52:42Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-26T00:52:43Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-b82457b5436c.yaml
+    revalidated:
+      at: 2026-10-26T00:52:44Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-c95d6fad77f9.yaml
+    revalidated:
+      at: 2026-10-26T00:52:46Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-a164d961d8b1.yaml
+    revalidated:
+      at: 2026-10-26T00:52:47Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-26T00:52:49Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-26T00:52:50Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-26T00:52:51Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-26T00:52:53Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-26T00:52:55Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-525e5f95da00.yaml
+    revalidated:
+      at: 2026-10-26T00:52:56Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-26T00:52:59Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-26T00:53:01Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-677ab7326b1b.yaml
+    revalidated:
+      at: 2026-10-26T00:53:04Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-26T00:53:06Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-26T00:53:08Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-012-report-problem.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-16225f01f42e.yaml
+    revalidated:
+      at: 2026-10-26T00:53:09Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-013-link-reports.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-441b89549614.yaml
+    revalidated:
+      at: 2026-10-26T00:53:11Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-26T00:53:12Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-26T00:53:14Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-26T00:53:16Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-26T00:53:18Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-26T00:53:19Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-c023390f2be9.yaml
+    revalidated:
+      at: 2026-10-26T00:53:20Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - moved-4859ed958bd4.yaml
+    revalidated:
+      at: 2026-10-26T00:53:22Z
+      outcome: updated
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-26T00:53:23Z
+      outcome: unchanged
+      unchanged-because: With main merged, cli.py rewords the friction commands' help for answer files, and this change gives pkit refs lookup a point's heading anchor. install.py changes only init's closing next steps. How the core layer copies, registers and runs each adapter, as this README says, is untouched by all three.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - moved-7bd9bf62ec3a.yaml
+      - moved-a08ed9a38659.yaml
+    revalidated:
+      at: 2026-10-26T00:53:25Z
+      outcome: unchanged
+      unchanged-because: The Surface table now says pkit refs lookup gives a point's heading anchor, and main rewords its friction revalidate, defer and revisit rows for answer files. The permissions commands this README cites the Surface for are untouched by both, so it holds.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+    revalidated:
+      at: 2026-10-26T00:53:27Z
+      outcome: unchanged
+      unchanged-because: The Surface table now says pkit refs lookup gives a point's heading anchor, and main rewords its friction revalidate, defer and revisit rows for answer files. This guide names no lookup, and the permissions commands it sends its reader to the Surface for are as before, so it holds.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T00:53:29Z
+      outcome: unchanged
+      unchanged-because: refs.py's lookup now also gives a point's heading anchor, and the actors, journeys and REQ-021 gain only links to the records they cite. With main merged, the writer writes a revalidation into an answer file, which the change check reads, as the README's example shows. The README quotes none of init's closing next steps, which main changed. Its install line at the tag latest and its settings.json.pre-pkit backup still hold.
