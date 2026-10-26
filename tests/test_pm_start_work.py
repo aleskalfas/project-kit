@@ -5,14 +5,13 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
-from tests.pm_ownership_support import FakeGitHub, clone_with, stub_seat_stamps, topology_with
+from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
@@ -635,11 +634,8 @@ def _assigned_42() -> FakeGitHub:
     return github
 
 
-_T = datetime(2026, 7, 7, tzinfo=UTC)
-
-
 def _stamp(sw, event: str, instance: int) -> str:
-    return sw.instance_claims.ownership.format_event_comment(event=event, instance=instance, ts=_T)
+    return sw.instance_claims.ownership.format_event_comment(event=event, instance=instance)
 
 
 def test_with_no_instance_id_start_work_is_unchanged(run_main, capsys) -> None:
@@ -820,8 +816,8 @@ def test_a_dry_run_claims_nothing(run_main, capsys) -> None:
 
 # ---- a project with a topology of seats (DEC-059 points 5, 7 and 9) -----------
 #
-# The run's reading of the topology and the stamp that names a seat stand in for
-# what #2140, #2141 and #2138 bring (`tests/pm_ownership_support`).
+# The run's reading of the topology stands in for what #2140 and #2141 bring
+# (`tests/pm_ownership_support`).
 
 
 @pytest.fixture
@@ -831,19 +827,18 @@ def seats(sw, monkeypatch) -> Any:
     gives each seat's holder (`worker-2` held by this clone by default)."""
     claims = sw.instance_claims
     ownership = claims.ownership
-    stub_seat_stamps(ownership, monkeypatch)
 
     def seat(role: str = "worker", holders: dict | None = None) -> None:
         held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
-        topology = claims.Topology(claims.Seat("worker-2", 2, role), "k2", holders or held)
-        topology_with(claims, monkeypatch, topology)
+        topology = claims.Topology(claims.Seat("worker-2", 2, role), holders or held)
+        topology_with(claims, monkeypatch, topology, key="k2")
 
     return seat
 
 
 def _seat_claim(sw, seat: str, instance: int, key: str) -> str:
     return sw.instance_claims.ownership.format_event_comment(
-        event="claim", instance=instance, ts=_T, seat=seat, key=key
+        event="claim", instance=instance, seat=seat, seat_number=instance, clone=key
     )
 
 
@@ -855,7 +850,7 @@ def test_a_worker_claims_for_its_seat(run_main, sw, seats, capsys) -> None:
     assert rc == 0
     assert ("move", "in-progress") in mutations
     claim = github.issues[42].comments[0]["body"]
-    assert "event=claim instance=2 seat=worker-2 key=k2" in claim
+    assert "event=claim instance=2 seat=worker-2 seat_number=2 clone=k2 " in claim
     assert "[ok] ownership: #42 claimed for seat worker-2, instance 2" in capsys.readouterr().out
 
 
@@ -912,7 +907,7 @@ def test_a_claim_whose_seat_cannot_be_read_refuses(run_main, sw, seats, capsys) 
 def test_a_clone_that_holds_no_seat_marks_nothing(run_main, sw, monkeypatch, capsys) -> None:
     """DEC-059 point 6: no seat, no instance, whatever id file the clone kept."""
     claims = sw.instance_claims
-    topology_with(claims, monkeypatch, claims.Topology(None, "k9", {}))
+    topology_with(claims, monkeypatch, claims.Topology(None, {}), key="k9")
     github = _assigned_42()
     github.post(42, _stamp(sw, "claim", 3))
     rc, _mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)

@@ -6,11 +6,11 @@ date: 2026-10-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** when the default branch leaves an artefact out of date, the agent that fixes artefacts of its type starts and proposes an answer, and the person decides it. A capability declares which of its agents fixes which of its types. A fixer starts on its own only where the project granted it, and only the person grants. A command of this capability, the drift command, starts the granted fixers, each bounded and confined as far as the harness allows. The person is asked a plain question about each fixer nobody was asked about: by the drift command, and by install and upgrade once the core lifecycle can ask. Commands list, grant and revoke. A fixer only proposes. It takes one brief and ends with one line for each artefact, by one contract that this capability sets for every fixer. Its proposals wait as files, the landing command says how many wait, and the person accepts, rewords or refuses each before anything is written.
+**In plain terms:** when the default branch leaves an artefact out of date, the agent that fixes artefacts of its type starts and proposes an answer, and the person, or the delegate they named, decides it. A capability declares which of its agents fixes which of its types. A fixer starts on its own only where the project granted it, and only the person grants. A command of this capability, the drift command, starts the granted fixers, each bounded and confined as far as the harness allows. The person is asked a plain question about each fixer nobody was asked about: by the drift command, and by install and upgrade once the core lifecycle can ask. Commands list, grant and revoke. A fixer only proposes. It takes one brief and ends with one line for each artefact, by one contract that this capability sets for every fixer. Its proposals wait as files, the landing command says how many wait, and the person, or their delegate, accepts, rewords or refuses each before anything is written.
 
 ## Context
 
-The whole-repository check finds the artefacts that merges left out of date on the default branch. That debt is derived from git (COR-050 point 9), and the checks are read-only (COR-050 point 12). A capability that owns artefacts may ship an agent that proposes their answers. Nothing starts such an agent. The debt waits until a person reads the check and starts the right agent by hand. Nothing gathers what they propose either, and each such answer is the person's decision (COR-050 point 3).
+The whole-repository check finds the artefacts that merges left out of date on the default branch. That debt is derived from git (COR-050 point 9), and the checks are read-only (COR-050 point 12). A capability that owns artefacts may ship an agent that proposes their answers. Nothing starts such an agent. The debt waits until a person reads the check and starts the right agent by hand. Nothing gathers what they propose either, and each such answer is the person's decision, or the decision of a delegate the person named (COR-050 point 3).
 
 Starting them on their own raises who may start which agent.
 - **A fixer is an agent with a shell** that runs with nobody watching. A reviewer a capability contributes applies on install ([project-management:DEC-032-conditional-reviewer-requirements]), but a reviewer gates a change a person is making.
@@ -21,7 +21,7 @@ What one agent may start through the harness's own dispatch tool is a separate q
 
 ## Decision
 
-**A capability declares its fixers in a data point this capability accepts. The person grants each fixer, by answering a question or by command, and nothing is granted by default. A command of this capability starts the granted fixers on the default branch's stale artefacts, each bounded, confined and limited to proposing. The proposals wait as files until the person decides each one, and this capability applies what the person accepts through an ordinary change.**
+**A capability declares its fixers in a data point this capability accepts. The person grants each fixer, by answering a question or by command, and nothing is granted by default. A command of this capability starts the granted fixers on the default branch's stale artefacts, each bounded, confined and limited to proposing. The proposals wait as files until the person, or the delegate they named, decides each one, and this capability applies what is accepted through an ordinary change.**
 
 ### 1. A capability declares its fixers
 
@@ -154,10 +154,10 @@ A run nobody watches cannot ask, so a tool call no rule allows is refused, and t
   - A command the platform runs outside the sandbox is held by the run's rules alone.
   - Where the adapter can only take away, the project's allow rules outside the denied categories reach the run.
   - The permission layer sees the command, not each agent it starts.
-  - A proposal's words can carry a contributor's steering, so the person reads every word of each answer before accepting it.
+  - A proposal's words can carry a contributor's steering, so whoever decides an answer reads every word of it before accepting it. A delegate is an agent, which such words can steer too. It judges from what the files hold, and refers to the person what only an account settles. Behind it stand the reviewer's check against the same files and the person's report (COR-064 points 3 to 5). A fluent reason the files do not contradict can still pass.
   - A pull request's text can change after its merge, so the words a brief quotes may be newer than the commit.
 
-### 6. The proposals wait for the person
+### 6. The proposals wait for a decision
 
 - **Files, not pull requests.** A fixer writes its proposal into its workspace, in a folder named for the artefact as the brief names it. The folder holds `evidence.md`, which the person reads before deciding, the diff where the fixer proposes an edit, and `answer.json`. A held artefact's folder holds its evidence and no answer. A pull request would need a branch, a commit, a push and an issue, each made under the person's account by a run nobody watched.
 - **A proposal is data.** It is a diff and its answer. The diff is confined to the file of the artefact it was dispatched for, or to its entry in a collection file. A proposal whose diff reaches anything else is set aside, as a breach is (point 5).
@@ -177,8 +177,9 @@ A run nobody watches cannot ask, so a tool call no rule allows is refused, and t
 - **Checked again before it is shown, and before it is applied.** A proposal whose artefact is no longer stale, or whose friction at the current default branch differs from what it was judged against, is set aside and dispatched again. It is never shown or applied, since a revalidation would answer friction nobody judged. A proposal judged under another version of the contract is set aside and dispatched again too. The index records the version each run's proposals follow.
 - **Visible.** The landing command prints a one-line count of the proposals waiting. A view of what waits on the person, once this capability builds one, lists them beside the rest.
 - **One batch.** The project manager brings the proposals to the person together, each with its evidence, its diff and its commands word for word. The person accepts, rewords or refuses each.
+- **Or the delegate decides.** Where the default branch names a delegate (COR-064), the delegate decides each proposal in the person's place, as that record sets out. It judges from the files, and a proposal's evidence is a lead to it, never a ground. The person is told what it decided and what it refused. A question a fixer held stays the person's. So does a proposal on an artefact whose type's owner keeps its answers for a person by its own record (COR-064 point 1).
 - **A refusal is remembered** in the queue, against the artefact's friction, so the artefact is not dispatched again until its friction changes. It goes with the queue. Its lasting form is a deferral, which the person may give instead as their own answer.
-- **After yes.** The person first does what each accepted answer lists for them to do, such as reporting a defect and writing its reference into the reason. The project manager files an issue, branches, applies the accepted diffs in upstream order and runs the writers the person accepted. A diff that no longer applies is set aside and dispatched again. The project manager runs a writer only under the conditions the agents README sets for an agent whose task is the answer itself ("Friction writers"). The change then passes the ordinary gate, and the person authorises its merge.
+- **After yes.** Whoever accepted an answer first does what it lists, such as reporting a defect and writing its reference into the reason. The project manager files an issue, branches, applies the accepted diffs in upstream order and runs the writers the person accepted. A diff that no longer applies is set aside and dispatched again. The project manager runs a writer only under the conditions the agents README sets for an agent whose task is the answer itself ("Friction writers"). The change then passes the ordinary gate, and the person authorises its merge.
 - **A fixer runs no writer.** It has no way to ask the person, and point 5 denies it every writer.
 
 ## Rationale

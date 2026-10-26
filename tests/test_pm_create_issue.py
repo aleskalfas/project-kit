@@ -11,18 +11,14 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from tests.pm_ownership_support import (
-    FakeGitHub,
-    clone_with,
-    stub_seat_stamps,
-    topology_with,
-    use,
-)
+from tests.pm_ownership_support import FakeGitHub, clone_with, topology_with, use
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -508,15 +504,14 @@ def test_an_issue_filed_for_another_person_is_not_claimed(
 
 def _file_from_seat(ci, tmp_path, monkeypatch, role: str) -> tuple[int, list, FakeGitHub]:
     """File from a clone that holds the topology's first seat, of `role`
-    (DEC-059), with the stamp that names a seat stood in for (#2138)."""
+    (DEC-059), with the key `k1`."""
     github = FakeGitHub(author="filer-login")
     github.add(55, assignees=("filer-login",))
     claims = ci.instance_claims
     ownership = claims.ownership
-    stub_seat_stamps(ownership, monkeypatch)
     holder = ownership.Holder(ownership.SEAT_HELD, "filer-login", "k1")
     seat = claims.Seat("seat-1", 1, role)
-    topology_with(claims, monkeypatch, claims.Topology(seat, "k1", {"seat-1": holder}))
+    topology_with(claims, monkeypatch, claims.Topology(seat, {"seat-1": holder}), key="k1")
     use(claims, monkeypatch, github)
     rc, calls = _file_task(ci, tmp_path, monkeypatch, _CLEAN_TITLE)
     return rc, calls, github
@@ -539,7 +534,7 @@ def test_any_other_seat_claims_what_it_files(ci, tmp_path, monkeypatch, capsys, 
     rc, _calls, github = _file_from_seat(ci, tmp_path, monkeypatch, role)
     assert rc == 0
     claim = github.issues[55].comments[0]["body"]
-    assert "event=claim instance=1 seat=seat-1 key=k1" in claim
+    assert "event=claim instance=1 seat=seat-1 seat_number=1 clone=k1 " in claim
     assert "#55 claimed for seat seat-1, instance 1" in capsys.readouterr().out
 
 
@@ -3237,3 +3232,32 @@ def test_each_shipped_template_composes_a_body_the_rules_accept(
     err = capsys.readouterr().err
     assert "body.required-section" not in err
     assert "body.h1" not in err
+
+
+def test_the_children_view_is_rendered_from_issues_of_work_alone(ci, monkeypatch) -> None:
+    """#2139: the corpus the children view renders from comes through the one
+    read of issues, which leaves a state issue out, even one whose first line
+    names the parent (DEC-058 point 3)."""
+    rows = [
+        {"number": 7, "title": "[Task] child", "body": "Feature: #5\n## What\n"},
+        {
+            "number": 8,
+            "title": "Seat planner",
+            "body": "Feature: #5\n<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+        },
+    ]
+
+    def fake_gh(args, config):
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+
+    seen: dict = {}
+
+    def fake_refresh(config, *, parent_number, corpus, containment_mode, titles=None):
+        seen.update(corpus=corpus, titles=titles)
+        return SimpleNamespace(ok=True, detail="children view refreshed")
+
+    monkeypatch.setattr(ci.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(ci.containment, "refresh_children_comment", fake_refresh)
+    ci._refresh_parent_children_view({}, parent_number=5, containment_mode="textual")
+    assert set(seen["corpus"]) == {7}
+    assert set(seen["titles"]) == {7}

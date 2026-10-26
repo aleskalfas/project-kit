@@ -116,11 +116,13 @@ class FakeRepo:
             return _proc(cmd)
         if verb == ["issue", "list"] and "--label" in cmd:
             label = _flag(cmd, "--label")
+            fields = (_flag(cmd, "--json") or "").split(",")
             hits = [
-                {"number": n, "title": i["title"]}
+                {"number": n, "title": i["title"], "body": i.get("body", "")}
                 for n, i in sorted(self.issues.items())
                 if label in i["labels"]
             ]
+            hits = [{k: v for k, v in hit.items() if k in fields} for hit in hits]
             return _proc(cmd, json.dumps(hits))
         if verb in (["issue", "list"], ["pr", "list"]) and "--search" in cmd:
             if verb == ["pr", "list"]:

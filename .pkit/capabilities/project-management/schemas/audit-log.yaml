@@ -1,0 +1,87 @@
+# The audit-log facility's machine stamp, and the event types it builds.
+#
+# Per [project-management:DEC-044-audit-log-facility], every event comment the
+# capability posts carries a hidden, versioned machine stamp that tooling reads,
+# beside a line a person reads. This schema declares the stamp's form and the
+# event types, each with its family (the seam that posts it) and its payload.
+# `scripts/_lib/audit_log.py` is the one builder and parser, and a test holds it
+# to this file. Two families post events today: the ownership seam
+# ([pkit:ADR-041] point 3) and the state-issue seam ([pkit:ADR-071] point 5).
+#
+# Each event type is also a kind of [project-management:DEC-052-comment-house-style]'s
+# roster: its comment ends with the kind's marker `<!-- pkit-<event> -->` and the
+# provenance footer.
+
+schema_version: 1
+
+# The stamp. One line of its own, outside a fenced code block:
+#   <!-- pkit:audit v=<version> event=<event> <field>=<value> ... -->
+# Each value is percent-encoded, so no value holds a space, a `>` or a run of
+# two hyphens, and none can end the stamp. Every stamp carries `id`, made once
+# for each act, so a retry finds its own comment and two acts never merge. The
+# stamp carries no time: a fold takes each event's time from GitHub's record of
+# the comment.
+stamp:
+  prefix: "pkit:audit"
+  version: 1
+  act_field: id
+  # Stamps written before the facility, still read. The ownership seam wrote
+  # `<!-- pkit:instance-owner v=1 event=<event> instance=<n> [to=<n>] ts=<time> -->`;
+  # its events read as the same events, without the fields the new stamp adds
+  # (DEC-059 Implications).
+  legacy:
+    - prefix: "pkit:instance-owner"
+      version: 1
+      fields: [instance, to, ts]
+
+# Event types. Lookup by id, the stamp's `event`.
+#
+# Per-entry fields:
+#   family:   the seam that posts the event — `ownership` or `state-issue`
+#   fields:   the payload's fields, in the order the stamp writes them
+#   required: the fields an event of this type cannot do without
+#   summary:  what the event records, for a person
+events:
+  claim:
+    family: ownership
+    fields: [instance, seat, seat_number, clone, name, id]
+    required: [instance]
+    summary: >-
+      An instance claims an issue of work. In a project with a topology it names
+      the seat, the seat's number and the clone's key.
+  handoff:
+    family: ownership
+    fields: [instance, to, seat, seat_number, clone, name, id]
+    required: [instance, to]
+    summary: >-
+      An instance hands an issue to another. In a project with a topology it
+      names the target seat, its number and the key of its holder.
+  abandon:
+    family: ownership
+    fields: [instance, seat, seat_number, clone, name, id]
+    required: [instance]
+    summary: An instance stops work on an issue and gives up its claim.
+  release:
+    family: ownership
+    fields: [instance, seat, seat_number, clone, name, id]
+    required: [instance]
+    summary: An instance releases an issue once it is done.
+  state-claim:
+    family: state-issue
+    fields: [key, clone, place, id]
+    required: [key, clone, place]
+    summary: >-
+      A clone claims the state a state issue holds, naming the state's key, the
+      clone's key and where the clone lies. The first claim on a free state holds.
+  state-release:
+    family: state-issue
+    fields: [key, clone, place, id]
+    required: [key, clone, place]
+    summary: The clone that holds the state releases it.
+  state-force-release:
+    family: state-issue
+    fields: [key, clone, place, reason, id]
+    required: [key, clone, place, reason]
+    summary: >-
+      A release by force, with its reason, frees the state whoever holds it. The
+      record that adds the state says who may write one.

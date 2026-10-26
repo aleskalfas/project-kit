@@ -35,7 +35,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _lib import axis_labels, board_fields, substrate_writes
+from _lib import axis_labels, board_fields, issue_list, substrate_writes
 from _lib.workstreams import rewrite_references
 
 GhCall = Callable[..., "subprocess.CompletedProcess[str]"]
@@ -94,27 +94,51 @@ def _issues(stdout: str) -> list[dict[str, Any]] | None:
     return [d for d in data if isinstance(d, dict)] if isinstance(data, list) else None
 
 
+def _list_issues(
+    flags: list[str], fields: str, config: dict[str, Any], *, gh_call: GhCall, **kwargs: Any
+) -> tuple[list[dict[str, Any]] | None, str | None]:
+    """The issues of work one `gh issue list` returns, or `(None, error)`.
+
+    The listing runs through the capability's one read of its issues, which
+    leaves state issues out (DEC-058 point 3), so no state issue is a carrier
+    or holds a reference to rewrite.
+    """
+    try:
+        listing = issue_list.list_issues(
+            config, flags, fields=fields, gh_call=gh_call, check=False, **kwargs
+        )
+    except FileNotFoundError:
+        return None, "`gh` not on PATH. Install GitHub CLI."
+    if listing.returncode != 0:
+        return None, listing.stderr.strip() or "`gh issue list` failed"
+    if listing.rows is None:
+        return None, "`gh issue list` returned non-JSON output."
+    return [row for row in listing.rows if isinstance(row, dict)], None
+
+
+def _list_prs(
+    flags: list[str], fields: str, config: dict[str, Any], *, gh_call: GhCall, **kwargs: Any
+) -> tuple[list[dict[str, Any]] | None, str | None]:
+    """The pull requests one `gh pr list` returns, or `(None, error)`."""
+    proc, error = _run(gh_call, ["gh", "pr", "list", *flags, "--json", fields], config, **kwargs)
+    if proc is None:
+        return None, error
+    entries = _issues(proc.stdout)
+    if entries is None:
+        return None, "`gh pr list` returned non-JSON output."
+    return entries, None
+
+
 def issues_with_label(label: str, config: dict[str, Any], *, gh_call: GhCall) -> CarriersRead:
     """Every issue, open or closed, that carries the label `label`."""
-    args = [
-        "gh",
-        "issue",
-        "list",
-        "--label",
-        label,
-        "--state",
-        "all",
-        "--limit",
-        _LIST_LIMIT,
-        "--json",
+    issues, error = _list_issues(
+        ["--label", label, "--state", "all", "--limit", _LIST_LIMIT],
         "number,title",
-    ]
-    proc, error = _run(gh_call, args, config)
-    if proc is None:
-        return CarriersRead(ok=False, error=error)
-    issues = _issues(proc.stdout)
+        config,
+        gh_call=gh_call,
+    )
     if issues is None:
-        return CarriersRead(ok=False, error="`gh issue list` returned non-JSON output.")
+        return CarriersRead(ok=False, error=error)
     return CarriersRead(
         ok=True,
         carriers=tuple(
@@ -127,25 +151,14 @@ def issues_with_title_prefix(
     prefix: str, config: dict[str, Any], *, gh_call: GhCall
 ) -> CarriersRead:
     """Every issue, open or closed, whose title opens with `prefix` and a space."""
-    args = [
-        "gh",
-        "issue",
-        "list",
-        "--state",
-        "all",
-        "--limit",
-        _LIST_LIMIT,
-        "--search",
-        f'"{prefix}" in:title',
-        "--json",
+    issues, error = _list_issues(
+        ["--state", "all", "--limit", _LIST_LIMIT, "--search", f'"{prefix}" in:title'],
         "number,title",
-    ]
-    proc, error = _run(gh_call, args, config)
-    if proc is None:
-        return CarriersRead(ok=False, error=error)
-    issues = _issues(proc.stdout)
+        config,
+        gh_call=gh_call,
+    )
     if issues is None:
-        return CarriersRead(ok=False, error="`gh issue list` returned non-JSON output.")
+        return CarriersRead(ok=False, error=error)
     return CarriersRead(
         ok=True,
         carriers=tuple(
@@ -479,26 +492,15 @@ def bodies_referencing(
     """
     found: list[Body] = []
     hits: list[tuple[int, str]] = []
-    for verb, kind in (("issue", "issue"), ("pr", "pull request")):
-        args = [
-            "gh",
-            verb,
-            "list",
-            "--state",
-            "all",
-            "--limit",
-            _LIST_LIMIT,
-            "--search",
-            f'"{old_label}"',
-            "--json",
-            "number,body,author",
-        ]
-        proc, error = _run(gh_call, args, config, cwd=cwd)
-        if proc is None:
-            return [], error
-        entries = _issues(proc.stdout)
+    flags = ["--state", "all", "--limit", _LIST_LIMIT, "--search", f'"{old_label}"']
+    fields = "number,body,author"
+    for kind in ("issue", "pull request"):
+        if kind == "issue":
+            entries, error = _list_issues(flags, fields, config, gh_call=gh_call, cwd=cwd)
+        else:
+            entries, error = _list_prs(flags, fields, config, gh_call=gh_call, cwd=cwd)
         if entries is None:
-            return [], f"`gh {verb} list` returned non-JSON output."
+            return [], error
         for entry in entries:
             number = entry.get("number")
             if not isinstance(number, int):

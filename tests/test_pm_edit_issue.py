@@ -679,18 +679,12 @@ def test_main_refuses_a_retitle_that_breaks_a_hard_reject_rule(ei, monkeypatch, 
 def _retitle_an_issue_instance_3_owns(ei, monkeypatch, *extra: str):
     """Run `edit-issue --title` as instance 2 on an issue instance 3 claimed;
     returns (rc, the edit's own writes, the in-memory GitHub)."""
-    from datetime import UTC, datetime
     from types import SimpleNamespace
 
     github = FakeGitHub()
     github.add(42, assignees=("me",))
     claims = ei.instance_claims
-    github.post(
-        42,
-        claims.ownership.format_event_comment(
-            event="claim", instance=3, ts=datetime(2026, 7, 7, tzinfo=UTC)
-        ),
-    )
+    github.post(42, claims.ownership.format_event_comment(event="claim", instance=3))
     issue = {
         "title": "[Task] Evidence points are keyed so two providers can report one",
         "body": "## What\nx\n",

@@ -63,7 +63,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import axis_carriage, axis_labels, bootstrap_gate, issue_list, session_guard
 from _lib.gh import gh_run
 from _lib.label_contributions import (
     LabelContribution,
@@ -634,32 +634,25 @@ def _apply_contributed_label_create(label: LabelContribution) -> Action:
 
 def _starter_epic_already_filed() -> bool:
     """Check whether the starter EPIC has already been filed."""
-    title = "[EPIC] Methodology adoption — initial hierarchy"
-    proc = subprocess.run(
-        [
-            "gh",
-            "issue",
-            "list",
-            "--search",
-            f'in:title "{title}"',
-            "--state",
-            "all",
-            "--json",
-            "number,title,state",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
+    return _filed_starter_epic() is not None
+
+
+def _filed_starter_epic() -> dict[str, Any] | None:
+    """The issue filed as the starter EPIC, by its title, or None.
+
+    The listing runs through the capability's one read of its issues, which
+    leaves state issues out (DEC-058 point 3). It runs `gh` with no adopter
+    `gh:` block, as bootstrap's search for the EPIC always has.
+    """
+    listing = issue_list.list_issues(
+        {},
+        ["--search", f'in:title "{_STARTER_EPIC_TITLE}"', "--state", "all"],
+        fields="number,title,state",
     )
-    if proc.returncode != 0:
-        return False
-    try:
-        for issue in json.loads(proc.stdout):
-            if issue.get("title") == title:
-                return True
-    except (json.JSONDecodeError, KeyError, TypeError):
-        pass
-    return False
+    for issue in listing.rows or ():
+        if isinstance(issue, dict) and issue.get("title") == _STARTER_EPIC_TITLE:
+            return issue
+    return None
 
 
 # ----- projects_v2_node_id cache (#310) ------------------------------
@@ -761,37 +754,17 @@ def _file_starter_epic(*, dry_run: bool) -> Action:
     PM-authority filing. The `--with-starter-epic` flag is the PM's
     explicit gesture; the script does not re-prompt.
     """
-    title = "[EPIC] Methodology adoption — initial hierarchy"
+    title = _STARTER_EPIC_TITLE
     body = _STARTER_EPIC_BODY
 
     # Refuse if an EPIC with the same title already exists.
-    proc = subprocess.run(
-        [
-            "gh",
-            "issue",
-            "list",
-            "--search",
-            f'in:title "{title}"',
-            "--state",
-            "all",
-            "--json",
-            "number,title,state",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode == 0:
-        try:
-            for issue in json.loads(proc.stdout):
-                if issue.get("title") == title:
-                    return Action(
-                        "starter EPIC",
-                        "exists",
-                        f"already filed as #{issue['number']} (state: {issue['state']})",
-                    )
-        except (json.JSONDecodeError, KeyError, TypeError):
-            pass
+    filed = _filed_starter_epic()
+    if filed is not None:
+        return Action(
+            "starter EPIC",
+            "exists",
+            f"already filed as #{filed.get('number')} (state: {filed.get('state')})",
+        )
 
     if dry_run:
         return Action("starter EPIC", "created", "(dry-run) would file")
@@ -821,6 +794,8 @@ def _file_starter_epic(*, dry_run: bool) -> Action:
         f"`gh issue create` exit {proc.returncode}: {proc.stderr.strip()}",
     )
 
+
+_STARTER_EPIC_TITLE = "[EPIC] Methodology adoption — initial hierarchy"
 
 _STARTER_EPIC_BODY = """\
 ## Outcome

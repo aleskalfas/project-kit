@@ -17,12 +17,11 @@ not hold fails, as GitHub refuses it.
 fake, and `clone_with(module, monkeypatch, instance)` gives every caller of
 `this_clone` that instance id, with no file written under the real capability.
 
-A project with a topology of seats (DEC-059) is stood in for in two parts.
-`topology_with(module, monkeypatch, topology)` gives every `this_clone` that
-reading of the topology, as the module that reads it (#2140, #2141) will.
-`stub_seat_stamps(ownership, monkeypatch)` stands in for the audit-log
-facility's builder and parser of a stamp that names a seat (#2138), with a stamp
-of the tests' own that the stub parser reads back.
+A project with a topology of seats (DEC-059) is stood in for by
+`topology_with(module, monkeypatch, topology, key)`: every `this_clone` reads
+that reading of the topology, as the module that reads it (#2140, #2141) will,
+and `key` as this clone's key, as its runtime file keeps it. The stamp that
+names a seat is the audit-log facility's own.
 """
 
 from __future__ import annotations
@@ -166,39 +165,11 @@ def clone_with(module: Any, monkeypatch: pytest.MonkeyPatch, instance: int | Non
     monkeypatch.setattr(module, "read_instance_id", lambda _root: instance)
 
 
-def topology_with(module: Any, monkeypatch: pytest.MonkeyPatch, topology: Any) -> None:
+def topology_with(
+    module: Any, monkeypatch: pytest.MonkeyPatch, topology: Any, key: str | None = None
+) -> None:
     """Every `this_clone` of the loaded `instance_claims` reads `topology` as the
-    run's reading of the project's topology (None: the project has none)."""
+    run's reading of the project's topology (None: the project has none), and
+    `key` as this clone's key (None: its runtime file keeps none)."""
     monkeypatch.setattr(module, "read_topology", lambda _root, _config: topology)
-
-
-#: The opening of the tests' own stamp that names a seat.
-SEAT_STAMP_OPENING = "<!-- test-seat-stamp "
-
-
-def stub_seat_stamps(ownership: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Stand in for the builder and the parser of a stamp that names a seat,
-    the audit-log facility's (#2138), in the loaded `instance_ownership`."""
-
-    def build(stamp: Any) -> str:
-        to = f" to={stamp.to}" if stamp.to is not None else ""
-        return (
-            f"{SEAT_STAMP_OPENING}event={stamp.event} instance={stamp.instance} "
-            f"seat={stamp.seat} key={stamp.key}{to} -->"
-        )
-
-    def read(body: str) -> Any:
-        if SEAT_STAMP_OPENING not in body:
-            return None
-        inner = body.split(SEAT_STAMP_OPENING, 1)[1].split(" -->", 1)[0]
-        fields = dict(part.split("=", 1) for part in inner.split())
-        return ownership.SeatStamp(
-            fields["event"],
-            int(fields["instance"]),
-            fields["seat"],
-            fields["key"],
-            int(fields["to"]) if "to" in fields else None,
-        )
-
-    monkeypatch.setattr(ownership, "build_seat_stamp", build)
-    monkeypatch.setattr(ownership, "read_seat_stamp", read)
+    monkeypatch.setattr(module, "read_clone_key", lambda _root: key)

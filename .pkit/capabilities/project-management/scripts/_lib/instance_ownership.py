@@ -29,13 +29,22 @@ folded set by every clone; comment-create is per-object-atomic, so two concurren
 claims coexist as two markers rather than clobbering (the property a single
 mutable comment or a whole-body region could not provide — DEC-043 rejected both).
 
+The log is read whole through the shared reader (:func:`read_log`, the one
+``_lib/comment_log`` the state-issue seam reads its logs with), and its events
+are parsed by the audit-log facility (``_lib/audit_log``, DEC-044). The fold
+takes the events in the order of their comments, which is the order of their ids.
+It reads the stamps written before the facility as well (``pkit:instance-owner
+v=1``), so an issue claimed under them keeps its owner (DEC-059 Implications).
+
 Write construction (one point per side)
 ---------------------------------------
 Two sole-constructors, each the *only* place its write is built (ADR-041 §3):
 
-  * :func:`ownership_event_comment` — the ownership-event comment (claim / handoff
-    / abandon / release; a hidden machine stamp + visible human text). Every
-    ownership mutation obtains its event write only here.
+  * :func:`ownership_event_comment_args` — the ownership-event comment (claim /
+    handoff / abandon / release). The audit-log facility builds its body: the
+    stamp, a line a person reads and DEC-052's frame. In a project with a
+    topology the event names the seat, the seat's number and the clone's key
+    (ADR-041 point 7). Every ownership mutation obtains its event write only here.
   * :func:`render_mirror_body` — regenerates the derived owner-mirror region in the
     issue body by **full overwrite** from the folded resolution (never an append;
     the region is derived, the comment log is its regeneration spine — ADR-041 §4).
@@ -51,14 +60,11 @@ side of DEC-035.
 A project with a topology of seats (ADR-041 point 7)
 ----------------------------------------------------
 In a project with a topology (DEC-059), every claim names the claimant's seat,
-the seat's number and the clone's key. The fold then takes each seat's holder
-from its caller, as :class:`Holder`, and reads no other seam: a claim counts only
-while the clone it names holds the seat it names, judged when it is read. The
-fold reads the log in GitHub's order, never by a time a stamp holds. A claim
-that names no seat does not count, and a claim whose seat was not read cannot
-be judged, which no consumer treats as free. The stamp that names a seat is the
-audit-log facility's (ADR-041 point 3): :func:`build_seat_stamp` and
-:func:`read_seat_stamp` stand for its builder and parser, which #2138 brings.
+the seat's number and the clone's key, in the audit-log facility's stamp. The
+fold then takes each seat's holder from its caller, as :class:`Holder`, and reads
+no other seam: a claim counts only while the clone it names holds the seat it
+names, judged when it is read. A claim that names no seat does not count, and a
+claim whose seat was not read cannot be judged, which no consumer treats as free.
 Renewal and lapse are not judged yet.
 
 Realm-blindness (ADR-041 §6)
@@ -80,11 +86,12 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
-# Sibling gh helper (DEC-023 host/owner pinning), imported with the defensive
-# fallback the other _lib seams use for file-path test loads.
+# Sibling helpers, imported with the defensive fallback the other _lib seams use
+# for file-path test loads: the gh helper (DEC-023 host/owner pinning), the
+# audit-log facility's builder and parser, and the shared reader of a log.
 try:
     from gh import gh_run  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover
@@ -92,33 +99,24 @@ except ImportError:  # pragma: no cover
         from _lib.gh import gh_run  # type: ignore[no-redef]
     except ImportError:  # pragma: no cover
         gh_run = None  # type: ignore[assignment]
+try:
+    from _lib import audit_log, comment_log
+except ImportError:  # pragma: no cover - a test that puts `_lib` itself on the path
+    import audit_log  # type: ignore[no-redef]
+    import comment_log  # type: ignore[no-redef]
 
 
 # ---- vocabulary ---------------------------------------------------------
 
 #: The ownership event types carried by the append-only comment log (DEC-043 D3).
 #: ``claim`` and ``handoff`` assert ownership; ``abandon`` / ``release`` relinquish
-#: it. The fold reads them in timestamp order.
-EVENTS = ("claim", "handoff", "abandon", "release")
+#: it. The fold reads them in the order of their comments.
+EVENTS = audit_log.OWNERSHIP_EVENTS
 
 #: Substrate selector values (DEC-043 D2). ``comment`` is the default (safe where
 #: labels cannot be created); ``label`` is the opt-in for repos that can.
 SUBSTRATES = ("comment", "label")
 DEFAULT_SUBSTRATE = "comment"
-
-#: The stamp version — bumped only on an explicit format change, never for
-#: aesthetics (the human-render layer absorbs those). Tooling parses this line;
-#: the audit-log facility (DEC-044) owns the shared stamp grammar this conforms to.
-STAMP_VERSION = 1
-
-# The hidden machine stamp. Carries event + instance + timestamp ONLY — never the
-# assignee (that is the comment's author.login, resolved live; DEC-043 D3 / the
-# methodology-review S1 correction). ``to`` is present on a handoff.
-_STAMP_RE = re.compile(
-    r"<!--\s*pkit:instance-owner\s+v=(?P<v>\d+)\s+event=(?P<event>\w+)"
-    r"\s+instance=(?P<instance>\d+)(?:\s+to=(?P<to>\d+))?"
-    r"\s+ts=(?P<ts>\S+)\s*-->"
-)
 
 # The derived owner-mirror region in the issue body — a fenced, do-not-edit block
 # the read seam regenerates by full overwrite (ADR-041 §4; the DEC-009 derived-
@@ -140,21 +138,25 @@ class OwnershipEvent:
 
     ``instance`` is the acting clone's number; ``to`` is the target on a handoff.
     ``assignee`` is the comment's ``author.login`` (the owning account — the
-    ``(assignee, instance)`` pair's first half). ``ts`` orders the append-only
-    fold where no topology is: the stamp's time, or GitHub's time for a stamp
-    that names a seat, which holds none. ``seat`` and ``key`` are the claimant's
-    seat and its clone's key, which only a stamp that names a seat carries
-    (DEC-059 point 9). Content-free about what the event *means* for the guard —
-    that is the caller's posture.
+    ``(assignee, instance)`` pair's first half). ``ts`` is GitHub's time of the
+    comment, where the comment carries it, or the time an old stamp holds; the
+    fold orders by the comments, never by ``ts``. ``seat``, ``seat_number`` and
+    ``clone`` are what a claim names in a project with a topology (ADR-041 point
+    7), and ``act`` the id of the act. ``legacy`` marks an old stamp.
+    Content-free about what the event *means* for the guard — that is the
+    caller's posture.
     """
 
     event: str
     instance: int
     assignee: str
-    ts: datetime | None
+    ts: datetime | None = None
     to: int | None = None
     seat: str | None = None
-    key: str | None = None
+    seat_number: int | None = None
+    clone: str | None = None
+    act: str | None = None
+    legacy: bool = False
 
 
 # ---- a project with a topology of seats (ADR-041 point 7) ---------------------
@@ -184,7 +186,7 @@ class Holder:
 
     state: str
     login: str | None = None
-    key: str | None = None
+    clone: str | None = None
 
 
 @dataclass(frozen=True)
@@ -195,7 +197,7 @@ class ClaimJudgement:
 
     instance: int
     seat: str | None
-    key: str | None
+    clone: str | None
     verdict: str
     reason: str | None = None
 
@@ -245,136 +247,102 @@ class OwnershipResolution:
         return next((j for j in self.judgements if j.instance == instance), None)
 
 
-# ---- stamp parse / format ----------------------------------------------
+# ---- the log and its events ---------------------------------------------
 
 
-def _parse_ts(raw: str) -> datetime:
-    """Parse an ISO-8601 stamp timestamp; tolerate a trailing ``Z``."""
-    return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+def read_log(issue_number: int, gh: comment_log.Gh) -> comment_log.LogRead:
+    """The issue's whole comment log, through the reader both seams share.
 
-
-def format_stamp(event: str, instance: int, ts: datetime, to: int | None = None) -> str:
-    """Build the hidden machine stamp line (the parseable half of a marker).
-
-    The sole formatter of the stamp — carries event + instance + timestamp (+ ``to``
-    on a handoff), never the assignee. ``format_event_comment`` composes this with
-    the human-readable half; nothing else string-builds the stamp.
+    A fold reads the log whole, paged to its end, and never the comments a
+    listing returns, which may be cut short (ADR-041 point 1). ``gh`` runs one
+    call; the caller's posture decides what an incomplete read means.
     """
-    if event not in EVENTS:
-        raise ValueError(f"unknown ownership event: {event!r}")
-    to_frag = f" to={to}" if to is not None else ""
-    iso = ts.astimezone(UTC).isoformat()
-    return (
-        f"<!-- pkit:instance-owner v={STAMP_VERSION} event={event} "
-        f"instance={instance}{to_frag} ts={iso} -->"
-    )
+    return comment_log.read_log(issue_number, gh)
 
 
-@dataclass(frozen=True)
-class SeatStamp:
-    """The fields of an ownership event's stamp in a project with a topology:
-    the event, the seat's number, the seat, the clone's key, and the target on a
-    handoff (DEC-059 point 9). It holds no time: GitHub's record of the comment
-    gives it (ADR-041 point 7)."""
-
-    event: str
-    instance: int
-    seat: str
-    key: str
-    to: int | None = None
+def _parse_ts(raw: str | None) -> datetime | None:
+    """Parse an ISO-8601 time; tolerate a trailing ``Z``. None when absent or
+    unreadable."""
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
 
 
-class SeatStampUnavailable(RuntimeError):
-    """No builder of a stamp that names a seat is installed yet."""
+def _field(comment: Any, name: str) -> Any:
+    if isinstance(comment, dict):
+        return comment.get(name)
+    return getattr(comment, name, None)
 
 
-def build_seat_stamp(stamp: SeatStamp) -> str | None:
-    """The machine stamp of an ownership event that names a seat, or None.
+def _author_of(comment: Any) -> str:
+    """The comment's author: a log comment's ``author``, or the ``author`` /
+    ``user`` login of a comment as ``gh`` returns it."""
+    if isinstance(comment, dict):
+        for key in ("author", "user"):
+            who = comment.get(key)
+            if isinstance(who, dict) and who.get("login"):
+                return str(who["login"])
+        return ""
+    return str(getattr(comment, "author", "") or "")
 
-    The audit-log facility's builder builds it, with a version of its own
-    (ADR-041 point 3, DEC-044 point 2), and #2138 brings that builder. Until it
-    lands, no project has a topology to claim in, and this answers None."""
+
+def _created_at(comment: Any) -> str | None:
+    for name in ("created_at", "createdAt"):
+        value = _field(comment, name)
+        if value:
+            return str(value)
     return None
 
 
-def read_seat_stamp(body: str) -> SeatStamp | None:
-    """The stamp naming a seat that ``body`` carries, or None.
+def _int(value: str | None) -> int | None:
+    """The number ``value`` holds, ASCII digits of bounded length, or None, so
+    no text a comment carries can make the fold fail."""
+    if value is None or not re.fullmatch(r"[0-9]{1,9}", value):
+        return None
+    return int(value)
 
-    The audit-log facility's parser (ADR-041 point 3), which #2138 brings. Until
-    then no comment carries such a stamp."""
-    return None
 
-
-def parse_events(
-    comments: Iterable[dict[str, Any]], assignee_login: str | None, *, log_order: bool = False
-) -> list[OwnershipEvent]:
+def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[OwnershipEvent]:
     """Extract authenticated ownership events from an issue's comments.
 
+    ``comments`` are the log's (:func:`read_log`) or ``gh``'s comment entries.
     The authenticity filter (ADR-041 §1 / DEC-043 D3): a stamped comment counts
-    **only** if its ``author.login`` equals the issue's expected ``assignee_login``
-    — a forged stamp pasted from another account is ignored. With no assignee
+    **only** if its author equals the issue's expected ``assignee_login`` — a
+    forged stamp pasted from another account is ignored. With no assignee
     (``None``), no marker authenticates, so the issue reads as unclaimed. Returned
-    in timestamp order for the fold, or, with ``log_order``, in the order GitHub
-    lists the comments, which a project with a topology folds in (ADR-041
-    point 7).
+    in the order of the comments, which GitHub lists in the order of their ids.
     """
     out: list[OwnershipEvent] = []
     if not assignee_login:
         return out
     for c in comments:
-        event = _parse_event(c)
-        if event is None:
-            continue
-        if event.assignee != assignee_login:
+        author = _author_of(c)
+        if author != assignee_login:
             continue  # forgery / another account — not trusted
-        out.append(event)
-    if not log_order:
-        out.sort(key=_stamp_order)
-    return out
-
-
-def _parse_event(comment: dict[str, Any]) -> OwnershipEvent | None:
-    """The ownership event one comment carries, by either stamp, or None."""
-    body = comment.get("body") or ""
-    author = ((comment.get("author") or {}).get("login")) or ""
-    m = _STAMP_RE.search(body)
-    if m:
-        return OwnershipEvent(
-            event=m.group("event"),
-            instance=int(m.group("instance")),
-            assignee=author,
-            ts=_parse_ts(m.group("ts")),
-            to=int(m.group("to")) if m.group("to") else None,
+        ev = audit_log.parse(str(_field(c, "body") or ""))
+        if ev is None or ev.type not in EVENTS:
+            continue
+        instance = _int(ev.get("instance"))
+        if instance is None:
+            continue
+        out.append(
+            OwnershipEvent(
+                event=ev.type,
+                instance=instance,
+                assignee=author,
+                ts=_parse_ts(ev.get("ts") if ev.legacy else _created_at(c)),
+                to=_int(ev.get("to")),
+                seat=ev.get("seat"),
+                seat_number=_int(ev.get("seat_number")),
+                clone=ev.get("clone"),
+                act=ev.act,
+                legacy=ev.legacy,
+            )
         )
-    stamp = read_seat_stamp(body)
-    if stamp is None or stamp.event not in EVENTS:
-        return None
-    return OwnershipEvent(
-        event=stamp.event,
-        instance=stamp.instance,
-        assignee=author,
-        ts=_created_at(comment),
-        to=stamp.to,
-        seat=stamp.seat,
-        key=stamp.key,
-    )
-
-
-def _created_at(comment: dict[str, Any]) -> datetime | None:
-    """The time GitHub records for the comment's creation, or None."""
-    raw = comment.get("createdAt")
-    try:
-        return _parse_ts(raw) if isinstance(raw, str) and raw else None
-    except ValueError:
-        return None
-
-
-#: Where an event with no time sorts: last, in the order it was listed.
-_NO_TIME = datetime.max.replace(tzinfo=UTC)
-
-
-def _stamp_order(event: OwnershipEvent) -> datetime:
-    return event.ts or _NO_TIME
+    return out
 
 
 # ---- the read fold seam -------------------------------------------------
@@ -385,10 +353,10 @@ def fold_events(events: list[OwnershipEvent]) -> frozenset[int]:
 
     Per-instance semantics: a ``claim`` (or a ``handoff to=N``) adds an owner; an
     ``abandon`` / ``release`` by an instance (or a ``handoff`` *away* from it)
-    removes it. Replaying in timestamp order yields the live owner set — normally a
-    singleton, two-plus only in the same-instant clash window (both claimants'
-    markers coexist because comment-create is atomic; DEC-035 D6). The caller reads
-    :attr:`OwnershipResolution.winner` for the lowest-wins tie-break.
+    removes it. Replaying in the order of the comments yields the live owner set —
+    normally a singleton, two-plus only in the same-instant clash window (both
+    claimants' markers coexist because comment-create is atomic; DEC-035 D6). The
+    caller reads :attr:`OwnershipResolution.winner` for the lowest-wins tie-break.
     """
     return frozenset(_owning_events(events))
 
@@ -421,28 +389,28 @@ def judge_claim(
     claim that names no seat, or whose seat is free or held by another clone, is
     void. A seat that is unread, or not among the holders, leaves it unjudged."""
     if not event.seat:
-        return ClaimJudgement(instance, None, event.key, VOID, NO_SEAT)
+        return ClaimJudgement(instance, None, event.clone, VOID, NO_SEAT)
     holder = holders.get(event.seat)
     if holder is None:
-        return ClaimJudgement(instance, event.seat, event.key, UNJUDGED, SEAT_NOT_READ)
+        return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, SEAT_NOT_READ)
     if holder.state == SEAT_UNREAD:
-        return ClaimJudgement(instance, event.seat, event.key, UNJUDGED, SEAT_UNREAD_REASON)
+        return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, SEAT_UNREAD_REASON)
     same_account = holder.login is None or holder.login == event.assignee
-    if holder.state == SEAT_HELD and holder.key == event.key and same_account:
-        return ClaimJudgement(instance, event.seat, event.key, COUNTS)
-    return ClaimJudgement(instance, event.seat, event.key, VOID, SEAT_RELEASED)
+    if holder.state == SEAT_HELD and holder.clone == event.clone and same_account:
+        return ClaimJudgement(instance, event.seat, event.clone, COUNTS)
+    return ClaimJudgement(instance, event.seat, event.clone, VOID, SEAT_RELEASED)
 
 
 def _resolve_with_seats(
-    comments: Iterable[dict[str, Any]],
+    comments: Iterable[Any],
     labels: Iterable[dict[str, Any] | str],
     assignee_login: str | None,
     holders: Mapping[str, Holder],
 ) -> OwnershipResolution:
-    """The fold in a project with a topology (ADR-041 point 7): the log in
-    GitHub's order, each owner judged against the seats' holders. A label names
-    no seat, so a label owner with no comment marker is void."""
-    events = parse_events(comments, assignee_login, log_order=True)
+    """The fold in a project with a topology (ADR-041 point 7): each owner
+    judged against the seats' holders. A label names no seat, so a label owner
+    with no comment marker is void."""
+    events = parse_events(comments, assignee_login)
     owning = _owning_events(events)
     judgements = [judge_claim(n, owning[n], holders) for n in sorted(owning)]
     judgements += [
@@ -472,7 +440,7 @@ def _label_owners(labels: Iterable[dict[str, Any] | str]) -> frozenset[int]:
 
 def resolve_owner(
     *,
-    comments: Iterable[dict[str, Any]],
+    comments: Iterable[Any],
     labels: Iterable[dict[str, Any] | str],
     assignee_login: str | None,
     selector: str = DEFAULT_SUBSTRATE,
@@ -529,69 +497,55 @@ def resolve_owner(
 
 # ---- comment-event sole-constructor (comment backend) -------------------
 
-# The human-readable render's verbosity is per-event (DEC-044 §4): authorisation-
-# weight events (handoff) read fuller; routine churn (claim/abandon/release) stays
-# a compact line. The shared audit-log facility (DEC-044) will own the final
-# template; this is the seam's built-in default until that lands.
-_EVENT_TITLE = {
-    "claim": "🔖 Claimed",
-    "handoff": "🤝 Handoff",
-    "abandon": "🚪 Abandoned",
-    "release": "✅ Released",
-}
 
-
-def format_event_comment(
+def ownership_event(
     *,
     event: str,
     instance: int,
-    ts: datetime,
     to: int | None = None,
     name: str | None = None,
     seat: str | None = None,
-    key: str | None = None,
-) -> str:
-    """Compose one ownership-event comment body: human text + hidden stamp.
+    seat_number: int | None = None,
+    clone: str | None = None,
+    act: str | None = None,
+) -> audit_log.Event:
+    """The ownership event, as the audit-log facility records it (DEC-044).
 
-    The sole composer of a marker comment body. ``name`` is the optional DEC-045
-    display name of the instance, shown for readability; the machine stamp carries
-    only the numeric ``instance`` (+ ``to``). The visible text keeps the comment
-    from rendering blank (a stamp-only comment would — DEC-044).
-
-    With ``seat`` and ``key``, in a project with a topology, the stamp names the
-    seat, its number and the clone's key, built by :func:`build_seat_stamp`
-    (DEC-059 point 9). Raises :class:`SeatStampUnavailable` while no builder is
-    installed.
+    ``name`` is the optional DEC-045 display name, shown for a person. In a
+    project with a topology, ``seat``, ``seat_number`` and ``clone`` name the
+    claim's seat, its number and the clone's key; a handoff names those of the
+    instance it goes to (ADR-041 point 7). ``act`` is the id the caller made once
+    for this act, so a retry finds the comment it already posted; the facility
+    makes one where none is passed. ``ValueError`` on an unknown event.
     """
-    if seat is None:
-        stamp = format_stamp(event, instance, ts, to)
-    else:
-        if event not in EVENTS:
-            raise ValueError(f"unknown ownership event: {event!r}")
-        built = build_seat_stamp(SeatStamp(event, instance, seat, key or "", to))
-        if built is None:
-            raise SeatStampUnavailable(
-                "no stamp can name a seat until the audit-log facility's builder lands (#2138)"
-            )
-        stamp, name = built, name or seat
-    who = f"instance {instance}" + (f" ({name})" if name else "")
-    if event == "handoff" and to is not None:
-        line = f"**{_EVENT_TITLE[event]}** — {who} → instance {to}"
-    else:
-        line = f"**{_EVENT_TITLE[event]}** — {who}"
-    return f"{line}\n{stamp}"
+    if event not in EVENTS:
+        raise ValueError(f"unknown ownership event: {event!r}")
+    return audit_log.event(
+        event,
+        instance=instance,
+        to=to if event == "handoff" else None,
+        seat=seat,
+        seat_number=seat_number,
+        clone=clone,
+        name=name,
+        id=act,
+    )
+
+
+def format_event_comment(*, versions: Any = None, **fields: Any) -> str:
+    """Compose one ownership-event comment body, through the audit-log facility.
+
+    The sole composer of a marker comment body: :func:`ownership_event` takes
+    ``fields``, and the facility builds the stamp, the line a person reads and
+    the kind's marker. ``versions`` adds DEC-052's provenance footer. The stamp
+    carries the instance numbers and, in a project with a topology, the seat
+    and the clone's key, never the assignee, which is the comment's author.
+    """
+    return audit_log.build(ownership_event(**fields), versions=versions)
 
 
 def ownership_event_comment_args(
-    *,
-    issue_number: int | str,
-    event: str,
-    instance: int,
-    to: int | None = None,
-    name: str | None = None,
-    ts: datetime | None = None,
-    seat: str | None = None,
-    key: str | None = None,
+    *, issue_number: int | str, versions: Any = None, **fields: Any
 ) -> list[str]:
     """Construct the ``gh issue comment`` argv for an ownership event.
 
@@ -599,13 +553,9 @@ def ownership_event_comment_args(
     ownership mutation — ``create-issue`` claim, ``start-work`` commons-claim,
     ``handoff-issue``, terminal release — obtains its event write only here; no
     script string-builds ``gh issue comment`` for a marker inline. The guard test
-    enforces that structurally. ``seat`` and ``key`` name the claimant's seat and
-    its clone's key in a project with a topology (DEC-059 point 9).
+    enforces that structurally. ``fields`` are :func:`ownership_event`'s.
     """
-    ts = ts or datetime.now(UTC)
-    body = format_event_comment(
-        event=event, instance=instance, ts=ts, to=to, name=name, seat=seat, key=key
-    )
+    body = format_event_comment(versions=versions, **fields)
     return ["gh", "issue", "comment", str(issue_number), "--body", body]
 
 

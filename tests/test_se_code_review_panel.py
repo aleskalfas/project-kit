@@ -461,23 +461,38 @@ def test_the_docs_reviewer_blocks_on_each_answer_that_does_not_hold(lead, says):
         assert words in item, (lead, words)
 
 
-def test_an_answer_that_is_a_person_s_decision_is_named_not_blocked():
-    """Whether a person accepted an answer on an artefact the change was not asked
-    about, or a reason for having no anchors, is a fact no reviewer can read (COR-050
-    point 3): the reviewer names it, as an advisory, and judges a reworded deferral on
-    an artefact it was asked about by the other rules. The sentence on such an
-    `updated` answer is still checked, since COR-050 point 3 asks it of every one."""
-    lead = "- **Some answers are a person's decision, not yours to judge.**"
-    (item,) = [line for line in _answers_check() if line.startswith(lead)]
+_NOT_OWED_LEAD = "- **An answer no change owes is decided by someone else, and you check it.**"
+
+
+def test_an_answer_no_change_owes_is_checked_and_named():
+    """An answer on an artefact the change was not asked about, or a reason for having
+    no anchors, is decided by a person or by the delegate a person named, and a reviewer
+    checks it whoever decided it (COR-050 point 3, COR-064 point 4). Who decided it is a
+    fact no reviewer can read, so the reviewer also names it, as an advisory. A reworded
+    deferral on an artefact the check asked about is judged by the other rules."""
+    (item,) = [line for line in _answers_check() if line.startswith(_NOT_OWED_LEAD)]
     for words in (
         "An answer on an artefact the change check asked nothing about",
         "every reason for having no anchors",
-        "so do not block on it",
-        "in an `[advisory]` finding",
-        "such as a deferral the change rewords, is judged by the bullets above",
-        "Where such an answer is `updated`, its sentence is still checked",
+        "or the delegate a person named (COR-050 point 3; COR-064)",
     ):
         assert words in item, words
+    items = _sub_items(_answers_check(), _NOT_OWED_LEAD)
+    check = items["Check each, whoever decided it"]
+    for words in (
+        "`pkit friction explain <artefact>`, run at the base",
+        "A revisit entry answers its source and its target as they stand at the head.",
+        "A reason for having no anchors answers what the artefact says.",
+        "One that does not hold is a `[block]`",
+        "Where such an answer is `updated`, its sentence is checked",
+    ):
+        assert words in check, words
+    assert "in an `[advisory]` finding" in items["Name each, too."]
+    assert "`[block]`" in items["Never as the delegate."]
+    assert (
+        "such as a deferral the change rewords, is judged by the bullets above"
+        in items["On an artefact the check asked about."]
+    )
 
 
 def test_the_docs_reviewer_s_answers_check_raises_findings_not_a_verdict_line():
@@ -628,23 +643,21 @@ def test_a_target_revisited_by_its_change_needs_no_sentence():
         assert words in lead, words
 
 
-def test_a_revisit_entry_not_asked_for_is_named_not_judged():
-    """An entry the change check does not ask for is a person's decision (COR-050
-    point 16): one for a target that owes no answer, or one whose outcome alone
-    changed, which also answers nothing. The blocking rules never judge it,
-    wherever its document sits."""
-    lead = "- **Some answers are a person's decision, not yours to judge.**"
-    (item,) = [line for line in _answers_check() if line.startswith(lead)]
+def test_a_revisit_entry_not_asked_for_is_an_answer_no_change_owes():
+    """An entry the change check does not ask for is an answer no change owes (COR-050
+    point 16, COR-064 point 1): one for a target that owes no answer, or one whose
+    outcome alone changed, which also answers nothing. The reviewer checks it against
+    its source and its target, whoever decided it, wherever its document sits."""
+    (item,) = [line for line in _answers_check() if line.startswith(_NOT_OWED_LEAD)]
     for words in (
-        'A revisit entry the list flags "not asked for by this change" is a person\'s decision,'
-        " even on a document the check asked about, and the bullets above never judge it"
-        " (COR-050 point 16)",
+        'A revisit entry the list flags "not asked for by this change" is such an answer too,'
+        " even on a document the check asked about (COR-050 point 16)",
         "Its target owes no answer, or only its outcome changed",
         "An entry whose outcome alone changed also answers nothing.",
     ):
         assert words in item, words
-    # The revisit sentences come before the advisory instruction that covers them.
-    assert item.index("A revisit entry the list flags") < item.index("so do not block on it")
+    check = _sub_items(_answers_check(), _NOT_OWED_LEAD)["Check each, whoever decided it"]
+    assert "(COR-064 point 4)" in check
 
 
 def _friction_answers() -> str:

@@ -17,10 +17,11 @@ substrate is read only once an id is set, from the adopter's
 
 **A project with a topology of seats** (DEC-059). There a clone takes part by
 holding a seat, and its number is the seat's, never a typed one (point 6). The
-run's reading of the topology, this clone's seat and key and each seat's holder,
-comes from :func:`read_topology`, whose source lands with #2140 and #2141. A
-clone that holds no seat marks no issue and is guarded by nothing. A claim names
-the seat, its number and the clone's key, on the comment log (point 9). It
+run's reading of the topology, this clone's seat and each seat's holder, comes
+from :func:`read_topology`, whose source lands with #2140 and #2141. The clone's
+key is read from its runtime file (``_lib/instance_identity``). A clone that
+holds no seat marks no issue and is guarded by nothing. A claim names the seat,
+its number and the clone's key, in the audit-log facility's stamp (point 9). It
 counts only while that clone holds that seat, judged when it is read, so a
 seat's release frees its clone's claims with no write (point 5). A planner's
 seat files with no owner, so its work enters the shared pool, and every other
@@ -90,7 +91,7 @@ from ruamel.yaml.error import YAMLError
 from _lib import audit, provenance
 from _lib import instance_ownership as ownership
 from _lib.comment import post_audit_once
-from _lib.instance_identity import read_instance_id
+from _lib.instance_identity import read_clone_key, read_instance_id
 
 #: The adopter's substrate selector, in the marker's own schema home (DEC-043
 #: point 2), relative to the capability root.
@@ -147,10 +148,9 @@ class Seat:
 class Topology:
     """One run's reading of the project's topology, as instance ownership takes
     it from its caller (ADR-041 point 7, ADR-071 point 1): the seat this clone
-    holds, or None, this clone's key, and each seat's holder."""
+    holds, or None, and each seat's holder."""
 
     seat: Seat | None
-    key: str | None
     holders: Mapping[str, ownership.Holder]
 
 
@@ -242,11 +242,13 @@ def this_clone(
     ``None`` is the no-op: the caller does nothing more than it did before
     instance ownership existed. In a project with a topology, the clone takes
     part only while it holds a seat, and its number is the seat's (DEC-059
-    point 6). Otherwise an instance id must be set, and the substrate selector is
-    read only then."""
+    point 6). Its key is the one its runtime file keeps, which a clone that holds
+    a seat has. Otherwise an instance id must be set, and the substrate selector
+    is read only then."""
     topology = read_topology(capability_root, config or {})
     if topology is not None:
-        if topology.seat is None or not topology.key:
+        key = read_clone_key(capability_root) if topology.seat is not None else None
+        if topology.seat is None or key is None:
             return None
         return Clone(
             topology.seat.number,
@@ -254,7 +256,7 @@ def this_clone(
             login,
             capability_root,
             seat=topology.seat,
-            key=topology.key,
+            key=key,
             holders=topology.holders,
         )
     instance = read_instance_id(capability_root)
@@ -419,17 +421,18 @@ def _write_claim(gh: Run, n: int, clone: Clone) -> str | None:
             return f"{_said(proc)}, and creating the label failed: {_said(create)}"
         proc = gh(ownership.instance_label_args(issue_number=n, instance=clone.instance))
         return None if _ok(proc) else _said(proc)
-    try:
-        args = ownership.ownership_event_comment_args(
+    seat = clone.seat
+    proc = gh(
+        ownership.ownership_event_comment_args(
             issue_number=n,
+            versions=_versions(clone),
             event="claim",
             instance=clone.instance,
-            seat=clone.seat.name if clone.seat is not None else None,
-            key=clone.key,
+            seat=seat.name if seat is not None else None,
+            seat_number=seat.number if seat is not None else None,
+            clone=clone.key if seat is not None else None,
         )
-    except ownership.SeatStampUnavailable as exc:
-        return str(exc)
-    proc = gh(args)
+    )
     return None if _ok(proc) else _said(proc)
 
 
@@ -451,7 +454,7 @@ def _back_off(
     else:
         proc = gh(
             ownership.ownership_event_comment_args(
-                issue_number=n, event="abandon", instance=clone.instance
+                issue_number=n, versions=_versions(clone), event="abandon", instance=clone.instance
             )
         )
     rival = _owner(after, winner)
@@ -578,8 +581,11 @@ def release(issue_number: int, clone: Clone, config: dict, *, run: Run | None = 
     # A comment marker counts only from its account (DEC-043 point 3), so a
     # release from another account would be ignored: it is not posted.
     kept = sorted(logged) if logged and account != clone.login else []
+    versions = _versions(clone)
     writes = [
-        ownership.ownership_event_comment_args(issue_number=n, event="release", instance=i)
+        ownership.ownership_event_comment_args(
+            issue_number=n, versions=versions, event="release", instance=i
+        )
         for i in ([] if kept else sorted(logged))
     ] + [
         ownership.instance_label_args(issue_number=n, instance=i, remove=True)
@@ -666,7 +672,7 @@ def _mirror(gh: Run, n: int, clone: Clone, issue: dict, account: str | None) -> 
     # Above the footer, the region is overwritten where it stands and placed
     # once at the end where it is absent. The footer is stamped again after it.
     head = ownership.render_mirror_body(provenance.strip_footer(current), region)
-    body = provenance.stamp(head, provenance.read_versions(clone.capability_root))
+    body = provenance.stamp(head, _versions(clone))
     if body == current:
         return []
     failure = _write_body(gh, n, body)
@@ -676,6 +682,12 @@ def _mirror(gh: Run, n: int, clone: Clone, issue: dict, account: str | None) -> 
         f"[warn] ownership: the owner shown in #{n}'s description could not be updated: "
         f"{failure}. The comment log holds the owner."
     ]
+
+
+def _versions(clone: Clone) -> provenance.Versions:
+    """The versions in force, which an event comment's footer and the
+    description's footer name (DEC-052, ADR-037)."""
+    return provenance.read_versions(clone.capability_root)
 
 
 def _write_body(gh: Run, n: int, body: str) -> str | None:

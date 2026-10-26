@@ -1033,15 +1033,11 @@ def test_audit_comment_is_posted_before_the_label_write() -> None:
 
 
 def _owned_by_instance_3() -> FakeGitHub:
-    from datetime import UTC, datetime
-
     from _lib import instance_ownership
 
     github = FakeGitHub()
     github.add(42, assignees=("me",))
-    claim = instance_ownership.format_event_comment(
-        event="claim", instance=3, ts=datetime(2026, 7, 7, tzinfo=UTC)
-    )
+    claim = instance_ownership.format_event_comment(event="claim", instance=3)
     github.post(42, claim)
     return github
 

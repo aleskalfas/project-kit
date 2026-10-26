@@ -1,0 +1,54 @@
+# A state issue's marker, the region of its description, its event types, and
+# the kinds of state that live in one.
+#
+# Per [project-management:DEC-058-state-issues], a piece of shared state that
+# changes while agents work lives in a state issue: an issue outside the work
+# hierarchy, whose comments log each change and whose description shows the
+# current state. This schema holds the marker's form, the kind and key it names,
+# and the event types of a state issue (DEC-058 Implications). The machine stamp
+# of each event is the audit-log facility's (`audit-log.yaml`).
+# `scripts/_lib/state_issues.py` is the one module that reads and writes a state
+# issue ([pkit:ADR-071]), and a test holds it to this file.
+
+schema_version: 1
+
+# The marker. One line of its own, outside a fenced code block, in the issue's
+# first comment and in its description, outside the region:
+#   <!-- pkit:state-issue v=<version> kind=<kind> key=<key> -->
+# The key is encoded as a stamp's values are, so it may hold any text, and is
+# matched exactly, case included. A marker of any version keeps an issue out of
+# the listings of work; a read accepts only this version's.
+marker:
+  prefix: "pkit:state-issue"
+  version: 1
+  fields: [kind, key]
+
+# The region of the description the seam rewrites whole after each event. It
+# shows the state the comments give, and nothing reads it as the state.
+view:
+  begin: "<!-- pkit:state-view:begin -->"
+  end: "<!-- pkit:state-view:end -->"
+
+# The event types a state issue's log holds.
+events:
+  - "[audit-log:state-claim]"
+  - "[audit-log:state-release]"
+  - "[audit-log:state-force-release]"
+
+# Kinds of state. Lookup by id, the marker's `kind`.
+#
+# Per-entry fields (what DEC-058 point 1 asks of a record that adds a piece of
+# shared state):
+#   decided_by:    the accepted record that adds the state
+#   key:           what the key names
+#   found_by:      how a reader finds the state issue — `number`, recorded in
+#                  configuration, or `marker`
+#   force_release: who may release the state by force
+#   lapses:        whether a claim lapses on its own
+kinds:
+  seat:
+    decided_by: "[project-management:DEC-059-topology-of-seats]"
+    key: the seat's name, as the topology declares it
+    found_by: number
+    force_release: the clone of the organizer seat, or a person in any clone
+    lapses: false

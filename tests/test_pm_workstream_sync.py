@@ -106,6 +106,60 @@ def test_carriers_fails_when_the_label_read_fails() -> None:
     assert read.error == "HTTP 401"
 
 
+# --- state issues: never a carrier, never a reference (#2139) ---------------
+#
+# The issues are read through the one read of issues, which leaves a state
+# issue out by its marker (DEC-058 point 3).
+
+_MARKER = "<!-- pkit:state-issue v=1 key=seat-planner -->"
+
+
+def test_a_state_issue_is_never_a_carrier_of_a_label() -> None:
+    repo = FakeRepo(
+        issues={
+            1: _issue("One", "workstream:cli"),
+            2: _issue("Seat planner", "workstream:cli", body=f"{_MARKER}\n"),
+        }
+    )
+    read = workstream_sync.carriers(
+        "cli", carriage="kit-label", config={}, substrate_map=None, gh_call=repo
+    )
+    assert [c.number for c in read.carriers] == [1]
+
+
+def test_a_state_issue_is_never_a_carrier_of_a_title_prefix() -> None:
+    sm = axis_labels.SubstrateMap(
+        axes={"workstream": {"title-prefix": {"remap": {"cli": "[CLI]"}}}}
+    )
+
+    def gh(cmd, config, *, check=True, **kwargs):
+        rows = [
+            {"number": 1, "title": "[CLI] Fix it", "body": ""},
+            {"number": 2, "title": "[CLI] seat", "body": f"{_MARKER}\n"},
+        ]
+        return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps(rows))
+
+    read = workstream_sync.carriers(
+        "cli", carriage="title", config={}, substrate_map=sm, gh_call=gh
+    )
+    assert [c.number for c in read.carriers] == [1]
+
+
+def test_a_state_issue_holds_no_reference_to_rewrite() -> None:
+    """Neither its body nor its comments, the state's log, are found."""
+    repo = FakeRepo(
+        issues={
+            1: _issue("One", body="Part of `workstream:cli`."),
+            2: _issue("Seat planner", body=f"{_MARKER}\nSee `workstream:cli`.\n"),
+        },
+        comments={2: [{"id": 9, "body": "Moved to `workstream:cli`.", "login": "me"}]},
+    )
+    found, error = workstream_sync.bodies_referencing("workstream:cli", {}, gh_call=repo)
+    assert error is None
+    assert [(b.number, b.kind) for b in found] == [(1, "issue")]
+    assert not any("issues/2/comments" in " ".join(call) for call in repo.calls)
+
+
 # --- labels -----------------------------------------------------------------
 
 

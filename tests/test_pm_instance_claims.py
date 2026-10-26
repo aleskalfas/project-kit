@@ -15,17 +15,15 @@ from __future__ import annotations
 import importlib
 import sys
 import tempfile
-from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from tests.pm_ownership_support import FakeGitHub, stub_seat_stamps, topology_with
+from tests.pm_ownership_support import FakeGitHub, topology_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
-T0 = datetime(2026, 7, 7, 12, 0, 0, tzinfo=UTC)
 
 
 @pytest.fixture(scope="module")
@@ -51,7 +49,7 @@ def _clone(ic, root: Path, instance: int = 2, substrate: str = "comment", login=
 
 
 def _stamp(ic, event: str, instance: int, to: int | None = None) -> str:
-    return ic.ownership.format_event_comment(event=event, instance=instance, ts=T0, to=to)
+    return ic.ownership.format_event_comment(event=event, instance=instance, to=to)
 
 
 def _owners(ic, gh: FakeGitHub, n: int, account: str = "me", selector: str = "comment"):
@@ -550,12 +548,6 @@ def test_say_guard_puts_a_refusal_on_stderr_and_a_pass_nowhere(ic, capsys) -> No
 # ---- a project with a topology of seats (DEC-059) -------------------------------
 
 
-@pytest.fixture
-def seat_stamps(ic, monkeypatch) -> None:
-    """The stamp that names a seat, as the audit-log facility will build it (#2138)."""
-    stub_seat_stamps(ic.ownership, monkeypatch)
-
-
 def _held(ic, login: str = "me", key: str = "k2"):
     return ic.ownership.Holder(ic.ownership.SEAT_HELD, login, key)
 
@@ -568,26 +560,36 @@ def _seat_clone(ic, root: Path, *, role: str = "worker", holders: dict | None = 
 
 def _seat_stamp(ic, seat: str, instance: int, key: str, event: str = "claim") -> str:
     return ic.ownership.format_event_comment(
-        event=event, instance=instance, ts=T0, seat=seat, key=key
+        event=event, instance=instance, seat=seat, seat_number=instance, clone=key
     )
 
 
 def test_a_clone_in_a_seat_takes_its_number_and_the_comment_log(ic, root, monkeypatch) -> None:
     """DEC-059 points 6 and 9: the seat's number, never a typed one, on the
-    comment log whatever the selector names."""
-    importlib.import_module("_lib.instance_identity").write_instance_id(root, 7)
+    comment log whatever the selector names, with the key its runtime file keeps."""
+    identity = importlib.import_module("_lib.instance_identity")
+    identity.write_instance_id(root, 7)
+    key = identity.ensure_clone_key(root)
     (root / "project" / "instance-ownership.yaml").write_text("substrate: label\n")
-    holders = {"worker-2": _held(ic)}
+    holders = {"worker-2": _held(ic, key=key)}
     seat = ic.Seat("worker-2", 2, ic.WORKER)
-    topology_with(ic, monkeypatch, ic.Topology(seat, "k2", holders))
+    monkeypatch.setattr(ic, "read_topology", lambda _root, _config: ic.Topology(seat, holders))
     clone = ic.this_clone(root, "me")
-    assert clone == ic.Clone(2, "comment", "me", root, seat, "k2", holders)
+    assert clone == ic.Clone(2, "comment", "me", root, seat, key, holders)
     assert clone.named() == "seat worker-2, instance 2"
 
 
 def test_a_clone_that_holds_no_seat_takes_no_part(ic, root, monkeypatch) -> None:
     importlib.import_module("_lib.instance_identity").write_instance_id(root, 7)
-    topology_with(ic, monkeypatch, ic.Topology(None, "k2", {}))
+    topology_with(ic, monkeypatch, ic.Topology(None, {}), key="k2")
+    assert ic.this_clone(root, "me") is None
+
+
+def test_a_clone_in_a_seat_with_no_key_takes_no_part(ic, root, monkeypatch) -> None:
+    """A clone that holds a seat has a key, kept since its first claim on a
+    state issue (DEC-058 point 5): with none, it cannot be the seat's holder."""
+    seat = ic.Seat("worker-2", 2, ic.WORKER)
+    topology_with(ic, monkeypatch, ic.Topology(seat, {"worker-2": _held(ic)}), key=None)
     assert ic.this_clone(root, "me") is None
 
 
@@ -607,7 +609,8 @@ def test_a_planner_files_with_no_owner(ic, root: Path, role: str, claims: bool) 
     assert ic.claim_plan(clone) == "claimed for seat worker-2, instance 2 (comment substrate)"
 
 
-def test_a_seats_claim_names_the_seat_and_the_key(ic, root, seat_stamps) -> None:
+def test_a_seats_claim_names_the_seat_its_number_and_the_key(ic, root: Path) -> None:
+    """DEC-059 point 9, in the audit-log facility's stamp, with DEC-052's footer."""
     gh = FakeGitHub()
     gh.add(7)
     result = ic.claim(7, _seat_clone(ic, root), {}, run=gh)
@@ -616,17 +619,19 @@ def test_a_seats_claim_names_the_seat_and_the_key(ic, root, seat_stamps) -> None
         "[ok] ownership: #7 claimed for seat worker-2, instance 2 (comment substrate)."
     )
     claim = gh.issues[7].comments[0]["body"]
-    assert "event=claim instance=2 seat=worker-2 key=k2" in claim
+    assert "event=claim instance=2 seat=worker-2 seat_number=2 clone=k2 id=" in claim
+    assert "<sub>🧰 pkit" in claim
     assert "**Owner:** instance 2 (worker-2)" in gh.issues[7].body
 
 
-def test_with_no_builder_a_seats_claim_fails_and_writes_nothing(ic, root: Path) -> None:
+def test_with_no_topology_a_claim_names_no_seat(ic, root: Path) -> None:
+    """An instance id's claim stays DEC-035's: the stamp holds the number alone."""
     gh = FakeGitHub()
     gh.add(7)
-    result = ic.claim(7, _seat_clone(ic, root), {}, run=gh)
-    assert result.outcome == ic.FAILED
-    assert "audit-log facility's builder lands (#2138)" in result.line
-    assert gh.writes() == []
+    ic.claim(7, _clone(ic, root), {}, run=gh)
+    claim = gh.issues[7].comments[0]["body"]
+    assert "event=claim instance=2 id=" in claim
+    assert "seat=" not in claim and "clone=" not in claim
 
 
 @pytest.mark.parametrize(
@@ -636,7 +641,7 @@ def test_with_no_builder_a_seats_claim_fails_and_writes_nothing(ic, root: Path) 
         pytest.param(("held", "me", "k3"), id="another-clone-took-its-seat"),
     ],
 )
-def test_a_claim_whose_clone_lost_its_seat_is_no_claim(ic, root, seat_stamps, holder) -> None:
+def test_a_claim_whose_clone_lost_its_seat_is_no_claim(ic, root, holder) -> None:
     """A seat's release frees its clone's claims with no write to the issue
     (DEC-059 point 5), so this clone claims."""
     gh = FakeGitHub()
@@ -648,7 +653,7 @@ def test_a_claim_whose_clone_lost_its_seat_is_no_claim(ic, root, seat_stamps, ho
     assert result.winner == 2
 
 
-def test_a_claim_made_under_a_typed_number_is_no_claim(ic, root, seat_stamps) -> None:
+def test_a_claim_made_under_a_typed_number_is_no_claim(ic, root) -> None:
     """DEC-059 point 9: it names no seat, so it stops counting with the topology."""
     gh = FakeGitHub()
     gh.add(7)
@@ -657,7 +662,7 @@ def test_a_claim_made_under_a_typed_number_is_no_claim(ic, root, seat_stamps) ->
     assert result.outcome == ic.CLAIMED
 
 
-def test_a_claim_that_cannot_be_judged_keeps_the_issue(ic, root, seat_stamps) -> None:
+def test_a_claim_that_cannot_be_judged_keeps_the_issue(ic, root) -> None:
     """ADR-041 point 5: no consumer treats an unjudged claim as free."""
     gh = FakeGitHub()
     gh.add(7)
@@ -671,7 +676,7 @@ def test_a_claim_that_cannot_be_judged_keeps_the_issue(ic, root, seat_stamps) ->
     assert gh.writes() == []
 
 
-def test_two_seats_claiming_at_once_leave_it_to_the_lower(ic, root, seat_stamps) -> None:
+def test_two_seats_claiming_at_once_leave_it_to_the_lower(ic, root) -> None:
     gh = FakeGitHub()
     gh.add(7)
 
@@ -687,9 +692,7 @@ def test_two_seats_claiming_at_once_leave_it_to_the_lower(ic, root, seat_stamps)
     assert "this clone, seat worker-2, instance 2, withdrew its claim" in result.line
 
 
-def test_the_guard_refuses_another_seats_task_and_passes_a_void_claim(
-    ic, root, seat_stamps
-) -> None:
+def test_the_guard_refuses_another_seats_task_and_passes_a_void_claim(ic, root) -> None:
     gh = FakeGitHub()
     gh.add(7)
     gh.post(7, _seat_stamp(ic, "worker-1", 1, "k1"))
@@ -703,7 +706,7 @@ def test_the_guard_refuses_another_seats_task_and_passes_a_void_claim(
     assert _guard(ic, gh, _seat_clone(ic, root, holders=freed)).outcome == ic.PASSED
 
 
-def test_the_guard_refuses_a_claim_it_cannot_judge(ic, root, seat_stamps) -> None:
+def test_the_guard_refuses_a_claim_it_cannot_judge(ic, root) -> None:
     gh = FakeGitHub()
     gh.add(7)
     gh.post(7, _seat_stamp(ic, "worker-1", 1, "k1"))

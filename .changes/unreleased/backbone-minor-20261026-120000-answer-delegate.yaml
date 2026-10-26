@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A reviewer now checks every answer no change owes that a change writes,
+  whoever decided it, in every project (COR-064). That is an answer on an
+  artefact a change was not asked about, a revisit entry the change check does
+  not ask for, and a reason for having no anchors. A person who decides what
+  reaches the default branch may also name one agent to decide these answers
+  in a person's place. The backbone configuration gains `friction.delegate`,
+  the agent's name, which counts where the default branch holds it.
+  `pkit validate` fails a name no agent of the project carries, and warns of
+  an agent whose definition does not read COR-064. The delegate never decides
+  an answer it drafted, judges from what the files hold, and refers to a
+  person what only an account settles. COR-050 points 1, 3, 14 and 16 and
+  COR-062 point 7 are refined to match, and so are core rule 20 and the agents
+  README's "Friction writers". With no delegate named, a person decides each
+  such answer.

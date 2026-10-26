@@ -9,7 +9,6 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
@@ -2761,9 +2760,7 @@ def _run_done_work_end_to_end(
     if claimed_by is not None:
         from _lib.instance_ownership import format_event_comment
 
-        claim = format_event_comment(
-            event="claim", instance=claimed_by, ts=datetime(2026, 9, 1, tzinfo=UTC)
-        )
+        claim = format_event_comment(event="claim", instance=claimed_by)
         task = {
             **task,
             "assignees": [{"login": "octocat"}],
