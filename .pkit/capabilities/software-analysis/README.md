@@ -213,7 +213,7 @@ Where an analysis keeps a domain model, `pkit analysis link` links its terms whe
 - **A moved link asks nothing.** Each place of the analysis's artefacts declares these links' form, a link to a glossary entry (DEC-004 point 7). The core's friction checks read each such link as its words alone (COR-050 point 5). So a change that only adds, removes or retargets links asks nothing of what anchors the linked artefact. A word you change beside a link still does.
 - **A revalidation of links alone is `unchanged`.** Friction reads a moved link as no change to content, so `outcome: updated` on such a change alone is a bump. Mark it `unchanged`, with why the artefact still holds.
 - **A link of that form you write by hand** is set aside too, as in the glossary of an analysis that keeps no domain model. Its words still count.
-- **A citation's link is not set aside.** Its form is not declared, so a moved one flags what anchors its artefact ([Linking citations](#linking-citations-pkit-analysis-link), below).
+- **A citation's link is set aside too,** by a form of its own. [Linking citations](#linking-citations-pkit-analysis-link), below, says which links friction does not set aside.
 
 A section of the example view below, linked:
 
@@ -246,7 +246,9 @@ In every analysis, with a domain model or without, `pkit analysis link` also lin
 - **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. A missing or stale link into a file you receive as a synced copy is a warning, and every other one fails. A synced copy, such as a core record or a shipped capability's decision, changes at a version transition, which rewrites none of your text, so run the command after an upgrade. A citation that resolves to nothing is a warning too.
 - **A reworded point heading.** A point's id is permanent, and its title is not. A reworded heading gives another anchor, so the check reports each link to it as stale, and the command rewrites them.
 - **Written, never by hand.** A link whose text is a citation, or a point's id inside one, and whose target is a path in the repository, is held as the command's, and rewritten or taken out. A link to a web address is yours.
-- **Its cost.** A moved link is part of the content that holds it, unlike a term's link, so it flags whatever anchors that artefact.
+- **A moved link asks nothing.** Each place of the analysis's artefacts declares these links' form beside a term link's: a path to a file named by a record's id, or to a heading named by a rule's id (DEC-001 point 13). The core's friction checks read each such link as its words alone (COR-050 point 5). So a change that only adds, removes or retargets links asks nothing, while a word you change beside a link still asks. A revalidation of moved links alone is `unchanged`, since `updated` there is a bump.
+- **What friction does not set aside** asks an answer when it moves. That is the link of a citation in brackets, such as `[software-analysis:DEC-001]`, since the core reads no link whose words hold a bracket. It is also a rule linked to its rule set whole, where the lookup finds no heading for it.
+- **A link of that form you write by hand** is set aside too, whatever its words. The check holds only a link whose text is a citation, or a point's id inside one. So one under other words is yours to keep true, though its words still count.
 
 A use case's variant, linked:
 

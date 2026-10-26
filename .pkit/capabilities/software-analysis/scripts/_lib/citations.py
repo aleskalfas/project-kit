@@ -42,6 +42,10 @@ link, and is noted (`Note`): the check warns of it.
 The citations of one text are found on the text with the links the command writes
 taken out, and the spans the caller skips (`_lib/links.py`: code, headings, labels,
 comments, other links and markup) never hold one.
+
+**Set aside by friction** (`TARGET`): each place of the capability declares the form of
+the targets the command writes, a path to a record's file or to a rule's heading, so the
+core's friction reads each such link as its words alone (COR-050 point 5).
 """
 
 from __future__ import annotations
@@ -107,6 +111,19 @@ _JOINER = re.compile(rf"^(?:,{_SP}|,?{_SP}and{_SP})$")
 #: A link's text that is a point's id alone, and the name of a record's file.
 POINT_ID = re.compile(rf"^{_PID}$")
 RECORD_FILE = re.compile(r"^(?:COR|PRJ|ADR|DEC)-[0-9]+(?:[-.]|$)")
+
+#: The target of a link the command writes, the form each place of the capability
+#: declares as a derived link (COR-050 point 5): a path with no scheme to a record's
+#: file, named by its id, with a point's anchor or none; or to a rule set's file at a
+#: rule's heading, its anchor as the host gives it. The core matches the target alone,
+#: and reads no link whose words hold a bracket, so a citation in brackets keeps its link
+#: as content (DEC-001 point 13).
+TARGET = (
+    r"(?:[^()\s:#]*/)?(?:"
+    r"(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?"
+    r"|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?"
+    r")"
+)
 
 #: What a note says of a `DEC-NNN` no capability's decision answers, and of a citation
 #: the lookup finds nothing for.

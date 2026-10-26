@@ -110,7 +110,9 @@ docs:
 # so friction reads each as its words alone and a change that only moves links asks
 # nothing (DEC-004 point 7). The glossary's form is the link command's own target,
 # `_lib/links.py`'s `_ENTRY`, and every other place's its branch by a path, since only
-# the glossary links an entry by its anchor alone. A test holds each to it.
+# the glossary links an entry by its anchor alone. Beside it, every place declares the
+# form of a citation's link, `_lib/citations.py`'s `TARGET` (DEC-001 point 13). A test
+# holds each to it.
 #
 # COR-050 point 16 — each kind of requirement's place declares the core's
 # signal (DEC-002 point 4): a change to its statement, measure or applies-to
@@ -142,6 +144,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*|#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary or by its anchor alone, which `pkit analysis link` writes on a term's first mention and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: domain-model
       type: domain-model-view
@@ -149,6 +153,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention and on a section's line to its term, and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: use-case-model/actors
       type: actor
@@ -156,6 +162,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: use-case-model/use-cases
       type: use-case
@@ -163,6 +171,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: use-case-model/journeys
       type: journey
@@ -170,6 +180,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: requirements/quality
       type: quality-requirement
@@ -177,6 +189,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
       revisits:
         - all-but: [actors, refines]
           when: [statement, measure, applies-to]
@@ -188,6 +202,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
       revisits:
         - all-but: [actors, refines]
           when: [statement, measure, applies-to]
@@ -199,6 +215,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
       revisits:
         - all-but: [actors, refines]
           when: [statement, measure, applies-to]
@@ -213,6 +231,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*|#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary or by its anchor alone, which `pkit analysis link` writes on a term's first mention and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: "*/domain-model/**"
       type: domain-model-view
@@ -220,6 +240,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention and on a section's line to its term, and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: "*/use-case-model/actors/**"
       type: actor
@@ -227,6 +249,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: "*/use-case-model/use-cases/**"
       type: use-case
@@ -234,6 +258,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: "*/use-case-model/journeys/**"
       type: journey
@@ -241,6 +267,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
     - location: analysis
       path: "*/requirements/quality/**"
       type: quality-requirement
@@ -248,6 +276,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
       revisits:
         - all-but: [actors, refines]
           when: [statement, measure, applies-to]
@@ -259,6 +289,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
       revisits:
         - all-but: [actors, refines]
           when: [statement, measure, applies-to]
@@ -270,6 +302,8 @@ friction:
       derived-links:
         - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
           description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention in each part and the check holds (DEC-004 point 7).
+        - target: '(?:[^()\s:#]*/)?(?:(?:COR|PRJ|ADR|DEC)-[0-9]+(?:-[^()\s:#/]*)?\.md(?:#[^()\s]*)?|[^()\s:#/]+\.md#rs-[a-z][a-z0-9]*-[0-9]+(?:-[^()\s]*)?)'
+          description: A link by a path to a file named by a record's id, or to a heading named by a rule's id, the form of the links `pkit analysis link` writes on citations, which the check holds (DEC-001 point 13). A link of the form written by hand under other words is set aside too.
       revisits:
         - all-but: [actors, refines]
           when: [statement, measure, applies-to]

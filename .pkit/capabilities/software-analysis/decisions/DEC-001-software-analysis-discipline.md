@@ -325,9 +325,13 @@ Where the analysis's prose cites a decision record, one of its points or a rule,
 **A copy for navigation.** Each link copies where its citation's target lies, and the check holds it equal to the lookup, so it never drifts.
 - **No anchor.** A record anchor in front matter says what an artefact rests on, so a change to that record flags it (point 4). A link only leads a reader to what the text cites, and rests on nothing.
 - **One direction.** A link runs from the analysis to the records, as its anchors do. No record links back.
+- **A derived link.** Each place of the capability declares these links' form, beside a term link's (COR-050 point 5). The form is a path to a file named by a record's id, or to a heading named by a rule's id. Friction reads each link of the form as its words alone. So a change that only adds, removes or re-points one asks no answer, and a word changed beside a link still does.
 
-**Its cost.** A link is part of the content of the artefact that holds it. A citation added, a point's heading reworded, a record's file renamed and a rule moved each move a link, and the command runs before validation passes.
-- **What a moved link flags:** whatever anchors the artefact that holds it. Its revalidation is short, since the link leaves the artefact true. A change that only moves links asks no answer once the core spares it ([project-kit#1844](https://github.com/aleskalfas/project-kit/issues/1844)).
+**Its cost.** A citation added, a point's heading reworded, a record's file renamed and a rule moved each move a link. So the command runs before validation passes.
+- **What friction does not set aside** reads as content, so moving such a link asks an answer:
+  - the link of a citation in brackets, such as `[software-analysis:DEC-001]`, since the core reads no link whose words hold a bracket
+  - a rule linked to its rule set whole, where the lookup finds no heading for it
+- **A link of the form written by hand** is set aside too. The form reads a link's target alone. The check holds only a link whose text is a citation, or a point's id inside one. So a writer's own link into a record's file, under other words, can be re-pointed unseen, though its words still count.
 - **A file the project receives** changes under it at a version transition, which rewrites none of the project's own text (COR-059 point 10). So a reworded heading there stales the project's links, and the check warns until the project runs the command. A link that went stale leads to the top of the right file.
 - **Where the records are the project's own,** as in the repository that writes the core, a change that rewords a point's heading fails validation until it runs the command.
 - **The first run.** The cost was weighed where no release had shipped the capability, so no project held an analysis these links could fail.
@@ -471,6 +475,8 @@ So the direction from the analysis treats a record that ships as it treats the p
 
 **Why a citation links to what it cites.** The analysis cites a record in most of its statements, as the decision behind it. A reader who wants that point has to find the record's file and then the point's heading. The anchors in front matter name it, but a reader never sees front matter. The capability's maintainer asked for the links on 21 October ([project-kit#1865](https://github.com/aleskalfas/project-kit/issues/1865)).
 - **Why a command writes them, and the check holds them.** A link to a point written by hand rots when its heading is reworded, since the host's anchor carries the title, and only the id is permanent (COR-058 point 3). The command writes each link from the lookup, and the check sees one go stale.
+- **Why friction sets them aside.** A moved link states nothing new, so the revalidation it would ask could only say that a link moved. A first run of the command would ask that revalidation of every artefact resting on a document the run writes links into ([project-kit#2064](https://github.com/aleskalfas/project-kit/issues/2064)). Only this capability knows which links its command writes, so it declares their form (COR-050 point 5).
+- **Why the form names a file or a heading by an id.** The lookup gives such targets: a file named by a record's id, and a heading named by a rule's id, where it finds one. A pattern on a target cannot tell a citation's link from a writer's own. So the form also sets aside a writer's link into a record's file. A form of every link to a file would set aside more, a writer's link to any artefact.
 - **Why a body is read for them.** A tool takes data from front matter alone (point 1). A citation is the writer's words, and its link adds no fact to them: it leads a reader to what the words already name, and no tool reads it. A form the command does not read only loses its link, so prose parsed by pattern costs no check here. The rule-set record rejects such parsing where a check depends on it (COR-051).
 - **Why the backbone's lookup.** The backbone resolves every kind of record, and reads a record's points in one place. A second reading in the capability would drift from it, and would walk folders the backbone owns to find a capability's decisions.
 - **Why GitHub's anchor.** A reader follows the link on the host, and the repository that writes this capability is read on GitHub. The backbone's own slug differs from GitHub's at the edges, such as a heading that holds `run_rules`, whose underscore GitHub keeps. A link with that slug would land at the top of the record.
@@ -578,6 +584,9 @@ So the direction from the analysis treats a record that ships as it treats the p
 - **A rule set's name linked, such as `WRITE`.** Not taken. A word in capitals reads as many things in prose, and a rule names the rule cited.
 - **The links in revalidation records and withdrawn artefacts.** Rejected. Both are history, kept as written.
 - **The links only where an analysis keeps a domain model.** Rejected. Their targets lie outside the analysis, so every analysis takes them, with or without views.
+- **The links read as content, each move answered.** Rejected. Each answer could only say that a link moved. A reworded heading would ask one of every artefact resting on a document that cites the heading.
+- **One form for every link to a Markdown file.** Rejected. The check does not hold a writer's own link to another artefact, and that form would set it aside.
+- **The check holding every link of the form, whoever wrote it, as it holds a term's link.** Not taken. A writer's own link into a record, under words of the writer's own, would then be taken out as extra.
 
 ## Implications
 
