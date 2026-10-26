@@ -621,3 +621,31 @@ def test_this_clone_keeps_a_task_it_claimed_first(run, nt, sw, monkeypatch) -> N
         comments=pool.github.issues[10].comments, labels=[], assignee_login="me"
     )
     assert resolution.winner == 2
+
+
+# ---- the commit the run read (DEC-059 point 1) ----------------------------------------------
+
+_READ = "this clone read the topology of origin/main at c0ffee."
+
+
+def test_it_names_the_commit_it_read_and_the_start_work_it_runs_does_not_repeat_it(
+    run, nt, sw, monkeypatch, capsys
+) -> None:
+    """A clone says which commit of the default branch it read, once in the run:
+    `start-work` reads the topology again to confirm the seat, and says nothing more."""
+    pool = Pool()
+    pool.add(21, kind="test")
+    seated, _repo = _scoped_topology(nt)
+    start = StartWorkInProcess(sw, monkeypatch, pool)
+    rc, starts = run(pool, seated=seated, start=start)
+    assert (rc, starts) == (0, [(21, False)])
+    assert start.moved == [21]
+    assert capsys.readouterr().err.count(_READ) == 1
+
+
+def test_a_project_with_no_topology_names_no_commit(run, capsys) -> None:
+    pool = Pool()
+    pool.add(10)
+    rc, starts = run(pool, instance=2)
+    assert (rc, starts) == (0, [(10, False)])
+    assert "read the topology" not in capsys.readouterr().err

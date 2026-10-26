@@ -14,9 +14,11 @@ Three readings
   the topology from the default branch, at the commit the backbone resolves it
   to (``_lib/default_branch``, COR-054 point 5), and never from the branch or the
   working tree (point 1). The topology it returns names the reference and the
-  commit it read. It returns None where that commit declares no topology, or the
-  default branch has no commit yet, and raises :class:`Unresolved` where the
-  default branch resolves to no commit, or git cannot read the file there.
+  commit it read, and :func:`name_once` says that commit once in a run, however
+  many of the run's commands read it. It returns None where that commit declares
+  no topology, or the default branch has no commit yet, and raises
+  :class:`Unresolved` where the default branch resolves to no commit, or git
+  cannot read the file there.
 - :func:`read_working_tree` reads the change's own file: the command that creates
   the seats' state issues writes into it, and the check judges it.
 - :func:`read_at` reads the topology at a commit, such as a check's base.
@@ -59,7 +61,7 @@ import os
 import re
 import socket
 import subprocess
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, MutableMapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -124,6 +126,11 @@ UNRESOLVED = "unresolved"
 #: Git's environment for a reading that stays in this clone: a partial clone
 #: fetches an object it lacks unless told not to.
 _OFFLINE = {"GIT_NO_LAZY_FETCH": "1", "GIT_ALLOW_PROTOCOL": "none"}
+
+#: The commit of the default branch this run has named (:func:`name_once`). It
+#: lives in the environment, so each command a command runs, such as the
+#: ``move-issue`` that ``start-work`` runs, inherits it.
+NAMED_ENV = "PKIT_TOPOLOGY_NAMED"
 
 #: A git runner: takes the arguments after ``git``, returns what
 #: ``subprocess.run`` returns.
@@ -483,6 +490,23 @@ def read(
     cannot read the file there.
     """
     return read_at(capability_root, settled(capability_root, run=run), git=git)
+
+
+def name_once(tree: Topology, environ: MutableMapping[str, str] | None = None) -> str | None:
+    """Where ``tree`` was read, in words a line can carry, the first time this
+    run reads that commit, or None where the run named it already.
+
+    A clone that has not fetched the default branch reads what it last fetched,
+    and says which commit it read (DEC-059 point 1). One run says it once,
+    however many of its commands read the topology. The commit named is kept in
+    ``environ``, this process's environment unless a caller gives another, which
+    each command the run starts inherits. A reading at another commit names that
+    commit. A topology read from no commit names nothing."""
+    env = os.environ if environ is None else environ
+    if tree.commit is None or env.get(NAMED_ENV) == tree.commit:
+        return None
+    env[NAMED_ENV] = tree.commit
+    return tree.where()
 
 
 def read_at(capability_root: Path, at: Settled, *, git: Git | None = None) -> Topology | None:

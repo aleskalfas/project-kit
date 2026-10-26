@@ -19,7 +19,9 @@ substrate is read only once an id is set, from the adopter's
 holding a seat, and its number is the seat's, never a typed one (point 6). The
 run's reading of the topology, this clone's seat and each seat's holder, comes
 from :func:`read_topology`, through one run's snapshot (``_lib/topology``,
-ADR-071 point 1). The clone's key and the name of the seat it took are read from
+ADR-071 point 1). A note names the commit of the default branch the run read,
+once, however many commands of the run read it (point 1). The clone's key and
+the name of the seat it took are read from
 its runtime file (``_lib/instance_identity``). A clone that holds no seat marks
 no issue and is guarded by nothing. A claim names the seat, its number and the
 clone's key, in the audit-log facility's stamp (point 9). It counts only while
@@ -341,7 +343,12 @@ def read_topology(
     a clone that took a seat cannot confirm it, and :class:`Unconfirmed` is
     raised (DEC-059 point 1). A clone that took none keeps the number typed into
     it, or acts as no instance where none is, with a note, since no topology was
-    read to refuse it."""
+    read to refuse it.
+
+    A note names the commit of the default branch the topology was read at,
+    before the seat is confirmed, and once in a run: a command that another
+    command runs repeats no commit the first named (DEC-059 point 1,
+    ``topology.name_once``)."""
     try:
         snap = _snapshot(capability_root, config, login)
     except topology.Unresolved as exc:
@@ -364,6 +371,9 @@ def read_topology(
         return None
     if snap is None:
         return None
+    where = topology.name_once(snap.topology)
+    if where is not None:
+        print(f"[note] ownership: this clone read the topology of {where}.", file=sys.stderr)
     seat = confirm_seat(snap, capability_root, dry_run=dry_run)
     return Topology(seat, SeatHolders(snap))
 
@@ -399,8 +409,8 @@ def confirm_seat(
         if instance is not None:
             print(
                 f"[note] ownership: the number {instance} typed into this clone is not used, "
-                f"since {snapshot.topology.where()} holds a topology: a clone takes part by "
-                "taking a seat (`pkit pm take-seat`, DEC-059 point 6).",
+                "since the default branch holds a topology: a clone takes part by taking a "
+                "seat (`pkit pm take-seat`, DEC-059 point 6).",
                 file=sys.stderr,
             )
         return None
