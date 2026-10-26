@@ -128,6 +128,10 @@ What is checked, each against the record's words:
   and each part of an actor, a use case, a journey and a requirement, against what
   `pkit analysis link` writes (`_lib/links.py`) — a link missing, extra or stale,
   the message naming the command.
+- **The links of ids** (point 13), whatever any rule's status, in every analysis:
+  each first mention of an artefact by its id in each section, in the same files and
+  parts, against what `pkit analysis link` writes — a link missing, extra or stale,
+  the message naming the command.
 - **One name, one concept** (points 1 and 2), whatever any rule's status, as a
   shared id is refused: no two terms in force of an analysis share a name, a
   noun form counted, and none takes a name another replaces; no term takes a
@@ -1537,12 +1541,13 @@ def _senses(own: Sequence[Artefact]) -> list[Finding]:
 
 def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
     """Each section's link to its term, and the mentions' links, in every analysis that
-    keeps a domain model (DEC-004 point 7), whatever any rule's status: a link missing,
-    one extra and one whose target is stale, each against what `pkit analysis link`
-    writes (`_lib/links.py`), in the glossary, the views, and the actors, use cases,
-    journeys and requirements. An analysis whose folder of views holds none is not read.
-    Where the kinds' declared structure cannot be read, which the structure check
-    reports, the four kinds' parts are not read either."""
+    keeps a domain model (DEC-004 point 7), and the links of the ids each analysis's text
+    names (DEC-001 point 13), whatever any rule's status: a link missing, one extra and one
+    whose target is stale, each against what `pkit analysis link` writes
+    (`_lib/links.py`), in the glossary, the views, and the actors, use cases, journeys and
+    requirements. An analysis whose folder of views holds none is read for the links of
+    ids alone. Where the kinds' declared structure cannot be read, which the structure
+    check reports, the four kinds' parts are not read either."""
     try:
         kinds: Mapping[str, structure.Kind] | None = links.parted(root)
     except structure.Unreadable:
@@ -1589,6 +1594,8 @@ def _link_message(d: links.Departure) -> str:
             f"`{d.written}`: a section's one link to its term is its first line below its "
             f"heading, to its own term while that term is in force — {mend}"
         )
+    if d.of_id:
+        return _id_link_message(d)
     if d.how == links.MISSING:
         return (
             f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
@@ -1603,6 +1610,27 @@ def _link_message(d: links.Departure) -> str:
         f"line {d.line}: `{d.text}` links to a glossary entry, `{d.written}`, where no link "
         f"belongs: only the first mention of a term in force in each section takes one, never "
         f"in its own section, nor after `{links.ESCAPE}` — {mend}"
+    )
+
+
+def _id_link_message(d: links.Departure) -> str:
+    """What a departure of an id's link says, and what mends it (DEC-001 point 13)."""
+    mend = "run `pkit analysis link`, which writes the links (DEC-001 point 13)"
+    if d.how == links.MISSING:
+        return (
+            f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
+            f"takes a link to it, `{d.wanted}` — {mend}"
+        )
+    if d.how == links.STALE:
+        return (
+            f"line {d.line}: `{d.text}` links to `{d.written}`, and {d.term} is `{d.wanted}` "
+            f"— {mend}"
+        )
+    return (
+        f"line {d.line}: `{d.text}` links to `{d.written}`, where no link belongs: only the "
+        f"first mention of an artefact of the analysis, or of one it builds on, by its id in "
+        f"each section takes one, never in the artefact itself, a goal or an actor's first "
+        f"sentence — {mend}"
     )
 
 

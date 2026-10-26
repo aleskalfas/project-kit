@@ -94,6 +94,8 @@ each with what it reads:
   Text follows each label, up to the next hand-over, blank line or item. Each
   use case in `relies-on` has a hand-over of its own. A line that opens with
   `**Needs from` is a hand-over, and one that is neither label breaks the form.
+  A link around an id, as `pkit analysis link` writes one on a step line or in a
+  label, is read as the id alone (`ids_read_plain`, DEC-001 point 13).
 - **`outcomes-match-front-matter`:** one item for each entry of the record's
   `outcomes`, in the same order. Item n opens with `**<id> — <outcome>.**` for
   the n-th entry, exactly, and text follows.
@@ -140,7 +142,8 @@ when what it rests on changes, and a person rereads it (DEC-001 point 4).
 **A precondition's producers** are no form, and read with no rule of their own
 (`preconditions`): each item of a use case's *Preconditions* opens with them,
 such as `**From UC-003:**`, `**From UC-001 or UC-064:**` or `**From UC-059, or
-Environment:**` (DEC-001 point 1). The check of a use case's `after` compares
+Environment:**` (DEC-001 point 1), a link around an id read as the id (DEC-001 point
+14). The check of a use case's `after` compares
 them with that field (`_lib/chain.py`), and no closed list of labels reads such
 an opening as a label (`structure._undeclared`).
 """
@@ -572,6 +575,24 @@ def _after(rest: str, item: Item) -> str:
     return " ".join(" ".join([rest, *(row.text for row in item.rows[1:])]).split())
 
 
+# --- an id's link, read as the id -----------------------------------------------------------
+
+#: A Markdown link around an artefact's id, as `pkit analysis link` writes one (DEC-001
+#: point 14): its words an id, with its analysis's component before it or not, and its
+#: target a path. A form that holds an id to data reads it as the id.
+_ID_LINK = re.compile(
+    r"(?<!!)\[(?P<id>(?:[a-z](?:[a-z0-9-]*[a-z0-9])?:)?"
+    r"(?:UC|JRN|REQ|ACT|TERM|VIEW)-[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)\]\([^()\s]*\)"
+)
+
+
+def ids_read_plain(text: str) -> str:
+    """`text` with each link around an artefact's id read as the id alone, as a form that
+    holds an id to data reads it (DEC-001 point 13): a journey's step lines and seams, and
+    a precondition's producers."""
+    return _ID_LINK.sub(r"\g<id>", text) if "](" in text else text
+
+
 # --- a precondition's producers -------------------------------------------------------------
 
 #: A bold run that opens a line, and what follows it on the line.
@@ -602,10 +623,11 @@ class Precondition:
 def named_producers(text: str, rest: str = ":") -> tuple[str, ...] | None:
     """The producers a bold opening names, its `text` such as `From UC-059, or
     Environment:` and `rest` what follows the bold run: each use case's id and
-    `environment`, in the order written, separated by commas and `or`. `None` where it
-    is no such opening: it does not start `From `, it ends in no colon, inside the bold
-    run or right after it, or it holds a word that names no producer."""
-    stripped = text.strip()
+    `environment`, in the order written, separated by commas and `or`, a link around an id
+    read as the id (`ids_read_plain`). `None` where it is no such opening: it does not
+    start `From `, it ends in no colon, inside the bold run or right after it, or it holds
+    a word that names no producer."""
+    stripped = ids_read_plain(text).strip()
     if not (stripped.endswith(":") or rest.startswith(":")):
         return None
     found = _PRODUCERS.match(stripped)
@@ -905,7 +927,8 @@ def _is_step_line(written: str, use_case: str, titles: Mapping[str, str]) -> boo
 
 def _step_text(item: Item) -> str:
     """A step's line: its item's first paragraph, its number left out, up to a blank
-    line, a nested item or a hand-over, white space runs read as one space."""
+    line, a nested item or a hand-over, white space runs read as one space, and the link
+    around its use case's id read as the id (`ids_read_plain`)."""
     _number_of, first = _numbered(item)
     lines = [first]
     for row in item.rows[1:]:
@@ -913,7 +936,7 @@ def _step_text(item: Item) -> str:
         if not text.strip() or _opens_item(text) or _HANDOVER.match(text.strip()):
             break
         lines.append(text)
-    return " ".join(" ".join(lines).split())
+    return ids_read_plain(" ".join(" ".join(lines).split()))
 
 
 def _opens_item(text: str) -> bool:
@@ -923,14 +946,15 @@ def _opens_item(text: str) -> bool:
 
 
 def _handovers(item: Item) -> Iterator[tuple[int, str, str]]:
-    """Each hand-over under a step: its line, its label's line from the label on, and
-    the text that follows the label — to the next hand-over, blank line or item."""
+    """Each hand-over under a step: its line, its label's line from the label on, a link
+    around an id read as the id (`ids_read_plain`), and the text that follows the label —
+    to the next hand-over, blank line or item."""
     rows = item.rows[1:]
     for index, row in enumerate(rows):
         opening = _HANDOVER.match(row.text.strip())
         if opening is None:
             continue
-        label = opening["label"]
+        label = ids_read_plain(opening["label"])
         closed = re.match(r"^\*\*.*?:\*\*", label)
         said = [label[closed.end() :] if closed else ""]
         for later in rows[index + 1 :]:

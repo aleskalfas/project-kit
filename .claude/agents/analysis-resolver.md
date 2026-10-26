@@ -93,8 +93,8 @@ The only commands that write, and the proposal lists them for the person; you ru
 pkit friction revalidate <artefact> --outcome unchanged --because "<why it still holds against this change>"
 # holds — the code moved; after the person applies the anchor edit
 pkit friction revalidate <artefact> --outcome unchanged --because "<old path> moved to <new path>; anchor re-pointed."
-# analysis-stale — after the person applies the content edit; where the analysis keeps
-# a domain model, the links between terms first (DEC-004 point 7)
+# analysis-stale — after the person applies the content edit; the links of ids first
+# (DEC-001 point 13), and of terms where the analysis keeps a domain model (DEC-004 point 7)
 pkit analysis link
 pkit friction revalidate <artefact> --outcome updated
 # code-regressed — after the person reports the defect

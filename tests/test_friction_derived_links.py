@@ -526,14 +526,16 @@ def test_software_analysis_declares_the_link_commands_own_form() -> None:
     """The glossary's form is the command's target; every other place's, its branch by a
     path, since only the glossary links an entry by its anchor alone: the views, the actors,
     the use cases, the journeys and the three kinds of requirement. The views' places also
-    declare the form of their closing section's links (#2104)."""
-    (links,) = load_lib("links")
+    declare the form of their closing section's links (#2104). Every place declares the
+    form of the links of ids last (#2109)."""
+    links, id_links = load_lib("links", "id_links")
     entry_form: str = links._ENTRY
+    ids: str = id_links.TARGET
     for place in ("glossary.md", "*/glossary.md"):
-        assert _declared(place) == [entry_form]
+        assert _declared(place) == [entry_form, ids]
     by_path = entry_form.split("|", 1)[0]
     for place in ("domain-model", "*/domain-model/**"):
-        assert _declared(place) == [by_path, links.CLOSING_TARGET]
+        assert _declared(place) == [by_path, links.CLOSING_TARGET, ids]
     for folder in (
         "use-case-model/actors",
         "use-case-model/use-cases",
@@ -542,8 +544,8 @@ def test_software_analysis_declares_the_link_commands_own_form() -> None:
         "requirements/functional",
         "requirements/constraints",
     ):
-        assert _declared(folder) == [by_path], folder
-        assert _declared(f"*/{folder}/**") == [by_path], folder
+        assert _declared(folder) == [by_path, ids], folder
+        assert _declared(f"*/{folder}/**") == [by_path, ids], folder
 
 
 @pytest.fixture
@@ -581,11 +583,14 @@ def test_links_written_in_the_four_kinds_ask_nothing_of_what_rests_on_them(
     parted: AdopterRepo,
 ) -> None:
     """`pkit analysis link` adds links in an actor, the use cases, a journey and the
-    requirements, which rest on one another: nothing asks an answer. A word changed beside
-    a link in a use case still asks the journey through it."""
+    requirements, which rest on one another: nothing asks an answer, the links of the
+    journey's steps to its use cases included (#2109). A word changed beside a link in a
+    use case still asks the journey through it."""
     before = {rel: (parted.root / rel).read_text(encoding="utf-8") for rel in BODIES}
     link(parted)
     assert all((parted.root / rel).read_text(encoding="utf-8") != before[rel] for rel in before)
+    journey = (parted.root / JOURNEY).read_text(encoding="utf-8")
+    assert "1. [UC-001](../use-cases/UC-001-place-order.md) — Place an order" in journey
     assert _friction(fc.run_change_check(parted.root, "main")) == []
     text = (parted.root / PLACE).read_text(encoding="utf-8")
     reworded = text.replace("chooses goods", "picks goods", 1)

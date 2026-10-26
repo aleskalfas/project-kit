@@ -35,7 +35,7 @@ Where the analysis keeps a domain model, the links between terms read two more f
 - **`noun-forms`** lists other forms of the name as a noun, such as its plural, `[sandboxes]`. List only forms that cannot read as a verb: `payments`, never `orders`. Each counts as a name, so no other term takes it.
 - **`other-senses`** lists each phrase in which the name has another sense, one the distinctions tell apart, such as `in order to` beside the `order` a customer places. Each holds one of the term's names, and more. No link names the term inside it.
 
-Then run `pkit analysis link` where the analysis keeps a domain model. A new term moves the links of each section that mentions it first. Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first.
+Then run `pkit analysis link`, which links the ids the entry names (DEC-001 point 13). Where the analysis keeps a domain model, a new term moves the links of each section that mentions it first. Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first.
 
 ## Later
 
