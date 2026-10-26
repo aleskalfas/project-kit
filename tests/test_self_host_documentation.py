@@ -294,13 +294,15 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     # Every place is a page (#1010), and so is every guide in the user root, each
     # reader resolved against the readers point. software-analysis contributes one
     # reader per actor of pkit's own analysis (#1001), under the `act-` prefix: the
-    # eight core actors (#1344) and the planner (#1710), beside living-docs' own two.
+    # eight core actors (#1344), the planner (#1710) and the three agents of
+    # parallel work (#2096), beside living-docs' own two.
     assert "docs/permissions/README.md" in _user_root_pages()
     assert summary[4] == (
         "readers (pkit::documentation:readers): act-adopter, act-ai-agent, "
         "act-ci-pipeline, act-component-author, act-developer, "
-        "act-merge-authoriser, act-methodology-maintainer, act-operator, "
-        "act-planner, maintainer, user; "
+        "act-lead-agent, act-merge-authoriser, act-methodology-maintainer, "
+        "act-operator, act-planner, act-planning-agent, act-worker-agent, "
+        "maintainer, user; "
         f"{len(_project_places()) + len(_user_root_pages())} page reader(s) checked."
     )
 
