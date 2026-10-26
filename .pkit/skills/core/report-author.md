@@ -5,8 +5,6 @@ metadata:
   wraps_command: pkit report
 reads:
   records:
-    - PRJ-008
-    - ADR-047
     - COR-043
   paths:
     - .pkit/cli/README.md
@@ -14,7 +12,7 @@ reads:
 
 # Composing a report to project-kit
 
-`pkit report` is the built-in adopter→project-kit feedback channel (per the report-command decision, PRJ-008; cross-repo realization ADR-047). It files a **bug** (something is broken), a **change-request** (a concrete desired change — templated: motivation / desired behaviour / current workaround), or **feedback** (an idea, friction, or rough edge) as an issue on the upstream project-kit repo — *not* the adopter's own tracker — with a redacted environment block attached automatically.
+`pkit report` is the built-in adopter→project-kit feedback channel (the CLI reference's "Report commands", in `.pkit/cli/README.md`). It files a **bug** (something is broken), a **change-request** (a concrete desired change — templated: motivation / desired behaviour / current workaround), or **feedback** (an idea, friction, or rough edge) as an issue on the upstream project-kit repo — *not* the adopter's own tracker — with a redacted environment block attached automatically.
 
 Your job with this skill is to turn a user's rough "this is annoying" or "X broke" into a report a maintainer can act on without a round-trip, then file it through the command. You are the formulation help — the user should not have to know how to write a good bug report.
 
