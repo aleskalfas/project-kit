@@ -23,6 +23,9 @@ shortfalls:
   - at: "4a"
     issue: "#512"
     record: project-management:DEC-045#6
+  - at: "8a"
+    issue: "#2177"
+    record: project-management:DEC-059#1
 pkit:
   friction:
     anchors:
@@ -127,6 +130,9 @@ pkit:
 - **7a.** The project writes the [owner](../../../glossary.md#term-owner--owner) of each issue as a label. The topology's check refuses the topology, since a label cannot carry what an ownership names ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again) and [DEC-043 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#2-a-selector-in-instance-ownerships-own-schema-home)).
 
 - **8a.** A clone has not fetched the default branch since the change merged. The clone reads the topology the clone last fetched. The commands that take and list seats say which commit the clone read ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
+
+> [!WARNING]
+> **Not built yet:** the seat confirmation before each write and `next-task` read the topology without naming the commit they read. DEC-059 point 1 decides it, and #2177 tracks it.
 
 **Postconditions:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares each [seat](../../../glossary.md#term-seat--seat), with the seat's number, [state issue](../../../glossary.md#term-state-issue--state-issue) and [scope](../../../glossary.md#term-scope--scope), where the seat has a scope. Each scope names the [workstreams](../../../glossary.md#term-workstream--workstream) or the kinds of work that the agent of the scope's seat takes work from.
 
