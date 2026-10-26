@@ -707,7 +707,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#seat).
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#state-issue).
 
-**Example:** the [seat](#term-seat--seat) `api-worker` has a state issue. A comment on it records each clone that takes or releases the seat, and its description names the clone that holds the seat now.
+**Example:** the [seat](#term-seat--seat) `api-worker` has a state issue. A comment on the state issue records each clone that takes or releases the seat. The state issue's description names the clone that holds the seat now.
 
 **Distinctions:**
 

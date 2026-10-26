@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:07cbbb31a10d59d9c225de86b23bbe82cf31a44904aa10a6d0a8e7d36c91f18f -->
+<!-- pkit:overview reads=5 fingerprint=sha256:6682531f6172868fd58e980d1b08426429ae7f6b1084c243c8580137b251cfc0 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -93,7 +93,7 @@ Run several AI agents on one project at once, each on its own scope and never on
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md) ([not built yet](#not-built-yet): step 2, step 3, variant 1a, variant 2a, variant 3a, variant 3b, variant 3c)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md) ([not built yet](#not-built-yet): step 1, step 2, variant 1a, variant 2a, variant 2b, variant 2c)
 - [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) ([not built yet](#not-built-yet): variant 1a, variant 4a, variant 4b)
-- [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md) ([not built yet](#not-built-yet): step 1)
+- [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md) ([not built yet](#not-built-yet): step 1)
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md) ([not built yet](#not-built-yet): step 1, step 3, variant 3a)
 - [UC-091 — Measure one topology against another on comparable work](../use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md)
@@ -105,7 +105,7 @@ Run several AI agents on one project at once, each on its own scope and never on
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
-| [ACT-lead-agent — Lead agent](../use-case-model/actors/ACT-lead-agent.md) | An AI agent of a topology that plans and builds the work of its scope, delegating Tasks to agents it starts itself. | [040-work-in-parallel](#040-work-in-parallel) |
+| [ACT-lead-agent — Lead agent](../use-case-model/actors/ACT-lead-agent.md) | An AI agent of a topology that plans and builds the work of its scope, delegating Tasks to helper agents it starts itself. | [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-planner — Planner](../use-case-model/actors/ACT-planner.md) | The person who plans a project's work at the level of its outcomes. | [010-plan](#010-plan), [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-planning-agent — Planning agent](../use-case-model/actors/ACT-planning-agent.md) | An AI agent of a topology that slices a project's work and files it for the other agents, and builds none of it. | [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-worker-agent — Worker agent](../use-case-model/actors/ACT-worker-agent.md) | An AI agent of a topology that takes ready Tasks one at a time, and builds each up to its merge. | [040-work-in-parallel](#040-work-in-parallel) |
@@ -223,7 +223,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 1a, decided by `project-management:DEC-035#4`, tracked in `#521`
 - [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#3`, tracked in `#519`
 - [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4b, decided by `project-management:DEC-059#7`, tracked in `#2142`
-- [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md): step 1, decided by `project-management:DEC-035#3`, tracked in `#519`
+- [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md): step 1, decided by `project-management:DEC-035#3`, tracked in `#519`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-035#7`, tracked in `#521`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-059#6`, tracked in `#521`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 3, decided by `project-management:DEC-059#3`, tracked in `#2141`

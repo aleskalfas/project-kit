@@ -1,6 +1,6 @@
 ---
 id: UC-088
-title: Delegate a Task of my scope to an agent I start
+title: Delegate a Task of my scope to a helper agent
 status: active
 actor: ACT-lead-agent
 other-actors:
@@ -37,11 +37,11 @@ pkit:
         - REQ-062
 ---
 
-# UC-088 — Delegate a Task of my scope to an agent I start
+# UC-088 — Delegate a Task of my scope to a helper agent
 
-**Goal:** Delegate a Task of my scope to an agent I start, which acts as my instance while it builds the Task.
+**Goal:** Delegate a Task of my scope to a helper agent, which acts as my instance while it builds the Task.
 
-**Other actors:** **AI agent** (`core:ACT-ai-agent`): the agent the lead starts, which the [topology](../../../glossary.md#term-topology--topology) does not name. It builds the [Task](../../../glossary.md#term-task--task) and returns its whole result to the lead ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+**Other actors:** **AI agent** (`core:ACT-ai-agent`): the helper agent the lead starts, which the [topology](../../../glossary.md#term-topology--topology) does not name. The helper agent builds the [Task](../../../glossary.md#term-task--task) and returns its whole result to the lead ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
 **Preconditions:**
 
@@ -50,10 +50,10 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the agents the lead starts ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the helper agents the lead starts ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md) and [COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 - The harness lets a session start agents, down to a limit on how deep they nest ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
-**Trigger:** The lead decides to have another agent build a [Task](../../../glossary.md#term-task--task) of its [scope](../../../glossary.md#term-scope--scope).
+**Trigger:** The lead decides to have a helper agent build a [Task](../../../glossary.md#term-task--task) of its [scope](../../../glossary.md#term-scope--scope).
 
 **Main path:**
 
@@ -62,26 +62,26 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `start-work` writes no owner. DEC-035 point 3 decides that starting an [issue](../../../glossary.md#term-issue--issue) with no owner makes the instance its owner, and #519 tracks it.
 
-2. The lead starts an agent for the Task through the harness, and passes it no name, so the agent's whole result comes back ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The agent acts as the lead's instance while it builds the Task ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
-3. The agent builds the Task on the Task's branch, commits its work and pushes it.
-4. The agent ends, and returns its result to the lead.
+2. The lead starts a helper agent for the Task through the harness, and passes it no name. The helper agent's whole result then comes back ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The helper agent acts as the lead's instance while it builds the Task ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+3. The helper agent builds the Task on the Task's branch, commits its work and pushes it.
+4. The helper agent ends, and returns its result to the lead.
 5. The lead reviews the result, and lands the Task, as `UC-089` describes.
 
 **Variants:**
 
-- **3a.** The lead's session dies while the agent works, and the agent's session ends with it. A new session of the lead takes up the [Task](../../../glossary.md#term-task--task), as `UC-086` describes, and finds on the Task's branch what the agent pushed.
+- **3a.** The lead's session dies while the helper agent works, and the helper agent's session ends with it. A new session of the lead takes up the [Task](../../../glossary.md#term-task--task), as `UC-086` describes, and finds on the Task's branch what the helper agent pushed.
 
 **Postconditions:** The [Task](../../../glossary.md#term-task--task)'s work is on its branch, and the lead's [instance](../../../glossary.md#term-instance--instance) still owns the Task.
 
 **Minimal guarantees:**
 
 - The lead's [instance](../../../glossary.md#term-instance--instance) stays the [Task](../../../glossary.md#term-task--task)'s [owner](../../../glossary.md#term-owner--owner), whichever session builds the Task ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)).
-- The agent's result reaches the lead whole, since the lead passes it no name ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
+- The helper agent's result reaches the lead whole, since the lead passes the helper agent no name ([DEC-029](../../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
 ## Open for the design
 
 What the lead needs here that no accepted record decides yet:
 
-- **The lead's identity in a linked worktree** of the clone, where the agent runs a command of project-management. The agent acts as the lead's [instance](../../../glossary.md#term-instance--instance), and [project-management DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) leaves undecided how a linked worktree reads that identity. Today a linked worktree reads no number of its clone, and #1140 proposes that a linked worktree reads its clone's number.
+- **The lead's identity in a linked worktree** of the clone, where the helper agent runs a command of project-management. The helper agent acts as the lead's [instance](../../../glossary.md#term-instance--instance), and [project-management DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) leaves undecided how a linked worktree reads that identity. Today a linked worktree reads no number of its clone, and #1140 proposes that a linked worktree reads its clone's number.
 - **Several delegations at once.** `start-work` checks each [Task](../../../glossary.md#term-task--task)'s branch out in the lead's own clone, so the lead delegates one Task at a time. A second delegation at once needs a linked worktree, which reads no number today (#1140).
-- **Which agents a lead may start.** A scratchpad note on which agent may start which, `2026-07-02-agent-dispatch-privilege-model`, has produced no record yet.
+- **Which helper agents a lead may start.** A scratchpad note on which agent may start which, `2026-07-02-agent-dispatch-privilege-model`, has produced no record yet.

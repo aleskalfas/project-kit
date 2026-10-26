@@ -47,7 +47,7 @@ pkit:
 
 **Goal:** Hand the next piece of the work to the scope that does it, with what that piece needs from mine.
 
-**Other actors:** **Planning agent** (`ACT-planning-agent`): filed the next piece's [Task](../../../glossary.md#term-task--task) in its own [scope](../../../glossary.md#term-scope--scope), naming this piece's Task in its `## Dependencies` section (`batch-plan.md`).
+**Other actors:** **Planning agent** (`ACT-planning-agent`): filed the next piece's [Task](../../../glossary.md#term-task--task) in that Task's own [scope](../../../glossary.md#term-scope--scope). The `## Dependencies` section of the next piece's Task names this piece's Task (`batch-plan.md`).
 
 **Preconditions:**
 
