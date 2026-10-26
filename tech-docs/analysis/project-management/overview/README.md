@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:6682531f6172868fd58e980d1b08426429ae7f6b1084c243c8580137b251cfc0 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:25a0a7ef4cd0fedcbd603514d32886772f6095ce5b711249cdd6abfbc6b838b6 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -87,12 +87,12 @@ Run several AI agents on one project at once, each on its own scope and never on
 
 **Its use cases:**
 
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md) ([not built yet](#not-built-yet): step 1, step 2, step 3, step 4, step 5, step 6, step 7, step 8, variant 1a, variant 2c, variant 4a, variant 6a, variant 7a, variant 8a)
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md) ([not built yet](#not-built-yet): step 1, step 2, step 3, step 4, step 5, step 6, step 7, step 8, variant 1a, variant 2c, variant 4a, variant 6a, variant 7a, variant 8a)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md) ([not built yet](#not-built-yet): step 2, step 3, step 10, variant 1a)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md) ([not built yet](#not-built-yet): step 1, step 3, step 5, step 6, step 9, variant 2a, variant 2b, variant 3a, variant 9a)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md) ([not built yet](#not-built-yet): step 2, step 3, variant 1a, variant 2a, variant 3a, variant 3b, variant 3c)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md) ([not built yet](#not-built-yet): step 1, step 2, variant 1a, variant 2a, variant 2b, variant 2c)
-- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) ([not built yet](#not-built-yet): variant 1a, variant 4a, variant 4b)
+- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md) ([not built yet](#not-built-yet): variant 1a, variant 4a, variant 4b)
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md) ([not built yet](#not-built-yet): step 1)
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md) ([not built yet](#not-built-yet): step 1, step 3, variant 3a)
@@ -105,9 +105,9 @@ Run several AI agents on one project at once, each on its own scope and never on
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
-| [ACT-lead-agent — Lead agent](../use-case-model/actors/ACT-lead-agent.md) | An AI agent of a topology that plans and builds the work of its scope, delegating Tasks to helper agents it starts itself. | [040-work-in-parallel](#040-work-in-parallel) |
+| [ACT-lead-agent — Lead agent](../use-case-model/actors/ACT-lead-agent.md) | An AI agent of a topology that plans and builds the work of the agent's scope, delegating Tasks to helper agents the agent starts. | [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-planner — Planner](../use-case-model/actors/ACT-planner.md) | The person who plans a project's work at the level of its outcomes. | [010-plan](#010-plan), [040-work-in-parallel](#040-work-in-parallel) |
-| [ACT-planning-agent — Planning agent](../use-case-model/actors/ACT-planning-agent.md) | An AI agent of a topology that slices a project's work and files it for the other agents, and builds none of it. | [040-work-in-parallel](#040-work-in-parallel) |
+| [ACT-planning-agent — Planning agent](../use-case-model/actors/ACT-planning-agent.md) | An AI agent of a topology that slices a project's work and files the work for the other agents, and builds none of the work. | [040-work-in-parallel](#040-work-in-parallel) |
 | [ACT-worker-agent — Worker agent](../use-case-model/actors/ACT-worker-agent.md) | An AI agent of a topology that takes ready Tasks one at a time, and builds each up to its merge. | [040-work-in-parallel](#040-work-in-parallel) |
 | core:ACT-adopter — Adopter | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [040-work-in-parallel](#040-work-in-parallel) |
 | core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [010-plan](#010-plan), [020-file-and-move](#020-file-and-move), [030-review-and-land](#030-review-and-land), [040-work-in-parallel](#040-work-in-parallel) |
@@ -137,21 +137,21 @@ Each view of the domain model explains a group of related concepts:
 
 ### Journeys
 
-#### [JRN-004 — Set up the topology my project runs, and adjust it on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
+#### [JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure](../use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md)
 
 ```mermaid
 flowchart LR
-  accTitle: JRN-004 — Set up the topology my project runs, and adjust it on what I measure
+  accTitle: JRN-004 — Set up the topology my project runs, and adjust the topology on what I measure
   accDescr: The flow of JRN-004: core:ACT-adopter takes 3 steps in order, UC-082, UC-091, UC-082. It relies on 6 use cases outside the journey, drawn apart with no arrow.
   core_ACT_adopter["core:ACT-adopter"]
-  step_1(["1. UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats"])
+  step_1(["1. UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats"])
   step_2(["2. UC-091 — Measure one topology against another on comparable work"])
-  step_3(["3. UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats"])
+  step_3(["3. UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats"])
   subgraph relies_on["Relied on, outside the journey"]
     UC_064(["UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward"])
     UC_083(["UC-083 — Plan an intent into Tasks that one agent can each finish"])
     UC_084(["UC-084 — Take my next ready Task, and build it up to its merge"])
-    UC_087(["UC-087 — Hand the next piece of the work to the scope that does it"])
+    UC_087(["UC-087 — Hand the next piece of the work to the scope that does that piece"])
     UC_089(["UC-089 — Land my Task while other agents land theirs"])
     UC_092(["UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent"])
   end
@@ -178,20 +178,20 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md): step 4, decided by `project-management:DEC-016`, tracked in `#1939`
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md): step 9, decided by `project-management:DEC-016`, tracked in `#1939`
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md): variant 11a, decided by `project-management:DEC-016`, tracked in `#1939`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 1, decided by `project-management:DEC-059#2`, tracked in `#2140`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 2, decided by `project-management:DEC-059#6`, tracked in `#2141`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 3, decided by `project-management:DEC-045#1`, tracked in `#2141`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 4, decided by `project-management:DEC-045#6`, tracked in `#512`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 5, decided by `project-management:DEC-059#7`, tracked in `#2136`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 6, decided by `project-management:DEC-059#3`, tracked in `#2140`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 7, decided by `project-management:DEC-059`, tracked in `#2140`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 8, decided by `project-management:DEC-059#1`, tracked in `#2140`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 1a, decided by `project-management:DEC-059#6`, tracked in `#2140`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 2c, decided by `project-management:DEC-059#6`, tracked in `#2141`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 4a, decided by `project-management:DEC-045#6`, tracked in `#512`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 6a, decided by `project-management:DEC-059#3`, tracked in `#2141`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 7a, decided by `project-management:DEC-059#9`, tracked in `#2140`
-- [UC-082 — Set up my project's topology in its committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 8a, decided by `project-management:DEC-059#1`, tracked in `#2140`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 1, decided by `project-management:DEC-059#2`, tracked in `#2140`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 2, decided by `project-management:DEC-059#6`, tracked in `#2141`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 3, decided by `project-management:DEC-045#1`, tracked in `#2141`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 4, decided by `project-management:DEC-045#6`, tracked in `#512`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 5, decided by `project-management:DEC-059#7`, tracked in `#2136`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 6, decided by `project-management:DEC-059#3`, tracked in `#2140`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 7, decided by `project-management:DEC-059`, tracked in `#2140`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 8, decided by `project-management:DEC-059#1`, tracked in `#2140`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 1a, decided by `project-management:DEC-059#6`, tracked in `#2140`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 2c, decided by `project-management:DEC-059#6`, tracked in `#2141`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 4a, decided by `project-management:DEC-045#6`, tracked in `#512`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 6a, decided by `project-management:DEC-059#3`, tracked in `#2141`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 7a, decided by `project-management:DEC-059#9`, tracked in `#2140`
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 8a, decided by `project-management:DEC-059#1`, tracked in `#2140`
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md): step 2, decided by `project-management:DEC-059#1`, tracked in `#2143`
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md): step 3, decided by `project-management:DEC-059#7`, tracked in `#2143`
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md): step 10, decided by `project-management:DEC-059#7`, tracked in `#2136`
@@ -220,9 +220,9 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2a, decided by `project-management:DEC-035#6`, tracked in `#520`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2b, decided by `project-management:DEC-059#9`, tracked in `#2136`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2c, decided by `project-management:DEC-059#9`, tracked in `#2136`
-- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 1a, decided by `project-management:DEC-035#4`, tracked in `#521`
-- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#3`, tracked in `#519`
-- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4b, decided by `project-management:DEC-059#7`, tracked in `#2142`
+- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 1a, decided by `project-management:DEC-035#4`, tracked in `#521`
+- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#3`, tracked in `#519`
+- [UC-087 — Hand the next piece of the work to the scope that does that piece](../use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md): variant 4b, decided by `project-management:DEC-059#7`, tracked in `#2142`
 - [UC-088 — Delegate a Task of my scope to a helper agent](../use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md): step 1, decided by `project-management:DEC-035#3`, tracked in `#519`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-035#7`, tracked in `#521`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-059#6`, tracked in `#521`

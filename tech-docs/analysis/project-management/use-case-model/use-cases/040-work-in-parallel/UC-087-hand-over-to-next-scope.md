@@ -1,6 +1,6 @@
 ---
 id: UC-087
-title: Hand the next piece of the work to the scope that does it
+title: Hand the next piece of the work to the scope that does that piece
 status: active
 actor: ACT-worker-agent
 other-actors:
@@ -43,33 +43,33 @@ pkit:
         - REQ-041
 ---
 
-# UC-087 — Hand the next piece of the work to the scope that does it
+# UC-087 — Hand the next piece of the work to the scope that does that piece
 
-**Goal:** Hand the next piece of the work to the scope that does it, with what that piece needs from mine.
+**Goal:** Hand the next piece of the work to the scope that does that piece, with what that piece needs from mine.
 
 **Other actors:** **Planning agent** (`ACT-planning-agent`): filed the next piece's [Task](../../../glossary.md#term-task--task) in that Task's own [scope](../../../glossary.md#term-scope--scope). The `## Dependencies` section of the next piece's Task names this piece's Task (`batch-plan.md`).
 
 **Preconditions:**
 
 - **From [UC-084](UC-084-take-next-task.md):** The worker's [instance](../../../glossary.md#term-instance--instance) owns this piece's [Task](../../../glossary.md#term-task--task), which is In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
-- **From [UC-083](UC-083-plan-across-scopes.md):** The next piece's Task is filed in its own [scope](../../../glossary.md#term-scope--scope), and names this piece's Task in its `## Dependencies` section ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
+- **From [UC-083](UC-083-plan-across-scopes.md):** The next piece's Task is filed in that Task's own [scope](../../../glossary.md#term-scope--scope). That Task's `## Dependencies` section names this piece's Task ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and its commands ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
 
-**Trigger:** The worker finishes its piece of the work, such as an interface that another [scope](../../../glossary.md#term-scope--scope) builds on.
+**Trigger:** The worker finishes the worker's piece of the work, such as an interface that another [scope](../../../glossary.md#term-scope--scope) builds on.
 
 **Main path:**
 
-1. The worker finishes its [Task](../../../glossary.md#term-task--task). What the next piece needs from it, such as an interface, lies in the work the Task lands.
-2. The worker lands the Task, as `UC-089` describes, and the Task closes ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
-3. The next piece's Task now names no open [issue](../../../glossary.md#term-issue--issue) in its `## Dependencies` section ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
+1. The worker finishes this piece's [Task](../../../glossary.md#term-task--task). What the next piece needs from this piece's Task, such as an interface, lies in the work that Task lands.
+2. The worker lands this piece's Task, as `UC-089` describes, and that Task closes ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+3. The next piece's Task now names no open [issue](../../../glossary.md#term-issue--issue) in that Task's `## Dependencies` section ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 4. The agent of the next piece's [scope](../../../glossary.md#term-scope--scope) takes that Task, as `UC-084` describes.
 
 **Variants:**
 
-- **1a.** The worker hands its [Task](../../../glossary.md#term-task--task) to another [instance](../../../glossary.md#term-instance--instance) before finishing it, such as when the [topology](../../../glossary.md#term-topology--topology) moves the Task's [workstream](../../../glossary.md#term-workstream--workstream) to another [scope](../../../glossary.md#term-scope--scope): `pkit pm handoff-issue <N> --to-instance <M> --reason "<R>"`. That instance becomes the [owner](../../../glossary.md#term-owner--owner), and the Task keeps its state ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-on-terminal-transitions-and-transfers-on-reclaim) and [DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
+- **1a.** The worker hands this piece's [Task](../../../glossary.md#term-task--task) to another [instance](../../../glossary.md#term-instance--instance) unfinished, such as when the [topology](../../../glossary.md#term-topology--topology) moves the Task's [workstream](../../../glossary.md#term-workstream--workstream) to another [scope](../../../glossary.md#term-scope--scope): `pkit pm handoff-issue <N> --to-instance <M> --reason "<R>"`. That instance becomes the [owner](../../../glossary.md#term-owner--owner), and the Task's state does not [change](../../../../core/glossary.md#term-change--change) ([DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-on-terminal-transitions-and-transfers-on-reclaim) and [DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 
 > [!WARNING]
 > **Not built yet:** `handoff-issue` hands an [issue](../../../glossary.md#term-issue--issue) from one person to another only. DEC-035 point 4 decides the hand-over between instances, and #521 tracks it.
@@ -77,7 +77,7 @@ pkit:
 - **4a.** The next piece's agent finds a defect in this piece. That agent files a Task in this piece's scope, as `UC-060` describes, and that agent's instance owns the Task ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). This scope's agent takes the Task over, as `UC-084` variant 2a describes.
 
 > [!WARNING]
-> **Not built yet:** `create-issue` writes no owner. DEC-035 point 3 decides that the instance that files an issue owns it, and #519 tracks it.
+> **Not built yet:** `create-issue` writes no owner. DEC-035 point 3 decides that the instance that files an issue owns the issue, and #519 tracks it.
 
 - **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task, and so may the agent of every seat that builds with no scope ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
@@ -95,5 +95,5 @@ pkit:
 What the worker needs here that no accepted record decides yet:
 
 - **A checked hand-over between stages,** so that the next piece starts only from what this piece declared done. The core's [processes](../../../../core/glossary.md#term-process--process) can declare a hand-over that a check reports on, which [COR-042](../../../../../../.pkit/decisions/core/COR-042-process-health.md) calls a hand-off contract. None is declared between stages of the work.
-- **A scope by a discipline that no kind of work carries,** such as design, for the [seat](../../../glossary.md#term-seat--seat) that does that discipline's work. A [scope](../../../glossary.md#term-scope--scope) names testing by the kind of work `test` (variant 4b). [project-management DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) leaves a discipline with no kind to a record that decides how a [Task](../../../glossary.md#term-task--task) carries it.
-- **How the next piece's agent learns that its Task can start.** While `## Dependencies` is prose, that agent reads the section of each Task. Typed `Blocked by:` lines are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s, which is proposed.
+- **A scope by a discipline that no kind of work carries,** such as design, for the [seat](../../../glossary.md#term-seat--seat) that does that discipline's work. A [scope](../../../glossary.md#term-scope--scope) names testing by the kind of work `test` (variant 4b). [project-management DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) leaves a discipline with no kind to a record that decides how a [Task](../../../glossary.md#term-task--task) carries the discipline.
+- **How the next piece's agent learns that the next piece's Task can start.** While `## Dependencies` is prose, that agent reads the section of each Task. Typed `Blocked by:` lines are [project-management DEC-025](../../../../../../.pkit/capabilities/project-management/decisions/DEC-025-parallelization-primitive.md)'s, which is proposed.

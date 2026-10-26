@@ -30,7 +30,7 @@ builds-on:
       - id: ACT-adopter
         name: Adopter
         needs:
-          - Set up my project's topology in its committed configuration, so that every clone reads the same seats from the default branch.
+          - Set up my project's topology in the project's committed configuration, so that every clone reads the same seats from the default branch.
           - Measure one topology against another on comparable work, by figures GitHub holds.
       - id: ACT-developer
         name: Developer
@@ -180,7 +180,7 @@ TERM-instance:
   name: instance
   noun-forms: [instances]
   status: active
-  definition: "clone of a project's repository with a number of its own, which tells work in it apart from work in the same person's other clones"
+  definition: "clone of a project's repository with a separate number, which tells work in the clone apart from work in the same person's other clones"
   pkit:
     friction:
       anchors:
@@ -261,7 +261,7 @@ TERM-owner:
   name: owner
   noun-forms: [owners]
   status: active
-  definition: "instance an issue belongs to from its filing or start until its close, paired with the issue's assignee, whose other instances leave the issue alone"
+  definition: "instance an issue belongs to from filing or start until close, paired with the issue's assignee, whose other instances leave the issue alone"
   pkit:
     friction:
       anchors:
@@ -303,7 +303,7 @@ TERM-required-reviewer:
 TERM-scope:
   name: scope
   status: active
-  definition: "part of a project's work that one AI agent of a topology takes its issues from"
+  definition: "part of a project's work that one AI agent of a topology takes issues from"
   pkit:
     friction:
       anchors:
@@ -315,7 +315,7 @@ TERM-seat:
   name: seat
   noun-forms: [seats]
   status: active
-  definition: "place in a topology that one clone holds, saying whether the clone's agent plans, builds or does both, and which agent definition it follows"
+  definition: "place in a topology that one clone holds, saying whether the clone's agent plans, builds or does both, and which agent definition that agent follows"
   pkit:
     friction:
       anchors:
@@ -329,7 +329,7 @@ TERM-state-issue:
   name: state issue
   noun-forms: [state issues]
   status: active
-  definition: "GitHub item outside the work's hierarchy, whose comments log each new value of one piece of shared data, and whose description shows the current one"
+  definition: "GitHub item outside the work's hierarchy, whose comments log each new value of one piece of shared data, and whose description shows the current value"
   pkit:
     friction:
       anchors:
@@ -352,7 +352,7 @@ TERM-topology:
   name: topology
   noun-forms: [topologies]
   status: active
-  definition: "set of seats a project declares for the AI agents that work on it at once"
+  definition: "set of seats a project declares for the AI agents that work on the project at once"
   pkit:
     friction:
       anchors:
@@ -443,7 +443,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
-    - Set up my project's topology in its committed configuration, so that every clone reads the same seats from the default branch.
+    - Set up my project's topology in the project's committed configuration, so that every clone reads the same seats from the default branch.
     - Measure one topology against another on comparable work, by figures GitHub holds.
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - File a Task under its parent, with its title and the sections its body needs checked as it is filed.
@@ -577,9 +577,9 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#instance).
 
 **Distinctions:**
 
-- **Session:** one run of an AI agent in a clone. A session ends or dies, and the instance keeps its number, which a file in the clone holds ([DEC-035 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
-- **A clone with no number:** a clone that never set one. It marks nothing and is guarded by nothing, as before instances existed (DEC-035 point 1).
-- **A linked worktree:** a further working tree of a clone. Whether it reads its clone's identity, or may set one of its own, is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
+- **Session:** one run of an AI agent in a clone. A session ends or dies, and the instance's number stays, held by a file in the clone ([DEC-035 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
+- **A clone with no number:** a clone that never set a number. Such a clone marks nothing and is guarded by nothing, as before instances existed (DEC-035 point 1).
+- **A linked worktree:** a further working tree of a clone. Whether a linked worktree reads the clone's identity, or may set a separate identity, is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
 - **Seat:** a place in a [topology](#term-topology--topology), which a clone takes. The clone's name and number are then the [seat](#term-seat--seat)'s, and never typed (DEC-059 point 6).
 
 ## TERM-issue — issue
@@ -645,13 +645,13 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#owner).
 
-**Example:** [instance](#term-instance--instance) 2 starts #1712 and becomes its owner. When instance 1 then tries to start #1712, it is refused, unless a person sets the refusal aside with a reason ([DEC-035 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
+**Example:** [instance](#term-instance--instance) 2 starts #1712 and becomes the owner of #1712. When instance 1 then tries to start #1712, instance 1 is refused, unless a person sets the refusal aside with a reason ([DEC-035 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 
 **Distinctions:**
 
-- **Assignee:** the GitHub account an [issue](#term-issue--issue) is assigned to. One person's instances all share it, so the owner pairs it with one instance ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-an-instancen-github-label-paired-with-the-assignee)).
-- **A lock:** a hold that no one else can take at the same moment. GitHub offers none, so two instances may both take one issue at once, and the higher-numbered one then gives it up (DEC-035 point 6).
-- **A file's owner:** the [methodology](../core/glossary.md#term-methodology--methodology) or the [project](../core/glossary.md#term-project--project), under the core's [rule](../core/glossary.md#term-rule--rule) that every file has one. It has nothing to do with an issue.
+- **Assignee:** the GitHub account an [issue](#term-issue--issue) is assigned to. One person's instances all share the assignee, so the owner pairs the assignee with one instance ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-an-instancen-github-label-paired-with-the-assignee)).
+- **A lock:** a hold that no one else can take at the same moment. GitHub offers no lock, so two instances may both take one issue at once. The higher-numbered instance then gives the issue up (DEC-035 point 6).
+- **A file's owner:** the [methodology](../core/glossary.md#term-methodology--methodology) or the [project](../core/glossary.md#term-project--project), under the core's [rule](../core/glossary.md#term-rule--rule) that every file has one owner. A file's owner has nothing to do with an issue.
 - **A seat's holder:** the clone that holds a [seat](#term-seat--seat). The seat's [state issue](#term-state-issue--state-issue) shows which clone that is. An owner holds an issue of work, and a holder holds a seat ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
 
 ## TERM-parent-reference — parent reference
@@ -680,15 +680,15 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
 
-**Example:** a worker agent whose [seat](#term-seat--seat)'s scope is the [workstream](#term-workstream--workstream) `api` takes its Tasks from `api`. A worker agent whose seat has no scope takes from all the [project](../core/glossary.md#term-project--project)'s ready Tasks. A testing seat's scope names the kind of work `test` ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+**Example:** a worker agent whose [seat](#term-seat--seat)'s scope is the [workstream](#term-workstream--workstream) `api` takes Tasks from `api`. A worker agent whose seat has no scope takes from all the [project](../core/glossary.md#term-project--project)'s ready Tasks. A testing seat's scope names the kind of work `test` ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
 
 **Distinctions:**
 
 - **Workstream:** a long-lived area that classifies issues. A scope may name workstreams, and never changes them ([DEC-045 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy)).
 - **Kind of work:** the value a [Task](#term-task--task) takes on the `type` [classification axis](#term-classification-axis--classification-axis), such as `test`. A scope may name kinds of work, and never changes them (DEC-059 point 7).
-- **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone it is.
-- **The scope of a set of rules:** what selects the artefacts its rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). It is no part of a [topology](#term-topology--topology).
-- **The scope of a grant:** where an entry of the permission model allows or denies a privilege ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). It is no part of a topology either.
+- **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone the agent works in.
+- **The scope of a set of rules:** what selects the artefacts a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a [topology](#term-topology--topology).
+- **The scope of a grant:** where an entry of the permission model allows or denies a privilege ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Such a scope is no part of a topology either.
 
 ## TERM-seat — seat
 
@@ -698,9 +698,9 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#seat).
 
 **Distinctions:**
 
-- **Instance:** a clone with a number of its own. A clone takes a seat, and the clone's identity is then the seat's name ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
-- **Actor:** the planning agent, a worker agent and a lead agent are actors of this analysis. A seat says which of them the agent of the clone that holds it is.
-- **DEC-045's named instance:** a clone with a name, listed in one person's file with the [workstreams](#term-workstream--workstream) it handles (DEC-045 points [1](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#1-instances-gain-a-human-readable-name) and [2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). The adopter writes seats in the [project](../core/glossary.md#term-project--project)'s committed configuration instead ([DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
+- **Instance:** a clone with a separate number. A clone takes a seat, and the clone's identity is then the seat's name ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+- **Actor:** the planning agent, a worker agent and a lead agent are actors of this analysis. A seat says which of these actors the agent of the clone holding the seat is.
+- **DEC-045's named instance:** a clone with a name, listed in one person's file with the [workstreams](#term-workstream--workstream) the clone handles (DEC-045 points [1](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#1-instances-gain-a-human-readable-name) and [2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). The adopter writes seats in the [project](../core/glossary.md#term-project--project)'s committed configuration instead ([DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
 - **Agent definition:** the file that defines an agent. A seat names the [agent definition](../core/glossary.md#term-agent-definition--agent-definition) its agent follows, the project-manager agent's by default.
 
 ## TERM-state-issue — state issue
@@ -711,9 +711,9 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#state-issue)
 
 **Distinctions:**
 
-- **Issue:** an item of work, filed as one of four types. A state issue holds no work. It takes none of the four types, and sits under no parent ([DEC-058 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#3-it-sits-outside-the-work-hierarchy-and-the-lifecycle)).
-- **The owner's comment log:** the comments on an [issue](#term-issue--issue) of work that record its [owner](#term-owner--owner), with a summary in its description (DEC-043 points [3](../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#3-in-comment-mode-the-source-of-truth-is-a-per-instance-append-only-ownership-event-log) and [4](../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)). A state issue keeps its own data the same way.
-- **Committed configuration:** what a person reviews before it changes, such as the [topology](#term-topology--topology). A state issue holds what changes while agents work ([DEC-058 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#1-what-a-person-reviews-is-configuration-and-what-changes-at-run-time-is-a-state-issue)).
+- **Issue:** an item of work, filed as one of four types. A state issue holds no work. A state issue takes none of the four types, and sits under no parent ([DEC-058 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#3-it-sits-outside-the-work-hierarchy-and-the-lifecycle)).
+- **The owner's comment log:** the comments on an [issue](#term-issue--issue) of work that record the issue's [owner](#term-owner--owner), with a summary in the issue's description (DEC-043 points [3](../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#3-in-comment-mode-the-source-of-truth-is-a-per-instance-append-only-ownership-event-log) and [4](../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)). A state issue keeps its own data the same way.
+- **Committed configuration:** what a person reviews before the configuration changes, such as the [topology](#term-topology--topology). A state issue holds what changes while agents work ([DEC-058 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#1-what-a-person-reviews-is-configuration-and-what-changes-at-run-time-is-a-state-issue)).
 
 ## TERM-task — Task
 
@@ -731,14 +731,14 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#topology).
 
-**Example:** one [project](../core/glossary.md#term-project--project)'s topology holds a planning agent's [seat](#term-seat--seat), and two worker agents' seats with no [scope](#term-scope--scope). Another project's holds three lead agents' seats, whose scopes are its [workstreams](#term-workstream--workstream) `api`, `web` and `docs`.
+**Example:** one [project](../core/glossary.md#term-project--project)'s topology holds a planning agent's [seat](#term-seat--seat), and two worker agents' seats with no [scope](#term-scope--scope). Another project's topology holds three lead agents' seats, whose scopes are that project's [workstreams](#term-workstream--workstream) `api`, `web` and `docs`.
 
 **Distinctions:**
 
-- **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists their [instances](#term-instance--instance) and the workstreams each handles ([DEC-045 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). [DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) overturns that file: a topology is the project's committed configuration.
+- **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists the person's [instances](#term-instance--instance) and the workstreams each instance handles ([DEC-045 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). [DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) overturns that file: a topology is the project's committed configuration.
 - **Seat:** one place in a topology, which one clone holds. The topology says nothing of who holds a seat now, which the seat's [state issue](#term-state-issue--state-issue) shows.
 - **Instance:** one clone of the project, which takes a seat of the topology by the seat's name, or the first free one ([DEC-059 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
-- **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says what they work on.
+- **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says what is worked on.
 
 ## TERM-umbrella — Umbrella
 

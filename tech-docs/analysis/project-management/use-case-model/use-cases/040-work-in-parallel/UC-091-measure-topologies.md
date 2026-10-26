@@ -30,21 +30,21 @@ pkit:
 
 **Assumptions:**
 
-- GitHub keeps, for each [pull request](../../../../core/glossary.md#term-pull-request--pull-request), when it opened and when it merged ([DEC-003](../../../../../../.pkit/capabilities/project-management/decisions/DEC-003-github-bound-substrate.md)).
+- GitHub keeps, for each [pull request](../../../../core/glossary.md#term-pull-request--pull-request), when the pull request opened and when the pull request merged ([DEC-003](../../../../../../.pkit/capabilities/project-management/decisions/DEC-003-github-bound-substrate.md)).
 
 **Trigger:** The adopter wants to know which [topology](../../../glossary.md#term-topology--topology) serves the [project](../../../../core/glossary.md#term-project--project) better.
 
 **Main path:**
 
-1. The adopter has each [topology](../../../glossary.md#term-topology--topology) work on comparable work, until all of it has landed.
-2. The adopter reads, for each topology, when each [pull request](../../../../core/glossary.md#term-pull-request--pull-request) opened and when it merged.
-3. The adopter counts the review rounds of each pull request from its [verdicts](../../../glossary.md#term-verdict--verdict), since each verdict names the [head](../../../../core/glossary.md#term-head--head) it reviewed ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
-4. Where the [project](../../../../core/glossary.md#term-project--project) set its [audit comments](../../../glossary.md#term-audit-comment--audit-comment) to `full`, the adopter reads each write the agents made, with its versions ([DEC-049 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#2-github-comments-are-a-configurable-provenance-stamped-projection-with-three-intensities)).
+1. The adopter has each [topology](../../../glossary.md#term-topology--topology) work on comparable work, until all of that work has landed.
+2. The adopter reads, for each topology, when each [pull request](../../../../core/glossary.md#term-pull-request--pull-request) opened and when that pull request merged.
+3. The adopter counts the review rounds of each pull request from the pull request's [verdicts](../../../glossary.md#term-verdict--verdict), since each verdict names the [head](../../../../core/glossary.md#term-head--head) reviewed ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)).
+4. Where the [project](../../../../core/glossary.md#term-project--project) set its [audit comments](../../../glossary.md#term-audit-comment--audit-comment) to `full`, the adopter reads each write the agents made, with the write's versions ([DEC-049 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md#2-github-comments-are-a-configurable-provenance-stamped-projection-with-three-intensities)).
 5. The adopter compares the topologies on these figures.
 
 **Variants:** None.
 
-**Postconditions:** The adopter holds, for each [topology](../../../glossary.md#term-topology--topology), the time from its first [pull request](../../../../core/glossary.md#term-pull-request--pull-request) to its last merge, and the review rounds of each pull request.
+**Postconditions:** The adopter holds, for each [topology](../../../glossary.md#term-topology--topology), the time from the topology's first [pull request](../../../../core/glossary.md#term-pull-request--pull-request) to the topology's last merge. The adopter also holds the review rounds of each pull request.
 
 **Minimal guarantees:** None.
 
@@ -52,15 +52,15 @@ pkit:
 
 What the adopter needs here that no accepted record decides yet:
 
-- **How the topologies get comparable work.** One way is a copy of the [project](../../../../core/glossary.md#term-project--project) for each. Another runs them one after the other on comparable backlogs, and another splits one backlog between them.
+- **How the topologies get comparable work.** One way is a copy of the [project](../../../../core/glossary.md#term-project--project) for each [topology](../../../glossary.md#term-topology--topology). Another way runs the topologies one after the other on comparable backlogs, and a third splits one backlog between the topologies.
 - **What else to record:**
-  - the [topology](../../../glossary.md#term-topology--topology) and the [seat](../../../glossary.md#term-seat--seat) behind each event. An ownership names its seat ([project-management DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)), and no other event names one
+  - the topology and the [seat](../../../glossary.md#term-seat--seat) behind each event. An ownership names its seat ([project-management DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)), and no other event names a seat
   - the time from a plan's approval to its last merge
   - the person's own time
   - the tokens each agent spends
   - the work dropped or done twice
-- **A command that prints the figures.** No record decides one.
+- **A command that prints the figures.** No record decides such a command.
 
 ## Sources
 
-The goal is one #2096 names, under [EPIC](../../../glossary.md#term-epic--epic) #564. No record decides it yet, and the maintainer reviews it with these use cases.
+The goal is one #2096 names, under [EPIC](../../../glossary.md#term-epic--epic) #564. No record decides the goal yet, and the maintainer reviews the goal with these use cases.

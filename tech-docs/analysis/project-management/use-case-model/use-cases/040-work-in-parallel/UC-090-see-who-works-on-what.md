@@ -53,13 +53,13 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and its commands ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
+- The [project](../../../../core/glossary.md#term-project--project) has project-management installed, and the CLI registers `pkit pm` and the commands of `pkit pm` ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md) and [COR-021](../../../../../../.pkit/decisions/core/COR-021-capability-command-dispatch.md)).
 
 **Trigger:** The planner wants the whole picture, such as after a restart, or before planning more work for the [topology](../../../glossary.md#term-topology--topology)'s agents.
 
 **Main path:**
 
-1. In any [instance](../../../glossary.md#term-instance--instance), the planner lists the open issues, each signed with its [owner](../../../glossary.md#term-owner--owner): this instance, another instance, or none ([DEC-035 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#7-listings-show-every-issue-signed-by-owner)). Each owner is named by its [seat](../../../glossary.md#term-seat--seat)'s name, such as `api-worker` ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+1. In any [instance](../../../glossary.md#term-instance--instance), the planner lists the open issues, each [issue](../../../glossary.md#term-issue--issue) signed with the issue's [owner](../../../glossary.md#term-owner--owner): this instance, another instance, or none ([DEC-035 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#7-listings-show-every-issue-signed-by-owner)). Each owner is named by the name of the owner's [seat](../../../glossary.md#term-seat--seat), such as `api-worker` ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 
 > [!WARNING]
 > **Not built yet:** no command lists issues signed by their owner. DEC-035 point 7 decides the signed listing, and #521 tracks it.
@@ -67,8 +67,8 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no owner carries a seat's name. DEC-059 point 6 decides that an instance is named by its seat, and #521 tracks it.
 
-2. For each owned [Task](../../../glossary.md#term-task--task), the planner reads its state in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), In Progress or Review, which the Task itself carries ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
-3. The planner lists the seats of the [topology](../../../glossary.md#term-topology--topology), each with the clone that holds it ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). Each holder is read from the seat's [state issue](../../../glossary.md#term-state-issue--state-issue) ([DEC-058 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#4-the-comments-are-the-record-and-the-description-shows-the-current-state)).
+2. For each owned [Task](../../../glossary.md#term-task--task), the planner reads the Task's state in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), In Progress or Review, which the Task itself carries ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+3. The planner lists the seats of the [topology](../../../glossary.md#term-topology--topology), each seat with the clone that holds the seat ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). Each holder is read from the seat's [state issue](../../../glossary.md#term-state-issue--state-issue) ([DEC-058 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#4-the-comments-are-the-record-and-the-description-shows-the-current-state)).
 
 > [!WARNING]
 > **Not built yet:** no command lists the seats. DEC-059 point 3 decides the listing of the seats, and #2141 tracks it.
@@ -92,6 +92,6 @@ pkit:
 
 What the planner needs here that no accepted record decides yet:
 
-- **The fixers' proposals across clones.** Each clone keeps the proposals its own runs made, and `land-work` prints only that clone's count ([project-management DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-the-person)). So the planner sees them only by visiting each agent.
+- **The fixers' proposals across clones.** Each clone keeps the proposals its own runs made, and `land-work` prints only that clone's count ([project-management DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-the-person)). So the planner sees the proposals only by visiting each agent.
 - **One view of all that waits on a person,** such as heads ready to merge and records waiting for acceptance. The maintainer decided on 17 October that one view lists all of that (#1682), and no record holds the decision yet.
-- **Where each agent is heading,** beside what it owns. The pilot analysis proposed a command for it, under [EPIC](../../../glossary.md#term-epic--epic) #943, and no record decides it.
+- **Where each agent is heading,** beside what the agent owns. The pilot analysis proposed a command that shows where each agent is heading, under [EPIC](../../../glossary.md#term-epic--epic) #943, and no record decides on that command.
