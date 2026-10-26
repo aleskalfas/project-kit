@@ -1,7 +1,9 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.10"
-# dependencies = []
+# dependencies = [
+#   "ruamel.yaml>=0.18",
+# ]
 # ///
 """Project-management capability — set-instance.
 
@@ -18,6 +20,13 @@ create-issue claims each issue it files, start-work claims an issue no instance
 owns, and close-issue releases the owner as the issue closes (done-work through
 the close-issue it runs). handoff-issue does not move the marker yet.
 
+In a project with a topology of seats, a clone's number is its seat's, derived
+from the topology, and never typed (DEC-059 point 6). So a number is refused
+where the default branch holds a topology, and where the default branch cannot
+be resolved, since whether it holds one cannot then be told (COR-054 point 4).
+A clone there takes a seat instead (`take-seat`). `--show` also names the seat
+the clone took, and `--clear` keeps it.
+
 Usage:
   set-instance <N>       set this clone's instance id (positive integer)
   set-instance --show    print the current id (or `unset`)
@@ -28,6 +37,8 @@ Self-contained via PEP 723; runs via
 
 Exit codes:
   0  ran cleanly
+  1  refused: the project has a topology, or the default branch cannot be
+     resolved, or the foreign-repo guard refused
   2  capability not installed at the expected path
   3  bad argument (no id and no --show/--clear, or a non-positive id)
 """
@@ -35,15 +46,19 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, session_guard, topology
 from _lib.instance_identity import (
     clear_instance_id,
     read_instance_id,
+    read_seat_hint,
     write_instance_id,
 )
 from _lib.membership import CAPABILITY_NAME, resolve_capability_root
@@ -93,6 +108,9 @@ def main() -> int:
         # Read-only — no mutation, so the foreign-repo guard does not apply.
         current = read_instance_id(capability_root)
         print(f"instance: {current}" if current is not None else "instance: unset")
+        seat = read_seat_hint(capability_root)
+        if seat is not None:
+            print(f"seat: {seat}, as this clone took it (`pkit pm seats` shows its holder)")
         return 0
 
     # Validate arguments before any mutation.
@@ -106,6 +124,10 @@ def main() -> int:
         if args.instance < 1:
             print("error: instance id must be a positive integer.", file=sys.stderr)
             return 3
+        refusal = typed_number_refusal(capability_root)
+        if refusal is not None:
+            print(refusal, file=sys.stderr)
+            return 1
 
     # Foreign-repo mutation guard (COR-039 / ADR-034): both --clear and a set write
     # the runtime file under capability_root, which --capability-root (or a cwd-walk)
@@ -127,6 +149,34 @@ def main() -> int:
     print(f"this clone is now instance {args.instance}.")
     print(f"  written: {path} (git-ignored — never committed)")
     return 0
+
+
+def typed_number_refusal(
+    capability_root: Path,
+    *,
+    run: Callable[..., Any] = subprocess.run,
+    git: topology.Git | None = None,
+) -> str | None:
+    """Why no number may be typed into this clone, or None where one may.
+
+    A project whose default branch holds a topology numbers each clone by its
+    seat (DEC-059 point 6). Where the default branch cannot be resolved, whether
+    it holds one cannot be told, and no number is typed on a guess (COR-054
+    point 4)."""
+    try:
+        found = topology.read(capability_root, run=run, git=git)
+    except topology.Unresolved as exc:
+        return (
+            f"[refused] set-instance: whether the project has a topology could not be read "
+            f"from the default branch ({exc}), so no number is typed into this clone."
+        )
+    if found is None:
+        return None
+    return (
+        f"[refused] set-instance: {found.where()} holds a topology, so a clone's number is "
+        "its seat's, derived from the topology, and never typed (DEC-059 point 6). Take a "
+        "seat instead: `pkit pm take-seat`."
+    )
 
 
 if __name__ == "__main__":

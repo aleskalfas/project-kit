@@ -24,11 +24,15 @@ from ruamel.yaml import YAML
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 SCRIPTS = CAPABILITY / "scripts"
-if str(SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS))
+TESTS = Path(__file__).resolve().parent
+for entry in (SCRIPTS, TESTS):
+    if str(entry) not in sys.path:
+        sys.path.insert(0, str(entry))
 
-from _lib import default_branch, state_issues  # noqa: E402
+from _lib import audit_log, default_branch, provenance, state_issues  # noqa: E402
 from _lib import topology as tp  # noqa: E402
+
+from pm_state_issue_fakes import FakeRepo  # noqa: E402
 
 REL = ".pkit/capabilities/project-management/project/topology.yaml"
 MEMBERS_REL = ".pkit/capabilities/project-management/project/members.yaml"
@@ -476,3 +480,114 @@ def test_the_check_of_a_tree_with_no_topology_and_none_on_the_base_passes(
     assert report.problems == () and report.notes == ()
     assert _load_script().say(report) == 0
     assert "no topology at project/topology.yaml" in capsys.readouterr().out
+
+
+# ---- one run's snapshot (ADR-071 points 1 and 8) ------------------------------------
+
+VERSIONS = provenance.Versions(tree="1.2.3", capability="0.9.0", cli="1.2.3")
+
+
+def _state_issue(repo: FakeRepo, number: int, name: str, holder: tuple[str, str] | None) -> None:
+    repo.add(number, state_issues.description("seat", name, state_issues.Fold(None), VERSIONS))
+    repo.post(number, state_issues.marker_comment("seat", name, VERSIONS))
+    if holder is not None:
+        claim = audit_log.event(state_issues.CLAIM, key=name, clone=holder[1], place="h:/c")
+        repo.post(number, audit_log.build(claim, versions=VERSIONS), author=holder[0])
+
+
+def _snapshot(tmp_path: Path, repo: FakeRepo, *seats: dict[str, Any], **kw: Any):
+    members = {"schema_version": 1, "members": [{"github_login": "me"}]}
+    files = {(TIP, REL): _dump(_doc(*seats)), (TIP, MEMBERS_REL): _dump(members)}
+    kw.setdefault("account", "me")
+    kw.setdefault("key", "k1")
+    return tp.snapshot(
+        _capability(tmp_path), gh=repo, run=_backbone(), git=_git(files), versions=VERSIONS, **kw
+    )
+
+
+def test_the_snapshot_takes_the_default_branchs_topology_members_and_this_clone(
+    tmp_path: Path,
+) -> None:
+    snap = _snapshot(tmp_path, FakeRepo(), PLANNER, WORKER)
+    assert snap is not None
+    assert [s.name for s in snap.topology.seats] == ["planner", "worker-1"]
+    assert snap.topology.where() == f"origin/main at {TIP}"
+    assert snap.run.writers == state_issues.Writers.closed(["me"])
+    assert (snap.clone.account, snap.clone.key) == ("me", "k1")
+    assert snap.clone.place.endswith(str(tmp_path))
+
+
+def test_there_is_no_snapshot_where_the_default_branch_declares_no_topology(
+    tmp_path: Path,
+) -> None:
+    root = _capability(tmp_path)
+    repo = FakeRepo()
+    assert tp.snapshot(root, gh=repo, account="me", key="k1", run=_backbone(), git=_git({})) is None
+    default_branch._read.clear()  # a new run, which asks the backbone again
+    with pytest.raises(tp.Unresolved, match="did not say which branch is settled"):
+        tp.snapshot(root, gh=repo, account="me", key=None, run=_backbone(answers=False))
+    assert repo.calls == []
+
+
+def test_a_seats_holder_is_read_from_its_state_issue_once_a_run(tmp_path: Path) -> None:
+    repo = FakeRepo()
+    _state_issue(repo, 11, "planner", ("me", "k1"))
+    _state_issue(repo, 12, "worker-1", None)
+    snap = _snapshot(tmp_path, repo, PLANNER, WORKER)
+    assert snap is not None
+    planner = snap.state("planner")
+    assert planner is not None and planner.state == tp.HELD and planner.held_by(snap.clone)
+    assert planner.said() == "held by @me, clone k1, at h:/c"
+    assert snap.state("planner") is planner
+    worker = snap.state("worker-1")
+    assert worker is not None and worker.state == tp.FREE and not worker.held_by(snap.clone)
+    assert snap.state("worker-9") is None
+    views = [argv[3] for argv in repo.calls if argv[1:3] == ["issue", "view"]]
+    assert views == ["11", "12"]
+
+
+def test_a_seat_with_no_state_issue_or_an_unreadable_one_is_unread(tmp_path: Path) -> None:
+    """No reader takes such a seat for free (ADR-041 point 5)."""
+    repo = FakeRepo()
+    _state_issue(repo, 12, "worker-1", None)
+    repo.failing.add("view")
+    lead = {"name": "lead-1", "role": "lead"}
+    snap = _snapshot(tmp_path, repo, WORKER, lead)
+    assert snap is not None
+    states = snap.states()
+    assert [s.state for s in states] == [tp.UNREAD, tp.UNREAD]
+    assert "could not be read" in str(states[0].cause)
+    assert states[1].cause == "the topology names no state issue for it"
+    assert states[0].said().startswith("unread (")
+
+
+def test_the_place_names_the_machine_and_a_folder_under_home_from_the_tilde(
+    tmp_path: Path,
+) -> None:
+    """DEC-058 point 5, with no user's name in a claim a public repository shows."""
+    root = _capability(tmp_path)
+    machine, _, folder = tp.place(root, home=tmp_path.parent).partition(":")
+    assert machine and folder == f"~/{tmp_path.name}"
+    assert tp.place(root, home=tmp_path / "elsewhere").endswith(":" + tmp_path.resolve().as_posix())
+
+
+def test_a_clone_with_no_key_holds_no_seat(tmp_path: Path) -> None:
+    repo = FakeRepo()
+    _state_issue(repo, 11, "planner", ("me", "k1"))
+    snap = _snapshot(tmp_path, repo, PLANNER, key=None)
+    assert snap is not None
+    state = snap.state("planner")
+    assert state is not None and state.state == tp.HELD and not state.held_by(snap.clone)
+
+
+def test_what_a_write_found_replaces_what_the_run_read(tmp_path: Path) -> None:
+    repo = FakeRepo()
+    _state_issue(repo, 12, "worker-1", None)
+    snap = _snapshot(tmp_path, repo, WORKER)
+    assert snap is not None
+    seat = snap.topology.seat("worker-1")
+    assert seat is not None
+    claimed = state_issues.claim(12, "seat", "worker-1", snap.clone, snap.run)
+    state = snap.learn(seat, claimed.read)
+    assert state.held_by(snap.clone) and snap.state("worker-1") is state
+    assert snap.learn(seat, None).state == tp.UNREAD

@@ -137,7 +137,7 @@ pkit:
 - **2b.** A Task In Progress has an ownership that no longer counts, since the ownership lapsed or the ownership's [seat](../../../glossary.md#term-seat--seat) was released ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)). The Task is ready, and the worker takes the Task over and goes on from the Task's branch ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-035 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#4-ownership-releases-on-terminal-transitions-and-transfers-on-reclaim)).
 
 > [!WARNING]
-> **Not built yet:** no ownership lapses, and the release of a seat frees nothing. DEC-059 point 9 decides when an ownership stops counting, and #2136 tracks it.
+> **Not built yet:** no ownership lapses. DEC-059 point 9 decides when an ownership lapses, and #2136 tracks it.
 
 - **3a.** The worker chooses a Task that only another seat may take. The system warns that the other seat is expected to take the Task, and goes on ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-045 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#5-ownership-derivation-feeds-the-pm-layer-guard-only-and-degrades-gracefully)).
 

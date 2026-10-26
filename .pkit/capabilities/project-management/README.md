@@ -631,12 +631,14 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 | Command | What it does |
 |---|---|
 | `set-instance <N>` | Set this clone's instance id to `N` (a positive integer). |
-| `set-instance --show` | Print the current id, or `unset`. |
+| `set-instance --show` | Print the current id, or `unset`, and the seat the clone took, where it took one. |
 | `set-instance --clear` | Unset — revert to the non-participating no-op default. |
 
 Setting the id touches no issue. The lifecycle commands read it and write each issue's ownership *marker*, as the next section says.
 
-The same runtime file keeps the clone's **key**. The clone generates it the first time it claims on a state issue (below), and keeps it whatever its number. Setting or clearing the id keeps the key. Whoever copies a clone clears its runtime file, since two clones that share a key cannot be told apart.
+**In a project with a topology of seats,** a clone's number is its seat's place in the topology, and nobody types it ([project-management:DEC-059-topology-of-seats] point 6). So `set-instance <N>` refuses a number where the default branch holds a topology. The command refuses one too where the default branch cannot be resolved, since whether it holds one cannot then be told. A clone there takes a seat with `take-seat` (below).
+
+The same runtime file keeps the clone's **key**. The clone generates it the first time it claims on a state issue (below), and keeps it whatever its number. Setting or clearing the id keeps the key, and so does taking or releasing a seat. Whoever copies a clone clears its runtime file, since two clones that share a key cannot be told apart.
 
 **How an ownership event reads.** The audit-log facility ([project-management:DEC-044-audit-log-facility], `scripts/_lib/audit_log.py`) builds each ownership event's comment. Its hidden stamp, `<!-- pkit:audit v=1 event=claim ... -->`, names the instance and carries an id made once for the act. In a project with a topology it also names the seat, the seat's number and the clone's key. The stamps written before the facility, `<!-- pkit:instance-owner v=1 ... -->`, still read as the same events, so an issue claimed under them keeps its owner. `schemas/audit-log.yaml` declares the stamp and every event type.
 
@@ -662,7 +664,18 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 **In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files. A claim counts only while the clone its stamp names holds the seat the stamp names. A seat's release thus frees its clone's work with no write to the issues.
 
-The guard does not refuse on a claim that no longer counts, and refuses on one whose seat it could not read. No command reads the topology for instance ownership yet, so each behaves as this section says for a project with none.
+The guard does not refuse on a claim that no longer counts, and refuses on one whose seat it could not read. Each command reads a seat's holder from the seat's state issue the first time a claim names that seat, and keeps it for the rest of its run.
+
+**In a project with a topology, every command this section names confirms the clone's seat before it writes** (DEC-059 point 6). It reads the topology from the default branch, then the state issue of the seat the clone took, by the clone's key. The runtime file names that seat only as a hint of where to look. Where the confirmation fails, every such command but `close-issue` refuses and writes nothing:
+
+- the state issue shows the seat free, or held by another clone, such as after a release by force
+- the state issue cannot be read
+- the topology no longer holds the seat
+- the default branch cannot be resolved
+
+`close-issue` closes the issue all the same, and releases no owner, with a warning. A seat retired while the clone holds it is released at the clone's next command, and the clone then acts as no instance. A clone that took no seat takes no part, whatever number was typed into it, and a note says so.
+
+**A project with no topology behaves as before.** A clone that took no seat and set no id reads nothing more. One with an id set reads the topology from the default branch, finds none, and acts as that instance. Where the default branch cannot be resolved, it still acts as that instance, with a note, since no topology was read to refuse the number.
 
 #### State issues — shared state that changes while agents work (per [project-management:DEC-058-state-issues])
 
@@ -674,14 +687,14 @@ A **state issue** holds one piece of shared state that changes while agents work
 - **A comment counts only from an author who may write:** a member where the membership gate is closed, and otherwise an account GitHub records as having write access or more. The access is read once for each author in a run
 - **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out. Every listing of issues runs through the one read of issues, which leaves state issues out
 
-`scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. `create-seats` creates the state issues of a topology's seats (below). The commands that take, release and list seats come later.
+`scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. `create-seats` creates the state issues of a topology's seats, and `take-seat`, `release-seat` and `seats` take, release and list the seats (below).
 
 Two things no code enforces, for a person to watch once seats are in use:
 
 - **After an account loses its access or is deleted,** its comments stop counting. A seat's holder may then change, since a void claim may hold, or an earlier holder return. Check the listing of seats, and release by force each seat whose holder changed
 - **A Task that a board's automation moves back to In Progress** renews no claim, since only an ownership event renews one, and a board's automation posts none. Once claims lapse ([project-management:DEC-059-topology-of-seats] point 9), such a Task's claim may lapse at once
 
-#### Topologies of seats — `create-seats` / `check-topology` (per [project-management:DEC-059-topology-of-seats])
+#### Topologies of seats — `create-seats` / `check-topology` / `take-seat` / `release-seat` / `seats` (per [project-management:DEC-059-topology-of-seats])
 
 A project that runs several agents at once, each in a clone of its own, declares a **topology**: a list of seats in `project/topology.yaml`. Every clone reads the topology from the default branch, at the commit the backbone resolves it to, and never from its own branch. So a change to the topology binds once it merges. Where the default branch cannot be resolved, no clone takes a seat.
 
@@ -731,7 +744,21 @@ seats:
 
 The check compares a change with a base, so it is no member of `pkit validate`, which takes no base. Run it among the checks of a pull request. It reads no GitHub.
 
-`scripts/_lib/topology.py` is the one reader of the topology. Every command that acts as a seat reads the topology through it, from the default branch. `schemas/topology.schema.json` holds the file's shape.
+**Taking a seat.** `pkit pm take-seat [<name>] [--role planner|worker|lead] --agent <definition>` takes the seat named for this clone. Without a name it takes the first free seat in the topology's order, or the first free one of the role. It says which commit of the default branch it read, and then the seat's name, its number, its role and the agent definition it names. From then on the clone acts as that seat's instance.
+
+- **Only a seat of the session's agent definition.** The session says which definition it follows, with `--agent`, or with `PKIT_AGENT` in its environment, which a platform that starts sessions may set. The command reads no harness's files, and takes no seat where neither names a definition
+- **A claim on the seat's state issue.** The claim names the account, the clone's key and where the clone lies, its machine and folder. The first claim on a free seat holds. A clone that loses the seat to a claim made in the same instant holds no seat, and its agent takes another, or stops
+- **One seat for each clone.** A clone that holds a seat takes it up again, as a new session in the clone does, since the key outlives every session. It takes no second seat, and releases a retired seat it holds first
+- **No seat is taken** where the default branch cannot be resolved, where a seat names no state issue or its state issue cannot be read, or where another clone holds the seat
+
+**Releasing a seat.** A seat stays taken until it is released: the tolerant mode is the only one built, so no seat is freed for its clone's silence. `pkit pm release-seat` releases the seat this clone holds, and the clone then forgets it. `pkit pm release-seat <name> --force --reason "<why>"` releases a seat whoever holds it, and the seat's state issue logs the reason.
+
+- **Who may release by force:** the clone of the organizer seat, or a person in any clone. A person authorises it at a terminal, or with `--yes`, as a held move. An agent never passes `--yes` for itself, and off a terminal with no `--yes` the command refuses
+- **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks are then free for another clone to take
+
+**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition and its scope. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub.
+
+`scripts/_lib/topology.py` is the one reader of the topology. Every command that acts as a seat reads the topology through it, from the default branch. It also builds each run's snapshot: the topology, the members who may write on a state issue, and the clone's account, key and place. `schemas/topology.schema.json` holds the file's shape.
 
 #### Taking the next ready Task — `next-task` (per [project-management:DEC-059-topology-of-seats] point 7)
 
@@ -755,7 +782,7 @@ What else holds a Task back:
 
 **Two clones at once never both start one Task.** Where `start-work` fails and the Task is now another instance's, the first claim held. This clone then takes the next ready Task. Any other failure of `start-work` stops the run, with its exit code.
 
-**Who takes.** Outside a topology, a clone takes with no scope, and a clone with no instance id reads no owner. In a project with a topology, a clone that holds no seat takes nothing, and nor does a planner's seat, which builds none of the work. The seat's scope comes from the reading of the topology, and no command reads the topology for instance ownership yet.
+**Who takes.** Outside a topology, a clone takes with no scope, and a clone with no instance id reads no owner. In a project with a topology, a clone that holds no seat takes nothing, and nor does a planner's seat, which builds none of the work. The seat's scope is the one the topology on the default branch gives the seat. A clone whose seat cannot be confirmed on its state issue takes nothing either.
 
 `--dry-run` says which Task it would start, and runs `start-work --dry-run` on it. The command asks before it starts a Task, unless `--yes` is given. A listing that reaches `--limit`, 1000 open issues by default, refuses, since a dependency it did not return could be open.
 
@@ -763,7 +790,7 @@ What else holds a Task back:
 |---|---|
 | 0 | A Task was started, or a dry run said which it would start |
 | 1 | Membership refused, or the foreign-repo guard did |
-| 2 | A clone that holds no seat, or a planner's seat, or a listing that reached `--limit` |
+| 2 | A clone that holds no seat, a planner's seat or a seat that cannot be confirmed, or a listing that reached `--limit` |
 | 3 | The open issues could not be read, or a ready Task's owner could not be read and no other Task was free |
 | 5 | No Task is ready for this clone, so nothing was started |
 | other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |
