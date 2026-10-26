@@ -9,7 +9,7 @@ pkit:
         - .pkit/rules/core.md
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - src/project_kit/install.py
-      record: [COR-001, COR-014]
+      record: [COR-001, COR-014, "COR-064#1", "COR-064#2"]
 ---
 
 # Rules
