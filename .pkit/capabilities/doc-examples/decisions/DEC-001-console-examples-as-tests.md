@@ -1,7 +1,7 @@
 ---
 id: DEC-001
 title: A page's console examples run as tests
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
