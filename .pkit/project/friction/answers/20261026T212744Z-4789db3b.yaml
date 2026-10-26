@@ -1,0 +1,104 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-batch-plan
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+    revalidated:
+      at: 2026-10-26T21:27:44Z
+      outcome: unchanged
+      unchanged-because: A batch plan is still one outline that the person approves before anything is filed. Batch planning now names the shared choices before it slices, and the two stages DEC-060 decides are two such plans. The agent takes its seat before it plans, which leaves the term as it is.
+  - artefact: tech-docs/analysis/project-management/domain-model/050-batch-planning.md
+    read:
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T123904Z-0482f880.yaml
+    revalidated:
+      at: 2026-10-26T21:27:49Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    revalidated:
+      at: 2026-10-26T21:27:54Z
+      outcome: unchanged
+      unchanged-because: Batch planning now reads the seats, slices vertically and plans a foundation first where the Tasks would share an open choice. The planning agent still slices the work and files it with no owner, builds none of it, and files nothing before the planner approves the plan.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261026T162757Z-3a4706c7.yaml
+    revalidated:
+      at: 2026-10-26T21:27:57Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261026T162757Z-3a4706c7.yaml
+    revalidated:
+      at: 2026-10-26T21:28:00Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T085608Z-061b0816.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T141053Z-7af348ef.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+    revalidated:
+      at: 2026-10-26T21:28:03Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T152835Z-e6e43fac.yaml
+    revalidated:
+      at: 2026-10-26T21:28:05Z
+      outcome: unchanged
+      unchanged-because: Batch planning keeps its rule that Tasks which change the same files are built one at a time, which the note on review rounds cites. The worker's loop lands a pull request only through the merge gate, on the person's authorisation of its head, so landing alongside others is as it was.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+    revalidated:
+      at: 2026-10-26T21:28:08Z
+      outcome: unchanged
+      unchanged-because: UC-083 and UC-092 lose their boxes, since batch planning reads the seats and slices vertically, and the agent runs its seat's role. What the journey needs from each, the Tasks of each approved plan and each seat taken by an agent, still holds.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T125321Z-c79100d7.yaml
+      - 20261026T135447Z-827d6480.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T141439Z-0ec32467.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162345Z-546e92b5.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T21:28:11Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
