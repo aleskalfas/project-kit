@@ -15,6 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
+      artefact:
+        - .pkit/decisions/README.md#checking-a-changes-numbering
 ---
 
 # project-management capability
@@ -566,7 +568,7 @@ An edit to an accepted decision record that changes what the record decides is a
 findings to judge: 1, above
 ```
 
-- **Where the list comes from.** The backbone's numbering check lists each point the change adds, alters or retires, each of the record's title, status and supersession fields that changed, and a change to the text its points stand on or to its other text (`pkit decisions check-diff --json --head <head>`, the decisions README, "Checking a change's numbering"). `land-work` derives it at the pinned head against the PR's base, fetched first, and never reads a record's points itself. A list that cannot be read stops the run with nothing merged (exit 2).
+- **Where the list comes from.** The backbone's numbering check lists each point the change adds, alters or retires, each of the record's title, status and supersession fields that changed, and a change to the text its points stand on or to its other text (`pkit decisions check-diff --json --head <head>`, [the decisions README, "Checking a change's numbering"](../../decisions/README.md#checking-a-changes-numbering)). `land-work` derives it at the pinned head against the PR's base, fetched first, and never reads a record's points itself. A list that cannot be read stops the run with nothing merged (exit 2).
 - **What it holds.** The list stands for the pinned head and is there when the run starts. So a `--yes` for that head covers it, as it covers a `[person]` finding whose verdict the run found at its start, standing for the head ([project-management:DEC-055-pr-lists-answers] point 3). Unlike a verdict, the list is in no comment on the PR, only in `land-work`'s printout. So show the person the `ready:` stop's list before asking for that `--yes`.
 - **At a later head** an earlier head's authorisation covers, the list must be the one at the head authorised. A merge of the base moves where the head left it, so a record the base accepted meanwhile can join the list. Another list, or one that cannot be read at the head authorised, stops the run at `ready:`, as another change to the fixers' grant list does.
 - **What it does not see.** The list names what a change edits, not its words, so the person reads the edit in the PR's diff. `done-work` and `merge-pr` run directly show no list: on that path, run `pkit decisions check-diff` from a checkout at the PR's head, and show the person its list before asking.
