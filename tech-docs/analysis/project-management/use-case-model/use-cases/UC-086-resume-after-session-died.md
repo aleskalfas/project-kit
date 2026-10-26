@@ -34,11 +34,11 @@ pkit:
 
 # UC-086 — Take up my instance's work after my session died
 
-**Goal:** Take up my instance's work in flight after my session died, without losing what it had done.
+**Goal:** Take up my instance's work in flight after my session died, without losing what that session had done.
 
 **Other actors:** **Operator** (`core:ACT-operator`): starts the new session in the same clone, on the machine or the sandbox where the clone lies.
 
-**Preconditions:** **From UC-084:** The worker's [instance](../../glossary.md#term-instance--instance) owns a [Task](../../glossary.md#term-task--task) in progress, on the Task's own branch (DEC-026).
+**Preconditions:** **From UC-084:** The worker's [instance](../../glossary.md#term-instance--instance) owns a [Task](../../glossary.md#term-task--task) In Progress, on the Task's own branch (DEC-026).
 
 **Assumptions:**
 
@@ -54,7 +54,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no command lists issues signed by their [owner](../../glossary.md#term-owner--owner). DEC-035 point 7 decides the signed listing and its narrowing, and #521 tracks it.
 
-3. For each [Task](../../glossary.md#term-task--task) in progress, the worker finds the Task's branch, whose name carries the Task's number, and checks it out (DEC-013).
+3. For each [Task](../../glossary.md#term-task--task) In Progress, the worker finds the Task's branch, whose name carries the Task's number, and checks it out (DEC-013).
 4. The worker reads the branch's commits, and the Task's [pull request](../../../core/glossary.md#term-pull-request--pull-request) where one is open, to see what was done.
 5. The worker goes on from there, and builds the rest of the Task, as `UC-084` describes from its step 7.
 

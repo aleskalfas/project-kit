@@ -66,7 +66,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-082:** The worker's clone has its number, and its [scope](../../glossary.md#term-scope--scope) names the [workstreams](../../glossary.md#term-workstream--workstream) it takes work from (DEC-035 point 1 and DEC-045 point 3).
+- **From UC-082:** The worker's clone has its number, and the worker's [scope](../../glossary.md#term-scope--scope) names the [workstreams](../../glossary.md#term-workstream--workstream) it takes work from (DEC-035 point 1 and DEC-045 point 3).
 - **From UC-083, or UC-060:** Tasks of the scope are filed, each with its workstream (DEC-012).
 
 **Assumptions:**

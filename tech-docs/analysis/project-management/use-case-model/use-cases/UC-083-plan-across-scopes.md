@@ -54,7 +54,7 @@ pkit:
 **Other actors:**
 
 - **Planner** (`ACT-planner`): approves the whole plan before any [issue](../../glossary.md#term-issue--issue) of it is filed (DEC-029).
-- **Worker agent** (`ACT-worker-agent`) and **Lead agent** (`ACT-lead-agent`): take the Tasks of their scopes. Each [Task](../../glossary.md#term-task--task) names the Tasks it waits on, so they never start it too early (`batch-plan.md`).
+- **Worker agent** (`ACT-worker-agent`) and **Lead agent** (`ACT-lead-agent`): take the Tasks of their scopes. Each [Task](../../glossary.md#term-task--task) names the Tasks it waits on, so these agents never start a Task too early (`batch-plan.md`).
 
 **Preconditions:**
 

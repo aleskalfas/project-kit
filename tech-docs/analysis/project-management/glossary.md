@@ -252,7 +252,7 @@ TERM-owner:
   name: owner
   noun-forms: [owners]
   status: active
-  definition: "instance an issue belongs to from its filing or start until its close, paired with the issue's assignee, which that person's other instances leave alone"
+  definition: "instance an issue belongs to from its filing or start until its close, paired with the issue's assignee, whose other instances leave the issue alone"
   pkit:
     friction:
       anchors:
@@ -666,7 +666,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#topology).
 
 - **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists their [instances](#term-instance--instance) and the workstreams each handles (DEC-045 point 2). On 25 October the maintainer decided that a topology is shared through the project's committed configuration instead (#512).
 - **Instance:** one clone of the project, which an agent of the topology works in. How an instance learns which agent of the topology it is, is not decided yet.
-- **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says on what.
+- **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says what they work on.
 
 ## TERM-umbrella — Umbrella
 

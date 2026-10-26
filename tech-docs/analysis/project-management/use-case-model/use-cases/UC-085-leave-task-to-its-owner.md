@@ -92,7 +92,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** none of these commands reads the [owner](../../glossary.md#term-owner--owner). DEC-035 point 6 decides the refusal, and #520 tracks it.
 
-- **2a.** No [instance](../../glossary.md#term-instance--instance) owns the Task, and another instance starts it at the same instant. Each writes its owner, reads the Task again and finds two owners. The higher-numbered instance gives the Task up and says so, and the lower one keeps it (DEC-035 point 6).
+- **2a.** No [instance](../../glossary.md#term-instance--instance) owns the Task, and another instance starts it at the same instant. Each instance writes itself as the Task's owner, reads the Task again and finds two owners. The higher-numbered instance gives the Task up and says so, and the lower one keeps it (DEC-035 point 6).
 
 > [!WARNING]
 > **Not built yet:** no command writes an owner or reads the Task back, so both instances go on. DEC-035 point 6 decides that the higher number gives the Task up, and #519 tracks it.

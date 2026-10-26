@@ -25,4 +25,4 @@ An AI agent of a topology that slices a project's work and files it for the othe
 
 **Context:** the planner's intent, the [topology](../../glossary.md#term-topology--topology)'s scopes, and the [project](../../../core/glossary.md#term-project--project)'s use cases where the project keeps them (DEC-054).
 
-**Note:** it is not the planner, the person whose intent it plans and who approves its plan (DEC-008). It is an AI agent (`core:ACT-ai-agent`) with a part of its own in a [topology](../../glossary.md#term-topology--topology).
+**Note:** it is not the planner, the person whose intent it plans and who approves its plan (DEC-008). It is an AI agent (`core:ACT-ai-agent`) with its own job in a [topology](../../glossary.md#term-topology--topology).

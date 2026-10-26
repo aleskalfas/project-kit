@@ -23,7 +23,7 @@ pkit:
 
 # UC-091 — Measure one topology against another on comparable work
 
-**Goal:** Measure one topology against another on comparable work, by figures the tracker holds.
+**Goal:** Measure one topology against another on comparable work, by figures GitHub holds.
 
 **Other actors:** None.
 
@@ -54,7 +54,12 @@ pkit:
 What the director needs here that no accepted record decides yet:
 
 - **How the topologies get comparable work.** One way is a copy of the [project](../../../core/glossary.md#term-project--project) for each. Another runs them one after the other on comparable backlogs, and another splits one backlog between them.
-- **What else to record.** Each event's [topology](../../glossary.md#term-topology--topology), [instance](../../glossary.md#term-instance--instance) and agent's part. The time from a plan's approval to its last merge, and the person's own time. The tokens each agent spends, and the work dropped or done twice.
+- **What else to record:**
+  - the [topology](../../glossary.md#term-topology--topology), the [instance](../../glossary.md#term-instance--instance) and the agent's job behind each event
+  - the time from a plan's approval to its last merge
+  - the person's own time
+  - the tokens each agent spends
+  - the work dropped or done twice
 - **A command that prints the figures.** No record decides one.
 
 ## Sources

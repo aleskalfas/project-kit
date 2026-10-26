@@ -40,11 +40,11 @@ pkit:
 
 **Goal:** Delegate a Task of my scope to an agent I start, which acts as my instance while it builds the Task.
 
-**Other actors:** **AI agent** (`core:ACT-ai-agent`): the agent the lead starts, which holds no part in the [topology](../../glossary.md#term-topology--topology) of its own. It builds the [Task](../../glossary.md#term-task--task) and returns its whole result to the lead (DEC-029).
+**Other actors:** **AI agent** (`core:ACT-ai-agent`): the agent the lead starts, which the [topology](../../glossary.md#term-topology--topology) does not name. It builds the [Task](../../glossary.md#term-task--task) and returns its whole result to the lead (DEC-029).
 
 **Preconditions:**
 
-- **From UC-082:** The lead's clone has its number, and its [scope](../../glossary.md#term-scope--scope) names the [workstreams](../../glossary.md#term-workstream--workstream) it takes work from (DEC-035 point 1 and DEC-045 point 3).
+- **From UC-082:** The lead's clone has its number, and the lead's [scope](../../glossary.md#term-scope--scope) names the [workstreams](../../glossary.md#term-workstream--workstream) it takes work from (DEC-035 point 1 and DEC-045 point 3).
 - **From UC-083, or UC-060:** The [Task](../../glossary.md#term-task--task) is filed in the lead's scope (DEC-012).
 
 **Assumptions:**

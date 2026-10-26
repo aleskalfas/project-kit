@@ -4,9 +4,9 @@ name: Director
 status: active
 summary: "The person who directs a project's AI agents while several of them work on it at once."
 needs:
-  - Set up the topology my project runs, so that every agent of it reads the same one.
+  - Set up the topology my project runs, so that every agent of that topology reads the same one.
   - See which agent works on which issue, without visiting each agent.
-  - Measure one topology against another on comparable work, by figures the tracker holds.
+  - Measure one topology against another on comparable work, by figures GitHub holds.
 pkit:
   friction:
     anchors:
@@ -19,7 +19,7 @@ pkit:
 
 The person who directs a project's AI agents while several of them work on it at once. They choose which agents run and on what, and they decide what the agents bring to them.
 
-**Setup:** the [project](../../../core/glossary.md#term-project--project)'s [topology](../../glossary.md#term-topology--topology), which names each agent, its [scope](../../glossary.md#term-scope--scope), and whether it plans, builds or does both.
+**Setup:** the [project](../../../core/glossary.md#term-project--project)'s [topology](../../glossary.md#term-topology--topology). It names each agent and its [scope](../../glossary.md#term-scope--scope), and says whether the agent plans, builds or does both.
 
 **Human role:** only a person supplies the intent the agents act on, and decides what they bring (DEC-008).
 

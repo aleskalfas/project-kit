@@ -23,7 +23,7 @@ pkit:
 
 # VIEW-parallel-work — Parallel work
 
-Several AI agents may work on one [project](../../core/glossary.md#term-project--project) at the same time, each in a clone of its own and often under one person's account. Each must know its own part of the work, and no two may work on one [issue](../glossary.md#term-issue--issue). A [topology](../glossary.md#term-topology--topology) names the agents and gives each a [scope](../glossary.md#term-scope--scope). Each agent works in an [instance](../glossary.md#term-instance--instance), and the [owner](../glossary.md#term-owner--owner) of an issue says which instance works on it (DEC-035 and DEC-045).
+Several AI agents may work on one [project](../../core/glossary.md#term-project--project) at the same time, each in a clone of its own and often under one person's account. Each must know its own job, and no two may work on one [issue](../glossary.md#term-issue--issue). A [topology](../glossary.md#term-topology--topology) names the agents and gives each a [scope](../glossary.md#term-scope--scope). Each agent works in an [instance](../glossary.md#term-instance--instance), and the [owner](../glossary.md#term-owner--owner) of an issue says which instance works on it (DEC-035 and DEC-045).
 
 ```mermaid
 classDiagram
@@ -70,15 +70,15 @@ flowchart LR
 
 Defined in [TERM-topology](../glossary.md#term-topology--topology).
 
-**Why:** Agents that work at the same time each do a distinct part of the work. Each needs to know its own name and part, and work needs to reach the agent whose part it is (DEC-045).
+**Why:** Agents that work at the same time each have a distinct job. Each needs to know its own name and job, and work needs to reach the agent whose job it is (DEC-045).
 
-A topology is the set of AI agents a [project](../../core/glossary.md#term-project--project) runs on its work at the same time. It names each agent, gives it a [scope](../glossary.md#term-scope--scope), and says whether it plans, builds or does both.
+A topology is the set of AI agents a [project](../../core/glossary.md#term-project--project) runs on its work at the same time. It names each agent and gives it a [scope](../glossary.md#term-scope--scope). It also says whether each agent plans, builds or does both.
 
 **Attributes:**
 
 - each agent's name (DEC-045 point 1)
 - each agent's scope (DEC-045 point 3)
-- whether each agent plans, builds or does both, which is how this analysis reads the <!-- pkit:not-the-term -->roles #512 names
+- whether each agent plans, builds or does both (the <!-- pkit:not-the-term -->roles #512 names)
 
 **Relations:**
 
@@ -95,7 +95,7 @@ A topology is the set of AI agents a [project](../../core/glossary.md#term-proje
 
 Defined in [TERM-scope](../glossary.md#term-scope--scope).
 
-**Why:** Work must reach the agent whose part it is. A [project](../../core/glossary.md#term-project--project) already divides its work into long-lived areas, so a scope names those areas rather than adding another way to divide the work (DEC-045).
+**Why:** Work must reach the agent whose job it is. A [project](../../core/glossary.md#term-project--project) already divides its work into long-lived areas, so a scope names those areas rather than adding another way to divide the work (DEC-045).
 
 A scope is the part of a project's work that one agent of a [topology](../glossary.md#term-topology--topology) takes its issues from. The accepted records give it as a set of [workstreams](../glossary.md#term-workstream--workstream). A scope by stage of the work, such as design or testing, has no form yet.
 

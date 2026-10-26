@@ -71,5 +71,5 @@ What the director needs here that no accepted record decides yet:
 
 - **Each instance's name in the listing,** such as `api`. DEC-045 point 1 gives a clone a name of its own, and only DEC-045 point 2's per-user file would name the other [instances](../../glossary.md#term-instance--instance).
 - **The fixers' proposals across clones.** Each clone keeps the proposals its own runs made, and `land-work` prints only that clone's count (DEC-056 point 6). So the director sees them only by visiting each agent.
-- **One view of all that waits on the director,** such as heads ready to merge and records waiting for acceptance. The maintainer decided on 17 October that one view lists it (#1682), and no record holds it yet.
+- **One view of all that waits on the director,** such as heads ready to merge and records waiting for acceptance. The maintainer decided on 17 October that one view lists all of that (#1682), and no record holds the decision yet.
 - **Where each agent is heading,** beside what it owns. The pilot analysis proposed a command for it, under [EPIC](../../glossary.md#term-epic--epic) #943, and no record decides it.

@@ -55,7 +55,7 @@ pkit:
 
 # UC-082 — Set up the topology my project runs, so that every agent reads the same one
 
-**Goal:** Set up the topology my project runs, so that every agent of it reads the same one.
+**Goal:** Set up the topology my project runs, so that every agent of that topology reads the same one.
 
 **Other actors:**
 
@@ -73,7 +73,7 @@ pkit:
 
 **Main path:**
 
-1. The director chooses the agents the [project](../../../core/glossary.md#term-project--project) runs. For each, they choose a name, its [scope](../../glossary.md#term-scope--scope), and whether it plans, builds or does both.
+1. The director chooses the agents the [project](../../../core/glossary.md#term-project--project) runs. For each agent, they choose a name and a [scope](../../glossary.md#term-scope--scope). They also choose whether the agent plans, builds or does both.
 2. In each agent's clone, the director or the operator sets the clone's number: `pkit pm set-instance <N>`. The system writes the number to a file of the clone that is never committed (DEC-035 point 1).
 3. The system writes the agent's name beside the number, such as `api` (DEC-045 point 1).
 
@@ -112,10 +112,10 @@ What the director needs here that no accepted record decides yet:
 
 - **Where the topology is kept.** DEC-045 point 2 keeps it in one person's file, on one machine and never committed. The maintainer decided on 25 October that it is shared through the [project](../../../core/glossary.md#term-project--project)'s committed configuration instead (#512). The record changes with the [topology](../../glossary.md#term-topology--topology)'s design.
 - **The guided assignment, once the topology is shared.** DEC-045 points 5 and 6 read and write the per-user file of point 2. So the topology's design may alter steps 4 and 5 and variant 4a, and where the scopes are written.
-- **How the topology records what each agent does:** plans, builds or both. #512 names the agents' <!-- pkit:not-the-term -->roles, and this analysis reads them so, from the actors #2096 lists.
+- **How the topology records what each agent does:** plans, builds or both. This analysis reads the agents' <!-- pkit:not-the-term -->roles that #512 names as planning, building or both, after the actors #2096 lists.
 - **Who may change a shared topology, and when an agent sees a change.** A committed topology reaches a clone only once that clone takes the [default branch](../../../core/glossary.md#term-default-branch--default-branch). DEC-045 calls a shared topology a larger concern, with questions of authority of its own.
 - **More than four agents under one account.** DEC-035 point 2 gives each person a pool of four numbers, and `set-instance` takes any positive number. No record says what a topology of five agents under one account does.
-- **How an agent learns its place.** No record decides how an agent that starts in a clone learns its name, its [scope](../../glossary.md#term-scope--scope), and whether it plans, builds or does both.
+- **How an agent learns its place.** No record decides how an agent that starts in a clone learns its name and its [scope](../../glossary.md#term-scope--scope). Nor does one decide how the agent learns whether it plans, builds or does both.
 - **A scope by stage of the work,** such as design, development or testing. No record decides how a scope names a stage, since [workstreams](../../glossary.md#term-workstream--workstream) are long-lived areas and no stage (DEC-018).
 
 ## Sources

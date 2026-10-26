@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=4 fingerprint=sha256:1660bc4dee4a1fda05301c87001d7da4cd0fb762d2a2f8154ad97d2bb696a4ee -->
+<!-- pkit:overview reads=4 fingerprint=sha256:2b9b22777e1162da818b31a0ac65c01d8936262fea905d8a3c19a83c1730c4a4 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -18,7 +18,7 @@ This analysis describes what project-management does: who uses it, what they do 
 - [UC-084 — Take my next Task from my scope, and build it up to its merge](../use-case-model/use-cases/UC-084-take-next-task.md) ([not built yet](#not-built-yet): step 1, step 5, step 6, variant 2a, variant 3a)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/UC-085-leave-task-to-its-owner.md) ([not built yet](#not-built-yet): step 2, step 3, variant 1a, variant 2a, variant 3a, variant 3b)
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/UC-086-resume-after-session-died.md) ([not built yet](#not-built-yet): step 2)
-- [UC-087 — Hand the next part of the work to the scope that does it](../use-case-model/use-cases/UC-087-hand-over-to-next-scope.md) ([not built yet](#not-built-yet): variant 1a, variant 4a)
+- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/UC-087-hand-over-to-next-scope.md) ([not built yet](#not-built-yet): variant 1a, variant 4a)
 - [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/UC-088-delegate-to-agent.md) ([not built yet](#not-built-yet): step 1)
 - [UC-089 — Land my Task while other agents land theirs](../use-case-model/use-cases/UC-089-land-alongside-others.md)
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/UC-090-see-who-works-on-what.md) ([not built yet](#not-built-yet): step 1)
@@ -60,7 +60,7 @@ Each view of the domain model explains a group of related concepts:
 - [REQ-041 · Functional · A command that writes checks the project's prerequisites and the person's membership first](../requirements/functional/REQ-041-gates-before-writing.md)
 - [REQ-042 · Functional · A move a person holds is made only on that person's authorisation](../requirements/functional/REQ-042-held-moves-authorised.md)
 - [REQ-061 · Functional · No two instances keep working on one issue](../requirements/functional/REQ-061-one-owner-per-issue.md)
-- [REQ-062 · Functional · An instance's work in flight is found again from the tracker and its number alone](../requirements/functional/REQ-062-work-found-from-tracker.md)
+- [REQ-062 · Functional · An instance's work in flight is found again from GitHub and the instance's number alone](../requirements/functional/REQ-062-work-found-from-tracker.md)
 
 ### Not built yet
 
@@ -98,8 +98,8 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/UC-085-leave-task-to-its-owner.md): variant 3a, decided by `project-management:DEC-035#6`, tracked in `#520`
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/UC-085-leave-task-to-its-owner.md): variant 3b, decided by `project-management:DEC-035#4`, tracked in `#521`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/UC-086-resume-after-session-died.md): step 2, decided by `project-management:DEC-035#7`, tracked in `#521`
-- [UC-087 — Hand the next part of the work to the scope that does it](../use-case-model/use-cases/UC-087-hand-over-to-next-scope.md): variant 1a, decided by `project-management:DEC-035#4`, tracked in `#521`
-- [UC-087 — Hand the next part of the work to the scope that does it](../use-case-model/use-cases/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#3`, tracked in `#519`
+- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/UC-087-hand-over-to-next-scope.md): variant 1a, decided by `project-management:DEC-035#4`, tracked in `#521`
+- [UC-087 — Hand the next piece of the work to the scope that does it](../use-case-model/use-cases/UC-087-hand-over-to-next-scope.md): variant 4a, decided by `project-management:DEC-035#3`, tracked in `#519`
 - [UC-088 — Delegate a Task of my scope to an agent I start](../use-case-model/use-cases/UC-088-delegate-to-agent.md): step 1, decided by `project-management:DEC-035#3`, tracked in `#519`
 - [UC-090 — See which agent works on which issue, without visiting each agent](../use-case-model/use-cases/UC-090-see-who-works-on-what.md): step 1, decided by `project-management:DEC-035#7`, tracked in `#521`
 

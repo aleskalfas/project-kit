@@ -25,4 +25,7 @@ An AI agent of a topology that plans and builds the work of its scope, delegatin
 
 **Context:** its [scope](../../glossary.md#term-scope--scope), its [instance](../../glossary.md#term-instance--instance)'s number, and the harness's limit on how deep agents may start further agents (DEC-029).
 
-**Note:** one session that starts agents for all of a [project](../../../core/glossary.md#term-project--project)'s work is one lead agent whose [scope](../../glossary.md#term-scope--scope) is the whole project. project-kit's own work ran that way in October 2026. Like the other agents of a [topology](../../glossary.md#term-topology--topology), it is an AI agent (`core:ACT-ai-agent`) with a part of its own.
+**Note:**
+
+- One session that starts agents for all of a [project](../../../core/glossary.md#term-project--project)'s work is one lead agent whose [scope](../../glossary.md#term-scope--scope) is the whole project. project-kit's own work ran that way in October 2026.
+- The lead agent is an AI agent (`core:ACT-ai-agent`) with its own job in a [topology](../../glossary.md#term-topology--topology), as the other agents of a topology are.
