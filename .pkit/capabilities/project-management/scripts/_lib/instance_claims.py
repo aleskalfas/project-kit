@@ -43,11 +43,12 @@ from the markers alone (DEC-035 point 6). It is not a lock. A clone whose re-rea
 came before the other's claim keeps its claim, and the fold shows both.
 
 **The clash guard** (DEC-035 point 6). :func:`guard` refuses an ordinary command
-(``start-work``, ``done-work``, ``edit-issue``, ``move-issue``) on an issue
-another instance owns, at ``bypassable-with-audit`` (DEC-014): a bypass carries
-a reason, posted on the issue as an audit comment before the command writes. In
-a project with a topology, a claim that does not count is no claim, and one the
-fold cannot judge refuses as one that counts (ADR-041 point 5).
+(``start-work``, ``review-work``, ``done-work``, ``promote-issue``,
+``edit-issue``, ``move-issue``) on an issue another instance owns, at
+``bypassable-with-audit`` (DEC-014): a bypass carries a reason, posted on the
+issue as an audit comment before the command writes. In a project with a
+topology, a claim that does not count is no claim, and one the fold cannot
+judge refuses as one that counts (ADR-041 point 5).
 
 **The owner is the assignee paired with an instance** (DEC-035 point 2). A clone
 claims only an issue assigned to its own account, so a marker the fold trusts
