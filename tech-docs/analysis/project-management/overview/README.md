@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:74f02354538b65c17a68316675269414014c971371b5d05ae5d4893bf5cbefdc -->
+<!-- pkit:overview reads=5 fingerprint=sha256:9a08abe0b7ccb1f7a5969cd559853deb699d3b111b0172d1552910a607f8ff5e -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -200,7 +200,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 1, decided by `project-management:DEC-035#7`, tracked in `#521`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 3, decided by `project-management:DEC-059#7`, tracked in `#2142`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 5, decided by `project-management:DEC-035#3`, tracked in `#519`
-- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 5, decided by `project-management:DEC-059#9`, tracked in `#2138`
+- [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 5, decided by `project-management:DEC-059#9`, tracked in `#519`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 6, decided by `project-management:DEC-035#6`, tracked in `#519`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): step 9, decided by `project-management:DEC-059#9`, tracked in `#2136`
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md): variant 2a, decided by `project-management:DEC-035#4`, tracked in `#521`
@@ -217,7 +217,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md): variant 3c, decided by `project-management:DEC-059#9`, tracked in `#2136`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): step 1, decided by `project-management:DEC-059#4`, tracked in `#2141`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): step 2, decided by `project-management:DEC-035#7`, tracked in `#521`
-- [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 1a, decided by `project-management:DEC-059#9`, tracked in `#2138`
+- [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 1a, decided by `project-management:DEC-059#9`, tracked in `#519`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2a, decided by `project-management:DEC-035#6`, tracked in `#520`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2b, decided by `project-management:DEC-059#9`, tracked in `#2136`
 - [UC-086 — Take up my instance's work after my session died](../use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md): variant 2c, decided by `project-management:DEC-059#9`, tracked in `#2136`
@@ -232,7 +232,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): step 1, decided by `project-management:DEC-059#4`, tracked in `#2141`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): step 2, decided by `project-management:DEC-059#1`, tracked in `#2140`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): step 3, decided by `project-management:DEC-059#8`, tracked in `#2143`
-- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): step 5, decided by `project-management:DEC-058#5`, tracked in `#2138`
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): step 5, decided by `project-management:DEC-058#5`, tracked in `#2141`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): step 6, decided by `project-management:DEC-059#6`, tracked in `#2141`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 1a, decided by `project-management:DEC-059#6`, tracked in `#2141`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 1b, decided by `project-management:DEC-059#4`, tracked in `#2141`
@@ -242,7 +242,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 4a, decided by `project-management:DEC-059#5`, tracked in `#2141`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 4b, decided by `project-management:DEC-059#5`, tracked in `#2141`
 - [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 4c, decided by `project-management:DEC-059#5`, tracked in `#2141`
-- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 5a, decided by `project-management:DEC-058#6`, tracked in `#2138`
+- [UC-092 — Take a seat of my project's topology for my clone, and act as that seat's agent](../use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md): variant 5a, decided by `project-management:DEC-058#6`, tracked in `#2141`
 
 ### Diagrams
 

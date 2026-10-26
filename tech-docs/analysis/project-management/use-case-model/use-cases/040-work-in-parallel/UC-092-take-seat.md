@@ -20,7 +20,7 @@ shortfalls:
     issue: "#2143"
     record: project-management:DEC-059#8
   - at: 5
-    issue: "#2138"
+    issue: "#2141"
     record: project-management:DEC-058#5
   - at: 6
     issue: "#2141"
@@ -50,7 +50,7 @@ shortfalls:
     issue: "#2141"
     record: project-management:DEC-059#5
   - at: "5a"
-    issue: "#2138"
+    issue: "#2141"
     record: project-management:DEC-058#6
 pkit:
   friction:
@@ -113,7 +113,7 @@ pkit:
    - where the clone lies, such as the clone's machine and folder
 
 > [!WARNING]
-> **Not built yet:** no command writes to a state issue, and no clone has a key. DEC-058 point 5 decides how a clone takes what a state issue holds, and #2138 tracks it.
+> **Not built yet:** no command takes a seat, so nothing writes to a seat's state issue. DEC-058 point 5 decides how a clone takes what a state issue holds, and #2141 tracks it.
 
 6. The system reads the state issue again, and finds that the clone holds the seat. The first taking of a free seat holds ([DEC-058 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#6-the-first-claim-on-a-free-state-holds)). The clone is now an [instance](../../../glossary.md#term-instance--instance) named by the clone's seat, with the seat's number ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and [DEC-045 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#1-instances-gain-a-human-readable-name)). The system prints these:
    - the seat's name
@@ -177,7 +177,7 @@ pkit:
 - **5a.** Another clone took the seat first. This clone's taking counts for nothing, so the clone holds no seat, and writes nothing more ([DEC-058 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#6-the-first-claim-on-a-free-state-holds)). This clone's agent takes another free seat that matches what the agent asked for, or stops, as the agent judges ([DEC-059 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
 
 > [!WARNING]
-> **Not built yet:** nothing reads a state issue. DEC-058 point 6 decides that the first taking of a free seat holds, and #2138 tracks it.
+> **Not built yet:** no command takes a seat, so nothing writes to a seat's state issue. DEC-058 point 6 decides that the first taking of a free seat holds, and #2141 tracks it.
 
 **Postconditions:** The clone holds the [seat](../../../glossary.md#term-seat--seat), and the clone's agent works as the [instance](../../../glossary.md#term-instance--instance) the seat names, in the direction the seat sets.
 

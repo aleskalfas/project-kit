@@ -23,7 +23,7 @@ shortfalls:
     issue: "#519"
     record: project-management:DEC-035#3
   - at: 5
-    issue: "#2138"
+    issue: "#519"
     record: project-management:DEC-059#9
   - at: 6
     issue: "#519"
@@ -116,7 +116,7 @@ pkit:
 > **Not built yet:** `start-work` writes no owner. DEC-035 point 3 decides that an instance that starts an issue with no owner becomes the issue's owner, and #519 tracks it.
 
 > [!WARNING]
-> **Not built yet:** no ownership names a seat or a clone's key. DEC-059 point 9 decides what an ownership names, and #2138 tracks it.
+> **Not built yet:** no command writes an ownership that names a seat or a clone's key. DEC-059 point 9 decides what an ownership names, and #519 tracks it.
 
 6. The system reads the Task again after writing, and finds the worker's instance the Task's only owner ([DEC-035 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 
