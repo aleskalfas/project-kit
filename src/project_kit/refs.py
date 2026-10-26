@@ -33,6 +33,13 @@ Body parser convention (per COR-013, documented in `.pkit/agents/README.md`):
   frontmatter either.
 - Hook names: `<topic>.<operation>` or `<topic>.<provider>.<operation>`.
 - Skipped regions: fenced code blocks, HTML comments, strikethrough.
+
+A citation of a record's point (COR-058 point 1) — `COR-058 point 3`, `PRJ-002 D1`,
+`COR-050#14`, `[project-management:DEC-035-instance-ownership] point 6` — is read by
+`point_citations`, and `CitedPoints` holds each to its record as validation reads its
+points. The check warns of a point its record neither holds nor retires, in an agent's
+or a skill's body here, and in a record in `decisions_validate`: the citations are read
+from prose, so the warning never fails a command.
 """
 
 from __future__ import annotations
@@ -42,7 +49,7 @@ import io
 import itertools
 import os
 import re
-from collections.abc import Collection
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
@@ -50,7 +57,7 @@ from typing import Any, Literal
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agent_policy, agents_overlay, connections, rule_sets
+from project_kit import agent_policy, agents_overlay, connections, record_points, rule_sets
 from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
 from project_kit.line_breaks import universal_newlines
 from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
@@ -141,6 +148,12 @@ STORYBOARD = "storyboard"
 CITATION = "citation"
 COMPOSES = "composes"
 AGENT_POLICY = "agent-policy"
+# A citation of a point its record does not hold (COR-058 point 1): read from prose, so
+# reported and never failed, by the member and by `pkit refs validate` alike.
+POINT_CITATION = "point-citation"
+
+#: The kinds of finding that warn and never fail `pkit refs validate`.
+WARNING_KINDS = frozenset({POINT_CITATION})
 
 
 @dataclass(frozen=True)
@@ -245,7 +258,8 @@ def load_hook_providers(target_root: Path) -> list[Provider]:
 
 def validate_corpus(target_root: Path) -> list[Issue]:
     """Run bidirectional consistency + hook closure + same-tier collision + exactly-one-owner +
-    storyboard + capability-, rule- and address-citation + composes + agent-policy checks."""
+    storyboard + capability-, rule-, address- and point-citation + composes + agent-policy
+    checks."""
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
     return check_corpus(artifacts, providers, target_root)
@@ -264,6 +278,7 @@ def check_corpus(
     issues.extend(_kind(_validate_capability_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
+    issues.extend(_kind(_validate_point_citations(artifacts, target_root), POINT_CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     return issues
@@ -283,9 +298,10 @@ def outcome(target_root: Path) -> Outcome:
     hook). Every other finding — a path owned twice or by nobody, a hook no
     provider answers, two providers at one tier, a missing storyboard, a
     citation that does not resolve, a sub-procedure that does not exist, a
-    model or effort the harness does not accept — is an **error**. `pkit refs
-    validate`, the focused surface, keeps its stricter exit: it fails on any
-    finding.
+    model or effort the harness does not accept — is an **error**. A citation of
+    a point its record does not hold is a **warning** too, read from prose as
+    drift is. `pkit refs validate`, the focused surface, keeps its stricter exit:
+    it fails on any finding but that last.
     """
     artifacts = load_artifacts(target_root)
     providers = load_hook_providers(target_root)
@@ -293,7 +309,7 @@ def outcome(target_root: Path) -> Outcome:
         Finding(
             issue.location,
             issue.diagnosis,
-            Severity.WARNING if issue.kind == DRIFT else Severity.ERROR,
+            Severity.WARNING if issue.kind in (DRIFT, *WARNING_KINDS) else Severity.ERROR,
         )
         for issue in check_corpus(artifacts, providers, target_root)
     )
@@ -711,6 +727,217 @@ def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Look
         found.append(Lookup(citation, (located,), path=rel, anchor=anchor))
     is_synced = synced_record_test(target_root)
     return [replace(f, received=is_synced(f.path)) if f.path else f for f in found]
+
+
+# ---------------------------------------------------------------- point citations
+
+# A citation of a record's point in prose (COR-058 point 1; the decisions README,
+# "Citing"): the record, then its point. The record bare, `COR-058`; as a link's text,
+# `[COR-058](core/COR-058-record-points.md)`; or in brackets with its component in front,
+# `[project-management:DEC-035-instance-ownership]`, `[pkit:COR-010]`. A possessive's
+# `'s` may follow it. Then the point: an anchor's mark, `COR-050#14`; `point 6` or
+# `points 3, 4 and 16`; or a label alone, `PRJ-002 D1`. White space between the two may
+# break a line, a block quote's included, but never a paragraph.
+_RECORD_ID = r"(?:COR|PRJ|ADR|DEC)-\d+"
+_POINT_ID = r"(?:\d+|[A-Z]+\d+)"
+_GAP = r"(?:[ \t]+(?:\n[ \t]*(?:>[ \t]*)*)?|\n[ \t]*(?:>[ \t]*)*)"
+_JOIN = rf"(?:,{_GAP}|,?{_GAP}(?:and|or|to){_GAP})"
+_POSSESSIVE = "(?:['" + chr(0x2019) + "]s)?"  # an apostrophe of either kind
+POINT_CITATION_RE = re.compile(
+    rf"(?:\[(?P<component>[a-z][a-z0-9-]*[a-z0-9]):(?P<qualified>{_RECORD_ID})(?:-[a-z0-9-]+)?\]"
+    rf"|\[(?P<linked>{_RECORD_ID})\]\((?P<target>[^)\s]*)\)"
+    rf"|(?<![\w/#:-])(?P<bare>{_RECORD_ID})(?![\w-]))"
+    rf"{_POSSESSIVE}"
+    rf"(?:#(?P<anchor>{_POINT_ID})(?![\w-])"
+    rf"|{_GAP}points?{_GAP}(?P<listed>{_POINT_ID}(?:{_JOIN}{_POINT_ID})*)(?![\w-])"
+    rf"|{_GAP}(?P<label>[A-Z]+\d+)(?![\w-]))"
+)
+_LISTED_ID = re.compile(rf"(?<![\w-]){_POINT_ID}(?![\w-])")
+_CAPABILITY_DECISION = re.compile(r"capabilities/([a-z][a-z0-9-]*[a-z0-9])/decisions/(DEC-\d+)")
+_QUALIFIED_DECISION = re.compile(r"\[([a-z][a-z0-9-]*[a-z0-9]):(DEC-\d+)")
+_FENCE = re.compile(r"^\s*(?:>\s*)*(`{3,}|~{3,})")
+_CODE_SPAN = re.compile(r"(`+)(?:(?!\1).)+?\1")
+
+#: The component that cites a core record, a project record or an ADR in brackets.
+BACKBONE_COMPONENT = "pkit"
+
+
+@dataclass(frozen=True)
+class PointCitation:
+    """A citation of one or more points of a record, as `point_citations` finds it.
+
+    - `line`: the line of the text it starts on, counted from 1.
+    - `text`: the citation as written, its white space folded.
+    - `record`: the record it names, as `resolve_record` takes it: `COR-058`, or a
+      capability's decision, `project-management:DEC-035`.
+    - `points`: the ids of the points it names, in written order.
+    """
+
+    line: int
+    text: str
+    record: str
+    points: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class UnheldPoint:
+    """A point a citation names that its record neither holds nor retires.
+
+    `path` is the record's file, relative to the root. A record whose points are a list
+    holds the numbers its list shows (COR-058 point 2), so a citation of another is one.
+    """
+
+    citation: PointCitation
+    point: str
+    path: str
+
+    @property
+    def message(self) -> str:
+        return (
+            f"{self.citation.text!r} names point {self.point}, which {self.citation.record} "
+            "does not hold: a point is cited by the id its heading carries, as "
+            "`pkit refs lookup` resolves it (COR-058 point 1)."
+        )
+
+
+def point_citations(text: str, *, capability: str | None = None) -> list[PointCitation]:
+    """Every citation of a record's point in `text`, in order (`POINT_CITATION_RE`).
+
+    Front matter, fenced code, inline code and HTML comments are quoted or data, not
+    prose, and hold none. A capability's decision cited bare, `DEC-035`, or as a link's
+    text is `capability`'s, the component whose text it is; else, a link into a
+    capability's `decisions` folder names its capability. Outside a capability, a bare
+    `DEC-NNN` is the decision of the one capability the text cites it of in full, in
+    brackets or by a link, and a citation of one cited of none or of several is left
+    out, since the text does not say whose it is.
+    """
+    prose = _prose(text)
+    cited: dict[str, set[str]] = {}
+    for match in (*_QUALIFIED_DECISION.finditer(prose), *_CAPABILITY_DECISION.finditer(prose)):
+        cited.setdefault(match.group(2), set()).add(match.group(1))
+    found: list[PointCitation] = []
+    for match in POINT_CITATION_RE.finditer(prose):
+        record = _cited_record(match, capability, cited)
+        if record is None:
+            continue
+        if match["anchor"]:
+            points: tuple[str, ...] = (match["anchor"],)
+        elif match["label"]:
+            points = (match["label"],)
+        else:
+            points = tuple(_LISTED_ID.findall(match["listed"]))
+        found.append(
+            PointCitation(
+                line=prose.count("\n", 0, match.start()) + 1,
+                text=" ".join(match.group(0).replace(">", " ").split()),
+                record=record,
+                points=points,
+            )
+        )
+    return found
+
+
+def _cited_record(
+    match: re.Match[str], capability: str | None, cited: Mapping[str, set[str]]
+) -> str | None:
+    """The record a citation names, as `resolve_record` takes it, or `None` when the
+    text does not say whose decision a `DEC-NNN` is."""
+    record = match["qualified"] or match["linked"] or match["bare"]
+    if not record.startswith("DEC-"):
+        return record
+    if match["component"] and match["component"] != BACKBONE_COMPONENT:
+        return f"{match['component']}:{record}"
+    if match["component"]:
+        return None
+    linked = _CAPABILITY_DECISION.search(match["target"] or "")
+    if linked is not None:
+        return f"{linked.group(1)}:{record}"
+    if capability is not None:
+        return f"{capability}:{record}"
+    owners = cited.get(record, set())
+    return f"{next(iter(owners))}:{record}" if len(owners) == 1 else None
+
+
+def _prose(text: str) -> str:
+    """`text` with what holds no prose blanked, every line kept where it was: front
+    matter, fenced code, inline code and HTML comments."""
+    text = HTML_COMMENT_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
+    lines = text.split("\n")
+    if lines and lines[0].strip() == "---":
+        closing = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+        if closing is not None:
+            lines[: closing + 1] = [""] * (closing + 1)
+    fence: str | None = None
+    for index, line in enumerate(lines):
+        opened = _FENCE.match(line)
+        if opened is not None:
+            marker = opened.group(1)
+            if fence is None:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence):
+                fence = None
+            lines[index] = ""
+        elif fence is not None:
+            lines[index] = ""
+        else:
+            lines[index] = _CODE_SPAN.sub(lambda code: " " * len(code.group(0)), line)
+    return "\n".join(lines)
+
+
+class CitedPoints:
+    """The points of the records citations name, each record read once (`record_points`,
+    as validation reads them), for `unheld` to hold each citation to its record."""
+
+    def __init__(self, target_root: Path) -> None:
+        self._root = target_root
+        self._read: dict[str, tuple[str, record_points.RecordPoints] | None] = {}
+
+    def unheld(self, citations: Iterable[PointCitation]) -> list[UnheldPoint]:
+        """Each point a citation names that its record neither holds nor retires, in
+        order. A citation of a record not found is left to what resolves records."""
+        found: list[UnheldPoint] = []
+        for citation in citations:
+            read = self._points(citation.record)
+            if read is None:
+                continue
+            rel, points = read
+            for point in citation.points:
+                if _unheld(points, point):
+                    found.append(UnheldPoint(citation, point, rel))
+        return found
+
+    def _points(self, record: str) -> tuple[str, record_points.RecordPoints] | None:
+        if record not in self._read:
+            path = resolve_record(self._root, record)
+            read: tuple[str, record_points.RecordPoints] | None = None
+            if path is not None:
+                try:
+                    text = universal_newlines(path.read_bytes().decode("utf-8"))
+                except (OSError, UnicodeDecodeError):
+                    text = None
+                if text is not None:
+                    read = (_relative_to(path, self._root), record_points.read_points(text))
+            self._read[record] = read
+        return self._read[record]
+
+
+def _unheld(points: record_points.RecordPoints, point: str) -> bool:
+    """Whether a record's points leave `point` unheld: no point has the id and none is
+    retired under it, or, in a record whose points are a list, its list shows no such
+    number."""
+    state = points.anchored(point).state
+    if state is record_points.PointState.MISSING:
+        return True
+    if state is record_points.PointState.LIST_FORM:
+        return point not in {listed.id for listed in points.list_points}
+    return False
+
+
+def _relative_to(path: Path, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def who_references(artifacts: list[Artifact], target: str) -> list[Artifact]:
@@ -2101,6 +2328,32 @@ def _validate_address_citations(artifacts: list[Artifact], target_root: Path) ->
                 what = "role" if address.point is None else "point"
                 diagnosis = f"cites {what} {token!r}, which does not resolve: {resolution.problem}."
             issues.append(Issue(location=_location(art, target_root), diagnosis=diagnosis))
+    return issues
+
+
+def _validate_point_citations(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
+    """Every citation of a record's point in a body names a point the record holds or
+    retires (COR-058 point 1), in each form `point_citations` reads.
+
+    Each finding is at `<file>:<line>`, a composite skill's sibling files read with
+    its dispatcher, and each cited record read once.
+    """
+    reader = CitedPoints(target_root)
+    issues: list[Issue] = []
+    for art in artifacts:
+        files = [art.path]
+        if art.path.parent.name == art.path.stem:
+            files += [p for p in sorted(art.path.parent.glob("*.md")) if p != art.path]
+        for path in files:
+            try:
+                text = universal_newlines(path.read_bytes().decode("utf-8"))
+            except (OSError, UnicodeDecodeError):
+                continue
+            where = str(path.relative_to(target_root)) if target_root in path.parents else str(path)
+            issues.extend(
+                Issue(location=f"{where}:{unheld.citation.line}", diagnosis=unheld.message)
+                for unheld in reader.unheld(point_citations(text, capability=art.capability))
+            )
     return issues
 
 
