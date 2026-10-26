@@ -1758,8 +1758,8 @@ def connections_resolve(address: str, as_json: bool) -> None:
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
-    discovery finds, whether what changed since a commit lies inside
-    `revalidated` blocks and `revisited` lists, the plan of the move of the
+    discovery finds, whether what changed since a commit lies inside answer
+    files the change adds, the plan of the move of the
     answers into answer files — which never write, the writers — revalidate,
     defer, revisit, record-status — which write one answer or status, only with
     consent, and resolve, which resolves a merge's conflicting revalidations and
@@ -1848,10 +1848,9 @@ def friction_revalidate_command(
     """Write ARTEFACT's revalidation (COR-050 point 3): a fresh `at`, the outcome, and
     for `unchanged` a new `unchanged-because`.
 
-    Where ARTEFACT's block holds no answer, it writes into an answer file of this
-    change's own, which names every other answer file on ARTEFACT in `read`
-    (COR-062 points 1 and 4); where its block holds answers, it rewrites the
-    `revalidated` block and nothing else in the file. Re-states the deferrals
+    It writes into an answer file of this change's own, which names every other
+    answer file on ARTEFACT in `read` (COR-062 points 1 and 4). An ARTEFACT whose
+    block still holds answers is refused, naming the move. Re-states the deferrals
     kept — each named with --keep or confirmed at the prompt — and drops the
     rest (point 4). ARTEFACT is a location (`path`, or `path#id` for a
     collection entry) or an id.
@@ -1893,8 +1892,8 @@ def friction_defer_command(
     or reword the reason of the entry already there.
 
     Writes the `deferred` list and nothing else — never `at`: a deferral is
-    not a revalidation. Where ARTEFACT's block holds no answer, the list is in an
-    answer file of this change's own (COR-062 point 1). The entry covers the
+    not a revalidation. The list is in an answer file of this change's own, and an
+    ARTEFACT whose block still holds answers is refused (COR-062 point 1). The entry covers the
     anchor's changes up to the commit that introduces it; rewording its reason
     does not move that.
     """
@@ -1940,8 +1939,9 @@ def friction_revisit_command(
     change alters its trigger fields, each target changes in the same change or
     ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
     it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
-    an entry is no revalidation of ARTEFACT. Where ARTEFACT's block holds no
-    answer, the list is in an answer file of this change's own (COR-062 point 1).
+    an entry is no revalidation of ARTEFACT. The list is in an answer file of this
+    change's own, and an ARTEFACT whose block still holds answers is refused
+    (COR-062 point 1).
     """
     rerun = [
         "pkit",
@@ -2124,7 +2124,7 @@ def friction_check_command(
     included) — or, with --head, commit REV — against the merge-base of REF —
     by default $PKIT_CHECK_BASE, else the default branch (COR-054). An `at`
     the change writes back — a value the artefact carried before, read from
-    its file's history behind the base — answers nothing: the artefact is
+    its answers' history behind the base — answers nothing: the artefact is
     judged against that value's revalidation point. Reports
     friction, dead anchors of the change, bumps with nothing behind them and
     an outdated base, and lists last every answer the change wrote, word for
@@ -2134,8 +2134,10 @@ def friction_check_command(
     fails, nor a dead anchor it cannot lay at the change (dead-unattributed),
     nor an anchor on an id two artefacts share (shared-id).
 
-    Answers in answer files (.pkit/project/friction/answers/) are read too,
-    and what each one read is judged against the change's own head: the
+    Answers are read in answer files (.pkit/project/friction/answers/) alone,
+    a block's only in the base's history; a project whose answers have not
+    moved is refused, naming the move. What each answer file read is judged
+    against the change's own head: the
     working tree's HEAD, or $PKIT_CHECK_HEAD, a parent of HEAD such as the
     change's head where a host checks out its merge with the base. Exit 1 in
     enforcing mode on an answer file the change rewrites, a prune mixed with

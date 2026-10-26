@@ -180,7 +180,6 @@ from project_kit.friction_discovery import (
     ResolverCommand,
     SetAside,
     content,
-    deferral_reason,
     discover_artefacts,
     pattern_matcher,
     placed_content,
@@ -594,8 +593,8 @@ class _Judge:
     # --- an artefact's answers --------------------------------------------------------
 
     def answers_of(self, artefact: Artefact) -> Answers:
-        """The artefact's answers at HEAD, from its block or its answer files
-        (`StateAnswers.answers`), read once."""
+        """The artefact's answers at HEAD, from the answer files alone (COR-062 point 1;
+        `StateAnswers.answers`), read once."""
         found = self._answers.get(artefact.location)
         if found is None:
             found = self.answers.answers(artefact, self.head.discovery)
@@ -1621,6 +1620,9 @@ def _check_head(
     settings = discovery.settings
     if not discovery.places:
         return _dormant(settings.mode_or_default, settings.mode, places=0)
+    answer_files.refuse_unmoved(
+        discovery.artefacts, [rel for rel in tree.files() if answer_files.is_answer_file(rel)]
+    )
 
     head = Side(target_root, tree, discovery)
     registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
@@ -1846,7 +1848,7 @@ def _check_artefact(
             )
         message += " — revalidate the artefact, or defer the anchor again"
         stale.append(finding(RepositoryFindingKind.STALE, message, anchor, change.origin))
-    for anchor, deferral_point, reason in _deferrals(artefact, answers, found_points):
+    for anchor, deferral_point, reason in _deferrals(answers, found_points):
         if deferral_point is None:
             continue
         since = commits[deferral_point]
@@ -1896,17 +1898,9 @@ def _check_artefact(
     return report, stale + deferred + apart + left_out + problems + broad
 
 
-def _deferrals(
-    artefact: Artefact, answers: Answers, found: AnswerPoints
-) -> list[tuple[Anchor, int | None, str]]:
-    """Each live deferral with the point its debt is dated from and its reason: read from
-    the block, each entry's point as the walk found it, the reason as the block gives
-    it; read from answer files, the oldest point it keeps (COR-062 point 6)."""
-    if not answers.from_files:
-        return [
-            (anchor, point, deferral_reason(artefact, anchor))
-            for anchor, point in found.points.deferrals
-        ]
+def _deferrals(answers: Answers, found: AnswerPoints) -> list[tuple[Anchor, int | None, str]]:
+    """Each live deferral with the point its debt is dated from, the oldest point it keeps
+    (COR-062 point 6), and its reason."""
     return [
         (deferral.anchor, max(points) if points else None, deferral.reason or "")
         for deferral, points in zip(answers.deferrals, found.deferrals, strict=True)
@@ -2113,8 +2107,8 @@ class ArtefactCheck:
     findings: tuple[TracedFinding, ...]
     files: Mapping[Anchor, AnchorFiles] = field(default_factory=dict[Anchor, AnchorFiles])
     diffs: Mapping[Anchor, tuple[str, ...]] = field(default_factory=dict[Anchor, tuple[str, ...]])
-    # Its answers at HEAD, read from its block or its answer files (`answer_files`); `None`
-    # where it carries no `friction` block, or neither anchors nor answers to read.
+    # Its answers at HEAD, read from the answer files (`answer_files`); `None` where it
+    # carries no `friction` block, or neither anchors nor answers to read.
     answers: Answers | None = None
 
 
@@ -2148,11 +2142,11 @@ def run_artefact_check(
         return None
     artefact = select(discovery)
     head = HeadState(head_sha, uncommitted_paths(target_root))
-    unanswered = not anchors_of(artefact) and (
-        answer_files.block_holds_answers(artefact)
-        or not any(answer_files.is_answer_file(rel) for rel in tree.files())
-    )
-    if not artefact.has_friction_block or (unanswered and not artefact.deferrals):
+    held = [rel for rel in tree.files() if answer_files.is_answer_file(rel)]
+    answer_files.refuse_unmoved(discovery.artefacts, held)
+    # With no anchors and no answer file, no live deferral can make it judged (`_judged`).
+    unanswered = not anchors_of(artefact) and not held
+    if not artefact.has_friction_block or unanswered:
         return ArtefactCheck(head, bool(shallow_commits(target_root)), artefact, None, ())
     registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
     history = read_history(target_root, head_sha)

@@ -1,0 +1,622 @@
+answers:
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-25T20:11:39Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-b1ddbb959267.yaml
+    revalidated:
+      at: 2026-10-25T20:11:50Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/schemas/backbone/**
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/backbone_schemas.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/data_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_discovery.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: ADR-056
+          reason: "ADR-056 point 2 gains a location rule for answer files, which the README's binding order does not list. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, whose files' schema is a backbone file schema. #1779 builds it and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It models the friction block with its answers, which COR-062 moves to answer files with a schema of their own. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README models in the block. #1779 builds it and rewrites it."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-7a369d906fdb.yaml
+    revalidated:
+      at: 2026-10-25T20:11:57Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-a164d961d8b1.yaml
+    revalidated:
+      at: 2026-10-25T20:12:04Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-answer
+    read:
+      - moved-32025a10d403.yaml
+    revalidated:
+      at: 2026-10-25T20:12:11Z
+      outcome: unchanged
+      unchanged-because: "The writers now write every answer into an answer file of the change's own, and refuse an artefact whose block still holds one. Where the definition says the answers live on the artefacts stays deferred to #1779, as its deferrals say."
+      deferred:
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_write.py
+          reason: "The writers now write an answer into an answer file of the change's own where the block holds none, and the definition still puts every answer in the block. #1779 rewrites the term once the move lands."
+        - anchor:
+            kind: record
+            value: COR-050#3
+          reason: "It defines an answer as a statement in the artefact's friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the definition."
+        - anchor:
+            kind: record
+            value: COR-050#4
+          reason: "A deferral moves from the block to an answer file under COR-062, so the definition's block is out of date. #1779 builds it and rewrites the definition."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-change-check
+    read:
+      - moved-539b6877a665.yaml
+    revalidated:
+      at: 2026-10-25T20:12:18Z
+      outcome: unchanged
+      unchanged-because: The change check now reads every answer in answer files, a block's only in its base's history, and refuses a project whose answers have not moved. It still compares a change with its base and lists the answers the change wrote, as the term says.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-debt
+    read:
+      - moved-eb034b253026.yaml
+    revalidated:
+      at: 2026-10-25T20:12:25Z
+      outcome: unchanged
+      unchanged-because: "The whole-repository check, the debt listing and the explanation now read answers in answer files alone, and refuse a project whose answers have not moved. Debt is still stale or deferred and derived from git on each run. Debt answered apart stays deferred to #1779."
+      deferred:
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_report.py
+          reason: "The debt listing now lists debt answered apart, dormant until the answers move to answer files, which this term's definition and section do not name. #1779 builds the move and rewrites them."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_repository.py
+          reason: "The debt listing now lists debt answered apart, dormant until the answers move to answer files, which this term's definition and section do not name. #1779 builds the move and rewrites them."
+        - anchor:
+            kind: record
+            value: COR-050#9
+          reason: "COR-050 point 9 gains debt answered apart, which this term's definition and section do not name. #1779 builds it and rewrites them."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-friction
+    read:
+      - moved-fcf368d3df19.yaml
+    revalidated:
+      at: 2026-10-25T20:12:32Z
+      outcome: unchanged
+      unchanged-because: "The checks now read every answer in answer files and no block's at head, which changes where an answer is found, not what friction is. Where the section says the block holds answers stays deferred to #1779, as its deferrals say."
+      deferred:
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_check.py
+          reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_repository.py
+          reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#1
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#5
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#6
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#9
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-revisit
+    revalidated:
+      at: 2026-10-25T20:12:39Z
+      outcome: unchanged
+      unchanged-because: The revisit writer now writes an entry only in an answer file of the change's own, and the change check reads it there alone. The term already puts a revisit entry among the source's answers, as COR-062 point 1 does, so it holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-trigger-field
+    revalidated:
+      at: 2026-10-25T20:12:48Z
+      outcome: unchanged
+      unchanged-because: The change check now reads a revisit entry in answer files alone. Which fields of an artefact trigger a revisit, and which choose its link targets, is as before, so the term holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-whole-repository-check
+    read:
+      - moved-6038b46e1ac7.yaml
+    revalidated:
+      at: 2026-10-25T20:12:54Z
+      outcome: unchanged
+      unchanged-because: The whole-repository check now reads answers in answer files alone, and refuses a project whose answers have not moved, naming the move. It still measures every artefact from its revalidation point and never fails on debt, as the term says.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-005-reading-writes-nothing.md
+    revalidated:
+      at: 2026-10-25T20:13:06Z
+      outcome: unchanged
+      unchanged-because: Its test module now writes its fixtures' answers in answer files, and an answer's home reads files. What it verifies of a reading command, that it changes no file, is as before, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-bcae90c061e0.yaml
+    revalidated:
+      at: 2026-10-25T20:13:14Z
+      outcome: unchanged
+      unchanged-because: The resolve tests now move a merge's block answers into answer files once it is committed, as an upgrade moves them. No test of a --dry-run preview changed, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-019-reading-document-versioned.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-78477704a6e4.yaml
+    revalidated:
+      at: 2026-10-25T20:13:27Z
+      outcome: unchanged
+      unchanged-because: The tests now write their fixtures' answers in answer files. The change check's findings lose one kind, answer-file-ignored, and no key a reader relies on changes or goes, so no document's schema_version is raised and the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-018-same-json-same-state.md
+    read:
+      - moved-83533106223a.yaml
+    revalidated:
+      at: 2026-10-25T20:13:34Z
+      outcome: unchanged
+      unchanged-because: The tests now write their fixtures' answers in answer files, and read the answers' home as files. Each reading still prints the same bytes for the same state, which they verify as before, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-004-missing-answer-never-clean.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-97da208f5979.yaml
+    revalidated:
+      at: 2026-10-25T20:13:40Z
+      outcome: unchanged
+      unchanged-because: Its test module now writes its fixtures' answers in answer files, so validation has no answer in a block to leave out. What it verifies of a resolver that gives no answer is as before, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-006-command-time-bound.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-4695bf771ed9.yaml
+    revalidated:
+      at: 2026-10-25T20:13:54Z
+      outcome: unchanged
+      unchanged-because: Its test module now writes its fixtures' answers in answer files, so validation has no answer in a block to leave out. What it verifies of a resolver's time bound is as before, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-c65929ef6b08.yaml
+    revalidated:
+      at: 2026-10-25T20:14:01Z
+      outcome: unchanged
+      unchanged-because: Its test module now writes its fixtures' answers in answer files, so validation has no answer in a block to leave out. What it verifies of a resolver run offline is as before, so the constraint holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-e11f83cef2b2.yaml
+    revalidated:
+      at: 2026-10-25T20:14:07Z
+      outcome: unchanged
+      unchanged-because: The tests now write their fixtures' answers in answer files, and lay a block's answers down only in history. A dead anchor is still an error the checks report, which they verify as before, so the requirement holds.
+  - artefact: tech-docs/analysis/living-docs/requirements/constraints/REQ-025-never-fetch-source.md
+    read:
+      - moved-e37e76be6f79.yaml
+    revalidated:
+      at: 2026-10-25T20:14:14Z
+      outcome: unchanged
+      unchanged-because: Its test module now writes its pages' answers in answer files, through the fixture answers_in_files. Nothing in living-docs fetches a captured source's text, which it verifies as before, so the constraint holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-b82457b5436c.yaml
+    revalidated:
+      at: 2026-10-25T20:14:24Z
+      outcome: unchanged
+      unchanged-because: The checks now read answers in answer files alone, and validation's findings on a block are as they were. Anchoring a document, and the faults variant 2a names, are as this use case says.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-c95d6fad77f9.yaml
+    revalidated:
+      at: 2026-10-25T20:14:30Z
+      outcome: unchanged
+      unchanged-because: The change check now reads answers in answer files alone, and refuses a project whose answers have not moved. Gating a merge on its result, and judging each answer against its own change's head, are as this use case says.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-25T20:14:37Z
+      outcome: unchanged
+      unchanged-because: The schemas README now keeps answers out of the friction block, its examples holding none, and cli.py rewords only the friction commands' help. Authoring a rule set, its rules' anchors and their reach are as this use case says.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-40743155218d.yaml
+    revalidated:
+      at: 2026-10-25T20:14:42Z
+      outcome: unchanged
+      unchanged-because: The change check now reads answers in answer files alone, and refuses a project whose answers have not moved. What step 4 needs of the places and of the install is as before, so the journey holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-25T20:14:47Z
+      outcome: unchanged
+      unchanged-because: "UC-002 and UC-007 lose the boxes that waited on #2032, their steps as before, and the checks now read answers in answer files alone. What each step needs of the one before is as the journey says."
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-25T20:14:51Z
+      outcome: unchanged
+      unchanged-because: The writer still writes a revalidation into an answer file, and the change check reads it there, as the example shows. Its commands and their output are as this change leaves them, so the README holds.
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - moved-96e1f9e9c108.yaml
+    revalidated:
+      at: 2026-10-25T20:14:56Z
+      outcome: unchanged
+      unchanged-because: "The schemas reference's friction block now keeps answers in answer files, and its examples hold none. How an anchor names a part, and the synced-place finding, which this README takes from it, are as before. Where it keeps a page's answers in its block stays deferred to #1779."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says two branches revalidating one page conflict in its block and friction resolve takes the base side's answer, which COR-062 replaces. #1779 builds it and rewrites the passage."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README keeps in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passage #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-25T20:15:02Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py. Registering adapters and running their primitives are as before, so the README holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-bca813b8718e.yaml
+    revalidated:
+      at: 2026-10-25T20:15:16Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-c023390f2be9.yaml
+    revalidated:
+      at: 2026-10-25T20:15:22Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-14cab8fa596f.yaml
+    revalidated:
+      at: 2026-10-25T20:15:29Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-e74c084a6ef5.yaml
+    revalidated:
+      at: 2026-10-25T20:15:35Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-25T20:15:43Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-25T20:15:50Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-677ab7326b1b.yaml
+    revalidated:
+      at: 2026-10-25T20:15:57Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-82a9f92cf8a6.yaml
+    revalidated:
+      at: 2026-10-25T20:16:04Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-25T20:16:12Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-25T20:16:18Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-828a24ebf347.yaml
+    revalidated:
+      at: 2026-10-25T20:16:25Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-25T20:16:35Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-50d19a823f20.yaml
+    revalidated:
+      at: 2026-10-25T20:16:43Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-25T20:16:50Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-66d5b1529575.yaml
+    revalidated:
+      at: 2026-10-25T20:16:57Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-c6041f71d67c.yaml
+    revalidated:
+      at: 2026-10-25T20:17:04Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-25T20:17:12Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-25T20:17:18Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-25T20:17:26Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-25T20:17:33Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-25T20:17:43Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. The list of answers the merge authoriser reads, and the landing, are as before, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-25T20:17:51Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-525e5f95da00.yaml
+    revalidated:
+      at: 2026-10-25T20:17:59Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-25T20:18:06Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-25T20:18:12Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-25T20:18:18Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-012-report-problem.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - moved-16225f01f42e.yaml
+    revalidated:
+      at: 2026-10-25T20:18:25Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-013-link-reports.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-441b89549614.yaml
+    revalidated:
+      at: 2026-10-25T20:18:31Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-25T20:18:37Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-25T20:18:41Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-25T20:18:47Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-25T20:18:52Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-25T20:19:02Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-4859ed958bd4.yaml
+    revalidated:
+      at: 2026-10-25T20:19:07Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the friction commands' help in cli.py, where answers are now read and written in answer files alone. No step of this use case reads or writes an answer, so it holds.
