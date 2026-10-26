@@ -35,7 +35,7 @@ where labels are creatable, an append-only comment log (source of truth) plus a
 derived, regenerable owner-mirror in the issue description where they are not; the
 selector lives in instance-ownership's own schema home (not `substrate-map.yaml`),
 default `comment`. This ADR records the *comment-substrate contract* DEC-043 named
-as its ADR follow-up (DEC-043 D5) — the **fourth sibling** to
+as its ADR follow-up (DEC-043 point 5) — the **fourth sibling** to
 [ADR-026](ADR-026-substrate-map-read-path-contract.md) (the label
 read-path/sole-constructor seam),
 [ADR-031](ADR-031-substrate-write-path-contract.md) (the field/milestone
@@ -44,7 +44,7 @@ write-path sole-constructor), and
 read-seam + write-constructor): **how** ownership resolves on read and constructs
 on write in `comment` mode, and the one invariant each side must never violate. It
 pins the contract, not the selector schema, the comment-stamp format, or the
-mirror-region UX (those land with the Feature, citing DEC-043).
+mirror-region UX, which DEC-043 and the audit-log facility's DEC-044 carry.
 
 **The contract, in one breath:** instance ownership in `comment` mode has **one
 read seam** — a single fold point answering "who owns this issue now, and via
@@ -61,7 +61,7 @@ fourth substrate).
 **The load-bearing invariants — one read seam with comment-log-wins, one write
 constructor per side, the mirror derived.** Three parts, structural only together:
 (i) **every ownership consumer resolves the current owner only by asking the
-seam** — the clash guard (DEC-035 D6), the signed listing (DEC-035 D7), and the
+seam** — the clash guard (DEC-035 point 6), the signed listing (DEC-035 point 7), and the
 description-mirror renderer all route through the fold, and in a project with a
 topology the shared pool, the check before writing and the seat's release do too;
 none re-scans comments or reads the mirror directly, so there is one place ownership
@@ -99,15 +99,14 @@ DEC-043 settled the ownership substrate-selection rule and explicitly deferred t
 formal contract to a sibling ADR: *"The write path is a sole-constructor pinned by
 a sibling ADR … one read seam, one construction point, a grep/AST guard,
 failure-posture-neutral. The ADR is authored by the architect once this record
-settles."* (DEC-043 D5, and its Implications naming "a fourth sibling ADR" that
+settles."* (DEC-043 point 5, and its Implications naming "a fourth sibling ADR" that
 pins the comment-log read seam, the description-mirror sole-constructor, the
-grep/AST guard, and mixed-mode precedence). DEC-043 is now `accepted`; this is that
-ADR.
+grep/AST guard, and mixed-mode precedence). This record is that ADR.
 
 The comment-log substrate is a **fourth substrate**, distinct from the label axis
 ADR-026 covers, the Projects-v2 field-value / milestone writes ADR-031 covers, and
 the containment edge ADR-035 covers. It is a *different operation* again — reading
-`gh issue view --json comments` and folding hidden-stamped event comments, writing
+an issue's whole comment log and folding hidden-stamped event comments, writing
 a new ownership-event comment, and full-overwriting a derived region of the issue
 *body* — so it lives in its own module with its own sole-constructor guard, the
 same discipline as the three prior seams, **not a widening of any of them.**
@@ -120,37 +119,36 @@ the clash guard that refuses an ordinary verb on another instance's work
 (`[validation-severity:bypassable-with-audit]` per
 [project-management:DEC-014](../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md)),
 and the same-instant lowest-wins tie-break both clones compute identically. DEC-043
-refined DEC-035 to substrate-*where-available* and added the comment substrate,
+refines DEC-035 to substrate-*where-available* and adds the comment substrate,
 preserving those semantics atop per-object-atomic comment writes. This ADR pins how
-that refined rule resolves at the seam in `comment` mode.
+that rule resolves at the seam in `comment` mode.
 
-**The realization surface — a forward design contract.** Unlike ADR-026/ADR-031
-(convergence over shipped inline sites) and ADR-035 (seam-first, merged
-#344/#345), the instance-ownership feature (DEC-035) and its comment substrate
-(DEC-043) are **gated, not yet built** (DEC-043 Implications: "Implementation is
-gated … bumps the capability version on landing"). This ADR is therefore a
-**forward contract** in the class of ADR-031's acceptance-gate posture: the seam,
-the two constructors, the guard, and the drivers land with the Feature, citing
-this ADR for the invariant. As project-kit's own capability-architecture record,
-concrete module/site names are in scope once they exist (per
-[PRJ-005](../../../.pkit/decisions/project/PRJ-005-adopt-adrs.md)); until the
-Feature builds them this Context names the participants conceptually rather than by
-line number. The participants:
+**The realization surface.** The ownership read seam and its two constructors are
+realized in a module of their own. The fold resolves one issue's owner from that
+issue's comments and labels, and the constructors build the ownership-event comment
+and the full-overwrite mirror body. The seam reads a log through the one reader of a
+whole comment log, paged to its end, which the state-issue seam shares. The
+audit-log facility's builder builds and parses each event, and a guard test keeps
+every ownership stamp inside the seam and that builder.
+
+No lifecycle command calls the seam. Point 7's inputs and results, point 5's
+outcomes and point 4's read of the mirror have no realization. The contract binds
+each participant below, realized or not:
 
 1. **The ownership fold** (a single ownership-substrate `_lib` seam) — the one read
    point. Reads the mirror for a listing, at one call (DEC-043 Implications "read
    cost stays one call"), and the issue's whole comment log, paged to its end,
    whenever it folds one, so a fold never reads a log cut short. Keeps only comments carrying
    the hidden ownership stamp **authored by the expected assignee account**
-   (`author.login` authenticity, DEC-043 D3), folds the append-only claim / handoff
+   (`author.login` authenticity, DEC-043 point 3), folds the append-only claim / handoff
    / abandon / release sequence to current ownership, and — over a mixed repo —
    applies comment-log-wins against any lingering `instance:N` label. In a project
    with a topology, it takes the seats' holders, the time of reading, the limit and
    the Task's state from its caller, and reads the mirror where point 7 lets the
    mirror stand in. **The sole resolver — consumers route through it.**
-2. **The clash guard** (DEC-035 D6) — the ordinary-verb refusal and the same-instant
+2. **The clash guard** (DEC-035 point 6) — the ordinary-verb refusal and the same-instant
    lowest-wins back-off. **Resolves current ownership through the fold.**
-3. **The signed listing** (DEC-035 D7) — `mine` / `other instance` / `unclaimed`.
+3. **The signed listing** (DEC-035 point 7) — `mine` / `other instance` / `unclaimed`.
    **Resolves through the fold.**
 4. **The description-mirror renderer** — folds the log and full-overwrites the
    derived owner-mirror region in the issue body. **Resolves through the fold; is
@@ -195,8 +193,8 @@ rejected or this ADR holds against:
 
 ## Decision
 
-**In plain terms:** ownership consumers stop scanning comments themselves and start
-asking *one seam* "who owns this issue now?" The seam folds the append-only event
+**In plain terms:** ownership consumers never scan comments themselves, and ask
+*one seam* "who owns this issue now?" The seam folds the append-only event
 log — trusting only comments the expected account authored — to current ownership,
 and over a repo that still carries an old `instance:N` label resolves
 comment-log-wins. Every ownership *write* — the event comment, the description
@@ -208,8 +206,8 @@ seam reads no other seam.
 ### 1. One ownership read seam — resolution lives in exactly one auditable place
 
 "Who owns this issue now, and via which substrate?" is answered by a **single fold
-seam**, not re-derived per consumer. The clash guard (DEC-035 D6), the signed
-listing (DEC-035 D7), and the description-mirror renderer all resolve through it;
+seam**, not re-derived per consumer. The clash guard (DEC-035 point 6), the signed
+listing (DEC-035 point 7), and the description-mirror renderer all resolve through it;
 none re-scans comments directly. In a project with a topology, the shared pool, the
 check before writing and the seat's release resolve through it too (point 7). A
 listing reads each issue's mirror through the seam (point 4), so its cost stays one
@@ -219,7 +217,7 @@ and, in a project with a topology, the inputs point 7 names. It returns the reso
 current owner, the substrate it came from, and the authenticated event history.
 
 This is ADR-026's one-reader discipline applied to the ownership axis: the
-indirection — comment scan, `author.login` authenticity filter (DEC-043 D3),
+indirection — comment scan, `author.login` authenticity filter (DEC-043 point 3),
 append-only fold, comment-log-wins dedup — sits in one place where it can be
 audited, tested, and reasoned about as a unit, and no second consumer re-derives
 what one seam already resolves. A consumer re-scanning comments itself would (a)
@@ -238,20 +236,20 @@ win.* This preserves DEC-035's ownership semantics under DEC-043's forward switc
 - **The fold is over an append-only sequence.** Claim, then handoff to another
   instance, then abandon, then a fresh claim — the seam folds to the *last
   authentic event's* owner (or unclaimed after an abandon/release), so history is
-  preserved (DEC-043 D3) while a single current owner resolves. The same-instant
-  clash (DEC-035 D6) holds unchanged: two clones each post their own event
+  preserved (DEC-043 point 3) while a single current owner resolves. The same-instant
+  clash (DEC-035 point 6) holds unchanged: two clones each post their own event
   (per-object-atomic, no whole-object race), the re-read sees both, the
   higher-numbered instance backs off — lowest-wins computed identically by both
   clones from the folded log, exactly as it was from the labels.
 - **Authenticity rides `author.login`.** A marker is trusted only if authored by the
-  expected assignee account (DEC-043 D3) — stronger than the label substrate, where
+  expected assignee account (DEC-043 point 3) — stronger than the label substrate, where
   a label carries no actor. The seam is the one place this filter runs.
 - **A repo may hold both substrates.** DEC-043's selector defaults to `comment`; a
   repo forward-switched from `label` (DEC-035's original mechanism) leaves lingering
   `instance:N` labels alongside new comment-log markers. **The seam resolves
   comment-log-wins** — the folded comment-log owner is authoritative, the lingering
   label is residual (to be stripped on the next ownership mutation, the same way
-  DEC-035 D4 strips on terminal transitions). This is ADR-035's native-wins
+  DEC-035 point 4 strips on terminal transitions). This is ADR-035's native-wins
   instinct at a new substrate boundary: the newer/authoritative substrate wins over
   the residual one, enforced **once, at the seam, over the union** — so the guard,
   the listing, and the mirror never disagree about a mixed repo.
@@ -356,12 +354,12 @@ substrate:
   stamp's grammar and its version have one owner. Each seam names its own event
   types and payload, and neither builds an event's stamp itself. A mutating script obtains an
   ownership event **only by asking the writer** — `create-issue`'s claim-at-birth (DEC-035
-  D3), `start-work`'s commons-claim, `handoff-issue`'s push/pull/recursive modes
-  (DEC-035 D4), and the terminal release all reuse the same construction point;
+  point 3), `start-work`'s commons-claim, `handoff-issue`'s push/pull/recursive modes
+  (DEC-035 point 4), and the terminal release all reuse the same construction point;
   none string-builds the stamped comment inline. The event log aligns with, and
   does not duplicate, the handoff audit comment
   [project-management:DEC-026](../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)
-  already posts (DEC-043 D3).
+  already posts (DEC-043 point 3).
 - **The description-mirror region** is constructed in one regenerator that writes
   the region by **full overwrite** from the folded log — never a second writer, and
   **never an append** (point 4).
@@ -380,7 +378,7 @@ stay scoped to their own substrates.
 
 The description mirror is a **derived view the read seam regenerates by full
 overwrite** from the folded log — the comment log is its regeneration spine
-(DEC-043 D4). It is therefore safe to full-overwrite: if a human edits or deletes
+(DEC-043 point 4). It is therefore safe to full-overwrite: if a human edits or deletes
 the region, or a write races, the seam regenerates it from the log and **no
 ownership record is lost**, because the mirror was never the truth. The one
 construction point (point 3) writes by **overwrite**, never by append — a
@@ -414,7 +412,7 @@ spirit as ADR-031 point 6 and ADR-035 point 3. They construct/execute/fold and
 report a neutral outcome; **each caller imposes its own posture**:
 
 - **The ownership-event comment writer** reports `WROTE` / `FAILED`. The
-  **claim path** re-reads after writing (DEC-035 D6) and, on seeing a
+  **claim path** re-reads after writing (DEC-035 point 6) and, on seeing a
   lower-numbered instance's event, reads `RACED-LOST` from the fold and **backs
   off** (posts an abandon event, notifies); a **handoff** treats `WROTE` as success
   and moves on; a **durability-check** path treats `FAILED` as a retryable
@@ -446,7 +444,7 @@ routine render's — the exact miscoupling neutrality prevents.
 The ownership fold is a **pm-domain read** with **pm-domain consumers only** — the
 clash guard, the signed listing, the mirror renderer, and in a project with a
 topology the shared pool, the check before writing and the seat's release. Instance
-ownership remains, per DEC-035 D8 and DEC-043 D6, **never an input to a gate, a
+ownership remains, per DEC-035 point 8 and DEC-043 point 6, **never an input to a gate, a
 transition, or the cascade fold**
 ([project-management:DEC-034](../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md),
 COR-037's process-cascade). This is the deliberate *inverse* of ADR-035, where the
@@ -460,36 +458,32 @@ realm-blind.
 
 ### Boundaries — what this contract is NOT
 
-- **Not the selector schema.** How instance-ownership's schema home spells the
-  `label | comment` selector (default `comment`) is DEC-043 D2 schema work that
-  lands with the Feature — explicitly **not** a slot in `substrate-map.yaml`
-  (DEC-043 D2), so an ownership-only opt-in does not trip DEC-036's emergent
-  activation. This ADR pins the resolution + construction contract, not the
-  selector field.
+- **Not the selector schema.** The `label | comment` selector (default `comment`)
+  belongs to instance-ownership's own schema home, explicitly **not** a slot in
+  `substrate-map.yaml` (DEC-043 point 2). So an ownership-only opt-in does not trip
+  DEC-036's emergent activation. This ADR pins the resolution + construction
+  contract, not the selector field.
 - **Not the comment-stamp or mirror-region format.** The hidden-stamp syntax and
   the mirror region's rendered shape are carried by the shared audit-log facility's
-  own DEC ([project-management:DEC-044-audit-log-facility]; DEC-043 Implications: "the
-  ownership event log is that facility specialised") and land with the Feature. This ADR pins only that the event write
-  and the mirror render each have one constructor and that the mirror is
-  overwrite-not-append.
-- **Not the DEC-009 refinement note.** The description-mirror region is a
-  capability-owned, do-not-edit, **derived** class of body content that
+  own DEC ([project-management:DEC-044-audit-log-facility], with DEC-043 Implications:
+  "the ownership event log is that facility specialised"). This ADR pins only that
+  the event write and the mirror render each have one constructor and that the
+  mirror is overwrite-not-append.
+- **Not DEC-009's rule for derived regions.** The description-mirror region is
+  capability-owned, do-not-edit, **derived** body content, the third class
   [project-management:DEC-009](../../../.pkit/capabilities/project-management/decisions/DEC-009-living-documents.md)
-  does not yet model (its wording-free / scope-gated / ticks-sticky rules assume
-  human-or-PM-authored body content; a *derived, regenerated* region is a lighter,
-  distinct class — a human edit to it is not a gated scope edit, it is simply
-  overwritten on next render, safely, because the region is derived). DEC-043
-  Implications names the reciprocal DEC-009 refinement note as a **separate
-  change-set item**; this ADR references the boundary and does **not** author that
-  note.
+  models. DEC-009's wording and scope rules govern body content a person or the PM
+  authors, and neither applies to a derived region. A human edit to the region is
+  not a gated scope edit, and the next render overwrites it safely. This ADR cites
+  that class, and DEC-009 owns validate-body's rule for it.
 - **Not a DEC-035 supersession.** DEC-035's label mechanism, the
-  `(assignee, instance:N)` owner, and the clash-guard semantics all stand; DEC-043
-  *refined* DEC-035 to substrate-*where-available* (refinement-in-place, reciprocal
-  note on DEC-035) and this ADR pins how the comment substrate resolves.
+  `(assignee, instance:N)` owner, and the clash-guard semantics all stand. DEC-043
+  refines DEC-035 to substrate-*where-available*, and DEC-035 point 2 carries the
+  refinement pointer to DEC-043. This ADR pins how the comment substrate resolves.
   Comment-log-wins is DEC-035's lowest-wins tie-break preserved atop per-object
   atomic writes and lifted to a mixed-mode invariant, not a replacement.
 - **Not auto-selection.** The selector is a manual operator declaration defaulting
-  to `comment` (DEC-043 D2); this ADR pins no auto-detection of label-creatability.
+  to `comment` (DEC-043 point 2); this ADR pins no auto-detection of label-creatability.
   The seam resolves comment-log-wins over the mixed union the forward switch
   produces regardless.
 - **Not a label / field / containment contract change.** ADR-026's label invariant,
@@ -588,7 +582,7 @@ is DEC-039 D4 / ADR-035 point 4's separation of the visibility goal from the
 storage decision; only visibility is wanted.
 
 **Why failure-posture neutrality.** The callers have genuinely different correct
-postures — the claim path must back off on `RACED-LOST` (DEC-035 D6), the handoff
+postures — the claim path must back off on `RACED-LOST` (DEC-035 point 6), the handoff
 path must not, the routine render must treat a `CLOBBERED` mirror as benign, and a
 reconcile report may surface it as healed drift. Baking any one posture into a
 constructor would force another caller to wear a posture its path rejects — a
@@ -600,7 +594,7 @@ substrates.
 
 **Why realm-blindness, stated as a non-consumer.** ADR-035's containment seam feeds
 the cascade fold because membership *is* engine state; ownership is deliberately
-*not* (DEC-035 D8, COR-037's content-free substrate). Naming the engine fold as an
+*not* (DEC-035 point 8, COR-037's content-free substrate). Naming the engine fold as an
 explicit **non-consumer** of the ownership seam is what keeps the boundary from
 eroding the way a convenient "close only my realm's children" feature would erode
 it — that would feed ownership into the fold and cross the content-free boundary,
@@ -641,7 +635,7 @@ enforced by the seam having no engine-side caller.
   Ownership gets its own constructors and guard; the prior invariants stay scoped.
 - **Feed the ownership fold into the cascade closure fold** (a "close only my
   realm's children" convenience). Rejected — crosses the content-free engine
-  boundary COR-037 holds (DEC-035 D8); if ever wanted it needs its own
+  boundary COR-037 holds (DEC-035 point 8); if ever wanted it needs its own
   authorisation, not a quiet widening of this seam's consumer set.
 - **The fold reads the seats' state issues itself.** Rejected — it binds the
   ownership seam to another seam, and reads every seat once for each Task.
@@ -662,81 +656,79 @@ enforced by the seam having no engine-side caller.
 ## Implications
 
 - **One ownership read seam** (an ownership-substrate `_lib` fold) that the clash
-  guard (DEC-035 D6), the signed listing (DEC-035 D7), and the description-mirror
+  guard (DEC-035 point 6), the signed listing (DEC-035 point 7), and the description-mirror
   renderer resolve through, and in a project with a topology the shared pool, the
   check before writing and the seat's release; no consumer re-scans comments or
   parses the mirror directly. Reads the mirror for a listing, and the issue's whole
   comment log, paged to its end, whenever it folds one (DEC-043 Implications),
-  filters by `author.login` authenticity (DEC-043 D3), and folds the append-only
-  claim/handoff/abandon/release sequence to current ownership. Lands with the
-  Feature (DEC-043-gated), citing this ADR.
+  filters by `author.login` authenticity (DEC-043 point 3), and folds the append-only
+  claim/handoff/abandon/release sequence to current ownership. No lifecycle command
+  calls the seam.
 - **Comment-log-wins is a seam invariant over the union of both substrates** — a
   comment-log marker is authoritative; a coexisting lingering `instance:N` label is
   residual and does not win, and is stripped on the next ownership mutation (DEC-035
-  D4). This makes a **forward-switched (label→comment) repo** resolve
+  point 4). This makes a **forward-switched (label→comment) repo** resolve
   deterministically for every consumer. It is DEC-035's lowest-wins tie-break
   preserved atop per-object-atomic comment writes and lifted to a mixed-mode
   reconciliation invariant.
 - **One write construction point per side, under one grep/AST guard** — the
   ownership-event comment writer (claim/handoff/abandon/release, hidden stamp +
-  human text; reused by `create-issue`, `start-work`, `handoff-issue`, terminal
-  release) and the description-mirror regenerator (full overwrite from the folded
-  log). The guard is the two-half shape ADR-031/ADR-035 hold: (a) a **construction
+  human text, the only one `create-issue`, `start-work`, `handoff-issue` and the
+  terminal release may use) and the description-mirror regenerator (full overwrite
+  from the folded log). The guard is the two-half shape ADR-031/ADR-035 hold: (a) a **construction
   test** — the writers construct/execute the covered writes and the ownership
   mutation sites obtain their write *from* them; **and** (b) a **grep/AST scan-all**
   — no script string-builds a stamped ownership-event comment or a mirror-region
   overwrite inline except the two constructors. Its own module and its own guard —
   **not a widening of ADR-026 / ADR-031 / ADR-035's covered sets.**
 - **The description mirror is a derived, single-source full-overwrite, never an
-  append, never authoritative** (DEC-043 D4) — the comment log is its regeneration
+  append, never authoritative** (DEC-043 point 4) — the comment log is its regeneration
   spine, so a stray human edit, deletion, or racing write is regenerated with no
   ownership record lost. This is DEC-039 D4 / ADR-035 point 4 with the comment/body
   roles swapped.
 - **The constructors and fold are failure-posture-neutral** (ADR-031 point 6 /
   ADR-035 point 3 spirit): the event writer reports `WROTE` / `FAILED` (the claim
-  path reads `RACED-LOST` from the re-read fold and backs off, DEC-035 D6; handoff
+  path reads `RACED-LOST` from the re-read fold and backs off, DEC-035 point 6; handoff
   and durability-check paths impose their own posture); the mirror regenerator
-  reports `WROTE` / `CLOBBERED-regenerated` / `FAILED` (routine render treats
+  reports `WROTE` / `CLOBBERED` / `FAILED` (routine render treats
   `CLOBBERED` as benign; a reconcile report may surface it as healed drift).
-  Construction/fold and failure-handling live at different layers. Confirm at impl
-  that the result types carry enough detail for every caller's posture.
+  Construction/fold and failure-handling live at different layers. These outcomes
+  have no realization, and the contract requires each to carry enough detail for
+  every caller's posture.
 - **Realm-blindness — the seam has pm-layer consumers only.** The clash guard, the
   signed listing, and the mirror renderer consume the fold, and in a project with a
   topology the shared pool, the check before writing and the seat's release; the engine and its
   cascade predicates (DEC-034, COR-037) explicitly **do not** — the inverse of
   ADR-035, where the closure fold *is* a containment-seam consumer. Wiring
   ownership into the engine fold would cross the content-free boundary and require
-  its own authorisation (DEC-035 D8 / DEC-035 Implications).
-- **In a project with a topology** (DEC-059 Implications), the fold takes the seats'
-  holders, the time of reading, the limit and the Task's state from its caller, and
-  folds the whole log of each Task In Progress (point 7). In such a project its
-  consumers include the shared pool, the check before writing and the seat's
-  release. The ownership stamp gains a version that carries the seat, the seat's
-  number and the clone's key, and readers accept both versions (DEC-044 point 2).
-  The seat's check lands with the seats and the shared pool (#2141, #2142).
-  Renewal, lapse and parking come after the Feature's first demonstration (#2136).
+  its own authorisation (DEC-035 point 8 / DEC-035 Implications).
+- **In a project with a topology,** the fold must take four inputs from its caller
+  and fold each Task In Progress's whole log (point 7). The shared pool, the check
+  before writing and the seat's release must resolve through it (DEC-059
+  Implications). The ownership stamp has a version carrying the seat, the seat's
+  number and the clone's key, and readers accept the earlier version (DEC-044 point
+  2). Point 7 says how the fold judges renewal and lapse, and point 5 leaves parking
+  to the check before writing (DEC-059 point 9).
 - **One event builder for two seams.** The audit-log facility's builder builds and
-  parses the ownership events and every event of a state issue (point 3). It lands
-  with the state issue (#2138), which moves the ownership seam's own event composer
-  onto the builder with the new stamp.
-- **DEC-009 boundary — reciprocal note is a separate change-set item.** The
-  description-mirror region is a capability-owned, do-not-edit, **derived** class of
-  body content DEC-009 does not yet model (lighter than the authoritative,
-  scope-gated body content DEC-009 governs — a human edit is overwritten on next
-  render, not gated). DEC-043 Implications names the reciprocal DEC-009 refinement
-  note as a separate change-set item; this ADR references the boundary and does not
-  author it.
-- **The selector schema, comment-stamp format, and mirror-region UX are Feature
-  work** (DEC-043-gated), citing DEC-043 — the `label | comment` selector in
-  instance-ownership's own schema home (default `comment`, **not** in
-  `substrate-map.yaml`, DEC-043 D2), the hidden-stamp syntax and the mirror region's
-  rendered shape (carried by the shared audit-log facility's DEC). This ADR pins the
-  resolution + construction contract, not the schema or the UX.
+  parses the ownership events and every event of a state issue (point 3). The
+  ownership seam's writer asks that builder for each event's body, and composes no
+  stamp of its own.
+- **DEC-009 models the region.** The description-mirror region is capability-owned,
+  do-not-edit, **derived** body content. DEC-009 places it in a third class of body
+  content, which neither its wording rule nor its scope rule governs, and points
+  here. A human edit to the region is not gated, and the next render overwrites it.
+  This ADR cites that class, and DEC-009 owns validate-body's rule for it.
+- **The selector schema, comment-stamp format, and mirror-region UX lie outside
+  this contract.** The `label | comment` selector lives in instance-ownership's own
+  schema home (default `comment`), **not** in `substrate-map.yaml` (DEC-043 point 2).
+  The shared audit-log facility's DEC carries the hidden-stamp syntax and the mirror
+  region's rendered shape. This ADR pins the resolution + construction contract, not
+  the schema or the UX.
 - **Relationship to records — no DEC-035 or DEC-043 amendment needed.** Records the
   comment-substrate contract DEC-043 named as its ADR follow-up (the fourth sibling
   to ADR-026 read-path / ADR-031 write-path / ADR-035 containment). **DEC-035 is not
   superseded** — its label mechanism and clash-guard semantics stand; DEC-043
-  refined it to substrate-*where-available* and this ADR pins how the comment
+  refines it to substrate-*where-available* and this ADR pins how the comment
   substrate resolves; comment-log-wins is DEC-035's lowest-wins tie-break lifted to
   a mixed-mode invariant. Inherits ADR-026's one-reader discipline at a new boundary
   (the ownership fold), ADR-031/ADR-035's sole-constructor + grep/AST guard
@@ -745,13 +737,9 @@ enforced by the seam having no engine-side caller.
   three prior seam invariants staying scoped to their own substrates. Composes with
   DEC-014 (the guard's severity token) and DEC-026 (the event log aligns with the
   handoff audit comment). Does not restate DEC-043; cites it as the decision.
-- **Acceptance.** Because this ADR pins the contract for a substrate that **refines
-  the foundational DEC-035** (via DEC-043), it required **explicit maintainer
-  sign-off** rather than architect self-acceptance — the same class as DEC-035's own
-  handoff-contract sign-off, DEC-039's DEC-005 refinement, and DEC-043's DEC-035
-  refinement. That sign-off was given in-session by the maintainer, and this record
-  was accepted alongside DEC-043 / DEC-044 / DEC-045 in the same change-set. The seam,
-  the two constructors, the guard, and the drivers land with the DEC-043-gated
-  Feature, citing this ADR for the invariant. Point 7, and the event builder that
-  point 3 shares with state issues, rest on the maintainer's sign-off on DEC-058 and
-  DEC-059, which their Implications record.
+- **Acceptance.** This ADR pins the contract for the comment substrate, by which
+  DEC-043 refines the **foundational DEC-035**. So accepting it needs the
+  maintainer's sign-off, not the architect's alone. The seam, its two constructors
+  and its guard cite this ADR for the invariant. Point 7, and the event builder that
+  point 3 shares with state issues, rest on the maintainer's sign-off on DEC-059,
+  which DEC-058 and DEC-059 record.
