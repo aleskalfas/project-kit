@@ -31,7 +31,7 @@ pkit:
 
 - **Operator** (`ACT-operator`): keeps the [harness](../../../glossary.md#term-harness--harness)'s settings under which the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration says the requirement holds. The operator's `pkit harness report` reads only the support declarations. So it resolves the requirement `indeterminate`, with the adapter's grade and cost, and never as met (COR-047 points 3 and 4).
 
-**Preconditions:** **From UC-014, UC-019 or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the [project](../../../glossary.md#term-project--project)'s [harness](../../../glossary.md#term-harness--harness) answers the harness requirement `delegated-result-complete` with a grade and any cost (COR-047 [point](../../../glossary.md#term-point--point) 2).
+**Preconditions:** **From [UC-014](../010-develop/UC-014-develop-methodology.md), [UC-019](../010-develop/UC-019-adapt-harness.md) or [UC-049](../050-adopt/UC-049-install-system.md):** An [adapter](../../../glossary.md#term-adapter--adapter) for the [project](../../../glossary.md#term-project--project)'s [harness](../../../glossary.md#term-harness--harness) answers the harness requirement `delegated-result-complete` with a grade and any cost (COR-047 [point](../../../glossary.md#term-point--point) 2).
 
 **Assumptions:**
 

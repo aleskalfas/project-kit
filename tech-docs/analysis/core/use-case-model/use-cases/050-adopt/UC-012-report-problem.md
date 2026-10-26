@@ -42,9 +42,9 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`ACT-ai-agent`): composes the [report](../../../glossary.md#term-report--report) with the adopter through the `report-author` [skill](../../../glossary.md#term-skill--skill). Where the agent runs a report verb with `--yes`, the [system](../../../glossary.md#term-system--system) stages the report and posts nothing. So the adopter sees every word before the report leaves (ADR-047 [point](../../../glossary.md#term-point--point) 2).
-- **Methodology maintainer** (`ACT-methodology-maintainer`): receives the report, and links each tracked fix to it (UC-013).
+- **Methodology maintainer** (`ACT-methodology-maintainer`): receives the report, and links each tracked fix to it ([UC-013](UC-013-link-reports.md)).
 
-**Preconditions:** **From UC-048:** The adopter has the [system](../../../glossary.md#term-system--system)'s CLI, `pkit`, on the machine.
+**Preconditions:** **From [UC-048](UC-048-install-cli.md):** The adopter has the [system](../../../glossary.md#term-system--system)'s CLI, `pkit`, on the machine.
 
 **Assumptions:**
 
@@ -66,7 +66,7 @@ pkit:
    - a hidden marker of the report's kind
 3. With `gh` signed in, the system shows the whole report and asks `Post as @<login> to <target>?`. The question names the adopter's `gh` identity, and the report target, project-kit's own repository (ADR-047 [point](../../../glossary.md#term-point--point) 3).
 4. The adopter confirms. The system posts the report there as an issue, and prints `[ok] filed: <url>`. The issue carries the label `report:bug` only where the adopter may set labels on the report target. The hidden marker names the kind either way (`report.py`).
-5. Later, the adopter runs `pkit report`. The system lists each report the adopter filed, or another person filed for them (1d), with its number, kind, state and title. It writes nothing (REQ-005).
+5. Later, the adopter runs `pkit report`. The system lists each report the adopter filed, or another person filed for them (1d), with its number, kind, state and title. It writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).
 6. The adopter runs `pkit report show <number>`. The system shows the report's state, and each tracked fix with that fix's state. It also shows how many comments the report has, and the latest one's first line. It writes nothing (REQ-005).
 
 **Variants:**
@@ -92,4 +92,4 @@ pkit:
 
 - No [report](../../../glossary.md#term-report--report) is posted until a person has seen it whole and confirmed it, with its target and the identity it posts as. Run with `--yes`, a report verb only stages the report, and `pkit report submit` refuses `--yes` (ADR-047 [point](../../../glossary.md#term-point--point) 2).
 - The environment block names no path. It leaves out the names of [capabilities](../../../glossary.md#term-capability--capability) the [system](../../../glossary.md#term-system--system) does not ship, unless `--include-private` asks for them (PRJ-008 and `environment.py`).
-- A report command moves a [scratchpad note](../../../glossary.md#term-scratchpad-note--scratchpad-note) to `reported/` only after a complete post. After a browser filing or a failed post, the note stays where it was until someone runs `pkit scratchpad reported` (COR-043 point 3 and REQ-002).
+- A report command moves a [scratchpad note](../../../glossary.md#term-scratchpad-note--scratchpad-note) to `reported/` only after a complete post. After a browser filing or a failed post, the note stays where it was until someone runs `pkit scratchpad reported` (COR-043 point 3 and [REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md)).

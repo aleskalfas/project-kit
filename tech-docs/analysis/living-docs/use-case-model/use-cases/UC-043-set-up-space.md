@@ -56,7 +56,7 @@ pkit:
 
 **Other actors:**
 
-- **Operator** (`core:ACT-operator`): is asked before `pkit living-docs new space` writes in a repository other than the session's own, so no such write happens silently (core:REQ-012).
+- **Operator** (`core:ACT-operator`): is asked before `pkit living-docs new space` writes in a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 - **AI agent** (`core:ACT-ai-agent`): carries out the steps for the adopter through the `docs-author` [skill](../../../core/glossary.md#term-skill--skill)'s space operation. It asks the adopter before it edits a configuration file.
 
 **Preconditions:** None.
@@ -76,9 +76,9 @@ pkit:
 1. The adopter assigns each [place](../../../core/glossary.md#term-place--place) outside every [documentation root](../../../core/glossary.md#term-documentation-root--documentation-root) that holds the space's pages to the space, under `places` in `.pkit/capabilities/living-docs/project/config.yaml` (DEC-001 point 1).
 2. The adopter names the space's audience in words, as `spaces.<space>.audience` in that file (DEC-001 point 1).
 3. The adopter runs `pkit living-docs new space <space> --dry-run`.
-4. The [system](../../../core/glossary.md#term-system--system) makes the checks it makes before the write, prints the [space definition](../../glossary.md#term-space-definition--space-definition) and the configuration as it would write them, and writes nothing. So the adopter previews each edit, as core:REQ-009 asks.
+4. The [system](../../../core/glossary.md#term-system--system) makes the checks it makes before the write, prints the [space definition](../../glossary.md#term-space-definition--space-definition) and the configuration as it would write them, and writes nothing. So the adopter previews each edit, as [core:REQ-009](../../../core/requirements/quality/REQ-009-preview-before-change.md) asks.
 5. The adopter reads the scope it would write, and runs `pkit living-docs new space <space>`.
-6. At its entry, before it writes, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
+6. At its entry, before it writes, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit living-docs new` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -91,7 +91,7 @@ pkit:
 12. The system says what it wrote, and lists as a warning each page of the space that the space's rules now fail. The definition stands (DEC-001 point 2).
 13. The adopter names the page its [readers](../../glossary.md#term-reader--reader) start from as the space's `entry-point` in the configuration (DEC-001 point 1).
 14. The adopter runs `pkit living-docs validate`.
-15. The system checks the space's places and their assignment, its definition's scope against them, its entry point and its definition (DEC-001 points 1 and 2). It checks a part of an `LDOC` [rule](../../../core/glossary.md#term-rule--rule) only on the pages where that rule binds (REQ-024). It prints a summary that names the spaces whose definitions carry a scope, and exits 0.
+15. The system checks the space's places and their assignment, its definition's scope against them, its entry point and its definition (DEC-001 points 1 and 2). It checks a part of an `LDOC` [rule](../../../core/glossary.md#term-rule--rule) only on the pages where that rule binds ([REQ-024](../../requirements/functional/REQ-024-checks-where-rule-binds.md)). It prints a summary that names the spaces whose definitions carry a scope, and exits 0.
 
 **Variants:**
 
@@ -111,7 +111,7 @@ pkit:
 - **8a.** The space is the user space. Its definition carries the space's own [rule](../../../core/glossary.md#term-rule--rule), that [reader](../../glossary.md#term-reader--reader) paths stay unbroken, written as accepted (DEC-001 point 3). The system says that the review of the change that carries the definition accepts it.
 - **9a.** The [capability](../../../core/glossary.md#term-capability--capability)'s configuration does not exist yet. The system creates it, holding the space's entry.
 - **9b.** The configuration's `spaces` is not written as a block mapping, or its lines end in more than one way. The system refuses before it writes anything, and names the line to add by hand. The use case ends.
-- **10a.** The write brings a validation error the project did not have, such as an assigned place outside every root that gives no page type. The system puts back every file it wrote, refuses and quotes the error (REQ-023). The use case ends.
+- **10a.** The write brings a validation error the project did not have, such as an assigned place outside every root that gives no page type. The system puts back every file it wrote, refuses and quotes the error ([REQ-023](../../requirements/quality/REQ-023-refused-stamp-writes-nothing.md)). The use case ends.
 - **10b.** The check after the write cannot read what it judges once the rules bind. An example is a readers [data point](../../../core/glossary.md#term-data-point--data-point) that does not resolve, where the space's pages name readers. The system puts back every file it wrote, and refuses (REQ-023). The use case ends.
 - **11a.** The definitions location cannot be recorded. The system puts back every file it wrote, and refuses (REQ-023). The use case ends.
 - **12a.** The space's rules fail some of its pages once they bind. The adopter mends those pages next, as `UC-044` describes, and the path goes on at step 13.
@@ -128,8 +128,8 @@ pkit:
 
 **Minimal guarantees:**
 
-- A refused [stamp](../../../core/glossary.md#term-stamp--stamp) puts back every file it wrote, or names each it could not (REQ-023).
+- A refused [stamp](../../../core/glossary.md#term-stamp--stamp) puts back every file it wrote, or names each it could not ([REQ-023](../../requirements/quality/REQ-023-refused-stamp-writes-nothing.md)).
 - The stamp writes no [space definition](../../glossary.md#term-space-definition--space-definition) that exists, and no other space's definition. It writes nothing of the [backbone configuration](../../../core/glossary.md#term-backbone-configuration--backbone-configuration) itself, which only `pkit config set` writes, under its own consent (DEC-001 point 2).
-- The stamp writes only what DEC-001 point 2 names it the writer of, so it meets core:REQ-002.
-- [Validation](../../../core/glossary.md#term-validation--validation) changes no file, needs no network and answers the same for the same state, meeting core:REQ-005 and core:REQ-007 (`validate.py`).
-- A later change of root moves no space definition, since the definitions location is recorded on first use (COR-049 point 5 and core:REQ-014).
+- The stamp writes only what DEC-001 point 2 names it the writer of, so it meets [core:REQ-002](../../../core/requirements/functional/REQ-002-project-owned-writers.md).
+- [Validation](../../../core/glossary.md#term-validation--validation) changes no file, needs no network and answers the same for the same state, meeting [core:REQ-005](../../../core/requirements/quality/REQ-005-reading-writes-nothing.md) and [core:REQ-007](../../../core/requirements/constraints/REQ-007-offline-same-answer.md) (`validate.py`).
+- A later change of root moves no space definition, since the definitions location is recorded on first use (COR-049 point 5 and [core:REQ-014](../../../core/requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)).

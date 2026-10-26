@@ -77,9 +77,9 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs every check with no terminal and no person to reply, and gates the merge on the exit status. It names the [base](../../../glossary.md#term-base--base) once, for every check (COR-054 [point](../../../glossary.md#term-point--point) 3).
-- **Operator** (`ACT-operator`): is asked before `pkit config set` writes in a repository other than the session's own. So no such write happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before `pkit config set` writes in a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+**Preconditions:** **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 
 **Assumptions:**
 
@@ -91,7 +91,7 @@ pkit:
 **Main path:**
 
 1. The adopter runs `pkit config set friction.mode enforcing --yes`.
-8. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+8. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit config set` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -108,14 +108,14 @@ pkit:
 - **1a.** The value is not a mode, such as `loud`. The [system](../../../glossary.md#term-system--system) refuses it with the schema's message, and writes nothing.
 - **1b.** The adopter keeps the default, `warning` mode. The [change check](../../../glossary.md#term-change-check--change-check) reports what it finds and passes, so only [validation](../../../glossary.md#term-validation--validation)'s errors and the other checks fail the job.
 - **1c.** The adopter writes `friction.mode` by hand, with a value that is no mode. The change check reads it as `warning`, with a warning line, and `pkit validate` fails on it (COR-050 [point](../../../glossary.md#term-point--point) 12).
-- **1d.** The adopter passes `--dry-run`, to see first each edit the command would make. The system names each edit, and writes nothing (REQ-009).
+- **1d.** The adopter passes `--dry-run`, to see first each edit the command would make. The system names each edit, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit config set` takes no `--dry-run`, and refuses the flag. COR-004 decides that it offers one, and #1884 tracks it.
 
 - **3a.** The job does not run `pkit sync` first. A registered validator then says "environment not provisioned — run `pkit sync`", an `error` [finding](../../../glossary.md#term-finding--finding), so `pkit validate` fails.
 - **3b.** The job's checkout lacks the [base](../../../glossary.md#term-base--base). Each check that compares refuses with its fixes, such as fetching the base or naming another.
-- **3c.** The job's checkout is shallow. The change check names, in its header, each [artefact](../../../glossary.md#term-artefact--artefact) whose history the cut hides (UC-002).
+- **3c.** The job's checkout is shallow. The change check names, in its header, each [artefact](../../../glossary.md#term-artefact--artefact) whose history the cut hides ([UC-002](UC-002-answer-stale.md)).
 - **3d.** The [project](../../../glossary.md#term-project--project)'s merges go through a merge queue, so the job runs on each merge the queue builds too. That merge holds the answers of the changes queued ahead. The change check judges what each [answer](../../../glossary.md#term-answer--answer) read against the [head](../../../glossary.md#term-head--head) of the answer's own [change](../../../glossary.md#term-change--change), never against the queue's merge (COR-062 point 4).
 
 > [!WARNING]
@@ -124,7 +124,7 @@ pkit:
 - **4a.** The adopter never makes the job required. The checks run and say what they find, and nothing holds the merge (COR-050 point 12). The use case ends.
 - **6a.** The base moved on after the branch left it. The change check reports an `outdated-base` and never fails on it, since the fix is to update the branch.
 - **6b.** No [place](../../../glossary.md#term-place--place) is declared yet, or nothing in the places carries the `pkit` container. The change check is dormant and passes.
-- **6c.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. Validation warns of it, and does not fail the job on it (REQ-015).
+- **6c.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. Validation warns of it, and does not fail the job on it ([REQ-015](../../../requirements/functional/REQ-015-missing-root-warns.md)).
 - **7a.** Someone with the right bypasses the required status, or commits straight to the [default branch](../../../glossary.md#term-default-branch--default-branch). The job does not hold that change.
 
 **Postconditions:** No [pull request](../../../glossary.md#term-pull-request--pull-request) merges into the [default branch](../../../glossary.md#term-default-branch--default-branch) through the hosting service's protection while a check of the required job fails on it.

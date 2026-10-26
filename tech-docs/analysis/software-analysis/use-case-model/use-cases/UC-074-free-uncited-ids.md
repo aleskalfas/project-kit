@@ -33,7 +33,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): may look for what cites the ids, and propose the entry that frees them. It never writes one to make a check pass, so the declaration stays the developer's (REQ-050).
+- **AI agent** (`core:ACT-ai-agent`): may look for what cites the ids, and propose the entry that frees them. It never writes one to make a check pass, so the declaration stays the developer's ([REQ-050](../../requirements/functional/REQ-050-agent-proposes.md)).
 
 **Preconditions:** None.
 
@@ -56,13 +56,13 @@ pkit:
 3. The developer deletes the artefacts' files in one commit, and lands it on the [default branch](../../../core/glossary.md#term-default-branch--default-branch).
 4. The developer adds an entry under `numbering.freed-by` in `.pkit/capabilities/software-analysis/project/config.yaml`. The entry names that commit by its full id, and lists the ids (DEC-001 point 3).
 5. The developer runs `pkit analysis check-numbers`.
-6. The [system](../../../core/glossary.md#term-system--system) checks that the entry can be honoured. The commit lies on the default branch's history, and the default branch lost each listed file by it last. Every file an id was ever given is freed. The system lists the ids each entry frees, one line for each entry, and writes nothing (core:REQ-005).
+6. The [system](../../../core/glossary.md#term-system--system) checks that the entry can be honoured. The commit lies on the default branch's history, and the default branch lost each listed file by it last. Every file an id was ever given is freed. The system lists the ids each entry frees, one line for each entry, and writes nothing ([core:REQ-005](../../../core/requirements/quality/REQ-005-reading-writes-nothing.md)).
 7. The developer opens the pull request that adds the entry. The pull request says where the developer looked and what they found, so a [reviewer](../../../core/glossary.md#term-reviewer--reviewer) can judge the declaration.
-8. Once the entry lands, the [stamp](../../../core/glossary.md#term-stamp--stamp) gives each [freed id](../../glossary.md#term-freed-id--freed-id) again, as though it was never given. Where a freed id is the number the stamp would have followed, the stamp says so, naming the commit (REQ-051).
+8. Once the entry lands, the [stamp](../../../core/glossary.md#term-stamp--stamp) gives each [freed id](../../glossary.md#term-freed-id--freed-id) again, as though it was never given. Where a freed id is the number the stamp would have followed, the stamp says so, naming the commit ([REQ-051](../../requirements/functional/REQ-051-id-names-one-artefact.md)).
 
 **Variants:**
 
-- **1a.** An AI agent looks for what cites the ids. It proposes the entry with the ids, where it looked and what it found, and never writes one to make a check pass (REQ-050).
+- **1a.** An AI agent looks for what cites the ids. It proposes the entry with the ids, where it looked and what it found, and never writes one to make a check pass ([REQ-050](../../requirements/functional/REQ-050-agent-proposes.md)).
 - **2a.** Something cites an id. The developer deletes nothing and writes no entry, and withdraws the [artefacts](../../../core/glossary.md#term-artefact--artefact) instead, so the [analysis](../../glossary.md#term-analysis--analysis) numbers past them. Artefacts already removed are restored as withdrawn. The [use case](../../glossary.md#term-use-case--use-case) ends.
 - **3a.** The artefacts were removed from the [default branch](../../../core/glossary.md#term-default-branch--default-branch) long ago, as the pilot of project-kit's first analysis was. The developer names the commit that removed them, and the path goes on at step 4.
 - **3b.** The commit moved a file rather than deleting it, such as into another folder, or git pairs the file with a similar new one. The file keeps its id, so the developer deletes it instead.
@@ -75,6 +75,6 @@ pkit:
 
 **Minimal guarantees:**
 
-- Only an id the [project](../../../core/glossary.md#term-project--project) lists is freed, and no tool infers one (DEC-001 point 3 and REQ-051).
+- Only an id the [project](../../../core/glossary.md#term-project--project) lists is freed, and no tool infers one (DEC-001 point 3 and [REQ-051](../../requirements/functional/REQ-051-id-names-one-artefact.md)).
 - An entry that cannot be honoured stops the [stamp](../../../core/glossary.md#term-stamp--stamp) from numbering, so no id is given again on a wrong declaration (`numbering.py`).
-- `pkit analysis check-numbers` is a query, which changes no file of the project (core:REQ-005 and `check-numbers.py`).
+- `pkit analysis check-numbers` is a query, which changes no file of the project ([core:REQ-005](../../../core/requirements/quality/REQ-005-reading-writes-nothing.md) and `check-numbers.py`).

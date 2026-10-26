@@ -43,10 +43,10 @@ pkit:
 
 **Other actors:**
 
-- **Adopter** (`ACT-adopter`): filed the [report](../../../glossary.md#term-report--report), and sees each tracked fix with that fix's state, from their own [project](../../../glossary.md#term-project--project) (UC-012).
-- **Operator** (`ACT-operator`): is asked before a command changes the hosting service for a repository other than the session's own. So no such write happens silently (REQ-012).
+- **Adopter** (`ACT-adopter`): filed the [report](../../../glossary.md#term-report--report), and sees each tracked fix with that fix's state, from their own [project](../../../glossary.md#term-project--project) ([UC-012](UC-012-report-problem.md)).
+- **Operator** (`ACT-operator`): is asked before a command changes the hosting service for a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-012:** Adopters' reports arrive as issues on the [report](../../../glossary.md#term-report--report) target, project-kit's own repository, each with its [versions](../../../glossary.md#term-version--version) attached.
+**Preconditions:** **From [UC-012](UC-012-report-problem.md):** Adopters' reports arrive as issues on the [report](../../../glossary.md#term-report--report) target, project-kit's own repository, each with its [versions](../../../glossary.md#term-version--version) attached.
 
 **Assumptions:**
 
@@ -57,7 +57,7 @@ pkit:
 **Main path:**
 
 1. The maintainer runs `pkit report inbox` in a clone of the [report](../../../glossary.md#term-report--report) target.
-2. The [system](../../../glossary.md#term-system--system) lists the reports on the report target, by any author, newest first, with each one's number, kind, state and title. It reads at most the latest 100 issues of each search it runs (`report.py`). It writes nothing (REQ-005).
+2. The [system](../../../glossary.md#term-system--system) lists the reports on the report target, by any author, newest first, with each one's number, kind, state and title. It reads at most the latest 100 issues of each search it runs (`report.py`). It writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).
 3. The maintainer reads a report on the hosting service, with the [versions](../../../glossary.md#term-version--version) its environment block gives.
 4. The maintainer files the issue that will fix the report, or finds one that exists.
 5. The maintainer runs `pkit report link <report> <fix>`. The system adds `- [ ] #<fix>` under the report's `## Tracked by` heading, which makes that issue one of the report's tracked fixes. The system prints `Linked #<fix> into #<report>'s Tracked by.`

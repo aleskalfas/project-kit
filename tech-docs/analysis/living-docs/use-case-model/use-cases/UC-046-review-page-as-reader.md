@@ -42,11 +42,11 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): the `living-docs` agent, which performs the [reader-review](../../glossary.md#term-reader-review--reader-review). It changes nothing it judges (REQ-022).
+- **AI agent** (`core:ACT-ai-agent`): the `living-docs` agent, which performs the [reader-review](../../glossary.md#term-reader-review--reader-review). It changes nothing it judges ([REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)).
 
 **Preconditions:**
 
-- **From UC-044 or UC-047:** The [page](../../glossary.md#term-page--page) names its [reader](../../glossary.md#term-reader--reader) and its [page kind](../../glossary.md#term-page-kind--page-kind).
+- **From [UC-044](UC-044-write-page.md) or [UC-047](UC-047-onboard-documents.md):** The [page](../../glossary.md#term-page--page) names its [reader](../../glossary.md#term-reader--reader) and its [page kind](../../glossary.md#term-page-kind--page-kind).
 
 **Assumptions:**
 
@@ -82,12 +82,12 @@ pkit:
 - **4b.** The reading-evidence data point holds results of executed checks that followed the page, such as a simulated reader running a guide. Before step 4, the agent resolves the point with `pkit connections resolve pkit::documentation:reading-evidence --json`. The agent reads each result for the page as advice, which never replaces its own reading (DEC-001 points 6 and 7). The record of step 7, or the line of variant 7a, names each result the agent read, by its id.
 - **7a.** The agent finds nothing. It says so in one line, writes no file, and the use case ends (DEC-001 point 6).
 - **8a.** A passage is one a rule leaves to a person's judgement, such as a fact the page states twice in agreement. The agent lists it in the record as a question for the developer, not as a break (DEC-001 point 3).
-- **9a.** The developer asks for the findings as a pull-request comment, and names the [pull request](../../../core/glossary.md#term-pull-request--pull-request). The agent posts the record with `gh pr comment`, its one write outside the [agent workspace](../../../core/glossary.md#term-agent-workspace--agent-workspace) (REQ-022). Where it found nothing, it posts no comment.
+- **9a.** The developer asks for the findings as a pull-request comment, and names the [pull request](../../../core/glossary.md#term-pull-request--pull-request). The agent posts the record with `gh pr comment`, its one write outside the [agent workspace](../../../core/glossary.md#term-agent-workspace--agent-workspace) ([REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)). Where it found nothing, it posts no comment.
 
 **Postconditions:** The developer knows whether the [page](../../glossary.md#term-page--page) serves its [reader](../../glossary.md#term-reader--reader). The agent wrote a record of [findings](../../../core/glossary.md#term-finding--finding), each citing the [rule](../../../core/glossary.md#term-rule--rule) the page breaks, or said in one line that it found nothing.
 
 **Minimal guarantees:**
 
-- The agent changes nothing it judges (REQ-022).
+- The agent changes nothing it judges ([REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)).
 - A review that finds nothing leaves no file and no comment (DEC-001 point 6).
 - The agent judges no part of a [rule](../../../core/glossary.md#term-rule--rule) a second time that [validation](../../../core/glossary.md#term-validation--validation) already enforces (DEC-001 point 6).

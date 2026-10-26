@@ -45,8 +45,8 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): walks the choice through the `analysis-author` [skill](../../../core/glossary.md#term-skill--skill). It writes an entry of the [project](../../../core/glossary.md#term-project--project)'s own structures only once the adopter accepts it (REQ-050).
-- **Operator** (`core:ACT-operator`): is asked before `pkit analysis new` writes in a repository other than the session's own, so no such write happens silently (core:REQ-012).
+- **AI agent** (`core:ACT-ai-agent`): walks the choice through the `analysis-author` [skill](../../../core/glossary.md#term-skill--skill). It writes an entry of the [project](../../../core/glossary.md#term-project--project)'s own structures only once the adopter accepts it ([REQ-050](../../requirements/functional/REQ-050-agent-proposes.md)).
+- **Operator** (`core:ACT-operator`): is asked before `pkit analysis new` writes in a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:** None.
 
@@ -65,16 +65,16 @@ pkit:
 2. The agent finds the [project](../../../core/glossary.md#term-project--project)'s own [rule set](../../../core/glossary.md#term-rule-set--rule-set) that inherits `SAN`, through which the format [rule](../../../core/glossary.md#term-rule--rule) binds on the [analysis](../../glossary.md#term-analysis--analysis) (COR-051 point 7).
 3. For the kind, the agent shows the adopter its shipped parts. The kind's template, rendered from its [declared structure](../../glossary.md#term-declared-structure--declared-structure), shows each part with its [hint](../../glossary.md#term-hint--hint) and its example.
 4. The adopter picks a real case of the project. The agent stamps a [candidate](../../glossary.md#term-candidate--candidate) of the kind with `pkit analysis new`, and commits nothing.
-5. At its entry, before it writes, the [system](../../../core/glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
+5. At its entry, before it writes, the [system](../../../core/glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit analysis new` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-6. The system writes the candidate whole, each part holding its hint. A [use case](../../glossary.md#term-use-case--use-case), a journey or a requirement takes the next free number (REQ-051).
+6. The system writes the candidate whole, each part holding its hint. A [use case](../../glossary.md#term-use-case--use-case), a journey or a requirement takes the next free number ([REQ-051](../../requirements/functional/REQ-051-id-names-one-artefact.md)).
 7. The agent fills each part as its hint says, and runs `pkit analysis validate --preview`.
-8. The system holds the candidate to its kind's declared structure where the format rule binds. Where a proposed rule would bind, it reports what that rule would find as `preview:`, and never fails on it (DEC-001 point 1 and REQ-053).
+8. The system holds the candidate to its kind's declared structure where the format rule binds. Where a proposed rule would bind, it reports what that rule would find as `preview:`, and never fails on it (DEC-001 point 1 and [REQ-053](../../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)).
 9. The adopter reads the filled candidate part by part, and chooses: keep the shipped parts, relabel a part, or add parts of the project's own.
-10. Where the adopter changes a part, the agent proposes the entry for `.pkit/capabilities/software-analysis/project/structures.yaml`, and writes it once the adopter accepts it (REQ-050):
+10. Where the adopter changes a part, the agent proposes the entry for `.pkit/capabilities/software-analysis/project/structures.yaml`, and writes it once the adopter accepts it ([REQ-050](../../requirements/functional/REQ-050-agent-proposes.md)):
     - a new label, hint or example, under `relabel` or `front-matter`, which names no rule
     - a [tightening](../../glossary.md#term-tightening--tightening) under `tighten`, which names a rule of the project's own, written first as `proposed`
 11. The adopter runs `pkit validate`. The [capability](../../../core/glossary.md#term-capability--capability)'s check, which `pkit validate` runs, holds the file to the kind's shipped structure, and reports nothing.
@@ -104,4 +104,4 @@ pkit:
 - No entry drops, loosens or reorders a shipped part, since the file's schema takes no key for it (DEC-001 point 1).
 - A file that breaks applies none of itself, so no [candidate](../../glossary.md#term-candidate--candidate) is checked against half of it (`project_structure.py`).
 - A refused [stamp](../../../core/glossary.md#term-stamp--stamp) leaves every file as it was (`stamp.py`).
-- `pkit analysis validate` is a query, which changes no file of the [project](../../../core/glossary.md#term-project--project) (core:REQ-005 and `validate.py`).
+- `pkit analysis validate` is a query, which changes no file of the [project](../../../core/glossary.md#term-project--project) ([core:REQ-005](../../../core/requirements/quality/REQ-005-reading-writes-nothing.md) and `validate.py`).

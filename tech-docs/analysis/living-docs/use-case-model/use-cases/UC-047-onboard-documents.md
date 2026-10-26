@@ -38,7 +38,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): the `living-docs` agent, which drafts the [onboarding plan](../../glossary.md#term-onboarding-plan--onboarding-plan) and the [proposals](../../glossary.md#term-proposal--proposal) it names, and applies none (REQ-022).
+- **AI agent** (`core:ACT-ai-agent`): the `living-docs` agent, which drafts the [onboarding plan](../../glossary.md#term-onboarding-plan--onboarding-plan) and the [proposals](../../glossary.md#term-proposal--proposal) it names, and applies none ([REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)).
 
 **Preconditions:** None.
 
@@ -71,7 +71,7 @@ pkit:
    - **Mapping:** the rules of the mapping that become page anchors, narrowed where an [anchor](../../../core/glossary.md#term-anchor--anchor) would match most of the repository
 7. The agent shows the plan's summary, and waits at its one gate: approve, revise or reject.
 8. The adopter approves the plan.
-9. The agent drafts one [proposal](../../glossary.md#term-proposal--proposal) for each step the plan names, under `.agent-workspace/living-docs/onboarding/`, each a diff and a pull-request body that cites the plan's evidence. It applies none, and stops (DEC-001 point 8 and REQ-022).
+9. The agent drafts one [proposal](../../glossary.md#term-proposal--proposal) for each step the plan names, under `.agent-workspace/living-docs/onboarding/`, each a diff and a pull-request body that cites the plan's evidence. It applies none, and stops (DEC-001 point 8 and [REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)).
 10. The adopter reviews each proposal, applies it, and opens its [pull request](../../../core/glossary.md#term-pull-request--pull-request).
 11. The adopter runs `pkit living-docs validate` again. The system counts no unclassified document, and no page left unanchored without an accepted reason (DEC-001 point 8).
 
@@ -95,6 +95,6 @@ pkit:
 
 **Minimal guarantees:**
 
-- Nothing is drafted before the adopter approves the plan, and nothing is applied (REQ-022).
+- Nothing is drafted before the adopter approves the plan, and nothing is applied ([REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)).
 - Every line of the plan, and every [proposal](../../glossary.md#term-proposal--proposal), cites its evidence (DEC-001 point 8).
 - A [page](../../glossary.md#term-page--page) left unanchored stays counted until it carries anchors or an accepted reason. It is never hidden (DEC-001 point 8).

@@ -28,4 +28,4 @@ pkit:
 
 The CLI reference gives each of these documents as stable, its keys sorted, and says that [components](../../../glossary.md#term-component--component) read them, never the human view. A reader that compares two runs then sees only what changed in the repository.
 
-REQ-007 asks the same of a command a component registers. These commands are the [backbone](../../../glossary.md#term-backbone--backbone)'s own, so it does not reach them.
+[REQ-007](../../constraints/REQ-007-offline-same-answer.md) asks the same of a command a component registers. These commands are the [backbone](../../../glossary.md#term-backbone--backbone)'s own, so it does not reach them.

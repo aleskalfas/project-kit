@@ -37,18 +37,18 @@ pkit:
 
 **Other actors:** None.
 
-**Preconditions:** **From UC-008:** The [release](../../../glossary.md#term-release--release) carries its tag, `v<version>`, on the [distribution](../../../glossary.md#term-distribution--distribution)'s repository. The tag `latest` points at the highest release's commit (PRJ-004).
+**Preconditions:** **From [UC-008](../040-release/UC-008-release-backbone.md):** The [release](../../../glossary.md#term-release--release) carries its tag, `v<version>`, on the [distribution](../../../glossary.md#term-distribution--distribution)'s repository. The tag `latest` points at the highest release's commit (PRJ-004).
 
 **Assumptions:**
 
-- `uv` is on the machine, and gives the CLI a Python of 3.11 or later apart from the projects' own (PRJ-003 and REQ-003).
+- `uv` is on the machine, and gives the CLI a Python of 3.11 or later apart from the projects' own (PRJ-003 and [REQ-003](../../../requirements/constraints/REQ-003-python-floor.md)).
 - The operator can reach the [distribution](../../../glossary.md#term-distribution--distribution)'s repository on github.com, over SSH, or over HTTPS with a token (PRJ-004).
 
 **Trigger:** The operator starts using the [system](../../../glossary.md#term-system--system) on a machine, or wants the [release](../../../glossary.md#term-release--release) that machine's CLI runs to move on.
 
 **Main path:**
 
-1. The operator runs `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest`, naming the tag `latest`, which points at the highest [release](../../../glossary.md#term-release--release) (PRJ-004 and REQ-031).
+1. The operator runs `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest`, naming the tag `latest`, which points at the highest [release](../../../glossary.md#term-release--release) (PRJ-004 and [REQ-031](../../../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)).
 2. `uv` installs the [system](../../../glossary.md#term-system--system)'s CLI, `pkit`, at that release. The CLI carries the [methodology](../../../glossary.md#term-methodology--methodology)'s content of the same release, so its [version](../../../glossary.md#term-version--version) names one content (ADR-033 and ADR-065 [point](../../../glossary.md#term-point--point) 12).
 3. The operator runs `pkit version`, and the system prints `pkit <version>`.
 4. Later, the operator runs `pkit upgrade` outside any [project](../../../glossary.md#term-project--project), where no git repository and no `.pkit/` lie above the working directory (ADR-063 point 5).
@@ -61,8 +61,8 @@ pkit:
 - **1a.** The operator authenticates to GitHub with a token, not SSH keys. The operator installs from the HTTPS form, `git+https://github.com/aleskalfas/project-kit.git@latest` (PRJ-004).
 - **1b.** The operator installs a branch, a commit or main's latest commit, naming neither `latest` nor a [release](../../../glossary.md#term-release--release)'s tag. The CLI's [version](../../../glossary.md#term-version--version) then names the last release, while its files may be newer. So no version vouches for its content (PRJ-004 and ADR-065 [point](../../../glossary.md#term-point--point) 12).
 - **1c.** The operator wants a release other than the latest. The operator runs step 1 again with `--force` and that release's tag.
-- **4a.** The operator passes `--dry-run`. The [system](../../../glossary.md#term-system--system) says which `uv` command it would run, and installs nothing (REQ-009).
-- **4b.** The operator runs `pkit upgrade` in a [project](../../../glossary.md#term-project--project) that pins no version. The system runs steps 5 to 7 first, then upgrades the project under the CLI they leave (UC-051). In a pinned project the system never runs them (ADR-063 point 5).
+- **4a.** The operator passes `--dry-run`. The [system](../../../glossary.md#term-system--system) says which `uv` command it would run, and installs nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
+- **4b.** The operator runs `pkit upgrade` in a [project](../../../glossary.md#term-project--project) that pins no version. The system runs steps 5 to 7 first, then upgrades the project under the CLI they leave ([UC-051](UC-051-upgrade-system.md)). In a pinned project the system never runs them (ADR-063 point 5).
 - **5a.** The lookup fails, offline, without credentials, without `git`, or past its limit. The system warns `could not check for a newer pkit tool`, and ends without failing the command (ADR-063 point 1).
 - **6a.** The CLI is the latest release, or newer. The system prints `pkit tool is current (v<version>).`, and the use case ends.
 - **6b.** Standard input or standard output is no terminal, or the operator passed `--no-self-update`. The system prints `A newer pkit tool is available: v<latest> (you are running v<version>).` and the command that updates the CLI, and installs nothing (ADR-063 point 3).
@@ -77,4 +77,4 @@ pkit:
 - A failed lookup or a failed update of the CLI never fails `pkit upgrade` (ADR-063 [point](../../../glossary.md#term-point--point) 1).
 - The [system](../../../glossary.md#term-system--system) installs the CLI only under the CLI `uv` installed, at a terminal, and never where automation runs it (ADR-063 point 3).
 - Updating the CLI acts on no [project](../../../glossary.md#term-project--project) (COR-059 point 5). Outside any project, `pkit upgrade` touches no project's files.
-- The system installs the CLI from the [distribution](../../../glossary.md#term-distribution--distribution)'s URL compiled into it, and from no other source (ADR-063 point 7 and REQ-031).
+- The system installs the CLI from the [distribution](../../../glossary.md#term-distribution--distribution)'s URL compiled into it, and from no other source (ADR-063 point 7 and [REQ-031](../../../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)).

@@ -58,7 +58,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the same checks on the [pull request](../../../glossary.md#term-pull-request--pull-request) with no person to reply. It names the [base](../../../glossary.md#term-base--base) once, for every check (COR-054 [point](../../../glossary.md#term-point--point) 3).
 
-**Preconditions:** **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+**Preconditions:** **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 
 **Assumptions:**
 
@@ -80,11 +80,11 @@ pkit:
 
 - **1a.** A check fails, and the developer fixes what it found before pushing. In project-kit, the aggregator marks the check `FAILED` and ends with `✗ checks FAILED`. It exits non-zero, so the push stops. The path rejoins at step 1.
 - **1b.** In project-kit, the clone has not opted into the hook, which `git config core.hooksPath .githooks` does. Nothing runs at the push, so the developer runs `scripts/check.sh` by hand.
-- **1c.** The [project](../../../glossary.md#term-project--project)'s merges also wait on the [changeset](../../../glossary.md#term-changeset--changeset) guard, which needs the [pull request](../../../glossary.md#term-pull-request--pull-request)'s labels. project-kit's aggregator leaves it out, so the developer runs `pkit release check` by hand (UC-003).
+- **1c.** The [project](../../../glossary.md#term-project--project)'s merges also wait on the [changeset](../../../glossary.md#term-changeset--changeset) guard, which needs the [pull request](../../../glossary.md#term-pull-request--pull-request)'s labels. project-kit's aggregator leaves it out, so the developer runs `pkit release check` by hand ([UC-003](UC-003-declare-changeset.md)).
 - **2a.** The repository has no remote. The [default branch](../../../glossary.md#term-default-branch--default-branch) is read from the local branch, and a `warning:` line says so (COR-054 [point](../../../glossary.md#term-point--point) 2).
 - **2b.** The [base](../../../glossary.md#term-base--base) resolves to no commit. Each check that has something to compare refuses (COR-054 point 4). It names its fixes: fetching the base, declaring the right default branch, or naming another base.
 - **3a.** A registered validator cannot run, ends abnormally or overruns its time. It yields an `error` [finding](../../../glossary.md#term-finding--finding), never a clean pass. Where `pkit sync` has not provisioned its environment in this clone, it says "environment not provisioned — run `pkit sync`".
-- **3b.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. [Validation](../../../glossary.md#term-validation--validation) warns of it, and does not fail on it (REQ-015).
+- **3b.** A [documentation root](../../../glossary.md#term-documentation-root--documentation-root) the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration) declares does not exist yet. [Validation](../../../glossary.md#term-validation--validation) warns of it, and does not fail on it ([REQ-015](../../../requirements/functional/REQ-015-missing-root-warns.md)).
 - **4a.** The base moved on after the branch left it. The [change check](../../../glossary.md#term-change-check--change-check) reports an `outdated-base` and passes. The developer merges the base and runs the checks again.
 - **6a.** The developer pushes with `git push --no-verify`, so the hook does not run. The CI pipeline still runs the checks on the pull request.
 - **6b.** In project-kit, the push changes only answers since the pull request's most recent full run in CI, which passed. The CI pipeline runs every check but the test suite on it (project rule 2). Where the hook ran, it ran the whole aggregator before the push.

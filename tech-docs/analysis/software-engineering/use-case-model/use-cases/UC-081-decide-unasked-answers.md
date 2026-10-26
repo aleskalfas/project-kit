@@ -43,7 +43,7 @@ pkit:
 - The `software-engineer` agent keeps to its definition. Nothing at run time stops an agent writing an answer the change does not owe (COR-050 point 3).
 - The developer, or another agent the developer directs, writes each answer the developer accepted, as `core:UC-002` describes (COR-050 point 3 and core rule 20).
 
-**Trigger:** While making a change, as UC-001 describes, the `software-engineer` agent finds an answer the change check did not ask of the change.
+**Trigger:** While making a change, as [UC-001](UC-001-build-under-conventions.md) describes, the `software-engineer` agent finds an answer the change check did not ask of the change.
 
 **Main path:**
 
@@ -55,7 +55,7 @@ pkit:
 3. The agent names each in its hand-off, for the developer to decide (`software-engineer.md`).
 4. The developer is shown each answer's words, and accepts them or declines the answer, as `core:UC-002` describes in its variant 5c (COR-050 point 3).
 5. Each answer the developer accepted is written with those words, by the developer or by another agent the developer directs.
-6. The `docs-reviewer` reviews the pull request, as UC-080 describes. The reviewer names in an `[advisory]` finding each such answer the change check flags "not asked for by this change" (software-engineering DEC-002 point 1). The finding says that the answer is the developer's decision.
+6. The `docs-reviewer` reviews the pull request, as [UC-080](UC-080-check-answers.md) describes. The reviewer names in an `[advisory]` finding each such answer the change check flags "not asked for by this change" (software-engineering DEC-002 point 1). The finding says that the answer is the developer's decision.
 7. The developer says in the pull request whether they accepted each answer the reviewer named.
 
 **Variants:**

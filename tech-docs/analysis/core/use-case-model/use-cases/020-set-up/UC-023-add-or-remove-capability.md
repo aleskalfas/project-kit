@@ -59,13 +59,13 @@ pkit:
 
 **Other actors:**
 
-- **Operator** (`ACT-operator`): is asked before the [install](../../../glossary.md#term-install--install) or the uninstall writes in another repository than the session's own. So no such write happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before the [install](../../../glossary.md#term-install--install) or the uninstall writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
-- **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
-- **From UC-015 or UC-048, or Environment:** The [capability](../../../glossary.md#term-capability--capability) is on hand. The source repository authors it, the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI ships it, or another repository of the adopter's authors it (COR-017 and COR-041).
-- **From UC-014, UC-019 or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) deploys [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where that harness reads them.
+- **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+- **From [UC-015](../010-develop/UC-015-package-capability.md) or [UC-048](../050-adopt/UC-048-install-cli.md), or Environment:** The [capability](../../../glossary.md#term-capability--capability) is on hand. The source repository authors it, the [distribution](../../../glossary.md#term-distribution--distribution) of the running CLI ships it, or another repository of the adopter's authors it (COR-017 and COR-041).
+- **From UC-014, [UC-019](../010-develop/UC-019-adapt-harness.md) or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) deploys [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where that harness reads them.
 
 **Assumptions:** None.
 
@@ -74,7 +74,7 @@ pkit:
 **Main path:**
 
 1. The adopter runs `pkit capabilities install <name>`.
-2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit capabilities install` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -82,7 +82,7 @@ pkit:
 3. The system refuses a name that is reserved, or that an [adapter](../../../glossary.md#term-adapter--adapter) holds. It finds the [capability](../../../glossary.md#term-capability--capability) in the [methodology](../../../glossary.md#term-methodology--methodology)'s tree, `.pkit/capabilities/<name>/`.
 4. The system checks the capability against the [backbone](../../../glossary.md#term-backbone--backbone) the [project](../../../glossary.md#term-project--project) records, and against the capabilities installed (COR-017 and COR-030). Its [range](../../../glossary.md#term-range--range) on the backbone, each capability it requires and each range an installed capability declares on it must hold.
 5. The system checks that no [rule set](../../../glossary.md#term-rule-set--rule-set) of the capability takes a name a project rule set declares (COR-051 point 3).
-6. The system finds that the project is the methodology's [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code, where the capability's subtree is its source (ADR-059). So it registers the capability in place, as UC-014's variant 2d does.
+6. The system finds that the project is the methodology's [source repository](../../../glossary.md#term-source-repository--source-repository), run by its own code, where the capability's subtree is its source (ADR-059). So it registers the capability in place, as [UC-014](../010-develop/UC-014-develop-methodology.md)'s variant 2d does.
 7. The system checks that none of the capability's [skills](../../../glossary.md#term-skill--skill) or [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) collides with other content the project holds.
 8. The system records the capability in the [manifest](../../../glossary.md#term-manifest--manifest) with the [component origin](../../../glossary.md#term-component-origin--component-origin) `kit-shipped`, and copies nothing (COR-031). It prints `Registered capability '<name>' v<version> in place at .pkit/capabilities/<name>/: it is authored in this repository, the methodology's source, so nothing was copied (ADR-059).`
 9. The capability may declare a project rule set. Where no rule set of the project's own inherits its method set, the system creates that set (COR-017). Running [install](../../../glossary.md#term-install--install) is the [consent](../../../glossary.md#term-consent--consent). It prints `created the project rule set <set> at <path>, inheriting <pin> (COR-017): it is the project's own, to edit or remove`.
@@ -100,12 +100,12 @@ pkit:
 
 **Variants:**
 
-- **1a.** The adopter passes `--plan`. The [system](../../../glossary.md#term-system--system) shows what the [install](../../../glossary.md#term-install--install) would connect to and the conflicts it would leave, and writes nothing (UC-024).
-- **1b.** The adopter passes `--dry-run`. The system runs every check, says what it would register, create and ask, and writes nothing (REQ-009).
-- **1c.** The [project](../../../glossary.md#term-project--project) is not the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. The system stops before it reads anything, under `--dry-run` and `--plan` too, names the remedy, and writes nothing (REQ-010). The use case ends.
-- **1d.** The project is the methodology's source repository, and the running code is not its own (UC-014 variants 3a and 3b). The system refuses, since the install would copy the [capability](../../../glossary.md#term-capability--capability) from that code's tree into the one it is built from. It names the checkout's own code to run instead, and writes nothing (ADR-059). The uninstall refuses the same way.
+- **1a.** The adopter passes `--plan`. The [system](../../../glossary.md#term-system--system) shows what the [install](../../../glossary.md#term-install--install) would connect to and the conflicts it would leave, and writes nothing ([UC-024](UC-024-see-capability-connections.md)).
+- **1b.** The adopter passes `--dry-run`. The system runs every check, says what it would register, create and ask, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
+- **1c.** The [project](../../../glossary.md#term-project--project) is not the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. The system stops before it reads anything, under `--dry-run` and `--plan` too, names the remedy, and writes nothing ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)). The use case ends.
+- **1d.** The project is the methodology's source repository, and the running code is not its own ([UC-014](../010-develop/UC-014-develop-methodology.md) variants 3a and 3b). The system refuses, since the install would copy the [capability](../../../glossary.md#term-capability--capability) from that code's tree into the one it is built from. It names the checkout's own code to run instead, and writes nothing (ADR-059). The uninstall refuses the same way.
 - **3a.** The name is reserved, or an [adapter](../../../glossary.md#term-adapter--adapter) holds it. The system refuses, saying which, and writes nothing. The use case ends.
-- **3b.** No capability of that name ships with the running CLI. The system refuses, naming `pkit capabilities list`, and writes nothing. A capability the project authors is registered instead (UC-016).
+- **3b.** No capability of that name ships with the running CLI. The system refuses, naming `pkit capabilities list`, and writes nothing. A capability the project authors is registered instead ([UC-016](../010-develop/UC-016-keep-capability.md)).
 - **3c.** The capability is installed already. The system refuses, naming `pkit capabilities upgrade <name>`, and writes nothing. The use case ends.
 - **3d.** The capability is authored in another repository, from which the adopter shares it, such as an organisation's own (COR-041). The system pulls it whole, at a ref of that repository the project pins, and checks it as steps 4 and 5 do. It settles each collision as variant 7b does, and records the capability with the [component origin](../../../glossary.md#term-component-origin--component-origin) `externally-sourced`. The path goes on at step 9.
 

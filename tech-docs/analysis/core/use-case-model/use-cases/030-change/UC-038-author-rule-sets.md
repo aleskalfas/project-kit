@@ -49,8 +49,8 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
-- **From UC-014, UC-023 or UC-016:** The method [rule sets](../../../glossary.md#term-rule-set--rule-set) the project may inherit lie in it. They are those the [backbone](../../../glossary.md#term-backbone--backbone) ships, and those of each [capability](../../../glossary.md#term-capability--capability) the [manifest](../../../glossary.md#term-manifest--manifest) records (COR-051 [point](../../../glossary.md#term-point--point) 6).
+- **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+- **From UC-014, [UC-023](../020-set-up/UC-023-add-or-remove-capability.md) or [UC-016](../010-develop/UC-016-keep-capability.md):** The method [rule sets](../../../glossary.md#term-rule-set--rule-set) the project may inherit lie in it. They are those the [backbone](../../../glossary.md#term-backbone--backbone) ships, and those of each [capability](../../../glossary.md#term-capability--capability) the [manifest](../../../glossary.md#term-manifest--manifest) records (COR-051 [point](../../../glossary.md#term-point--point) 6).
 
 **Assumptions:**
 
@@ -68,11 +68,11 @@ pkit:
 6. The developer runs `pkit validate`. Its `rule-sets` pass checks each set's schema and the join between its data and its sections. It checks the ids, the origins, the successors and what each set inherits too (COR-051 points 2, 3, 5 and 7).
 7. The developer runs `pkit rule-sets reach`. The [system](../../../glossary.md#term-system--system) answers which accepted rules bind on each artefact, and through which sets. It names each rule that a pin behind its set holds back (COR-051 point 7).
 8. The developer runs `pkit rule-sets reach --preview`, which answers as if every proposed rule were accepted. It marks what holds only under the preview, and [validation](../../../glossary.md#term-validation--validation) never reads that output.
-9. The developer commits the rule set. Its rules stay proposed until the merge authoriser accepts them (UC-040).
+9. The developer commits the rule set. Its rules stay proposed until the merge authoriser accepts them ([UC-040](UC-040-accept-through-review.md)).
 
 **Variants:**
 
-- **1a.** A [capability](../../../glossary.md#term-capability--capability)'s [install](../../../glossary.md#term-install--install) created the set, inheriting the capability's method [rule set](../../../glossary.md#term-rule-set--rule-set) (UC-023). The developer runs `pkit capabilities project-rule-set <name>`, which shows that set and each set of the [project](../../../glossary.md#term-project--project)'s own that inherits the method set. It writes nothing (REQ-005). The developer edits that set, and the path goes on at step 3.
+- **1a.** A [capability](../../../glossary.md#term-capability--capability)'s [install](../../../glossary.md#term-install--install) created the set, inheriting the capability's method [rule set](../../../glossary.md#term-rule-set--rule-set) ([UC-023](../020-set-up/UC-023-add-or-remove-capability.md)). The developer runs `pkit capabilities project-rule-set <name>`, which shows that set and each set of the [project](../../../glossary.md#term-project--project)'s own that inherits the method set. It writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)). The developer edits that set, and the path goes on at step 3.
 - **1b.** The project keeps rule sets in a [place](../../../glossary.md#term-place--place) of its own whose path has a `rule-sets` segment, declared in `friction.places`. The developer writes the set there, and the path goes on at step 2.
 - **1c.** The developer would edit a [rule](../../../glossary.md#term-rule--rule) a method rule set ships. That edit belongs to the [component](../../../glossary.md#term-component--component) that ships the set, so the developer proposes it there, or does not inherit the set (COR-051 [point](../../../glossary.md#term-point--point) 7). The use case ends.
 - **2a.** A scope holds an empty list, names neither paths nor types, or names a type that no owner declares. [Validation](../../../glossary.md#term-validation--validation) fails on it, and the path rejoins at step 2.
@@ -83,7 +83,7 @@ pkit:
   - a rule and a section that do not match
   - two rule sets that share a name
 - **6b.** An accepted rule has no complete origin, or its origin cites a [decision record](../../../glossary.md#term-decision-record--decision-record) that is not accepted. Validation fails, naming the rule (COR-051 point 5).
-- **6c.** A rule's origin cites a source of a kind a capability registers. Validation resolves it through that kind's command, offline as REQ-007 asks, and stops the command after thirty seconds (REQ-006). A command that gives no result fails validation as `unanswered-source`, and is never passed (REQ-004). A kind no installed component resolves is reported, without failing (COR-051 point 5).
+- **6c.** A rule's origin cites a source of a kind a capability registers. Validation resolves it through that kind's command, offline as [REQ-007](../../../requirements/constraints/REQ-007-offline-same-answer.md) asks, and stops the command after thirty seconds ([REQ-006](../../../requirements/quality/REQ-006-command-time-bound.md)). A command that gives no result fails validation as `unanswered-source`, and is never passed ([REQ-004](../../../requirements/quality/REQ-004-missing-answer-never-clean.md)). A kind no installed component resolves is reported, without failing (COR-051 point 5).
 - **6d.** Validation fails at a fill, and the path rejoins at step 5. It fails on each of these:
   - a fill of an extension point that no inherited rule offers
   - a second fill of one extension point along the chain
@@ -98,7 +98,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- [Sync](../../../glossary.md#term-sync--sync) never reads or writes a [rule set](../../../glossary.md#term-rule-set--rule-set) of the [project](../../../glossary.md#term-project--project)'s own, and uninstall never writes one (COR-051 [point](../../../glossary.md#term-point--point) 6 and REQ-002).
+- [Sync](../../../glossary.md#term-sync--sync) never reads or writes a [rule set](../../../glossary.md#term-rule-set--rule-set) of the [project](../../../glossary.md#term-project--project)'s own, and uninstall never writes one (COR-051 [point](../../../glossary.md#term-point--point) 6 and [REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md)).
 - No [rule](../../../glossary.md#term-rule--rule) of a method rule set binds until a set of the project's own with a scope inherits it (COR-051 point 7).
 - A proposed rule binds nothing, wherever it is inherited (COR-051 point 4).
-- `pkit rule-sets reach` and `pkit capabilities project-rule-set` write nothing (REQ-005).
+- `pkit rule-sets reach` and `pkit capabilities project-rule-set` write nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).

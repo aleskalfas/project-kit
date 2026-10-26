@@ -67,8 +67,8 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-049:** The [system](../../../glossary.md#term-system--system) is installed in the [project](../../../glossary.md#term-project--project), and its [manifest](../../../glossary.md#term-manifest--manifest) records the [version](../../../glossary.md#term-version--version) of the content the project holds.
-- **From UC-008:** Each [release](../../../glossary.md#term-release--release) a [version pin](../../../glossary.md#term-version-pin--version-pin) names carries its tag on the [distribution](../../../glossary.md#term-distribution--distribution)'s repository, so `uvx` can fetch that release (ADR-039 D3).
+- **From [UC-049](UC-049-install-system.md):** The [system](../../../glossary.md#term-system--system) is installed in the [project](../../../glossary.md#term-project--project), and its [manifest](../../../glossary.md#term-manifest--manifest) records the [version](../../../glossary.md#term-version--version) of the content the project holds.
+- **From [UC-008](../040-release/UC-008-release-backbone.md):** Each [release](../../../glossary.md#term-release--release) a [version pin](../../../glossary.md#term-version-pin--version-pin) names carries its tag on the [distribution](../../../glossary.md#term-distribution--distribution)'s repository, so `uvx` can fetch that release (ADR-039 D3).
 
 **Assumptions:**
 
@@ -79,16 +79,16 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit pin` in the [project](../../../glossary.md#term-project--project).
-2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit pin` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-3. The system reads the [backbone](../../../glossary.md#term-backbone--backbone) [version](../../../glossary.md#term-version--version) the project records, `backbone_version` in `.pkit/manifest.yaml`. It writes `.pkit/version-pin` at that version, whole, and prints `Pinned project-kit to <version> (.pkit/version-pin).` (ADR-049 point 3 and REQ-027).
+3. The system reads the [backbone](../../../glossary.md#term-backbone--backbone) [version](../../../glossary.md#term-version--version) the project records, `backbone_version` in `.pkit/manifest.yaml`. It writes `.pkit/version-pin` at that version, whole, and prints `Pinned project-kit to <version> (.pkit/version-pin).` (ADR-049 point 3 and [REQ-027](../../../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)).
 4. The operator commits the [version pin](../../../glossary.md#term-version-pin--version-pin), so every clone of the project runs at it.
 5. Later, the operator runs a `pkit` command in the project, where the installed CLI is at another [release](../../../glossary.md#term-release--release).
 6. Before it loads the rest of the CLI, the system finds the project's version pin, naming another release than the running CLI's (ADR-039 point 2).
-7. The system checks that `uvx` can fetch the pinned release, from the [distribution](../../../glossary.md#term-distribution--distribution)'s git URL at that release's tag (ADR-039 D2 and REQ-031).
+7. The system checks that `uvx` can fetch the pinned release, from the [distribution](../../../glossary.md#term-distribution--distribution)'s git URL at that release's tag (ADR-039 D2 and [REQ-031](../../../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)).
 8. The system runs the command under `uvx` at the pinned release, which brings that release's code and content together. It exits with the command's status (ADR-039 D1).
 9. Later, the operator runs `pkit unpin`.
 10. At its entry, `pkit unpin` checks the repository as step 2 does (REQ-012).
@@ -100,10 +100,10 @@ pkit:
 
 **Variants:**
 
-- **1a.** `pkit upgrade` pinned the [project](../../../glossary.md#term-project--project) already, as it does by default (UC-051). The path goes on at step 4.
+- **1a.** `pkit upgrade` pinned the [project](../../../glossary.md#term-project--project) already, as it does by default ([UC-051](UC-051-upgrade-system.md)). The path goes on at step 4.
 - **1b.** The operator names the [release](../../../glossary.md#term-release--release) the content is at, `pkit pin <version>`. The [system](../../../glossary.md#term-system--system) writes the [version pin](../../../glossary.md#term-version-pin--version-pin) at it, as step 3 does.
-- **1c.** The operator names a newer release. The system runs that release's own `pkit upgrade` through `uvx`, with routing bypassed, which brings the content to that release (REQ-026, REQ-029 and REQ-030). Only then does `pkit pin` write the version pin, last (ADR-049 [point](../../../glossary.md#term-point--point) 5 and REQ-027).
-- **1d.** On the path of 1c, the operator first passes `--dry-run` to `pkit pin`, to see each edit the raise would make. The system names each edit, and writes nothing (REQ-009).
+- **1c.** The operator names a newer release. The system runs that release's own `pkit upgrade` through `uvx`, with routing bypassed, which brings the content to that release ([REQ-026](../../../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md), [REQ-029](../../../requirements/functional/050-adopt/REQ-029-compatibility-before-write.md) and [REQ-030](../../../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)). Only then does `pkit pin` write the version pin, last (ADR-049 [point](../../../glossary.md#term-point--point) 5 and [REQ-027](../../../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)).
+- **1d.** On the path of 1c, the operator first passes `--dry-run` to `pkit pin`, to see each edit the raise would make. The system names each edit, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit pin` takes no `--dry-run`, and refuses the flag. COR-004 decides that it offers one, and #1884 tracks it.
@@ -116,7 +116,7 @@ pkit:
 - **6a.** The project pins no [version](../../../glossary.md#term-version--version), or its version pin names the running CLI's release. The system runs the command itself (ADR-039 point 3).
 - **6b.** The working directory lies in the methodology's source repository. The system runs that checkout's own code, and reads no version pin (ADR-039 point 1).
 - **6c.** `PKIT_NO_ROUTE` is set. The system runs the command under the running CLI, and reads no version pin.
-- **7a.** `uvx` cannot fetch the pinned release, as offline, or `uvx` is missing. The system warns once on standard error that it runs the installed CLI instead, and runs the command there (REQ-028).
+- **7a.** `uvx` cannot fetch the pinned release, as offline, or `uvx` is missing. The system warns once on standard error that it runs the installed CLI instead, and runs the command there ([REQ-028](../../../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)).
 - **7b.** On the path of 7a, the installed CLI is older than the version pin. The warning says so, and says that `pkit sync` and `pkit upgrade` refuse rather than write older content over the project's.
 - **7c.** On the path of 7a, the operator ran `pkit upgrade`. The system refuses, and names reconnecting, the version pin run through `uvx`, or `pkit unpin` then `pkit upgrade` (ADR-065 point 9).
 - **11a.** The project holds no version pin. The system prints `No pin to remove; project already floats on the installed tool.`.
@@ -125,8 +125,8 @@ pkit:
 
 **Minimal guarantees:**
 
-- The [version pin](../../../glossary.md#term-version-pin--version-pin) holds the old one or the new one, never part of either (REQ-027).
+- The [version pin](../../../glossary.md#term-version-pin--version-pin) holds the old one or the new one, never part of either ([REQ-027](../../../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)).
 - A raise writes the version pin only once the content reached the new [release](../../../glossary.md#term-release--release). A failed raise leaves the old version pin (ADR-049 [point](../../../glossary.md#term-point--point) 1).
-- A version pin that cannot be fetched never fails a command in the router (REQ-028).
+- A version pin that cannot be fetched never fails a command in the router ([REQ-028](../../../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)).
 - `pkit pin` never moves a [project](../../../glossary.md#term-project--project) to an older release (ADR-049 point 3).
-- `pkit pin`, `pkit unpin` and `pkit upgrade` are the version pin's only writers (ADR-065 point 11 and REQ-002).
+- `pkit pin`, `pkit unpin` and `pkit upgrade` are the version pin's only writers (ADR-065 point 11 and [REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md)).

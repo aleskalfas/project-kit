@@ -63,7 +63,7 @@ pkit:
 3. The agent writes the change's code, applying the corpus to each choice it settles, such as naming, layout and error handling.
 4. The agent reads its diff again against the corpus, and corrects what does not conform.
 5. The agent hands the change on for review, and invokes no reviewer itself (COR-024).
-6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires (project-management DEC-032). Where the project runs the code-review panel, the panel's `security-reviewer` judges the change's code against REQ-060: a secret never goes on a command line.
+6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires (project-management DEC-032). Where the project runs the code-review panel, the panel's `security-reviewer` judges the change's code against [REQ-060](../../requirements/quality/REQ-060-secret-off-command-line.md): a secret never goes on a command line.
 7. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered. A finding marked for a person waits for that person (project-management DEC-028).
 
 **Variants:**

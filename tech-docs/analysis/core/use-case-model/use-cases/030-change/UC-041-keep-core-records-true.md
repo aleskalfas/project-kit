@@ -42,19 +42,19 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): as the `methodology-reviewer`, judges the record against the [methodology](../../../glossary.md#term-methodology--methodology)'s disciplines. It reports each violation, and changes nothing in the record (REQ-021).
-- **Merge authoriser** (`ACT-merge-authoriser`): accepts the core record by their own review, and authorises its merge (UC-040).
+- **AI agent** (`ACT-ai-agent`): as the `methodology-reviewer`, judges the record against the [methodology](../../../glossary.md#term-methodology--methodology)'s disciplines. It reports each violation, and changes nothing in the record ([REQ-021](../../../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)).
+- **Merge authoriser** (`ACT-merge-authoriser`): accepts the core record by their own review, and authorises its merge ([UC-040](UC-040-accept-through-review.md)).
 
 **Preconditions:**
 
-- **From UC-014:** The maintainer develops the [methodology](../../../glossary.md#term-methodology--methodology) in its [source repository](../../../glossary.md#term-source-repository--source-repository).
-- **From UC-037:** The maintainer's [change](../../../glossary.md#term-change--change) adds a core record, stamped with the namespace `core`, or refines an accepted one in place.
-- **From UC-027:** The `methodology-reviewer`'s [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it.
+- **From [UC-014](../010-develop/UC-014-develop-methodology.md):** The maintainer develops the [methodology](../../../glossary.md#term-methodology--methodology) in its [source repository](../../../glossary.md#term-source-repository--source-repository).
+- **From [UC-037](UC-037-record-decision.md):** The maintainer's [change](../../../glossary.md#term-change--change) adds a core record, stamped with the namespace `core`, or refines an accepted one in place.
+- **From [UC-027](../020-set-up/UC-027-find-agent-definition-deployed.md):** The `methodology-reviewer`'s [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it.
 
 **Assumptions:**
 
 - A [project](../../../glossary.md#term-project--project) that holds a core record wrong proposes an edit to the [methodology](../../../glossary.md#term-methodology--methodology), and edits no copy of it. Nothing stops such an edit, and the next [sync](../../../glossary.md#term-sync--sync) writes over it (COR-001).
-- The `methodology-reviewer` changes nothing in the record it judges, as its [agent definition](../../../glossary.md#term-agent-definition--agent-definition) says. Nothing at run time checks what it changed (REQ-021).
+- The `methodology-reviewer` changes nothing in the record it judges, as its [agent definition](../../../glossary.md#term-agent-definition--agent-definition) says. Nothing at run time checks what it changed ([REQ-021](../../../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)).
 
 **Trigger:** The maintainer's [change](../../../glossary.md#term-change--change), which adds or refines a core record, is ready for review.
 
@@ -69,10 +69,10 @@ pkit:
    - each thing it names by the part it plays, where that part is what the record means (COR-046)
    - its title and its opening, which state the decision before the detail
    - the present, stated with no amendment log or dated correction
-3. The reviewer reports each violation with its discipline, and changes nothing in the record (REQ-021). Its working files lie in the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace).
+3. The reviewer reports each violation with its discipline, and changes nothing in the record ([REQ-021](../../../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)). Its working files lie in the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace).
 4. The maintainer revises the record. Content that fits only one project moves to that project's own namespace, such as a PRJ record of the [source repository](../../../glossary.md#term-source-repository--source-repository) (COR-014).
 5. The maintainer runs `pkit decisions validate`. In the source repository a core record is no [synced copy](../../../glossary.md#term-synced-copy--synced-copy), so [validation](../../../glossary.md#term-validation--validation) checks its id, its points and its narration (COR-055 [point](../../../glossary.md#term-point--point) 1).
-6. The merge authoriser accepts the record (UC-040), and the change lands (UC-034).
+6. The merge authoriser accepts the record ([UC-040](UC-040-accept-through-review.md)), and the change lands ([UC-034](UC-034-land-change.md)).
 
 **Variants:**
 
@@ -81,7 +81,7 @@ pkit:
 - **3a.** The reviewer finds no violation. The path goes on at step 5.
 - **4a.** The maintainer holds a [finding](../../../glossary.md#term-finding--finding) wrong. The maintainer keeps the text, says why in the change, and the path goes on at step 5.
 - **4b.** The decision fits only the [source repository](../../../glossary.md#term-source-repository--source-repository), such as the name of its tool's binary. The maintainer records it as a PRJ record of the source repository instead, and the use case ends.
-- **5a.** A line of the record narrates its own revision. [Validation](../../../glossary.md#term-validation--validation) warns of it, naming the file and the line, and the maintainer states the fact plainly (UC-037 variant 7c).
+- **5a.** A line of the record narrates its own revision. [Validation](../../../glossary.md#term-validation--validation) warns of it, naming the file and the line, and the maintainer states the fact plainly ([UC-037](UC-037-record-decision.md) variant 7c).
 
 **Postconditions:**
 
@@ -91,4 +91,4 @@ pkit:
 **Minimal guarantees:**
 
 - A [project](../../../glossary.md#term-project--project)'s [validation](../../../glossary.md#term-validation--validation) never fails on a core record it receives, which it cannot mend (COR-055 [point](../../../glossary.md#term-point--point) 1).
-- `pkit decisions validate` writes nothing, whatever it finds (REQ-005).
+- `pkit decisions validate` writes nothing, whatever it finds ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).

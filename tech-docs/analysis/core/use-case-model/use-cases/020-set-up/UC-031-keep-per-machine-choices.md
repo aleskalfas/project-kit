@@ -60,8 +60,8 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
-- **From UC-014, UC-019 or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) declares where that harness enforces each dimension of the permission model (COR-028 [point](../../../glossary.md#term-point--point) 3).
+- **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+- **From UC-014, [UC-019](../010-develop/UC-019-adapt-harness.md) or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) declares where that harness enforces each dimension of the permission model (COR-028 [point](../../../glossary.md#term-point--point) 3).
 
 **Assumptions:**
 
@@ -73,7 +73,7 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit permissions sandbox accommodate --socket "$SSH_AUTH_SOCK"`.
-2. At its entry, before it reads anything, each writing command of this use case checks that the repository it writes in is the session's own. Where it is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, each writing command of this use case checks that the repository it writes in is the session's own. Where it is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** no `pkit permissions` command runs such a check, and each writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -90,8 +90,8 @@ pkit:
 - **1c.** The operator turns the sandbox on with `--dangerously-allow-unconfined`. The system writes `sandbox.failIfUnavailable: false` to the per-machine settings alone, and the committed settings keep `true` (ADR-005 point 6). It warns where git does not ignore the per-machine file.
 - **1d.** The operator activates a [profile](../../../glossary.md#term-profile--profile) with `pkit permissions profile activate <name>`. The system writes the profile's name to `.pkit/permissions/project/active-profile.yaml`, which `.pkit/.gitignore` ignores (ADR-032). It writes the allows only that profile justifies to the per-machine settings (ADR-046 point 1). ADR-032 calls the posture shared policy, so the system writes it to the committed `.pkit/permissions/project/config.yaml`, though ADR-032's <!-- pkit:not-the-term -->Rule A reads it as per-machine (#1765).
 - **1e.** The operator arms a diagnostic session with `pkit permissions diagnose on`. Its marker and its log lie under `.pkit/permissions/project/`, where `.pkit/.gitignore` ignores them (PRJ-006 point 5).
-- **1f.** The operator runs `pkit permissions setup autonomy` (UC-030). The system writes the per-machine parts of the setup to the per-machine settings, and the shared parts to the committed ones. It moves each entry an earlier [version](../../../glossary.md#term-version--version) left in a committed file to that entry's per-machine home (ADR-007). It leaves the operator's own entries in place.
-- **1g.** The operator passes `--dry-run` to a command of this use case whose edit reaches past what the person named, such as `sandbox enable`. The system names each edit it would make, and writes nothing (REQ-009).
+- **1f.** The operator runs `pkit permissions setup autonomy` ([UC-030](UC-030-work-unprompted.md)). The system writes the per-machine parts of the setup to the per-machine settings, and the shared parts to the committed ones. It moves each entry an earlier [version](../../../glossary.md#term-version--version) left in a committed file to that entry's per-machine home (ADR-007). It leaves the operator's own entries in place.
+- **1g.** The operator passes `--dry-run` to a command of this use case whose edit reaches past what the person named, such as `sandbox enable`. The system names each edit it would make, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 
 > [!WARNING]
 > **Not built yet:** `sandbox accommodate`, `sandbox enable`, `profile activate` and `setup autonomy` take no `--dry-run`. COR-004 decides that each such command offers the flag, and #1884 tracks it.
@@ -110,5 +110,5 @@ pkit:
 - An exclusion from the [sandbox](../../../glossary.md#term-sandbox--sandbox) is never written to a committed file (ADR-008 [point](../../../glossary.md#term-point--point) 4 and ADR-029 point 3).
 - A value read from this machine, such as a socket's path, is never written to a committed file (ADR-010 point 3).
 - The fail-open that `--dangerously-allow-unconfined` asks for is never written to a committed file (ADR-005 point 6).
-- The [system](../../../glossary.md#term-system--system) writes the [harness](../../../glossary.md#term-harness--harness)'s settings only through the permission model's one writer, which routes each entry to its file (REQ-002 and ADR-029 point 2).
+- The [system](../../../glossary.md#term-system--system) writes the [harness](../../../glossary.md#term-harness--harness)'s settings only through the permission model's one writer, which routes each entry to its file ([REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md) and ADR-029 point 2).
 - A move of a per-machine entry writes the per-machine file first, then strips the committed one. So no entry is lost between the two (`permissions.py`).

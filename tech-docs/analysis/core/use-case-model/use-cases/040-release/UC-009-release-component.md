@@ -54,14 +54,14 @@ pkit:
 
 **Other actors:**
 
-- **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the [release](../../../glossary.md#term-release--release) [pull request](../../../glossary.md#term-pull-request--pull-request) that carries the [component](../../../glossary.md#term-component--component)'s new [version](../../../glossary.md#term-version--version). That pull request carries the new versions of the [backbone](../../../glossary.md#term-backbone--backbone) and of other components too (UC-008).
-- **Operator** (`ACT-operator`): is asked before `pkit release apply` changes a repository other than the session's own. So no such write happens silently (REQ-012).
+- **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the [release](../../../glossary.md#term-release--release) [pull request](../../../glossary.md#term-pull-request--pull-request) that carries the [component](../../../glossary.md#term-component--component)'s new [version](../../../glossary.md#term-version--version). That pull request carries the new versions of the [backbone](../../../glossary.md#term-backbone--backbone) and of other components too ([UC-008](UC-008-release-backbone.md)).
+- **Operator** (`ACT-operator`): is asked before `pkit release apply` changes a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
-- **From UC-003:** Changes to the [component](../../../glossary.md#term-component--component) declare, in [changesets](../../../glossary.md#term-changeset--changeset) naming it, what each means for the component's next [version](../../../glossary.md#term-version--version).
-- **From UC-034:** The component's changes landed on the [default branch](../../../glossary.md#term-default-branch--default-branch), so their changesets wait under `.changes/unreleased/`.
-- **From UC-009, UC-015 or UC-019:** The component's `package.yaml` gives its `version` and a `requires_backbone` [range](../../../glossary.md#term-range--range). The component's last [release step](../../../glossary.md#term-release-step--release-step) wrote them, or its author did when packaging it as a [capability](../../../glossary.md#term-capability--capability) or writing it as an [adapter](../../../glossary.md#term-adapter--adapter).
+- **From [UC-003](../030-change/UC-003-declare-changeset.md):** Changes to the [component](../../../glossary.md#term-component--component) declare, in [changesets](../../../glossary.md#term-changeset--changeset) naming it, what each means for the component's next [version](../../../glossary.md#term-version--version).
+- **From [UC-034](../030-change/UC-034-land-change.md):** The component's changes landed on the [default branch](../../../glossary.md#term-default-branch--default-branch), so their changesets wait under `.changes/unreleased/`.
+- **From UC-009, [UC-015](../010-develop/UC-015-package-capability.md) or [UC-019](../010-develop/UC-019-adapt-harness.md):** The component's `package.yaml` gives its `version` and a `requires_backbone` [range](../../../glossary.md#term-range--range). The component's last [release step](../../../glossary.md#term-release-step--release-step) wrote them, or its author did when packaging it as a [capability](../../../glossary.md#term-capability--capability) or writing it as an [adapter](../../../glossary.md#term-adapter--adapter).
 
 **Assumptions:**
 
@@ -75,7 +75,7 @@ pkit:
 1. The component author runs `pkit release plan`.
 2. The [system](../../../glossary.md#term-system--system) groups the pending [changesets](../../../glossary.md#term-changeset--changeset) by what each names, and takes the highest segment for each. It prints the [component](../../../glossary.md#term-component--component)'s move as `<component>: <old> -> <new> (<segment>)`, with each floor and upper bound a changeset declares for the component.
 3. The author runs `pkit release apply` on a [release](../../../glossary.md#term-release--release) branch, and confirms `Write these versions and consume the changesets?`.
-10. At its entry, before it prints its plan, `pkit release apply` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+10. At its entry, before it prints its plan, `pkit release apply` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit release apply` runs the check only when `--tag --push` asks it to push a tag. Without them, it writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -89,7 +89,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** In project-kit, `release-pr.yml` runs the [release step](../../../glossary.md#term-release-step--release-step) for the [component](../../../glossary.md#term-component--component), with the [backbone](../../../glossary.md#term-backbone--backbone) where the backbone moves (UC-008). A release step that moves no backbone takes the branch `release/<run id>`. The maintainer merges the [release](../../../glossary.md#term-release--release) [pull request](../../../glossary.md#term-pull-request--pull-request) as UC-008 says, and the use case ends with no tag cut.
+- **1a.** In project-kit, `release-pr.yml` runs the [release step](../../../glossary.md#term-release-step--release-step) for the [component](../../../glossary.md#term-component--component), with the [backbone](../../../glossary.md#term-backbone--backbone) where the backbone moves ([UC-008](UC-008-release-backbone.md)). A release step that moves no backbone takes the branch `release/<run id>`. The maintainer merges the [release](../../../glossary.md#term-release--release) [pull request](../../../glossary.md#term-pull-request--pull-request) as UC-008 says, and the use case ends with no tag cut.
 - **3a.** The author runs `pkit release apply --no-broaden`, to keep the upper bound as written, such as for a patch known not to work on the newest backbone. Step 5 is skipped, and each declared floor and upper bound is still written.
 - **3b.** A [changeset](../../../glossary.md#term-changeset--changeset) declares `requires_backbone: release`, and the release step moves no backbone. The floor rises to the current backbone. The plan adds `backbone does not move this release`, asking the author to confirm that the needed surface shipped there.
 - **3c.** On the path of 3b, the current backbone is a pre-release, such as `1.150.0rc1`. The [system](../../../glossary.md#term-system--system) refuses the release step before writing anything, since no floor rises to a pre-release (PRJ-002 D4). The use case ends.
@@ -97,7 +97,7 @@ pkit:
 - **3e.** A declared floor would leave a [range](../../../glossary.md#term-range--range) that admits no backbone, such as where `--no-broaden` keeps an upper bound at or below the floor. The system refuses the release step before writing anything, and the use case ends.
 - **3f.** The release step would leave another capability whose range excludes the component's new [version](../../../glossary.md#term-version--version). The system refuses before writing anything, naming that capability, its range and the version (PRJ-002 D4). The use case ends.
 - **3g.** The release step moves the backbone too. Step 5 instead widens every component's upper bound to cover the new backbone's minor, and the backbone is released as UC-008 says.
-- **3h.** The author first passes `--dry-run` to `pkit release apply`, to see each edit it would make. The system names each edit, and writes nothing (REQ-009).
+- **3h.** The author first passes `--dry-run` to `pkit release apply`, to see each edit it would make. The system names each edit, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit release apply` takes no `--dry-run`, and refuses the flag. COR-004 decides that it offers one, and #1884 tracks it.

@@ -82,8 +82,8 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
-- **From UC-014, UC-019 or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) declares where that harness enforces each dimension of the permission model (COR-028 [point](../../../glossary.md#term-point--point) 3).
+- **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+- **From UC-014, [UC-019](../010-develop/UC-019-adapt-harness.md) or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) declares where that harness enforces each dimension of the permission model (COR-028 [point](../../../glossary.md#term-point--point) 3).
 
 **Assumptions:**
 
@@ -95,7 +95,7 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit permissions setup autonomy`.
-2. At its entry, before it reads anything, the command checks that the repository it would write in is the session's own. Where it is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the command checks that the repository it would write in is the session's own. Where it is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit permissions setup autonomy` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -111,8 +111,8 @@ pkit:
 7. The system stops before it verifies the setup, since the sandbox starts only with a new session. It ends `Result: configured. Restart the session and re-run to enable the box and prove the goal.` (ADR-007).
 8. The operator restarts the session, and runs `pkit permissions setup autonomy` again from inside it. The system skips each step already done.
 9. The system verifies the setup. Its probes find that the permission code's verdicts match the model, and that the operating system refuses each read of the credential floor. It ends `Result: goal reached — autonomous agents: configured, confined, and proven.`
-10. The agents work. The adapter's permission hook runs the [backbone](../../../glossary.md#term-backbone--backbone)'s permission code under the system `python3`, and the code needs nothing outside that interpreter's standard library (REQ-016). A command a [grant](../../../glossary.md#term-grant--grant) allows runs with nobody asked, and so does a single command inside the sandbox. A deny wins over an allow (REQ-013).
-11. The operator learns where the confinement does not hold, from commands that write nothing (REQ-005):
+10. The agents work. The adapter's permission hook runs the [backbone](../../../glossary.md#term-backbone--backbone)'s permission code under the system `python3`, and the code needs nothing outside that interpreter's standard library ([REQ-016](../../../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)). A command a [grant](../../../glossary.md#term-grant--grant) allows runs with nobody asked, and so does a single command inside the sandbox. A deny wins over an allow ([REQ-013](../../../requirements/functional/020-set-up/REQ-013-deny-wins.md)).
+11. The operator learns where the confinement does not hold, from commands that write nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)):
     - `pkit permissions sandbox` says whether the sandbox really confines, and names each command that runs outside it
     - `pkit permissions diff` counts the grants that only the permission hook enforces, and those that no native layer expresses
     - `pkit permissions diff` also names each dimension that the adapter's enforcement declaration says no layer enforces, such as `network-egress` (COR-028 point 3)
@@ -120,7 +120,7 @@ pkit:
 **Variants:**
 
 - **1a.** The operator names another [profile](../../../glossary.md#term-profile--profile) with `--profile <name>`, such as `non-destructive`. The path goes on at step 2 with that profile.
-- **1b.** The operator passes `--dry-run`, as to each command whose edit reaches past what the person named. The [system](../../../glossary.md#term-system--system) names each edit it would make, and writes nothing (REQ-009).
+- **1b.** The operator passes `--dry-run`, as to each command whose edit reaches past what the person named. The [system](../../../glossary.md#term-system--system) names each edit it would make, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit permissions setup autonomy` takes no `--dry-run`, and writes as it goes. COR-004 decides that each such command offers the flag, and #1884 tracks it.
@@ -158,5 +158,5 @@ pkit:
 - The [harness](../../../glossary.md#term-harness--harness)'s settings deny the [guardrails](../../../glossary.md#term-guardrail--guardrail)' common forms, such as `sudo`, even where the [permission hook](../../../glossary.md#term-permission-hook--permission-hook) fails or is not registered (COR-028 [point](../../../glossary.md#term-point--point) 2).
 - `setup autonomy` lets commands in the [sandbox](../../../glossary.md#term-sandbox--sandbox) run unasked only together with the setting that stops a session without the sandbox. So a missing sandbox stops the session, rather than letting commands run unconfined and unasked (ADR-004 point 4).
 - `setup autonomy` declares the goal reached only once its probes pass (ADR-007).
-- The [system](../../../glossary.md#term-system--system) writes the harness's settings only through the permission model's one writer, which routes each entry to its file (REQ-002 and ADR-029 point 2).
+- The [system](../../../glossary.md#term-system--system) writes the harness's settings only through the permission model's one writer, which routes each entry to its file ([REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md) and ADR-029 point 2).
 - A dimension that the [adapter](../../../glossary.md#term-adapter--adapter)'s enforcement declaration says no layer enforces is reported, never dropped (COR-028 point 3 and `permissions.py`).

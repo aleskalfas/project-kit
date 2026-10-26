@@ -58,7 +58,7 @@ pkit:
 
 1. The developer writes a demo bundle: its recording configuration, `record.yaml`, and an executable storyboard in its `storyboards/` folder.
 2. The developer runs `pkit demo-recording validate <storyboard>`.
-3. The system parses the executable storyboard, and checks the content of each directive. It prints each step with a line for each of its directives, and ends with `✓ <n> step(s) parsed.  No errors.`. It changes no file of the project (core:REQ-005), and runs on any platform (DEC-004 point 2).
+3. The system parses the executable storyboard, and checks the content of each directive. It prints each step with a line for each of its directives, and ends with `✓ <n> step(s) parsed.  No errors.`. It changes no file of the project ([core:REQ-005](../../../core/requirements/quality/REQ-005-reading-writes-nothing.md)), and runs on any platform (DEC-004 point 2).
 4. The developer runs `pkit demo-recording record <demo> --config <bundle>/record.yaml`. `<demo>` names the executable storyboard: a path, or a name the system looks for beside the configuration and in the demo bundle's `storyboards/` folder.
 5. The system finds the executable storyboard and the recording configuration. Before it reads the configuration's fields, it checks that it runs on macOS (DEC-004 point 2).
 6. The system reads the working directory and the bounds of two windows from the recording configuration, and parses the executable storyboard again. Only then does it create the folder for videos, `recordings/` unless the configuration names another, and start the run's log in that folder's `.logs/`.
@@ -98,7 +98,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- The check of step 3 changes no file of the project, and needs no macOS (core:REQ-005, DEC-004 point 2 and `validate.sh`).
+- The check of step 3 changes no file of the project, and needs no macOS ([core:REQ-005](../../../core/requirements/quality/REQ-005-reading-writes-nothing.md), DEC-004 point 2 and `validate.sh`).
 - Off macOS, recording refuses before it writes anything or opens a window (DEC-004 point 2 and `platform-guard.sh`).
 - An executable storyboard that does not parse opens no window and starts no capture (`record.sh`).
 - Ctrl-C while the steps run stops the capture, so no capture runs on unseen (`_session.sh`).

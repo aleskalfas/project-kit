@@ -55,9 +55,9 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the [migration](../../../glossary.md#term-migration--migration) check on every [pull request](../../../glossary.md#term-pull-request--pull-request), with no person to reply. The check fails while a rename or a removal it finds has no migration.
 - **AI agent** (`ACT-ai-agent`): writes the migration for the maintainer through the `migration-author` [skill](../../../glossary.md#term-skill--skill), which pairs with the [stamp](../../../glossary.md#term-stamp--stamp) of step 2.
-- **Operator** (`ACT-operator`): is asked before the stamp writes in a repository other than the session's own. So no such write happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before the stamp writes in a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-014:** The maintainer develops the [backbone](../../../glossary.md#term-backbone--backbone) in the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository).
+**Preconditions:** **From [UC-014](../010-develop/UC-014-develop-methodology.md):** The maintainer develops the [backbone](../../../glossary.md#term-backbone--backbone) in the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository).
 
 **Assumptions:**
 
@@ -69,18 +69,18 @@ pkit:
 **Main path:**
 
 1. The maintainer runs `pkit new migration --tier backbone --name <slug>` without `--version`, or has an AI agent run the command through the `migration-author` [skill](../../../glossary.md#term-skill--skill).
-9. At its entry, before it writes, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+9. At its entry, before it writes, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit new migration` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 2. The system takes the next minor past the [backbone](../../../glossary.md#term-backbone--backbone) [version](../../../glossary.md#term-version--version) that the [default branch](../../../glossary.md#term-default-branch--default-branch) records in `.pkit/VERSION`. The system prints `Version: <X.Y.0>, the next minor past backbone <version>, which the default branch 'main' records.` and stamps `<NNN>-<slug>.sh` in `.pkit/migrations/backbone/<X.Y.0>/`.
-3. The maintainer writes the script to carry installed projects across. The script is safe to run twice, and acts only on a positive sign that its edit is needed (COR-010, REQ-001 and REQ-017).
+3. The maintainer writes the script to carry installed projects across. The script is safe to run twice, and acts only on a positive sign that its edit is needed (COR-010, [REQ-001](../../../requirements/quality/030-change/REQ-001-migration-runs-again.md) and [REQ-017](../../../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)).
 4. The maintainer runs `pkit migrations check-diff --include-working-tree` before committing.
 5. The system lists each rename and removal the [change](../../../glossary.md#term-change--change) makes in the trees the check reads, with each one's tier. It also lists each [migration](../../../glossary.md#term-migration--migration) script the change adds, and ends with `Verdict: COVERED (every tier:component with triggers has a matching migration).`
-6. The maintainer commits the change with its migration and its [changeset](../../../glossary.md#term-changeset--changeset) (UC-003).
+6. The maintainer commits the change with its migration and its [changeset](../../../glossary.md#term-changeset--changeset) ([UC-003](UC-003-declare-changeset.md)).
 7. The CI pipeline runs `pkit migrations check-diff` on the [pull request](../../../glossary.md#term-pull-request--pull-request), and the check passes. The check reads the change from where the branch left its target, and the backbone's version at the target's tip.
-8. For the [release](../../../glossary.md#term-release--release) that ships the change, the [release step](../../../glossary.md#term-release-step--release-step) computes the version the migration's folder names (UC-008).
+8. For the [release](../../../glossary.md#term-release--release) that ships the change, the [release step](../../../glossary.md#term-release-step--release-step) computes the version the migration's folder names ([UC-008](../040-release/UC-008-release-backbone.md)).
 
 **Variants:**
 
@@ -92,7 +92,7 @@ pkit:
 - **2c.** On the path of 1c, the version given is at or below the [backbone](../../../glossary.md#term-backbone--backbone) version that the default branch records. The system refuses with `--version <X.Y.0> is already released`, and names the version the system picks without `--version`. The path rejoins at step 1.
 - **2d.** On the path of 1c, the version given is not of the form `X.Y.0`, such as `1.150.3`. The system refuses with `version '1.150.3' must be X.Y.0 (patch segment must be 0 per COR-010 — patches have no migrations).`, and the path rejoins at step 1.
 - **3a.** The script adds a default that a [project](../../../glossary.md#term-project--project) lacks. A later run over a project whose history is unknown may restore a default the project removed. The maintainer names that default in the [changeset](../../../glossary.md#term-changeset--changeset), so the [release](../../../glossary.md#term-release--release)'s notes carry the sentence (COR-010).
-- **4a.** The [base](../../../glossary.md#term-base--base) resolves to no commit. The check refuses, naming the references it tried and the fixes, and never guesses a base (COR-054 [point](../../../glossary.md#term-point--point) 4 and REQ-004). The path rejoins at step 4.
+- **4a.** The [base](../../../glossary.md#term-base--base) resolves to no commit. The check refuses, naming the references it tried and the fixes, and never guesses a base (COR-054 [point](../../../glossary.md#term-point--point) 4 and [REQ-004](../../../requirements/quality/REQ-004-missing-answer-never-clean.md)). The path rejoins at step 4.
 - **5a.** A rename or a removal has no migration of its tier and [component](../../../glossary.md#term-component--component). The system ends with `Verdict: UNCOVERED. Author migrations for the following tiers before merging:`, lists `backbone`, and exits 1. The path rejoins at step 1.
 - **5b.** The change breaks installed projects in a way the check cannot see. Examples are a flag whose meaning inverts, and a rename in a tree the check does not read, such as `.pkit/permissions/`. The check finds no trigger and passes, whether or not the change holds a migration. The path goes on at step 6.
 - **5c.** The change moves a file out of the backbone's trees, such as from `.pkit/skills/core/` to `.pkit/skills/project/`. The check reads a rename by its new path alone, so the check finds no trigger and passes. The path goes on at step 6.

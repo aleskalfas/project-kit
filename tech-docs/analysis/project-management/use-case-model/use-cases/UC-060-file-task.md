@@ -76,12 +76,12 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`core:ACT-ai-agent`): files the [Task](../../glossary.md#term-task--task) for the developer, through the `pm` [skill](../../../core/glossary.md#term-skill--skill)'s `create-issue.md`, which runs the same command.
-- **Operator** (`core:ACT-operator`): is asked before `pkit pm create-issue` writes in a repository other than the session's own, so no such write happens silently (core:REQ-012).
+- **Operator** (`core:ACT-operator`): is asked before `pkit pm create-issue` writes in a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
-- **From UC-064:** The [project](../../../core/glossary.md#term-project--project) declares the [workstreams](../../glossary.md#term-workstream--workstream) its work falls into (DEC-018).
-- **From UC-063, or UC-064:** The [issue](../../glossary.md#term-issue--issue) the [Task](../../glossary.md#term-task--task) goes under is filed, or the [Milestone](../../glossary.md#term-milestone--milestone) it goes straight under is created (DEC-004).
+- **From [UC-064](UC-064-define-milestones-and-workstreams.md):** The [project](../../../core/glossary.md#term-project--project) declares the [workstreams](../../glossary.md#term-workstream--workstream) its work falls into (DEC-018).
+- **From [UC-063](UC-063-plan-intent.md), or UC-064:** The [issue](../../glossary.md#term-issue--issue) the [Task](../../glossary.md#term-task--task) goes under is filed, or the [Milestone](../../glossary.md#term-milestone--milestone) it goes straight under is created (DEC-004).
 
 **Assumptions:**
 
@@ -96,7 +96,7 @@ pkit:
 1. The developer chooses the [Task](../../glossary.md#term-task--task)'s parent, its title, its kind of work, its priority and its [workstream](../../glossary.md#term-workstream--workstream) (DEC-004 and DEC-012).
 2. The developer writes the body in a file, opening with the [parent reference](../../glossary.md#term-parent-reference--parent-reference), or leaves the body to the Task's template (DEC-010).
 3. The developer runs `pkit pm create-issue --type task --title "<title>" --parent <N>`, with `--kind`, `--priority`, `--workstream` and, where they wrote one, `--body-file`.
-4. At its entry, the system checks the [project](../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
+4. At its entry, the system checks the [project](../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list ([REQ-041](../../requirements/functional/REQ-041-gates-before-writing.md)). It then checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 5. The system composes the title from the kind's prefix and `<title>`, such as `[Bug] <title>`, and checks it against the title formats the [capability](../../../core/glossary.md#term-capability--capability) declares (DEC-011).
 6. The system reads the parent's type, and checks that a Task may sit under it: a [Feature](../../glossary.md#term-feature--feature), an [Umbrella](../../glossary.md#term-umbrella--umbrella) or an [EPIC](../../glossary.md#term-epic--epic) (DEC-005).
 
@@ -120,7 +120,7 @@ pkit:
 
 - **1a.** An AI agent files the [Task](../../glossary.md#term-task--task) for the developer, through the `pm` [skill](../../../core/glossary.md#term-skill--skill)'s `create-issue.md`. It infers the kind and the [workstream](../../glossary.md#term-workstream--workstream) from the request, and asks where it is unsure (DEC-012). The path goes on at step 3.
 - **3a.** The developer passes `--dry-run`. The system makes the checks of steps 4 to 10, prints the Task as step 11 does, and writes nothing. The use case ends.
-- **4a.** The [project](../../../core/glossary.md#term-project--project) does not meet the prerequisites, or the developer is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing (REQ-041). The use case ends.
+- **4a.** The [project](../../../core/glossary.md#term-project--project) does not meet the prerequisites, or the developer is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing ([REQ-041](../../requirements/functional/REQ-041-gates-before-writing.md)). The use case ends.
 - **4b.** The repository is another, and the operator declines, or nobody can reply and the developer passed no `--allow-foreign-repo`. The system refuses and writes nothing. The use case ends.
 - **5a.** The composed title fails a check that blocks, such as one on a conventional-commits prefix. The system refuses, naming the check, and writes nothing (DEC-011). A check that only warns, such as one on a short title, is printed, and the path goes on.
 - **6a.** No parent is given. The system refuses, naming the types a Task may sit under, and writes nothing (DEC-004). The use case ends.
@@ -157,5 +157,5 @@ pkit:
 **Minimal guarantees:**
 
 - A refusal before step 12 files nothing (`create-issue.py`).
-- The system never files the [Task](../../glossary.md#term-task--task) in another repository without the operator's yes, or a confirmation passed with the call (core:REQ-012).
+- The system never files the [Task](../../glossary.md#term-task--task) in another repository without the operator's yes, or a confirmation passed with the call ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 - A comment of the versions that fails to post never stops the filing (DEC-041).
