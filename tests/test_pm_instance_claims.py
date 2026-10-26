@@ -222,6 +222,41 @@ def test_a_label_with_no_comment_marker_still_owns_the_issue(ic, root: Path) -> 
     assert gh.writes() == []
 
 
+def test_an_issue_owned_by_this_clones_label_alone_moves_to_the_comment_log(ic, root: Path) -> None:
+    """In comment mode, an issue this clone owns by its label alone, as a
+    label-mode past leaves it, is claimed on the comment log before the label is
+    removed, so the issue keeps an owner (ADR-041 point 2)."""
+    gh = FakeGitHub()
+    gh.add(7, labels=("instance:2", "type:feature"))
+    result = ic.claim(7, _clone(ic, root), {}, run=gh)
+    assert result.outcome == ic.HELD
+    assert _events(gh, 7) == ["claim 2"]
+    assert gh.issues[7].labels == ["type:feature"]
+    assert _owners(ic, gh, 7) == frozenset({2})
+    assert "**Owner:** instance 2" in gh.issues[7].body
+
+
+def test_a_label_owner_whose_comment_claim_fails_keeps_its_label(ic, root: Path) -> None:
+    gh = FakeGitHub(failing={"comment"})
+    gh.add(7, labels=("instance:2",))
+    result = ic.claim(7, _clone(ic, root), {}, run=gh)
+    assert result.outcome == ic.FAILED
+    assert gh.issues[7].labels == ["instance:2"]
+    assert _owners(ic, gh, 7) == frozenset({2})
+
+
+def test_a_label_that_lost_a_label_clash_is_withdrawn_alone(ic, root: Path) -> None:
+    """Two labels a label-mode clash left: in comment mode the higher instance
+    removes its own label and leaves the lower one's, its only marker."""
+    gh = FakeGitHub()
+    gh.add(7, labels=("instance:1", "instance:2"))
+    result = ic.claim(7, _clone(ic, root, instance=2), {}, run=gh)
+    assert result.outcome == ic.LOST
+    assert gh.issues[7].labels == ["instance:1"]
+    assert _events(gh, 7) == []
+    assert _owners(ic, gh, 7) == frozenset({1})
+
+
 # ---- the same-instant clash (DEC-035 point 6) --------------------------------
 
 

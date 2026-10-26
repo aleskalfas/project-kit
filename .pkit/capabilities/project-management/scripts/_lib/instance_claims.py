@@ -8,11 +8,12 @@ from birth; ``start-work`` claims an issue no instance owns yet (the commons);
 ``done-work`` releases through the ``close-issue --mode pr-merge`` it runs for
 each issue its merge closed (DEC-035 points 3 and 4).
 
-**Activation.** :func:`this_clone` answers ``None`` when no instance id is set,
-and every caller then writes and prints exactly what it did before: the id is
-the sole activation gate (DEC-035 point 1). The substrate is read only once an
-id is set, from the adopter's ``project/instance-ownership.yaml``, through the
-seam's selector (default ``comment``, DEC-043 point 2).
+**Activation.** Outside a topology of seats, :func:`this_clone` answers ``None``
+when no instance id is set, and every caller then writes and prints exactly
+what it did before: the id is the sole activation gate (DEC-035 point 1). The
+substrate is read only once an id is set, from the adopter's
+``project/instance-ownership.yaml``, through the seam's selector (default
+``comment``, DEC-043 point 2).
 
 **A project with a topology of seats** (DEC-059). There a clone takes part by
 holding a seat, and its number is the seat's, never a typed one (point 6). The
@@ -58,7 +59,10 @@ removed. A comment marker is released only by its own account's clone, since
 the fold trusts no other author. In ``comment`` mode an ``instance:N`` label
 beside a comment marker is residual, left from a label-mode past, and a claim
 removes it (ADR-041 point 2). With no marker beside it, the seam reads the label
-as the owner.
+as the owner, so it is no residue. Where the lowest such label is this clone's,
+a claim writes the comment marker first, and only then are the labels residual.
+Where a lower instance's label is there, this clone withdraws by removing its
+own label alone.
 
 **The mirror.** In ``comment`` mode each claim and release regenerates the owner
 mirror from the fold, before the provenance footer, through
@@ -323,8 +327,10 @@ def claim(issue_number: int, clone: Clone, config: dict, *, run: Run | None = No
 
     Reads the issue, writes the claim where no instance owns it, reads it again
     and backs off where a lower-numbered instance claimed in the same instant.
-    In ``comment`` mode it then regenerates the owner mirror. Never raises on a
-    ``gh`` failure: the result says what happened."""
+    In ``comment`` mode it also writes the claim where this clone owns the issue
+    by its label alone, before the label is removed. It then regenerates the
+    owner mirror. Never raises on a ``gh`` failure: the result says what
+    happened."""
     gh = run or _runner(config)
     n = issue_number
     if not clone.login:
@@ -354,7 +360,16 @@ def claim(issue_number: int, clone: Clone, config: dict, *, run: Run | None = No
             winner=first,
         )
     held = before.owners == frozenset({clone.instance})
-    if not before.claimants:
+    # In comment mode, an issue whose lowest owner is this clone's label alone
+    # has no other marker, and the strip below removes that label: the claim is
+    # written on the comment log first, and the issue is read again (ADR-041
+    # point 2).
+    by_label = (
+        clone.substrate == "comment"
+        and before.substrate == "label"
+        and before.winner == clone.instance
+    )
+    if not before.claimants or by_label:
         failure = _write_claim(gh, n, clone)
         if failure is not None:
             return Result(FAILED, f"[warn] ownership: the claim on #{n} failed: {failure}")
@@ -427,8 +442,9 @@ def _back_off(
     notes: list[str],
 ) -> Result:
     """Abandon this clone's claim: a lower instance claimed in the same instant
-    and wins (DEC-035 point 6)."""
-    if clone.substrate == "label":
+    and wins (DEC-035 point 6). A claim the seam read from a label, in either
+    mode, is withdrawn by removing that label."""
+    if clone.substrate == "label" or after.substrate == "label":
         proc = gh(
             ownership.instance_label_args(issue_number=n, instance=clone.instance, remove=True)
         )
@@ -614,8 +630,12 @@ def _owner(resolution: ownership.OwnershipResolution, instance: int) -> str:
 def _strip_residual_labels(gh: Run, n: int, issue: dict, clone: Clone) -> list[str]:
     """In ``comment`` mode, remove any ``instance:N`` label the issue still
     carries from a label-mode past: it is residual, and the next ownership
-    mutation removes it (ADR-041 point 2). The warnings, if a removal failed."""
+    mutation removes it (ADR-041 point 2). A label is residual only beside a
+    comment marker: with none, the label is the owner and stays. The warnings,
+    if a removal failed."""
     if clone.substrate != "comment":
+        return []
+    if _resolve(issue, clone.login, clone).substrate != "comment":
         return []
     residual = ownership.resolve_owner(
         comments=[], labels=_labels(issue), assignee_login=None, selector="label"
