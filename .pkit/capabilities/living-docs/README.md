@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/living-docs/skills/**
         - .pkit/capabilities/living-docs/review-contributions.yaml
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
-      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
+      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare", ".pkit/cli/README.md#config-set-key-value---yes"]
 ---
 
 # living-docs capability
@@ -248,11 +248,11 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 
 ### A fresh project: the first stamp sets the roots apart
 
-Both roots default to `docs/`, and two roots that are one folder give no space (DEC-001 point 1). So before it stamps a space, or a page of the user or technical space, the command offers to set the internal root apart. You need no step before it, and you may install the capabilities in any order.
+Both roots default to `docs/`, and two roots that are one folder give no space (DEC-001 point 1). So before `new` stamps a space, or a page of the user or technical space, it offers to set the internal root apart. No step comes before the command, and you may install the capabilities in any order.
 
-- **The folder.** The internal root goes to `tech-docs/`, and the user root keeps `docs/`. Name another folder with `--internal-root <path>`. One that lies in the user root, or holds it, is refused.
-- **The write.** `pkit config set docs.internal tech-docs` makes it, and asks once at a terminal. Off a terminal it needs `--yes`, and without it the command refuses, writes nothing and names the command to run. Declined, nothing is written or stamped.
-- **What stays in `docs/`.** No document moves. A project rule set a capability's install created in `docs/rule-sets/` stays found there. `pkit config set` declares that folder a place, and prints each recorded location the old root held, such as the overlay's `adr-records`, with how to move it.
+- **The folder.** The internal root goes to `tech-docs/`, and the user root keeps `docs/`. Name another folder with `--internal-root <path>`. A folder that lies in the user root, or holds the user root, is refused.
+- **The write.** `pkit config set docs.internal tech-docs` makes the write, and asks once at a terminal. Off a terminal the stamp needs `--yes`. Without it the stamp refuses, writes nothing and names the command to run. Declined, nothing is written or stamped.
+- **What stays in `docs/`.** No document moves. A project rule set a capability's install created in `docs/rule-sets/` stays found there, and the configuration command names each recorded location the old root held ([the CLI reference, "config set"](../../cli/README.md#config-set-key-value---yes)).
 - **A dry run** says it would set the root first, and writes nothing.
 
 Accepted, the roots stay apart even where the stamp then refuses. A space your project adds lies in places of its own, so a page of it needs no separation. Its definition still lies under the internal root, so `new space` for it offers the separation too.
