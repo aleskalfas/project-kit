@@ -7,32 +7,32 @@ scope:
   types: [living-docs:page]
 rules:
   RS-REWORK-001:
-    status: proposed
-    origin: {why: "ADR-069 point 4 decides the names. A number in a name gives the reading order a home that a test can hold the README's list to. Numbers in tens leave room for a page between two others, so adding one renames none. A rename of a shipped page owes revalidations and a changeset (ADR-069, Implications)."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "ADR-069 point 4 decides the names. A number in a name gives the reading order a home that a test can hold the README's list to. Numbers in tens leave room for a page between two others, so adding one renames none. A rename of a shipped page owes revalidations and a changeset (ADR-069, Implications)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#3", "ADR-069#4"]}
   RS-REWORK-002:
-    status: proposed
-    origin: {why: "ADR-069 point 4 decides how a move keeps its links. A link from outside the change, such as from an adopter's page or an old message, cannot be mended by the change. It still lands where the old address stays. The pilot renamed five headings to drop their citations, and kept each old address as an HTML id (PR #2018)."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "ADR-069 point 4 decides how a move keeps its links. A link from outside the change, such as from an adopter's page or an old message, cannot be mended by the change. It still lands where the old address stays. The pilot renamed five headings to drop their citations, and kept each old address as an HTML id (PR #2018)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#4"], artefact: ["RS-USER-001"]}
   RS-REWORK-003:
-    status: proposed
-    origin: {why: "ADR-069 point 4 decides what a user page cites. An adopter's agent cannot read a record or an issue that does not ship, so a citation of one leads it nowhere. The maintainer agreed on 24 October that a page cites only the records that ship (#1928). project-kit's own records live under tech-docs/, which never ships."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "ADR-069 point 4 decides what a user page cites. An adopter's agent cannot read a record or an issue that does not ship, so a citation of one leads it nowhere. The maintainer agreed on 24 October that a page cites only the records that ship (#1928). project-kit's own records live under tech-docs/, which never ships."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#4"]}
   RS-REWORK-004:
-    status: proposed
-    origin: {why: "ADR-069 point 4 decides how a component's page reaches the backbone's. A capability or an adapter runs on a range of backbone versions, so a page it ships meets backbone pages it was not written against. A backbone page may be numbered anew or moved, while an area's README moves only with its folder (ADR-069 point 3)."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "ADR-069 point 4 decides how a component's page reaches the backbone's. A capability or an adapter runs on a range of backbone versions, so a page it ships meets backbone pages it was not written against. A backbone page may be numbered anew or moved, while an area's README moves only with its folder (ADR-069 point 3)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#3", "ADR-069#4"]}
   RS-REWORK-005:
-    status: proposed
-    origin: {why: "The maintainer chose a contents list for a page a reader moves around in, such as a long guide or a reference (#2053). A generator writes it, and a check fails it when stale. Four second-level sections is project-kit's choice of where a page becomes one. A list kept by hand drifts when a section is added or renamed."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The maintainer chose a contents list for a page a reader moves around in, such as a long guide or a reference (#2053). A generator writes it, and a check fails it when stale. Four second-level sections is project-kit's choice of where a page becomes one. A list kept by hand drifts when a section is added or renamed."}
 # The part of a rule that project-kit's contents generator, scripts/page_contents.py,
 # checks (COR-051 point 2). The generator checks every contents list a page holds, as
 # CONTRIBUTING.md says. It stands in for this rule's part only where the rule binds,

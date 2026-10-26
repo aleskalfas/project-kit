@@ -7,56 +7,56 @@ scope:
   types: [living-docs:page]
 rules:
   RS-GUIDE-001:
-    status: proposed
-    origin: {why: "The pilot's first pass rewrote the permissions README under every accepted rule and kept every claim (#2012). It still never said what problem the model solves (PR #2018). The research found that the strongest pages open with the problem, in countable terms, such as pnpm's hundred copies of one package (pnpm.io/motivation). On 25 October the maintainer set where the problems come from: the needs and goals the analysis gives the page's readers (#1928)."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The pilot's first pass rewrote the permissions README under every accepted rule and kept every claim (#2012). It still never said what problem the model solves (PR #2018). The research found that the strongest pages open with the problem, in countable terms, such as pnpm's hundred copies of one package (pnpm.io/motivation). On 25 October the maintainer set where the problems come from: the needs and goals the analysis gives the page's readers (#1928)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#4", "living-docs:DEC-001#7"]}
   RS-GUIDE-002:
-    status: proposed
-    origin: {why: "The research found that the strongest pages prove each claim in a way the reader can check. uv and ripgrep give benchmarks, each with its method. The weakest give labels with no proof, such as Vite's README and Rust's three pillars. The pilot's second pass stated five claims, and proved each by a command's real output (PR #2018). On 26 October the maintainer, Aleš Kalfas, set what comes first for a claim with no proof: \"We should not just reword our decisions when we see that they are not truth we should first have to care whether we have a gap in our implementation first.\" (#1928)."}
+    status: accepted
+    origin: {date: 2026-10-26, by: "Aleš Kalfas", why: "The research found that the strongest pages prove each claim in a way the reader can check. uv and ripgrep give benchmarks, each with its method. The weakest give labels with no proof, such as Vite's README and Rust's three pillars. The pilot's second pass stated five claims, and proved each by a command's real output (PR #2018). On 26 October the maintainer, Aleš Kalfas, set what comes first for a claim with no proof: \"We should not just reword our decisions when we see that they are not truth we should first have to care whether we have a gap in our implementation first.\" (#1928)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#4"]}
   RS-GUIDE-003:
-    status: proposed
-    origin: {why: "The research found that trusted pages compare the thing with its alternatives. pnpm marks a feature table with ✅ and ❌ against npm and Yarn, and Renovate's comparison credits Dependabot where Dependabot is better. Diátaxis holds that an explanation can and must consider alternatives (diataxis.fr/explanation). The pilot's comparison credits Claude Code's own settings with setup and the cost of a call (PR #2018)."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The research found that trusted pages compare the thing with its alternatives. pnpm marks a feature table with ✅ and ❌ against npm and Yarn, and Renovate's comparison credits Dependabot where Dependabot is better. Diátaxis holds that an explanation can and must consider alternatives (diataxis.fr/explanation). The pilot's comparison credits Claude Code's own settings with setup and the cost of a call (PR #2018)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#4"]}
   RS-GUIDE-004:
-    status: proposed
-    origin: {why: "The research found that trusted pages state an honest limit, such as ripgrep's \"Why shouldn't I use ripgrep?\" and \"What Kubernetes is not\". A reader told when a thing does not fit can trust what the page claims for it. That is a reason, not a finding, since the research tested no readers. The pilot's guide says when the model is not needed (PR #2018)."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The research found that trusted pages state an honest limit, such as ripgrep's \"Why shouldn't I use ripgrep?\" and \"What Kubernetes is not\". A reader told when a thing does not fit can trust what the page claims for it. That is a reason, not a finding, since the research tested no readers. The pilot's guide says when the model is not needed (PR #2018)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#4"]}
   RS-GUIDE-005:
-    status: proposed
-    origin: {why: "The pilot's first pass explained the decision core in its first sentence, and showed no decision anywhere on the page (PR #2018). The research found that the strongest pages show a worked example early, as Git's chapter on rerere, direnv's README and uv's documentation do. That one case teaches faster than a mechanism is a reason, not a finding, since neither tested readers."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The pilot's first pass explained the decision core in its first sentence, and showed no decision anywhere on the page (PR #2018). The research found that the strongest pages show a worked example early, as Git's chapter on rerere, direnv's README and uv's documentation do. That one case teaches faster than a mechanism is a reason, not a finding, since neither tested readers."}
   RS-GUIDE-006:
-    status: proposed
-    origin: {why: "The research found that documentation sites draw their key mechanism once, as Vite, pnpm, Terraform and Docker each do. None of 85 READMEs drew a Mermaid diagram, so the rule leaves the entry README out. The pilot's second pass drew how a tool call is decided in one flowchart, beside the prose that explains it (PR #2018)."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The research found that documentation sites draw their key mechanism once, as Vite, pnpm, Terraform and Docker each do. None of 85 READMEs drew a Mermaid diagram, so the rule leaves the entry README out. The pilot's second pass drew how a tool call is decided in one flowchart, beside the prose that explains it (PR #2018)."}
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-002#2", "living-docs:DEC-002#3", "living-docs:DEC-002#8"]}
   RS-GUIDE-007:
-    status: proposed
-    origin: {why: "The pilot's first pass named four commands of the diagnostic loop, and showed none of what they print (PR #2018). It quoted the report's headline in prose, and the pilot found that the quote did not match the code (#2012). Output typed by hand drifts with nothing to tell. A fence that a run checks fails when the output moves."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The pilot's first pass named four commands of the diagnostic loop, and showed none of what they print (PR #2018). It quoted the report's headline in prose, and the pilot found that the quote did not match the code (#2012). Output typed by hand drifts with nothing to tell. A fence that a run checks fails when the output moves."}
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-002#6"]}
   RS-GUIDE-008:
-    status: proposed
-    origin: {why: "The pilot's first pass followed the parts of the mechanism. Its one section headed by what its reader does, \"Authoring a fragment\", came near the page's end, after most of its lookup material (PR #2018). The maintainer adopted the order of a reader's tasks, with reference last, on 25 October (#2022). That a reader comes to a guide to do something is a reason, not a finding, since the pilot tested no readers."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The pilot's first pass followed the parts of the mechanism. Its one section headed by what its reader does, \"Authoring a fragment\", came near the page's end, after most of its lookup material (PR #2018). The maintainer adopted the order of a reader's tasks, with reference last, on 25 October (#2022). That a reader comes to a guide to do something is a reason, not a finding, since the pilot tested no readers."}
   RS-GUIDE-009:
-    status: proposed
-    origin: {why: "The research found callouts in 15 of 85 READMEs, each for a caveat, a status or a deprecation, and none for an advantage. GitHub's own writing guidance gives an article one or two callouts, and never two in a row (docs.github.com, basic writing and formatting syntax). A callout that sells loses the weight a warning needs."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The research found callouts in 15 of 85 READMEs, each for a caveat, a status or a deprecation, and none for an advantage. GitHub's own writing guidance gives an article one or two callouts, and never two in a row (docs.github.com, basic writing and formatting syntax). A callout that sells loses the weight a warning needs."}
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-002#7"]}
   RS-GUIDE-010:
-    status: proposed
-    origin: {why: "The research found a short list of claims in 23 of 85 READMEs, such as uv's, ruff's and fd's. It sits under a heading such as Highlights or Features. A reader who scans the list reaches each claim's proof in one step. The entry README gave its highlights this form (#2027)."}
+    status: accepted
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The research found a short list of claims in 23 of 85 READMEs, such as uv's, ruff's and fd's. It sits under a heading such as Highlights or Features. A reader who scans the list reaches each claim's proof in one step. The entry README gave its highlights this form (#2027)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#4"]}
