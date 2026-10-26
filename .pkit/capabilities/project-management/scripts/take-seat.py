@@ -244,7 +244,11 @@ def take_seat(
         return 0
     if outcome.outcome in (state_issues.LOST, state_issues.HELD_ELSEWHERE):
         holder = outcome.holder
-        who = f"@{holder.account}, clone {holder.clone}" if holder is not None else "another clone"
+        who = (
+            f"@{topology.shown(holder.account)}, clone {topology.shown(holder.clone)}"
+            if holder is not None
+            else "another clone"
+        )
         return _refuse(
             f"{who} took the seat {seat.name} first, so this clone holds no seat and writes "
             "nothing more (DEC-058 point 6). Take another free seat, or stop."

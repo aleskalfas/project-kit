@@ -607,9 +607,16 @@ class SeatState:
         if self.state == UNREAD or self.holder is None:
             return f"unread ({self.cause})"
         return (
-            f"held by @{self.holder.account}, clone {self.holder.clone}, at "
-            f"{self.holder.place or 'an unnamed place'}"
+            f"held by @{shown(self.holder.account)}, clone {shown(self.holder.clone)}, at "
+            f"{shown(self.holder.place) or 'an unnamed place'}"
         )
+
+
+def shown(value: str) -> str:
+    """``value`` on one line, as a terminal shows it: each character a terminal
+    would act on, such as a newline or an escape, written as its escape. A
+    value read from GitHub never starts a line of its own, or moves the cursor."""
+    return "".join(c if c.isprintable() else repr(c)[1:-1] for c in value)
 
 
 class Snapshot:
@@ -669,14 +676,21 @@ def _seat_state(seat: Seat, found: state_issues.StateRead) -> SeatState:
     return SeatState(seat, FREE if holder is None else HELD, holder=holder, read=found)
 
 
-def place(capability_root: Path) -> str:
+def place(capability_root: Path, *, home: Path | None = None) -> str:
     """Where this clone lies, in words a person reads: its machine and its folder
-    (DEC-058 point 5)."""
+    (DEC-058 point 5). A folder under the home folder is written from `~`, so
+    the claim, which a public repository shows to anyone, names no user."""
     try:
         machine = socket.gethostname() or "an unnamed machine"
     except OSError:
         machine = "an unnamed machine"
-    return f"{machine}:{repo_root(capability_root)}"
+    folder = repo_root(capability_root).resolve()
+    try:
+        base = (home if home is not None else Path.home()).resolve()
+        shown_folder = f"~/{folder.relative_to(base).as_posix()}"
+    except (RuntimeError, ValueError, OSError):
+        shown_folder = folder.as_posix()
+    return f"{machine}:{shown_folder}"
 
 
 def snapshot(

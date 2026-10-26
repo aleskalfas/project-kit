@@ -914,6 +914,27 @@ def test_a_retired_seat_is_released_at_its_clones_next_command(
     assert "the seat worker-2 is retired, so this clone released it on #13" in err
 
 
+@pytest.mark.parametrize("failing", ["comment", "read-after"])
+def test_a_retired_seat_whose_release_is_not_seen_to_land_is_not_forgotten(
+    ic, root, monkeypatch, capsys, failing
+) -> None:
+    """A release that failed, or whose read after it failed, leaves the seat
+    unread, which is no sign that the clone no longer holds it."""
+    snap, repo = _seated(ic, retired=True)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    forgotten: list[Path] = []
+    monkeypatch.setattr(ic, "clear_seat_hint", lambda root: forgotten.append(root) or True)
+    if failing == "comment":
+        repo.failing.add("comment")
+    else:
+        repo.before_post = lambda _number: repo.failing.add("view")
+    assert ic.this_clone(root, "me") is None
+    assert forgotten == []
+    assert "the seat worker-2 is retired, and its release on #13 failed" in (
+        capsys.readouterr().err
+    )
+
+
 def test_a_typed_number_is_not_used_where_the_project_has_a_topology(
     ic, root, monkeypatch, capsys
 ) -> None:

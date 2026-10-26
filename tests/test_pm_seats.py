@@ -443,6 +443,21 @@ def test_the_listing_names_the_state_issues_no_seat_names(
     assert "#42" not in out and "  #12  seat" not in out
 
 
+def test_text_from_outside_the_project_cannot_forge_a_line_of_the_listing(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Anyone who may open an issue may write a seat's marker, so a key that is
+    no seat's name is shown quoted, and a holder's clone and place escaped."""
+    repo = _repo(worker_1=("me", "k\n[ok] forged"))
+    forged = "x\n[ok] forged line\x1b[2J"
+    repo.add(40, si.description("seat", forged, si.Fold(None), VERSIONS), title="Seat")
+    assert _list(root, repo) == 0
+    out = capsys.readouterr().out
+    assert "\n[ok] forged" not in out and "\x1b" not in out
+    assert f"  #40  seat {forged!r}" in out
+    assert "held by @me, clone k\\n[ok] forged, at host:/clone" in out
+
+
 def test_the_listing_says_where_it_could_not_read(root: Path) -> None:
     repo = _repo()
     repo.failing.add("view")

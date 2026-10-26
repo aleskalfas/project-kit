@@ -561,6 +561,16 @@ def test_a_seat_with_no_state_issue_or_an_unreadable_one_is_unread(tmp_path: Pat
     assert states[0].said().startswith("unread (")
 
 
+def test_the_place_names_the_machine_and_a_folder_under_home_from_the_tilde(
+    tmp_path: Path,
+) -> None:
+    """DEC-058 point 5, with no user's name in a claim a public repository shows."""
+    root = _capability(tmp_path)
+    machine, _, folder = tp.place(root, home=tmp_path.parent).partition(":")
+    assert machine and folder == f"~/{tmp_path.name}"
+    assert tp.place(root, home=tmp_path / "elsewhere").endswith(":" + tmp_path.resolve().as_posix())
+
+
 def test_a_clone_with_no_key_holds_no_seat(tmp_path: Path) -> None:
     repo = FakeRepo()
     _state_issue(repo, 11, "planner", ("me", "k1"))

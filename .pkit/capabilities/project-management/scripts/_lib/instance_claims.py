@@ -433,7 +433,12 @@ def _release_retired(
         seat.state_issue, topology.SEAT_KIND, seat.name, snapshot.clone, snapshot.run
     )
     after = snapshot.learn(seat, released.read)
-    if released.outcome == state_issues.RELEASED or not after.held_by(snapshot.clone):
+    # Forgotten only where a read shows the seat free of this clone: a read that
+    # failed leaves the seat unread, which is no sign that the release landed.
+    freed = after.state == topology.FREE or (
+        after.state == topology.HELD and not after.held_by(snapshot.clone)
+    )
+    if released.outcome == state_issues.RELEASED or freed:
         clear_seat_hint(capability_root)
         print(
             f"[note] ownership: the seat {seat.name} is retired, so this clone released it "

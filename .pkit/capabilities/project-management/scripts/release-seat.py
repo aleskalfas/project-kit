@@ -306,7 +306,11 @@ def release_by_force(
     )
     if released.outcome == state_issues.RELEASED:
         freed = released.freed
-        who = f"@{freed.account}, clone {freed.clone}" if freed is not None else "its holder"
+        who = (
+            f"@{topology.shown(freed.account)}, clone {topology.shown(freed.clone)}"
+            if freed is not None
+            else "its holder"
+        )
         if freed is not None and freed.is_clone(clone.account, clone.key):
             _forget(capability_root, name)
         print(

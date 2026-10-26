@@ -181,7 +181,11 @@ def stray_state_issues(
     tree: topology.Topology, rows: Iterable[dict[str, Any]]
 ) -> list[tuple[int, str]]:
     """The open state issues of a seat that no seat of ``tree`` names, by their
-    description's marker, in number order."""
+    description's marker, in number order.
+
+    Anyone who may open an issue may write such a marker, so a key that is no
+    seat's name is shown quoted, with each character a terminal acts on
+    escaped."""
     named = {seat.state_issue for seat in tree.seats if seat.state_issue is not None}
     out: list[tuple[int, str]] = []
     for row in rows:
@@ -190,7 +194,8 @@ def stray_state_issues(
             continue
         marker = state_issues.read_marker(str(row.get("body") or ""))
         if marker is not None and marker.kind == topology.SEAT_KIND and marker.key:
-            out.append((number, marker.key))
+            key = marker.key
+            out.append((number, key if topology.NAME_PATTERN.fullmatch(key) else repr(key)))
     return sorted(out)
 
 
