@@ -38,6 +38,16 @@ it. An interruption during the check puts back what was written, then goes on.
 A dry run makes the checks the stamp makes before writing, prints each file it
 would write, and writes nothing.
 
+**Roots that are one folder are set apart first** (DEC-001 points 1 and 2). Asked
+for a space, or a page of the user or technical space, while the two
+documentation roots are one folder, a stamp first offers to set the internal
+root apart: at `tech-docs`, or a folder the person names. The backbone's
+configuration command writes it, under its own consent (COR-048 point 5): it
+asks at a terminal, and off one it needs `--yes`, which the stamp passes on only
+when it was given one. Declined or refused, the stamp writes nothing. Accepted,
+the roots stay apart even where the stamp then refuses. A dry run says it would
+set the root first, and writes nothing.
+
 Every file is written whole, to a temporary file beside it then moved over it,
 keeping its mode. A path reached through a link is refused: the discovery never
 reads one.
@@ -64,6 +74,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from _lib import formats, spaces
+from _lib.artefacts import Unreadable, read_artefacts
 from _lib.binding import Binding, read_binding
 from _lib.declarations import (
     CAPABILITY,
@@ -71,7 +82,9 @@ from _lib.declarations import (
     DOCUMENT_SUFFIX,
     LDOC_FILE,
     LIVING_DOCS_CONFIG,
+    RECOMMENDED_INTERNAL_ROOT,
     Declarations,
+    is_within,
     normalise,
 )
 from _lib.readers import Readers, read_readers
@@ -100,6 +113,10 @@ DECISION = f"{CAPABILITY}:DEC-001"
 
 #: How the definitions location is recorded on first use (COR-049 point 5).
 RECORD = ("pkit", "docs", "record-location", CAPABILITY, DEFINITIONS_LOCATION)
+
+#: How the internal root is set: the backbone's configuration command, its one writer
+#: (COR-048 point 5, COR-049 point 2).
+SET_INTERNAL_ROOT = ("pkit", "config", "set", "docs.internal")
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 Read = Callable[[], Readers]
@@ -155,6 +172,148 @@ class SpaceRequest:
 
     space: str
     set_name: str | None = None
+
+
+@dataclass(frozen=True)
+class Separation:
+    """How a stamp may set the roots apart where they are one folder: the folder for
+    the internal root, the recommended one when none is named, and whether the
+    person consented to the write with `--yes`."""
+
+    internal_root: str | None = None
+    yes: bool = False
+
+
+# --- roots that are one folder --------------------------------------------------------------------
+
+
+def separate_roots(
+    root: Path,
+    space: str,
+    separation: Separation,
+    *,
+    rerun: str,
+    defines: bool = False,
+    dry_run: bool = False,
+    roots: Callable[[Path], Mapping[str, str]] | None = None,
+    run: Runner = subprocess.run,
+    interactive: Callable[[], bool] | None = None,
+    say: Callable[[str], None] | None = None,
+) -> Stamped | None:
+    """Set the internal root apart before a stamp, where the two roots are one folder and
+    the stamp needs them apart (DEC-001 points 1 and 2): a space's definition, which
+    `defines` says it is, since every definition lies in the technical space, or a page of
+    the user or technical space, `space`.
+
+    `None` lets the stamp go on: the roots are apart already, the stamp does not need
+    them apart, or the backbone's configuration command has just set them apart, saying
+    what it wrote. A dry run that would set them returns what it would do, and the stamp
+    writes nothing. Refused, with nothing written: a folder for the internal root that
+    lies in the user root or holds it, a run off a terminal with no `--yes`, and a write
+    the person declined. `rerun` is the stamp's own command, which a refusal names. When
+    the roots cannot be read, `None` too: the stamp's own check then refuses, saying why."""
+    roots = roots or _roots
+    interactive = interactive or _stdin_is_tty
+    say = say or _say
+    try:
+        read = roots(root)
+    except Unreadable:
+        return None
+    user, internal = normalise(read.get("user", "")), normalise(read.get("internal", ""))
+    folder = separation.internal_root
+    if user != internal:
+        if folder is not None:
+            raise Refused(
+                f"--internal-root sets the internal root only where the two documentation roots "
+                f"are one folder, and they are {user!r} (user) and {internal!r} (internal) — "
+                f"change it with `pkit config set docs.internal <path>`"
+            )
+        return None
+    if not defines and space not in spaces.SPACE_OF_ROOT.values():
+        if folder is not None:
+            raise Refused(
+                f"--internal-root sets the roots apart before a space, or a page of the user or "
+                f"technical space, and a page of space {space!r} lies in places of its own "
+                f"(DEC-001 point 1)"
+            )
+        return None
+    target = _internal_folder(folder if folder is not None else RECOMMENDED_INTERNAL_ROOT, user)
+    why = (
+        f"The two documentation roots are one folder, {user!r}, and {CAPABILITY} keeps the user "
+        f"and technical spaces apart (DEC-001 point 1). The internal root goes to {target!r} "
+        f"first, outside the user root."
+    )
+    command = [*SET_INTERNAL_ROOT, target]
+    if dry_run:
+        return Stamped(
+            (),
+            (
+                f"dry run: nothing written. {why} The stamp would run `{' '.join(command)}` first, "
+                f"under that command's consent; its checks run once the roots are apart.",
+            ),
+            written=False,
+        )
+    if not separation.yes and not interactive():
+        raise Refused(
+            f"{why} Setting it writes the backbone configuration, which takes consent (COR-048 "
+            f"point 5), and stdin is not a terminal. Nothing is written. To consent, run: "
+            f"{rerun} --yes — or name another folder with --internal-root <path>"
+        )
+    say(why)
+    try:
+        proc = run([*command, *(["--yes"] if separation.yes else [])], cwd=root, check=False)
+    except OSError as exc:
+        raise Refused(f"`pkit` could not be run ({exc}); nothing is written") from exc
+    if proc.returncode != 0:
+        raise Refused(
+            f"the internal root was not set apart (`{' '.join(command)}` exited "
+            f"{proc.returncode}), so nothing is written"
+        )
+    return None
+
+
+def _internal_folder(folder: str, user: str) -> str:
+    """`folder` for the internal root, normalised; refused where it is not a folder of the
+    repository, or lies in the user root, `user`, or holds it: neither root may lie inside
+    the other (DEC-001 point 1)."""
+    text = folder.strip().replace("\\", "/")
+    target = normalise(text)
+    if not text or text.startswith("/") or ".." in target.split("/") or target == ".":
+        raise Refused(
+            f"--internal-root {folder!r} is not a folder of the repository: give one from the "
+            f"repository root, such as {RECOMMENDED_INTERNAL_ROOT}"
+        )
+    if user == ".":
+        raise Refused(
+            "the user root is the repository itself, so every folder lies in it, and neither "
+            "root may lie inside the other (DEC-001 point 1) — set the user root to a folder "
+            "first, with `pkit config set docs.user <path>`"
+        )
+    if is_within(target, user) or is_within(user, target):
+        raise Refused(
+            f"the internal root {target!r} would lie in the user root {user!r}, or hold it: "
+            f"neither root may lie inside the other (DEC-001 point 1) — name a folder that does "
+            f"neither with --internal-root <path>"
+        )
+    return target
+
+
+def _roots(root: Path) -> Mapping[str, str]:
+    """The two documentation roots by audience, as the backbone reads them."""
+    return read_artefacts(root).roots
+
+
+def _say(line: str) -> None:
+    """Print `line` before the backbone's command prints, which shares the terminal."""
+    print(line, flush=True)
+
+
+def _stdin_is_tty() -> bool:
+    """Whether a person at a terminal can answer the backbone's question."""
+    try:
+        return bool(sys.stdin is not None and sys.stdin.isatty())
+    except (AttributeError, ValueError, OSError):
+        return False
 
 
 # --- a page -------------------------------------------------------------------------------------

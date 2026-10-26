@@ -63,9 +63,11 @@ The stamp writes a page's front matter from its kind's template, and a definitio
 
 Each command takes `--dry-run`, which makes the checks before the write, prints each file it would write and writes nothing.
 
-### Separate roots first
+### Roots that are one folder
 
-Both documentation roots default to `docs/`. Two roots that are one folder give no space (DEC-001 point 1). On a fresh project, set the user and internal roots to two folders first, under `docs` in `.pkit/project/config.yaml`. That is onboarding's first step. It is an edit of the backbone configuration, so an agent asks the person first.
+Both documentation roots default to `docs/`. Two roots that are one folder give no space (DEC-001 point 1). So the first stamp of a space, or of a page of the user or technical space, offers to set the internal root apart, at `tech-docs/`. It sets the internal root through `pkit config set`, which edits the backbone configuration.
+
+An agent asks the person first, naming the folder, and passes `--yes` only once they accept. Pass `--internal-root <path>` when they choose another folder. Off a terminal without `--yes`, the stamp refuses and writes nothing.
 
 ### After stamping
 

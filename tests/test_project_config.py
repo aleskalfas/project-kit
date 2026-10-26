@@ -550,6 +550,27 @@ def test_changing_the_internal_root_declares_the_old_rule_set_folder(
     ]
 
 
+def test_changing_the_internal_root_names_the_recorded_locations_it_leaves_behind(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # A fresh project's overlay records the ADR folder under the default root
+    # (COR-049 point 6, #2084).
+    make_adopter_repo()
+
+    result = _run("docs.internal", "tech-docs", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert result.output.splitlines()[1:3] == [
+        "kept adr-records = docs/architecture/decisions  (.pkit/agents/project/overlay.yaml)",
+        "  recorded under the internal root before this change, docs; it stays there "
+        "(COR-049 point 6). To move it: move what it holds to tech-docs/architecture/decisions, "
+        "edit that entry, then pkit sync.",
+    ]
+    again = _run("docs.internal", "handbook", "--yes")
+    assert again.exit_code == 0, again.output
+    assert "kept " not in again.output
+
+
 @pytest.mark.parametrize(
     ("files", "config"),
     [
