@@ -13,7 +13,9 @@ and `tests/test_pm_issue_list_guard.py` fails on any other. It runs the listing
 its caller describes, asks `gh` for each issue's body as well, and drops each
 issue whose body carries the marker. Each issue of work comes back in the fields
 the caller asked for, with `body` only where the caller asked for it, so a work
-issue reads as it did before this read existed.
+issue reads as it did before this read existed. The state issues it dropped come
+back apart (:attr:`IssueListing.state_rows`), so the state-issue seam finds one
+by its marker through this read ([pkit:ADR-071] point 2).
 
 A page that reached its limit is judged by what `gh` returned
 (:attr:`IssueListing.returned`), state issues included. A page of 50 that held
@@ -26,52 +28,33 @@ path and its tests' patch point stay as they were.
 
 The marker
 ----------
-A line of its own, outside a fenced code block, of the form
-``<!-- pkit:state-issue v=1 key=<key> -->``. A line that opens the comment with
-``pkit:state-issue`` and closes it marks a state issue, whatever attributes it
-carries, so a later version of the stamp still reads as one. The marker quoted
-in a code block, or inline in a sentence, marks nothing, so a work issue that
-writes about state issues stays a work issue. :func:`marker` and
-:func:`is_state_issue` are the form's one home until the state issue's schema
-holds it (DEC-058 Implications).
+The state-issue seam (`_lib/state_issues`) builds a state issue's marker and
+holds its one reader ([pkit:ADR-071] point 6). :func:`is_state_issue` asks that
+reader, so this read and the seam agree on what a state issue is. A marker
+counts on a line of its own, outside a fenced code block, in any version. A
+work issue that quotes one in a sentence or a code block stays a work issue.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from _lib.body_rules import lines_outside_fences
+from _lib import state_issues
 from _lib.gh import gh_run
 
 GhCall = Callable[..., "subprocess.CompletedProcess[str]"]
 
-#: The version of the marker this module writes.
-MARKER_VERSION = 1
-
-_MARKER_LINE = re.compile(r"<!--\s*pkit:state-issue(?:\s+[^\s>]+)*\s*-->")
-_KEY = re.compile(r"[^\s>]+")
-
 _BODY = "body"
 
 
-def marker(key: str) -> str:
-    """The marker line of the state issue that holds the piece of state `key`."""
-    if not _KEY.fullmatch(key):
-        raise ValueError(f"a state issue's key holds no space and no `>`: {key!r}")
-    return f"<!-- pkit:state-issue v={MARKER_VERSION} key={key} -->"
-
-
 def is_state_issue(body: str) -> bool:
-    """Whether `body` marks its issue a state issue.
-
-    It does when a line of its own, outside a fenced code block, is the marker.
-    """
-    return any(_MARKER_LINE.fullmatch(line.strip()) for line in lines_outside_fences(body))
+    """Whether `body` marks its issue a state issue, by the state-issue seam's
+    one reader of the marker."""
+    return state_issues.is_state_issue(body)
 
 
 @dataclass(frozen=True)
@@ -81,11 +64,13 @@ class IssueListing:
     ``rows`` holds the issues of work, each as `gh` returned it in the fields
     the caller asked for. It is None when the command failed (``returncode``
     and ``stderr`` are `gh`'s, verbatim) or printed no JSON list.
+    ``state_rows`` holds the state issues left out, each with its body.
     ``returned`` counts every issue `gh` returned, state issues included: what
     a limit is measured against.
     """
 
     rows: tuple[Any, ...] | None
+    state_rows: tuple[Any, ...] = ()
     returned: int = 0
     returncode: int = 0
     stderr: str = ""
@@ -122,10 +107,16 @@ def list_issues(
         return IssueListing(rows=None, stderr=stderr)
     if not isinstance(parsed, list):
         return IssueListing(rows=None, stderr=stderr)
-    rows = tuple(
-        row if asked_body else _without_body(row) for row in parsed if not _is_state_row(row)
+    rows: list[Any] = []
+    state_rows: list[Any] = []
+    for row in parsed:
+        if _is_state_row(row):
+            state_rows.append(row)
+        else:
+            rows.append(row if asked_body else _without_body(row))
+    return IssueListing(
+        rows=tuple(rows), state_rows=tuple(state_rows), returned=len(parsed), stderr=stderr
     )
-    return IssueListing(rows=rows, returned=len(parsed), stderr=stderr)
 
 
 def _is_state_row(row: Any) -> bool:

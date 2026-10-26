@@ -29,8 +29,9 @@ author who may write names the kind and key. It counts each event comment for
 that key whose author may write, and folds them (:func:`fold`): the first claim
 on a free state holds, another clone's claim on a held state is void, and stays
 void after a release. A read that finds the description's marker gone restores
-it, the one write a read makes. :func:`find` reads, in number order, the issues
-a listing of open issues found by their description's marker. The issue GitHub
+it, the one write a read makes. :func:`find` reads, in number order, the state
+issues the one read of issues (``_lib/issue_list``) left out of a listing of open
+issues, where their description's marker names the key. The issue GitHub
 numbered first holds the state.
 
 Who may write is the caller's to pass (:class:`Writers`): the members, where the
@@ -485,9 +486,10 @@ class Found:
 def find(kind: str, key: str, rows: Iterable[dict[str, Any]], run: StateRun) -> Found:
     """Find the state issue for ``kind`` and ``key`` among ``rows``.
 
-    ``rows`` are the open issues the one read of issues listed, each with its
-    ``number`` and ``body``. Those whose description's marker names the kind and
-    key are read by number, lowest first. A caller that claims lists again
+    ``rows`` are the state issues the one read of issues left out of a listing
+    of open issues (``IssueListing.state_rows``), each with its ``number`` and
+    ``body``. Those whose description's marker names the kind and key are read
+    by number, lowest first. A caller that claims lists again
     before it claims, and again when it reads after claiming, and writes only to
     the first (DEC-058 point 2).
     """

@@ -22,9 +22,9 @@ SCRIPTS = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
-from _lib import issue_list  # noqa: E402
+from _lib import issue_list, state_issues  # noqa: E402
 
-STATE_BODY = f"{issue_list.marker('seat-planner')}\n\n## Current state\n\nfree\n"
+STATE_BODY = f"{state_issues.marker_line('seat', 'planner')}\n\n## Current state\n\nfree\n"
 
 
 def _work(number: int, **fields) -> dict:
@@ -52,11 +52,13 @@ class _Runner:
 # --- the marker ---------------------------------------------------------------
 
 
-def test_the_marker_names_its_key_and_marks_a_state_issue() -> None:
-    line = issue_list.marker("seat-planner")
-    assert line == "<!-- pkit:state-issue v=1 key=seat-planner -->"
+def test_the_seam_s_marker_marks_a_state_issue() -> None:
+    """The read tells a state issue by the marker the state-issue seam builds,
+    through the seam's one reader of it (ADR-071 point 6)."""
+    line = state_issues.marker_line("seat", "two words")
     assert issue_list.is_state_issue(f"{line}\n## Current state\n")
     assert issue_list.is_state_issue(f"## Current state\n\nfree\n\n  {line}  \n")
+    assert issue_list.is_state_issue("<!-- pkit:state-issue v=1 key=seat-planner -->")
 
 
 def test_a_later_version_of_the_marker_still_marks_one() -> None:
@@ -83,12 +85,6 @@ def test_a_body_without_the_marker_on_a_line_of_its_own_is_work(body: str) -> No
     assert not issue_list.is_state_issue(body)
 
 
-@pytest.mark.parametrize("key", ["", "two words", "a>b"])
-def test_a_key_that_would_break_the_marker_is_refused(key: str) -> None:
-    with pytest.raises(ValueError):
-        issue_list.marker(key)
-
-
 # --- the read -----------------------------------------------------------------
 
 
@@ -98,6 +94,17 @@ def test_the_read_leaves_state_issues_out_and_counts_what_gh_returned() -> None:
     assert listing.rows is not None
     assert [row["number"] for row in listing.rows] == [1, 3]
     assert listing.returned == 3
+
+
+def test_the_state_issues_left_out_come_back_apart_with_their_bodies() -> None:
+    """The state-issue seam finds a state issue by its marker through this read
+    (ADR-071 point 2), so the read hands back what it left out, body and all."""
+    runner = _Runner([_work(1), _state(2), _work(3)])
+    listing = issue_list.list_issues({}, ["--state", "open"], fields="number", gh_call=runner)
+    assert listing.state_rows == (_state(2),)
+    assert listing.rows is not None
+    assert [row["number"] for row in listing.rows] == [1, 3]
+    assert all("body" not in row for row in listing.rows)
 
 
 def test_a_work_issue_comes_back_in_the_fields_asked_for() -> None:

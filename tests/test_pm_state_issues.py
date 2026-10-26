@@ -10,7 +10,9 @@ call is a fake; no test reaches GitHub.
 
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import TypeVar
@@ -24,7 +26,7 @@ for path in (SCRIPTS, TESTS):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
 
-from _lib import audit_log, provenance  # noqa: E402
+from _lib import audit_log, issue_list, provenance  # noqa: E402
 from _lib import state_issues as si  # noqa: E402
 
 from pm_state_issue_fakes import FakeRepo  # noqa: E402
@@ -354,6 +356,23 @@ def test_find_finds_nothing_where_no_description_names_the_key() -> None:
     _state_issue(repo, key="worker")
     rows = [{"number": 5, "body": repo.issues[5].body}]
     assert si.find("seat", "planner", rows, _run(repo)).outcome == si.NO_STATE_ISSUE
+
+
+def test_find_takes_the_state_issues_the_one_read_of_issues_left_out() -> None:
+    """The seam finds a state issue by its marker through the one read of
+    issues, never GitHub's search (ADR-071 point 2)."""
+    repo = FakeRepo()
+    _state_issue(repo, number=8)
+    repo.add(3, "## What\n\nA task.\n")
+
+    def listing(argv, config, **kwargs):
+        rows = [{"number": n, "body": i.body} for n, i in repo.issues.items()]
+        return subprocess.CompletedProcess(argv, 0, json.dumps(rows), "")
+
+    listed = issue_list.list_issues({}, ["--state", "open"], fields="number", gh_call=listing)
+    assert listed.rows == ({"number": 3},)
+    found = si.find("seat", "planner", listed.state_rows, _run(repo))
+    assert found.outcome == si.READ and _some(found.read).number == 8
 
 
 # ---- claim, release, release by force -----------------------------------------------
