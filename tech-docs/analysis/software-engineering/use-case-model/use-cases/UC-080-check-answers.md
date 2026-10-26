@@ -28,6 +28,7 @@ pkit:
         - project-management:DEC-032#D4
         - project-management:DEC-055#3
         - project-management:DEC-055#5
+        - COR-064#4
         - COR-013
         - COR-017
         - COR-031
@@ -79,12 +80,12 @@ pkit:
 > **Not built yet:** the reviewer starts from a pull request's number, and requests changes where it cannot fetch one. COR-050 point 3 decides that the reviewer checks a direct commit's answers before the commit, and #1966 tracks it.
 
 - **2a.** The list says `none`, or the check reports itself dormant in the project. Nothing is left to check, and the path goes on at step 7.
-- **2b.** The list flags as "not asked for by this change" an answer that is the developer's decision, as UC-081 describes:
+- **2b.** The list flags as "not asked for by this change" an answer no change owes, which the developer or the delegate decided, as UC-081 describes:
   - an answer on an artefact the check asked nothing about
   - a reason for having no anchors
   - a revisit entry the check did not ask for
 
-  The reviewer names each in an `[advisory]` finding. It blocks on none of them, but for the sentence of one that is `updated`, which it checks as at step 5.
+  The reviewer checks each against what it answers, whoever decided it, through `pkit friction explain` at the base (COR-064 point 4). One that does not hold is a `[block]` finding. It also names each in an `[advisory]` finding, since it cannot tell who decided it.
 - **2c.** The list flags "not asked for by this change" a deferral the change rewords on an artefact the check asked about. The reviewer judges it as at step 4 (software-engineering DEC-002 point 1).
 - **3a.** A reason does not hold against the change: it is false, or it leaves out an edit that makes the artefact untrue. A `[block]` finding quotes the reason and the passage the change made untrue. The answer is mended, and the path rejoins at step 1 on the new head.
 - **4a.** The change keeps a deferral as it was, with the anchor and the words the base had. The reviewer does not judge it again, since the review of the change that wrote it was to check it (COR-050 point 3).
@@ -96,11 +97,11 @@ pkit:
 - **7a.** The developer edits a sentence in the description after the verdict. An edit of the description makes no verdict stale, so nobody checks the edited sentence (project-management DEC-055 point 5).
 - **7b.** The verdict requests changes, and a person bypasses the `docs-reviewer` on record, with a reason. The answers then stand checked by their writer alone, a limit COR-050 point 3 accepts (project-management DEC-055 point 5).
 
-**Postconditions:** A reviewer other than their writer checked each answer and each revisit the change owed against the change. The verdict approves the change only where each holds.
+**Postconditions:** A reviewer other than their writer checked each answer and each revisit the change owed against the change. It checked each answer no change owes against what that answer answers. The verdict approves the change only where each holds.
 
 **Minimal guarantees:**
 
 - An answer that does not hold is a `[block]` finding, whatever the project's conventions say (software-engineering DEC-002 point 1 and `docs-reviewer.md`).
 - A change check the reviewer cannot run is a `[block]` finding, never an approval (`docs-reviewer.md`).
 - The reviewer writes no answer, and changes nothing it reviews (core:REQ-021).
-- The reviewer blocks on no answer that is the developer's decision, but for an `updated` one's sentence (software-engineering DEC-002 point 1).
+- An answer no change owes that does not hold is a `[block]` finding, whoever decided it (software-engineering DEC-002 point 1 and COR-064 point 4).

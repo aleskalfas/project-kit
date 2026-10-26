@@ -751,6 +751,7 @@ TERM-reviewer:
           - COR-050#3
           - COR-057#1
           - COR-057#3
+          - COR-064#4
           - COR-057#5
 TERM-revisit:
   name: revisit
@@ -1789,7 +1790,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 - **The reviewer stack:** the critic and the architect advise on a draft. The `methodology-reviewer`, the `convention-compliance-reviewer` and the `rule-set-reviewer` judge an [artefact](#term-artefact--artefact) or a diff. The [backbone](#term-backbone--backbone) ships all five (COR-024 and COR-057).
 - **Verdict:** a reviewer agent's judgement of a [pull request](#term-pull-request--pull-request), posted where a merge gate reads it (project-management DEC-028).
-- **The answers' reviewer:** the reviewer the [project](#term-project--project) chooses to check the answers an agent wrote for its own change (COR-050 [point](#term-point--point) 3).
+- **The answers' reviewer:** the reviewer the [project](#term-project--project) chooses to check the answers an agent wrote for its own change (COR-050 [point](#term-point--point) 3). It also checks each [answer](#term-answer--answer) no change owes that a change writes, whoever decided it (COR-064 point 4).
 - **Merge authoriser:** the person who authorises a merge (`ACT-merge-authoriser`). A reviewer's approval is never that authorisation (project-management DEC-055 point 3).
 
 ## TERM-revisit — revisit

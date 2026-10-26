@@ -26,6 +26,7 @@ pkit:
         - COR-050#1
         - COR-050#2
         - COR-050#3
+        - COR-064#1
         - COR-050#6
         - COR-050#7
         - COR-050#8
@@ -68,8 +69,8 @@ pkit:
 **Variants:**
 
 - **1a.** The document lies in no declared [place](../../../glossary.md#term-place--place), so nothing reads its anchors. `pkit friction artefacts` lists the places. The developer adds the document's path to `friction.places`, and the path rejoins at step 1.
-- **1b.** Nothing the repository holds makes the document true, such as a person's part in the work. A person accepts a reason for having no anchors, word for word, before it is written as `unanchored-because` (COR-050 points 1 and 3). The use case ends.
-- **1c.** The document already carries anchors, and the developer changes the list. The [change check](../../../glossary.md#term-change-check--change-check) asks the document for a revalidation in the same [change](../../../glossary.md#term-change--change) (COR-050 [point](../../../glossary.md#term-point--point) 6), and the path goes on at step 2.
+- **1b.** Nothing the repository holds makes the document true, such as a person's part in the work. A person accepts a reason for having no anchors, word for word, before it is written as `unanchored-because` (COR-050 points 1 and 3). A delegate a person named may decide it instead (COR-064 [point](../../../glossary.md#term-point--point) 1). The use case ends.
+- **1c.** The document already carries anchors, and the developer changes the list. The [change check](../../../glossary.md#term-change-check--change-check) asks the document for a revalidation in the same [change](../../../glossary.md#term-change--change) (COR-050 point 6), and the path goes on at step 2.
 - **1d.** A [stamp](../../../glossary.md#term-stamp--stamp) writes the anchors, such as the command an installed [capability](../../../glossary.md#term-capability--capability) offers to create an [artefact](../../../glossary.md#term-artefact--artefact) of its kind. The path goes on at step 2.
 - **1e.** An [anchor](../../../glossary.md#term-anchor--anchor) names a kind a capability registers, with the command that resolves it. The check asks that command which files the anchor stands on, offline and within thirty seconds (COR-050 point 2, REQ-006 and REQ-007). A command that gives no result leaves the anchor `no-answer`, never read as unchanged (REQ-004). The path goes on at step 2.
 - **2a.** [Validation](../../../glossary.md#term-validation--validation) finds a fault in the block, and fails, naming it. The path rejoins at step 1. The faults it fails on are these:
@@ -86,5 +87,5 @@ pkit:
 **Minimal guarantees:**
 
 - A dead [anchor](../../../glossary.md#term-anchor--anchor) is an error, never silence, so a mistyped anchor never reads as a document nothing changed (COR-050 [point](../../../glossary.md#term-point--point) 7 and REQ-020).
-- A document in a declared [place](../../../glossary.md#term-place--place) with no anchors is counted as unanchored, or listed apart with the reason a person accepted. It is never hidden (COR-050 point 8).
+- A document in a declared [place](../../../glossary.md#term-place--place) with no anchors is counted as unanchored, or listed apart with its accepted reason. It is never hidden (COR-050 point 8).
 - [Validation](../../../glossary.md#term-validation--validation) fails a malformed block wherever the [project](../../../glossary.md#term-project--project) runs it, in either [friction](../../../glossary.md#term-friction--friction) mode (COR-050 point 12).
