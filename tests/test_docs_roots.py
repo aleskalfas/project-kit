@@ -480,6 +480,52 @@ def test_a_root_change_after_recording_moves_nothing(make_adopter_repo: MakeAdop
     assert again.categories_wired == () and again.categories_already_set == ("adr-records",)
 
 
+def test_a_change_of_the_internal_root_names_each_recorded_location_it_leaves_behind(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # COR-049 point 6: nothing moves, and nothing is left behind in silence (#2084).
+    repo = make_adopter_repo(capabilities=("project-management",))
+    _overlay(
+        repo, "architecture-docs:\n  - README.md\nadr-records:\n  - docs/architecture/decisions/\n"
+    )
+    _declare_locations(repo, "project-management", "    guides: {path: guides}\n")
+    dr.record_location(repo.root, "project-management", "guides", "docs/guides")
+    dr.record_location(repo.root, "project-management", "notes", "docs/notes")
+    dr.record_location(repo.root, "project-management", "kept", "handbook/kept")
+
+    _set_internal_root(repo, "handbook")
+
+    left = dr.left_behind(repo.root, "docs")
+    assert [(lb.location.name, lb.location.path, lb.home) for lb in left] == [
+        (
+            "adr-records",
+            Path("docs/architecture/decisions"),
+            Path("handbook/architecture/decisions"),
+        ),
+        ("guides", Path("docs/guides"), Path("handbook/guides")),
+        ("notes", Path("docs/notes"), None),  # declared nowhere, so it derives from nothing
+    ]
+    assert left[0].notice() == (
+        "kept adr-records = docs/architecture/decisions  (.pkit/agents/project/overlay.yaml)\n"
+        "  recorded under the internal root before this change, docs; it stays there "
+        "(COR-049 point 6). To move it: move what it holds to handbook/architecture/decisions, "
+        "edit that entry, then pkit sync."
+    )
+    assert (
+        left[1]
+        .notice()
+        .startswith(
+            "kept project-management guides = docs/guides  "
+            "(.pkit/capabilities/project-management/project/docs-locations.yaml)\n"
+        )
+    )
+    assert left[1].notice().endswith("move what it holds to handbook/guides, edit that line.")
+    assert left[2].notice().endswith("To move it: move what it holds, edit that line.")
+    # What lay outside the old root, or lies under the new one, is not left behind.
+    assert dr.left_behind(repo.root, "handbook") == []
+    assert dr.left_behind(repo.root, "elsewhere") == []
+
+
 def test_existing_explicit_overlay_values_survive_introducing_the_roots(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
