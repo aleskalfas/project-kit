@@ -63,7 +63,7 @@ An analysis artefact may hold a diagram in its body, written as a Mermaid fence.
 
 The capability's diagrams are drawn from the analysis's front matter, as every tool reads it (DEC-001 point 1).
 - **What follows:** they draw relations, never a use case's main path or a journey's seams, which lie in the body.
-- **The next step:** the capability's own queries are to read a body's parts by their permanent id, as its check already reads them. A diagram of a use case's path, or of a journey's seams, comes with it. The change that builds it refines DEC-001 point 1. An artefact's texts, such as a term's definition, are read so (refinement per [software-analysis:DEC-006-text-in-body]). A use case's path and a journey's seams are not, and their diagrams wait for that step.
+- **The next step:** the capability's own queries are to read a body's parts by their permanent id, as its check already reads them. A diagram of a use case's path, or of a journey's seams, comes with it. The change that builds it refines DEC-001 point 1. An artefact's texts are read so (refinement per [software-analysis:DEC-006-text-in-body]), and a use case's path and a journey's seams wait for that step.
 
 ### 4. What it draws
 
@@ -133,8 +133,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
 - **Front matter, the links to the terms, and who each actor is.** The overview reads the analysis's front matter and the paths of its files, as DEC-001 point 1 allows a tool. Of a body, it reads two things:
   - the links to the glossary's entries a use case holds, which the links command writes and the check holds ([software-analysis:DEC-004-domain-model-views] point 7)
   - the first sentence of each actor's opening, a text (refinement per [software-analysis:DEC-006-text-in-body])
-
-  A requirement's area is read from its path. Beyond the analysis's files, it reads the capability's configuration and the front matter of the record its purpose names.
+- **What else it reads.** A requirement's area is read from its path. Beyond the analysis's files, the overview reads the capability's configuration and the front matter of the record its purpose names.
 - **Its purpose.** What a component is for is a decision, so a decision record states it. The analysis's entry in the capability's configuration points to that record, `purpose: <record id>`, as the entry names the analyses it builds on.
   - **Which record:** a decision record the project owns, named as a record anchor names one, such as `PRJ-004` or `billing:DEC-001`. That is a project or an architecture record, or, for a capability's analysis, a decision of that capability.
   - **Never a record a release changes.** A core record, or another capability's decision, reaches an adopting project with a release. A new title there would leave the overview stale after an upgrade, so the check refuses such a pointer.

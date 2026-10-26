@@ -55,7 +55,7 @@ Front matter keeps the data a tool finds, relates, lists or links artefacts by. 
 
 A tool takes an artefact's data from its front matter, and a text from the part that holds it. The texts a tool reads are those point 1 moves. So are the first sentence of an actor's opening (point 4) and the needs a glossary's head lists (point 5). Of the rest of a body, a tool reads only the links to the terms (DEC-001 point 1).
 - **By its permanent id.** A tool finds a part as the check finds it, by the id the structure gives it, never by its label. So a project's relabel changes no tool's reading, once its artefacts carry the new label (DEC-001 point 1).
-- **Its words.** A tool that shows or compares a text reads each derived link in it as its words alone. That holds where the place declares the link's form at the state read, as friction reads such a link (COR-050 point 5).
+- **Its words.** A tool that shows or compares a text reads each derived link in it as its words alone. That holds where the artefact's place declares the link's form at the state read, as friction reads such a link (COR-050 point 5).
 - **A part the body lacks** gives no text, and a tool reads it as absent. It never reads another part's text in its place. So a missing part is no tool's finding, and its presence stays the format rule's to hold.
 - **A body it cannot read.** A tool that cannot read an artefact's body gives no answer, rather than a partial one that would read as whole (DEC-003 point 7).
 
@@ -85,7 +85,7 @@ Each requirement, of each of the three kinds, carries `obligation`: a fingerprin
 ### 7. The fingerprint's canonical form
 
 The fingerprint reads each text in one canonical form, so one text gives one value in either home. The form reads a text's characters as written, never a rendering of them, and reads both homes the same way.
-- **The rule.** The form sets aside what changes only how a text looks, or where a link the command that links terms wrote leads. It counts everything that can change what the text says.
+- **The rule.** The form sets aside what changes only how a text looks, or only where a link written by the command that links terms leads. It counts everything that can change what the text says.
 - **A text's characters:**
   - in front matter, the field's value once the front matter is parsed, never the marks that quote it
   - in the body, the part's characters after its label, up to the next part, as the check finds the part
@@ -189,7 +189,7 @@ This record partially supersedes DEC-002. Each overturned passage stays in DEC-0
 - **Conflicts.** Two branches that edit one requirement's texts conflict on its `obligation` line. The command, run again on the merged text, mends it.
 - **Old versions kept.** The capability keeps the code of each version of the form it shipped.
 - **A value no reviewer reads.** A change to a requirement's texts changes a hash. The reviewer reads the texts in the change, as for any change of content.
-- **A move flags what rests on it, once.** Moving a text changes its artefact's content. So the change that moves it answers each use case and journey that lists a moved requirement. It also answers each view that explains a moved term, and each artefact that anchors a moved actor. Once the moved texts take links, a view's list of what is built on its concepts changes too (DEC-004 point 7). That flags what anchors the view.
+- **A move flags what rests on it, once.** Moving a text changes its artefact's content. So the change that moves it answers each use case and journey that lists a moved requirement. It also answers each view that explains a moved term, and each artefact that anchors a moved actor. Once the moved texts take links, a view's list of what is built on its concepts changes too, flagging what anchors the view (DEC-004 point 7).
 - **One upgrade across both steps.** A project that skips the fingerprint's release, and takes both in one upgrade, sees each requirement's revisits fire once, in that change. The field is absent at its base, so nothing in the core can spare it.
 - **Answered twice.** A project that takes the steps one at a time answers what anchors each requirement twice. It answers once when the fingerprint is added, and once when the texts move.
 - **Each adopter's own move.** A project's analysis moves by a migration, and the project answers what each move flags.
