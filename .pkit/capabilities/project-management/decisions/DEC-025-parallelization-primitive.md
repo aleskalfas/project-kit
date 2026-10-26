@@ -1,7 +1,7 @@
 ---
 id: DEC-025
 title: Parallelization primitive — lanes for code surface and dependencies for sequence, neither carried by workstreams
-status: proposed
+status: accepted
 date: 2026-05-27
 author: Ales Kalfas
 ---
