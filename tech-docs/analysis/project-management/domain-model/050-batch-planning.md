@@ -111,9 +111,9 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Use-case entry:**
 
-- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md)
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/020-file-and-move/UC-060-file-task.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)
 
 **Batch plan:**
 
-- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md)

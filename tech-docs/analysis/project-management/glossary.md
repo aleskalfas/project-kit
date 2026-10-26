@@ -27,6 +27,11 @@ builds-on:
       - {id: TERM-skill, name: skill}
       - {id: TERM-validation, name: validation}
     actors:
+      - id: ACT-adopter
+        name: Adopter
+        needs:
+          - Set up my project's topology in the project's committed configuration, so that every clone reads the same seats from the default branch.
+          - Measure one topology against another on comparable work, by figures GitHub holds.
       - id: ACT-developer
         name: Developer
         needs:
@@ -35,6 +40,8 @@ builds-on:
           - Have the reviewer agents my change requires review my pull request, each verdict standing only while I change nothing its reviewer checks.
       - id: ACT-ai-agent
         name: AI agent
+        needs:
+          - Take a seat of my project's topology for my clone, and act as that seat's agent.
       - id: ACT-ci-pipeline
         name: CI pipeline
       - id: ACT-merge-authoriser
@@ -169,6 +176,22 @@ TERM-feature:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
+TERM-instance:
+  name: instance
+  noun-forms: [instances]
+  status: active
+  definition: "clone of a project's repository with a separate number, which tells work in the clone apart from work in the same person's other clones"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/instance_identity.py
+          - .pkit/capabilities/project-management/scripts/set-instance.py
+        record:
+          - project-management:DEC-035#1
+          - project-management:DEC-045#1
+          - project-management:DEC-058#5
+          - project-management:DEC-059#6
 TERM-issue:
   name: issue
   status: active
@@ -234,6 +257,22 @@ TERM-milestone-category:
           - .pkit/capabilities/project-management/scripts/create-milestone.py
         record:
           - project-management:DEC-016
+TERM-owner:
+  name: owner
+  noun-forms: [owners]
+  status: active
+  definition: "instance an issue belongs to from filing or start until close, paired with the issue's assignee, whose other instances leave the issue alone"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
+          - .pkit/capabilities/project-management/schemas/instance-ownership.yaml
+        record:
+          - project-management:DEC-035#2
+          - project-management:DEC-035#6
+          - project-management:DEC-043
+          - project-management:DEC-059#9
 TERM-parent-reference:
   name: parent reference
   status: active
@@ -261,6 +300,43 @@ TERM-required-reviewer:
           - project-management:DEC-032#D1
           - project-management:DEC-032#D2
           - project-management:DEC-027
+TERM-scope:
+  name: scope
+  status: active
+  definition: "part of a project's work that one AI agent of a topology takes issues from"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-045#3
+          - project-management:DEC-059#7
+          - project-management:DEC-018
+TERM-seat:
+  name: seat
+  noun-forms: [seats]
+  status: active
+  definition: "place in a topology, held by one clone, saying whether the clone's agent plans, builds or does both, and which agent definition that agent follows"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-045#1
+          - project-management:DEC-045#3
+          - project-management:DEC-059#2
+          - project-management:DEC-059#4
+          - project-management:DEC-029
+TERM-state-issue:
+  name: state issue
+  noun-forms: [state issues]
+  status: active
+  definition: "GitHub item outside the work's hierarchy, whose comments log each new value of one piece of shared data, and whose description shows the current value"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-058
+          - project-management:DEC-043#3
+          - project-management:DEC-043#4
 TERM-task:
   name: Task
   status: active
@@ -272,6 +348,19 @@ TERM-task:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
+TERM-topology:
+  name: topology
+  noun-forms: [topologies]
+  status: active
+  definition: "set of seats a project declares for the AI agents that work on the project at once"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-045
+          - project-management:DEC-059#1
+          - project-management:DEC-059#2
+          - project-management:DEC-008
 TERM-umbrella:
   name: Umbrella
   status: active
@@ -353,11 +442,15 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [rule](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule--rule)
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
+  - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
+    - Set up my project's topology in the project's committed configuration, so that every clone reads the same seats from the default branch.
+    - Measure one topology against another on comparable work, by figures GitHub holds.
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - File a Task under its parent, with its title and the sections its body needs checked as it is filed.
     - Move my issue through its lifecycle, with each move checked and the moves that need my authorisation never made without it.
     - Have the reviewer agents my change requires review my pull request, each verdict standing only while I change nothing its reviewer checks.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
+    - Take a seat of my project's topology for my clone, and act as that seat's agent.
   - **Actor:** [CI pipeline](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ci-pipeline.md)
   - **Actor:** [Merge authoriser](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md)
   - **Actor:** [Operator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-operator.md)
@@ -476,6 +569,19 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **EPIC:** an issue that states an outcome spanning several quarters. A Feature sits under one or under an Umbrella, or straight under a [Milestone](#term-milestone--milestone) where the project skips the [EPIC](#term-epic--epic) (DEC-004).
 - **Capability:** the core's word for a [component](../core/glossary.md#term-component--component) a project chooses to install. project-management's records say that a Feature claims "a [capability](../core/glossary.md#term-capability--capability)", meaning a piece of functionality in any component (DEC-004).
 
+## TERM-instance — instance
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#instance).
+
+**Example:** `set-instance 2` makes a clone instance 2 of the instances of the clone's person. A session that starts in that clone after a crash works as instance 2 again.
+
+**Distinctions:**
+
+- **Session:** one run of an AI agent in a clone. A session ends or dies, and the instance's number stays, held by a file in the clone ([DEC-035 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
+- **A clone with no number:** a clone that never set a number. Such a clone marks nothing and is guarded by nothing, as before instances existed (DEC-035 point 1).
+- **A linked worktree:** a further working tree of a clone. Whether a linked worktree reads the clone's identity, or may set a separate identity, is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
+- **Seat:** a place in a [topology](#term-topology--topology), taken by a clone. The clone's name and number are then the [seat](#term-seat--seat)'s, and never typed (DEC-059 point 6).
+
 ## TERM-issue — issue
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#issue).
@@ -535,6 +641,19 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **Close trigger:** the line on one [Milestone](#term-milestone--milestone) that says when it closes. The category gives a default, and the Milestone's own line overrides it ([DEC-016](../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 - **Workstream:** a long-lived area that classifies issues. A category classifies Milestones, by their titles (DEC-016).
 
+## TERM-owner — owner
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#owner).
+
+**Example:** [instance](#term-instance--instance) 2 starts #1712 and becomes the owner of #1712. When instance 1 then tries to start #1712, instance 1 is refused, unless a person sets the refusal aside with a reason ([DEC-035 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
+
+**Distinctions:**
+
+- **Assignee:** the GitHub account an [issue](#term-issue--issue) is assigned to. One person's instances all share the assignee, so the owner pairs the assignee with one instance ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-an-instancen-github-label-paired-with-the-assignee)).
+- **A lock:** a hold that no one else can take at the same moment. GitHub offers no lock, so two instances may both take one issue at once. The higher-numbered instance then gives the issue up (DEC-035 point 6).
+- **A file's owner:** the [methodology](../core/glossary.md#term-methodology--methodology) or the [project](../core/glossary.md#term-project--project), under the core's [rule](../core/glossary.md#term-rule--rule) that every file has one owner. A file's owner has nothing to do with an issue.
+- **A seat's holder:** the clone that holds a [seat](#term-seat--seat). The seat's [state issue](#term-state-issue--state-issue) shows which clone that is. An owner holds an issue of work, and a holder holds a seat ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
+
 ## TERM-parent-reference — parent reference
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#parent-reference).
@@ -557,6 +676,45 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 - **Reviewer:** the core's word for any agent or person who reports on a [change](../core/glossary.md#term-change--change). A required reviewer is one whose verdict project-management waits for ([DEC-032 point D1](../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d1--the-required-local-reviewer-set-resolves-from-the-prs-closing-issues)).
 - **An opted-out reviewer:** a contributed one that the [project](../core/glossary.md#term-project--project) declines in its settings, with its reason. It is not required ([DEC-032 point D2](../../../.pkit/capabilities/project-management/decisions/DEC-032-conditional-reviewer-requirements.md#d2--capabilities-contribute-reviewer-requirements-pm-collects-them-by-walking-the-manifest)).
 
+## TERM-scope — scope
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
+
+**Example:** a worker agent whose [seat](#term-seat--seat)'s scope is the [workstream](#term-workstream--workstream) `api` takes Tasks from `api`. A worker agent whose seat has no scope takes from all the [project](../core/glossary.md#term-project--project)'s ready Tasks. A testing seat's scope names the kind of work `test` ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+
+**Distinctions:**
+
+- **Workstream:** a long-lived area that classifies issues. A scope may name workstreams, and never changes them ([DEC-045 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy)).
+- **Kind of work:** the value a [Task](#term-task--task) takes on the `type` [classification axis](#term-classification-axis--classification-axis), such as `test`. A scope may name kinds of work, and never changes them (DEC-059 point 7).
+- **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone the agent works in.
+- **The scope of a set of rules:** what selects the artefacts a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a [topology](#term-topology--topology).
+- **The scope of a grant:** where an entry of the permission model allows or denies a privilege ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Such a scope is no part of a topology either.
+
+## TERM-seat — seat
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#seat).
+
+**Example:** the seat `api-worker` says that its agent builds, and that this agent follows the project-manager agent's definition. A clone that takes the seat works under the name `api-worker`, and the clone's agent builds Tasks.
+
+**Distinctions:**
+
+- **Instance:** a clone with a separate number. A clone takes a seat, and the clone's identity is then the seat's name ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
+- **Actor:** the planning agent, a worker agent and a lead agent are actors of this analysis. A seat says which of these actors the agent of the clone holding the seat is.
+- **DEC-045's named instance:** a clone with a name, listed in one person's file with the [workstreams](#term-workstream--workstream) the clone handles (DEC-045 points [1](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#1-instances-gain-a-human-readable-name) and [2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). The adopter writes seats in the [project](../core/glossary.md#term-project--project)'s committed configuration instead ([DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)).
+- **Agent definition:** the file that defines an agent. A seat names the [agent definition](../core/glossary.md#term-agent-definition--agent-definition) its agent follows, the project-manager agent's by default.
+
+## TERM-state-issue — state issue
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#state-issue).
+
+**Example:** the [seat](#term-seat--seat) `api-worker` has a state issue. A comment on the state issue records each clone that takes or releases the seat. The state issue's description names the clone that holds the seat now.
+
+**Distinctions:**
+
+- **Issue:** an item of work, filed as one of four types. A state issue holds no work. A state issue takes none of the four types, and sits under no parent ([DEC-058 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#3-it-sits-outside-the-work-hierarchy-and-the-lifecycle)).
+- **The owner's comment log:** the comments on an [issue](#term-issue--issue) of work that record the issue's [owner](#term-owner--owner), with a summary in the issue's description (DEC-043 points [3](../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#3-in-comment-mode-the-source-of-truth-is-a-per-instance-append-only-ownership-event-log) and [4](../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#4-the-current-owner-is-mirrored-into-the-issue-description-as-a-derived-regenerable-view)). A state issue keeps its own data the same way.
+- **Committed configuration:** what a person reviews before the configuration changes, such as the [topology](#term-topology--topology). A state issue holds what changes while agents work ([DEC-058 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#1-what-a-person-reviews-is-configuration-and-what-changes-at-run-time-is-a-state-issue)).
+
 ## TERM-task — Task
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#task).
@@ -568,6 +726,19 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **Sub-task:** a [checkbox](#term-checkbox--checkbox) in a Task's body, and no [issue](#term-issue--issue). Once it needs its own pull request, it becomes a Task under the parent of the Task that held it ([DEC-004](../../../.pkit/capabilities/project-management/decisions/DEC-004-six-level-hierarchy.md) and [DEC-010](../../../.pkit/capabilities/project-management/decisions/DEC-010-issue-body-minimum-structure.md)).
 - **Feature:** an issue that claims a coherent piece of functionality, which several Tasks deliver (DEC-004).
 - **Kind of work:** the value a Task takes on the `type` [classification axis](#term-classification-axis--classification-axis), such as `bug` or `docs`. It sets the prefix of the Task's title, and a Task of any kind is still a Task ([DEC-012](../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+
+## TERM-topology — topology
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#topology).
+
+**Example:** one [project](../core/glossary.md#term-project--project)'s topology holds a planning agent's [seat](#term-seat--seat), and two worker agents' seats with no [scope](#term-scope--scope). Another project's topology holds three lead agents' seats, whose scopes are that project's [workstreams](#term-workstream--workstream) `api`, `web` and `docs`.
+
+**Distinctions:**
+
+- **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists the person's [instances](#term-instance--instance) and the workstreams each instance handles ([DEC-045 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#2-a-per-user-machine-local-topology-file--not-committed-not-team-shared)). [DEC-059 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) overturns that file: a topology is the project's committed configuration.
+- **Seat:** one place in a topology, held by one clone. The topology says nothing of who holds a seat now. The seat's [state issue](#term-state-issue--state-issue) shows the holder.
+- **Instance:** one clone of the project. The clone takes a seat of the topology by the seat's name, or the first free seat ([DEC-059 point 4](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#4-a-clone-takes-a-seat-by-its-name-or-the-first-free-seat)).
+- **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says what is worked on.
 
 ## TERM-umbrella — Umbrella
 

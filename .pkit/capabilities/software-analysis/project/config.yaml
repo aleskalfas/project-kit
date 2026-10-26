@@ -28,6 +28,13 @@ analyses:
     # The record that states what project-management is for (software-analysis
     # DEC-003 point 8).
     purpose: project-management:DEC-057
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8).
+    areas:
+      010-plan: "Define the Milestones and workstreams a project's work falls into, and plan each intent into an EPIC and the work under it."
+      020-file-and-move: "File each Task under its parent, and move each issue through its lifecycle, each filing and each move checked."
+      030-review-and-land: "Have each pull request reviewed by the reviewers its change requires, and land it once the merge authoriser authorises its head."
+      040-work-in-parallel: "Run several AI agents on one project at once, each on its own scope and never on another's issue, and see and measure their work."
     builds-on:
       - analysis: core
   - component: evidence

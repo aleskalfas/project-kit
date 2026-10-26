@@ -1,0 +1,22 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085608Z-061b0816.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      at: 2026-10-26T14:10:53Z
+      outcome: unchanged
+      unchanged-because: "This change moves it into the area 010-plan and mends its links, and ACT-planner gains a need and an occasion for parallel work. Main adds the seat roles of DEC-029 and the project manager's section on deciding as the delegate, and its answer on COR-053 point 10 holds. Main's DEC-029 step 3 now points to DEC-060's two stages of planning, which batch-plan.md does not carry yet. Judged together, the steps still say what batch planning does, and it files only once the planner approves the whole plan. The deferral on DEC-029 stands until #2143 adds the two stages to this use case."
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-029
+          reason: "DEC-060's two stages of planning, which DEC-029 step 3 now points to, are not built yet. #2143 builds them in batch planning and adds them to this use case's slicing step."

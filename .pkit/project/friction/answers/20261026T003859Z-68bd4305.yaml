@@ -1,0 +1,38 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      at: 2026-10-26T00:38:59Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 010-plan, and mends its term links for the new folder. Its steps and its anchors are unchanged, and so is the code they describe.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md
+    read:
+      - moved-e8b5c957d8c2.yaml
+    revalidated:
+      at: 2026-10-26T00:39:05Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 010-plan, and mends its term links for the new folder. Its steps and its anchors are unchanged, and so is the code they describe.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-060-file-task.md
+    read:
+      - moved-a3323ce78e42.yaml
+    revalidated:
+      at: 2026-10-26T00:39:07Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 020-file-and-move, and mends its term links for the new folder. Its steps and its anchors are unchanged, and so is the code they describe.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - moved-6e104fbc48be.yaml
+    revalidated:
+      at: 2026-10-26T00:39:09Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 020-file-and-move, and mends its term links for the new folder. Its steps and its anchors are unchanged, and so is the code they describe.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - moved-a808f0db0388.yaml
+    revalidated:
+      at: 2026-10-26T00:39:16Z
+      outcome: unchanged
+      unchanged-because: This change moves it into the area 030-review-and-land, and mends its term links for the new folder. Its steps are unchanged. The answers at its old path judged each anchor changed since 24 October, the last on 25 October, and this change edits none of them.
