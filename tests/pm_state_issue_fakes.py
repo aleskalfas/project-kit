@@ -15,10 +15,17 @@ answers 404. `failing` holds the verbs whose next call fails once (`"comment"`,
 its call fails. `before_post` runs before each comment lands, with the issue's
 number, so a test can post another clone's comment there to stand for one made
 in the same instant.
+
+GitHub numbers the comments of every issue from one sequence, so a comment made
+later has the higher id, whichever issue it is on. `COMMENT_IDS` stands for it:
+this fake and `pm_ownership_support.FakeGitHub` both number their comments from
+it, so a comment on a seat's state issue and one on a Task compare in the order
+a test posted them.
 """
 
 from __future__ import annotations
 
+import itertools
 import json
 import re
 import subprocess
@@ -30,6 +37,9 @@ from typing import Any
 _PAGE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)/comments\?per_page=(\d+)&page=(\d+)")
 _ACCESS = re.compile(r"repos/\{owner\}/\{repo\}/collaborators/([^/]+)/permission")
 _ISSUE = re.compile(r"repos/\{owner\}/\{repo\}/issues/(\d+)")
+
+#: The ids of the comments every fake posts, in the order it posts them.
+COMMENT_IDS = itertools.count(1001)
 
 
 @dataclass
@@ -55,7 +65,6 @@ class FakeRepo:
     calls: list[list[str]] = field(default_factory=list)
     before_post: Callable[[int], None] | None = None
     next_issue: int = 100
-    next_comment: int = 1000
 
     def add(
         self,
@@ -74,12 +83,12 @@ class FakeRepo:
     def post(self, number: int, body: str, author: str | None = None) -> dict[str, Any]:
         """A comment on the issue, by `author` (the fake's own by default); an
         author of `""` stands for an account GitHub no longer has."""
-        self.next_comment += 1
+        cid = next(COMMENT_IDS)
         user = None if author == "" else {"login": author or self.author}
         comment = {
-            "id": self.next_comment,
+            "id": cid,
             "user": user,
-            "created_at": f"2026-10-26T00:00:{self.next_comment % 60:02d}Z",
+            "created_at": f"2026-10-26T00:00:{cid % 60:02d}Z",
             "body": body,
         }
         self.issues[number].comments.append(comment)

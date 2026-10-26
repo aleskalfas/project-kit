@@ -320,9 +320,12 @@ def test_selector_reads_own_schema_home(io) -> None:
 # ---- a project with a topology of seats (ADR-041 point 7) -----------------
 
 
-def _seat_comment(io, *, event, instance, seat, key, author="alice", to=None, created=None):
+def _seat_comment(
+    io, *, event, instance, seat, key, author="alice", to=None, created=None, cid=None
+):
     """A claim or a handoff that names `seat`, the seat's number and the clone's
-    `key`, through the audit-log facility's stamp."""
+    `key`, through the audit-log facility's stamp. `cid` is the id GitHub gave
+    the comment, in its `url`, as `gh issue view` gives it."""
     number = to if event == "handoff" else instance
     body = io.format_event_comment(
         event=event, instance=instance, to=to, seat=seat, seat_number=number, clone=key
@@ -330,6 +333,8 @@ def _seat_comment(io, *, event, instance, seat, key, author="alice", to=None, cr
     comment = {"body": body, "author": {"login": author}}
     if created is not None:
         comment["createdAt"] = created
+    if cid is not None:
+        comment["url"] = f"https://github.com/o/r/issues/7#issuecomment-{cid}"
     return comment
 
 
@@ -436,6 +441,64 @@ def test_a_handoff_to_a_seat_counts_for_the_target(io) -> None:
     res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
     assert res.owners == frozenset({2})
     assert res.judgement(2).seat == "w-2"
+
+
+def test_a_comments_id_comes_from_the_log_or_from_its_url(io) -> None:
+    """The log and GitHub's REST answer give a comment's id as `id`, and `gh
+    issue view` in the `url` it gives beside a node id, which the fold leaves."""
+    body = io.format_event_comment(event="claim", instance=1)
+    logged = io.comment_log.LogComment(41, "alice", "2026-10-26T00:00:00Z", body)
+    rest = {"id": 42, "user": {"login": "alice"}, "body": body}
+    viewed = {
+        "id": "IC_kwDOAbCd",
+        "author": {"login": "alice"},
+        "body": body,
+        "url": "https://github.com/o/r/issues/7#issuecomment-43",
+    }
+    bare = {"author": {"login": "alice"}, "body": body}
+    events = io.parse_events([logged, rest, viewed, bare], "alice")
+    assert [e.comment_id for e in events] == [41, 42, 43, None]
+
+
+@pytest.mark.parametrize(
+    ("cid", "verdict", "reason"),
+    [
+        pytest.param(9, "void", "its seat was released after it was made", id="before-the-take"),
+        pytest.param(11, "counts", None, id="after-the-take"),
+        pytest.param(None, "unjudged", "its comment's id could not be read", id="no-id"),
+    ],
+)
+def test_a_claim_counts_only_where_it_came_after_its_clones_take_of_its_seat(
+    io, cid, verdict, reason
+) -> None:
+    """DEC-059 point 5: a seat's release frees its clone's claims for good, so
+    the same clone, taking the seat again, revives none of them (#2182). The
+    claim's comment and the take's are ordered by the ids GitHub gave them."""
+    comments = [_seat_comment(io, event="claim", instance=1, seat="w-1", key="k1", cid=cid)]
+    holders = {"w-1": io.Holder(io.SEAT_HELD, "alice", "k1", take=10)}
+    res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
+    judged = res.judgement(1)
+    assert judged is not None
+    assert (judged.verdict, judged.reason) == (verdict, reason)
+    assert res.owners == (frozenset({1}) if verdict == "counts" else frozenset())
+    assert res.claimants == (frozenset() if verdict == "void" else frozenset({1}))
+
+
+def test_a_handoff_made_before_its_targets_take_does_not_count(io) -> None:
+    """A handoff counts for its target as a claim does (ADR-041 point 7), so
+    one made before the target's clone last took its seat counts for nothing."""
+    comments = [
+        _seat_comment(io, event="claim", instance=1, seat="w-1", key="k1", cid=5),
+        _seat_comment(io, event="handoff", instance=1, seat="w-2", key="k2", to=2, cid=6),
+    ]
+    holders = {
+        "w-1": io.Holder(io.SEAT_HELD, "alice", "k1", take=1),
+        "w-2": io.Holder(io.SEAT_HELD, "alice", "k2", take=8),
+    }
+    res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice", holders=holders)
+    assert res.owners == frozenset()
+    judged = res.judgement(2)
+    assert judged is not None and judged.verdict == io.VOID
 
 
 # ========================================================================
