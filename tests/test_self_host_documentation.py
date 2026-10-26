@@ -19,7 +19,8 @@ realises, over the real repository:
   friction pass over the roots it declares as places (#1003); the user pages'
   sets `REWORK` and `GUIDE` pin `LDOC` and `WRITE` (ADR-069 point 4);
 - every declared place is a page — its reader, a kind with a template, a
-  friction block anchoring what it describes and a revalidation — and the
+  friction block anchoring what it describes, and a revalidation or, with none
+  yet, nothing it rests on changed since the commit that added it — and the
   code-to-doc mapping keeps no rule a page's anchors now carry (#1010);
 - the declared surface names only what a page should describe: every file
   under the retired rules' trees is in it or left out for a named reason
@@ -40,15 +41,25 @@ from click.testing import CliRunner
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
-from project_kit import answer_files
+from project_kit import answer_files, default_branch
 from project_kit import config_validate as cv
 from project_kit import docs_roots as dr
+from project_kit import friction_repository as fr
 from project_kit import rule_sets as rs
 from project_kit.cli import main
 from project_kit.document_parts import split_front_matter
-from project_kit.friction_discovery import pattern_matcher, read_friction_settings
+from project_kit.friction_discovery import (
+    Artefact,
+    Discovery,
+    discover_artefacts,
+    pattern_matcher,
+    read_friction_settings,
+)
+from project_kit.friction_git import BlobReader, CommitTree
 from project_kit.friction_validate import FrictionFindingKind, validate_friction
 from project_kit.working_tree import working_tree
+from tests.adopter_repo import MakeAdopterRepo
+from tests.friction_documents import Timeline, document
 
 REPO = Path(__file__).resolve().parent.parent
 LIVING_DOCS = REPO / ".pkit" / "capabilities" / "living-docs"
@@ -372,15 +383,53 @@ def _revalidated() -> frozenset[str]:
     )
 
 
+#: How a page reads that the change's base does not hold yet (`_without_revalidation`).
+NEW = "new"
+
+#: The readings of a page with no revalidation yet under which it owes no answer.
+OWES_NOTHING = frozenset({NEW, fr.ArtefactState.CURRENT.value})
+
+
+def _without_revalidation(root: Path, place: str, base_ref: str | None = None) -> str:
+    """How the friction engine reads `place`, a page that no answer file revalidates yet.
+
+    Such a page is current as of the commit that added it, until something it rests
+    on changes after that commit. On the default branch, that commit is the squash its
+    change landed as (project-management DEC-013). So a page the change's base does not
+    hold reads `NEW`: the change check counts it revalidated (COR-050 point 6). The base
+    is where HEAD left `base_ref`, else the base every reader resolves (COR-054). A page
+    the base holds reads as the whole-repository check reads it, from the commit that
+    first introduced its block (COR-050 point 3): `current` while no anchor changed since.
+    """
+    base = default_branch.base(root, base_ref)
+    assert base.fork is not None, base.problem
+    blobs = BlobReader(root)
+    try:
+        held = discover_artefacts(root, tree=CommitTree(root, base.fork, blobs)).artefacts
+    finally:
+        blobs.close()
+    if all(artefact.location != place for artefact in held):
+        return NEW
+
+    def select(discovery: Discovery) -> Artefact:
+        (artefact,) = [a for a in discovery.artefacts if a.location == place]
+        return artefact
+
+    check = fr.run_artefact_check(root, select)
+    assert check is not None and check.report is not None, place
+    return check.report.state.value
+
+
 # Asserts what this tree's answers hold, so the short check runs it (ADR-067).
 @pytest.mark.answers
 @pytest.mark.parametrize("place", _project_places())
 def test_every_declared_place_is_a_page_anchored_and_revalidated(place: str) -> None:
     """A place's document is a page (living-docs DEC-001 point 4): its reader —
     the one its space serves — and a kind whose template the capability ships
-    (RS-LDOC-004), then a friction block that anchors what the page describes,
-    and an answer file that records its revalidation (COR-050 points 2 and 3,
-    COR-062 point 1)."""
+    (RS-LDOC-004), then a friction block that anchors what the page describes.
+    An answer file records its revalidation (COR-050 points 2 and 3, COR-062
+    point 1), or, with none yet, nothing it rests on changed since the commit
+    that added it (`_without_revalidation`)."""
     front = _front_matter(place)
     schema = json.loads((LIVING_DOCS / "schemas" / "page.schema.json").read_text(encoding="utf-8"))
     assert list(Draft202012Validator(schema).iter_errors(front)) == [], place
@@ -394,7 +443,48 @@ def test_every_declared_place_is_a_page_anchored_and_revalidated(place: str) -> 
     friction = _friction(front)
     anchors = friction.get("anchors") or {}
     assert any(anchors.values()), f"{place}: no anchor"
-    assert place in _revalidated(), f"{place}: no revalidation in an answer file"
+    if place not in _revalidated():
+        reading = _without_revalidation(REPO, place)
+        assert reading in OWES_NOTHING, (
+            f"{place}: no revalidation in an answer file, and {reading} since the commit "
+            "that added it"
+        )
+
+
+PAGE = "docs/guide.md"
+CLI_EDIT = {"src/cli/main.py": "print('cli v2')\n"}
+
+
+def _page() -> str:
+    """A page anchored to the CLI's sources, with no revalidation."""
+    return document("guide", anchors={"path": ["src/cli/**"]})
+
+
+def test_a_page_new_in_the_change_owes_nothing_and_is_current_once_landed(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A later commit of the change that adds a page may edit what the page rests on.
+    The page still owes nothing: the change lands as one commit, which adds it."""
+    timeline = Timeline(make_adopter_repo())
+    timeline.start({})
+    timeline.adopter.checkout("topic", create=True)
+    timeline.commit("add the page", {PAGE: _page()})
+    timeline.commit("a fix round edits the CLI", CLI_EDIT)
+    assert _without_revalidation(timeline.adopter.root, PAGE, "main") == NEW
+    timeline.adopter.checkout("main")
+    timeline.squash_merge("topic")
+    assert _without_revalidation(timeline.adopter.root, PAGE, "main") == "current"
+
+
+def test_a_page_whose_anchor_changed_after_it_was_added_with_no_answer_is_stale(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """With no revalidation, the commit that added the page is its revalidation point
+    (COR-050 point 3), so an edit after it with no answer leaves the page owing one."""
+    timeline = Timeline(make_adopter_repo())
+    timeline.start({PAGE: _page()})
+    timeline.commit("edit the CLI", CLI_EDIT)
+    assert _without_revalidation(timeline.adopter.root, PAGE, "main") == "stale"
 
 
 def test_no_page_path_anchors_another_page() -> None:
