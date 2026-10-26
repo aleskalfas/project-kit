@@ -10,7 +10,7 @@
 Promotes an issue from Todo → Backlog, recording the authorisation source.
 Per DEC-026, "The seven commands":
 
-    promote-issue <N> [--milestone "<M>"] --reason "<R>"
+    promote-issue <N> [--milestone "<M>"] --reason "<R>" [--bypass-owner "<reason>"]
 
 Two paths:
   - `--milestone` given → resolves <M> to an OPEN milestone (by number or
@@ -29,6 +29,16 @@ Gates per DEC-026:
     OPEN milestone in the repo (given-but-unresolvable is still an error;
     it is never silently downgraded to milestone-free).
   - Current Status = Todo (delegated to `move-issue`'s state machine).
+  - The clash guard (DEC-035 point 6), with an instance id set or a seat of
+    a topology held: an issue another instance owns is refused before the
+    move and before any milestone is attached, at bypassable-with-audit
+    (DEC-014), through `_lib/instance_claims`. `--bypass-owner "<reason>"`
+    posts the reason on the issue as an audit comment first, and the composed
+    move-issue is handed the same reason, so it posts no second one. The flag
+    is qualified per DEC-046, since `--reason` already carries the bypass of
+    the move's own gate. In a project with a topology, a claim whose clone no
+    longer holds its seat is no claim, and one that cannot be judged refuses
+    (DEC-059 point 9).
 
 Composes over `move-issue.py`: this wrapper invokes `move-issue --to backlog`,
 **threading `--reason` to move-issue's `--bypass-reason`**, then attaches the
@@ -46,7 +56,8 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  promoted
-  1  membership refusal
+  1  membership refusal / the clash guard refused an issue another instance
+     owns
   2  usage error / gate failure / gh failure
 """  # noqa: E501 — a usage line is a command, kept whole
 
@@ -62,7 +73,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import axis_carriage, axis_labels, bootstrap_gate, instance_claims, session_guard
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -119,6 +130,17 @@ def main() -> int:
         "--yes",
         action="store_true",
         help="Skip the confirmation prompt.",
+    )
+    parser.add_argument(
+        "--bypass-owner",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses an issue another instance owns "
+            "(bypassable-with-audit per DEC-014, DEC-035 point 6): the reason is "
+            "posted on the issue as an audit comment before the move. Qualified "
+            "per DEC-046, since --reason already bypasses the move's own gate."
+        ),
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
@@ -177,6 +199,29 @@ def main() -> int:
             )
             return 2
         milestone_title = resolved.title
+
+    # The clash guard (DEC-035 point 6), before the move and before any
+    # milestone is attached: an issue another instance owns is refused, unless a
+    # bypass posts its reason. The move this run composes is handed the same
+    # reason, and finds its audit comment posted.
+    owner_bypass: str | None = None
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="promote-issue",
+            flag="--bypass-owner",
+            bypass=args.bypass_owner,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 1
+        if decision.bypassed:
+            owner_bypass = args.bypass_owner
 
     print(f"promote-issue: #{args.issue_number}")
     if milestone_title is not None:
@@ -254,7 +299,12 @@ def main() -> int:
     # Compose over move-issue for the actual state transition. move-issue posts
     # the single canonical audit comment from the reason threaded here (DEC-049).
     rc = _invoke_move_issue(
-        args.issue_number, "backlog", reason, args.capability_root, args.allow_foreign_repo
+        args.issue_number,
+        "backlog",
+        reason,
+        args.capability_root,
+        args.allow_foreign_repo,
+        **({"bypass_owner": owner_bypass} if owner_bypass else {}),
     )
     if rc != 0:
         if milestone_title is not None:
@@ -384,6 +434,7 @@ def _invoke_move_issue(
     reason: str,
     capability_root_arg: Path | None,
     allow_foreign_repo: bool,
+    bypass_owner: str | None = None,
 ) -> int:
     """Shell out to `move-issue.py --to <target>` as the substrate transition.
 
@@ -395,6 +446,10 @@ def _invoke_move_issue(
     override into the composed move-issue so the foreign-repo gate (COR-039 /
     ADR-034) is confirmed once at the wrapper, not re-prompted by the inner
     transition.
+
+    ``bypass_owner`` is the reason this run's clash guard was bypassed with
+    (DEC-035 point 6): move-issue's own guard finds its audit comment posted,
+    and posts none of its own.
     """
     cmd = [
         sys.executable,
@@ -409,6 +464,8 @@ def _invoke_move_issue(
     ]
     if allow_foreign_repo:
         cmd.append("--allow-foreign-repo")
+    if bypass_owner:
+        cmd += ["--bypass-owner", bypass_owner]
     if capability_root_arg is not None:
         cmd += ["--capability-root", str(capability_root_arg)]
     proc = subprocess.run(cmd, check=False)

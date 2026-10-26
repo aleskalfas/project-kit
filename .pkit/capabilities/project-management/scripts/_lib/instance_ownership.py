@@ -23,8 +23,8 @@ comments itself (ADR-026's one-reader discipline, applied to the ownership axis)
 
 The fold is **authenticity-filtered**: a marker comment is trusted only if it was
 authored by the issue's expected assignee account (``author.login``) — a pasted
-forgery from another account is ignored (DEC-043 D3). The same-instant clash
-(DEC-035 D6) resolves **lowest-instance-wins**, computed identically from the
+forgery from another account is ignored (DEC-043 point 3). The same-instant clash
+(DEC-035 point 6) resolves **lowest-instance-wins**, computed identically from the
 folded set by every clone; comment-create is per-object-atomic, so two concurrent
 claims coexist as two markers rather than clobbering (the property a single
 mutable comment or a whole-body region could not provide — DEC-043 rejected both).
@@ -49,8 +49,23 @@ Two sole-constructors, each the *only* place its write is built (ADR-041 §3):
     issue body by **full overwrite** from the folded resolution (never an append;
     the region is derived, the comment log is its regeneration spine — ADR-041 §4).
 
-The label backend's add/remove (:func:`instance_label`) is the third covered
-write, kept for the ``label`` selector (DEC-035's original mechanism).
+The label backend's add/remove (:func:`instance_label_args`) and its lazy
+creation (:func:`instance_label_create_args`) are the other covered writes, kept
+for the ``label`` selector (DEC-035's original mechanism).
+
+When each write fires — the claim at filing and at start-work, the same-instant
+back-off, the release on close — is ``_lib/instance_claims``'s, the lifecycle
+side of DEC-035.
+
+A project with a topology of seats (ADR-041 point 7)
+----------------------------------------------------
+In a project with a topology (DEC-059), every claim names the claimant's seat,
+the seat's number and the clone's key, in the audit-log facility's stamp. The
+fold then takes each seat's holder from its caller, as :class:`Holder`, and reads
+no other seam: a claim counts only while the clone it names holds the seat it
+names, judged when it is read. A claim that names no seat does not count, and a
+claim whose seat was not read cannot be judged, which no consumer treats as free.
+Renewal and lapse are not judged yet.
 
 Realm-blindness (ADR-041 §6)
 ----------------------------
@@ -69,7 +84,7 @@ mirror render; it takes no view on what a race or a clobber *means*.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -93,12 +108,13 @@ except ImportError:  # pragma: no cover - a test that puts `_lib` itself on the 
 
 # ---- vocabulary ---------------------------------------------------------
 
-#: The ownership event types carried by the append-only comment log (DEC-043 D3).
+#: The ownership event types carried by the append-only comment log (DEC-043
+#: point 3).
 #: ``claim`` and ``handoff`` assert ownership; ``abandon`` / ``release`` relinquish
 #: it. The fold reads them in the order of their comments.
 EVENTS = audit_log.OWNERSHIP_EVENTS
 
-#: Substrate selector values (DEC-043 D2). ``comment`` is the default (safe where
+#: Substrate selector values (DEC-043 point 2). ``comment`` is the default (safe where
 #: labels cannot be created); ``label`` is the opt-in for repos that can.
 SUBSTRATES = ("comment", "label")
 DEFAULT_SUBSTRATE = "comment"
@@ -144,22 +160,69 @@ class OwnershipEvent:
     legacy: bool = False
 
 
+# ---- a project with a topology of seats (ADR-041 point 7) ---------------------
+
+#: What a seat's state issue says of it, as the fold's caller read it.
+SEAT_HELD = "held"
+SEAT_FREE = "free"
+SEAT_UNREAD = "unread"
+
+#: How a claim is judged in a project with a topology: it counts, it does not
+#: (it is void), or it cannot be judged, which no consumer treats as free.
+COUNTS = "counts"
+VOID = "void"
+UNJUDGED = "unjudged"
+
+#: Why a claim is void, or cannot be judged.
+NO_SEAT = "it names no seat"
+SEAT_RELEASED = "its clone no longer holds its seat"
+SEAT_UNREAD_REASON = "its seat's holder could not be read"
+SEAT_NOT_READ = "its seat is not among the seats read"
+
+
+@dataclass(frozen=True)
+class Holder:
+    """Who holds one seat, as the caller read it from the seat's state issue
+    (ADR-041 point 7): a clone, by its account and key, or free, or unread."""
+
+    state: str
+    login: str | None = None
+    clone: str | None = None
+
+
+@dataclass(frozen=True)
+class ClaimJudgement:
+    """How the fold judged one instance's claim in a project with a topology:
+    the claim's seat, its clone's key, the verdict, and why where it is not
+    ``COUNTS``."""
+
+    instance: int
+    seat: str | None
+    clone: str | None
+    verdict: str
+    reason: str | None = None
+
+
 @dataclass(frozen=True)
 class OwnershipResolution:
     """The folded current ownership of one issue — the seam's return.
 
     ``owners`` is the set of currently-owning instance numbers (normally one;
     two-plus only in the same-instant-clash window before back-off). ``winner`` is
-    the lowest-numbered owner (DEC-035 D6 lowest-wins), or ``None`` when the issue
+    the lowest-numbered owner (lowest wins, DEC-035 point 6), or ``None`` when the issue
     is unclaimed (a *commons* issue — the DEC-045 unassigned fallback and DEC-035
     ``start-work`` claim target). ``substrate`` records which substrate resolved
     the owner (``comment`` wins over a lingering ``label`` — ADR-041 §2).
+
+    In a project with a topology, ``owners`` holds only the claims that count,
+    and ``judgements`` says how each claim was judged (ADR-041 point 7).
     """
 
     assignee: str | None
     owners: frozenset[int]
     substrate: str | None
     events: tuple[OwnershipEvent, ...] = field(default_factory=tuple)
+    judgements: tuple[ClaimJudgement, ...] = field(default_factory=tuple)
 
     @property
     def winner(self) -> int | None:
@@ -168,6 +231,21 @@ class OwnershipResolution:
     @property
     def claimed(self) -> bool:
         return bool(self.owners)
+
+    @property
+    def unjudged(self) -> tuple[ClaimJudgement, ...]:
+        """The claims the fold could not judge (ADR-041 point 7)."""
+        return tuple(j for j in self.judgements if j.verdict == UNJUDGED)
+
+    @property
+    def claimants(self) -> frozenset[int]:
+        """Every instance whose claim counts or cannot be judged: no consumer
+        treats such an issue as free (ADR-041 point 5)."""
+        return self.owners | {j.instance for j in self.unjudged}
+
+    def judgement(self, instance: int) -> ClaimJudgement | None:
+        """How ``instance``'s claim was judged, or None where no topology is."""
+        return next((j for j in self.judgements if j.instance == instance), None)
 
 
 # ---- the log and its events ---------------------------------------------
@@ -232,7 +310,7 @@ def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[Ow
     """Extract authenticated ownership events from an issue's comments.
 
     ``comments`` are the log's (:func:`read_log`) or ``gh``'s comment entries.
-    The authenticity filter (ADR-041 §1 / DEC-043 D3): a stamped comment counts
+    The authenticity filter (ADR-041 §1 / DEC-043 point 3): a stamped comment counts
     **only** if its author equals the issue's expected ``assignee_login`` — a
     forged stamp pasted from another account is ignored. With no assignee
     (``None``), no marker authenticates, so the issue reads as unclaimed. Returned
@@ -276,22 +354,78 @@ def fold_events(events: list[OwnershipEvent]) -> frozenset[int]:
 
     Per-instance semantics: a ``claim`` (or a ``handoff to=N``) adds an owner; an
     ``abandon`` / ``release`` by an instance (or a ``handoff`` *away* from it)
-    removes it. Replaying in timestamp order yields the live owner set — normally a
-    singleton, two-plus only in the same-instant clash window (both claimants'
-    markers coexist because comment-create is atomic; DEC-035 D6). The caller reads
-    :attr:`OwnershipResolution.winner` for the lowest-wins tie-break.
+    removes it. Replaying in the order of the comments yields the live owner set —
+    normally a singleton, two-plus only in the same-instant clash window (both
+    claimants' markers coexist because comment-create is atomic; DEC-035 point 6). The
+    caller reads :attr:`OwnershipResolution.winner` for the lowest-wins tie-break.
     """
-    owners: set[int] = set()
+    return frozenset(_owning_events(events))
+
+
+def _owning_events(events: list[OwnershipEvent]) -> dict[int, OwnershipEvent]:
+    """Each owning instance, with the event that made it the owner: its claim,
+    or the handoff to it, which names the target's seat and key (ADR-041
+    point 7)."""
+    owners: dict[int, OwnershipEvent] = {}
     for e in events:
-        if e.event in ("claim",):
-            owners.add(e.instance)
+        if e.event == "claim":
+            owners[e.instance] = e
         elif e.event == "handoff":
-            owners.discard(e.instance)
+            owners.pop(e.instance, None)
             if e.to is not None:
-                owners.add(e.to)
+                owners[e.to] = e
         elif e.event in ("abandon", "release"):
-            owners.discard(e.instance)
-    return frozenset(owners)
+            owners.pop(e.instance, None)
+    return owners
+
+
+def judge_claim(
+    instance: int, event: OwnershipEvent, holders: Mapping[str, Holder]
+) -> ClaimJudgement:
+    """Judge ``instance``'s claim, made by ``event``, against the seats' holders
+    (ADR-041 point 7).
+
+    It counts only while the clone it names holds the seat it names: the seat's
+    holder has the claim's key, and its account where the holder names one. A
+    claim that names no seat, or whose seat is free or held by another clone, is
+    void. A seat that is unread, or not among the holders, leaves it unjudged."""
+    if not event.seat:
+        return ClaimJudgement(instance, None, event.clone, VOID, NO_SEAT)
+    holder = holders.get(event.seat)
+    if holder is None:
+        return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, SEAT_NOT_READ)
+    if holder.state == SEAT_UNREAD:
+        return ClaimJudgement(instance, event.seat, event.clone, UNJUDGED, SEAT_UNREAD_REASON)
+    same_account = holder.login is None or holder.login == event.assignee
+    if holder.state == SEAT_HELD and holder.clone == event.clone and same_account:
+        return ClaimJudgement(instance, event.seat, event.clone, COUNTS)
+    return ClaimJudgement(instance, event.seat, event.clone, VOID, SEAT_RELEASED)
+
+
+def _resolve_with_seats(
+    comments: Iterable[Any],
+    labels: Iterable[dict[str, Any] | str],
+    assignee_login: str | None,
+    holders: Mapping[str, Holder],
+) -> OwnershipResolution:
+    """The fold in a project with a topology (ADR-041 point 7): each owner
+    judged against the seats' holders. A label names no seat, so a label owner
+    with no comment marker is void."""
+    events = parse_events(comments, assignee_login)
+    owning = _owning_events(events)
+    judgements = [judge_claim(n, owning[n], holders) for n in sorted(owning)]
+    judgements += [
+        ClaimJudgement(n, None, None, VOID, NO_SEAT)
+        for n in sorted(_label_owners(labels) - set(owning))
+    ]
+    owners = frozenset(j.instance for j in judgements if j.verdict == COUNTS)
+    return OwnershipResolution(
+        assignee=assignee_login if owners else None,
+        owners=owners,
+        substrate="comment" if owners else None,
+        events=tuple(events),
+        judgements=tuple(judgements),
+    )
 
 
 def _label_owners(labels: Iterable[dict[str, Any] | str]) -> frozenset[int]:
@@ -311,6 +445,7 @@ def resolve_owner(
     labels: Iterable[dict[str, Any] | str],
     assignee_login: str | None,
     selector: str = DEFAULT_SUBSTRATE,
+    holders: Mapping[str, Holder] | None = None,
 ) -> OwnershipResolution:
     """The one seam: resolve an issue's current owner, comment-log-wins on a mix.
 
@@ -324,10 +459,16 @@ def resolve_owner(
       * else fall back to the label owner set (``substrate='label'``), i.e. either a
         ``label``-selector repo or a comment-mode repo not yet claimed via a marker.
 
+    ``holders`` is each seat's holder, which the caller passes in a project with
+    a topology: the comment log is then the substrate, and each owner is judged
+    against the holders (ADR-041 point 7).
+
     Returns an :class:`OwnershipResolution`; an empty ``owners`` means *commons*
     (unclaimed) — the DEC-035 ``start-work`` claim target and the DEC-045
     unassigned-workstream fallback.
     """
+    if holders is not None:
+        return _resolve_with_seats(comments, labels, assignee_login, holders)
     events = parse_events(comments, assignee_login)
     comment_owners = fold_events(events)
     label_owners = _label_owners(labels)
@@ -433,12 +574,30 @@ def instance_label_args(
     """Construct the ``gh issue edit`` add/remove argv for an ``instance:N`` label.
 
     The label backend's write constructor (the ``label`` selector). Kept for repos
-    that opt into DEC-035's original label mechanism; a comment-mode repo never
-    calls it. Label *creation* is out of scope here — a label-mode repo has the
-    labels (bootstrap/greenfield); comment-mode is precisely the label-locked case.
+    that opt into DEC-035's original label mechanism. A comment-mode repo calls it
+    only to remove a residual label left from a label-mode past (ADR-041 §2). The
+    label's creation is :func:`instance_label_create_args`.
     """
     flag = "--remove-label" if remove else "--add-label"
     return ["gh", "issue", "edit", str(issue_number), flag, instance_label(instance)]
+
+
+def instance_label_create_args(*, instance: int) -> list[str]:
+    """Construct the ``gh label create`` argv for an ``instance:N`` label.
+
+    DEC-035 point 2 creates the label lazily, on its first use, so bootstrap
+    stays untouched: a ``label``-mode claim whose add fails asks for this once,
+    then adds again. Only a repo that selected ``label`` calls it, which is the
+    adopter's word that labels are creatable there (DEC-043 point 2).
+    """
+    return [
+        "gh",
+        "label",
+        "create",
+        instance_label(instance),
+        "--description",
+        f"Owned by instance {instance} of its assignee (instance ownership)",
+    ]
 
 
 # ---- derived owner-mirror (description regenerator) ----------------------
@@ -492,7 +651,7 @@ def render_mirror_body(body: str, region: str) -> str:
 
 
 def resolve_substrate(settings: dict[str, Any] | None) -> str:
-    """Resolve the active ownership substrate (DEC-043 D2), default ``comment``.
+    """Resolve the active ownership substrate (DEC-043 point 2), default ``comment``.
 
     ``settings`` is the adopter's parsed ``instance-ownership.yaml`` — this marker's
     own schema home, **not** ``substrate-map.yaml`` (whose mere presence would

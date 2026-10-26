@@ -1,7 +1,7 @@
 # Instance-ownership substrate selector — which substrate carries the marker.
 #
 # OPTIONAL adopter-side file (per [project-management:DEC-043-ownership-
-# substrate-selection] D2). The ownership marker ([project-management:DEC-035-
+# substrate-selection] point 2). The ownership marker ([project-management:DEC-035-
 # instance-ownership]: which of one person's concurrent clones owns an issue)
 # binds to a SELECTABLE substrate: a label-free append-only COMMENT log plus a
 # derived description mirror (the default), or the DEC-035 `instance:N` LABEL

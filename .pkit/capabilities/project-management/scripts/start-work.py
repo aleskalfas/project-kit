@@ -10,7 +10,7 @@
 Transitions an issue Backlog → In Progress by creating the feature
 branch + setting the assignee. Per DEC-026:
 
-    start-work <N>
+    start-work <N> [--bypass "<reason>"]
 
 Gates per DEC-026:
   - Current user is a team member (DEC-021); open-mode degrades to no-op.
@@ -25,11 +25,30 @@ Gates per DEC-026:
     matching, the issue's is the one with its open PR; with none or more than
     one open, it refuses, naming each (`_lib/issue_branch`, #1608). A branch
     naming the issue in another shape is refused only when no branch matches.
+  - The clash guard (DEC-035 point 6), with an instance id set or a seat of
+    a topology held: an issue another instance owns is refused, before
+    anything is written, at bypassable-with-audit (DEC-014). `--bypass
+    "<reason>"` posts the reason on the issue as an audit comment and starts
+    the work unclaimed, and the composed move-issue is handed the same
+    reason. In a project with a topology, a claim whose clone no longer holds
+    its seat is no claim, and one that cannot be judged refuses (DEC-059
+    point 9).
 
 Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
     label; slug from the issue title).
   - Sets assignee to the current invoker.
+  - With an instance id set (`set-instance`, DEC-035 point 1), claims the
+    issue for this clone once the assignee is set, where no instance owns it
+    (DEC-035 point 3), through `_lib/instance_claims`. The claim re-reads the
+    issue: where a lower-numbered instance claimed in the same instant, this
+    clone withdraws its claim and stops before the move, naming the branch it
+    left (DEC-035 point 6). It stops there too when the withdrawal could not
+    be written. Any other claim that fails is a warning, and the work starts
+    unclaimed. After a bypass it claims nothing, whichever account's instance
+    owned the issue. With no id set, nothing of this runs. In a project with a
+    topology, a clone claims for the seat it holds, its number the seat's, and
+    a clone that holds no seat claims nothing (DEC-059 points 6 and 7).
   - Composes over `move-issue.py --to in-progress`. If that move still fails
     after the branch / assignee were written (a network error, or a state
     that changed since the check so the move is no longer legal), the run
@@ -38,7 +57,10 @@ Side-effects:
 Exit codes:
   0  in-progress
   1  membership refusal
-  2  usage error / gate failure / illegal transition / gh failure
+  2  usage error / gate failure / illegal transition / gh failure / another
+     instance claimed the issue in the same instant and keeps it, so this
+     clone withdrew its claim and did not move the issue / the clash guard
+     refused an issue another instance owns
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -60,6 +82,7 @@ from _lib import (
     classification_rules,
     composed_move,
     default_branch,
+    instance_claims,
     issue_branch,
     issue_position,
     session_guard,
@@ -74,6 +97,10 @@ from _lib.membership import (
 )
 
 TARGET_STATE = "in-progress"
+
+#: Another instance claimed the issue in the same instant and keeps it: a gate
+#: this clone does not pass, so the exit code of a gate failure.
+EXIT_CLAIM_LOST = 2
 
 
 def main() -> int:
@@ -93,6 +120,17 @@ def main() -> int:
     )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--yes", action="store_true")
+    parser.add_argument(
+        "--bypass",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Bypass the clash guard, which refuses an issue another instance owns "
+            "(bypassable-with-audit per DEC-014, DEC-035 point 6): the reason is "
+            "posted on the issue as an audit comment before anything is written, "
+            "and the work starts unclaimed."
+        ),
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
@@ -217,10 +255,38 @@ def main() -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
+    # Instance ownership (DEC-035): None unless this clone set an instance id,
+    # or holds a seat of a topology (DEC-059), and then nothing below changes.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+
+    # The clash guard (DEC-035 point 6), before anything is written: an issue
+    # another instance owns is refused, unless a bypass posts its reason.
+    owner_bypass: str | None = None
+    if clone is not None:
+        decision = instance_claims.guard(
+            args.issue_number,
+            clone,
+            config,
+            verb="start-work",
+            flag="--bypass",
+            bypass=args.bypass,
+            invoker=invoker,
+            dry_run=args.dry_run,
+        )
+        instance_claims.say_guard(decision)
+        if decision.refused:
+            return 2
+        if decision.bypassed:
+            owner_bypass = args.bypass
+
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
     print(f"  base:      {base}")
     print(f"  assignee:  {invoker.github_login or '(unknown invoker)'}")
+    if clone is not None and owner_bypass is not None:
+        print("  ownership: not claimed, since --bypass starts the work unclaimed")
+    elif clone is not None:
+        print(f"  ownership: {instance_claims.claim_plan(clone)}, where no instance owns it")
 
     if args.dry_run:
         print(
@@ -261,12 +327,41 @@ def main() -> int:
                 file=sys.stderr,
             )
 
+    # Claim the issue for this clone (DEC-035 point 3), once the assignee is
+    # set: a marker counts only from the assignee's account (DEC-043 point 3).
+    # Ahead of the move, so a clone that lost a same-instant claim stops there,
+    # whether or not its withdrawal could be written. A bypass claims nothing,
+    # though this run made its account an assignee: the issue was another
+    # instance's, of this account or another, and the work starts unclaimed.
+    if clone is not None and owner_bypass is not None:
+        print(
+            f"[note] ownership: #{args.issue_number} is not claimed: --bypass starts the "
+            "work unclaimed."
+        )
+    elif clone is not None:
+        claimed = instance_claims.claim(args.issue_number, clone, config)
+        instance_claims.say(claimed)
+        if claimed.outcome in (instance_claims.LOST, instance_claims.FAILED) and (
+            claimed.winner not in (None, clone.instance)
+        ):
+            print(
+                _claim_lost_message(
+                    args.issue_number,
+                    claimed.winner,
+                    branch_name=branch_name if branch_created else None,
+                    base=base,
+                ),
+                file=sys.stderr,
+            )
+            return EXIT_CLAIM_LOST
+
     # Compose over move-issue.
     rc = composed_move.invoke_move_issue(
         args.issue_number,
         TARGET_STATE,
         capability_root_arg=args.capability_root,
         allow_foreign_repo=args.allow_foreign_repo,
+        **({"bypass_owner": owner_bypass} if owner_bypass else {}),
     )
     if rc != 0:
         print(
@@ -297,6 +392,25 @@ def main() -> int:
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="title,labels,assignees,state,body,milestone")
+
+
+def _claim_lost_message(
+    issue_number: int, winner: int | None, *, branch_name: str | None, base: str
+) -> str:
+    """The stop after a lost same-instant claim (DEC-035 point 6): the issue is
+    the winning instance's, so this clone does not move it. The branch it cut
+    is named with its undo. The assignee stays: it is this account's, as it is
+    the winning clone's."""
+    lines = [
+        f"[stopped] start-work #{issue_number}: instance {winner} claimed it in the same "
+        "instant and keeps it, so this clone did not move it.",
+    ]
+    if branch_name is not None:
+        lines.append(
+            f"  left: branch {branch_name!r} (created and checked out); "
+            f"undo: git checkout {base} && git branch -D {branch_name}"
+        )
+    return "\n".join(lines)
 
 
 def _left_behind(
