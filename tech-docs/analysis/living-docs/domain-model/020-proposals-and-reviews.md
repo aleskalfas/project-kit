@@ -132,3 +132,23 @@ An onboarding plan says how a project's existing documents come into its [docume
 - It cites its evidence for each thing it proposes (DEC-001 point 8).
 - Retiring a mapping from code to documents is a separate change, for whoever owns the mapping (DEC-001 point 8).
 - Onboarding is complete when the declared surface is covered, and no page is left unanchored without an accepted reason (DEC-001 point 8).
+
+## What is built on these concepts
+
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
+**Proposal:**
+
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+- [REQ-022 · Functional · The living-docs agent proposes each change, and applies none](../requirements/functional/REQ-022-agent-proposes-only.md)
+
+**Reader-review:**
+
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
+
+**Onboarding plan:**
+
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)

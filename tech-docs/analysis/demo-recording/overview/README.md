@@ -1,6 +1,6 @@
 # Overview of the analysis of demo-recording
 
-<!-- pkit:overview reads=4 fingerprint=sha256:b7d56347ffe8785f7b647be6faf0aee0e6181a30c085fdf10ff74e725bedf7b3 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:c610ab23138593d6603b2c068f628f61998111aba6b00626486759c9a4eb072c -->
 
 No record states what demo-recording is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of demo-recording under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
