@@ -1,0 +1,48 @@
+# The topology of seats — binding carrier for the project-management capability.
+#
+# Per [project-management:DEC-059-topology-of-seats], a project that runs agents
+# in parallel declares its topology in its own `project/topology.yaml`: a list of
+# seats, and the settings they share. Every clone reads it from the default
+# branch (point 1). `scripts/_lib/topology.py` is its one reader, and
+# `check-topology` its check. This kit-shipped file exists so that:
+#   (a) it declares the COR-023 `binds_to:` glob, letting `pkit data validate`
+#       resolve an adopter's topology.yaml to its companion JSON Schema; and
+#   (b) it validates against that companion under `pkit schemas validate`.
+# It declares no seat of its own. A project's file looks like this:
+#
+#   schema_version: 1
+#   settings:
+#     release_mode: tolerant        # the only mode built (DEC-059 point 5)
+#   seats:
+#     - name: planner               # unique, never renamed: retire it instead
+#       role: planner               # planner, worker or lead
+#       organizer: true             # at most one seat; may release others by force
+#       state_issue: 2210           # written by `pkit pm create-seats`
+#     - name: tester
+#       role: worker
+#       agent: project-manager      # the default
+#       scope:                      # optional; narrows this seat's own pool
+#         types: [test]
+#       state_issue: 2211
+#     - name: old-worker
+#       role: worker
+#       retired: true               # stays in place, so no seat's number moves
+#       state_issue: 2190
+#
+# A seat's number is its place in the list, counted from one (point 6).
+
+schema_version: 1
+
+# Adopter-data binding (per COR-023): a project's topology.yaml matches this
+# schema. Adopter files SHOULD also carry the self-describing top-level field
+# `pkit_schema: project-management:topology`.
+binds_to:
+  - "**/topology.yaml"
+
+pkit_schema: project-management:topology
+
+settings:
+  release_mode: tolerant
+
+# Empty placeholder: the carrier declares no seat.
+seats: []

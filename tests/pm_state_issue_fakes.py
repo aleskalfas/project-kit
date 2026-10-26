@@ -2,13 +2,14 @@
 
 `FakeRepo` answers the `gh` calls `_lib/state_issues` and `_lib/comment_log`
 make: a page of an issue's comments and an author's access (`gh api`), a read
-of an issue, a comment, a description written from a file, a new issue, and a
-reopen or a close. Every comment it is handed is authored by `author`, as GitHub
-authors a comment by the account `gh` runs as. No test reaches GitHub.
+of an issue, a listing of issues, a comment, a description written from a file,
+a new issue, and a reopen or a close. Every comment it is handed is authored by
+`author`, as GitHub authors a comment by the account `gh` runs as. No test
+reaches GitHub.
 
 `access` maps a login to the level GitHub would answer; a login it lacks
 answers 404. `failing` holds the verbs whose next call fails once (`"comment"`,
-`"edit"`, `"create"`, `"view"`, `"page"`, `"access"`, `"reopen"`), and
+`"edit"`, `"create"`, `"view"`, `"list"`, `"page"`, `"access"`, `"reopen"`), and
 `"comment-landed"` for a comment that lands though its call fails. `before_post`
 runs before each comment lands, with the issue's number, so a test can post
 another clone's comment there to stand for one made in the same instant.
@@ -94,6 +95,8 @@ class FakeRepo:
             issue.args = argv
             url = f"https://github.com/o/r/issues/{self.next_issue}\n"
             return _done(argv, stdout=url)
+        if verb == "list":
+            return self._list(argv)
         number = int(argv[3])
         issue = self.issues[number]
         if verb == "view":
@@ -123,6 +126,24 @@ class FakeRepo:
             issue.state = "OPEN" if verb == "reopen" else "CLOSED"
             return _done(argv)
         raise AssertionError(f"unexpected gh call: {argv}")
+
+    def _list(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
+        """`gh issue list --state <s> --limit <n> --json <fields>`: the newest first,
+        as GitHub lists them."""
+        if self._fails("list"):
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+        state = argv[argv.index("--state") + 1] if "--state" in argv else "open"
+        limit = int(argv[argv.index("--limit") + 1]) if "--limit" in argv else 30
+        fields = argv[argv.index("--json") + 1].split(",")
+        rows = []
+        for number in sorted(self.issues, reverse=True):
+            issue = self.issues[number]
+            if state != "all" and issue.state != state.upper():
+                continue
+            record = {"number": number, "state": issue.state, "title": issue.title}
+            record["body"] = issue.body
+            rows.append({f: record[f] for f in fields})
+        return _done(argv, stdout=json.dumps(rows[:limit]))
 
     def _api(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         path = argv[2]
