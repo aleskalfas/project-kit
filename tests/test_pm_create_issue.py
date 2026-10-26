@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -3125,3 +3127,32 @@ def test_each_shipped_template_composes_a_body_the_rules_accept(
     err = capsys.readouterr().err
     assert "body.required-section" not in err
     assert "body.h1" not in err
+
+
+def test_the_children_view_is_rendered_from_issues_of_work_alone(ci, monkeypatch) -> None:
+    """#2139: the corpus the children view renders from comes through the one
+    read of issues, which leaves a state issue out, even one whose first line
+    names the parent (DEC-058 point 3)."""
+    rows = [
+        {"number": 7, "title": "[Task] child", "body": "Feature: #5\n## What\n"},
+        {
+            "number": 8,
+            "title": "Seat planner",
+            "body": "Feature: #5\n<!-- pkit:state-issue v=1 key=seat-planner -->\n",
+        },
+    ]
+
+    def fake_gh(args, config):
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+
+    seen: dict = {}
+
+    def fake_refresh(config, *, parent_number, corpus, containment_mode, titles=None):
+        seen.update(corpus=corpus, titles=titles)
+        return SimpleNamespace(ok=True, detail="children view refreshed")
+
+    monkeypatch.setattr(ci.containment, "_gh_call", fake_gh)
+    monkeypatch.setattr(ci.containment, "refresh_children_comment", fake_refresh)
+    ci._refresh_parent_children_view({}, parent_number=5, containment_mode="textual")
+    assert set(seen["corpus"]) == {7}
+    assert set(seen["titles"]) == {7}

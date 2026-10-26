@@ -1,0 +1,50 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/constraints/REQ-040-github-and-gh.md
+    read:
+      - moved-3d3c5cb615ab.yaml
+    revalidated:
+      at: 2026-10-26T08:58:43Z
+      outcome: unchanged
+      unchanged-because: pre-check's title-prefix sample now runs through the one read of issues, which still lists them through gh on GitHub alone. The check of gh auth status is as it was.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - moved-c1c76fd062d5.yaml
+    revalidated:
+      at: 2026-10-26T08:58:58Z
+      outcome: unchanged
+      unchanged-because: close-issue's tests gain one that a state issue is never an open child. The tests that find each close a person holds refused, with no terminal and no --yes, are as they were.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-060-file-task.md
+    read:
+      - moved-a3323ce78e42.yaml
+    revalidated:
+      at: 2026-10-26T08:59:10Z
+      outcome: unchanged
+      unchanged-because: The containment seam now reads its corpus through the one read of issues, which leaves state issues out and gives each issue of work back as before. Filing a Task, its checks and its link to the parent are unchanged.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md
+    read:
+      - moved-e8b5c957d8c2.yaml
+    revalidated:
+      at: 2026-10-26T08:59:12Z
+      outcome: unchanged
+      unchanged-because: The carriers of a workstream and the bodies a rename rewrites are now read through the one read of issues, which leaves state issues out and gives each issue of work back as before. Each step and variant still holds.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T08:59:23Z
+      outcome: unchanged
+      unchanged-because: The scripts now list issues through one read that leaves state issues out, as DEC-058 point 3 decides. No command, flag or output changes for an issue of work, so what the README says of each command still holds.
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
