@@ -15,7 +15,7 @@ An analysis holds relations a reader grasps faster in a picture. A diagram drawn
 - which use case follows from which
 
 [software-analysis:DEC-001-software-analysis-discipline] and [software-analysis:DEC-002-analysis-requirements] already decide what such a picture can rest on:
-- **A tool reads front matter only.** A body's parts serve readers and the check, never another tool (DEC-001 point 1).
+- **A tool reads data from front matter.** A body's text serves readers and the check, never another tool (DEC-001 point 1).
 - **What meets a requirement is computed,** never stored on the requirement (DEC-002 point 7).
 - **Views of the solution stay outside the analysis.** A context view names the analysis's actors by id, and states none of their facts (DEC-001 point 11).
 - **A use case names what makes each precondition true,** optionally as data in `after` (DEC-001 point 1).
@@ -120,7 +120,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
     > This analysis describes what billing does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
 
     An analysis that builds on others names them in the second sentence, as the configuration lists them. The one analysis at the location's top names no component, so its first sentence reads "the system" where a component's name would stand.
-  - **the areas,** in their numbered order, each with its goal, the areas it builds on, its requirements and its use cases (below). Then the use cases in no area, in a section of their own. An analysis whose use cases lie in no area lists them under its use cases.
+  - **the areas,** in their numbered order, each with its goal, the areas it builds on, its concepts, its requirements and its use cases (below). Then the use cases in no area, in a section of their own. An analysis whose use cases lie in no area lists them under its use cases.
   - **reference,** each part below a section heading of its own under "Reference":
     - **who takes part:** one table of the actors (below)
     - **the words:** the glossary, then each domain-model view in its numbered order, by its number and its title
@@ -130,11 +130,11 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
     - **the diagrams:** one line that names the query, as it is run for this analysis, and its subjects. It ends reference on every page, so every page has the heading "Reference".
   - **a closing line:** the command writes the page from the analysis, so a reader changes the analysis, never the page
 - **Complete, or no answer.** The command writes no overview where the query could not draw each of its diagrams in full (point 7). The two share one test, so the page is written only where the query it names answers. Validation fails such a file in any case.
-- **Front matter only.** The overview reads the analysis's front matter and the paths of its files, never a body, as DEC-001 point 1 allows a tool. A requirement's area is read from its path. Beyond the analysis's files, it reads the capability's configuration and the front matter of the record its purpose names.
+- **Front matter, and the links to the terms.** The overview reads the analysis's front matter and the paths of its files, as DEC-001 point 1 allows a tool. Of a body, it reads only the links to the glossary's entries a use case or a requirement holds, which the links command writes and the check holds ([software-analysis:DEC-004-domain-model-views] point 7). A requirement's area is read from its path. Beyond the analysis's files, it reads the capability's configuration and the front matter of the record its purpose names.
 - **Its purpose.** What a component is for is a decision, so a decision record states it. The analysis's entry in the capability's configuration points to that record, `purpose: <record id>`, as the entry names the analyses it builds on.
   - **Which record:** a decision record the project owns, named as a record anchor names one, such as `PRJ-004` or `billing:DEC-001`. That is a project or an architecture record, or, for a capability's analysis, a decision of that capability.
   - **Never a record a release changes.** A core record, or another capability's decision, reaches an adopting project with a release. A new title there would leave the overview stale after an upgrade, so the check refuses such a pointer.
-  - **A record whole,** never one of its points. A point has no title in front matter, which is all the overview reads.
+  - **A record whole,** never one of its points. A point has no title in front matter, which is all the overview reads of a record.
   - **The one analysis** at the location's top keeps its pointer at the configuration's top, as it keeps its goals.
   - **What it shows:** the record's title as a sentence, linked to the record. The title is shown as written, with a full stop where it ends with none. So whoever titles the record states there what the component is for.
   - **The check** fails a pointer to no record, and one to a record that is not accepted, as the acceptance gate asks. It checks the pointer whatever the setting that keeps the overview, since a pointer left in the configuration still names a record.
@@ -142,6 +142,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
   - **No record named:** the overview says that no record states what the component is for yet. It names the command that writes one, and the setting that names it. Nothing fails.
 - **Each area** shows, below its goal:
   - **Builds on:** the other areas that hold a producer its use cases name in `after`. A producer in a later area is left out, as an alternative the area does not build on (point 5, DEC-001 point 12). The environment is no area. Where none of the area's use cases writes `after`, the line is left out, since nothing says what the area builds on.
+  - **Its concepts:** each domain-model view in force of its own analysis that explains a term one of the area's use cases or requirements links to, in the order of the views' numbers. It is shown where the analysis holds a view in force. An analysis whose use cases lie in no area, and the use cases in no area, show no concepts.
   - **Its requirements:** each requirement in force whose file lies in a folder named for the area, inside its kind's folder (DEC-002 point 3). A requirement's area folder takes the name of the use cases' area, so the two read as one area.
   - **Its use cases,** each marked where an open shortfall names one of its steps or variants.
   - **Not written yet:** an area whose goal the configuration gives, and which holds no use case in force, shows its goal and "Not written yet."
@@ -166,7 +167,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
   - **A missing overview** is a warning that names the command. So a project that installed the capability before fails nothing, and needs no migration.
 - **Keeping none:** a setting in the capability's configuration turns the overview off. The stamp then writes none, the command refuses, and validation asks for no overview and no goal. It still checks a purpose's pointer. It warns of an overview left in place, which nothing keeps fresh.
 - **What it anchors:** nothing, since a held document carries no friction block (COR-050 point 12). Generation and the check that it is fresh keep it true to what it draws. The capability's maintainer took this as meeting "it anchors what it shows".
-- **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis. A title, a status, a use case's actors and shortfalls, an actor's summary and a goal are included. So are the title and the status of the purpose record, though the record lies outside the analysis. A change that supersedes that record also fails validation, until the pointer names its successor. Two branches that each make such a change conflict on the overview, as on a lock file.
+- **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis. A title, a status, a use case's actors and shortfalls, an actor's summary and a goal are included. So is a link to a term that leads an area to another view. So are the title and the status of the purpose record, though the record lies outside the analysis. A change that supersedes that record also fails validation, until the pointer names its successor. Two branches that each make such a change conflict on the overview, as on a lock file.
   - **Where they conflict:** always on its fingerprint's line, and on each section both change. A section for each part keeps the rest apart.
   - **Resolving it** is running the command.
 
@@ -241,11 +242,17 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **The pointer is structure.** Like the entry's list of the analyses it builds on, it says which record the analysis rests on, never what that record says. So the pointer holds no reason of its own.
 - **Only an accepted record.** A proposed record decides nothing yet, so the overview shows none as what the component is for, as the acceptance gate asks.
 - **A pointer that fails, said on the page.** The page says what is wrong, and stays fresh for the rest of the analysis. Validation fails the pointer, so the change that broke it mends it.
-- **Its title.** The title states a record's decision in one line, and the overview reads front matter only.
+- **Its title.** The title states a record's decision in one line, and the overview reads only a record's front matter.
 - **No solution in the analysis.** The overview is no artefact of the analysis but its entry page. A component's purpose is the one statement that comes before every requirement, so the page may name its record.
 - **Nothing fails without one.** A project may adopt the capability before any record states what its component is for. The overview says so and names the way to write one.
 
 **Why each area shows what it builds on and its own requirements.** An analysis is built area by area, each after the areas it builds on. An area's requirements come before its use cases (DEC-001 point 12). Shown together, they tell the path through the system in the order it is built. Both are computed, from `after` and from a requirement's path, so they state no fact of their own.
+
+**Why each area shows its concepts.** A reader who starts from an area asks which concepts its use cases and requirements rest on, and where each is explained. The maintainer asked for it on 26 October, reviewing a change to project-management's analysis as a newcomer would read it ([project-kit#2104](https://github.com/aleskalfas/project-kit/issues/2104)).
+- **Read from the links to the terms.** They are the one reading the analysis holds of which terms an artefact uses ([software-analysis:DEC-004-domain-model-views] point 7). The links command writes them and the check holds them, so the overview reads a copy that never drifts.
+- **Only those links of a body.** A body's other text serves readers alone (DEC-001 point 1). The overview reads no part of it, so a reworded statement that moves no link leaves it fresh.
+- **The order of the commands.** A mention that comes to lead an area to another view makes the overview stale once the links command links it. So the links command runs first, then the overview's, and the check names each where its output is stale.
+- **Its cost.** Where most artefacts use the lowest views' concepts, each area lists most views, as four of the core's five areas did on 26 October. The line still says where each area's words are explained.
 
 **Why an area not written yet shows.** An area the project has planned is a stage of the path, whether or not a use case is written in it yet. Shown in its place, it tells a newcomer where the path has a gap.
 - **What it costs.** No check holds the areas' folder names together. A goal left behind when an area is renamed shows as an area not written yet. A requirement's folder named apart from its use cases' shows as an area of its own. A reader of the overview sees either, and the check warns of each such area that has no goal.
@@ -286,7 +293,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **The three on a second generated page, linked from reference.** Not taken. Its pictures would be as large, and a second page is a second file for branches to conflict on.
 - **A use-case diagram for each area, in the story.** Not taken. Each area lists its use cases, and the table of who takes part says where each actor acts, so the picture would restate both.
 - **A check of the overview's text, not a fingerprint.** Rejected. See Rationale.
-- **The first paragraph of each view's opening, beside its title.** Rejected. It made the list of concepts long and uneven, and it reads a body, which DEC-001 point 1 keeps from a tool.
+- **The first paragraph of each view's opening, beside its title.** Rejected. It made the list of concepts long and uneven, and it reads a body's text, which DEC-001 point 1 keeps from a tool.
 - **The problem in a field of the view's front matter.** Rejected. It would be a third home for a reason whose home is a record (DEC-004 point 3).
 - **A page for whoever decides whether to use the component,** with its areas in the order of what such a reader would do first. Rejected. See Rationale, "Why a newcomer first".
 - **A line in the opening that says where to start,** naming the first domain-model view and the first area. Rejected. It names two places to start, and the page's own order is the path (see Rationale).
@@ -295,9 +302,12 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **A purpose written as text in the configuration, with a rule that traces each area's goal to it.** Rejected. A rule cannot judge a setting, and a reason belongs in a record (see Rationale).
 - **A kind of artefact for the component's purpose, inside the analysis.** Rejected. A new kind needs a decision of its own (DEC-001 point 11), and a record already answers the need.
 - **A pointer to any record, a core record or another capability's decision included.** Rejected. A release would change such a record in an adopting project, and fail its overview.
-- **The purpose record's opening sentence in place of its title.** Rejected. The overview would read the record's body, and a tool reads front matter only (DEC-001 point 1).
+- **The purpose record's opening sentence in place of its title.** Rejected. The overview would read the record's body, and a tool reads no body's text (DEC-001 point 1).
 - **A goal that names no area of the use cases failing the check.** Rejected. An area planned and not written yet would be hidden until its first use case.
 - **The areas each area builds on, written in the configuration.** Rejected. They would state again what the use cases' `after` holds.
+- **The views of each area written in the configuration.** Rejected. They would state again what the links to the terms hold, and drift from them.
+- **Each area's concepts read from the views' closing sections.** Not taken. Each closing section is a copy of the links to the terms, so the overview would read a copy of a copy.
+- **Only the views that set an area apart from the others.** Not taken. Choosing them would weigh counts of uses, and an area's words would lose the link to where some are explained.
 - **Each actor's use cases in the actor's own file.** Not taken yet. A list a command writes there would change the actor's file at each new use case, and so the answers on it. It waits until a list written for navigation changes no answer ([project-kit#1844](https://github.com/aleskalfas/project-kit/issues/1844)).
 - **An actor of another analysis by its name in that analysis.** Rejected. The overview would read another analysis's files, which may lie in another repository, and go stale with them. The glossary's head names the actor in this analysis.
 - **Install or a migration writing the overview.** Not taken. Install runs no command of a capability (COR-017). A missing overview is a warning, so a project that installed the capability before needs no migration.
@@ -319,6 +329,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
   - each area's goal in the configuration, and its check
   - the pointer to the purpose record in the configuration, and its check
   - what each area builds on, read from `after`, and its requirements, read from their paths
+  - each area's concepts, read from the links to the terms its use cases and requirements hold
   - the table of who takes part, with each actor's `summary` (DEC-001 point 1)
   - the fingerprint and its version, and the check that the overview is fresh
   - the setting that keeps none
