@@ -606,7 +606,7 @@ def test_a_clone_in_a_seat_with_no_key_takes_no_part(ic, root, monkeypatch) -> N
 
 
 def test_with_no_topology_no_project_has_one(ic, root: Path) -> None:
-    """The reading lands with #2140 and #2141; until then DEC-035 stands."""
+    """#2141 wires the reading to `_lib/topology`; until then DEC-035 stands."""
     assert ic.read_topology(root, {}) is None
 
 

@@ -646,7 +646,7 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 **In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files. A claim counts only while the clone its stamp names holds the seat the stamp names. A seat's release thus frees its clone's work with no write to the issues.
 
-The guard does not refuse on a claim that no longer counts, and refuses on one whose seat it could not read. No project has a topology yet, so every command behaves as this section says for a project with none.
+The guard does not refuse on a claim that no longer counts, and refuses on one whose seat it could not read. Until #2141 is done, no command reads the topology for instance ownership, so each behaves as this section says for a project with none.
 
 #### State issues — shared state that changes while agents work (per [project-management:DEC-058-state-issues])
 

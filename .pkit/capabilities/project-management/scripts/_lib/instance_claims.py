@@ -18,7 +18,7 @@ substrate is read only once an id is set, from the adopter's
 **A project with a topology of seats** (DEC-059). There a clone takes part by
 holding a seat, and its number is the seat's, never a typed one (point 6). The
 run's reading of the topology, this clone's seat and each seat's holder, comes
-from :func:`read_topology`, whose source lands with #2140 and #2141. The clone's
+from :func:`read_topology`, which #2141 wires to ``_lib/topology``. The clone's
 key is read from its runtime file (``_lib/instance_identity``). A clone that
 holds no seat marks no issue and is guarded by nothing. A claim names the seat,
 its number and the clone's key, in the audit-log facility's stamp (point 9). It
@@ -271,10 +271,10 @@ def read_topology(capability_root: Path, config: dict) -> Topology | None:
     """This run's reading of the project's topology, or ``None`` where the
     project declares none.
 
-    The module that reads the topology from the default branch, and each seat's
-    holder from its state issue, builds this reading once for each run (ADR-071
-    point 1). It lands with #2140 and #2141. Until then no project has a
-    topology, and every command keeps DEC-035's behaviour."""
+    ``_lib/topology`` reads the topology from the default branch. #2141 builds
+    this reading from it once for each run, with each seat's holder from its
+    state issue (ADR-071 point 1). Until then this answers ``None`` for every
+    project, and every command keeps DEC-035's behaviour."""
     return None
 
 
