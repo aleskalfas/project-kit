@@ -18,6 +18,7 @@ pkit:
     anchors:
       path:
         - .pkit/agents/core/methodology-reviewer.md
+        - src/project_kit/decisions_proposed.py
         - src/project_kit/decisions_validate.py
         - src/project_kit/cli.py
       record:
@@ -71,7 +72,7 @@ pkit:
    - the present, stated with no amendment log or dated correction
 3. The reviewer reports each violation with its discipline, and changes nothing in the record ([REQ-021](../../../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)). Its working files lie in the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace).
 4. The maintainer revises the record. Content that fits only one project moves to that project's own namespace, such as a PRJ record of the [source repository](../../../glossary.md#term-source-repository--source-repository) (COR-014).
-5. The maintainer runs `pkit decisions validate`. In the source repository a core record is no [synced copy](../../../glossary.md#term-synced-copy--synced-copy), so [validation](../../../glossary.md#term-validation--validation) checks its id, its points and its narration ([COR-055 point 1](../../../../../../.pkit/decisions/core/COR-055-validation.md#1-what-validation-owns)).
+5. The maintainer runs `pkit decisions validate`. In the source repository a core record is no [synced copy](../../../glossary.md#term-synced-copy--synced-copy). So [validation](../../../glossary.md#term-validation--validation) checks its id, its points, its narration and its `waits-on` ([COR-055 point 1](../../../../../../.pkit/decisions/core/COR-055-validation.md#1-what-validation-owns)).
 6. The merge authoriser accepts the record ([UC-040](UC-040-accept-through-review.md)), and the change lands ([UC-034](UC-034-land-change.md)).
 
 **Variants:**
