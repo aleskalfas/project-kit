@@ -21,7 +21,7 @@ gates:
   - COR-023
 reads:
   paths:
-    - CONTRIBUTING.md
+    - .pkit/decisions/README.md
     - .pkit/schemas/README.md
     - .pkit/schemas/_defs/refs.schema.json
     - .pkit/lifecycle/README.md
@@ -69,11 +69,11 @@ Halt if any is `proposed` or `superseded`.
 
 ### Disciplines
 
-The kit's authoring disciplines (per `CONTRIBUTING.md`) apply when the operation involves authorial judgment:
+Three of the disciplines `.pkit/decisions/README.md` gives decision records ("Writing a record") carry over to a schema when the operation involves authorial judgment. The first binds every schema, and the other two a schema core ships, the methodology maintainers' case, as they bind a core record:
 
-- **Axiom** — use only previously-defined terms (kit-defined, generic English, named external tools). No reaching for not-yet-decided framework-internal names. One exception: a record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
-- **Project-neutrality** (for core-shipped schemas) — the rule expressed must make sense in any adopting project.
 - **Principles-not-inventory** — schemas encode rules; prose-only rationale lives in DECs, not schemas.
+- **Axiom** (a schema core ships) — use only previously-defined terms (defined by the core records, generic English, named external tools). No reaching for not-yet-decided framework-internal names.
+- **Project-neutrality** (a schema core ships) — the rule expressed must make sense in any adopting project.
 
 ### Conventions every operation respects
 

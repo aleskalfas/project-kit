@@ -43,7 +43,7 @@ The `core/` + `project/` split is the universal area pattern (per COR-003): core
 
 Core-shipped skills currently in `core/`:
 
-- **`decision-author`** — paired with `pkit new decision`. Walks the author through a new COR or PRJ record: disciplines (axiom / project-neutrality / principles-not-inventory), slug, command invocation for the stub, body drafting, self-checks, commit. See `.pkit/skills/core/decision-author.md`.
+- **`decision-author`** — paired with `pkit new decision`. Walks the author through a new record — the project's own PRJ or ADR, a capability's DEC, or, for the methodology's maintainers, a COR: the kind, the disciplines its kind follows (the decisions README's ["Writing a record"](../decisions/README.md#writing-a-record)), slug, command invocation for the stub, body drafting, self-checks, commit. See `.pkit/skills/core/decision-author.md`.
 - **`adapter-author`** — paired with `pkit new adapter`. Walks the author through adding a new harness adapter at `.pkit/adapters/<name>/`: contract review, scaffold, README + harness-specific content drafting, the harness's support declaration, self-checks, commit. See `.pkit/skills/core/adapter-author.md`.
 - **`migration-author`** — paired with `pkit new migration`. Walks the author through adding a new migration script: tier / scope / version / slug selection, scaffold, idempotent-body drafting, self-checks, commit. See `.pkit/skills/core/migration-author.md`.
 - **`area-author`** — paired with `pkit new area`. Walks the author through adding a new top-level area: name + variant selection, scaffold, README drafting per the variant's layout, self-checks, commit. See `.pkit/skills/core/area-author.md`.

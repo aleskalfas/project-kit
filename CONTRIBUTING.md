@@ -27,6 +27,7 @@ pkit:
         - .pkit/capabilities/doc-examples/README.md
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
+        - .pkit/decisions/README.md#writing-a-record
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
 ---
 
@@ -208,31 +209,15 @@ Core records are kit-owned. They sync into every adopting project. Adding one me
 1. **Pick the next COR number** in `.pkit/decisions/core/`. Numbering is independent of `project/`.
 2. **Create `COR-NNN-slug.md`** with the schema and four sections described in `.pkit/decisions/README.md`.
 3. **Open as `proposed`** if discussion is still open; promote to `accepted` once agreed.
-4. **Respect the discipline below** — both axiom and project-neutrality.
+4. **Respect the disciplines a core record follows.** They live in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record), which ships to every adopter, so an adopter's agent finds them there too. Every record leads with meaning, holds principles, not inventory, and names the role rather than its current holder. A core record also follows the axiom discipline and project-neutrality, the methodology maintainers' case. The sections below keep only what is project-kit's own.
 
 ### Axiom discipline
 
-The `core/` corpus is treated as an axiom system. A record may use only:
-
-- terms defined in an earlier record in the same corpus, or
-- generic English / filesystem / Markdown vocabulary, or
-- references to external tools or specifications named explicitly (e.g. Claude Code, Yeoman).
-
-It must not lean on tooling, commands, or conventions that the kit itself has not yet recorded a decision about. Concretely: do not use `pkit sync`, `pkit init`, `pkit` or any other kit-internal command name inside core records until that name is decided in its own record. Use generic phrasing instead — "the kit's sync operation", "first-time install", "the kit's CLI" — or defer the discussion to a future record.
-
-When a record needs to reach for something not yet defined, the right move is either to introduce that concept in its own earlier record or to defer the topic to a future one. Forward-pointer "see also" references are fine for navigation, but no record should *depend* on a later one. One exception: a record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
-
-This keeps the corpus self-supporting: any reader can start at COR-001 and follow forward without needing to know what the kit's CLI eventually looks like, what its sync mechanism is named, or what its distribution channel will be.
+Stated in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record). In project-kit's core records it means no `pkit sync`, `pkit init` or other command name of the CLI until a record decides that name. Write "the sync operation", "first-time install" or "the CLI" instead, or defer the topic to a later record.
 
 ### Project-neutrality
 
-A core record must be **project-neutral**: written from the perspective of any project that adopts the kit. It describes rules, contracts, and conventions that every adopter follows.
-
-Project-kit-specific decisions — how project-kit-the-project itself is built, the fact that it self-hosts, the choice of CLI binary name `pkit`, the choice of templating engine, the distribution channel — belong in `.pkit/decisions/project/` as PRJ records (project-kit's own project-side decisions), not in `core/`.
-
-The test: would this record make sense, and feel applicable, when read in an arbitrary adopting project's repo? If yes → COR. If it leaks project-kit's internals → PRJ.
-
-The same test applies to every artifact kind that has a core / project split, not just decision records. **Rules** in `.pkit/rules/{core,project}.md`, **skills** in `.pkit/skills/{core,project}/`, **agents** in `.pkit/agents/{core,project}/`, **hook providers** (with the `project > bundle > adapter > core` precedence in COR-013) — for all of them, an artifact ships in the core layer if and only if it would be useful to an arbitrary adopter. If it relies on a specific project's tooling, structure, or conventions, it lives in the project namespace instead. Bundle-specific content moves to that bundle's documentation; harness-specific content goes to the adapter's. When extending the methodology with a new artifact kind, apply the same question. (Codified as COR-014; see that record for the principle named explicitly.)
+Stated in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record), with COR-014 extending its test to every artifact kind that has a core / project split. project-kit's own choices, such as the CLI binary's name `pkit`, the templating engine, the distribution channel and self-hosting, are PRJ records in `.pkit/decisions/project/`.
 
 Adopter-relevance heuristic for the open questions:
 
@@ -246,35 +231,16 @@ Adopter-relevance heuristic for the open questions:
 
 ### Principles, not inventory
 
-A COR captures **durable principles** — rules among viable alternatives, with the rationale that distinguishes them. It does not enumerate operational state: path mappings, command lists, file lists, the current set of bundles, the current set of artifact types.
-
-Operational state belongs in reference docs: per-area READMEs (`.pkit/cli/README.md`, `.pkit/lifecycle/README.md`, …), the install/sync manifest, area-specific spec files. The COR cross-references the reference doc; the doc owns the listing.
-
-Inventory pinned inside a COR has two costs:
-
-- **Brittleness** — every content addition forces a COR edit. The record turns into a tracking doc rather than a decision.
-- **Conflation** — the decision (the rule that governs membership) gets mixed with its application (the current members). Future readers can't tell which sentences are load-bearing rules and which are just state.
-
-Examples in the corpus to read for shape:
+Stated in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record). Two core records to read for its shape:
 
 - **COR-003** — captures the *principles* for assigning a mechanism + delivery to any artifact type. It does not list which paths use which mechanism. The actual path-to-mechanism map lives in each area's README plus the install/sync manifest.
 - **COR-004** — captures the *design rules* for the CLI command surface (one operation per command, merge as a command of its own, init is one-shot, etc.). It does not list the current commands. The command list lives in `.pkit/cli/README.md`.
 
-**Pre-draft check.** Before writing a COR, list every piece of content that might land in it and tag each as either a *rule among alternatives* (decision-worthy, with rationale) or *current state* (inventory, will change as content lands). Inventory gets one cross-reference line in the COR, not enumeration. If an item sits ambiguously between the two, default to inventory unless the *why* is non-obvious and contested.
-
-When the boundary blurs and a single area's specifics outgrow a general COR, that area earns its own focused record — not by stuffing more state into the existing one. Workflow bundles is the most likely first such split.
+When the boundary blurs and a single area's specifics outgrow a general COR, that area earns its own focused record — not by stuffing more state into the existing one.
 
 ### Lead with meaning
 
-A record earns its keep only if a reader can grasp what it decides. Correctness is necessary but not sufficient — a record that is accurate yet unreadable has failed, because the reader can't extract the decision without reverse-engineering it.
-
-So every record **leads with meaning**:
-
-- **A short, declarative title.** State the decision, not a clause-stacked description of its mechanism. "Capabilities contribute permission grants through a model-composed fragment" — not a twenty-five-word run-on naming every layer.
-- **A plain-language summary first.** Open with what the record decides and why it matters, in prose a reader grasps in under a minute, *before* the rigor. The detailed decision, the layering, the citations, and the rejected alternatives come **after** the summary — not instead of it.
-- **Cross-references serve the sentence.** Cite what a point actually needs — roughly one reference per point. A sentence carrying five bracketed citations buries its own meaning; the reader chases links instead of learning the substance. Reference by meaning first, then the identifier (the authoring twin of `.pkit/rules/core.md`'s reference-by-meaning rule).
-
-This is a principle, not a style sheet: don't pad records with mandated boilerplate, and don't strip the rigor — keep the depth, but put a readable on-ramp in front of it. The failure mode it guards against is the wall-of-jargon record whose decision is unrecoverable on a first read.
+Stated in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record).
 
 ---
 
