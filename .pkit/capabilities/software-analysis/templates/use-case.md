@@ -29,7 +29,7 @@ pkit:
 
 **Goal:** <!-- pkit:hint What the actor wants from this use case, in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. Example: Export my report as a file. -->
 
-**Other actors:** <!-- pkit:hint Each other actor who takes part, and what this use case must protect for them. Write `None.` when there is none. Example: **Auditor** (`ACT-auditor`): each export is logged with who made it. -->
+**Other actors:** <!-- pkit:hint Each other actor who takes part, and what this use case must protect for them. Write `None.` when there is none. Example: **Auditor** (ACT-auditor): each export is logged with who made it. -->
 
 **Preconditions:** <!-- pkit:hint What the system, or an earlier use case, has already made true before the use case starts. Each is a state, not an event, and no step checks it. Write `None.` when there is none. Example: The analyst is signed in. -->
 

@@ -47,7 +47,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): the `living-docs` agent, which drafts each [proposal](../../glossary.md#term-proposal--proposal) and applies none, so the developer reviews every fix before it lands (REQ-022).
+- **AI agent** (`core:ACT-ai-agent`): the `living-docs` agent, which drafts each [proposal](../../glossary.md#term-proposal--proposal) and applies none, so the developer reviews every fix before it lands ([REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)).
 
 **Preconditions:** None.
 
@@ -71,7 +71,7 @@ pkit:
 5. A statement that nothing grounds any more is given a new anchor, taken out, or raised with the developer as a question. It is never left standing as if it were true (DEC-001 point 5).
 6. The agent writes the [proposal](../../glossary.md#term-proposal--proposal) under `.agent-workspace/living-docs/fix/<page-slug>/`: a diff of the page, labelled with the page's own path, and a pull-request body (DEC-001 point 5).
 7. The pull-request body cites each commit and each anchor, and each hunk with the statement it changes. It names the [answer](../../../core/glossary.md#term-answer--answer) the developer gives once the diff is applied.
-8. The agent checks the diff with `git apply --check`, which writes nothing, and tells the developer where the proposal lies. It applies nothing (REQ-022).
+8. The agent checks the diff with `git apply --check`, which writes nothing, and tells the developer where the proposal lies. It applies nothing ([REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)).
 9. The developer reviews the proposal, and accepts it.
 10. The developer applies the diff with `git apply`, and gives the page's answer, as `core:UC-002` describes.
 
@@ -82,8 +82,8 @@ pkit:
 - **2a.** `explain` reports the page current, or unanchored. The agent says that there is nothing to fix, or that the page needs anchors first, and offers onboarding or a [reader-review](../../glossary.md#term-reader-review--reader-review). The use case ends.
 - **2b.** The [artefact](../../../core/glossary.md#term-artefact--artefact) is no page, such as a [decision record](../../../core/glossary.md#term-decision-record--decision-record), a [rule](../../../core/glossary.md#term-rule--rule), or another [component](../../../core/glossary.md#term-component--component)'s artefact. The agent says that its owner revalidates it, and stops ([COR-050 point 6](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
 - **2c.** `explain` reports the page `unresolved`, so it was not judged. The agent proposes nothing for its text, and says why from the [anchor](../../../core/glossary.md#term-anchor--anchor)'s [finding](../../../core/glossary.md#term-finding--finding). Where the anchor's kind misspells a registered one, it proposes the one-line correction of the anchor.
-- **2d.** A [friction](../../../core/glossary.md#term-friction--friction) document carries a `schema_version` other than 1. The agent refuses it, naming the command and the version, and proposes nothing from it (core:REQ-019). The use case ends.
-- **2e.** The page is stale on a `source` anchor. The agent reads the versions recorded, and the address, from the [captured source](../../glossary.md#term-captured-source--captured-source)'s history, and never fetches the text (REQ-025). It names the text, both versions and the link, and asks the developer what changed that bears on the page ([DEC-001 point 4](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)). The path goes on at step 4, judged from the developer's reply.
+- **2d.** A [friction](../../../core/glossary.md#term-friction--friction) document carries a `schema_version` other than 1. The agent refuses it, naming the command and the version, and proposes nothing from it ([core:REQ-019](../../../core/requirements/functional/030-change/REQ-019-reading-document-versioned.md)). The use case ends.
+- **2e.** The page is stale on a `source` anchor. The agent reads the versions recorded, and the address, from the [captured source](../../glossary.md#term-captured-source--captured-source)'s history, and never fetches the text ([REQ-025](../../requirements/constraints/REQ-025-never-fetch-source.md)). It names the text, both versions and the link, and asks the developer what changed that bears on the page ([DEC-001 point 4](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)). The path goes on at step 4, judged from the developer's reply.
 - **2f.** The developer cannot say yet what changed in the text. The agent proposes nothing for the page's text. It names the two answers that are the developer's: read the text and come back, or defer the anchor with a reason. The use case ends.
 - **4a.** The change looks wrong, rather than the page, such as code that now contradicts a decision the page applies. The agent says so, and leaves the call to the developer. It never rewrites the page to match a regression ([DEC-001 point 5](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#5-fixes-are-proposed-never-applied-blind)).
 - **4b.** No statement needs to change. The agent proposes the `unchanged` [answer](../../../core/glossary.md#term-answer--answer), with its evidence and a draft reason the developer confirms or rewrites, and writes no diff.
@@ -107,7 +107,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- The agent changes no tracked file and runs no [friction](../../../core/glossary.md#term-friction--friction) writer, so nothing is applied that the developer did not review (REQ-022).
-- The agent never fetches a [captured source](../../glossary.md#term-captured-source--captured-source)'s text, and never rewrites a [page](../../glossary.md#term-page--page) from a version change alone ([DEC-001 point 4](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated) and REQ-025).
+- The agent changes no tracked file and runs no [friction](../../../core/glossary.md#term-friction--friction) writer, so nothing is applied that the developer did not review ([REQ-022](../../requirements/functional/REQ-022-agent-proposes-only.md)).
+- The agent never fetches a [captured source](../../glossary.md#term-captured-source--captured-source)'s text, and never rewrites a [page](../../glossary.md#term-page--page) from a version change alone ([DEC-001 point 4](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated) and [REQ-025](../../requirements/constraints/REQ-025-never-fetch-source.md)).
 - The agent never rewrites a page to match a change that looks wrong ([DEC-001 point 5](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#5-fixes-are-proposed-never-applied-blind)).
-- A friction document of a version the agent does not read is never read as version 1 (core:REQ-019).
+- A friction document of a version the agent does not read is never read as version 1 ([core:REQ-019](../../../core/requirements/functional/030-change/REQ-019-reading-document-versioned.md)).

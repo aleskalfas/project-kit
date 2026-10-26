@@ -464,12 +464,14 @@ def test_two_sections_naming_each_other_s_terms_are_each_mended(project: Adopter
 
 def test_an_analysis_with_no_domain_model_takes_no_link(bare: AdopterRepo) -> None:
     """A glossary with no view beside it is never linked to its terms nor held, a link
-    written in it by hand included (DEC-004 point 7). It cites no record, so the links of
-    citations write nothing either (DEC-001 point 13)."""
+    written in it by hand included (DEC-004 point 7). It cites no record and names no
+    artefact by its id, so the links of citations and of ids write nothing either (DEC-001
+    points 13 and 14)."""
     stamped(bare, "term", "order", "--name", "order", "--path", "src/run.py")
     stamped(bare, "term", "payment", "--name", "payment", "--path", "src/run.py")
     fill(bare)
-    _set_entries(bare, {"TERM-order": ("a payment settles an order.", " None.")})
+    hand = "a [payment](#term-payment--payment) settles an order."
+    _set_entries(bare, {"TERM-order": (hand, " None.")})
     before = _read(bare, GLOSSARY)
     completed = link(bare)
     assert completed.stdout.strip() == "Every link is as it should be; nothing written."
@@ -902,6 +904,10 @@ def _bodies(linked: bool) -> dict[str, str]:
     def k(text: str, slug: str) -> str:
         return f"[{text}](../../glossary.md#term-{slug}--{slug})" if linked else text
 
+    def case(case_id: str, slug: str) -> str:
+        """A use case's id in a journey, linked to its file (DEC-001 point 14)."""
+        return f"[{case_id}](../use-cases/{case_id}-{slug}.md)" if linked else case_id
+
     order, customer = k("order", "order"), k("customer", "customer")
     payment, method = k("payment", "payment"), k("payment method", "payment-method")
     return {
@@ -982,8 +988,8 @@ def _bodies(linked: bool) -> dict[str, str]:
                 "",
                 "**Steps:**",
                 "",
-                "1. UC-001 — Place an order",
-                "2. UC-002 — Pay for an order",
+                f"1. {case('UC-001', 'place-order')} — Place an order",
+                f"2. {case('UC-002', 'pay-order')} — Pay for an order",
                 f"   - **Needs from step 1 (UC-001):** the {order} the {customer} placed. An "
                 f"order left unplaced takes no {payment}.",
                 "",
@@ -1098,7 +1104,10 @@ def test_the_check_holds_the_links_of_the_four_kinds_and_a_link_on_a_datum_is_ex
     hand = "[order](../../glossary.md#term-order--order)"
     by_hand = {
         PLACE: ("**Goal:** Place an order", f"**Goal:** Place an {hand}"),
-        JOURNEY: ("1. UC-001 — Place an order", f"1. UC-001 — Place an {hand}"),
+        JOURNEY: (
+            "UC-001-place-order.md) — Place an order",
+            f"UC-001-place-order.md) — Place an {hand}",
+        ),
         ACTOR_FILE: ("an order and pays for it. Each", f"an {hand} and pays for it. Each"),
     }
     for rel, (old, new_text) in by_hand.items():
