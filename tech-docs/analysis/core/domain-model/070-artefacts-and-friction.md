@@ -538,6 +538,8 @@ Package metadata is the file a component ships that declares its [version](../gl
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Anchor:**
 
 - [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)

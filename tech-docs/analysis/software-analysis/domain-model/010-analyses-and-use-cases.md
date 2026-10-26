@@ -139,6 +139,8 @@ A freed id is the id of a removed [use case](../glossary.md#term-use-case--use-c
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Analysis:**
 
 - [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)

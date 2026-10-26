@@ -132,9 +132,17 @@ def _view(linked: bool) -> str:
     )
 
 
+#: The sentence that opens a view's closing section, as the command writes it.
+CLOSING_OPENING = (
+    "Each concept below lists the use cases, journeys and requirements whose text links its term."
+)
+
 #: The view's closing section where nothing in the analysis links a term it explains, as
 #: the command writes it (DEC-004 point 7).
-CLOSING_NONE = "\n## What is built on these concepts\n\n**Order:** None.\n\n**Payment:** None.\n"
+CLOSING_NONE = (
+    f"\n## What is built on these concepts\n\n{CLOSING_OPENING}\n\n"
+    "**Order:** None.\n\n**Payment:** None.\n"
+)
 
 VIEW_BODY = _view(linked=False)
 VIEW_LINKED = _view(linked=True) + CLOSING_NONE
@@ -1134,7 +1142,7 @@ def _under(label: str, *ids: str) -> str:
 #: second requirement links `order` and no `payment`, and the constraint links `payment
 #: method` alone, so it is under neither.
 KINDS_CLOSING = (
-    "## What is built on these concepts\n\n"
+    f"## What is built on these concepts\n\n{CLOSING_OPENING}\n\n"
     + _under("Order", "UC-001", "UC-002", "JRN-001", "REQ-001", "REQ-002")
     + "\n"
     + _under("Payment", "UC-001", "UC-002", "JRN-001", "REQ-001")
@@ -1214,7 +1222,8 @@ def test_the_stamp_ends_a_new_view_with_where_its_concepts_are_used(
     stamped(kinds, "view", "customers", "--number", "020", "--explains", "TERM-customer")
     view = f"{DOMAIN_MODEL}/020-customers.md"
     assert _closing_of(kinds, view) == (
-        f"{CLOSING_HEADING}\n\n" + _under("Customer", "UC-001", "UC-002", "JRN-001", "REQ-002")
+        f"{CLOSING_HEADING}\n\n{CLOSING_OPENING}\n\n"
+        + _under("Customer", "UC-001", "UC-002", "JRN-001", "REQ-002")
     )
     assert view not in link(kinds).stdout
 
@@ -1272,6 +1281,8 @@ def test_each_concept_lists_its_uses_by_a_path_in_the_declared_form() -> None:
     )
     assert written == [
         CLOSING_HEADING,
+        "",
+        CLOSING_OPENING,
         "",
         "**Order:**",
         "",

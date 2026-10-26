@@ -255,6 +255,8 @@ A shortfall is a step or a variant of a use case that the system does not carry 
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Revalidation:**
 
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)

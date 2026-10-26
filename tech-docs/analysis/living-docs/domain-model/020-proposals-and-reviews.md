@@ -135,6 +135,8 @@ An onboarding plan says how a project's existing documents come into its [docume
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Proposal:**
 
 - [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md)

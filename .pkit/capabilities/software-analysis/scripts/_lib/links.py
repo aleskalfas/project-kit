@@ -76,9 +76,10 @@ written by hand is held as the command's. Another link is the writer's, and its
 text is skipped.
 
 **A view's closing section** (`closing`). Each view in force ends with a section headed
-`What is built on these concepts`. Under each concept it explains, labelled by its
-section's heading, it lists each use case, journey and requirement in force of its
-analysis that links the concept's term: the use cases first, then the journeys, then
+`What is built on these concepts`, which opens with one sentence that says what it lists
+(`CLOSING_OPENING`). Under each concept it explains, labelled by its section's heading,
+it lists each use case, journey and requirement in force of its analysis that links the
+concept's term: the use cases first, then the journeys, then
 the requirements, each in the order of their numbers, linked by its id and its title as
 the overview links it. A concept nothing links reads `None.` An artefact links a term
 where its body, as the command writes it, holds a link to the term's entry
@@ -144,6 +145,11 @@ DEFINED = "Defined in"
 #: point 7), and the kinds it lists under each concept, in their order.
 CLOSING = "What is built on these concepts"
 LISTED: tuple[str, ...] = (USE_CASE, JOURNEY, *REQUIREMENTS)
+
+#: The sentence that opens a view's closing section, before its concepts' lists.
+CLOSING_OPENING = (
+    "Each concept below lists the use cases, journeys and requirements whose text links its term."
+)
 
 #: A line that heads a view's closing section, its spaces as any.
 _CLOSING_LINE = re.compile(rf"^##[ \t]+{re.escape(CLOSING)}[ \t]*$")
@@ -1012,12 +1018,13 @@ def closing(
     used: Mapping[str, Collection[str]],
     shown_as: Mapping[str, str],
 ) -> list[str]:
-    """The lines of the closing section of the view at `view_path`: for each term of
-    `explains`, in its order, under its section's heading as `headings` gives it by its
-    id, each of `listed` whose body links it, as `used` gives the terms each links by its
-    id, linked by a path from the view's folder. A requirement shows its kind beside its
-    id, as `shown_as` names it. A concept nothing links reads `None.`"""
-    out = [f"## {CLOSING}"]
+    """The lines of the closing section of the view at `view_path`: its opening sentence,
+    then, for each term of `explains`, in its order, under its section's heading as
+    `headings` gives it by its id, each of `listed` whose body links it, as `used` gives
+    the terms each links by its id, linked by a path from the view's folder. A requirement
+    shows its kind beside its id, as `shown_as` names it. A concept nothing links reads
+    `None.`"""
+    out = [f"## {CLOSING}", "", CLOSING_OPENING]
     here = posixpath.dirname(view_path) or "."
     for term_id in dict.fromkeys(explains):
         users = [a for a in listed if term_id in used.get(str(a.id), ())]

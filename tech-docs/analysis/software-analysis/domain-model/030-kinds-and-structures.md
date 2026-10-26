@@ -187,6 +187,8 @@ A candidate is an [analysis](../glossary.md#term-analysis--analysis) [artefact](
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Artefact kind:** None.
 
 **Declared structure:**

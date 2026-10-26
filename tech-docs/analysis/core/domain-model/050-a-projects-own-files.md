@@ -318,6 +318,8 @@ A documentation root is the folder for internal readers, or the one for user-fac
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Project-owned content:**
 
 - [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md)

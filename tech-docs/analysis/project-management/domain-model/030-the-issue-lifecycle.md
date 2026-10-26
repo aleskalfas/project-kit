@@ -219,6 +219,8 @@ A bypass overrides one check that refuses by default, such as scheduling an [iss
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Issue lifecycle:**
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)

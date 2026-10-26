@@ -264,6 +264,8 @@ An unclassified document is a file in a space's places that is neither a [page](
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Documentation space:**
 
 - [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)

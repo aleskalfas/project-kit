@@ -196,7 +196,7 @@ The stamp reads the analysis through the core's reading command, `pkit friction 
 Where an analysis keeps a domain model, `pkit analysis link` links its terms where they are mentioned, so each concept is a click from its definition (DEC-004 point 7). An analysis keeps a domain model once its `domain-model/` folder holds a view, in force or withdrawn. An analysis without one sees no link.
 
 - **What it writes.** Each section of a view in force opens with `Defined in [<TERM-id>](<glossary>#<anchor>).`, right below its heading. The first mention of each term in each section links to the term's entry. A term is never linked in its own section, nor in its own entry.
-- **What is built on each concept.** Each view in force ends with a section, `## What is built on these concepts`. Under each concept, its term's name in sentence case as a bold label, it lists each use case, journey and requirement in force of the view's analysis whose body links the concept's term. The use cases come first, then the journeys, then the requirements, each by its id and title, and a concept nothing uses reads `None.`.
+- **What is built on each concept.** Each view in force ends with a section, `## What is built on these concepts`, which opens with a sentence that says what it lists. Under each concept, its term's name in sentence case as a bold label, it lists each use case, journey and requirement in force of the view's analysis whose body links the concept's term. The use cases come first, then the journeys, then the requirements, each by its id and title, and a concept nothing uses reads `None.`.
   - **Read from the links it writes.** An artefact uses a term where the command links a mention of it. A term named only in front matter, such as a requirement's statement, lists nothing.
   - **Its own analysis alone.** An analysis that builds on this one may link its terms, and none of its artefacts is listed.
   - **No part.** The structure check reads the section as no part of the view, and the command links no mention in it. It writes the section last, in place of any the view holds.
@@ -395,7 +395,7 @@ Whoever writes and runs the project's tests.
 
 The heading is the id and the `name`, `# <id> — <name>`, and the check requires the two to agree, as it does a use case's title. The id is the slug the file is named by, and never changes.
 
-**Its `summary`** (optional) says who the actor is, in one sentence: the first sentence of its opening, word for word (DEC-001 point 1). The overview shows it in its table of who takes part, since a tool reads front matter only. Where the format rule binds, the check holds the two equal (the form `summary-matches-front-matter`). The stamp writes the field holding its hint: write the sentence, or delete the line to give none. Keep the sentence plain, since a link in it would not resolve from the overview's folder.
+**Its `summary`** (optional) says who the actor is, in one sentence: the first sentence of its opening, word for word (DEC-001 point 1). The overview shows it in its table of who takes part, since a tool reads no body's text, only the links to the terms. Where the format rule binds, the check holds the two equal (the form `summary-matches-front-matter`). The stamp writes the field holding its hint: write the sentence, or delete the line to give none. Keep the sentence plain, since a link in it would not resolve from the overview's folder.
 
 **Glossary** (`schemas/term.schema.json`, `templates/glossary.md`) — one collection file, serving everything (DEC-001 point 2):
 
@@ -528,6 +528,8 @@ A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart fr
 **Always true:** None.
 
 ## What is built on these concepts
+
+Each concept below lists the use cases, journeys and requirements whose text links its term.
 
 **Run:**
 

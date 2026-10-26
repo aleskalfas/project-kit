@@ -110,6 +110,8 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Classification axis:**
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)

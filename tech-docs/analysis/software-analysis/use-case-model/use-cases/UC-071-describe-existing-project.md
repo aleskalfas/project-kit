@@ -97,7 +97,7 @@ pkit:
 **Variants:**
 
 - **3a.** Two words name one concept, or one word names two. The agent proposes one term for each concept, and gives two concepts of one word qualified names (DEC-001 point 1).
-- **3b.** The [analysis](../../glossary.md#term-analysis--analysis) keeps a domain model. The agent runs `pkit analysis link` after each [artefact](../../../core/glossary.md#term-artefact--artefact) it stamps. The [system](../../../core/glossary.md#term-system--system) writes the links to the terms each artefact mentions, and those to and from each view, where one changes (DEC-004 point 7). At its entry, the command checks the repository as step 5 does (core:REQ-012).
+- **3b.** The [analysis](../../glossary.md#term-analysis--analysis) keeps a domain model. The agent runs `pkit analysis link` after each [artefact](../../../core/glossary.md#term-artefact--artefact) it stamps. The [system](../../../core/glossary.md#term-system--system) writes the links to the terms, and those to and from each view, in each file where a link changes (DEC-004 point 7). At its entry, the command checks the repository as step 5 does (core:REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit analysis link` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.

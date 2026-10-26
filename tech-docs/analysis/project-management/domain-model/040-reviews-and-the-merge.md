@@ -147,6 +147,8 @@ The merge gate is the set of conditions project-management holds a [pull request
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Verdict:**
 
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md)

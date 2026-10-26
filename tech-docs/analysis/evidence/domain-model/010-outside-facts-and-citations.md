@@ -156,6 +156,8 @@ A citation is the text `[ev:<slug>]`, right after the claim it backs. Its slug i
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Outside fact:**
 
 - [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)

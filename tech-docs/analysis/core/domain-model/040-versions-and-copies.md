@@ -387,6 +387,8 @@ A component origin is where an installed [capability](../glossary.md#term-capabi
 
 ## What is built on these concepts
 
+Each concept below lists the use cases, journeys and requirements whose text links its term.
+
 **Manifest:**
 
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
