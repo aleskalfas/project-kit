@@ -16,7 +16,7 @@ body: >
   per such component when it re-renders the file. The `pkit validate` warning
   on the entry now fires only when the journals are committed, the one case
   the render drops it; while they stay ignored the entry is redundant. The
-  1.150.0 journal migration says the next `pkit sync` drops a component line
-  it finds left behind. Documented in ADR-009 rule 7, the process README ("The
+  journal migration this release's upgrade runs says the next `pkit sync`
+  drops a component line it finds left behind. Documented in ADR-009 rule 7, the process README ("The
   journal — optional audit"), the CLI reference (`config set`, the `packages`
   check) and the lifecycle README ("Validation: the package schema").
