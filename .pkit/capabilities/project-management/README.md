@@ -758,6 +758,13 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 
 **Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition and its scope. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub.
 
+**The commit read.** Each command that reads the topology names the commit of the default branch that the command read. A clone that has not fetched the default branch thus shows which commit the clone last fetched.
+
+- `take-seat`, `release-seat` and `seats` name the commit in their output
+- each command that confirms the seat before it writes, and `next-task`, names the commit in a note
+- a command that another command runs, such as the `move-issue` that `start-work` runs, repeats no commit the run named already
+- in a project with no topology, no note names a commit
+
 `scripts/_lib/topology.py` is the one reader of the topology. Every command that acts as a seat reads the topology through it, from the default branch. It also builds each run's snapshot: the topology, the members who may write on a state issue, and the clone's account, key and place. `schemas/topology.schema.json` holds the file's shape.
 
 #### Taking the next ready Task — `next-task` (per [project-management:DEC-059-topology-of-seats] point 7)

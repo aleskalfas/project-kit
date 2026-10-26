@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:ce3e7a0b33b47436f327a7aa7b53f4d3959d547cbf630f3535a573f213b9fb7e -->
+<!-- pkit:overview reads=5 fingerprint=sha256:69fa90258449584d02ac1581a0d33b50430aac6b466961bdbbc3b74140b03993 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -87,7 +87,7 @@ Run several AI agents on one project at once, each on its own scope and never on
 
 **Its use cases:**
 
-- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md) ([not built yet](#not-built-yet): step 4, step 5, variant 4a, variant 8a)
+- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md) ([not built yet](#not-built-yet): step 4, step 5, variant 4a)
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md) ([not built yet](#not-built-yet): step 2, step 3, step 10, variant 1a, variant 3a)
 - [UC-084 — Take my next ready Task, and build it up to its merge](../use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md) ([not built yet](#not-built-yet): step 1, step 5, step 6, step 9, variant 2a, variant 2b, variant 3a, variant 9a)
 - [UC-085 — Never work on a Task another agent already works on](../use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md) ([not built yet](#not-built-yet): step 2, step 3, variant 1a, variant 2a, variant 3a, variant 3b, variant 3c)
@@ -182,7 +182,6 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 4, decided by `project-management:DEC-045#6`, tracked in `#512`
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): step 5, decided by `project-management:DEC-059#7`, tracked in `#2136`
 - [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 4a, decided by `project-management:DEC-045#6`, tracked in `#512`
-- [UC-082 — Set up my project's topology in the project's committed configuration, so that every clone reads the same seats](../use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md): variant 8a, decided by `project-management:DEC-059#1`, tracked in `#2177`
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md): step 2, decided by `project-management:DEC-059#1`, tracked in `#2143`
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md): step 3, decided by `project-management:DEC-059#7`, tracked in `#2143`
 - [UC-083 — Plan an intent into Tasks that one agent can each finish](../use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md): step 10, decided by `project-management:DEC-059#7`, tracked in `#2136`
