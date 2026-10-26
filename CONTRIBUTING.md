@@ -209,7 +209,7 @@ Core records are kit-owned. They sync into every adopting project. Adding one me
 1. **Pick the next COR number** in `.pkit/decisions/core/`. Numbering is independent of `project/`.
 2. **Create `COR-NNN-slug.md`** with the schema and four sections described in `.pkit/decisions/README.md`.
 3. **Open as `proposed`** if discussion is still open; promote to `accepted` once agreed.
-4. **Respect the disciplines a core record follows.** They live in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record), which ships to every adopter, so the `decision-author` skill can send an adopter's agent there too. Every record leads with meaning, holds principles, not inventory, and names the role rather than its current holder. A core record also follows the axiom discipline and project-neutrality, the methodology maintainers' case. The sections below keep only what is project-kit's own.
+4. **Respect the disciplines a core record follows.** They live in the decisions README, ["Writing a record"](.pkit/decisions/README.md#writing-a-record), which ships to every adopter, so an adopter's agent finds them there too. Every record leads with meaning, holds principles, not inventory, and names the role rather than its current holder. A core record also follows the axiom discipline and project-neutrality, the methodology maintainers' case. The sections below keep only what is project-kit's own.
 
 ### Axiom discipline
 
