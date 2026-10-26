@@ -60,8 +60,10 @@ and `.pyo` are not adopter-owned — the ownership predicate answers False for t
 `pyproject.toml`'s `exclude` cannot filter force-included paths, which is the whole reason the
 hook exists. So the hook applies those patterns itself (`EXCLUDED_PARTS` / `EXCLUDED_SUFFIXES`
 in `hatch_build.py`); omitting them shipped 87 `.pyc` files on the first attempt, trading 41
-unwanted files for 87 different ones. Two obligations on the bundle, not one — an author who
-reimplements it from the ownership rule alone reproduces that bug.
+unwanted files for 87 different ones. A document's sidecar is withheld the same way, by its
+folder's name, in the wheel's filter and in a glob of the sdist's own (refinement per
+[ADR-070](ADR-070-document-sidecar-place.md) point 4). So the bundle carries obligations beside
+the ownership rule — an author who reimplements it from that rule alone reproduces that bug.
 
 **The rule withholds adopter-owned *content*, not adopter-owned *shape* — one bounded
 exception.** The rule above cannot erase a directory's existence, because the installer reads
