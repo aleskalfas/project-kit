@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Right after `pkit upgrade` moves a project's answers into answer files, and
+  before the upgrade is committed, `pkit friction check --all`, `debt` and
+  `explain` no longer ask you to run the move again (#2186). They read the
+  last commit, which still holds the answers in their blocks. Where the
+  working tree holds the answer files the move wrote, `moved-<hash>.yaml`,
+  and the last commit does not, they now say the move has run and the upgrade
+  is to be committed with `git commit`. `pkit validate` gives the same words
+  where a component runs one of them, as living-docs' documentation check
+  does.
