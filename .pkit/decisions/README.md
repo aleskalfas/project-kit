@@ -13,7 +13,7 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-019, COR-025, COR-041, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5"]
+      record: [COR-001, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5"]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -289,6 +289,27 @@ If you prefer to author by hand, the procedure is:
 The directory listing in `project/` serves as the index — file names carry their slugs, and most projects' corpora are small enough that no separate index is needed. If yours grows numerous, a `README.md` index can be added inside `project/` as a convenience.
 
 Records in `core/` are managed by project-kit. **Do not edit them** — they are refreshed on every sync, and your edits would be overwritten. To propose a change to the methodology itself (a new core record, a refinement of an existing one, or a supersession), contribute to project-kit upstream.
+
+## Writing a record
+
+A record is read long after it is written, by people and agents who were not there when it was decided. The disciplines below keep its decision readable and durable. Every record follows the first three, and states the present with no log of its revisions ("Refining an accepted record" above). An architecture record adds a fourth discipline, and a core record two more.
+
+### Every record
+
+- **Lead with meaning.** The title is short and states the decision, not the mechanism behind it. A plain-language summary opens the record, so a reader grasps the decision in under a minute, before the detail, the citations and the rejected alternatives. Each point cites what it needs, about one reference a point, and says what a reference holds before its identifier. The depth stays, and no boilerplate is asked for: the summary goes in front of the depth, never in its place.
+- **Principles, not inventory.** A record captures a rule chosen among viable alternatives, with the reason that tells them apart. It lists no current state, such as paths, commands, files or the present members of a set. That state lives in a reference document the record points at, such as an area's README, so new content never forces an edit to a decision, and a reader can tell the rule from its present members. Before drafting, tag each piece of content as a rule or as state, give state one cross-reference, not a list, and count an item between the two as state unless its reason is contested.
+- **Name the role, not its current holder.** Where a record means whatever plays a part, such as what owns a boundary or answers a question, it names the part, not the component that plays it today. Where the name is itself what the record decides, or belongs to something outside the project, the record names it plainly. Either way it describes the part sharply enough that only one thing could play it ([COR-046](core/COR-046-records-name-roles.md)).
+
+### An architecture record (ADR)
+
+- **Architectural fit.** An ADR records what the project built and why: a system boundary, a technology, an integration pattern, a key abstraction or a deployment topology. How the project works, its workflow, tooling and process, is a PRJ record's ([COR-025](core/COR-025-adr-decision-space.md), "Distinct from PRJ"). A decision that touches both takes its architectural side into an ADR, which cites a PRJ record for the rest.
+
+### A core record (COR), the methodology maintainers' case
+
+Core records are written in project-kit's source repository and reach your project by sync, as "Adding a record" above says. Two more disciplines bind them, so that the core records read the same in every project that adopts the methodology.
+
+- **Axiom discipline.** The core records form an axiom system, which a reader can follow forward from the first. A core record uses only terms an earlier core record defines, generic English, filesystem or Markdown vocabulary, and external tools it names. It may point forward to a later record for navigation, but depends on none, nor on a command, convention or tool that no record has decided yet: it writes "the sync operation", say, until a record decides the command's name. A record refined in place may still cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
+- **Project-neutrality.** A core record makes sense, and applies, in any project that adopts the methodology. A choice about how the methodology's own source project is built, such as its CLI's name, its distribution channel or that it hosts itself, is a PRJ record of that project instead. The same test places every artefact that has a core side and a project side, a rule, a skill or an agent among them ([COR-014](core/COR-014-universal-applicability.md)).
 
 ## Why this shape
 

@@ -56,7 +56,7 @@ Per COR-014's universal-applicability test and COR-026's placement rule:
 - **`project`** — the agent is tied to this adopter's stack, language, or product. Implementer agents (`qa-engineer`), domain reviewers, customised coordinators. Authored per project; never propagated.
 - **a capability name** — the agent implies a discipline a capability ships (issues and pull requests, documentation, code authoring): it lives in that capability, at `.pkit/capabilities/<capability>/agents/`. The capability must already exist — author it first (`capability-author`) rather than parking the agent at core. The code-authoring `software-engineer` is the example: it ships in the `software-engineering` capability.
 
-If you're not sure, the questions to ask: *would an adopter who installed none of the methodology's capabilities find this agent useful?* No → the capability whose discipline it presupposes. Yes → *would `example-brownfield` and `example-greenfield` both benefit from it in identical form?* Yes → core. Otherwise → project.
+If you're not sure, the questions to ask: *would an adopter who installed none of the methodology's capabilities find this agent useful?* No → the capability whose discipline it presupposes. Yes → *would any project that adopts the methodology benefit from it in identical form?* (COR-014's universal-applicability test) Yes → core, the methodology maintainers' case: outside the methodology's source repository, propose it upstream. Otherwise → project.
 
 ### 3. Pick a name
 
@@ -127,10 +127,10 @@ Two-segment hooks (`<topic>.<operation>`) are portable across bundles. Three-seg
 Before showing the draft, walk it against:
 
 - **Bidirectional reference-graph consistency.** Every frontmatter `reads.{paths,records,patterns}` / `owns` / `needs` entry must appear in the body. Every path / record-ID / hook-name in the body must be declared in frontmatter. The validator runs the same check; running it mentally first saves a rejection.
-- **Universal applicability** (core namespace only). Would the agent read naturally for `example-greenfield` and `example-brownfield` in identical form? If it leaks framework-source vocabulary (`pkit` specifics, project-kit decision IDs that don't apply to adopters), demote to project namespace or generalise.
+- **Universal applicability** (core namespace only). Would the agent read naturally, in identical form, in any project that adopts the methodology (COR-014)? If it leaks vocabulary of the methodology's own source project, such as the ids of that project's own PRJ or ADR records, demote to project namespace or generalise.
 - **Role-not-procedure.** The body should read as "what you are and how you think", not as "step 1 do this, step 2 do that". Procedures live in skills the agent invokes.
 - **Description quality.** Read the description aloud. Does it tell the harness's auto-loader exactly when this agent applies? Sharpen until yes.
-- **Lead with meaning.** The agent opens by saying plainly what it is and when to reach for it, before the detail; sentences cite what they need (roughly one reference per point), not pile five-deep. An agent definition a reader can't grasp on a first pass has the same failure mode as a cryptic record. See CONTRIBUTING.md's "Lead with meaning".
+- **Lead with meaning.** The agent opens by saying plainly what it is and when to reach for it, before the detail; sentences cite what they need (roughly one reference per point), not pile five-deep. An agent definition a reader can't grasp on a first pass has the same failure mode as a cryptic record: `.pkit/decisions/README.md`'s "Writing a record" gives the discipline for records.
 
 If any check fails, revise.
 
