@@ -109,7 +109,7 @@ def main() -> int:
     if capability_root is None:
         print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
         return 2
-    if not bootstrap_gate.enforce(VERB, capability_root=capability_root):
+    if not bootstrap_gate.enforce("release-seat", capability_root=capability_root):
         return 2
     if args.force and not args.name:
         print("error: --force names the seat it releases.", file=sys.stderr)

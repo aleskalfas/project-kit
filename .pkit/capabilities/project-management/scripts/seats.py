@@ -78,7 +78,7 @@ def main() -> int:
     if capability_root is None:
         print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
         return 2
-    if not bootstrap_gate.enforce(VERB, capability_root=capability_root):
+    if not bootstrap_gate.enforce("seats", capability_root=capability_root):
         return 2
     config = load_adopter_config(capability_root)
     invoker = resolve_invoker_identity(config=config)
@@ -162,8 +162,15 @@ def seat_line(state: topology.SeatState, *, mine: bool) -> str:
     if seat.retired:
         marks.append("retired")
     if seat.scope is not None:
-        parts = [*seat.scope.workstreams, *(f"type:{t}" for t in seat.scope.types)]
-        marks.append("scope " + "+".join(parts))
+        parts = [
+            f"{label} {' and '.join(names)}"
+            for label, names in (
+                ("workstreams", seat.scope.workstreams),
+                ("types", seat.scope.types),
+            )
+            if names
+        ]
+        marks.append("scope: " + " with ".join(parts))
     issue = f"#{seat.state_issue}" if seat.state_issue is not None else "no state issue"
     holder = "no state issue named" if seat.state_issue is None else state.said()
     line = f"  {seat.number}. {seat.name} ({', '.join(marks)}), {issue}: {holder}"

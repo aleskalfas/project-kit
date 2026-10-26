@@ -114,7 +114,7 @@ def main() -> int:
     if capability_root is None:
         print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
         return 2
-    if not bootstrap_gate.enforce(VERB, capability_root=capability_root):
+    if not bootstrap_gate.enforce("take-seat", capability_root=capability_root):
         return 2
     agent, problem = session_agent(args.agent, os.environ)
     if agent is None:

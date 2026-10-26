@@ -46,7 +46,13 @@ SEATS = [
     {"name": "planner", "role": "planner", "organizer": True, "state_issue": 11},
     {"name": "worker-1", "role": "worker", "state_issue": 12},
     {"name": "worker-2", "role": "worker", "state_issue": 13},
-    {"name": "tester", "role": "worker", "agent": "test-writer", "state_issue": 14},
+    {
+        "name": "tester",
+        "role": "worker",
+        "agent": "test-writer",
+        "scope": {"types": ["test"]},
+        "state_issue": 14,
+    },
     {"name": "old", "role": "worker", "retired": True, "state_issue": 15},
 ]
 
@@ -417,7 +423,7 @@ def test_the_listing_shows_each_seat_its_role_and_its_holder(
     assert out.splitlines()[1].endswith("← this clone")
     assert "  2. worker-1 (worker, agent project-manager), #12: held by @you, clone k7" in out
     assert "  3. worker-2 (worker, agent project-manager), #13: free" in out
-    assert "  4. tester (worker, agent test-writer), #14: free" in out
+    assert "  4. tester (worker, agent test-writer, scope: types test), #14: free" in out
     assert "  5. old (worker, agent project-manager, retired), #15: free" in out
     assert repo.writes() == []
 
