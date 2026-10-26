@@ -746,7 +746,20 @@ def test_cli_refs_lookup_json_answers_every_id_in_one_document(kit_target: Path)
     ids = ["COR-001", "widgets:DEC-004", "COR-999", "-x"]
     result = CliRunner().invoke(main, ["refs", "lookup", "--json", "--", *ids])
     assert result.exit_code == 0, result.output
-    assert json.loads(result.output) == {
+    document = json.loads(result.output)
+    # Each answer also gives its file, the anchor of a cited point's or rule's heading and
+    # whether the file is a synced copy (tests/test_refs_lookup_points.py).
+    assert [(e["path"], e["anchor"]) for e in document["lookups"]] == [
+        (".pkit/decisions/core/COR-001-thing.md", None),
+        (".pkit/capabilities/widgets/decisions/DEC-004-thing.md", None),
+        (None, None),
+        (None, None),
+    ]
+    shared = ("id", "resolved", "paths", "problem")
+    assert {
+        "schema_version": document["schema_version"],
+        "lookups": [{k: e[k] for k in shared} for e in document["lookups"]],
+    } == {
         "schema_version": 1,
         "lookups": [
             {

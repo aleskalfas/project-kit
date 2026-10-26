@@ -102,8 +102,8 @@ Explained in [VIEW-outside-facts-and-citations](domain-model/010-outside-facts-a
 **Distinctions:**
 
 - **A citation of a decision record:** a reference such as `[evidence:DEC-001-citation-discipline]`, which names a record of a [component](../core/glossary.md#term-component--component). The core's `pkit refs validate` checks it, and evidence never checks it (the [capability](../core/glossary.md#term-capability--capability)'s README).
-- **A link or a footnote:** a citation is written as plain text, and holds no URL. The evidence record it names holds where the source lies (DEC-001).
-- **The same text where the check skips it:** in a fenced code block or an HTML comment of a Markdown file, or in the scope's `evidence.yaml`. An excerpt there may quote such text from its source. There it is no citation (DEC-003).
+- **A link or a footnote:** a citation is written as plain text, and holds no URL. The evidence record it names holds where the source lies ([DEC-001](../../../.pkit/capabilities/evidence/decisions/DEC-001-citation-discipline.md)).
+- **The same text where the check skips it:** in a fenced code block or an HTML comment of a Markdown file, or in the scope's `evidence.yaml`. An excerpt there may quote such text from its source. There it is no citation ([DEC-003](../../../.pkit/capabilities/evidence/decisions/DEC-003-validation-model.md)).
 
 ## TERM-evidence-record — evidence record
 
@@ -113,8 +113,8 @@ Explained in [VIEW-outside-facts-and-citations](domain-model/010-outside-facts-a
 
 **Distinctions:**
 
-- **Citation:** the token that names the record, in a document. The record keeps the excerpt the [citation](#term-citation--citation) points to (DEC-001).
-- **Snapshot:** a durable copy of the source, captured as the excerpt was fetched. The record holds only where the copy lies (DEC-002).
+- **Citation:** the token that names the record, in a document. The record keeps the excerpt the [citation](#term-citation--citation) points to ([DEC-001](../../../.pkit/capabilities/evidence/decisions/DEC-001-citation-discipline.md)).
+- **Snapshot:** a durable copy of the source, captured as the excerpt was fetched. The record holds only where the copy lies ([DEC-002](../../../.pkit/capabilities/evidence/decisions/DEC-002-evidence-record-schema.md)).
 - **The outside fact:** what the excerpt bears out. `fetched_at` says when the excerpt was fetched, never when the fact was true (DEC-002).
 
 ## TERM-evidence-scope — evidence scope
@@ -125,7 +125,7 @@ Explained in [VIEW-outside-facts-and-citations](domain-model/010-outside-facts-a
 
 **Distinctions:**
 
-- **The `evidence.yaml`:** the file that holds the scope's evidence records. The scope is the directory that holds the file, with what lies below it (DEC-002).
+- **The `evidence.yaml`:** the file that holds the scope's evidence records. The scope is the directory that holds the file, with what lies below it ([DEC-002](../../../.pkit/capabilities/evidence/decisions/DEC-002-evidence-record-schema.md)).
 
 ## TERM-outside-fact — outside fact
 

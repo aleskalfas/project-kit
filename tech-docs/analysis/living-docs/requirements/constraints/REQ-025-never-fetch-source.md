@@ -25,4 +25,4 @@ pkit:
 
 **Verified by:** A test runs the resolver offline, from an empty cache and apart from the [project](../../../core/glossary.md#term-project--project), and finds its result. Nothing checks the agent, whose definition grants it a shell: its text alone says it fetches no source.
 
-**Imposed by:** The [friction](../../../core/glossary.md#term-friction--friction) checks read the repository alone and reach no network (COR-050 point 2). A check that gives the same result wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it (living-docs DEC-001).
+**Imposed by:** The [friction](../../../core/glossary.md#term-friction--friction) checks read the repository alone and reach no network ([COR-050 point 2](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors)). A check that gives the same result wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it ([living-docs DEC-001](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).

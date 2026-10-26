@@ -71,21 +71,21 @@ pkit:
 
 **Main path:**
 
-1. The adopter writes the [project](../../../glossary.md#term-project--project)'s own [operational rules](../../../glossary.md#term-operational-rule--operational-rule) in `.pkit/rules/project.md`, beside the [methodology](../../../glossary.md#term-methodology--methodology)'s `.pkit/rules/core.md`. [Sync](../../../glossary.md#term-sync--sync) rewrites `core.md` at the [recorded version](../../../glossary.md#term-recorded-version--recorded-version), and never writes `project.md` (COR-001).
+1. The adopter writes the [project](../../../glossary.md#term-project--project)'s own [operational rules](../../../glossary.md#term-operational-rule--operational-rule) in `.pkit/rules/project.md`, beside the [methodology](../../../glossary.md#term-methodology--methodology)'s `.pkit/rules/core.md`. [Sync](../../../glossary.md#term-sync--sync) rewrites `core.md` at the [recorded version](../../../glossary.md#term-recorded-version--recorded-version), and never writes `project.md` ([COR-001](../../../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)).
 2. The adopter writes the project's own settings for the [harness](../../../glossary.md#term-harness--harness) in the project side of an [adapter](../../../glossary.md#term-adapter--adapter)'s settings. An example is `claude-code`'s `.pkit/adapters/claude-code/settings/project/settings.json`, which first [install](../../../glossary.md#term-install--install) seeded empty.
 3. The adopter runs `pkit permissions grant <subject> <privilege>`, such as `pkit permissions grant agent:architect web-fetch`, with `--deny` for a deny [grant](../../../glossary.md#term-grant--grant).
 4. At its entry, before it reads anything, each writing command of this use case checks that the repository it writes in is the session's own. Those are `pkit permissions grant` and `revoke`, and later `pkit agents reconcile --write`, `pkit sync` and `pkit merge`. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
-> **Not built yet:** none of those five commands runs such a check. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+> **Not built yet:** none of those five commands runs such a check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-5. The system checks that the subject is `all`, `operator` or `agent:<name>`, and finds the [privilege](../../../glossary.md#term-privilege--privilege) in the catalog (COR-028 point 1).
+5. The system checks that the subject is `all`, `operator` or `agent:<name>`, and finds the [privilege](../../../glossary.md#term-privilege--privilege) in the catalog ([COR-028 point 1](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth)).
 6. The system writes the grant to the project's own grants, `.pkit/permissions/project/grants.yaml`, and prints `granted: <subject> allow <privilege>`. The permission model decides each call with the project's grants beside the methodology's, and a deny wins over an allow (REQ-013).
-7. The adopter names, in the agents' [overlay](../../../glossary.md#term-overlay--overlay) `.pkit/agents/project/overlay.yaml`, the paths each placeholder of an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) stands for, such as `<adr-records>` (COR-013).
+7. The adopter names, in the agents' [overlay](../../../glossary.md#term-overlay--overlay) `.pkit/agents/project/overlay.yaml`, the paths each placeholder of an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) stands for, such as `<adr-records>` ([COR-013](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md)).
 8. The adopter runs `pkit agents reconcile`. The system lists each category an agent definition refers to that the overlay does not define, with what it would write, and writes nothing.
 9. The adopter runs `pkit agents reconcile --write`, which is the [consent](../../../glossary.md#term-consent--consent). The system adds each missing category, and never writes over a value the adopter set. It fills a category whose conventional folder exists with that folder.
 10. The adopter runs `pkit sync`.
-11. The system runs each adapter's [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) into the files its harness reads (COR-002). The methodology's baseline settings, the project's side and the entries already in the harness's file are joined, and no entry the project wrote is removed.
+11. The system runs each adapter's [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) into the files its harness reads ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)). The methodology's baseline settings, the project's side and the entries already in the harness's file are joined, and no entry the project wrote is removed.
 12. The same merge includes `.pkit/rules/project.md` in the harness's instruction file, after the methodology's `.pkit/rules/core.md`, such as in `claude-code`'s `CLAUDE.md`.
 13. Each adapter deploys the agent definitions where its harness reads them, with each placeholder replaced by the paths the overlay gives it (COR-013).
 
@@ -100,7 +100,7 @@ pkit:
 - **8a.** The adopter passes `--dry-run`, as to each command whose edit reaches past what the person named. The system shows the same list, and writes nothing (REQ-009).
 
 > [!WARNING]
-> **Not built yet:** `pkit agents reconcile` takes no `--dry-run`. It previews by default, and writes with `--write`. COR-004 decides that it offers the flag, and #1884 tracks it.
+> **Not built yet:** `pkit agents reconcile` takes no `--dry-run`. It previews by default, and writes with `--write`. [COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md) decides that it offers the flag, and #1884 tracks it.
 
 - **8b.** The [overlay](../../../glossary.md#term-overlay--overlay) defines every category the [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) refer to. The system prints `overlay is complete — every referenced category is defined.`, and the path goes on at step 10.
 - **8c.** The overlay is missing. The system says so, and step 9 creates it from the seed that first [install](../../../glossary.md#term-install--install) writes.
@@ -110,19 +110,19 @@ pkit:
 - **10b.** The adopter runs `pkit merge --dry-run`. The system prints `would run` and each adapter's merge script, and runs none of them (REQ-009).
 - **10c.** The adopter runs `pkit merge <adapter>` for an adapter the project does not hold. The system refuses with `no installed adapter matches the requested target(s): <names>`, and runs nothing.
 - **10d.** The project is not the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. [Sync](../../../glossary.md#term-sync--sync) stops before it writes, names the remedy, and the use case ends (REQ-010).
-- **11a.** The adopter removed a safety entry of the methodology's baseline from the harness's settings, such as an explicit deny for a destructive operation. [Merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) adds it back, since safety wins over the project's preference (COR-002).
+- **11a.** The adopter removed a safety entry of the methodology's baseline from the harness's settings, such as an explicit deny for a destructive operation. [Merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) adds it back, since safety wins over the project's preference ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)).
 
 **Postconditions:**
 
-- The [project](../../../glossary.md#term-project--project)'s own [operational rules](../../../glossary.md#term-operational-rule--operational-rule), [harness](../../../glossary.md#term-harness--harness) settings, grants and agent paths sit in project-owned files beside the [methodology](../../../glossary.md#term-methodology--methodology)'s. The adopter edited none of the methodology's files (COR-001).
+- The [project](../../../glossary.md#term-project--project)'s own [operational rules](../../../glossary.md#term-operational-rule--operational-rule), [harness](../../../glossary.md#term-harness--harness) settings, grants and agent paths sit in project-owned files beside the [methodology](../../../glossary.md#term-methodology--methodology)'s. The adopter edited none of the methodology's files ([COR-001](../../../../../../.pkit/decisions/core/COR-001-content-mechanisms.md)).
 - The harness's instruction file includes the project's operational rules after the methodology's, and the harness's settings hold the baseline's entries and the project's own.
 - The permission model decides each call with the project's grants beside the methodology's, and a deny wins over an allow.
 - Each [agent definition](../../../glossary.md#term-agent-definition--agent-definition) whose placeholders the [overlay](../../../glossary.md#term-overlay--overlay) sets is deployed with those paths.
 
 **Minimal guarantees:**
 
-- [Sync](../../../glossary.md#term-sync--sync) never writes `.pkit/rules/project.md`, and writes the [project](../../../glossary.md#term-project--project)'s other own files only through [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) (COR-001 and `install.py`).
-- Merge delivery never removes an entry the project wrote (COR-002).
+- [Sync](../../../glossary.md#term-sync--sync) never writes `.pkit/rules/project.md`, and writes the [project](../../../glossary.md#term-project--project)'s other own files only through [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) ([COR-001](../../../../../../.pkit/decisions/core/COR-001-content-mechanisms.md) and `install.py`).
+- Merge delivery never removes an entry the project wrote ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)).
 - A refused [grant](../../../glossary.md#term-grant--grant) leaves the project's grants as they were (`permissions.py`).
 - Reconcile never writes over a value the adopter set in the [overlay](../../../glossary.md#term-overlay--overlay) (`agents_overlay.py`).
-- No grant of the project's widens a deny (COR-028 [point](../../../glossary.md#term-point--point) 1 and `decide.py`).
+- No grant of the project's widens a deny ([COR-028 point 1](../../../../../../.pkit/decisions/core/COR-028-permission-model-realization.md#1-the-model-is-the-source-of-truth) and `decide.py`).

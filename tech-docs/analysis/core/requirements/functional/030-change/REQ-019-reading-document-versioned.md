@@ -26,7 +26,7 @@ pkit:
 
 **Verified by:** Tests of each reading command find `schema_version` in its document. A test gives project-kit's script that renders the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check)'s [findings](../../../glossary.md#term-finding--finding) a document of schema version 2. It finds that the script refuses it, naming the schema version. Each [component](../../../glossary.md#term-component--component) tests its own readers.
 
-**Rationale:** No record decides it. The requirement is its own home, and merging the [change](../../../glossary.md#term-change--change) that adds it approves it (software-analysis DEC-002 [point](../../../glossary.md#term-point--point) 8).
+**Rationale:** No record decides it. The requirement is its own home, and merging the [change](../../../glossary.md#term-change--change) that adds it approves it ([software-analysis DEC-002 point 8](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-002-analysis-requirements.md#8-what-approves-a-requirement-and-the-record-it-rests-on)).
 
 A [component](../../../glossary.md#term-component--component) reads these documents, never the human view, so a key whose meaning changed would be misread silently. A raised schema version tells such a reader to stop instead. A key added keeps the schema version, so a reader that knows the schema version still reads the document.
 
