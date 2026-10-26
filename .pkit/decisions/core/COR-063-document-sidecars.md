@@ -1,7 +1,7 @@
 ---
 id: COR-063
 title: A document may keep its data in a sidecar, where its type allows one
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
