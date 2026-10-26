@@ -7,8 +7,9 @@ body: >
   their `runtime_ignore` declaration shipped (#288). The rendered
   `.pkit/.gitignore` ignores them, but an ignore rule does not untrack a file git
   already tracks, so a committed `sandbox-provenance.yaml`, diagnose log or
-  `__pycache__/` stayed tracked for good. A backbone migration at 1.150.0 removes
-  every tracked file the rendered `.pkit/.gitignore` ignores from the index with
+  `__pycache__/` stayed tracked for good. The upgrade to this release runs a
+  backbone migration that removes every tracked file the rendered
+  `.pkit/.gitignore` ignores from the index with
   `git rm --cached` alone: the working copy, which is per-machine state, is never
   touched, and the removal is staged for the operator to commit. Only declared
   files move — git's own matcher decides, against that file alone, so a shared
