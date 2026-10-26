@@ -13,6 +13,7 @@ clone holds that seat. Every `gh` call reaches an in-memory GitHub
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 import tempfile
 from pathlib import Path
@@ -969,7 +970,9 @@ def test_a_typed_number_is_not_used_where_the_project_has_a_topology(
     snapshot_with(ic, monkeypatch, snap, hint=None)
     assert ic.this_clone(root, "me") is None
     assert repo.calls == []
-    assert "the number 5 typed into this clone is not used" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "the number 5 typed into this clone is not used" in err
+    assert err.count("c0ffee") == 1  # the commit is named once in the run
 
 
 def test_without_the_default_branch_a_seat_cannot_be_confirmed(ic, root, monkeypatch) -> None:
@@ -1000,6 +1003,51 @@ def test_without_the_default_branch_a_typed_number_stands(ic, root, monkeypatch,
 def test_an_unconfirmed_seat_is_refused_with_its_reason(ic, capsys) -> None:
     assert ic.say_unconfirmed("move-issue", 42, ic.Unconfirmed("why.")) == 1
     assert capsys.readouterr().err == "[refused] move-issue #42: why. Nothing was written.\n"
+
+
+# ---- the commit the run read, named once (DEC-059 point 1) --------------------------
+
+_READ = "[note] ownership: this clone read the topology of origin/main at c0ffee.\n"
+
+
+def test_the_seat_confirmation_names_the_commit_it_read_once_a_run(ic, root, monkeypatch, capsys):
+    """A clone says which commit of the default branch it read. A second reading
+    in the run, such as the `move-issue` that `start-work` runs, says it no more."""
+    snap, _repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    assert ic.this_clone(root, "me") is not None
+    assert ic.this_clone(root, "me") is not None
+    assert capsys.readouterr().err == _READ
+
+
+def test_a_reading_of_a_commit_the_run_did_not_name_names_it(ic, root, monkeypatch, capsys):
+    """The command that ran this one named another commit: the default branch
+    moved between the two readings."""
+    snap, _repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    monkeypatch.setenv(ic.topology.NAMED_ENV, "beef")
+    assert ic.this_clone(root, "me") is not None
+    assert capsys.readouterr().err == _READ
+
+
+def test_the_commit_is_named_before_a_seat_is_refused(ic, root, monkeypatch, capsys) -> None:
+    """A clone that has not fetched the default branch reads what it last
+    fetched, so a refusal follows the commit it read."""
+    snap, _repo = _seated(ic, ("me", "k9"))
+    snapshot_with(ic, monkeypatch, snap, hint="worker-2")
+    with pytest.raises(ic.Unconfirmed):
+        ic.this_clone(root, "me")
+    assert capsys.readouterr().err == _READ
+
+
+def test_a_project_with_no_topology_names_no_commit(
+    ic, root, monkeypatch, capsys, no_topology
+) -> None:
+    importlib.import_module("_lib.instance_identity").write_instance_id(root, 2)
+    monkeypatch.setenv(ic.topology.NAMED_ENV, "")
+    assert ic.this_clone(root, "me") == ic.Clone(2, "comment", "me", root)
+    assert capsys.readouterr().err == ""
+    assert os.environ[ic.topology.NAMED_ENV] == ""
 
 
 # Every command that writes as an instance: the clash guard's six, the claim at

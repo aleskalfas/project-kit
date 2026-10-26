@@ -685,6 +685,7 @@ A **state issue** holds one piece of shared state that changes while agents work
 - **The description shows the state.** A region of the description shows who holds the state, rewritten whole after each change. A stray edit to the region is rebuilt, and nothing is lost
 - **The first claim on a free state holds.** Another clone's claim on a held state counts for nothing, and stays void after the holder releases
 - **A comment counts only from an author who may write:** a member where the membership gate is closed, and otherwise an account GitHub records as having write access or more. The access is read once for each author in a run
+- **Its conversation is locked** when it is created, so GitHub lets fewer accounts comment on it, such as those with write access. A member who takes or releases a seat may need write access. A lock that fails is named, and a person locks that state issue on GitHub. A claim on a state issue is no security boundary ([project-management:DEC-058-state-issues] point 5), and neither the lock nor the check of each author makes it one
 - **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out. Every listing of issues runs through the one read of issues, which leaves state issues out
 
 `scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. `create-seats` creates the state issues of a topology's seats, and `take-seat`, `release-seat` and `seats` take, release and list the seats (below).
@@ -727,7 +728,7 @@ seats:
 
 **Adding seats.** Add the seats at the end of the file on a branch, and run `pkit pm create-seats` there. The command creates a state issue for each seat that names none and is not retired. It writes each issue's number into that seat's entry. Commit the file with the change, so the change lands with its state issues.
 
-- **A second run repeats nothing.** A seat that names its state issue is left alone. A state issue that an earlier run created is found by its marker among the open issues, and one left half done is finished
+- **A second run repeats nothing.** A seat that names its state issue is left alone. A state issue that an earlier run created is found by its marker among the open issues, and one left half done is finished. An issue opened by an account that may not write is never finished, and the run names it
 - **Each number is written as soon as its state issue exists,** so a run that stops keeps what it wrote
 - **Who may write on a state issue** comes from the members the default branch holds. A run that cannot resolve the default branch creates nothing, and a state issue that does not read back as the seat's gets no number
 - **The run stops on any other problem in the file,** such as a seat name used twice, before it creates anything
@@ -757,6 +758,13 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 - **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks are then free for another clone to take
 
 **Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition and its scope. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub.
+
+**The commit read.** Each command that reads the topology names the commit of the default branch that the command read. A clone that has not fetched the default branch thus shows which commit the clone last fetched.
+
+- `take-seat`, `release-seat` and `seats` name the commit in their output
+- each command that confirms the seat before it writes, and `next-task`, names the commit in a note
+- a command that another command runs, such as the `move-issue` that `start-work` runs, repeats no commit the run named already
+- in a project with no topology, no note names a commit
 
 `scripts/_lib/topology.py` is the one reader of the topology. Every command that acts as a seat reads the topology through it, from the default branch. It also builds each run's snapshot: the topology, the members who may write on a state issue, and the clone's account, key and place. `schemas/topology.schema.json` holds the file's shape.
 

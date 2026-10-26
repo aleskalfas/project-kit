@@ -26,6 +26,8 @@ Steps:
     the foreign-repo guard, whose confirmation is handed on to `start-work`.
   - Who takes: in a project with a topology, the clone's seat, confirmed on
     its state issue, whose scope the topology gives and which narrows the pool.
+    A note names the commit of the default branch the topology was read at, and
+    the `start-work` this command runs does not name it again (DEC-059 point 1).
     A clone that holds no seat, holds a planner's seat or whose seat cannot be
     confirmed takes nothing. Outside a topology a clone takes with no scope.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
