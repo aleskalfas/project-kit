@@ -1563,6 +1563,17 @@ def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) ->
 def _link_message(d: links.Departure) -> str:
     """What a departure of a link says, and what mends it."""
     mend = "run `pkit analysis link`, which writes the links (DEC-004 point 7)"
+    if d.closing:
+        what = (
+            f"the view ends with no section `## {links.CLOSING}`"
+            if d.how == links.MISSING
+            else f"line {d.line} heads the view's section `## {links.CLOSING}`, which is stale"
+        )
+        return (
+            f"{what}: the view's one closing section, at its end, lists under each concept it "
+            f"explains each use case, journey and requirement in force of its analysis that "
+            f"links the concept's term — {mend}"
+        )
     if d.defined:
         if d.how == links.MISSING:
             return (
@@ -3297,8 +3308,13 @@ def _artefact_structure(
             else structure.body_lines(text)
         )
         if artefact.kind == VIEW:
-            # A section's link to its term is no content of its explanation (DEC-004 point 7).
-            lines = [(n, "" if links.DEFINED_LINE.match(t) else t) for n, t in lines]
+            # A section's link to its term is no content of its explanation, and the
+            # closing section is no part of the view (DEC-004 points 2 and 7).
+            closing = links.closing_lines([t for _n, t in lines])
+            lines = [
+                (n, "" if index in closing or links.DEFINED_LINE.match(t) else t)
+                for index, (n, t) in enumerate(lines)
+            ]
         # A part still holding its hint is `_placeholders`', which reports it once (#2088).
         departing = structure.departures(
             lines, kind, fields=artefact.fields, titles=titles, hints_checked=True

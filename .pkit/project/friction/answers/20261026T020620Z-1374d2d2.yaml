@@ -1,0 +1,189 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T02:06:20Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T02:06:23Z
+      outcome: updated
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-001
+    read:
+      - moved-cfb5a5e6377e.yaml
+    revalidated:
+      at: 2026-10-26T02:06:29Z
+      outcome: unchanged
+      unchanged-because: DEC-001 gains what a tool reads and a view's links to where its concepts are used, and DEC-004 makes that closing section no part of a view. The rule still holds an artefact to its kind's declared structure, which the closing section never joins.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-003
+    read:
+      - moved-0d5d5e362e2b.yaml
+    revalidated:
+      at: 2026-10-26T02:06:31Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. Neither touches whose goal a use case states, which is all this rule judges.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-004
+    read:
+      - moved-7499b6f74bf4.yaml
+    revalidated:
+      at: 2026-10-26T02:06:33Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. A use case's goal and its actor's needs, which this rule compares, stay where point 1 put them.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-005
+    read:
+      - moved-cf1897716e93.yaml
+    revalidated:
+      at: 2026-10-26T02:06:35Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 11 now states once that a reverse is stored only as a navigation copy the check holds equal, naming a view's links to where its concepts are used beside the term's link. Neither draws an anchor, so what an artefact anchors, which this rule judges, is as it was.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-007
+    read:
+      - moved-9bc4a100eab6.yaml
+    revalidated:
+      at: 2026-10-26T02:06:37Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 1 and 11 now restate what a tool reads and the stored reverses. Where each goal, minimal guarantee and requirement names its source is untouched by either, so the rule holds.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-008
+    read:
+      - moved-e5b931beeb5e.yaml
+    revalidated:
+      at: 2026-10-26T02:06:39Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now lets a tool read the links to the terms, and a view gains a closing section of links. That section holds labels and titles the command copies from other artefacts, which this rule already reads as no use, and DEC-004 makes it no statement. The rule holds.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-009
+    read:
+      - moved-9c96c36c753c.yaml
+    revalidated:
+      at: 2026-10-26T02:06:44Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. A use case's preconditions and their producers in after, which this rule judges, are as they were.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-012
+    read:
+      - moved-98ed394a1c20.yaml
+    revalidated:
+      at: 2026-10-26T02:06:46Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. One name for one concept, which this rule holds, is a sentence of point 1 this change leaves as it was.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-013
+    read:
+      - moved-9b0cd39c4c82.yaml
+    revalidated:
+      at: 2026-10-26T02:06:48Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. Its passage on a step the system does not carry out, with its box and its entry, is as it was, so the rule holds.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-001
+    read:
+      - moved-e075489b6421.yaml
+    revalidated:
+      at: 2026-10-26T02:06:50Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. Neither changes what this project rule asks of the analysis, so it holds.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T02:07:10Z
+      outcome: unchanged
+      unchanged-because: The check now reads a view's closing section as no part, so the structure is held only on what the kind declares. It still holds an artefact's body where the accepted format rule binds and a record's always, as the statement says.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T02:07:12Z
+      outcome: unchanged
+      unchanged-because: The skill now has an agent run the links command, then the overview's, after it writes. Both write what the data gives, so nothing an agent proposes is decided without a person, and DEC-001 point 1's restated tool reading changes no outcome.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    revalidated:
+      at: 2026-10-26T02:07:14Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used, which is no part a project chooses. Choosing each kind's parts at adoption is as it was.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-072-revise-before-change.md
+    revalidated:
+      at: 2026-10-26T02:07:16Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. Revising the analysis before a change, with its planned record, is as it was.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T02:07:18Z
+      outcome: unchanged
+      unchanged-because: The package now declares the form of a view's closing links, so a change that only retargets them asks nothing, and step 7a already runs the links command before the answer. DEC-001 point 1's restated tool reading leaves each step as it was.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-074-free-uncited-ids.md
+    read:
+      - moved-cac80ba8834a.yaml
+    revalidated:
+      at: 2026-10-26T02:07:20Z
+      outcome: unchanged
+      unchanged-because: The skill's change is to what an agent runs after it writes, the links command then the overview's. Freeing the ids nothing cites, by a person's declaration, is as the use case says.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    revalidated:
+      at: 2026-10-26T02:07:25Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. An artefact kind, a category of what an analysis holds with one schema and one set of parts, is defined as before.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-candidate
+    read:
+      - moved-a9ec29110af1.yaml
+    revalidated:
+      at: 2026-10-26T02:07:27Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. A candidate, an artefact derived for a person to confirm, is defined as before.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T02:07:29Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body, and a view's closing section is no part of any declared structure. A declared structure, a kind's parts declared once as data, is defined as before.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-hint
+    revalidated:
+      at: 2026-10-26T02:07:31Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1's hints bullet keeps its words, and the tool reading it held moved to a bullet of its own. A hint, the placeholder that says what goes in a part, is defined as before.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-shortfall
+    revalidated:
+      at: 2026-10-26T02:07:33Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. A shortfall, a step the system does not carry out yet with its box and entry, is defined as before.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-tightening
+    revalidated:
+      at: 2026-10-26T02:07:35Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. A tightening, a project's addition to a kind's structure under a rule of its own, is defined as before.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-use-case
+    revalidated:
+      at: 2026-10-26T02:07:40Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 1 now restates what a tool reads of a body and adds a view's links to where its concepts are used. A use case, one actor's goal and how the system fulfils it, is defined as before.
+  - artefact: tech-docs/analysis/software-analysis/domain-model/010-analyses-and-use-cases.md
+    revalidated:
+      at: 2026-10-26T02:07:42Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-analysis/domain-model/020-revalidations.md
+    read:
+      - moved-9593b9f5285b.yaml
+    revalidated:
+      at: 2026-10-26T02:07:44Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-analysis/domain-model/030-kinds-and-structures.md
+    read:
+      - moved-47cbe686e4db.yaml
+    revalidated:
+      at: 2026-10-26T02:07:46Z
+      outcome: updated
