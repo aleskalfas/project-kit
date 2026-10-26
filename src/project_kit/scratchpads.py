@@ -15,7 +15,6 @@ import contextlib
 import datetime as _dt
 import hashlib
 import io
-import json
 import re
 import subprocess
 from dataclasses import dataclass
@@ -24,6 +23,8 @@ from typing import Literal
 
 import click
 from ruamel.yaml import YAML
+
+from project_kit import github_issues
 
 RetiredState = Literal["done", "dropped"]
 
@@ -434,39 +435,16 @@ def list_notes(target_root: Path) -> list[NoteEntry]:
 
 
 def resolve_ref(ref: str) -> ReportedRefState:
-    """Live upstream view of `owner/repo#N` via ONE `gh` read: its state
-    ("open" / "closed") plus title + url (#678 — the same single read that
-    used to fetch state alone), degrading to state "unknown" with empty
-    title/url offline or on any failure (COR-043: never blocking, never
-    guessing). Cross-repo *read* — unrestricted per COR-039."""
-    owner_repo, _, number = ref.partition("#")
-    data = _gh_json(
-        ["gh", "issue", "view", number, "--repo", owner_repo, "--json", "state,title,url"]
-    )
-    if isinstance(data, dict) and isinstance(data.get("state"), str):
-        state = data["state"].lower()
-        if state in ("open", "closed"):
-            return ReportedRefState(
-                ref,
-                state,
-                title=str(data.get("title", "")),
-                url=str(data.get("url", "")),
-            )
-    return ReportedRefState(ref, "unknown")
-
-
-def _gh_json(args: list[str]) -> object | None:
-    """Run a `gh … --json …` read and parse its JSON; None on any failure."""
-    try:
-        proc = subprocess.run(args, capture_output=True, text=True, check=False)
-    except OSError:
-        return None
-    if proc.returncode != 0:
-        return None
-    try:
-        return json.loads(proc.stdout or "null")
-    except json.JSONDecodeError:
-        return None
+    """Live upstream view of `owner/repo#N`: its state ("open" / "closed")
+    plus title + url, in the one read of the backbone's issue reader
+    (`github_issues.read_issue`; #678 for the single read). It degrades to
+    state "unknown" with empty title/url offline or on any failure (COR-043
+    point 5: never blocking, never guessing). Cross-repo *read* —
+    unrestricted per COR-039."""
+    reading = github_issues.read_issue(ref)
+    if reading.state == github_issues.UNKNOWN:
+        return ReportedRefState(ref, "unknown")
+    return ReportedRefState(ref, reading.state, title=reading.title, url=reading.url)
 
 
 def _frontmatter_close(lines: list[str]) -> int:

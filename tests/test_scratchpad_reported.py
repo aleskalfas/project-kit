@@ -5,6 +5,8 @@ from `reported/`, and the report-verb attach/stamp flow (ADR-047 refinement)."""
 from __future__ import annotations
 
 import datetime as _dt
+import json
+import subprocess
 from pathlib import Path
 
 import click
@@ -13,8 +15,17 @@ from click.testing import CliRunner
 
 import project_kit.cli as cli_mod
 import project_kit.report as rep
-from project_kit import scratchpads
+from project_kit import github_issues, scratchpads
 from project_kit.cli import main
+
+
+def _offline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`gh` cannot reach GitHub: the backbone's issue reader gets a failing exit."""
+
+    def run(args, **_kwargs):
+        return subprocess.CompletedProcess(args, 1, "", "error connecting to api.github.com")
+
+    monkeypatch.setattr(github_issues.subprocess, "run", run)
 
 
 @pytest.fixture
@@ -289,7 +300,7 @@ def test_list_notes_offline_degrades_to_unknown(
 ) -> None:
     _stamp_note(kit_target)
     scratchpads.stamp_reported(kit_target, "my-note", ("owner/repo#7",))
-    monkeypatch.setattr(scratchpads, "_gh_json", lambda args: None)  # offline
+    _offline(monkeypatch)
     entries = scratchpads.list_notes(kit_target)
     # offline: state unknown, no title/url (the render degrades to ref + state)
     assert entries[0].refs[0] == scratchpads.ReportedRefState("owner/repo#7", "unknown")
@@ -300,15 +311,19 @@ def test_resolve_ref_reads_state_title_url_in_one_gh_read(
 ) -> None:
     captured: dict = {}
 
-    def fake(args):
+    def fake(args, **_kwargs):
         captured["args"] = args
-        return {
-            "state": "CLOSED",
-            "title": "the fix",
-            "url": "https://github.com/owner/repo/issues/7",
-        }
+        stdout = json.dumps(
+            {
+                "state": "CLOSED",
+                "title": "the fix",
+                "url": "https://github.com/owner/repo/issues/7",
+            }
+        )
+        return subprocess.CompletedProcess(args, 0, stdout, "")
 
-    monkeypatch.setattr(scratchpads, "_gh_json", fake)
+    # the read is the backbone's one issue reader's (`github_issues`)
+    monkeypatch.setattr(github_issues.subprocess, "run", fake)
     assert scratchpads.resolve_ref("owner/repo#7") == scratchpads.ReportedRefState(
         "owner/repo#7",
         "closed",
@@ -417,7 +432,7 @@ def test_cli_scratchpad_list_unknown_renders_state_unknown(
 ) -> None:
     _stamp_note(cli_target)
     scratchpads.stamp_reported(cli_target, "my-note", ("owner/repo#7",))
-    monkeypatch.setattr(scratchpads, "_gh_json", lambda args: None)  # offline
+    _offline(monkeypatch)
     res = CliRunner().invoke(main, ["scratchpad", "list"])
     assert res.exit_code == 0, res.output
     # the offline degrade is ref + state exactly as before #678 — no

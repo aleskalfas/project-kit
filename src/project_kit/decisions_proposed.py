@@ -28,20 +28,23 @@ project's own proposed records a standing:
   for, a field of the wrong shape, a front matter or a date that does not parse.
 - **waiting** — the rest.
 
-It reads GitHub only for an issue, once for each issue, through `read_issue`,
-and everything else from the working tree, so all but an issue reads offline.
-Its answer moves with the date and the tracker, so it is a command of its own,
-never a member of validation (COR-055 point 2). A synced copy is not listed,
-since it is settled where it is authored (COR-055 point 1), though a record of
-the project's may wait on one.
+It reads GitHub only for an issue, once for each issue, and everything else
+from the working tree, so all but an issue reads offline. An issue is read
+through the backbone's one issue reader, `github_issues.read_issue`, from the
+project's root. That read is live and pull-only, stores nothing, and gives an
+issue it cannot read as unknown, with why, never blocking (COR-043 point 5).
+The condition is tied to GitHub, through `gh`, under a label naming it, a
+placement adopted provisionally (ADR-061 point 3) while #1222 raises it for a
+core decision. The report's answer moves with the date and the tracker, so it
+is a command of its own, never a member of validation (COR-055 point 2). A
+synced copy is not listed, since it is settled where it is authored (COR-055
+point 1), though a record of the project's may wait on one.
 """
 
 from __future__ import annotations
 
 import datetime as dt
-import json
 import re
-import subprocess
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -49,7 +52,8 @@ from typing import Any, cast
 
 import click
 
-from project_kit import cli_render, document_parts
+from project_kit import cli_render, document_parts, github_issues
+from project_kit.github_issues import IssueReading
 from project_kit.validators import Finding, Severity
 
 WAITS_ON_KEY = "waits-on"
@@ -60,17 +64,11 @@ KINDS = ("issue", "date", "record")
 # Days after its date that a proposed record naming no condition is due.
 DEFAULT_OLDER_THAN = 30
 
-# How long one read of an issue may take before it is given up as unread.
-GH_TIMEOUT_SECONDS = 30
-
 # The standings, in the order the report gives them.
 DUE = "due"
 UNREAD = "unread"
 WAITING = "waiting"
 STANDINGS = (DUE, UNREAD, WAITING)
-
-# An issue of another repository, `owner/repo#795`.
-_ELSEWHERE = re.compile(r"^(?P<repo>[A-Za-z0-9][\w.-]*/[A-Za-z0-9][\w.-]*)#(?P<number>[1-9]\d*)$")
 
 # A date as written, `2026-12-01`; whether it is a real date is asked apart.
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -144,7 +142,7 @@ def _issue(given: Any) -> tuple[Condition | None, str]:
     """An issue's number, or `owner/repo#N` for an issue of another repository."""
     if isinstance(given, int) and not isinstance(given, bool) and given > 0:
         return Condition("issue", str(given)), ""
-    if isinstance(given, str) and _ELSEWHERE.match(given):
+    if isinstance(given, str) and github_issues.ELSEWHERE.match(given):
         return Condition("issue", given), ""
     if given is None:
         return None, (
@@ -224,55 +222,17 @@ def check_waits_on(rel: str, text: str) -> list[Finding]:
 # --- reading an issue -----------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class IssueState:
-    """What GitHub says of one issue: closed or not, or `None`, with why it was not read."""
-
-    closed: bool | None
-    problem: str = ""
+# Reads one issue from the project's root, given the root and the issue's value.
+IssueReader = Callable[[Path, str], IssueReading]
 
 
-IssueReader = Callable[[Path, str], IssueState]
+def read_issue(target_root: Path, issue: str) -> IssueReading:
+    """One issue's state, read by the backbone's issue reader from the project's root.
 
-
-def read_issue(target_root: Path, issue: str) -> IssueState:
-    """One issue's state, read through `gh` from the project's root.
-
-    `gh` resolves the project's own repository from its remote there, and
-    `owner/repo#N` names another. Any failure gives no state and its reason,
-    never a guess. `issue` is a value `read_condition` read, so it holds a
-    number and, at most, a repository's name.
+    `gh` finds the project's own repository from its remote there, and
+    `owner/repo#N` names another (`github_issues.read_issue`).
     """
-    repo, _, number = issue.rpartition("#")
-    args = ["gh", "issue", "view", number, "--json", "state"]
-    if repo:
-        args += ["--repo", repo]
-    try:
-        proc = subprocess.run(
-            args,
-            cwd=target_root,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=GH_TIMEOUT_SECONDS,
-        )
-    except FileNotFoundError:
-        return IssueState(None, "`gh`, the GitHub client, is not installed")
-    except subprocess.TimeoutExpired:
-        return IssueState(None, f"`gh` gave no answer in {GH_TIMEOUT_SECONDS} seconds")
-    except OSError as exc:
-        return IssueState(None, f"`gh` could not run: {exc}")
-    if proc.returncode != 0:
-        said = next((line.strip() for line in proc.stderr.splitlines() if line.strip()), "")
-        return IssueState(None, f"`gh` exited {proc.returncode}" + (f": {said}" if said else ""))
-    try:
-        data: object = json.loads(proc.stdout or "null")
-    except json.JSONDecodeError:
-        data = None
-    state = cast("dict[str, object]", data).get("state") if isinstance(data, dict) else None
-    if state in ("OPEN", "CLOSED"):
-        return IssueState(state == "CLOSED")
-    return IssueState(None, "`gh` gave no state for it")
+    return github_issues.read_issue(issue, cwd=target_root)
 
 
 # --- the report -----------------------------------------------------------------------
@@ -316,9 +276,9 @@ def report(
 
     today = today if today is not None else dt.date.today()
     reader: IssueReader = read if read is not None else read_issue
-    asked: dict[str, IssueState] = {}
+    asked: dict[str, IssueReading] = {}
 
-    def issue_state(issue: str) -> IssueState:
+    def issue_state(issue: str) -> IssueReading:
         if issue not in asked:
             asked[issue] = reader(target_root, issue)
         return asked[issue]
@@ -360,7 +320,7 @@ def _proposed(
     statuses: Mapping[str, str],
     today: dt.date,
     older_than: int,
-    issue_state: Callable[[str], IssueState],
+    issue_state: Callable[[str], IssueReading],
 ) -> Proposed | None:
     """One record's entry, or `None` when it is not proposed."""
     front_matter, _body, problem = document_parts.parse_front_matter(text)
@@ -400,14 +360,16 @@ def _standing(
     condition: Condition,
     statuses: Mapping[str, str],
     today: dt.date,
-    issue_state: Callable[[str], IssueState],
+    issue_state: Callable[[str], IssueReading],
 ) -> tuple[str, str]:
     """A condition's standing, and how it stands, as a clause."""
     if condition.kind == "issue":
-        state = issue_state(condition.value)
-        if state.closed is None:
-            return UNREAD, f"which could not be read: {state.problem}"
-        return (DUE, "which is closed") if state.closed else (WAITING, "which is open")
+        reading = issue_state(condition.value)
+        if reading.state == github_issues.CLOSED:
+            return DUE, "which is closed"
+        if reading.state == github_issues.OPEN:
+            return WAITING, "which is open"
+        return UNREAD, f"which could not be read: {reading.reason}"
     if condition.kind == "date":
         ahead = (dt.date.fromisoformat(condition.value) - today).days
         return (DUE, "which has come") if ahead <= 0 else (WAITING, f"{ahead} day(s) ahead")

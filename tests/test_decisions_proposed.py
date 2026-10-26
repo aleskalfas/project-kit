@@ -11,9 +11,10 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
-from project_kit import decisions_proposed
+from project_kit import decisions_proposed, github_issues
 from project_kit.cli import main
-from project_kit.decisions_proposed import Condition, IssueState
+from project_kit.decisions_proposed import Condition
+from project_kit.github_issues import IssueReading
 from project_kit.validators import Severity
 from tests.adopter_repo import MakeAdopterRepo
 
@@ -58,16 +59,16 @@ def _prj(project: Path, number: int) -> Path:
 class _Issues:
     """An issue reader that answers from a table and counts what it is asked."""
 
-    def __init__(self, states: dict[str, IssueState]) -> None:
+    def __init__(self, states: dict[str, IssueReading]) -> None:
         self.states = states
         self.asked: list[str] = []
 
-    def __call__(self, _root: Path, issue: str) -> IssueState:
+    def __call__(self, _root: Path, issue: str) -> IssueReading:
         self.asked.append(issue)
         return self.states[issue]
 
 
-def _no_issues(_root: Path, issue: str) -> IssueState:
+def _no_issues(_root: Path, issue: str) -> IssueReading:
     raise AssertionError(f"the report read issue {issue} it had no need of")
 
 
@@ -190,17 +191,17 @@ def test_front_matter_that_does_not_parse_without_the_field_raises_nothing() -> 
 
 
 @pytest.mark.parametrize(
-    ("closed", "standing", "says"),
+    ("state", "standing", "says"),
     [
-        (True, "due", "waits on issue #795, which is closed."),
-        (False, "waiting", "waits on issue #795, which is open."),
+        ("closed", "due", "waits on issue #795, which is closed."),
+        ("open", "waiting", "waits on issue #795, which is open."),
     ],
 )
 def test_an_issue_condition_is_due_once_the_issue_closes(
-    project: Path, closed: bool, standing: str, says: str
+    project: Path, state: str, standing: str, says: str
 ) -> None:
     _record(_prj(project, 1), "PRJ-001", waits_on="{issue: 795}")
-    issues = _Issues({"795": IssueState(closed)})
+    issues = _Issues({"795": IssueReading(state)})
 
     found = decisions_proposed.report(project, today=TODAY, read=issues)
 
@@ -211,7 +212,7 @@ def test_an_issue_condition_is_due_once_the_issue_closes(
 
 def test_an_issue_that_could_not_be_read_says_why(project: Path) -> None:
     _record(_prj(project, 1), "PRJ-001", waits_on="{issue: owner/repo#12}")
-    issues = _Issues({"owner/repo#12": IssueState(None, "`gh` exited 1: no network")})
+    issues = _Issues({"owner/repo#12": IssueReading("unknown", "`gh` exited 1: no network")})
 
     [record] = decisions_proposed.report(project, today=TODAY, read=issues).records
 
@@ -224,7 +225,7 @@ def test_an_issue_that_could_not_be_read_says_why(project: Path) -> None:
 def test_each_issue_is_read_once(project: Path) -> None:
     _record(_prj(project, 1), "PRJ-001", waits_on="{issue: 795}")
     _record(_prj(project, 2), "PRJ-002", waits_on="{issue: 795}")
-    issues = _Issues({"795": IssueState(False)})
+    issues = _Issues({"795": IssueReading("open")})
 
     decisions_proposed.report(project, today=TODAY, read=issues)
 
@@ -387,7 +388,7 @@ def test_the_report_orders_due_then_unread_then_waiting_oldest_first(project: Pa
     _record(_prj(project, 3), "PRJ-003", date="2026-08-01")
     _record(_prj(project, 4), "PRJ-004", date="2026-07-01", waits_on="{date: 2026-08-01}")
     _record(_prj(project, 5), "PRJ-005", date="2026-06-01", waits_on="{record: PRJ-003}")
-    issues = _Issues({"1": IssueState(None, "offline")})
+    issues = _Issues({"1": IssueReading("unknown", "offline")})
 
     found = decisions_proposed.report(project, today=TODAY, read=issues)
 
@@ -421,78 +422,38 @@ def test_a_synced_copy_is_not_listed_and_a_record_may_wait_on_one(
 # --- reading an issue -----------------------------------------------------------------
 
 
-def _ran(
-    monkeypatch: pytest.MonkeyPatch, *, returncode: int = 0, stdout: str = "", stderr: str = ""
-) -> list[dict[str, Any]]:
+def test_an_issue_is_read_by_the_backbones_reader_from_the_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     calls: list[dict[str, Any]] = []
 
     def run(args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append({"args": args, **kwargs})
-        return subprocess.CompletedProcess(args, returncode, stdout, stderr)
+        return subprocess.CompletedProcess(args, 0, '{"state": "CLOSED"}', "")
 
-    monkeypatch.setattr(decisions_proposed.subprocess, "run", run)
-    return calls
+    monkeypatch.setattr(github_issues.subprocess, "run", run)
 
-
-@pytest.mark.parametrize(("state", "closed"), [("CLOSED", True), ("OPEN", False)])
-def test_an_issue_of_the_projects_repository_is_read_through_gh_from_the_root(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, state: str, closed: bool
-) -> None:
-    calls = _ran(monkeypatch, stdout=f'{{"state": "{state}"}}')
-
-    assert decisions_proposed.read_issue(tmp_path, "795") == IssueState(closed)
+    assert decisions_proposed.read_issue(tmp_path, "795") == IssueReading("closed")
     [call] = calls
-    assert call["args"] == ["gh", "issue", "view", "795", "--json", "state"]
+    assert call["args"][:4] == ["gh", "issue", "view", "795"]
     assert call["cwd"] == tmp_path
-    assert call["timeout"] == decisions_proposed.GH_TIMEOUT_SECONDS
 
 
-def test_an_issue_of_another_repository_names_it(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    calls = _ran(monkeypatch, stdout='{"state": "OPEN"}')
-
-    decisions_proposed.read_issue(tmp_path, "owner/repo#12")
-
-    assert calls[0]["args"] == [
-        *("gh", "issue", "view", "12", "--json", "state"),
-        *("--repo", "owner/repo"),
-    ]
-
-
-def test_gh_that_fails_gives_its_reason(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _ran(monkeypatch, returncode=1, stderr="\nerror connecting to api.github.com\nmore\n")
-
-    state = decisions_proposed.read_issue(tmp_path, "795")
-
-    assert state == IssueState(None, "`gh` exited 1: error connecting to api.github.com")
-
-
-def test_gh_that_gives_no_state_is_no_answer(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    _ran(monkeypatch, stdout="not json")
-    assert decisions_proposed.read_issue(tmp_path, "795") == IssueState(
-        None, "`gh` gave no state for it"
-    )
-
-
-@pytest.mark.parametrize(
-    ("raised", "says"),
-    [
-        (FileNotFoundError("gh"), "`gh`, the GitHub client, is not installed"),
-        (subprocess.TimeoutExpired("gh", 30), "`gh` gave no answer in 30 seconds"),
-        (PermissionError("denied"), "`gh` could not run: denied"),
-    ],
-)
-def test_gh_that_cannot_run_is_no_answer(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, raised: Exception, says: str
+def test_an_issue_the_reader_cannot_read_is_unread_with_its_reason(
+    project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def run(*_args: Any, **_kwargs: Any) -> None:
-        raise raised
+        raise FileNotFoundError("gh")
 
-    monkeypatch.setattr(decisions_proposed.subprocess, "run", run)
-    assert decisions_proposed.read_issue(tmp_path, "795") == IssueState(None, says)
+    monkeypatch.setattr(github_issues.subprocess, "run", run)
+    _record(_prj(project, 1), "PRJ-001", waits_on="{issue: 795}")
+
+    [record] = decisions_proposed.report(project, today=TODAY).records
+
+    assert record.standing == "unread"
+    assert record.reason == (
+        "waits on issue #795, which could not be read: `gh`, the GitHub client, is not installed."
+    )
 
 
 # --- the command -----------------------------------------------------------------------
@@ -511,7 +472,7 @@ def test_cli_lists_each_standing_and_exits_zero(
     _record(_prj(project, 2), "PRJ-002", waits_on="{issue: 795}")
     _record(_prj(project, 3), "PRJ-003", waits_on="{date: 2999-01-01}")
     monkeypatch.setattr(
-        decisions_proposed, "read_issue", lambda _root, _issue: IssueState(None, "offline")
+        decisions_proposed, "read_issue", lambda _root, _issue: IssueReading("unknown", "offline")
     )
 
     result = CliRunner().invoke(main, ["decisions", "proposed"])

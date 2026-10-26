@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit scratchpad list` reads a reported note's issues through the backbone's
+  one reader of a GitHub issue, which `pkit decisions proposed` shares (#2166).
+  A read that `gh` does not answer within 30 seconds now gives `state unknown`,
+  where the listing waited for it before. A recorded ref that names no issue is
+  never passed to `gh`, and gives `state unknown` too. The listing's output is
+  otherwise unchanged.
