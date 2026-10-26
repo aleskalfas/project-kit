@@ -2060,6 +2060,42 @@ def test_a_clean_clone_on_the_merged_branch_moves_to_main(dw, monkeypatch, capsy
     assert "left this clone" not in capsys.readouterr().out
 
 
+def test_a_clean_clone_on_main_is_fast_forwarded_and_stays_there(dw, monkeypatch, capsys):
+    """#2183: the person's landing clone sits on main with a clean working
+    tree. After the merge it is fast-forwarded and stays on main: nothing is
+    checked out, and the merged branch's local copy is kept."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, current="main")
+
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+
+    assert ["git", "pull", "--ff-only"] in seen
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "branch"]) for argv in seen)
+    assert (
+        "  brought main up to date in this clone, which is on it, not on fix/42-slug, the "
+        "branch that merged. Local branch fix/42-slug is kept."
+    ) in capsys.readouterr().out
+
+
+def test_a_clone_on_main_with_uncommitted_changes_is_left_there(dw, monkeypatch, capsys):
+    """#2183: on main, but with changes not committed, the clone is not
+    pulled: it is left as it is."""
+    real_cleanup = dw.pr_merge.cleanup_local
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(dw.pr_merge, "cleanup_local", real_cleanup)
+    seen = _fake_git(monkeypatch, dw, current="main", changes=" M README.md\n")
+
+    assert _run_main(dw, monkeypatch, ["42", "--yes"]) == 0
+
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert (
+        "  left this clone where it is: its working tree has uncommitted changes. "
+        "Local branch fix/42-slug is kept."
+    ) in capsys.readouterr().out
+
+
 def test_main_held_by_other_worktree_completes_merge_and_transition(
     dw,
     monkeypatch,

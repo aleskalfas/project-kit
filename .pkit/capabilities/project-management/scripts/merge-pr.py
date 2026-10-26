@@ -573,8 +573,9 @@ def _after_merge(
 
     # Branch cleanup — never fatal, after the hooks. The head branch on GitHub
     # is the backbone's to delete, only at the head that merged; the local
-    # steps warn and continue, and leave a clone not on the head branch, or
-    # with uncommitted changes, where it is (#2183), so a head branch checked
+    # steps warn and continue. They switch only a clone on the head branch
+    # with a clean working tree, fast-forward a clean one on the default
+    # branch, and leave any other where it is (#2183), so a head branch checked
     # out in another worktree (#587) is kept, not a failed merge. The record
     # above says the hooks ran, so a re-run of this verb returns before the
     # deletion: the command the line names is the only way to retry it.

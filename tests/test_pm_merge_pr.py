@@ -649,8 +649,9 @@ def test_head_branch_checked_out_in_worktree_is_a_warning_not_a_failure(
 ):
     """#587's trigger under the shared mechanic: the head branch is checked
     out in another worktree, so this clone, on main, is not on it. The merge
-    and the hooks complete and the verb exits 0. The local clean-up leaves
-    this clone where it is and keeps the branch, in one line (#2183)."""
+    and the hooks complete and the verb exits 0. The local clean-up
+    fast-forwards main here, never switches, and keeps the branch, in one
+    line (#2183)."""
     import subprocess
 
     real_cleanup = mp.pr_merge.cleanup_local
@@ -674,10 +675,11 @@ def test_head_branch_checked_out_in_worktree_is_a_warning_not_a_failure(
     assert calls["merged"] is True
     assert ("hooks", "after_merge_pr") in calls["order"]
     assert ("remote_delete", "sha-head") in calls["order"]
+    assert ["git", "pull", "--ff-only"] in seen
     assert not any(argv[:2] in (["git", "checkout"], ["git", "branch"]) for argv in seen)
     assert (
-        "  left this clone where it is: it is on main, not on fix/42-slug, the branch that "
-        "merged. Local branch fix/42-slug is kept."
+        "  brought main up to date in this clone, which is on it, not on fix/42-slug, the "
+        "branch that merged. Local branch fix/42-slug is kept."
     ) in captured.out
     assert not [ln for ln in captured.err.splitlines() if ln.lower().startswith("error:")]
 

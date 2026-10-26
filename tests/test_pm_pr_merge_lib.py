@@ -735,14 +735,14 @@ def test_with_no_merged_head_known_the_local_branch_is_kept(lib, monkeypatch, ca
 def test_with_the_merged_head_a_clone_without_the_branch_deletes_nothing(lib, monkeypatch, capsys):
     """A clone without the branch cannot be on it: it is left where it is, and
     the line names no local branch kept."""
-    seen = _guarded_git(monkeypatch, lib, tip="", unmerged="", current="main")
+    seen = _guarded_git(monkeypatch, lib, tip="", unmerged="", current="feat/7-next")
     _cleanup(lib)
     assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
     assert not any(argv[:2] in (["git", "branch"], ["git", "rev-list"]) for argv in seen)
     captured = capsys.readouterr()
     assert captured.out == (
-        "  left this clone where it is: it is on main, not on fix/42-slug, the branch that "
-        "merged.\n"
+        "  left this clone where it is: it is on feat/7-next, not on fix/42-slug, the branch "
+        "that merged.\n"
     )
     assert "[warn]" not in captured.err
 
@@ -782,13 +782,15 @@ def test_a_clone_on_another_branch_is_left_where_it_is(
     [" M src/fix.py\n", "A  src/new.py\n", "?? notes.txt\n"],
     ids=["modified", "staged", "untracked"],
 )
+@pytest.mark.parametrize("current", ["fix/42-slug", "main"], ids=["merged-branch", "default"])
 def test_a_clone_with_uncommitted_changes_is_left_where_it_is(
-    lib, monkeypatch, capsys, changes
+    lib, monkeypatch, capsys, changes, current
 ) -> None:
     """On the branch that merged, but with changes not committed — untracked
     files among them — a checkout would carry them onto the default branch for
-    the next commit to land there. The clone stays, and so does its branch."""
-    seen = _fake_git(monkeypatch, lib, changes=changes)
+    the next commit to land there. The clone stays, and so does its branch.
+    On the default branch with such changes, the clone is not pulled either."""
+    seen = _fake_git(monkeypatch, lib, changes=changes, current=current)
     _cleanup(lib)
     assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
     assert not any(argv[:2] in (["git", "branch"], ["git", "rev-list"]) for argv in seen)
@@ -817,6 +819,72 @@ def test_a_clean_clone_on_the_branch_that_merged_switches_and_pulls(lib, monkeyp
     assert seen[2:4] == [["git", "checkout", "main"], ["git", "pull", "--ff-only"]]
     assert ["git", "branch", "-D", "fix/42-slug"] in seen
     assert "left this clone" not in capsys.readouterr().out
+
+
+# --- cleanup_local: a clone on the default branch (#2183) ------------------
+
+
+@pytest.mark.parametrize(
+    ("tip", "kept"),
+    [("sha-head", " Local branch fix/42-slug is kept."), ("", "")],
+    ids=["branch-here", "no-branch-here"],
+)
+def test_a_clean_clone_on_the_default_branch_is_fast_forwarded_and_stays_on_it(
+    lib, monkeypatch, capsys, backbone, tip, kept
+) -> None:
+    """A landing clone sits on the default branch, and the person expects it
+    current after each merge. With a clean working tree it is fast-forwarded,
+    never switched, and the merged branch's local copy is kept, said in one
+    line. The default branch is the one the backbone declares."""
+    backbone("develop")
+    seen = _fake_git(monkeypatch, lib, current="develop", tip=tip)
+    _cleanup(lib)
+    assert seen == [
+        ["git", "symbolic-ref", "--quiet", "--short", "HEAD"],
+        ["git", "status", "--porcelain"],
+        ["git", "pull", "--ff-only"],
+        ["git", "rev-parse", "--verify", "--quiet", "refs/heads/fix/42-slug"],
+    ]
+    captured = capsys.readouterr()
+    assert captured.out == (
+        "  brought develop up to date in this clone, which is on it, not on fix/42-slug, the "
+        f"branch that merged.{kept}\n"
+    )
+    assert captured.err == ""
+
+
+def test_a_failed_fast_forward_of_the_default_branch_warns_and_changes_nothing(
+    lib, monkeypatch, capsys
+) -> None:
+    """A fast-forward git refuses leaves the clone as it was: a warning with
+    git's reason, no switch, and nothing deleted."""
+    seen = _fake_git(
+        monkeypatch, lib, current="main", pull_stderr="fatal: Not possible to fast-forward"
+    )
+    _cleanup(lib)
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "rev-list"]) for argv in seen)
+    assert not any(argv[:2] == ["git", "branch"] for argv in seen)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == (
+        "[warn] git pull failed: fatal: Not possible to fast-forward. This clone stays on main "
+        "as it was. Local branch fix/42-slug is kept.\n"
+    )
+
+
+def test_a_clone_on_a_branch_other_than_the_declared_default_is_left(
+    lib, monkeypatch, capsys, backbone
+) -> None:
+    """The default branch is the backbone's, not a hardcoded main: a clone on
+    main where develop is declared is not pulled."""
+    backbone("develop")
+    seen = _fake_git(monkeypatch, lib, current="main")
+    _cleanup(lib)
+    assert not any(argv[:2] in (["git", "checkout"], ["git", "pull"]) for argv in seen)
+    assert capsys.readouterr().out == (
+        "  left this clone where it is: it is on main, not on fix/42-slug, the branch that "
+        "merged. Local branch fix/42-slug is kept.\n"
+    )
 
 
 # --- the queue: refusal, landing, dequeue (#1011) ----------------------------

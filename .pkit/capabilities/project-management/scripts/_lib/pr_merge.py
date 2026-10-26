@@ -25,10 +25,11 @@ on merge. This module realises that outcome in three steps a verb composes:
      fails the verb; it is answered for step 3.
   3. :func:`cleanup_local` — `checkout <default>`, `pull --ff-only`,
      `branch -D <head>`, only in a clone on the head branch with a clean
-     working tree; any other clone is left where it is (#2183). The delete
-     runs only when the branch on GitHub was deleted or is gone and
-     everything on the local one merged. Every step warns with git's reason
-     and continues; none can fail the verb.
+     working tree; a clean clone on the default branch is only fast-forwarded,
+     and any other clone is left where it is (#2183). The delete runs only
+     when the branch on GitHub was deleted or is gone and everything on the
+     local one merged. Every step warns with git's reason and continues; none
+     can fail the verb.
 
 A verb runs its own irreversible-merge follow-up (done-work's issue
 transition, merge-pr's after-merge hooks) between 1 and 2, so no best-effort
@@ -910,7 +911,10 @@ def cleanup_local(
 
     The clean-up moves the clone only when it is on the branch that merged
     with a clean working tree: no uncommitted changes, untracked files
-    included (#2183). A clone on another branch, on a detached HEAD, or with
+    included (#2183). A clean clone already on the default branch, as a
+    landing clone sits, is fast-forwarded there and never switched; the local
+    head is kept, said in one line, and a fast-forward that fails warns and
+    changes nothing. A clone on another branch, on a detached HEAD, or with
     uncommitted changes holds someone's work in progress, such as a worker's
     next Task: a checkout would carry it onto the default branch, for the
     next commit to land there. Such a clone is left where it is, nothing
@@ -955,11 +959,29 @@ def cleanup_local(
             check=False,
         )
 
-    why = _why_the_clone_stays(branch, _git)
-    if why:
+    def _kept() -> str:
         tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
-        kept = f" Local branch {branch} is kept." if tip else ""
-        print(f"  left this clone where it is: {why}.{kept}")
+        return f" Local branch {branch} is kept." if tip else ""
+
+    current, why = _read_the_clone(branch, settled, _git)
+    if why:
+        print(f"  left this clone where it is: {why}.{_kept()}")
+        return
+    if current != branch:
+        # On the default branch with a clean working tree: fast-forwarded,
+        # never switched, and the merged branch's local copy kept.
+        proc = _git("pull", "--ff-only")
+        if proc.returncode != 0:
+            print(
+                f"[warn] git pull failed: {proc.stderr.strip()}. This clone stays on "
+                f"{settled} as it was.{_kept()}",
+                file=sys.stderr,
+            )
+            return
+        print(
+            f"  brought {settled} up to date in this clone, which is on it, not on {branch}, "
+            f"the branch that merged.{_kept()}"
+        )
         return
     proc = _git("checkout", settled)
     if proc.returncode != 0:
@@ -1007,18 +1029,26 @@ def cleanup_local(
         )
 
 
-def _why_the_clone_stays(branch: str, git: Callable[..., subprocess.CompletedProcess[str]]) -> str:
-    """Why the local clean-up leaves this clone where it is, or "" when the
-    clone is on `branch`, the branch that merged, with a clean working tree.
+def _read_the_clone(
+    branch: str, settled: str, git: Callable[..., subprocess.CompletedProcess[str]]
+) -> tuple[str, str]:
+    """The branch this clone is on ("" on a detached HEAD), and why the local
+    clean-up leaves it where it is: "" when the clone is on `branch`, the
+    branch that merged, or on `settled`, the default branch, with a clean
+    working tree.
 
     Both are read before either is judged, so every clean-up asks the same
     two questions of the clone."""
     current = git("symbolic-ref", "--quiet", "--short", "HEAD").stdout.strip()
     status = git("status", "--porcelain")
-    if current != branch:
-        return f"it is on {current or 'a detached HEAD'}, not on {branch}, the branch that merged"
+    if current not in (branch, settled):
+        on = current or "a detached HEAD"
+        return current, f"it is on {on}, not on {branch}, the branch that merged"
     if status.returncode != 0:
-        return f"git cannot tell whether its working tree is clean ({status.stderr.strip()})"
+        return (
+            current,
+            f"git cannot tell whether its working tree is clean ({status.stderr.strip()})",
+        )
     if status.stdout.strip():
-        return "its working tree has uncommitted changes"
-    return ""
+        return current, "its working tree has uncommitted changes"
+    return current, ""
