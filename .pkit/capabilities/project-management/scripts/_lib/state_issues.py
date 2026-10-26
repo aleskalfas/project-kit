@@ -131,7 +131,10 @@ FINISHED = "finished"
 
 _KIND = re.compile(r"[a-z][a-z0-9-]*")
 _MARKER = re.compile(r"<!--\s*pkit:state-issue((?:\s+[^\s>]+)*)\s*-->")
-_ISSUE_URL = re.compile(r"/issues/(\d+)\s*$")
+_ISSUE_URL = re.compile(r"/issues/([0-9]{1,9})\s*$")
+# A version is ASCII digits of bounded length, so no marker a hand writes can
+# make the reader fail on it.
+_NUMBER = re.compile(r"[0-9]{1,6}")
 
 #: A ``gh`` runner: takes the argv, returns what ``subprocess.run`` returns.
 Gh = Callable[[list[str]], Any]
@@ -185,7 +188,7 @@ def read_marker(text: str) -> Marker | None:
         return Marker(
             kind=attrs.get("kind", ""),
             key=attrs.get("key", ""),
-            version=int(version) if version.isdigit() else 0,
+            version=int(version) if _NUMBER.fullmatch(version) else 0,
         )
     return None
 
@@ -548,7 +551,7 @@ def view_text(kind: str, key: str, folded: Fold) -> str:
     else:
         lines.append(
             f"> **Held** by the account {_code(holder.account)}, clone"
-            f" {_code(holder.clone)}, at {holder.place or 'an unnamed place'}."
+            f" {_code(holder.clone)}, at {audit_log.one_line(holder.place) or 'an unnamed place'}."
         )
     return "\n".join(lines)
 
@@ -876,7 +879,9 @@ def _outcome(proc: Any) -> Write:
 
 
 def _code(value: str) -> str:
-    return "`" + value.replace("`", "'") + "`"
+    """A value as a code span on one line, so no value starts a line of its
+    own ahead of a marker."""
+    return audit_log.code(value)
 
 
 def runner(config: dict[str, Any]) -> Gh:

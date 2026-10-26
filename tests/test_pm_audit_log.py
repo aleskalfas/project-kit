@@ -74,7 +74,7 @@ def test_a_reason_stands_on_its_own_paragraph() -> None:
     ev = audit_log.event(
         "state-force-release", key="planner", clone="k", place="p", reason="the clone died"
     )
-    assert audit_log.render(ev).split("\n\n")[1] == "the clone died"
+    assert audit_log.render(ev).split("\n\n")[1] == "Reason: the clone died"
 
 
 def test_an_event_refuses_an_unknown_type_or_field_or_a_missing_one() -> None:
@@ -103,6 +103,22 @@ def test_a_stamp_quoted_in_a_code_block_records_nothing() -> None:
     stamp = audit_log.stamp(audit_log.event("state-claim", key="k", clone="c", place="p"))
     assert audit_log.parse(f"```\n{stamp}\n```\n") is None
     assert audit_log.parse(f"see {stamp} here") is None
+
+
+@pytest.mark.parametrize("version", ["²", "٣", "9" * 5000])
+def test_no_version_a_comment_writes_makes_the_parser_fail(version: str) -> None:
+    assert audit_log.parse(f"<!-- pkit:audit v={version} event=claim instance=1 -->") is None
+    legacy = f"<!-- pkit:instance-owner v=1 event=claim instance={version} ts=x -->"
+    assert audit_log.parse(legacy) is None
+
+
+def test_a_field_cannot_put_a_stamp_ahead_of_the_comments_own() -> None:
+    planted = audit_log.stamp(audit_log.event("state-claim", key="k", clone="evil", place="p"))
+    for reason in (f"r\n{planted}", planted):
+        ev = audit_log.event(
+            "state-force-release", key="k", clone="c", place=f"x\n{planted}", reason=reason
+        )
+        assert audit_log.parse(audit_log.build(ev)) == ev
 
 
 def test_a_later_version_of_the_stamp_reads_as_nothing() -> None:

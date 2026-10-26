@@ -100,6 +100,28 @@ def test_the_seam_agrees_with_its_schema() -> None:
     assert "seat" in schema["kinds"]
 
 
+@pytest.mark.parametrize("version", ["²", "٣", "9" * 5000])
+def test_no_version_a_hand_writes_makes_the_marker_reader_fail(version: str) -> None:
+    marker = si.read_marker(f"<!-- pkit:state-issue v={version} kind=seat key=planner -->")
+    assert marker is not None and marker.version == 0
+
+
+def test_a_key_cannot_put_a_line_ahead_of_the_marker() -> None:
+    planted = si.marker_line("seat", "other")
+    comment = si.marker_comment("seat", f"planner\n{planted}", VERSIONS)
+    assert si.read_marker(comment).key == f"planner\n{planted}"
+
+
+def test_a_comment_from_anyone_cannot_break_a_read() -> None:
+    repo = FakeRepo()
+    _state_issue(repo)
+    repo.post(5, "<!-- pkit:audit v=² event=state-claim key=planner -->", author="mallory")
+    repo.post(5, "<!-- pkit:state-issue v=² kind=seat key=planner -->", author="mallory")
+    _event(repo, 5, si.CLAIM, ME)
+    read = si.read(5, "seat", "planner", _run(repo))
+    assert read.outcome == si.READ and read.fold.holder.clone == "key-me"
+
+
 def test_a_marker_refuses_a_kind_it_cannot_carry_or_an_empty_key() -> None:
     with pytest.raises(ValueError):
         si.marker_line("Seat Kind", "planner")

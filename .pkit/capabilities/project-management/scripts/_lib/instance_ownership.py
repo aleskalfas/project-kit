@@ -221,7 +221,11 @@ def _created_at(comment: Any) -> str | None:
 
 
 def _int(value: str | None) -> int | None:
-    return int(value) if value is not None and value.isdigit() else None
+    """The number ``value`` holds, ASCII digits of bounded length, or None, so
+    no text a comment carries can make the fold fail."""
+    if value is None or not re.fullmatch(r"[0-9]{1,9}", value):
+        return None
+    return int(value)
 
 
 def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[OwnershipEvent]:
@@ -238,12 +242,12 @@ def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[Ow
     if not assignee_login:
         return out
     for c in comments:
-        ev = audit_log.parse(str(_field(c, "body") or ""))
-        if ev is None or ev.type not in EVENTS:
-            continue
         author = _author_of(c)
         if author != assignee_login:
             continue  # forgery / another account — not trusted
+        ev = audit_log.parse(str(_field(c, "body") or ""))
+        if ev is None or ev.type not in EVENTS:
+            continue
         instance = _int(ev.get("instance"))
         if instance is None:
             continue

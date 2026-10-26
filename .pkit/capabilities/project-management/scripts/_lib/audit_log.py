@@ -127,13 +127,15 @@ EVENT_TYPES: dict[str, EventType] = {
 OWNERSHIP_EVENTS = tuple(n for n, t in EVENT_TYPES.items() if t.family == OWNERSHIP)
 STATE_EVENTS = tuple(n for n, t in EVENT_TYPES.items() if t.family == STATE_ISSUE)
 
+# Numbers are ASCII digits of bounded length, so no text a comment carries can
+# make a reader fail on it.
 _STAMP = re.compile(
-    r"<!--\s*pkit:audit\s+v=(?P<v>\d+)\s+event=(?P<event>[a-z][a-z0-9-]*)"
+    r"<!--\s*pkit:audit\s+v=(?P<v>[0-9]{1,6})\s+event=(?P<event>[a-z][a-z0-9-]*)"
     r"(?P<fields>(?:\s+[a-z][a-z0-9_]*=[^\s>]*)*)\s*-->"
 )
 _LEGACY = re.compile(
-    r"<!--\s*pkit:instance-owner\s+v=1\s+event=(?P<event>\w+)"
-    r"\s+instance=(?P<instance>\d+)(?:\s+to=(?P<to>\d+))?"
+    r"<!--\s*pkit:instance-owner\s+v=1\s+event=(?P<event>[a-z]+)"
+    r"\s+instance=(?P<instance>[0-9]{1,9})(?:\s+to=(?P<to>[0-9]{1,9}))?"
     r"\s+ts=(?P<ts>\S+)\s*-->"
 )
 _PAIR = re.compile(r"([a-z][a-z0-9_]*)=([^\s>]*)")
@@ -222,42 +224,56 @@ def build(ev: Event, *, versions: Any = None) -> str:
 
 def render(ev: Event) -> str:
     """The lines a person reads: the payload line, and a reason on its own
-    paragraph where the event carries one (DEC-052)."""
+    paragraph where the event carries one (DEC-052).
+
+    Each value is shown on one line, after a word of the facility's own, so no
+    value can be a line of its own, such as a stamp, ahead of the comment's
+    stamp.
+    """
     known = EVENT_TYPES[ev.type]
     head = f"{known.icon} {known.name} — "
     if known.family == OWNERSHIP:
         head += _owner_payload(ev)
     else:
         head += _state_payload(ev)
-    reason = ev.get("reason")
-    return f"{head}\n\n{reason}" if reason else head
+    reason = _shown(ev, "reason")
+    return f"{head}\n\nReason: {reason}" if reason else head
 
 
 def _owner_payload(ev: Event) -> str:
-    who = f"instance {ev.get('instance')}"
-    if ev.get("name"):
-        who += f" ({ev.get('name')})"
+    who = f"instance {_shown(ev, 'instance')}"
+    if _shown(ev, "name"):
+        who += f" ({_shown(ev, 'name')})"
     if ev.type == "handoff":
-        who += f" → instance {ev.get('to')}"
-    seat = ev.get("seat")
-    if seat:
-        who += f" · seat {_code(seat)}"
-        if ev.get("seat_number"):
-            who += f" (number {ev.get('seat_number')})"
-    if ev.get("clone"):
-        who += f" · clone {_code(ev.get('clone') or '')}"
+        who += f" → instance {_shown(ev, 'to')}"
+    if _shown(ev, "seat"):
+        who += f" · seat {code(_shown(ev, 'seat'))}"
+        if _shown(ev, "seat_number"):
+            who += f" (number {_shown(ev, 'seat_number')})"
+    if _shown(ev, "clone"):
+        who += f" · clone {code(_shown(ev, 'clone'))}"
     return who
 
 
 def _state_payload(ev: Event) -> str:
     return (
-        f"{_code(ev.get('key') or '')} · clone {_code(ev.get('clone') or '')}"
-        f" at {ev.get('place') or 'an unnamed place'}"
+        f"{code(_shown(ev, 'key'))} · clone {code(_shown(ev, 'clone'))}"
+        f" at {_shown(ev, 'place') or 'an unnamed place'}"
     )
 
 
-def _code(value: str) -> str:
-    return "`" + value.replace("`", "'") + "`"
+def one_line(value: str) -> str:
+    """``value`` with each run of line breaks and whitespace made one space."""
+    return " ".join(value.split())
+
+
+def code(value: str) -> str:
+    """``value`` as a code span on one line, for a person to read."""
+    return "`" + one_line(value).replace("`", "'") + "`"
+
+
+def _shown(ev: Event, name: str) -> str:
+    return one_line(ev.get(name) or "")
 
 
 def parse(body: str) -> Event | None:
