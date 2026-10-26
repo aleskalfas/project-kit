@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  DEC-025 is accepted, refined first to fit DEC-059 and DEC-060 (#2155). Code
+  surface and sequence stay two conflicts with a mechanism each, and
+  workstreams carry neither. Readiness in sequence is reckoned once, through
+  the shared pool of DEC-059 in a project with a topology. Lanes and the typed
+  `Blocked by:` line are named, and built once lived evidence answers the
+  record's open questions, so no behaviour changes.
