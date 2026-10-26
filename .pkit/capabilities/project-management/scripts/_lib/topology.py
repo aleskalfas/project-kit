@@ -482,7 +482,9 @@ def read_at(capability_root: Path, at: Settled, *, git: Git | None = None) -> To
     return _parse_text(text, ref=at.ref, commit=at.commit)
 
 
-def writers_at(capability_root: Path, at: Settled, *, git: Git | None = None) -> Any:
+def writers_at(
+    capability_root: Path, at: Settled, *, git: Git | None = None
+) -> state_issues.Writers:
     """Who may write on a seat's state issue, as the commit ``at`` holds the
     members ([pkit:ADR-071] point 3): the members' logins where the membership
     gate is closed, and an open gate where the commit names no member.
@@ -626,7 +628,7 @@ def changes_against(base: Topology, topology: Topology | None) -> list[Problem]:
                     SEAT_DELETED,
                     f"seat {seat.number} ({seat.name}) of {base.where()} is gone. A seat "
                     "that leaves the topology stays in it, marked `retired: true`, and a "
-                    "renamed seat is retired and added again at the end.",
+                    "renamed seat is retired, with its new name added at the end.",
                 )
             )
         elif now.number != seat.number:

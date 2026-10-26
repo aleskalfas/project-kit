@@ -691,7 +691,7 @@ seats:
 
 The check compares a change with a base, so it is no member of `pkit validate`, which takes no base. Run it among the checks of a pull request. It reads no GitHub.
 
-`scripts/_lib/topology.py` is the one reader of the topology, from the default branch for every command that acts as a seat. `schemas/topology.schema.json` holds the file's shape.
+`scripts/_lib/topology.py` is the one reader of the topology. Every command that acts as a seat reads the topology through it, from the default branch. `schemas/topology.schema.json` holds the file's shape.
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 
