@@ -17,6 +17,7 @@ pkit:
         - src/project_kit/decisions_validate.py
         - src/project_kit/default_branch.py
         - src/project_kit/migrations.py
+        - .pkit/migrations/backbone/1.140.0/001-retire-pkit-router-shim.sh
         - src/project_kit/refs.py
         - src/project_kit/validate.py
         - src/project_kit/friction_check.py
@@ -36,6 +37,8 @@ pkit:
         - .pkit/agents/core/rule-set-reviewer.md
         - .pkit/agents/core/methodology-reviewer.md
         - .pkit/agents/core/convention-compliance-reviewer.md
+        - .pkit/capabilities/project-management/scripts/create-issue.py
+        - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
       record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
       artefact:
         - ACT-adopter
@@ -54,7 +57,6 @@ pkit:
         - .pkit/lifecycle/README.md#a-data-points-question
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
         - .pkit/capabilities/project-management/README.md#
-        - .pkit/capabilities/project-management/README.md#issue-body-validation--required-sections-and-universal-rules-per-project-managementdec-010-issue-body-minimum-structure
         - .pkit/capabilities/software-engineering/README.md#
         - .pkit/capabilities/evidence/README.md#
         - .pkit/adapters/README.md#currently-shipped
@@ -196,17 +198,17 @@ Below, `uvx`, which comes with uv, fetches release 1.134.0 from GitHub and sets 
 
 ```console
 $ git init -q older-project
-$ cd older-project && uvx -q --from git+https://github.com/aleskalfas/project-kit.git@v1.134.0 pkit init | grep "^  stamped"
+$ (cd older-project && uvx -q --from git+https://github.com/aleskalfas/project-kit.git@v1.134.0 pkit init | grep "^  stamped")
   stamped      .pkit/manifest.yaml (backbone v1.134.0; 1 adapter(s) registered)
-$ cd older-project && pkit status | grep "Backbone version"
+$ (cd older-project && pkit status | grep "Backbone version")
   Backbone version:      1.134.0   (source <version> — run `pkit upgrade --dry-run` to preview)
-$ cd older-project && pkit upgrade | grep -e "^Upgrading" -e "^  running" -e 1.140.0 -e rule-set-reviewer -e "^Pinned"
+$ (cd older-project && pkit upgrade | grep -e "^Upgrading" -e "^  running" -e 1.140.0 -e rule-set-reviewer -e "^Pinned")
 Upgrading backbone: 1.134.0 -> <version>
   running <any> backbone migration(s), the replay (no completed transition -> v<version>)
     • 1.140.0/001-retire-pkit-router-shim.sh
   created    .claude/agents/rule-set-reviewer.md
 Pinned project-kit to <version> (.pkit/version-pin).
-$ cd older-project && pkit status | grep "Backbone version"
+$ (cd older-project && pkit status | grep "Backbone version")
   Backbone version:      <version>   (up to date)
 ```
 
@@ -338,7 +340,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
      - a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares))
 
      A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
-4. **[Versioned, upgrades in one command](#the-methodology-upgrades-like-a-dependency).** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached, which it keeps when the installed pkit moves on (`--no-pin` skips the pin).
+4. **[Versioned, upgrades in one command](#the-methodology-upgrades-like-a-dependency).** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached. The project keeps that version when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:
 
@@ -365,7 +367,17 @@ $ pkit capabilities install project-management | grep -e "^  Installed" -e "crea
   created    .claude/agents/project-manager.md
 ```
 
-Then file issues and move them through the capability's governed workflow with `pkit project-management …`. **The tool enforces the process, so you need not remember it: `create-issue` refuses a body missing a required section ([the capability's README](.pkit/capabilities/project-management/README.md#issue-body-validation--required-sections-and-universal-rules-per-project-managementdec-010-issue-body-minimum-structure)).** At a terminal, the install also asks you the questions the capability declares ([the lifecycle README, on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+Then file issues and move them through the capability's governed workflow with `pkit project-management …`. At a terminal, the install also asks you the questions the capability declares ([the lifecycle README, on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+
+**The tool enforces the process, so you need not remember it: `create-issue` refuses to file an issue before `bootstrap` has run.**
+
+```console
+$ pkit capabilities install project-management | grep "^  Installed"
+  Installed capability 'project-management' v<any> at .pkit/capabilities/project-management/
+$ pkit project-management create-issue --type task --title "Add the app" 2>&1 | grep -e "^\[refused\]" -e "To fix"
+[refused] create-issue: project-management prerequisites are not met (DEC-017's hard gate, in code per #747)
+          → To fix: run `pkit project-management bootstrap`
+```
 
 **By role:**
 - **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch/PR conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
