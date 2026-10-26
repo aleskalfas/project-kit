@@ -1,0 +1,57 @@
+answers:
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T125321Z-c79100d7.yaml
+      - 20261026T135447Z-827d6480.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T141439Z-0ec32467.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162345Z-546e92b5.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T22:15:44Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+    revalidated:
+      at: 2026-10-26T22:15:51Z
+      outcome: unchanged
+      unchanged-because: UC-082 variant 8a now says each command names the commit it read, once in a run. UC-083 and UC-092 lose their boxes, since batch planning reads the seats and the agent runs its seat's role. What the journey needs, a topology committed on the default branch, the Tasks of each approved plan and each seat taken by an agent, still holds.

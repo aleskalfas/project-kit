@@ -11,7 +11,7 @@ A session that holds no seat leaves this procedure after step 1. It infers its d
 
 ## 1. Take your seat
 
-1. **List the seats:** `pkit pm seats`. It reads the topology from the default branch, and marks the seat this clone holds with `← this clone`.
+1. **List the seats:** `pkit pm seats`. It reads the topology from the default branch, names the commit it read, and marks the seat this clone holds with `← this clone`. A clone that has not fetched the default branch reads the commit it last fetched (DEC-059 point 1).
    - **The default branch declares no topology:** you hold no seat. Leave this procedure.
    - **Exit 3:** a state issue, or the listing of stray state issues, could not be read. The seats it listed above the error still stand: go on with them.
    - **Exit 1 or 2:** the default branch cannot be resolved, membership was refused, or the capability is not ready. Say what it printed, and take no seat (DEC-059 point 1). Where the session was started for a seat, stop there.
@@ -29,7 +29,11 @@ A session that holds no seat leaves this procedure after step 1. It infers its d
    - **3:** GitHub failed. Run the command once more, then stop and report what failed.
 5. **Run your role's loop.** The role sets your direction in place of inference from the request. A planner's seat acts in PM direction and runs step 2, and a worker's seat acts in Implementer direction and runs step 3. A lead's seat has no loop here yet: act in both directions within its scope, and ask which where the request does not show. Where a person asks you for one operation instead, do it as the seat's instance, and ask before you start the loop.
 
-**Your seat is confirmed before each write.** Every command that writes as your instance first confirms your seat on the seat's state issue (DEC-059 point 6). Where one refuses because GitHub failed, run it once more. Where it still refuses, or your seat was released by force or is no longer yours, stop the loop and tell the person. Take a seat again only when they ask.
+**Your seat is confirmed before each write.** Every command that writes as your instance first confirms your seat on the seat's state issue (DEC-059 point 6). So does `next-task`, before it takes a Task.
+
+Where a command refuses because GitHub failed, run it once more. Where it still refuses, or your seat was released by force or is no longer yours, stop the loop and tell the person. Take a seat again only when they ask.
+
+**The commit read.** Before a command confirms your seat, a note names the commit of the default branch that the run read (DEC-059 point 1). A run names it once, so the `start-work` that `next-task` runs names it no second time.
 
 ## 2. The planner's loop
 
