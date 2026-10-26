@@ -856,11 +856,14 @@ def _warn_settled(settled: default_branch.Settled) -> None:
         click.echo(f"warning: {warning}", err=True)
 
 
-def _settled_base(target_root: Path, base_ref: str | None) -> default_branch.Base:
+def _settled_base(
+    target_root: Path, base_ref: str | None, *, head_rev: str = "HEAD"
+) -> default_branch.Base:
     """The base a diff-scoped command compares with — `base_ref`, else
-    `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3) — with where HEAD
-    left it; the problem, with its fix, refuses the run (point 4)."""
-    settled = default_branch.settled(target_root, base_ref)
+    `$PKIT_CHECK_BASE`, else the default branch (COR-054 point 3) — with where HEAD,
+    or the commit `head_rev` a reader names, left it; the problem, with its fix,
+    refuses the run (point 4)."""
+    settled = default_branch.settled(target_root, base_ref, head_rev=head_rev)
     found = settled.base
     if found.problem is not None or found.fork is None:
         raise click.ClickException(found.problem or f"the base {found.ref!r} cannot be compared.")
@@ -6362,14 +6365,26 @@ def decisions_validate() -> None:
     help="Base ref to compare with. Default: $PKIT_CHECK_BASE, else the default branch "
     "(`pkit repository base` shows it).",
 )
-def decisions_check_diff(base_ref: str | None) -> None:
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default=None,
+    help="Read commit REV as the head instead of the working tree: its records read from git "
+    "objects, nothing checked out, the branch point taken against REV.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def decisions_check_diff(base_ref: str | None, head_rev: str | None, as_json: bool) -> None:
     """Check a change's numbering of points and records against its base (COR-058 point 8).
 
-    Compares each decision record the change touches, in the working tree, with
-    its state where this branch left the base, and the ids it takes with what
-    the base took since. The base is REF, else $PKIT_CHECK_BASE, else the
-    default branch (COR-054); a base that resolves nowhere refuses the run with
-    its fix. A record the project receives by sync is skipped.
+    Compares each decision record the change touches, in the working tree or,
+    with --head, commit REV, with its state where this branch left the base,
+    and the ids it takes with what the base took since. The base is REF, else
+    $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
+    nowhere refuses the run with its fix. A record the project receives by
+    sync is skipped.
 
     Exits non-zero on a point dropped without being retired, a new id not past
     every id the branch point holds or retires, a point's text found only under
@@ -6381,20 +6396,42 @@ def decisions_check_diff(base_ref: str | None) -> None:
     another id with its text changed, a converted point whose id differs from
     its bold number or label, and a point added to a record in list form or a
     new record in list form.
+
+    Lists, and fails nothing on, each record accepted at the branch point that
+    the change alters or removes: each point the head adds, alters or retires,
+    each of its title, status and supersession fields that changed, and whether
+    the text its points stand on, or its other text, changed. Whether an edit
+    changes what the record decides is for whoever accepts it to judge (the
+    decisions README, "Refining an accepted record"). --json prints the
+    findings and that list as one document, and exits as the human view does.
     """
+    import json
+
     from project_kit import decisions_check_diff as check_mod
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    head = check_mod.head_records(target_root)
+    commit: str | None = None
+    if head_rev is not None:
+        no_name = not head_rev or head_rev.startswith("-")
+        commit = None if no_name else default_branch.commit_of(target_root, head_rev)
+        if commit is None:
+            raise click.ClickException(f"--head {head_rev!r} names no commit of this repository.")
+    head = check_mod.head_records(target_root, commit)
     if not head:
-        click.echo("  No decision record here to check; no base read.")
+        if as_json:
+            click.echo(json.dumps(check_mod.as_json(None, commit), indent=2, ensure_ascii=False))
+        else:
+            click.echo("  No decision record here to check; no base read.")
         return
-    found = _settled_base(target_root, base_ref)
+    found = _settled_base(target_root, base_ref, head_rev=commit or "HEAD")
     assert found.fork is not None and found.tip is not None  # `_settled_base` refuses without
     report = check_mod.check(target_root, head, base=found.ref, fork=found.fork, tip=found.tip)
-    check_mod.print_report(report)
+    if as_json:
+        click.echo(json.dumps(check_mod.as_json(report, commit), indent=2, ensure_ascii=False))
+    else:
+        check_mod.print_report(report)
     if report.errors:
         raise click.ClickException(f"{report.errors} error(s) in the change's numbering found.")
 
