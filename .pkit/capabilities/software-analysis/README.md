@@ -778,8 +778,8 @@ Each kind's template in `templates/` is its structure rendered, so it shows exac
   **Goal:** <!-- pkit:hint … Example: … -->
   ```
 
-- **A list's hint stands where the list goes.** A part you write as a list, a use case's *Main path* and the *Variants* of a use case or a journey, holds its hint on a line of its own below its label, after a blank line. Its example is the list's first item, such as `1. The analyst chooses Export.`, so written in the hint's place it opens the list. A journey's *Steps* holds its hint on its label's line, since the stamp writes its items.
-- **Each example holds its part's form.** Written in the hint's place, every example passes the check, and a test holds each kind the stamp writes to that.
+- **A list's hint stands where the list goes.** A part you write as a list, a use case's *Main path* and the *Variants* of a use case or a journey, holds its hint on a line of its own below its label, after a blank line. Its example is the list's first item, such as `1. The analyst chooses Export.`, so the example, written in the hint's place, opens the list. A journey's *Steps* holds its hint on its label's line, since the stamp writes its items.
+- **Each example passes the check.** Written in its hint's place, each example holds its part's form. A test stamps every kind, writes each example in its hint's place, and the check passes the result.
 - **A front-matter field's hint is its placeholder too.** Where the stamp leaves a field for you to fill, it writes the field's hint as the field's text: the same marked comment, with the field's example after it. Those fields are an actor's `needs`, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to`. A field that takes a list holds one item, its hint. A YAML parse reads the hint as text, so the front matter stays valid while you fill it. The template's front matter, written by hand, shows the same hints, and a test holds the two equal. An actor's `needs`, shortened in the same way:
 
   ```yaml
