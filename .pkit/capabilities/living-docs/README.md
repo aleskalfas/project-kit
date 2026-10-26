@@ -11,8 +11,8 @@ pkit:
         - .pkit/capabilities/living-docs/templates/**
         - .pkit/capabilities/living-docs/skills/**
         - .pkit/capabilities/living-docs/review-contributions.yaml
-      record: ["living-docs:DEC-001", "living-docs:DEC-002", "doc-examples:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
-      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare", ".pkit/cli/README.md#config-set-key-value---yes"]
+      record: ["living-docs:DEC-001", "living-docs:DEC-002", "doc-examples:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-053", "project-management:DEC-056", "software-analysis:DEC-001#10"]
+      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare", ".pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift", ".pkit/lifecycle/README.md#the-methodologys-literals", ".pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping", ".pkit/cli/README.md#configuration-file", ".pkit/cli/README.md#config-set-key-value---yes", ".pkit/cli/README.md#docs-record-location-capability-name---dry-run", ".pkit/cli/README.md#repository-base---base-ref---json", ".pkit/cli/README.md#sync", ".pkit/cli/README.md#status", ".pkit/cli/README.md#validate", ".pkit/cli/README.md#friction-check---base-ref---head-rev---json", ".pkit/cli/README.md#friction-debt---json", ".pkit/cli/README.md#friction-explain-artefact---json", ".pkit/cli/README.md#friction-artefacts---at-rev---json", ".pkit/cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run", ".pkit/cli/README.md#friction-resolve-path---yes--dry-run---json", ".pkit/cli/README.md#rule-sets-reach---at-rev---preview---json", ".pkit/cli/README.md#connections-resolve-address---json"]
 ---
 
 # living-docs capability
@@ -171,8 +171,8 @@ A template you copy into the definitions location takes the template type there,
 
 Where your documentation lives is declared in two files, joined by path:
 
-- **The backbone configuration** (`.pkit/project/config.yaml`) names the two documentation roots (`docs.user`, `docs.internal`) and every place outside them that holds pages (`friction.places`), and the paths the friction checks leave out (`friction.exclude`). The CLI reference's "Configuration file" section documents those keys.
-- **This capability's project configuration** (`.pkit/capabilities/living-docs/project/config.yaml`) holds what only living-docs needs: each space's audience, entry point and definition, and which space each place belongs to.
+- **The backbone configuration** (`.pkit/project/config.yaml` <!-- unanchored: named as the file that holds these keys, whose meaning rests on the CLI reference's Configuration file section, which the page anchors -->) names the two documentation roots (`docs.user`, `docs.internal`) and every place outside them that holds pages (`friction.places`), and the paths the friction checks leave out (`friction.exclude`). The CLI reference's "Configuration file" section documents those keys.
+- **This capability's project configuration** (`.pkit/capabilities/living-docs/project/config.yaml` <!-- unanchored: named as the file, whose shape is schemas/config.schema.json, which the page anchors -->) holds what only living-docs needs: each space's audience, entry point and definition, and which space each place belongs to.
 
 ```yaml
 pkit_schema: living-docs:config
@@ -204,7 +204,7 @@ A place inside a root belongs to that root's space; list it under `places` only 
 
 A definition with no scope selects nothing itself, so nothing is held to it. The places assigned to its space are checked only against the scopes of the other spaces' definitions. A space with no definition yet is checked the same way. The validator's summary names the spaces whose definitions carry a scope.
 
-**What the capability declares for you**, in its package metadata: the two roots, as the default places of their spaces (everything under each), each giving the page type, and its **definitions location**, `living-docs/` under the internal root — `docs/living-docs/` with the default root — which gives the template type. The spaces' definitions go in its `rule-sets/` folder, where the core reads them as your project's rule sets. The location is recorded the first time a definition is placed there, in `.pkit/capabilities/living-docs/project/docs-locations.yaml` (`locations: {definitions: docs/living-docs}`). So changing a root later moves nothing already written (COR-049 point 5). `pkit living-docs new space` records it. For a definition you write by hand, `pkit docs record-location living-docs definitions` records it. It says what it recorded, the root it was derived from, and where to change it.
+**What the capability declares for you**, in its package metadata: the two roots, as the default places of their spaces (everything under each), each giving the page type, and its **definitions location**, `living-docs/` under the internal root — `docs/living-docs/` with the default root — which gives the template type. The spaces' definitions go in its `rule-sets/` folder, where the core reads them as your project's rule sets. The location is recorded the first time a definition is placed there, in `.pkit/capabilities/living-docs/project/docs-locations.yaml` <!-- unanchored: named as where the location is recorded, which COR-049 decides and the page anchors --> (`locations: {definitions: docs/living-docs}`). So changing a root later moves nothing already written (COR-049 point 5). `pkit living-docs new space` records it. For a definition you write by hand, `pkit docs record-location living-docs definitions` records it. It says what it recorded, the root it was derived from, and where to change it.
 
 ## Authoring: the `docs-author` skill
 
@@ -226,7 +226,7 @@ pkit living-docs new page <file> --space <space> --kind <kind> --reader <id> --t
 **`new space`** makes the three writes of creating a space (DEC-001 point 2):
 
 - **The definition,** `<definitions>/rule-sets/<space>.md`. It is a project rule set that inherits `LDOC` at its current major. Its scope selects the space's pages, the scope `pkit living-docs validate` names for a definition without one. The set is named after the space in upper case, its hyphens dropped, unless you name it with `--set`.
-- **Its path,** as the space's `definition` in `.pkit/capabilities/living-docs/project/config.yaml`. Every other byte of the file is kept. The entry declares a space your project adds. Without the file, the command creates it.
+- **Its path,** as the space's `definition` in `.pkit/capabilities/living-docs/project/config.yaml` <!-- unanchored: named as the file the command writes, whose shape is schemas/config.schema.json, which the page anchors -->. Every other byte of the file is kept. The entry declares a space your project adds. Without the file, the command creates it.
 - **The definitions location,** recorded the first time.
 
 The user space's definition carries its one rule, `RS-<SET>-001`, reader paths stay unbroken. It is written accepted, so the review of the change that carries it accepts it (COR-051 point 4).
@@ -279,9 +279,56 @@ Accepted, the roots stay apart even where the stamp then refuses. A space your p
 - an entry point that is not a document of its space — under its root or in a place assigned to it. An entry point without front matter whose places cannot be told apart (above) fails only when none of them gives its space;
 - a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
 
-It reports, without failing: a `source` anchor, or a rule origin citing a `source`, that no captured file answers (the whole-repository check reports it dead); a captured source nothing anchors or cites; a captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier; a file in the sources folder whose name does not end in `.yaml` — notes, an editor's backup — which captures nothing; a space with no definition yet, a definition with no scope, or with the template's placeholder in its scope, naming the scope to give it, the pages of a space its definition's scope leaves out, a file without front matter whose places cannot be told apart, unless every one of them is an unassigned place outside every root, which fails (above), roots that are the same folder, naming the stamp that sets them apart and the folder it recommends, or nested (onboarding separates them), a document that declares its page kind and lies only in an untyped place of rule sets outside every root that no assignment gives a space, naming the assignment that would make it a page, each kind that declares no structure, with the pages that name it where `RS-LDOC-004` binds and the kinds that do declare one, and — in its summary — the unclassified documents and the documents of a type of your own, whether each entry point is a page yet, the spaces whose definitions carry a scope, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, how many pages each check left out because its rule does not bind on them, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
+It reports, without failing: each page whose anchors do not cover what it mentions, and each mark that passes nothing over ([What a page mentions and does not anchor](#what-a-page-mentions-and-does-not-anchor), below); a `source` anchor, or a rule origin citing a `source`, that no captured file answers (the whole-repository check reports it dead); a captured source nothing anchors or cites; a captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier; a file in the sources folder whose name does not end in `.yaml` — notes, an editor's backup — which captures nothing; a space with no definition yet, a definition with no scope, or with the template's placeholder in its scope, naming the scope to give it, the pages of a space its definition's scope leaves out, a file without front matter whose places cannot be told apart, unless every one of them is an unassigned place outside every root, which fails (above), roots that are the same folder, naming the stamp that sets them apart and the folder it recommends, or nested (onboarding separates them), a document that declares its page kind and lies only in an untyped place of rule sets outside every root that no assignment gives a space, naming the assignment that would make it a page, each kind that declares no structure, with the pages that name it where `RS-LDOC-004` binds and the kinds that do declare one, and — in its summary — the unclassified documents and the documents of a type of your own, whether each entry point is a page yet, the spaces whose definitions carry a scope, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, how many pages each check left out because its rule does not bind on them, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
 
-**Pages are checked** for their front matter — `kind`, and `reader` against the readers point where `RS-LDOC-003` binds, and the friction block, which `pkit validate` checks under `friction` — for their body's structure, against the structure their kind declares, where `RS-LDOC-004` binds, and for their diagrams' text alternatives where `RS-LDOC-008` binds. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact has one home, and whether the page says only what its reader needs.
+**Pages are checked** for their front matter — `kind`, and `reader` against the readers point where `RS-LDOC-003` binds, and the friction block, which `pkit validate` checks under `friction` — for their body's structure, against the structure their kind declares, where `RS-LDOC-004` binds, and for their diagrams' text alternatives where `RS-LDOC-008` binds. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact has one home, and whether the page says only what its reader needs. The report below shows the mentions a page's anchors leave uncovered, as input to that judgment.
+
+### What a page mentions and does not anchor
+
+Only what a page anchors grounds what it says (`RS-LDOC-001`). So a page that names a file, a record, a rule or a command and anchors nothing of it is never asked when that thing changes. Where `RS-LDOC-001` binds on a page, the validator reports each such mention, with an anchor that would cover it, and never fails on one (DEC-001 point 6). `pkit validate` shows one report per page, and `pkit living-docs validate` lists each mention with its line:
+
+```
+mention(s) a page's anchors do not cover, each with an anchor that would cover it (2):
+  docs/guide.md
+    12: path `src/app.py` → path: [src/app.py]
+    30: record `COR-050#5` → record: [COR-050#5]
+```
+
+**What it reads.** The page's body below its front matter, outside fenced code, HTML comments and strikethrough:
+
+- **A path**: an inline code span that holds a `/` and no space, or a link's target, naming a file your repository holds. A code span is read from the repository's root, and failing that from the page's folder. A link is read from the page's folder. A placeholder such as `<name>`, a glob, an ellipsis, a URL, a folder and an image are not read, and a link's `#fragment` names a section.
+- **A record**: `COR-NNN`, `PRJ-NNN`, `ADR-NNN`, a capability's decision as `<capability>:DEC-NNN`, with its slug or without, or as `<capability> DEC-NNN`, and a bare `DEC-NNN` on a page in that capability's folder. The points written after the id count: `COR-050#5`, `COR-050 point 5`, `COR-050 points 2 and 5`. A link to a record's file mentions the record.
+- **A rule**: `RS-<SET>-NNN`, bare or after its component, as in `[living-docs:RS-LDOC-003]`.
+- **A command**: an inline code span that opens with `pkit`, or `uv run pkit`, and a word. Its words run to the first that is not a lowercase word, so `pkit friction check --base main` is `pkit friction check`.
+
+A record or a rule counts only where `pkit refs lookup` resolves it, and a page never mentions itself.
+
+**What covers each.** The validator reads the page's anchors as the backbone resolves them: the files each path anchor stands on, `path_anchors` in `pkit friction artefacts --json`, and each part an anchor names, `part_anchors`.
+
+| Mention | Covered by an anchor on | The finding suggests |
+|---|---|---|
+| a path | its file: a path anchor standing on it, or an artefact or record anchor on it. For a link with a fragment, the whole file or that section | an `artefact` anchor for a document of your places, a `path` anchor otherwise |
+| a record | the whole record. For a mention with points, each point it names, and without, any part | `record: [COR-050#5]` |
+| a rule | the rule, or its rule set's whole file | `artefact: [RS-LDOC-003]` |
+| a command | the script that implements it, or what documents it: the whole file, or the section that names it | that section, by its heading, and the script |
+
+A command's section is the heading whose code span opens with the most of the command's words. For a backbone command it is read in the CLI reference, `.pkit/cli/README.md`. For a capability's command it is read in that capability's README, where its heading may leave out `pkit` and the capability's name. In any page, a heading names a command where its code span opens with `pkit`. A capability's command is implemented by the script its `package.yaml` registers.
+
+- **No heading names it.** A section the page anchors whose text names the command covers it.
+- **The page documents it.** Only the command's script covers it there.
+- **The reference lies in none of your places,** as the CLI reference does in most projects. Anchor it by its path, since an artefact anchor names only a document of your places.
+
+**Marking a passage.** A name that gives none of the named thing's facts needs no anchor (DEC-001 point 3). Where a passage only names a thing, mark it right after the mention, on its line, with the reason:
+
+```markdown
+Run `pkit sync` <!-- unanchored: named as the next step, not described --> after upgrading.
+```
+
+- **One passage.** A mark passes over the last mention before it on its line, after any earlier comment. A later passage that rests on the same thing is still read.
+- **A person's decision.** A mark is written on a person's decision, and the `living-docs` agent proposes one as it proposes any change to a page.
+- **A mark that passes nothing over is reported:** one that follows no mention on its line, one that gives no reason, and one after a mention the page's anchors cover.
+
+A page accepted with no anchors (`unanchored-because`) has its mentions read like any other. The report settles no part of `RS-LDOC-001`: whether a statement rests on what it mentions stays a judgment, the agent's reader-review's and the rule-set reviewer's. So `LDOC` declares no check for it.
 
 ## Connections
 
@@ -335,7 +382,7 @@ When that floor requires the reviewer, and what it reads locally, is in [project
 
 ## The agent: `living-docs`
 
-The checks above tell you *that* a page drifted and *which* documents are not pages yet. Deciding what that means for a page is judgment, and the capability's agent, `living-docs`, does it — always as a proposal you review, never as an edit (DEC-001 points 5, 6 and 8). `pkit sync` deploys it with the other agents; in Claude Code it is `.claude/agents/living-docs.md`. Ask it in plain words; it picks one of three intents from what you ask:
+The checks above tell you *that* a page drifted and *which* documents are not pages yet. Deciding what that means for a page is judgment, and the capability's agent, `living-docs`, does it — always as a proposal you review, never as an edit (DEC-001 points 5, 6 and 8). `pkit sync` deploys it with the other agents; in Claude Code it is `.claude/agents/living-docs.md` <!-- unanchored: named so a reader finds the deployed agent, which the sync section the page anchors deploys -->. Ask it in plain words; it picks one of three intents from what you ask:
 
 | Ask it to… | It reads | It gives you |
 |---|---|---|
@@ -381,7 +428,7 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. So is the agent's declaration as the fixer of your pages, with what it takes from the command that starts it and what it returns. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill. So is the contribution of the core rule-set reviewer to project-management's merge gate. So are the decision on visual elements, its two proposed rules, and the validator's check of a diagram's text alternative, which runs once a major of `LDOC` accepts its rule.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. So is the agent's declaration as the fixer of your pages, with what it takes from the command that starts it and what it returns. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill. So is the contribution of the core rule-set reviewer to project-management's merge gate. So are the decision on visual elements, its two proposed rules, and the validator's check of a diagram's text alternative, which runs once a major of `LDOC` accepts its rule. So is the validator's report of what a page mentions and does not anchor, with the mark that passes a passage over.
 
 ## Citing this capability's decisions
 

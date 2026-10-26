@@ -78,6 +78,13 @@ What is checked, each against the record's words:
   binds nothing, and the summary says why. A page whose body cannot be read is
   one error, unless the format check already gave it. `formats` says what a
   diagram is.
+- **What a page mentions and does not anchor** (DEC-001 point 6; RS-LDOC-001).
+  Where RS-LDOC-001 binds on a page, each mention of a file, a record, a rule or
+  a command that the page's anchors do not cover is reported, one finding per
+  page, never failed; a passage the page marks is passed over, and a mark that
+  passes nothing over is reported. No answer from the backbone's resolver of
+  records is one report, and then no mention is read. `mentions` says what a
+  mention is and what covers it.
 - **Readers** (points 3, 4 and 7). Where RS-LDOC-003 binds on a page, the page
   names its reader in `reader`, and the reader resolves against the readers
   point, `pkit::documentation:readers`, read as it resolves (`readers`) — only
@@ -137,7 +144,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from _lib import formats, sources
+from _lib import formats, mentions, sources
 from _lib.artefacts import Document, Unreadable, read_artefacts
 from _lib.binding import Binding, read_binding
 from _lib.binding import Unreadable as Unbound
@@ -227,15 +234,17 @@ class Finding:
 
 @dataclass
 class Outcome:
-    """What the check answers: summary lines, findings, the unclassified documents, and
-    the pages left unanchored — without an accepted reason, and apart from them those
-    accepted with one, each with its reason (DEC-001 point 8)."""
+    """What the check answers: summary lines, findings, the unclassified documents, the
+    pages left unanchored — without an accepted reason, and apart from them those
+    accepted with one, each with its reason (DEC-001 point 8) — and each mention a page
+    does not anchor, with the anchor that would ground it (DEC-001 point 6)."""
 
     summary: list[str] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     unclassified: list[str] = field(default_factory=list)
     unanchored: list[str] = field(default_factory=list)
     accepted_unanchored: list[tuple[str, str]] = field(default_factory=list)
+    unanchored_mentions: list[mentions.Unanchored] = field(default_factory=list)
 
     @property
     def errors(self) -> list[Finding]:
@@ -489,19 +498,22 @@ def check(
     root: Path,
     read: Callable[[], Readers] = read_readers,
     reach: Callable[[Path], Binding] = read_binding,
+    look: Callable[[Path], mentions.Lookup] = mentions.look_up,
 ) -> Outcome:
     """Every check of this module over the project at `root`; `read` answers the
     readers point, asked only when some page names a well-formed reader where
-    RS-LDOC-003 binds, and `reach` where the rules bind, asked only when there is
-    a page. When the backbone gives no reading of the places, that is the one
-    finding."""
-    return checked(root, read, reach).outcome
+    RS-LDOC-003 binds, `reach` where the rules bind, asked only when there is
+    a page, and `look` resolves the records a page mentions or anchors, asked only
+    where RS-LDOC-001 binds on some page. When the backbone gives no reading of
+    the places, that is the one finding."""
+    return checked(root, read, reach, look).outcome
 
 
 def checked(
     root: Path,
     read: Callable[[], Readers] = read_readers,
     reach: Callable[[Path], Binding] = read_binding,
+    look: Callable[[Path], mentions.Lookup] = mentions.look_up,
 ) -> Checked:
     """The check, as `check` runs it, with the declarations and the walk it read."""
     try:
@@ -521,6 +533,7 @@ def checked(
     reader_note = _reader_findings(decl, walk, binding, read, outcome)
     format_note = _format_findings(root, decl, walk, binding, outcome)
     diagram_note = _diagram_findings(root, decl, walk, binding, outcome)
+    mention_note = _mention_findings(root, decl, walk, binding, look, outcome)
     captured = sources.check(root, decl.artefacts)
     outcome.findings.extend(
         Finding(
@@ -533,7 +546,7 @@ def checked(
         walk,
         entry_notes,
         definition_notes,
-        (reader_note, format_note, diagram_note, captured.summary, scope_note),
+        (reader_note, format_note, diagram_note, mention_note, captured.summary, scope_note),
         outcome,
     )
     return Checked(outcome, decl, walk)
@@ -1092,6 +1105,113 @@ def _diagram_findings(
         + (f"; {unreadable} page(s) that cannot be read" if unreadable else "")
         + (f"; {unbound} page(s) {rule} does not bind on, not checked" if unbound else "")
         + "."
+    )
+
+
+def _mention_findings(
+    root: Path,
+    decl: Declarations,
+    walk: _Walk,
+    binding: Binding | None,
+    look: Callable[[Path], mentions.Lookup],
+    outcome: Outcome,
+) -> str:
+    """Each mention of a file, a record, a rule or a command that a page's anchors do
+    not cover, where the rule on grounding (RS-LDOC-001) binds on the page, as the
+    backbone's answer gives it (DEC-001 point 6; COR-051 point 7). Reported, one
+    finding per page with each mention in the human view, and never failed. A
+    mention the page marks in its text is passed over, and a mark that passes over
+    nothing is reported. Nothing here settles a part of the rule. Returns the
+    summary's line about it."""
+    rule = mentions.GROUNDING_RULE
+    if binding is None:
+        return f"mentions: not read — where {rule} binds cannot be read."
+    bound = sorted(rel for rel in walk.pages if binding.binds(rel, cited(rule)))
+    unbound = len(walk.pages) - len(bound)
+    if not bound:
+        why = _unaccepted(rule, decl)
+        if why is not None:
+            return f"mentions: not read — {why}."
+        if walk.pages:
+            return (
+                f"mentions: not read — {rule} binds on none of the {unbound} page(s) "
+                f"(COR-051 point 7): {LDOC} binds only through a set of the project's own whose "
+                f"scope selects a page, such as a space's definition (DEC-001 point 2)."
+            )
+        return "mentions: no page to read."
+    whole = {a.path: a for a in decl.artefacts if not a.entry}
+    if any(whole.get(rel) is not None and whole[rel].standing is None for rel in bound):
+        return (
+            "mentions: not read — the backbone's `pkit friction artefacts --json` answered "
+            "without the files each path anchor stands on, so no mention can be told covered "
+            "(upgrade the backbone)."
+        )
+    try:
+        report = mentions.read(
+            root,
+            {rel: whole.get(rel) for rel in bound},
+            mentions.Documents.of(decl.artefacts),
+            look(root),
+            walk.pages,
+        )
+    except mentions.Unreadable as exc:
+        outcome.findings.append(
+            Finding(
+                REPORT,
+                BACKBONE_CONFIG,
+                f"the records and rules the pages mention cannot be resolved — "
+                f"{str(exc).rstrip('.')}. No mention is read until they can: {CAPABILITY} "
+                f"resolves them through the backbone's `pkit refs lookup --json` (DEC-001 "
+                f"point 6).",
+                check="mentions-unread",
+            )
+        )
+        return "mentions: not read — the records and rules cannot be resolved."
+    outcome.unanchored_mentions.extend(report.unanchored)
+    by_page: dict[str, list[mentions.Unanchored]] = {}
+    for found in report.unanchored:
+        by_page.setdefault(found.page, []).append(found)
+    outcome.findings.extend(
+        Finding(REPORT, rel, _unanchored_message(rel, found), check="mention")
+        for rel, found in sorted(by_page.items())
+    )
+    outcome.findings.extend(
+        Finding(
+            REPORT,
+            f"{idle.page}:{idle.line}",
+            f"{idle.page}: the mark `<!-- {mentions.MARK_WORD}: … -->` at line {idle.line} passes "
+            f"nothing over, since {idle.why}. A mark is written right after the mention it "
+            f"passes over, on its line, with the reason — move it there, give the reason, or "
+            f"remove it (DEC-001 point 6).",
+            check="mention-mark",
+        )
+        for idle in report.idle
+    )
+    beyond = f"; {unbound} page(s) {rule} does not bind on, not read" if unbound else ""
+    return (
+        f"mentions ({rule}): {report.mentions} mention(s) of a file, a record, a rule or a "
+        f"command in {report.pages} page(s), {len(report.unanchored)} the page's anchors do not "
+        f"cover, {report.marked} passage(s) marked unanchored on purpose{beyond}."
+    )
+
+
+def _unanchored_message(rel: str, found: Sequence[mentions.Unanchored]) -> str:
+    nouns = {
+        mentions.PATH: "file(s)",
+        mentions.RECORD: "record(s)",
+        mentions.RULE: "rule(s)",
+        mentions.COMMAND: "command(s)",
+    }
+    named = ", ".join(
+        f"{count} {noun}"
+        for kind, noun in nouns.items()
+        if (count := sum(1 for each in found if each.kind == kind))
+    )
+    return (
+        f"{rel} mentions {named} that its anchors do not cover. `pkit living-docs validate` "
+        f"lists each with an anchor that would cover it: anchor what the page rests on, or mark "
+        f"a passage that only names a thing with `<!-- {mentions.MARK_WORD}: <reason> -->` "
+        f"({mentions.GROUNDING_RULE}; DEC-001 point 6)."
     )
 
 

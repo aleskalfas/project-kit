@@ -14,7 +14,10 @@ RS-LDOC-003 binds on it, its body against the structure its kind declares
 where RS-LDOC-004 binds (DEC-001 point 3) and its diagrams' text alternatives
 where RS-LDOC-008 binds (DEC-002 point 8), each space's entry point and
 definition with its scope, whether the two spaces are separate, and the
-captured sources' layout and what names them (DEC-001 point 4).
+captured sources' layout and what names them (DEC-001 point 4). It reports,
+never failing, each mention of a file, a record, a rule or a command that a
+page's anchors do not cover where RS-LDOC-001 binds (DEC-001 point 6;
+`_lib/mentions.py`).
 `_lib/spaces.py` and `_lib/sources.py` state every check and the record point
 it applies.
 
@@ -25,13 +28,15 @@ output. It is a query — bounded, deterministic, read-only, needing no network 
 and `pkit init` and `pkit sync` provision its dependencies in uv's cache. It
 reads through the backbone's read commands: the roots, the places and the
 documents in them through `pkit friction artefacts`, where the rules bind
-through `pkit rule-sets reach`, only when there is a page, and the readers
+through `pkit rule-sets reach`, only when there is a page, the readers
 point through `pkit connections resolve`, only when some page names a reader
-where RS-LDOC-003 binds.
+where RS-LDOC-003 binds, and the records and rules a page mentions or anchors
+through `pkit refs lookup`, only where RS-LDOC-001 binds on some page.
 
 Usage:
-  pkit living-docs validate           the summary, the findings, the unclassified documents
-                                      and the pages left unanchored
+  pkit living-docs validate           the summary, the findings, the unclassified documents,
+                                      the pages left unanchored and each mention a page's
+                                      anchors do not cover
   pkit living-docs validate --json    the findings document {summary, findings}
 
 Exit codes:
@@ -94,6 +99,17 @@ def main() -> int:
         print(f"page(s) accepted unanchored, each with its reason ({len(accepted)}):")
         for rel, reason in accepted:
             print(f"  {rel} — {reason}")
+    if outcome.unanchored_mentions:
+        print(
+            f"mention(s) a page's anchors do not cover, each with an anchor that would cover it "
+            f"({len(outcome.unanchored_mentions)}):"
+        )
+        page = None
+        for found in outcome.unanchored_mentions:
+            if found.page != page:
+                page = found.page
+                print(f"  {page}")
+            print(f"    {found.line}: {found.kind} `{found.name}` → {found.grounding}")
     return 1 if outcome.errors else 0
 
 
