@@ -163,7 +163,7 @@ def test_an_issue_another_instance_owns_is_not_claimed(ic, root: Path) -> None:
 
 
 def test_an_issue_assigned_to_another_account_is_not_claimed(ic, root: Path) -> None:
-    """The owner is the assignee paired with an instance (DEC-035 point 5)."""
+    """The owner is the assignee paired with an instance (DEC-035 point 2)."""
     gh = FakeGitHub()
     gh.add(7, assignees=("someone-else",))
     result = ic.claim(7, _clone(ic, root), {}, run=gh)

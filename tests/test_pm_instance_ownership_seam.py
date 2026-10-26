@@ -79,7 +79,7 @@ def test_stamp_formats_and_parses_round_trip(io) -> None:
 
 def test_stamp_carries_no_assignee_only_instance(io) -> None:
     """The stamp encodes instance (+ event + optional `to`) but NOT the assignee —
-    the owner's account is the comment's author.login (DEC-043 D3) — and no time:
+    the owner's account is the comment's author.login (DEC-043 point 3) — and no time:
     the fold takes the comment's time from GitHub (ADR-041 point 7)."""
     body = io.format_event_comment(event="claim", instance=2)
     assert "instance=2" in body
@@ -161,7 +161,7 @@ def test_abandon_and_release_return_to_commons(io) -> None:
 
 def test_same_instant_clash_lowest_wins(io) -> None:
     """Two clones claim at the same instant — both markers coexist (comment-create
-    is atomic), and the winner is the lowest instance number (DEC-035 D6)."""
+    is atomic), and the winner is the lowest instance number (DEC-035 point 6)."""
     comments = [
         _comment(io, event="claim", instance=3, author="alice"),
         _comment(io, event="claim", instance=2, author="alice"),
@@ -176,7 +176,7 @@ def test_same_instant_clash_lowest_wins(io) -> None:
 
 def test_forged_marker_from_another_account_is_ignored(io) -> None:
     """A stamped comment authored by someone other than the issue assignee is a
-    forgery and does not count (ADR-041 §1 / DEC-043 D3)."""
+    forgery and does not count (ADR-041 §1 / DEC-043 point 3)."""
     comments = [_comment(io, event="claim", instance=9, author="mallory")]
     res = io.resolve_owner(comments=comments, labels=[], assignee_login="alice")
     assert not res.claimed

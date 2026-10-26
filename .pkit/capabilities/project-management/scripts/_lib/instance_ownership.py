@@ -23,8 +23,8 @@ comments itself (ADR-026's one-reader discipline, applied to the ownership axis)
 
 The fold is **authenticity-filtered**: a marker comment is trusted only if it was
 authored by the issue's expected assignee account (``author.login``) — a pasted
-forgery from another account is ignored (DEC-043 D3). The same-instant clash
-(DEC-035 D6) resolves **lowest-instance-wins**, computed identically from the
+forgery from another account is ignored (DEC-043 point 3). The same-instant clash
+(DEC-035 point 6) resolves **lowest-instance-wins**, computed identically from the
 folded set by every clone; comment-create is per-object-atomic, so two concurrent
 claims coexist as two markers rather than clobbering (the property a single
 mutable comment or a whole-body region could not provide — DEC-043 rejected both).
@@ -108,12 +108,13 @@ except ImportError:  # pragma: no cover - a test that puts `_lib` itself on the 
 
 # ---- vocabulary ---------------------------------------------------------
 
-#: The ownership event types carried by the append-only comment log (DEC-043 D3).
+#: The ownership event types carried by the append-only comment log (DEC-043
+#: point 3).
 #: ``claim`` and ``handoff`` assert ownership; ``abandon`` / ``release`` relinquish
 #: it. The fold reads them in the order of their comments.
 EVENTS = audit_log.OWNERSHIP_EVENTS
 
-#: Substrate selector values (DEC-043 D2). ``comment`` is the default (safe where
+#: Substrate selector values (DEC-043 point 2). ``comment`` is the default (safe where
 #: labels cannot be created); ``label`` is the opt-in for repos that can.
 SUBSTRATES = ("comment", "label")
 DEFAULT_SUBSTRATE = "comment"
@@ -208,7 +209,7 @@ class OwnershipResolution:
 
     ``owners`` is the set of currently-owning instance numbers (normally one;
     two-plus only in the same-instant-clash window before back-off). ``winner`` is
-    the lowest-numbered owner (DEC-035 D6 lowest-wins), or ``None`` when the issue
+    the lowest-numbered owner (lowest wins, DEC-035 point 6), or ``None`` when the issue
     is unclaimed (a *commons* issue — the DEC-045 unassigned fallback and DEC-035
     ``start-work`` claim target). ``substrate`` records which substrate resolved
     the owner (``comment`` wins over a lingering ``label`` — ADR-041 §2).
@@ -309,7 +310,7 @@ def parse_events(comments: Iterable[Any], assignee_login: str | None) -> list[Ow
     """Extract authenticated ownership events from an issue's comments.
 
     ``comments`` are the log's (:func:`read_log`) or ``gh``'s comment entries.
-    The authenticity filter (ADR-041 §1 / DEC-043 D3): a stamped comment counts
+    The authenticity filter (ADR-041 §1 / DEC-043 point 3): a stamped comment counts
     **only** if its author equals the issue's expected ``assignee_login`` — a
     forged stamp pasted from another account is ignored. With no assignee
     (``None``), no marker authenticates, so the issue reads as unclaimed. Returned
@@ -355,7 +356,7 @@ def fold_events(events: list[OwnershipEvent]) -> frozenset[int]:
     ``abandon`` / ``release`` by an instance (or a ``handoff`` *away* from it)
     removes it. Replaying in the order of the comments yields the live owner set —
     normally a singleton, two-plus only in the same-instant clash window (both
-    claimants' markers coexist because comment-create is atomic; DEC-035 D6). The
+    claimants' markers coexist because comment-create is atomic; DEC-035 point 6). The
     caller reads :attr:`OwnershipResolution.winner` for the lowest-wins tie-break.
     """
     return frozenset(_owning_events(events))
@@ -650,7 +651,7 @@ def render_mirror_body(body: str, region: str) -> str:
 
 
 def resolve_substrate(settings: dict[str, Any] | None) -> str:
-    """Resolve the active ownership substrate (DEC-043 D2), default ``comment``.
+    """Resolve the active ownership substrate (DEC-043 point 2), default ``comment``.
 
     ``settings`` is the adopter's parsed ``instance-ownership.yaml`` — this marker's
     own schema home, **not** ``substrate-map.yaml`` (whose mere presence would
