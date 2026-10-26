@@ -475,13 +475,13 @@ def test_a_configuration_that_cannot_be_read_exits_1(adopter: AdopterRepo) -> No
 
 def test_in_this_repository_a_module_leads_to_the_page_that_anchors_it() -> None:
     """The decisions README anchors this module, so a change here leads to it, with COR-050's
-    points 2 and 7 among the records it rests on. Where the methodology is authored, no
+    points 1, 2 and 7 among the records it rests on. Where the methodology is authored, no
     record arrives by sync."""
     module = "src/project_kit/path_records.py"
     found = _one(REPO, module)
     (readme,) = [t for t in found.through if t.artefact == ".pkit/decisions/README.md"]
     assert readme.anchor == module
-    assert ("COR-050", ("2", "7")) in [(t.record.id, t.points) for t in readme.ties]
+    assert ("COR-050", ("1", "2", "7")) in [(t.record.id, t.points) for t in readme.ties]
     assert not any(t.record.received for t in found.ties)
 
 
@@ -504,7 +504,9 @@ def _rule_22() -> str:
 
 def test_rule_22_tells_an_agent_to_run_the_lookup_before_changing_files() -> None:
     rule = _rule_22()
-    assert rule.startswith("22. **Before you change files, look up the accepted records")
+    assert rule.startswith(
+        "22. **When you change the system, read first the accepted records its files lead to.**"
+    )
     assert "`pkit refs records-for`" in rule
     assert "tied to them directly" in rule
     assert "read that artefact" in rule
