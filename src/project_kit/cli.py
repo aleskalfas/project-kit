@@ -6328,6 +6328,11 @@ def decisions_validate() -> None:
     successor the record neither holds nor retires, or a retired id named as its
     own successor. Warns, without failing, of
     a duplicate id, a gap in the ids and a misspelt point heading.
+
+    Then checks what each proposed record waits on, over the same records.
+    Exits non-zero on a `waits-on` that names no one condition of a known kind,
+    and warns, without failing, of a `waits-on` on a record that is not
+    proposed. `pkit decisions proposed` lists which proposed records are due.
     """
     from project_kit import decisions_validate as decisions_mod
 
@@ -6339,11 +6344,15 @@ def decisions_validate() -> None:
     decisions_mod.print_narration(decisions_mod.revision_narration(target_root))
     points = decisions_mod.point_findings(target_root)
     decisions_mod.print_points(points)
+    waits_on = decisions_mod.waits_on_findings(target_root)
+    decisions_mod.print_waits_on(waits_on)
     point_errors = sum(1 for finding in points if finding.severity.fails)
-    if not report.is_clean or point_errors:
+    waits_on_errors = sum(1 for finding in waits_on if finding.severity.fails)
+    if not report.is_clean or point_errors or waits_on_errors:
         failed = [
             *([f"{len(report.issues)} decision-id issue(s)"] if not report.is_clean else []),
             *([f"{point_errors} error(s) on records' points"] if point_errors else []),
+            *([f"{waits_on_errors} error(s) on `waits-on`"] if waits_on_errors else []),
         ]
         raise click.ClickException(" and ".join(failed) + " found.")
 
@@ -6392,6 +6401,38 @@ def decisions_check_diff(base_ref: str | None) -> None:
     check_mod.print_report(report)
     if report.errors:
         raise click.ClickException(f"{report.errors} error(s) in the change's numbering found.")
+
+
+@decisions.command("proposed")
+@click.option(
+    "--older-than",
+    "older_than",
+    type=click.IntRange(min=0),
+    default=30,
+    show_default=True,
+    metavar="DAYS",
+    help="Days after its date that a proposed record naming no condition is due.",
+)
+def decisions_proposed(older_than: int) -> None:
+    """List the project's own proposed records, and which are due for a person.
+
+    A record is due when the condition its `waits-on` names has passed: the
+    issue is closed, the date has come, or the record it waits on is accepted.
+    A record that names no condition is due once its `date` is more than DAYS
+    ago. Each record shows what it waits on, and records come due first, then
+    those whose condition could not be read, then those still waiting.
+
+    Reads GitHub, through `gh`, only for a record that waits on an issue, and
+    says which issue it could not read and why. Reads the rest from the
+    working tree. A record that arrives as a synced copy is not listed. Reports,
+    and exits 0. See the decisions README, "Statuses".
+    """
+    from project_kit import decisions_proposed as proposed_mod
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    proposed_mod.print_report(proposed_mod.report(target_root, older_than=older_than))
 
 
 @main.group()

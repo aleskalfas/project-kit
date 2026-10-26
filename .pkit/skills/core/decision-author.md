@@ -94,6 +94,7 @@ Open the stamped file and fill in:
 - **`## Decision`** — what was decided. Single crisp sentence ideally. A complex decision gives each part a point: a heading with its number and a title, `### 1. Title`, which keeps that number for good (`.pkit/decisions/README.md`, "Schema"). The stamped point heading sets the points' level, and once it is there a numbered list in the record is a list, never points. Delete it before the record first lands if the decision has no parts (`.pkit/decisions/README.md`, "Adding a record").
 - **`## Rationale`** — why this choice over alternatives. May include an `### Alternatives considered` sub-section.
 - **`## Implications`** — what does this mean for code, tests, workflow, downstream decisions?
+- **`waits-on`** — where the record's acceptance waits on an issue, a date or another record, name that one condition in its front matter (`.pkit/decisions/README.md`, "Schema"). Leave it out otherwise.
 
 ### 7. Self-check against disciplines
 
@@ -127,7 +128,7 @@ Status: proposed.
 Co-Authored-By: <as appropriate>
 ```
 
-The record lands as `proposed`. Acceptance is a separate gesture (status flip + a follow-up commit, per the acceptance gate). Do **not** mark the new record `accepted` in the same commit unless the user explicitly approves both the addition and the acceptance together.
+The record lands as `proposed`. Acceptance is a separate gesture (status flip + a follow-up commit, per the acceptance gate), which also removes the record's `waits-on`. Do **not** mark the new record `accepted` in the same commit unless the user explicitly approves both the addition and the acceptance together.
 
 ## Variations
 

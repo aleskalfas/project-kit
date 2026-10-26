@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A proposed record may name the one condition its acceptance waits on, in an
+  optional `waits-on` front-matter field: `issue: 795`, `date: 2026-12-01` or
+  `record: ADR-071` (#2166). `pkit validate` and `pkit decisions validate` fail
+  on a `waits-on` that names no one condition of a known kind, and warn of one
+  on a record that is not proposed. The new `pkit decisions proposed` lists the
+  project's own proposed records, due first: a record whose condition has
+  passed, or that names none and whose `date` is more than 30 days ago
+  (`--older-than DAYS`). It reads GitHub through `gh` only for an issue, says
+  which it could not read, and exits 0. No existing record changes, and nothing
+  migrates.

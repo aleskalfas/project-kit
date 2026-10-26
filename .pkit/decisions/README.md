@@ -8,6 +8,7 @@ pkit:
       path:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_check_diff.py
+        - src/project_kit/decisions_proposed.py
         - src/project_kit/decisions_validate.py
         - src/project_kit/document_parts.py
         - src/project_kit/record_points.py
@@ -120,6 +121,8 @@ author: Name <email>  # primary author (git-style)
 supersedes: PRJ-NNN  # optional — same-namespace prefix as the superseded record
 retired-points:      # optional — each retired point's id, with the points that took its text
   "2": ["3"]
+waits-on:            # optional, on a proposed record — the one condition it waits on
+  issue: 795
 ---
 
 ## Context
@@ -165,6 +168,18 @@ A record whose points are still a numbered list, or paragraphs that open with a 
 
 The **`author`** field captures responsibility for the record — git-style `Name <email>` matching the value the author would use as their git commit identity. When multiple users collaborate on a project, this makes per-record authorship explicit at a glance; git history captures the rest (commit author, `Co-Authored-By` trailers). The schema may grow a `co-authors` list if frequent multi-author records earn it.
 
+The **`date`** is the day the record was written, as the stamp gives it. Leave it as it is while the record is proposed, since the age of a proposal is read from it ("Statuses" below).
+
+The **`waits-on`** field is optional, and only a proposed record carries it. It names the one condition the record's acceptance waits on, as one kind and its value:
+
+- **`issue: 795`:** the issue closes. It is a GitHub issue of the repository the project's git remote names, read through `gh`. An issue of another repository is written `owner/repo#795`. The number stands alone, since `#` opens a comment in YAML.
+- **`date: 2026-12-01`:** the date comes.
+- **`record: ADR-071`:** the record is accepted, or superseded since. A capability's decision is written as in an anchor's value, such as `project-management:DEC-059`.
+
+A project that tracks its issues elsewhere waits on a date or a record. A record that waits on several things names the one that settles last, or an issue that gathers them.
+
+`pkit validate` and `pkit decisions validate` fail on a `waits-on` that names no one condition of these kinds. They warn of one on an accepted record, which waits on nothing. Remove the field when you accept the record. The warning fails nothing, so the status flip alone still passes.
+
 ## Statuses
 
 - **`proposed`** — under discussion. Not binding. **Implementation must not depend on the record's content** — see "The acceptance gate" below.
@@ -174,6 +189,16 @@ The **`author`** field captures responsibility for the record — git-style `Nam
 A record moves only forward through these states: `proposed → accepted → superseded`. There is no `rejected` state — a rejected proposal is deleted before it lands.
 
 Supersession is always within a single namespace.
+
+**A proposed record that waits.** A proposed record may name the one condition it waits on, in `waits-on` ("Schema" above). `pkit decisions proposed` lists the project's own proposed records, so that none waits unnoticed. It sorts them into three groups:
+
+- **Due, for a person to settle:** a record whose condition has passed. Its issue is closed, its date has come, or the record it waits on is no longer proposed. A record that waits on an id no record holds is due too, since only a person can mend the id. So is a record that names no condition, once its `date` is more than 30 days ago.
+- **Could not be read:** a record whose front matter or `waits-on` does not read, or whose issue GitHub gave no state for. So is a record that names no condition and whose `date` does not read. Each says why.
+- **Waiting:** the rest, each with what it waits on, or how long it has been proposed.
+
+The age of a proposal is read from its `date`. The threshold leaves room for a batch of acceptances, and still catches a record left for months. `--older-than DAYS` sets another. A record that arrives as a synced copy is settled where it is authored, so it is not listed.
+
+The command reads GitHub only for a record that waits on an issue, and the rest from the working tree. It is a command of its own, outside validation, since its answer moves with the date and the tracker ([COR-055](core/COR-055-validation.md) point 2). Its options and output are in [the CLI reference](../cli/README.md).
 
 ## The acceptance gate
 

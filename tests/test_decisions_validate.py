@@ -983,3 +983,98 @@ def test_cli_in_an_adopter_with_no_record_of_its_own_says_so(
     assert result.exit_code == 0, result.output
     assert "Validated 0 decision record(s)" not in result.output
     assert "No decision record of the project's own found to validate." in result.output
+
+
+# --- what a proposed record waits on (#2166) --------------------------------------------
+
+
+def _waiting(path: Path, record_id: str, waits_on: str, status: str = "proposed") -> None:
+    """A record whose front matter carries `waits-on` as given."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"---\nid: {record_id}\ntitle: x\nstatus: {status}\ndate: 2026-10-01\nauthor: t\n"
+        f"waits-on: {waits_on}\n---\n\n## Context\n",
+        encoding="utf-8",
+    )
+
+
+def test_waits_on_findings_name_the_file_in_every_id_space(project: Path) -> None:
+    _waiting(project / ".pkit" / "decisions" / "core" / "COR-001-a.md", "COR-001", "soon")
+    capability = _make_capability(project, "alpha")
+    _waiting(capability / "DEC-001-a.md", "DEC-001", "{issue: 795}", status="accepted")
+    _waiting(capability / "DEC-002-b.md", "DEC-002", "{issue: 795}")
+
+    found = decisions_validate.waits_on_findings(project)
+
+    assert [(f.location, f.severity) for f in found] == [
+        (".pkit/decisions/core/COR-001-a.md:/waits-on", Severity.ERROR),
+        (".pkit/capabilities/alpha/decisions/DEC-001-a.md:/waits-on", Severity.WARNING),
+    ]
+
+
+def test_a_superseded_record_is_not_checked_for_waits_on(project: Path) -> None:
+    path = project / ".pkit" / "decisions" / "core" / "COR-001-a.md"
+    _waiting(path, "COR-001", "soon", status="superseded")
+    assert decisions_validate.waits_on_findings(project) == ()
+
+
+def test_a_synced_copy_is_not_checked_for_waits_on_and_the_projects_own_record_is(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo(capabilities=("living-docs",))
+    decisions = repo.root / ".pkit" / "decisions"
+    _waiting(decisions / "core" / "COR-900-a.md", "COR-900", "soon")
+    capability = repo.root / ".pkit" / "capabilities" / "living-docs" / "decisions"
+    _waiting(capability / "DEC-900-a.md", "DEC-900", "soon")
+    _waiting(decisions / "project" / "PRJ-900-a.md", "PRJ-900", "soon")
+
+    found = decisions_validate.waits_on_findings(repo.root)
+
+    assert [f.location for f in found] == [".pkit/decisions/project/PRJ-900-a.md:/waits-on"]
+
+
+def test_the_validate_member_fails_on_a_malformed_waits_on_and_warns_of_a_stale_one(
+    project: Path,
+) -> None:
+    core = project / ".pkit" / "decisions" / "core"
+    _waiting(core / "COR-001-a.md", "COR-001", "{issue: 795, date: 2026-12-01}")
+    _waiting(core / "COR-002-b.md", "COR-002", "{issue: 795}", status="accepted")
+
+    outcome = decisions_validate.outcome(project)
+
+    assert [(f.location, f.severity) for f in outcome.findings] == [
+        (".pkit/decisions/core/COR-001-a.md:/waits-on", Severity.ERROR),
+        (".pkit/decisions/core/COR-002-b.md:/waits-on", Severity.WARNING),
+    ]
+    assert "1 error(s), 1 warning(s)." in outcome.summary[0]
+
+
+def test_cli_fails_on_a_malformed_waits_on(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+    _waiting(project / ".pkit" / "decisions" / "core" / "COR-001-a.md", "COR-001", "soon")
+    monkeypatch.chdir(project)
+
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+
+    assert result.exit_code != 0
+    assert "1 error(s) and 0 warning(s) on `waits-on`" in result.output
+    assert ".pkit/decisions/core/COR-001-a.md:/waits-on" in result.output
+    assert "1 error(s) on `waits-on` found." in result.output
+
+
+def test_cli_warns_of_waits_on_on_an_accepted_record_and_exits_zero(
+    project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+    path = project / ".pkit" / "decisions" / "core" / "COR-001-a.md"
+    _waiting(path, "COR-001", "{issue: 795}", status="accepted")
+    monkeypatch.chdir(project)
+
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+
+    assert result.exit_code == 0, result.output
+    assert "0 error(s) and 1 warning(s) on `waits-on`" in result.output

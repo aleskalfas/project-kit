@@ -81,6 +81,12 @@ record neither holds nor retires are errors. A duplicate id, a gap in the
 ids and a misspelt point heading are warnings. Of the front matter, only the
 field's shape is read, so a project's own fields pass.
 
+**What a proposed record waits on is checked too** (`waits_on_findings`), over
+the same records. `decisions_proposed.check_waits_on` holds each `waits-on` to
+its shape: a field that cannot be read is an error, and one on a record that is
+not proposed is a warning. Which records are due is that module's report, a
+command of its own, since its answer moves with the date and the tracker.
+
 **The numbering check reads records as this module finds them.** It compares a
 change with its base (COR-058 point 8), so it reads records at a commit too,
 where no folder is on disk: `record_space` says which file is a record, of
@@ -99,7 +105,14 @@ from pathlib import Path, PurePosixPath
 
 import click
 
-from project_kit import cli_render, document_parts, lifecycle_ownership, record_points, rule_sets
+from project_kit import (
+    cli_render,
+    decisions_proposed,
+    document_parts,
+    lifecycle_ownership,
+    record_points,
+    rule_sets,
+)
 from project_kit.decisions import resolve_adr_records_dir
 from project_kit.validators import Finding, Outcome, Severity
 
@@ -810,26 +823,47 @@ def _and(items: Iterable[str]) -> str:
     return listed[0] if len(listed) == 1 else f"{', '.join(listed[:-1])} and {listed[-1]}"
 
 
+# --- what a proposed record waits on ---------------------------------------------------
+
+
+def waits_on_findings(target_root: Path) -> tuple[Finding, ...]:
+    """Every record's `waits-on`, held to its shape by `decisions_proposed.check_waits_on`.
+
+    The records read are those `revision_narration` reads: a synced copy and a
+    superseded record are left out. A field that cannot be read is an error, and
+    one on a record that is not proposed is a warning, records in the order the
+    id pass finds them.
+    """
+    found: list[Finding] = []
+    for rel, text in _refined_records(target_root):
+        found.extend(decisions_proposed.check_waits_on(rel, text))
+    return tuple(found)
+
+
 def outcome(target_root: Path) -> Outcome:
     """The `decisions` member of `pkit validate`: every record's front matter
     (`validate.decision_frontmatter_issues`), the id spaces (`validate_decision_ids`) and
-    the errors on records' points (`point_findings`), then revision narration
-    (`revision_narration`) and the warnings on records' points. Each leaves a synced
-    copy of a record out (`synced_record_test`), so the member reports nothing on one."""
+    the errors on records' points (`point_findings`) and on `waits-on`
+    (`waits_on_findings`), then revision narration (`revision_narration`) and the
+    warnings on records' points and on `waits-on`. Each leaves a synced copy of a
+    record out (`synced_record_test`), so the member reports nothing on one."""
     from project_kit.validate import decision_frontmatter_issues
 
     front_matter = decision_frontmatter_issues(target_root)
     report = validate_decision_ids(target_root)
     narration = revision_narration(target_root)
     points = point_findings(target_root)
+    waits_on = waits_on_findings(target_root)
     errors = (
         *(Finding(issue.location, issue.diagnosis) for issue in front_matter),
         *(Finding(issue.location, issue.message) for issue in report.issues),
         *(finding for finding in points if finding.severity.fails),
+        *(finding for finding in waits_on if finding.severity.fails),
     )
     warnings = (
         *(Finding(issue.location, issue.message, severity=Severity.WARNING) for issue in narration),
         *(finding for finding in points if not finding.severity.fails),
+        *(finding for finding in waits_on if not finding.severity.fails),
     )
     rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
     summary = (
@@ -889,15 +923,24 @@ def print_narration(narration: tuple[DecisionIssue, ...]) -> None:
 def print_points(findings: tuple[Finding, ...]) -> None:
     """Render the findings on records' points, after the narration; nothing when there
     are none. Errors fail the command, and warnings do not (COR-058 point 7)."""
+    _print_findings(findings, "on records' points (COR-058 point 7)")
+
+
+def print_waits_on(findings: tuple[Finding, ...]) -> None:
+    """Render the findings on `waits-on`, after the points; nothing when there are none.
+    Errors fail the command, and warnings do not."""
+    _print_findings(findings, 'on `waits-on` (the decisions README, "Schema")')
+
+
+def _print_findings(findings: tuple[Finding, ...], on: str) -> None:
+    """A count of errors and warnings `on` what they judge, then each finding."""
     if not findings:
         return
     errors = sum(1 for finding in findings if finding.severity.fails)
     click.echo(
         "  "
         + cli_render.style(
-            "strong",
-            f"{errors} error(s) and {len(findings) - errors} warning(s) on records' points "
-            "(COR-058 point 7):",
+            "strong", f"{errors} error(s) and {len(findings) - errors} warning(s) {on}:"
         )
     )
     for finding in findings:
