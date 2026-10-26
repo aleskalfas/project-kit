@@ -181,7 +181,7 @@ Implementation work — code, content, tooling, downstream decisions — depends
 
 The gate applies to every kind of dependent work:
 
-- **Decisions** that build on other decisions cite only accepted predecessors.
+- **Decisions** that build on other decisions cite only accepted predecessors. `pkit refs rot` lists each accepted record whose body cites a proposed record, and exits 0. It reads a capability's decision cited as `[<capability>:DEC-NNN]`, or as a bare `DEC-NNN` in that capability's own records.
 - **Docs** describing systems built on a decision wait until that decision is accepted.
 - **Skills and agents** that automate work depending on a decision verify acceptance before running. The mechanism for declaring and verifying decision dependencies is part of each artifact area's own README (e.g. `.pkit/skills/README.md`, `.pkit/agents/README.md`).
 
