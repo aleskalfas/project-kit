@@ -46,16 +46,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from _lib.body_rules import lines_outside_fences
-
-# Sibling module — the gh shell-out helper that pins the adopter's host/owner
-# (DEC-023), imported as `_lib/containment` imports it.
-try:
-    from gh import gh_run  # type: ignore[import-not-found]
-except ImportError:  # pragma: no cover
-    try:
-        from _lib.gh import gh_run  # type: ignore[no-redef]
-    except ImportError:  # pragma: no cover
-        gh_run = None  # type: ignore[assignment]
+from _lib.gh import gh_run
 
 GhCall = Callable[..., "subprocess.CompletedProcess[str]"]
 
