@@ -636,7 +636,7 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 **A bypass posts its reason first.** `start-work --bypass "<reason>"` acts anyway, and so does `--bypass-owner "<reason>"` on the other three. The reason is posted on the issue as an audit comment before the command writes. A command hands its reason to the move it composes, which finds the comment posted and posts no second one.
 
-`review-work` and `promote-issue` take no bypass of their own. The move each composes is guarded, so it refuses after the command has written its own part.
+`review-work` and `promote-issue` take no bypass of the guard of their own. The move each composes is guarded. `review-work`'s move refuses after the command has opened or readied the pull request, and `promote-issue` moves first, so its move refuses before anything is written.
 
 **The marker is a comment unless you choose the label.** Each claim, withdrawal and release is then an event comment, and the issue's description shows the current owner. That owner line is derived from the comments, rewritten after each event, and kept above the provenance footer. Where your repository can create labels, `substrate: label` in the capability's `project/instance-ownership.yaml` selects the `instance:N` label instead, created on first use.
 
