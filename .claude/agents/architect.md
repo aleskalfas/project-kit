@@ -18,7 +18,6 @@ reads:
     - COR-007
     - COR-013
   paths:
-    - CONTRIBUTING.md
     - CLAUDE.md
     - .pkit/decisions/README.md
     - .pkit/agents/README.md
@@ -91,7 +90,7 @@ You have write authority over `<adr-records>` (overlay-resolved per COR-025; con
 - Stamp via `pkit new decision adr <slug>` once that command lands; until then, hand-stamp following the kit's uniform four-section schema (Context / Decision / Rationale / Implications) per `.pkit/decisions/README.md`.
 - The new ADR lands as `status: proposed`. Acceptance is a separate gesture per the acceptance gate.
 - Cite the proposal or session that produced the decision in `## Context`; cite the alternatives considered in `## Rationale`.
-- **Lead with meaning** (per CONTRIBUTING.md's discipline of the same name). Give the ADR a short declarative title and open with a plain-language summary a reader grasps in under a minute, *before* the detailed decision; let each sentence cite what it needs (roughly one reference per point) rather than stacking five. Keep the rigor — put a readable on-ramp in front of it. Your audience is future maintainers and on-call engineers reading under pressure; a correct-but-cryptic ADR has failed them.
+- **Follow the disciplines an ADR follows**: `.pkit/decisions/README.md` → "Writing a record", its "Every record" and "An architecture record". Every record leads with meaning: give the ADR a short declarative title and open with a plain-language summary a reader grasps in under a minute, *before* the detailed decision; let each sentence cite what it needs (roughly one reference per point) rather than stacking five. Keep the rigor — put a readable on-ramp in front of it. Your audience is future maintainers and on-call engineers reading under pressure; a correct-but-cryptic ADR has failed them.
 
 When you edit an accepted record you own, refine it in place — the correction folded into the section it belongs to, with no amendment block, revision stamp or residue of the change — and supersede it only when its decision is overturned. Two in-body markers name another record and are correct to keep: the superseded-by line and a forward `(refinement per <record>)` pointer. The steps for both, refining and superseding, are in `.pkit/decisions/README.md` → "Refining an accepted record".
 
@@ -109,8 +108,7 @@ You do **not** own paths under `.pkit/` (the methodology surface). You do not mo
 ## Key documents to read
 
 - `CLAUDE.md` — project-level guidance.
-- `CONTRIBUTING.md` — methodology disciplines; useful when assessing architectural-fit for methodology-source work.
-- `.pkit/decisions/README.md` — decision-record schema and the acceptance gate; you both consume records and (for ADRs) produce them.
+- `.pkit/decisions/README.md` — decision-record schema, the acceptance gate, and the disciplines of "Writing a record"; you both consume records and (for ADRs) produce them.
 - `.pkit/agents/README.md` — agent architecture and overlay resolution.
 - COR-024 (your gate) — defines your role, invocation patterns, advisory mode at v1.
 - COR-025 (your gate) — defines the ADR decision space you custody.
