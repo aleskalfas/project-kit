@@ -11,7 +11,7 @@ pkit:
         - scripts/prose-lint.yaml
         - tech-docs/rule-sets/writing.md
         - scripts/check_deployed_agents.py
-        - scripts/console_fences.py
+        - .pkit/capabilities/doc-examples/project/config.yaml
         - scripts/page_contents.py
         - scripts/short_check.py
         - .githooks/pre-push
@@ -22,8 +22,9 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053", "living-docs:DEC-002"]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053", "living-docs:DEC-002", "doc-examples:DEC-001"]
       artefact:
+        - .pkit/capabilities/doc-examples/README.md
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
@@ -151,23 +152,14 @@ Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one 
 
 To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what it changes in `.claude/agents/`. A rerun skips a skipped agent again, so its finding carries the remediation the deploy prints. Follow it, then run the deploy and commit what it changes. The check exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run.
 
-**The pages' console fences** (#1807). A page shows a command and its output in a `console` fence, each command after the prompt `$ ` ([living-docs:DEC-002](.pkit/capabilities/living-docs/decisions/DEC-002-visual-elements.md) point 6). The aggregator's `console fences` line, `uv run python scripts/console_fences.py`, runs each such fence as a test. The line reads each artefact that the backbone's discovery gives living-docs' page type, `living-docs:page`, wherever the artefact lies.
+**The pages' console fences** (#1807, #2098). A page shows a command and its output in a `console` fence, each command after the prompt `$ ` ([living-docs:DEC-002](.pkit/capabilities/living-docs/decisions/DEC-002-visual-elements.md) point 6). The aggregator's `console fences` line runs each such fence as a test, with the doc-examples capability's run: `uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py`. The contract a page is written against is in [the capability's README](.pkit/capabilities/doc-examples/README.md). The run reads the documents of living-docs' page type, `living-docs:page`, its default.
 
-- **Which fences:** a fence whose info string opens with the word `console`. A fence in another language is never run. So a command that cannot run as a test goes in a `sh` fence, with no output.
-- **Where a command runs:** in `/bin/sh`, in the fence's own copy of a scratch project outside the repository, with a home and a temporary folder of its own. The run builds that project once, with `pkit init` from your checkout, and gives uv a cache of its own, which fills from the network. The command's environment holds your `PATH`, with the checkout's `pkit` first, and nothing else of yours. Git in the copy reads only the scratch home's configuration, which signs nothing and allows no SSH.
-- **The limits:** a command is stopped when it runs longer than `--timeout`, 60 seconds by default, or prints more than 1 MiB. The run then kills every process left in the command's process group, and the command fails its fence. Interrupting the run stops the command the same way.
-- **What is compared:** what a command prints, its standard output and error together, with the fence's output, but not the command's exit status. The run writes `<project>`, `<home>`, `<tmp>`, `<scratch>`, `<repository>` and `<version>` for the paths and the version that vary between runs. `<scratch>` stands for the run's scratch folder, which holds the scratch project, each fence's folders and uv's cache. In the page, `<any>` stands for any text within one line.
-- **A write in the repository:** before and after each command, the run lists each file by its size, times, mode and inode, and each folder by its mode. A path added, removed or changed fails the test, and stops the run. The listing leaves out the git directory, `.git`, and each folder that holds a repository of its own, such as a linked worktree. A write by another process elsewhere in the repository during the command is taken for the command's.
-- **What the run cannot detect:**
-  - a write outside the repository, such as in your home folder by an absolute path, or in the git directory a linked worktree shares
-  - a write in the repository's git directory, `.git`, which every session sharing the repository writes in at any time
-  - a write the command undoes before it ends
-  - a write by a process that left the command's process group
-  - anything done over the network
-- **What the run confines:** nothing. A command runs as you, and can read whatever you can, such as your SSH keys. On Linux, that includes the environment of the processes that started the run. The run detects writes in the repository, and prevents none.
-- **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output in which a line the command printed would read as a command, close the fence or hold `<any>`. It writes no page at all when a command of the run wrote in the repository. Review the new output as any change to the page.
+- **project-kit's scratch project:** the setup step in `.pkit/capabilities/doc-examples/project/config.yaml` builds it. It is a repository with project-kit installed from your checkout by `pkit init`, and committed. Git there reads only the scratch home's configuration, which signs nothing and allows no SSH.
+- **Its environment:** `pkit` is your checkout's, since `uv run` puts the checkout's environment first on your `PATH`. uv gets a cache of its own in the run's scratch area, which fills from the network once for each run. No Python run writes bytecode, so nothing a command imports from your checkout writes in the repository.
+- **The version:** `<VERSION>` stands for your checkout's version, the one `.pkit/VERSION` holds and project-kit's commands print.
+- **New output:** `uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py --update` writes each command's new output into its page. Review the new output as any change to the page.
 
-Name pages to run only those, such as `uv run python scripts/console_fences.py README.md`. The script exits 0 when every fence matches, when no page holds one, or when `--update` wrote every output that differed. It exits 1 on any other failure, and 2 when it cannot start.
+Name pages to run only those, such as `uv run python .pkit/capabilities/doc-examples/scripts/run-examples.py README.md`. The run exits 0 when every fence matches, 1 when one fails, and 2 when it cannot start ([the capability's README, "The run"](.pkit/capabilities/doc-examples/README.md#the-run)).
 
 **The pages' contents lists** (#2053). A page a reader moves around in, such as a long guide or a reference, holds a contents list of its second-level sections near its top. The aggregator's `contents lists` line, `uv run python scripts/page_contents.py`, fails on a list that is stale. The line reads the same pages as the console fences' line.
 

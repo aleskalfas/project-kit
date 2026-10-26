@@ -1,0 +1,8 @@
+component: backbone
+kind: none
+body: >
+  The new core record COR-063, proposed, lets a document keep its data in a
+  sidecar beside it, where the owner of its type allows one. COR-050,
+  COR-051, COR-053 and COR-056 are refined beside it, and the decisions
+  README says a record keeps its front matter. The record decides ahead of
+  the build, #2077, so nothing you run changes yet.

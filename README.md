@@ -202,15 +202,15 @@ $ git init -q older-project
 $ (cd older-project && uvx -q --from git+https://github.com/aleskalfas/project-kit.git@v1.134.0 pkit init | grep "^  stamped")
   stamped      .pkit/manifest.yaml (backbone v1.134.0; 1 adapter(s) registered)
 $ (cd older-project && pkit status | grep "Backbone version")
-  Backbone version:      1.134.0   (source <version> — run `pkit upgrade --dry-run` to preview)
+  Backbone version:      1.134.0   (source <VERSION> — run `pkit upgrade --dry-run` to preview)
 $ (cd older-project && pkit upgrade | grep -e "^Upgrading" -e "^  running" -e 1.140.0 -e rule-set-reviewer -e "^Pinned")
-Upgrading backbone: 1.134.0 -> <version>
-  running <any> backbone migration(s), the replay (no completed transition -> v<version>)
+Upgrading backbone: 1.134.0 -> <VERSION>
+  running <any> backbone migration(s), the replay (no completed transition -> v<VERSION>)
     • 1.140.0/001-retire-pkit-router-shim.sh
   created    .claude/agents/rule-set-reviewer.md
-Pinned project-kit to <version> (.pkit/version-pin).
+Pinned project-kit to <VERSION> (.pkit/version-pin).
 $ (cd older-project && pkit status | grep "Backbone version")
-  Backbone version:      <version>   (up to date)
+  Backbone version:      <VERSION>   (up to date)
 ```
 
 The upgrade ran the migrations up to the newer version, release 1.140.0's among them, and deployed the `rule-set-reviewer`, an agent 1.134.0 lacked.
@@ -278,7 +278,7 @@ Check that your shell finds it:
 
 ```console
 $ pkit --version
-pkit, version <version>
+pkit, version <VERSION>
 ```
 
 If your shell does not find `pkit`, this command adds `uv`'s tool directory to your `PATH`. It changes your shell's startup files, so its fence shows no output. Reopen your shell after it:
@@ -320,7 +320,7 @@ The methodology appears as `.pkit/`, and brings:
 
 ```console
 $ pkit status | grep -e "Backbone version" -e deployed
-  Backbone version:      <version>   (up to date)
+  Backbone version:      <VERSION>   (up to date)
     skills deployed    <any> kit-managed:
     agents deployed    <any> kit-managed:
 ```
