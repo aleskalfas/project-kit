@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit friction revalidate`, `defer` and `revisit` follow a moved artefact,
+  as COR-062 point 10 asks (#2108). The answer they write names, in `read`,
+  the answer files on the artefact at every path its file had. They follow a
+  rename in HEAD's history and a move not yet committed, as the change check
+  does. A move answered through the writers alone now passes the change
+  check, with no answer file named in `read` by hand.
