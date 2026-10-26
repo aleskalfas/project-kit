@@ -213,7 +213,7 @@ An instance is a clone of a [project](../../core/glossary.md#term-project--proje
 
 **Always true:**
 
-- A typed number and the key are kept in a file of the clone that is never committed. The key is named only in comments on issues (DEC-035 point 1 and DEC-058 point 5).
+- A typed number and the key are kept in a file of the clone that is never committed. The key is named only in comments on issues and state issues (DEC-035 point 1 and DEC-058 point 5).
 - Every command that acts as an instance confirms the clone's seat before the command writes (DEC-059 point 6).
 - An instance is never an input to a move of the [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) ([DEC-035 point 8](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#8-the-instance-marker-is-a-pm-domain-side-effect-never-engine-state)).
 
