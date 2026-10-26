@@ -6,6 +6,8 @@ date: 2026-09-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [software-analysis:DEC-005-finding-functionality].** Every use case lies in a functional area, cut by what the use cases do. Overturned: that grouping the use cases by area is each analysis's choice, in point 2, and point 12's writing of an analysis with no areas as one area. Also overturned: two areas that rely on each other made one where they serve two functions. Among what stands: the layout, the ids, the areas' numbers and the build order. DEC-005's "What this overturns, and what stands" lists each passage.
+
 ## Context
 
 A project needs a written account of *what its software must do*: who uses it, what they are trying to achieve, how they get there, and what the words mean. Without one, every new person and every agent reconstructs it from code, and every design is judged against a picture that exists only in someone's head.
@@ -228,7 +230,7 @@ An analysis is built bottom-up, from the concepts it uses. Whoever writes it, a 
    - **Together.** Areas without numbers that build on each other are written together.
    - **Their requirements.** A requirement that binds one area comes before that area's use cases. One that binds some areas comes before the first of them.
    - **No areas.** A project that groups no use cases into areas writes them as one area.
-4. **The journeys, last,** across the areas they pass through.
+4. **The journeys, last:** one for each path the use cases make, across the areas it passes through (refinement per [software-analysis:DEC-005-finding-functionality] point 2).
 
 What the order binds:
 - **What each artefact uses.** An artefact uses only what the order puts before it: what an earlier step wrote, or what its own step wrote first. So a definition uses terms already defined, an actor's needs use the glossary's terms, and an area uses the areas it builds on. A domain-model view uses the domain-model views of its analysis numbered before it. Each artefact names a concept by the one term that defines it.
