@@ -27,6 +27,9 @@ shortfalls:
   - at: "1a"
     issue: "#519"
     record: project-management:DEC-035#3
+  - at: "3a"
+    issue: "#2143"
+    record: project-management:DEC-060
 pkit:
   friction:
     anchors:
@@ -46,6 +49,7 @@ pkit:
         - project-management:DEC-059#4
         - project-management:DEC-059#6
         - project-management:DEC-059#7
+        - project-management:DEC-060
         - COR-013
         - COR-017
       artefact:
@@ -94,7 +98,7 @@ pkit:
 10. The system warns of each Task of the plan that no seat may take, and refuses nothing (DEC-059 point 7 and [DEC-045 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#4-the-partition-is-soft--full-coverage-is-the-default-sharing-and-gaps-are-allowed-but-discouraged)).
 
 > [!WARNING]
-> **Not built yet:** nothing reads the seats' scopes, so nothing warns. DEC-059 point 7 decides the warning, and #2136 tracks it.
+> **Not built yet:** nothing warns of a Task that no seat may take. DEC-059 point 7 decides the warning, and #2136 tracks it.
 
 4. Where two Tasks edit the same files, the later Task's `## Dependencies` section names the earlier Task. The later Task is built once the earlier Task has merged ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md) and `batch-plan.md`).
 5. Where a Task needs what a Task of another scope builds, the first Task's `## Dependencies` section names that other Task too (DEC-005 and `batch-plan.md`).
@@ -109,6 +113,11 @@ pkit:
 
 > [!WARNING]
 > **Not built yet:** `create-issue` writes no [owner](../../../glossary.md#term-owner--owner). DEC-035 point 3 decides that the instance that files an issue owns the issue, and #519 tracks it.
+
+- **3a.** The intent's Tasks would share a choice that nothing settles yet, such as a library or the layout of the code. The first plan files only the [EPIC](../../../glossary.md#term-epic--epic), with an outline of the slices, and the [Feature](../../../glossary.md#term-feature--feature) of the work's foundation. The foundation's Tasks follow one another: first the records of the shared choices, then a walking skeleton built on the records the planner accepted. Once the planner closes the foundation's Feature, the agent slices the work in a second plan, against the records and the skeleton's code ([DEC-060](../../../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md)).
+
+> [!WARNING]
+> **Not built yet:** `batch-plan.md` plans the work in one stage. DEC-060 decides the two stages of planning, and #2143 tracks it.
 
 - **7a.** The planner asks for changes, or cancels the plan, as `UC-063` variants 7a and 7c describe.
 - **8a.** The planning agent's clone holds no [seat](../../../glossary.md#term-seat--seat). The clone marks no issue, and the agent files as step 8 does, with no owner ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
