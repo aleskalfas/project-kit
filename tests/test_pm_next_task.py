@@ -125,12 +125,12 @@ def _stamp(nt, instance: int, event: str = "claim") -> str:
 
 @pytest.fixture
 def run(nt, monkeypatch: pytest.MonkeyPatch):
-    """Returns `run(pool, instance=None, extra=(), start=None, seated=None) ->
-    (rc, starts)`. `instance` is this clone's instance id (none by default).
-    `start` stands in for `start-work`; by default it records each start and
-    answers 0. `seated` is the run's snapshot of the topology and the seat this
-    clone took, where it took one. `starts` holds `(number, dry_run)` for each
-    start."""
+    """Returns `run(pool, instance=None, extra=(), start=None, seated=None,
+    yes=True) -> (rc, starts)`. `instance` is this clone's instance id (none by
+    default). `start` stands in for `start-work`; by default it records each
+    start and answers 0. `seated` is the run's snapshot of the topology and the
+    seat this clone took, where it took one. `yes` passes `--yes`. `starts` holds
+    `(number, dry_run)` for each start."""
 
     def go(
         pool: Pool,
@@ -138,6 +138,7 @@ def run(nt, monkeypatch: pytest.MonkeyPatch):
         extra: tuple[str, ...] = (),
         start: Any = None,
         seated: tuple[Any, str] | None = None,
+        yes: bool = True,
     ) -> tuple[int, list[tuple[int, bool]]]:
         starts: list[tuple[int, bool]] = []
 
@@ -151,7 +152,7 @@ def run(nt, monkeypatch: pytest.MonkeyPatch):
             snapshot_with(nt.instance_claims, monkeypatch, snapshot, hint=hint)
         monkeypatch.setattr(nt.instance_claims, "_gh", lambda args, _c: pool.github(args))
         monkeypatch.setattr(nt, "_gh", pool.list)
-        monkeypatch.setattr(sys, "argv", ["next-task", "--yes", *extra])
+        monkeypatch.setattr(sys, "argv", ["next-task", *(("--yes",) if yes else ()), *extra])
         monkeypatch.setattr(nt, "resolve_capability_root", lambda _e: CAP_ROOT)
         monkeypatch.setattr(nt.bootstrap_gate, "enforce", lambda *a, **k: True)
         monkeypatch.setattr(nt.session_guard, "enforce", lambda **k: True)
@@ -282,6 +283,31 @@ def test_a_dry_run_hands_start_work_its_dry_run(run) -> None:
     pool.add(10)
     rc, starts = run(pool, extra=("--dry-run",))
     assert (rc, starts) == (0, [(10, True)])
+
+
+@pytest.mark.parametrize("reply", ["", "n", "no"])
+def test_a_person_who_declines_the_prompt_starts_nothing(run, monkeypatch, capsys, reply) -> None:
+    """Without `--yes`, at a terminal, the command asks before it starts a Task. A
+    person who declines starts nothing, and the run ends with 0 and `aborted.`, as
+    the README's exit table says (#2143)."""
+    pool = Pool()
+    pool.add(10)
+    asked: list[str] = []
+    monkeypatch.setattr(sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr("builtins.input", lambda prompt: asked.append(prompt) or reply)
+    rc, starts = run(pool, yes=False)
+    assert (rc, starts) == (0, [])
+    assert asked == ["Start #10? [y/N] "]
+    assert "aborted." in capsys.readouterr().err
+
+
+def test_a_person_who_agrees_to_the_prompt_starts_the_task(run, monkeypatch) -> None:
+    pool = Pool()
+    pool.add(10)
+    monkeypatch.setattr(sys, "stdin", SimpleNamespace(isatty=lambda: True))
+    monkeypatch.setattr("builtins.input", lambda _prompt: "y")
+    rc, starts = run(pool, yes=False)
+    assert (rc, starts) == (0, [(10, False)])
 
 
 def test_a_failure_that_is_not_a_lost_claim_stops_the_run(run, capsys) -> None:

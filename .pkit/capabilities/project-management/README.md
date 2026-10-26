@@ -43,7 +43,7 @@ The authority signal for distillation is pm-workflow's `main` branch. Capability
 
 - `decisions/DEC-NNN-*.md` — principles distilled from pm-workflow's METs (1:1). Some are schema-backed; others ship as policy prose adopters read.
 - `schemas/<name>.yaml` + `<name>.schema.json` — the operationally-material rules in data form: issue hierarchy, workflow state machine, body shape, title regexes, label classification, git conventions, validation severity, time containers.
-- `skills/pm/` — the composite engine skill (`pm.md` dispatcher + `create-issue.md` + `validate-body.md` + `transition-state.md` + `batch-plan.md` + `fix-drift.md` sub-procedures, per COR-020). Methodology-agnostic; reads schemas at runtime.
+- `skills/pm/` — the composite engine skill (`pm.md` dispatcher + `create-issue.md` + `validate-body.md` + `transition-state.md` + `batch-plan.md` + `fix-drift.md` + `work-loop.md` sub-procedures, per COR-020). Methodology-agnostic; reads schemas at runtime.
 - `agents/project-manager/project-manager.md` (with its storyboard) — orchestrates the three skills, enforces methodology gates.
 - `templates/{EPIC,Feature,Umbrella,Task,PR}.md` — body shapes adopters fill in.
 - `scripts/pre-check.py` — read-only diagnostic verifying every methodology prerequisite is in place (DEC-017). Hard-gate on every pm operation.
@@ -788,7 +788,7 @@ What else holds a Task back:
 
 | Exit | Meaning |
 |---|---|
-| 0 | A Task was started, or a dry run said which it would start |
+| 0 | A Task was started, a dry run said which it would start, or the person declined the `Start #N?` prompt, and the command printed `aborted.` |
 | 1 | Membership refused, or the foreign-repo guard did |
 | 2 | A clone that holds no seat, a planner's seat or a seat that cannot be confirmed, or a listing that reached `--limit` |
 | 3 | The open issues could not be read, or a ready Task's owner could not be read and no other Task was free |
@@ -796,6 +796,17 @@ What else holds a Task back:
 | other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |
 
 `scripts/_lib/task_pool.py` reckons which Tasks are ready, once for every command that needs it ([project-management:DEC-025-parallelization-primitive]).
+
+#### A seat's agent and its loop — the pm skill's `work-loop` (per [project-management:DEC-059-topology-of-seats] point 8)
+
+At the start of each session, the project-manager agent lists the seats with `seats`, and takes one with `take-seat` where the session was started for one, or its clone holds one already. The seat's role then sets its direction, and it runs the role's loop from the pm skill's `work-loop` sub-procedure. A session that holds no seat, as in a project with no topology, infers its direction from the request as before.
+
+- **A planner** plans each intent through batch planning, and files the work with no owner. Its Tasks enter the pool once scheduled into Backlog, a move the plan's gate lists and the person's approval authorises. It builds nothing, and closes a container only on the person's authorisation
+- **A worker** first goes on with what its clone has in flight: a Task In Progress, or a fix round on its pull request. Then it takes the next ready Task with `next-task --yes`, and builds it in its own clone. It opens the Task's pull request with `open-pr --draft` and `review-work`, then takes the next
+- **No role authorises a merge,** or anything else a person authorises. The person lands each pull request through the merge gate
+- **A lead's loop,** with helpers of its own, is not in the sub-procedure yet
+
+Where the Tasks of new work would share a choice that nothing settles yet, batch planning plans in two stages ([project-management:DEC-060-foundation-before-slices]). The first plan files the EPIC, with the intent and an outline of the slices, and only the Feature of the work's foundation: a Task for the records of the shared choices, then a walking skeleton built on them. The slices are planned in a second plan, once the person closes that Feature. The agent's storyboard walks one round of each role's loop.
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 
