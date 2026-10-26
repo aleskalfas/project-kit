@@ -1168,6 +1168,40 @@ def test_enforcing_modes_exit_1_still_carries_the_document(
     ]
 
 
+def test_the_answers_as_the_gate_reads_them_name_no_head_and_fetch_nothing(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`written` runs the change check as the project's gate runs it: the base named,
+    no `--head`, so the backbone reads HEAD and `$PKIT_CHECK_HEAD` itself, routing off,
+    and nothing fetched first. Enforcing mode's exit 1 still carries the list."""
+    seen: list[tuple[list[str], str | None]] = []
+    document = {"schema_version": 1, "answers": [{"location": "docs/guide.md"}]}
+
+    def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        seen.append((argv, kwargs["env"].get("PKIT_NO_ROUTE")))
+        return subprocess.CompletedProcess(argv, 1, json.dumps(document), "")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    found = fa.written("origin/main")
+    assert (found.problem, found.answers) == (None, ({"location": "docs/guide.md"},))
+    assert seen == [(["pkit", "friction", "check", "--json", "--base", "origin/main"], "1")]
+
+
+def test_answers_the_gate_cannot_read_are_a_problem_never_an_empty_list(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def run(argv: list[str], **_: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 2, "", "Error: the base main does not resolve\n")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    found = fa.written("main")
+    assert found.answers == ()
+    assert found.problem == (
+        "`pkit friction check --json --base main`: it exited 2: "
+        "Error: the base main does not resolve"
+    )
+
+
 def test_the_check_runs_unrouted_with_the_base_named_whatever_the_environment(
     fa: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

@@ -43,7 +43,7 @@
       }
     },
     "contributed-obligation": {
-      "description": "An obligation a documentation capability, or the project filler, contributes. One that names a `document` is met only by the page's answer in the diff: a changed file matches `document`; the form of the answer — updated, unchanged with its justification, deferred with its reason — is the core change check's to verify (`pkit friction check`). One that names no `document` is met only when its filler no longer gives it: the filler reads the pull request's head, so a `code-undocumented` obligation leaves the point once a page anchors its `path`. A `## Doc impact` line never meets either.",
+      "description": "An obligation a documentation capability, or the project filler, contributes. One that names a `document` is met only by the page's answer in the diff: a changed file matches `document`, or the change adds an answer on the page — updated, unchanged with its justification, deferred with its reason — that the core change check lists as standing (`pkit friction check --json`). One that names no `document` is met only when its filler no longer gives it: the filler reads the pull request's head, so a `code-undocumented` obligation leaves the point once a page anchors its `path`. A `## Doc impact` line never meets either.",
       "type": "object",
       "additionalProperties": false,
       "required": ["id", "source", "reason"],
