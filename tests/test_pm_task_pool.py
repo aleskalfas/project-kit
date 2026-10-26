@@ -229,11 +229,13 @@ def _stamp(tp, instance: int, seat: str | None = None, key: str | None = None) -
     return {"author": {"login": "me"}, "body": body}
 
 
-def test_a_backlog_task_is_free_when_no_other_instance_holds_it(tp) -> None:
-    assert tp.free_for(_owner(tp, []), 2, tp.BACKLOG)
-    assert tp.free_for(_owner(tp, [_stamp(tp, 2)]), 2, tp.BACKLOG)
-    assert not tp.free_for(_owner(tp, [_stamp(tp, 3)]), 2, tp.BACKLOG)
-    assert not tp.free_for(_owner(tp, [_stamp(tp, 2), _stamp(tp, 1)]), 2, tp.BACKLOG)
+def test_a_backlog_task_is_in_the_pool_only_with_no_owner(tp) -> None:
+    """DEC-059 point 7: an owner, this clone's own instance among them, keeps a
+    Task out of the pool."""
+    assert tp.in_pool(_owner(tp, []), tp.BACKLOG)
+    assert not tp.in_pool(_owner(tp, [_stamp(tp, 2)]), tp.BACKLOG)
+    assert not tp.in_pool(_owner(tp, [_stamp(tp, 3)]), tp.BACKLOG)
+    assert not tp.in_pool(_owner(tp, [_stamp(tp, 2), _stamp(tp, 1)]), tp.BACKLOG)
 
 
 def test_a_task_whose_seat_was_released_returns_to_the_pool(tp) -> None:
@@ -242,14 +244,14 @@ def test_a_task_whose_seat_was_released_returns_to_the_pool(tp) -> None:
     free = tp.ownership.Holder(tp.ownership.SEAT_FREE)
     unread = tp.ownership.Holder(tp.ownership.SEAT_UNREAD)
     claim = [_stamp(tp, 1, "worker-1", "k1")]
-    assert tp.free_for(_owner(tp, claim, {"worker-1": free}), 2, tp.IN_PROGRESS)
-    assert tp.free_for(_owner(tp, claim, {"worker-1": free}), 2, tp.BACKLOG)
-    assert not tp.free_for(_owner(tp, claim, {"worker-1": held}), 2, tp.IN_PROGRESS)
-    assert not tp.free_for(_owner(tp, claim, {"worker-1": unread}), 2, tp.IN_PROGRESS)
+    assert tp.in_pool(_owner(tp, claim, {"worker-1": free}), tp.IN_PROGRESS)
+    assert tp.in_pool(_owner(tp, claim, {"worker-1": free}), tp.BACKLOG)
+    assert not tp.in_pool(_owner(tp, claim, {"worker-1": held}), tp.IN_PROGRESS)
+    assert not tp.in_pool(_owner(tp, claim, {"worker-1": unread}), tp.IN_PROGRESS)
 
 
 def test_a_task_in_progress_that_no_claim_was_made_on_is_nobodys(tp) -> None:
-    assert not tp.free_for(_owner(tp, [], {}), 2, tp.IN_PROGRESS)
+    assert not tp.in_pool(_owner(tp, [], {}), tp.IN_PROGRESS)
 
 
 def test_taken_by_another_reads_the_lowest_claim(tp) -> None:
@@ -320,5 +322,5 @@ def test_the_pool_reads_its_owners_through_the_one_fold(tp, tmp_path) -> None:
     gh.post(10, _stamp(tp, 3)["body"])
     resolution = ic.read_owner(10, ic.Clone(2, "comment", "me", tmp_path), {}, run=gh)
     assert resolution is not None
-    assert not tp.free_for(resolution, 2, tp.BACKLOG)
+    assert not tp.in_pool(resolution, tp.BACKLOG)
     assert tp.taken_by_another(resolution, 2)

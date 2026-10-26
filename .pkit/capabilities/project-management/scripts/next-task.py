@@ -28,8 +28,9 @@ Steps:
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
     state issues out. The ready Tasks are ranked from it.
   - Where the clone takes part in instance ownership, each Task in turn is read
-    and its owner folded (`_lib/instance_claims.read_owner`). A Task another
-    instance holds is skipped, as is one that cannot be read.
+    and its owner folded (`_lib/instance_claims.read_owner`). A Task in Backlog
+    that any instance owns, this clone's own among them, is skipped, as is one
+    that cannot be read: a Task with an owner is not in the pool.
   - `start-work <N> --yes` starts the first free Task. Where it fails and the
     Task is now another instance's, the first claim held: this clone backs off
     and takes the next ready Task. Any other failure stops the run.
@@ -175,8 +176,9 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 continue
-            if not task_pool.free_for(resolution, clone.instance, candidate.state):
-                print(f"  skipped #{candidate.number}: {_held(resolution)}")
+            if not task_pool.in_pool(resolution, candidate.state):
+                held = _held(resolution, candidate.number, clone.instance)
+                print(f"  skipped #{candidate.number}: {held}")
                 continue
         print(f"next-task: {candidate.describe()}")
         if not args.dry_run and not args.yes and sys.stdin.isatty():
@@ -271,12 +273,19 @@ def _pool_line(count: int, taker: task_pool.Taker) -> str:
     return f"{count} {noun} ready for {who}, {within}, the highest in priority first."
 
 
-def _held(resolution: instance_ownership.OwnershipResolution) -> str:
-    """Why a Task is not free: who holds it."""
+def _held(resolution: instance_ownership.OwnershipResolution, number: int, instance: int) -> str:
+    """Why Task ``number`` is not in the pool: who holds it. A Task this clone's
+    own instance owns is named with the command that starts it."""
     if not resolution.claimants:
         return "In Progress with no claim ever made on it, so it is nobody's to take over"
     first = min(resolution.claimants)
-    return f"held by {instance_claims.owner_named(resolution, first)}"
+    owner = instance_claims.owner_named(resolution, first)
+    if first == instance:
+        return (
+            f"owned by this clone, {owner}, so it is not in the shared pool. "
+            f"Start it with pkit pm start-work {number}"
+        )
+    return f"held by {owner}"
 
 
 def _start_work(

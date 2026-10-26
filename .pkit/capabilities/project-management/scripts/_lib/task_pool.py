@@ -18,9 +18,10 @@ and ``next-task`` takes the first ready Task through ``start-work``. Two halves:
   Tasks in Backlog, and those In Progress where the clone may take one over, that
   are not assigned to another account, fall in the seat's scope and name no open
   issue among their dependencies. It ranks them by priority, then by number.
-- :func:`free_for` judges one candidate by its owner, as the ownership seam folds
-  it (``_lib/instance_claims.read_owner``). A Task this clone already owns in
-  Backlog is free for it, since no other agent holds it.
+- :func:`in_pool` judges one candidate by its owner, as the ownership seam folds
+  it (``_lib/instance_claims.read_owner``). A Task in Backlog that any instance
+  owns, this clone's own among them, is not in the pool, as point 7 says: a lead
+  starts what it filed through ``start-work``.
 
 Dependencies are prose
 ----------------------
@@ -310,17 +311,17 @@ def _assignees(row: Mapping[str, Any]) -> list[str]:
 # ---- the owner (DEC-035 point 6, DEC-059 points 7 and 9) --------------------------
 
 
-def free_for(resolution: ownership.OwnershipResolution, instance: int, state: str) -> bool:
-    """Whether a Task in ``state`` is free for the clone numbered ``instance``,
-    by its owner as the ownership seam folded it.
+def in_pool(resolution: ownership.OwnershipResolution, state: str) -> bool:
+    """Whether a Task in ``state`` is in the shared pool, by its owner as the
+    ownership seam folded it (DEC-059 point 7).
 
-    In Backlog, no claim counts or stands unjudged, or this clone's alone counts.
-    In Progress, a claim was made and none counts or stands unjudged, so the Task
-    has returned to the pool (DEC-059 point 9). A Task In Progress that no claim
-    was ever made on is nobody's to take over."""
+    In Backlog, no claim counts or stands unjudged: the Task has no owner. In
+    Progress, a claim was made and none counts or stands unjudged, so the Task
+    has returned to the pool (point 9). A Task In Progress that no claim was ever
+    made on is nobody's to take over."""
     claimants = resolution.claimants
     if state == BACKLOG:
-        return not claimants or (claimants == {instance} and instance in resolution.owners)
+        return not claimants
     return bool(resolution.judgements) and not claimants
 
 

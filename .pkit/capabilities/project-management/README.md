@@ -723,13 +723,13 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 
 A ready Task is one of two kinds:
 
-- **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue. A Task that this clone's instance already owns is its own to take, as a lead takes what it files
+- **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue. A Task that this clone's own instance owns is not in the pool either: a lead owns what it files, and starts it with `start-work`
 - **A Task In Progress whose claim no longer counts,** in a project with a topology, since the seat that claimed it was released. No claim lapses yet
 
 What else holds a Task back:
 
 - **An assignee of another account,** since `start-work` refuses such a Task and points to `handoff-issue`
-- **Another instance's claim,** folded as the clash guard folds it, and an owner that cannot be read
+- **A claim that counts,** folded as the clash guard folds it, and an owner that cannot be read
 - **The scope of the seat,** in a project with a topology. A Task falls in the scope where it matches each part the scope names: its workstream and its type
 - **An axis that a board carries,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
 

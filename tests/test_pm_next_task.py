@@ -203,13 +203,18 @@ def test_a_task_another_instance_holds_is_skipped(run, nt, capsys) -> None:
     assert pool.github.writes() == []
 
 
-def test_a_task_this_clone_holds_in_backlog_is_its_own(run, nt) -> None:
-    """A lead owns what it files, and builds it (DEC-059 point 7)."""
+def test_a_task_this_clone_owns_in_backlog_is_not_in_the_pool(run, nt, capsys) -> None:
+    """DEC-059 point 7: a ready Task has no owner. A lead owns what it files,
+    and starts it through start-work, as the line says."""
     pool = Pool()
     pool.add(10, assignees=("me",))
     pool.github.post(10, _stamp(nt, 2))
     rc, starts = run(pool, instance=2)
-    assert (rc, starts) == (0, [(10, False)])
+    assert (rc, starts) == (nt.EXIT_NONE_READY, [])
+    assert (
+        "  skipped #10: owned by this clone, instance 2, so it is not in the shared pool. "
+        "Start it with pkit pm start-work 10" in capsys.readouterr().out
+    )
 
 
 def test_a_task_assigned_to_another_account_is_skipped(run) -> None:
