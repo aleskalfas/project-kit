@@ -57,9 +57,9 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`ACT-ai-agent`): starts the note through the `scratchpad-author` [skill](../../../glossary.md#term-skill--skill), which pairs with the [stamp](../../../glossary.md#term-stamp--stamp).
-- **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
+**Preconditions:** **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 
 **Assumptions:**
 
@@ -70,7 +70,7 @@ pkit:
 **Main path:**
 
 1. The developer runs `pkit new scratchpad <slug>`, or an AI agent runs it through the `scratchpad-author` [skill](../../../glossary.md#term-skill--skill).
-2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit new scratchpad` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -97,7 +97,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit scratchpad reported` runs no such check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-- **5c.** The developer runs `pkit scratchpad list`. The system lists the notes by state, and writes nothing (REQ-005). For each reported note, it reads each issue's state live, and shows a state it cannot read as unknown ([COR-043 point 5](../../../../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md#5-read-back-is-live-and-pull-only)).
+- **5c.** The developer runs `pkit scratchpad list`. The system lists the notes by state, and writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)). For each reported note, it reads each issue's state live, and shows a state it cannot read as unknown ([COR-043 point 5](../../../../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md#5-read-back-is-live-and-pull-only)).
 - **5d.** On the path of 5c, a reported note's file differs from the hash recorded when it was sent. The listing marks it `[modified since reported]`, and stops nothing ([COR-043 point 4](../../../../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md#4-reported-notes-are-frozen-by-convention-and-guarded-by-detection)).
 - **5e.** On the path of 5c, every issue of a reported note is closed. The listing names the `pkit scratchpad done` command that retires the note, and never retires it itself ([COR-043 point 5](../../../../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md#5-read-back-is-live-and-pull-only)).
 - **5f.** On the path of 5b, the note lies in `reported/` already, and the run names an issue not yet recorded. The system adds that issue, and records the file's hash again. So the listing no longer marks an edit made before that run (`scratchpads.py`).
@@ -113,7 +113,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- [Sync](../../../glossary.md#term-sync--sync) never writes a [scratchpad note](../../../glossary.md#term-scratchpad-note--scratchpad-note), which is the [project](../../../glossary.md#term-project--project)'s own (`.pkit/scratchpad/README.md` and REQ-002).
+- [Sync](../../../glossary.md#term-sync--sync) never writes a [scratchpad note](../../../glossary.md#term-scratchpad-note--scratchpad-note), which is the [project](../../../glossary.md#term-project--project)'s own (`.pkit/scratchpad/README.md` and [REQ-002](../../../requirements/functional/REQ-002-project-owned-writers.md)).
 - No tool retires a note on its own: a listing only names the command that retires it ([COR-043 point 5](../../../../../../.pkit/decisions/core/COR-043-scratchpad-reported-state.md#5-read-back-is-live-and-pull-only)).
 - A refused [stamp](../../../glossary.md#term-stamp--stamp) or move leaves every note as it was (`scratchpads.py`).
-- `pkit scratchpad list` writes nothing, and never shows an issue it could not read as closed (COR-043 point 5 and REQ-005).
+- `pkit scratchpad list` writes nothing, and never shows an issue it could not read as closed (COR-043 point 5 and [REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).

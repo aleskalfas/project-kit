@@ -45,6 +45,10 @@ diagram. `accDescr: <text>`, or `accDescr {` opening a block that holds text
 before its closing `}`, says what it shows. A Mermaid comment, a line opening
 with `%%`, holds neither.
 
+What a **prose line** is: a line of the body that fenced code and an HTML comment
+do not hide, read as the headings are. A comment that opens and closes within the
+line stays in it. What a page mentions is read from these lines (`mentions`).
+
 This module imports nothing of the capability's library, so it reads alone.
 """
 
@@ -254,17 +258,27 @@ def fences(text: str) -> list[Fence]:
     return _read(text)[1]
 
 
+def prose(text: str) -> list[tuple[int, str]]:
+    """The lines of a Markdown file's body that fenced code and HTML comments do not
+    hide, in order, each with its line in the file: what the module's opening says
+    hides a line. A comment that opens and closes within a line stays in it, for the
+    reader of the line to take out or to read."""
+    return _read(text)[2]
+
+
 def diagrams(text: str) -> list[Diagram]:
     """The diagrams of a Markdown file's body, in order, each with what it carries
     of its text alternative: what the module's opening says a diagram is."""
     return [_alternative(fence) for fence in fences(text) if fence.language == MERMAID]
 
 
-def _read(text: str) -> tuple[list[Heading], list[Fence]]:
-    """The headings and the fenced code blocks of a Markdown file's body, each in order."""
+def _read(text: str) -> tuple[list[Heading], list[Fence], list[tuple[int, str]]]:
+    """The headings, the fenced code blocks and the prose lines of a Markdown file's
+    body, each in order."""
     lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     found: list[Heading] = []
     blocks: list[Fence] = []
+    shown: list[tuple[int, str]] = []
     fence: tuple[str, int] | None = None  # the open fence's character and length
     opened: tuple[str, int] = ("", 0)  # the open fence's info string and line
     held: list[str] = []
@@ -292,13 +306,14 @@ def _read(text: str) -> tuple[list[Heading], list[Fence]]:
         if comment is not None:
             in_comment = _COMMENT_END not in comment.group(1)
             continue
+        shown.append((index + 1, line))
         atx = _ATX.match(line)
         if atx is not None:
             raw = (atx.group(2) or "").strip()
             found.append(Heading(len(atx.group(1)), _CLOSING.sub("", raw).strip(), index + 1))
     if fence is not None:  # a fence never closed runs to the end of the file
         blocks.append(Fence(opened[0], opened[1], tuple(held)))
-    return found, blocks
+    return found, blocks, shown
 
 
 def _alternative(fence: Fence) -> Diagram:

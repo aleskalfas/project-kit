@@ -41,9 +41,9 @@ pkit:
 
 **Other actors:**
 
-- **Operator** (`ACT-operator`): is asked before `pkit connections providers set` writes in a repository other than the session's own, so no such write happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before `pkit connections providers set` writes in a repository other than the session's own, so no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-023 or UC-016:** Two or more installed [capabilities](../../../glossary.md#term-capability--capability) provide one [role](../../../glossary.md#term-role--role). So the role has no provider until the [project](../../../glossary.md#term-project--project) selects one ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
+**Preconditions:** **From [UC-023](UC-023-add-or-remove-capability.md) or [UC-016](../010-develop/UC-016-keep-capability.md):** Two or more installed [capabilities](../../../glossary.md#term-capability--capability) provide one [role](../../../glossary.md#term-role--role). So the role has no provider until the [project](../../../glossary.md#term-project--project) selects one ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
 
 **Assumptions:** None.
 
@@ -53,7 +53,7 @@ pkit:
 
 1. The adopter runs `pkit status`. For the [role](../../../glossary.md#term-role--role), the [system](../../../glossary.md#term-system--system) prints `<role> — conflict: <providers> provide it and none is selected`, then `fix: pkit connections providers set <role> <capability>` for each provider.
 2. The adopter runs `pkit connections providers set <role> <capability>`.
-3. At its entry, before it reads anything, the system checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+3. At its entry, before it reads anything, the system checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit connections providers set` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.

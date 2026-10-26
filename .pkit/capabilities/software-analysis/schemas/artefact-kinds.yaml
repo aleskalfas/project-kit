@@ -106,7 +106,7 @@ kinds:
         text: Other actors
         allows-none: true
         hint: Each other actor who takes part, and what this use case must protect for them. Write `None.` when there is none.
-        example: "**Auditor** (`ACT-auditor`): each export is logged with who made it."
+        example: "**Auditor** (ACT-auditor): each export is logged with who made it."
       - id: preconditions
         type: label
         text: Preconditions

@@ -47,7 +47,7 @@ pkit:
 - The `software-engineer` agent keeps to its definition. Nothing at run time stops an agent writing an answer the change does not owe ([COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - The developer, or another agent the developer directs, writes each answer the developer accepted, as `core:UC-002` describes (COR-050 point 3 and core rule 20).
 
-**Trigger:** While making a change, as UC-001 describes, the `software-engineer` agent finds an answer the change check did not ask of the change.
+**Trigger:** While making a change, as [UC-001](UC-001-build-under-conventions.md) describes, the `software-engineer` agent finds an answer the change check did not ask of the change.
 
 **Main path:**
 
@@ -59,7 +59,7 @@ pkit:
 3. The agent names each in its hand-off, for the developer, or the delegate a person named, to decide (`software-engineer.md`).
 4. The developer is shown each answer's words, and accepts them or declines the answer, as `core:UC-002` describes in its variant 5c (COR-050 point 3).
 5. Each answer the developer accepted is written with those words, by the developer or by another agent the developer directs.
-6. The `docs-reviewer` reviews the pull request, as UC-080 describes. It checks each answer the change check flags "not asked for by this change", whoever decided it ([COR-064 point 4](../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)). It names each in an `[advisory]` finding too, since it cannot tell who decided it ([software-engineering DEC-002 point 1](../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#1-the-panel)).
+6. The `docs-reviewer` reviews the pull request, as [UC-080](UC-080-check-answers.md) describes. It checks each answer the change check flags "not asked for by this change", whoever decided it ([COR-064 point 4](../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)). It names each in an `[advisory]` finding too, since it cannot tell who decided it ([software-engineering DEC-002 point 1](../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#1-the-panel)).
 7. The developer says in the pull request who decided each answer the reviewer named.
 
 **Variants:**

@@ -42,7 +42,7 @@ pkit:
 - **Developer** (`ACT-developer`): holds the draft in their [change](../../../glossary.md#term-change--change), and builds nothing on it until it is accepted.
 - **AI agent** (`ACT-ai-agent`): drafts a [decision record](../../../glossary.md#term-decision-record--decision-record) or a [rule](../../../glossary.md#term-rule--rule), and may propose its acceptance. Where the path involves a person, that person's review accepts the draft, never the agent ([COR-051 point 4](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate)).
 
-**Preconditions:** **From UC-037 or UC-038:** A [change](../../../glossary.md#term-change--change) holds a [decision record](../../../glossary.md#term-decision-record--decision-record) drafted as `proposed`, or a [rule](../../../glossary.md#term-rule--rule) with no status, so the draft binds nothing.
+**Preconditions:** **From [UC-037](UC-037-record-decision.md) or [UC-038](UC-038-author-rule-sets.md):** A [change](../../../glossary.md#term-change--change) holds a [decision record](../../../glossary.md#term-decision-record--decision-record) drafted as `proposed`, or a [rule](../../../glossary.md#term-rule--rule) with no status, so the draft binds nothing.
 
 **Assumptions:**
 
@@ -60,7 +60,7 @@ pkit:
 4. An accepted rule's entry carries its origin: the date, who decided and why, in the decider's words. Or its origin cites the [decision record](../../../glossary.md#term-decision-record--decision-record) that holds the reasoning ([COR-051 point 5](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
 5. The developer runs `pkit validate`. Its `rule-sets` pass fails on an accepted rule whose origin is incomplete, or cites a record that is not accepted (COR-051 point 5).
 6. From the commit that accepts it, the rule binds on each [artefact](../../../glossary.md#term-artefact--artefact) that a set of the [project](../../../glossary.md#term-project--project)'s own reaches, as `pkit rule-sets reach` answers there. From that commit, work may build on the accepted record (core rule 2).
-7. The merge authoriser authorises the merge of the [change](../../../glossary.md#term-change--change) that holds the acceptance (UC-034).
+7. The merge authoriser authorises the merge of the [change](../../../glossary.md#term-change--change) that holds the acceptance ([UC-034](UC-034-land-change.md)).
 
 **Variants:**
 
@@ -68,9 +68,9 @@ pkit:
 - **2a.** The draft is a [decision record](../../../glossary.md#term-decision-record--decision-record). No command shows where a record binds, so the merge authoriser reads its decision and its rationale. The path goes on at step 3.
 - **3a.** Accepting the rule brings each [artefact](../../../glossary.md#term-artefact--artefact) its sets reach under it. The change owns each break of the rule there, and the rule-set [reviewer](../../../glossary.md#term-reviewer--reviewer) withholds its approval for each settled one ([COR-060 point 1](../../../../../../.pkit/decisions/core/COR-060-brought-under-breaks.md#1-one-kind-whatever-brings-the-text-under-the-rule)). The change mends the text, or narrows a scope to leave a file out until it is mended ([COR-060 point 2](../../../../../../.pkit/decisions/core/COR-060-brought-under-breaks.md#2-no-exception-of-its-own)).
 - **3b.** A set of the [project](../../../glossary.md#term-project--project)'s own inherits the rule's set. Accepting the rule needs a new major of that set. Each pin on the old major then holds back every rule of the set ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). [Validation](../../../glossary.md#term-validation--validation) fails on each such pin until the project reviews the new major and updates the pin.
-- **3c.** The merge authoriser approved the record's addition and its acceptance together, as UC-037 variant 9a says. The record lands `accepted` in the commit that adds it.
+- **3c.** The merge authoriser approved the record's addition and its acceptance together, as [UC-037](UC-037-record-decision.md) variant 9a says. The record lands `accepted` in the commit that adds it.
 - **5a.** The rule's origin cites a decision record that is still proposed. Validation fails, naming the rule. The cited record is accepted first, through this same use case, and the path rejoins at step 5.
-- **7a.** The merge authoriser works alone, and commits the acceptance straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as UC-034 variant 1a says. No [pull request](../../../glossary.md#term-pull-request--pull-request) carries it.
+- **7a.** The merge authoriser works alone, and commits the acceptance straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [UC-034](UC-034-land-change.md) variant 1a says. No [pull request](../../../glossary.md#term-pull-request--pull-request) carries it.
 
 **Postconditions:** The record or the [rule](../../../glossary.md#term-rule--rule) is accepted, through the merge authoriser's review. An accepted rule carries a complete origin, and binds where a set of the [project](../../../glossary.md#term-project--project)'s own reaches it.
 
@@ -79,4 +79,4 @@ pkit:
 - A proposed [rule](../../../glossary.md#term-rule--rule) binds nothing, whatever inherits or cites it ([COR-051 point 4](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate) and `rule_sets.py`).
 - [Validation](../../../glossary.md#term-validation--validation) fails on an accepted rule whose origin is incomplete, or cites a record that is not accepted ([COR-051 point 5](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
 - What `pkit rule-sets reach --preview` answers never reaches validation or a gate (`cli.py`).
-- `pkit rule-sets reach` writes nothing (REQ-005).
+- `pkit rule-sets reach` writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)).

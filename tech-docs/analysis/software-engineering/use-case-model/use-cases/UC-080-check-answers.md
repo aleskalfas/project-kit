@@ -41,7 +41,7 @@ pkit:
 **Other actors:**
 
 - **Developer** (`core:ACT-developer`): the person whose pull request it is. They, or the agent making the change for them, mend each answer a `[block]` finding names.
-- **AI agent** (`core:ACT-ai-agent`): the code-review panel's `docs-reviewer`, which checks the answers and gives a verdict. The reviewer writes no answer, and changes nothing it reviews (core:REQ-021). The agent that wrote the answers, such as the `software-engineer`, never reviews them ([COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **AI agent** (`core:ACT-ai-agent`): the code-review panel's `docs-reviewer`, which checks the answers and gives a verdict. The reviewer writes no answer, and changes nothing it reviews ([core:REQ-021](../../../core/requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)). The agent that wrote the answers, such as the `software-engineer`, never reviews them ([COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 
 **Preconditions:** None.
 
@@ -80,7 +80,7 @@ pkit:
 > **Not built yet:** the reviewer starts from a pull request's number, and requests changes where it cannot fetch one. COR-050 point 3 decides that the reviewer checks a direct commit's answers before the commit, and #1966 tracks it.
 
 - **2a.** The list says `none`, or the check reports itself dormant in the project. Nothing is left to check, and the path goes on at step 7.
-- **2b.** The list flags as "not asked for by this change" an answer no change owes, which the developer or the delegate decided, as UC-081 describes:
+- **2b.** The list flags as "not asked for by this change" an answer no change owes, which the developer or the delegate decided, as [UC-081](UC-081-decide-unasked-answers.md) describes:
   - an answer on an artefact the check asked nothing about
   - a reason for having no anchors
   - a revisit entry the check did not ask for
@@ -103,5 +103,5 @@ pkit:
 
 - An answer that does not hold is a `[block]` finding, whatever the project's conventions say ([software-engineering DEC-002 point 1](../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#1-the-panel) and `docs-reviewer.md`).
 - A change check the reviewer cannot run is a `[block]` finding, never an approval (`docs-reviewer.md`).
-- The reviewer writes no answer, and changes nothing it reviews (core:REQ-021).
+- The reviewer writes no answer, and changes nothing it reviews ([core:REQ-021](../../../core/requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)).
 - An answer no change owes that does not hold is a `[block]` finding, whoever decided it (software-engineering DEC-002 point 1 and [COR-064 point 4](../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)).

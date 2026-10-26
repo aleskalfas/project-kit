@@ -51,9 +51,9 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`core:ACT-ai-agent`): may revise the [artefacts](../../../core/glossary.md#term-artefact--artefact) and draft the [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record) for the developer, through the `analysis-author` [skill](../../../core/glossary.md#term-skill--skill). The outcomes stay the developer's (variant 6b).
-- **Operator** (`core:ACT-operator`): is asked before `pkit analysis new` or `pkit analysis link` writes in a repository other than the session's own, so no such write happens silently (core:REQ-012).
+- **Operator** (`core:ACT-operator`): is asked before `pkit analysis new` or `pkit analysis link` writes in a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-070:** The [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record)'s kind has its parts chosen.
+**Preconditions:** **From [UC-070](UC-070-choose-parts.md):** The [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record)'s kind has its parts chosen.
 
 **Assumptions:**
 
@@ -72,13 +72,13 @@ pkit:
 4. Where an accepted [decision record](../../../core/glossary.md#term-decision-record--decision-record) decides a step the code lacks until the change lands, the developer writes the step as that decision record decides. The step takes its box and its entry in `shortfalls`, naming that record and the issue that tracks building it (DEC-001 points [1](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#1-what-it-keeps-and-in-what-shape) and 5).
 5. The developer records each artefact's [answer](../../../core/glossary.md#term-answer--answer), `updated` where it changed, as `core:UC-002` describes.
 6. The developer runs `pkit analysis new revalidation <slug> --trigger planned`, naming the change, each artefact's `--outcome` and `--because`, each gap's `--gap`, and each design source's `--reviewed-against` ([DEC-001 point 6](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
-7. At its entry, before it writes, the [system](../../../core/glossary.md#term-system--system) checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
+7. At its entry, before it writes, the [system](../../../core/glossary.md#term-system--system) checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit analysis new` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-8. The system checks the request. Each artefact must be one the analysis holds, and each outcome must have its justification. Each regression and gap found must be named by a `--gap`, and each design source must have its form. The system writes the [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record) whole, as `revalidations/<date>-<slug>.md`, naming git's user as who performed it (REQ-052).
-9. The developer runs `pkit analysis validate`. The system holds the revalidation record to its schema and to its kind's [declared structure](../../glossary.md#term-declared-structure--declared-structure). It holds each box to its entry in `shortfalls`, whatever any [rule](../../../core/glossary.md#term-rule--rule)'s status (DEC-001 points 1 and 6, and REQ-053).
+8. The system checks the request. Each artefact must be one the analysis holds, and each outcome must have its justification. Each regression and gap found must be named by a `--gap`, and each design source must have its form. The system writes the [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record) whole, as `revalidations/<date>-<slug>.md`, naming git's user as who performed it ([REQ-052](../../requirements/functional/REQ-052-record-only-with-something-to-say.md)).
+9. The developer runs `pkit analysis validate`. The system holds the revalidation record to its schema and to its kind's [declared structure](../../glossary.md#term-declared-structure--declared-structure). It holds each box to its entry in `shortfalls`, whatever any [rule](../../../core/glossary.md#term-rule--rule)'s status (DEC-001 points 1 and 6, and [REQ-053](../../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)).
 10. The developer runs `pkit analysis check-pointers`. The system places each commit a design source names on the default branch, finds each held, and passes (DEC-001 point 6).
 11. The developer runs `pkit analysis check-numbers`. The system finds no step or variant of a revised use case renumbered or removed, where the append-only rule binds, and passes ([DEC-001 point 3](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#3-identifiers)).
 12. The developer commits the revalidation record in the same change as the answers on the artefacts it covers.
@@ -106,4 +106,4 @@ pkit:
 - A refused [stamp](../../../core/glossary.md#term-stamp--stamp) leaves every file as it was (`stamp.py`).
 - A planned [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record) never lacks its [design sources](../../glossary.md#term-design-source--design-source), and one of any other trigger names none ([DEC-001 point 6](../../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#6-records-only-when-there-is-something-to-say)).
 - A commit that `pkit analysis check-pointers` cannot locate is reported as unknown, never as a failure (DEC-001 point 6).
-- `pkit analysis check-pointers` and `pkit analysis check-numbers` are queries, which edit no file of the [project](../../../core/glossary.md#term-project--project) (core:REQ-005).
+- `pkit analysis check-pointers` and `pkit analysis check-numbers` are queries, which edit no file of the [project](../../../core/glossary.md#term-project--project) ([core:REQ-005](../../../core/requirements/quality/REQ-005-reading-writes-nothing.md)).

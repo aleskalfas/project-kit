@@ -61,14 +61,14 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): opens the [release](../../../glossary.md#term-release--release) [pull request](../../../glossary.md#term-pull-request--pull-request). Once the release pull request lands, the pipeline tags the release commit, with no person there to confirm the push. No step of the CI pipeline's workflows merges a release pull request, so someone decides that each release lands (`release-pr.yml`).
-- **Operator** (`ACT-operator`): is asked before `pkit release merge` or `pkit release apply` changes a repository other than the session's own. So no such write happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before `pkit release merge` or `pkit release apply` changes a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
-- **From UC-014:** The [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository) runs the [system](../../../glossary.md#term-system--system) as written, so its [release step](../../../glossary.md#term-release-step--release-step) runs the code it releases.
+- **From [UC-014](../010-develop/UC-014-develop-methodology.md):** The [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository) runs the [system](../../../glossary.md#term-system--system) as written, so its [release step](../../../glossary.md#term-release-step--release-step) runs the code it releases.
 - **From UC-008, or Environment:** The [default branch](../../../glossary.md#term-default-branch--default-branch) records the [backbone](../../../glossary.md#term-backbone--backbone)'s current [version](../../../glossary.md#term-version--version) in `.pkit/VERSION`. The last [release](../../../glossary.md#term-release--release) wrote it there, or, before the first release, the source repository held it ([PRJ-002 D3](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
-- **From UC-003:** Each [change](../../../glossary.md#term-change--change) the release carries declares, in [changesets](../../../glossary.md#term-changeset--changeset), what it means for the release of the backbone or of a [component](../../../glossary.md#term-component--component).
-- **From UC-034:** The changes the release carries landed on the default branch, so their changesets wait under `.changes/unreleased/`.
+- **From [UC-003](../030-change/UC-003-declare-changeset.md):** Each [change](../../../glossary.md#term-change--change) the release carries declares, in [changesets](../../../glossary.md#term-changeset--changeset), what it means for the release of the backbone or of a [component](../../../glossary.md#term-component--component).
+- **From [UC-034](../030-change/UC-034-land-change.md):** The changes the release carries landed on the default branch, so their changesets wait under `.changes/unreleased/`.
 
 **Assumptions:**
 
@@ -86,17 +86,17 @@ pkit:
    - the new backbone version in `.pkit/VERSION`, and as `backbone_version` and `completed_version` in the self-host `.pkit/manifest.yaml` ([PRJ-007](../../../../../../.pkit/decisions/project/PRJ-007-release-maintains-self-host-manifest.md))
    - each moving component's `version:` in its `package.yaml`
    - each component's `requires_backbone`, its upper bound widened to cover the new backbone's minor
-   - each floor and upper bound a changeset declares (UC-009)
+   - each floor and upper bound a changeset declares ([UC-009](UC-009-release-component.md))
    - an entry at the top of `CHANGELOG.md`, from the notes of the changesets of the backbone and of each moving component
 5. The system deletes the changesets it consumed.
 6. The CI pipeline commits `chore(release): v<version>`, pushes the branch and opens the release [pull request](../../../glossary.md#term-pull-request--pull-request). The pull request's body lists these:
    - the move of the backbone and of each component, with the floors and upper bounds declared for it
    - any warning on a [migration](../../../glossary.md#term-migration--migration)'s folder
    - the new changelog entry
-7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The changeset guard reads the release pull request's diff as only what `pkit release apply` writes, and exempts that diff from the surface check (UC-003).
+7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The changeset guard reads the release pull request's diff as only what `pkit release apply` writes, and exempts that diff from the surface check ([UC-003](../030-change/UC-003-declare-changeset.md)).
 8. The maintainer reviews the new versions and the changelog entry.
 9. The maintainer runs `pkit release merge <pr>`. The system checks that the pull request is a release pull request: a `release/` head branch under a `chore(release):` title.
-14. At its entry, before it reads the pull request, `pkit release merge` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012 and [ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes)).
+14. At its entry, before it reads the pull request, `pkit release merge` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md) and [ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes)).
 10. The system also checks that the release pull request is open, mergeable and green in every check it shows. The system lands the release pull request as one squash commit whose subject is the pull request's title, and deletes the head branch.
 11. On the push to the default branch, the CI pipeline runs `release-tag.yml`. That workflow finds no tag for the version in `.pkit/VERSION`, and runs `pkit version tag --push`.
 12. The system tags the release commit `v<version>` with an annotated tag, and pushes the tag ([PRJ-004](../../../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)). The CI pipeline runs in no [harness](../../../glossary.md#term-harness--harness) session, so the cross-repository guard has nothing to compare with and does not fire. Nobody is asked to confirm the push (ADR-061 point 6).
@@ -111,7 +111,7 @@ pkit:
 > **Not built yet:** `pkit release apply` runs the check only when `--tag --push` asks it to push a tag. Without them, it writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 - **1b.** On the path of 1a, no pending [changeset](../../../glossary.md#term-changeset--changeset) moves a [version](../../../glossary.md#term-version--version). `pkit release apply` asks nothing, writes no version and no changelog entry, and deletes the pending `none` changesets. The use case ends.
-- **1c.** On the path of 1a, the maintainer first passes `--dry-run` to `pkit release apply`, to see each edit it would make. The [system](../../../glossary.md#term-system--system) names each edit, and writes nothing (REQ-009).
+- **1c.** On the path of 1a, the maintainer first passes `--dry-run` to `pkit release apply`, to see each edit it would make. The [system](../../../glossary.md#term-system--system) names each edit, and writes nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)).
 
 > [!WARNING]
 > **Not built yet:** `pkit release apply` takes no `--dry-run`, and refuses the flag. [COR-004](../../../../../../.pkit/decisions/core/COR-004-cli-surface.md) decides that it offers one, and #1884 tracks it.
@@ -120,7 +120,7 @@ pkit:
 - **2b.** A changeset names a [component](../../../glossary.md#term-component--component) the tree does not hold. The system refuses the release step, naming the changeset and the components it knows. `release-pr.yml` opens no pull request, and the use case ends.
 - **2c.** A changeset declares a floor or an upper bound the release step cannot write. The system refuses before writing anything, such as with `cannot raise a requires_backbone floor:` and the changeset's problem. The use case ends.
 - **2d.** The release step would leave a [capability](../../../glossary.md#term-capability--capability) whose [range](../../../glossary.md#term-range--range) excludes the version of a capability it depends on. The system refuses before writing anything, listing each such range, and the use case ends ([PRJ-002 D4](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
-- **2e.** A [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration)'s folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning (UC-010).
+- **2e.** A [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration)'s folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning ([UC-010](../030-change/UC-010-migrate-backbone-change.md)).
 - **3a.** A release pull request is already open, on a `release/` branch. `release-pr.yml` opens no second one, and the use case ends.
 - **7a.** The [project](../../../glossary.md#term-project--project) gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
 - **9a.** The pull request is no release pull request. The system refuses it, saying that `pkit release merge` merges only release pull requests. Where the pull request's head branch is no `release/` branch, the refusal names `pkit pull-request land`, the backbone's own command for landing any other pull request. The use case ends.
@@ -145,4 +145,4 @@ pkit:
 - A [version](../../../glossary.md#term-version--version) is tagged once. `release-tag.yml` tags only a version with no tag, locally or on the remote, and `pkit version tag` refuses a tag the clone already holds (`versioning.py`).
 - A GitHub release carries notes only, never a file to download ([PRJ-004](../../../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 - A run of `release-tag.yml` never moves `latest` back to an older release. Its push is leased on the value it read (`scripts/latest_tag.py`).
-- In a repository other than the session's own, `pkit release merge` changes nothing without the operator's yes or `--allow-foreign-repo` (REQ-012 and `session_guard.py`).
+- In a repository other than the session's own, `pkit release merge` changes nothing without the operator's yes or `--allow-foreign-repo` ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md) and `session_guard.py`).

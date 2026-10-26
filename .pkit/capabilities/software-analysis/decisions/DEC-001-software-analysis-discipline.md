@@ -23,7 +23,7 @@ The core layer supplies the machinery this needs:
 - artefact types, which name what an artefact is, so a rule set can select it (COR-056);
 - connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
-This record decides what the capability keeps, in what shape, and where, one analysis per component. It also decides how an analysis stays true, in what order it is built, and how it meets the project's decisions and architecture.
+This record decides what the capability keeps, in what shape, and where, one analysis per component. It also decides how an analysis stays true, in what order it is built, and how it meets the project's decisions and architecture. And it decides how the text of one artefact leads a reader to another.
 
 ## Decision
 
@@ -149,6 +149,47 @@ Use cases and journeys are numbered within the repository (`UC-NNN`, `JRN-NNN`),
 
   Inside a use case, steps are numbered and variants are lettered after the step they branch from. Both are append-only too, because journeys and evidence cite them. A check compares each use case with the default branch's, and reports a step or a variant renumbered or removed.
 - **Parallel work.** When two lines of work number a new artefact the same, the first to reach the default branch keeps the number. A check that compares the branch with its base reports the collision, and the other renumbers before merging. A new number is given past what the default branch holds, and past any base the stamp is named, while a collision is judged at the merge at hand — against the base of that comparison, an integration branch included (refinement per COR-054, point 3).
+
+### 14. A mention of an artefact by its id links to it
+
+Where an artefact's text names an artefact by its id, the id links to that artefact, so a reader reaches it in one click. A journey names its use cases so, in its steps and its seams. A use case names the use cases its preconditions rely on, and a requirement those it refines ([software-analysis:DEC-002-analysis-requirements] point 6). This point stands beside point 3, which gives the ids it links.
+
+**What a mention is.** An artefact's id, whole, in running text, such as `UC-082`, `JRN-004`, `REQ-012`, `ACT-developer`, `VIEW-orders-and-payments` or `TERM-change`.
+- **Whole.** No letter, digit, hyphen, slash, underscore or `#` joins it on either side. A full stop after it joins it where a letter or a digit follows, as in a file's name. So `UC-082-setup.md` holds no mention of `UC-082`, and `TERM-change-check` none of `TERM-change`.
+- **Its spelling.** A number written with other zeros names the same artefact, as `UC-82` names `UC-082`.
+- **Its analysis.** An id alone names an artefact of the analysis that holds the text. One written with an analysis's component, such as `core:UC-021`, names an artefact of an analysis the text's analysis builds on (point 2). It does so where the repository holds that analysis. Any other names nothing and takes no link, such as another analysis's id written alone.
+- **In force or withdrawn.** An id names one artefact for good (point 3), so a withdrawn artefact's id names it too, and links to its file.
+- **A term's id** links as any id does, and is no mention of the term. So it counts neither as the term's first mention nor as a use of it ([software-analysis:DEC-004-domain-model-views] point 7).
+- **Code keeps it plain.** An id in a code span or in fenced code is no mention. A writer who quotes an id the analysis does not mean, such as another project's `UC-001`, writes it as code.
+
+**What it links to.** The artefact's file, by a path from the folder of the file that holds the mention. A term's id links to the term's entry in its glossary, by the anchor its heading gives it (DEC-004 point 7). The link is around the mention as written, its analysis's name included, such as `[core:UC-021](…)`.
+
+**Where.** In every analysis, whether or not it keeps a domain model. The links lie in the body of each artefact in force.
+- **Once in each section:** only the first mention of each artefact in a section takes a link. A section is a glossary entry below its heading, a view's opening or one of its sections, or a part of any other kind's body. A part opens at each heading and each label its kind declares, a project's own included, and runs to the next.
+- **Never its own.** An artefact's mention of its own id takes no link.
+- **What is skipped:** fenced code, code spans, headings, comments, links, other markup, and the lines that link a term and its section. A bold label is read, since it may name an artefact. A seam's `**Needs from UC-064 (outside this journey):**` and a precondition's `**From UC-003:**` do, and their ids take links inside the bold.
+- **What stays plain:** front matter, the glossary's head, a use case's or a journey's goal, and an actor's first sentence where it gives the actor's summary. A goal states a need, and the others are data or say data again, as for the links to terms (DEC-004 point 7).
+- **A journey's step line** links its use case's id, and its title stays plain. Each step line's link counts first in its part, so a step line links its id whatever stands before it. Another mention there of a use case a step line names takes none.
+
+**What a check reads.** A check that holds a body's text to data, or to its text at another commit, reads an id's link as the id alone. Such are the forms of a journey's step lines and seams and of a precondition's producers (point 1), and the check that keeps steps append-only (point 3). So a linked id matches its data, as one written plain does.
+
+**Written by the command, held by the check.** Nobody writes these links by hand.
+- **The command,** `pkit analysis link`, writes them. It reads a body only to place its links, at the ids the text names (point 1). Each target is where the backbone's discovery finds the artefact's file.
+- **The stamp** links each id it writes, such as a journey's step lines, as the command would. It writes a new view's closing section the same way (DEC-004 point 7). So an id the stamp writes passes the check as written.
+- **The check** reports a link missing, one extra and one whose target is stale, and names the command. It holds them whatever any rule's status, as it holds the links to terms. An id that names nothing takes no link, and the check says nothing of it.
+- **A link written by hand** is held as the command's where its words are an id and its target a file's path. So it is extra where the command writes none. The writer's own are a link to a web address, and one to a heading other than a term's entry. Nor do the lines that link a term and its section hold a link of an id (DEC-004 point 7).
+
+**A copy for navigation.** Each link copies where its artefact lies, and the check holds it equal, so it never drifts.
+- **No anchor.** An artefact rests on what its anchors name (point 4). A link only leads a reader to what the text names already, and rests on nothing.
+- **No stored reverse.** A link follows a mention its writer made, whichever way it runs. So a use case that names a journey passing through it stores no reverse of the journey's anchor (point 11).
+- **A derived link.** Each place of the capability declares these links' form (COR-050 point 5). The form is a path to a file named by an artefact's id, or to a view's file by its number, with no heading named. A term's id takes the form of a link to a term. Friction reads each such link as its words alone, so a change that only adds, removes or re-points one asks no answer.
+
+**Its cost.**
+- **A moved file.** A use case moved to another area, or a view renumbered, moves every link to it. The change that moves it runs the command before validation passes, in each analysis that names it. Two branches may conflict on a moved link, and the command run again on the merged text mends it.
+- **Every artefact at once.** The links reach every analysis, and every artefact that names another. So the first run changes most of them, and validation fails until it runs. The cost was weighed where no release had shipped the capability, so no project held an analysis these links could fail.
+- **What the reviewer reads.** Friction sets the links aside, so a run asks no answer. Each artefact it changes is altered all the same, so the rule-set reviewer reads each in that change (COR-057 point 1).
+- **A link of the form written by hand** is set aside too, under words of its own. The form reads a link's target alone, so a writer's link to an artefact's file by its title can be re-pointed unseen. Its words still count.
+- **An id a writer adds** takes its link only once the command runs, so validation fails until then. The authoring skill runs the command after any artefact is written.
 
 ### 4. Every artefact says what makes it true
 
@@ -365,7 +406,7 @@ Where the analysis's prose cites a decision record, one of its points or a rule,
 - **What that costs.** A project that holds two terms of one name fails validation until it renames one. Its analysis already breaks the rule on domain concepts, since each name means the other term's concept too. The cost was weighed where no release had shipped the capability, and no analysis it held had such a pair ([project-kit#1841](https://github.com/aleskalfas/project-kit/issues/1841)).
 - **What two analyses built on pay.** Two analyses that build on none of each other share one set of names once a third builds on both. So a change to one of them that takes a name the other holds is refused, though neither reads the other.
 
-**What listing them costs.** A changed term or actor of another analysis flags no artefact that uses it. Only a changed record behind it does. Where an analysis keeps a domain model, a term renamed in an analysis it builds on in the same repository moves its links. Friction reads each such link as its words alone, so the move flags nothing that anchors them (refinement per [software-analysis:DEC-004-domain-model-views]).
+**What listing them costs.** A changed term or actor of another analysis flags no artefact that uses it. Only a changed record behind it does. Where an analysis keeps a domain model, a term renamed in an analysis it builds on in the same repository moves its links. A file moved in such an analysis moves the links of its id, in every analysis that names it (point 14). Friction reads each such link as its words alone, so the move flags nothing that anchors them (refinement per [software-analysis:DEC-004-domain-model-views]).
 - **The area named.** The head names the area it builds on by its folder, which carries no anchor. So a re-cut of those areas leaves the head stale, with no signal, until a reviewer reads it.
 - **The needs.** The needs a head states beside a listed actor carry no anchors and no revalidation. Friction reaches them only through the use cases whose goals state them.
 - **A requirement named by id.** A changed requirement of another analysis flags nothing in the analysis that assumes it. What meets it is computed within its own analysis alone (DEC-002 point 7).
@@ -449,6 +490,17 @@ The capability's maintainer decided the order of the concepts, the requirements,
 **Why ids are unique across a repository's analyses.** Three readers take an id across the repository. The core's lookup of an artefact anchor reads an id across the repository. Work tracking's use-case point receives every use case under its id (point 8). project-management reads that id as `UC-` and digits (project-management DEC-054 point 1). With one artefact per id, none of them changes.
 
 **Why a component leaving keeps withdrawn stubs.** Issues and records cite its artefacts by id, and an id names one artefact for good. Taking the folder away whole would delete cited artefacts, and would let their numbers be given again. A withdrawn stub keeps each id taken and each citation true, and adds no concept.
+
+**Why an id links to the artefact it names.** A journey leads a reader through its use cases, one step at a time, and names each by its id. Unlinked, each id sends the reader to search the folders for its file. The capability's maintainer found it on 26 October, reviewing a journey of project-management's analysis that linked none of its use cases ([project-kit#2109](https://github.com/aleskalfas/project-kit/issues/2109)).
+- **Why every analysis.** The links lead from one artefact to another, so they need no domain model. They change every artefact at once, the cost that keeps the links to terms to an analysis with views (DEC-004 point 7). The capability takes that cost while no release has shipped it.
+- **Why inside a label.** A seam's label names the use case its step needs, and a precondition's label names its producers. That is where a reader looks for the artefact, so the id there takes the link.
+- **Why a step line links its id.** A term's link on a step line would set the text apart from the data it says again (DEC-004 point 7). An id's link leads to the use case the line names, which is that data. The form reads the link as its id, one reading of a link's words alone.
+- **Why each step line links.** A reader looks for a step's use case at its line, whatever an earlier hand-over names. A use case a journey takes twice is linked at each of its steps.
+- **Why an id alone names its own analysis's artefact.** A reference across analyses names the other analysis, and runs only to an analysis this one builds on (point 2). An id of another analysis written alone breaks the first, and may break the second.
+- **Why a withdrawn artefact's id links.** An id names one artefact for good (point 3). The link leads to it as it was withdrawn, which a mention written before needs.
+- **Why a code span, and no escape.** The links to terms need an escape, since a word can have another sense (DEC-004 point 7). An id has no other sense in its repository, but a text may quote another project's id. A code span marks such text already, so it serves.
+- **Why a term's id is no mention.** An id names the term as an artefact, such as its entry, and states nothing of its concept. So it counts as no use of the concept, and the concept's first mention takes its own link.
+- **Why a command writes them, and friction sets them aside.** Links written by hand go missing and stale, unseen. A moved link states nothing new, so the revalidation it would ask could only say that (DEC-004 point 7).
 
 **Why a person decides stale versus regressed.** The distinction is intent: was the change meant? An agent can propose it from the change's context, but when intent is unclear, only a person knows. Getting it wrong either rewrites the truth to match a bug, or reports a defect for an intended change.
 
@@ -565,6 +617,20 @@ So the direction from the analysis treats a record that ships as it treats the p
 - **Freeing the ids of every artefact deleted before a given commit.** Rejected. It frees far more than the artefacts the project means, including any deleted while something cited them.
 - **A marker in the history, such as a line in a commit message.** Rejected. It cannot be added to a commit already merged, and it is not reviewed as an act of its own.
 - **Inferring which deletions free their ids.** Rejected. Deleting an artefact would become a legitimate way to free its id, the deletion the append-only rule exists to prevent.
+- **Ids linked by hand.** Rejected. Links go missing and stale, and nothing sees it.
+- **Only a journey's steps and seams linked.** Not taken. A use case's and a requirement's ids lead a reader on as a journey's do.
+- **The links of ids only where an analysis keeps a domain model.** Rejected. They lead between artefacts, so they need no view.
+- **A setting that asks for them, as DEC-004 point 7 names for the links to terms.** Not taken. A reader of any analysis gains them, and no release has shipped the capability yet.
+- **A step line left plain of an id's link too.** Not taken. The step line is where a reader looks for the use case, and the form reads the link as its id.
+- **Only the first step line of a use case linked, as any first mention.** Not taken. A reader at a later step would find its use case unlinked.
+- **A bold label skipped, as the links to terms skip it.** Not taken. A seam and a precondition name the use case they rely on in their label.
+- **Another analysis's id linked where it is written alone.** Rejected. A reference across analyses names its analysis (point 2).
+- **A warning on an id that names nothing.** Not taken yet. A quoted id of another project would be warned of too. The trigger to weigh it is a bare id of another analysis that a review misses (COR-007).
+- **Every mention of an id linked.** Rejected. The text grows hard to read, and the first link already leads there.
+- **An escape comment for one mention of an id.** Not taken. A code span keeps such text plain already.
+- **An id in a code span linked.** Not taken. Code is what a writer keeps plain, and a link inside code does not render.
+- **A link to a step or a variant cited with its use case, such as `UC-037 variant 1d`.** Not taken. A step or a variant has no anchor of its own, so the link would lead to the use case anyway.
+- **A term's id counted as its first mention.** Not taken. An id names the term as an artefact, and states nothing of its concept.
 - **Architecture views inside the analysis, beside the use cases or as a kind of their own.** Rejected. The solution would sit among the requirements, with two owners and two paces in one place.
 - **Anchors both ways between an analysis artefact and a decision.** Rejected. Each such pair would be a cycle, which has no order of revalidation.
 - **The solution always pointing at the analysis, a decision anchoring the obligation it answers.** Rejected. A record that ships could carry no such anchor, and a change to a decision would never reach the analysis that rests on it.
@@ -606,6 +672,7 @@ So the direction from the analysis treats a record that ships as it treats the p
 - **An actor's `summary`** follows this record into the capability too (point 1). The actor kind's schema gains the field, its structure the field's hint and a form on its opening that holds the two equal. Its template gains the field, which the stamp writes holding its hint.
 - **One name, one concept** follows this record into the capability too. Validation refuses a name two terms share, within an analysis and across those it builds on, whatever any rule's status, as it refuses a shared id (points 1 and 2). A judgement rule of `SAN` holds the rest. The term kind's schema gains `noun-forms` and `other-senses`.
 - **The links of citations** follow this record into the capability (point 13). `pkit analysis link` writes them in every analysis, and the check holds them whatever any rule's status. The backbone's `pkit refs lookup` gains a record's points and a rule's heading, each with GitHub's anchor, says whether the project receives each file, and answers several citations in one call. The capability's README lists the forms it links.
+- **The links of ids** follow this record into the capability (point 14). `pkit analysis link` writes them in every analysis, the stamp in a new artefact, and the check holds them whatever any rule's status. The forms of a journey's steps and a precondition's producers, and the append-only check, read an id's link as its id. Each place declares the links' form, and the shipped example of a use case's other actors names it plain.
 - **Projects** keep their analyses under their internal documentation root, one per component that keeps one. They choose each kind's parts when they adopt the capability, and build each analysis from its concepts up (point 12). They keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
 - **A project's use cases** anchor the records they rest on or are answered by, and the views that realise them. The project's records and views carry no anchor on the analysis (point 11).
 - **A change to a kind's structure** carries the migration of the live artefacts with it, and settles how a part it adds is answered and what friction the migration raises on their dependants.

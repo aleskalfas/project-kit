@@ -64,9 +64,9 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`core:ACT-ai-agent`): the `project-manager` agent, which drafts the [batch plan](../../glossary.md#term-batch-plan--batch-plan), has it reviewed and files it. It files nothing before the planner approves the plan ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
-- **Operator** (`core:ACT-operator`): is asked before a filing changes a repository other than the session's own, so no such write happens silently (core:REQ-012).
+- **Operator** (`core:ACT-operator`): is asked before a filing changes a repository other than the session's own, so no such write happens silently ([core:REQ-012](../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From UC-064:** The [project](../../../core/glossary.md#term-project--project) declares the [workstreams](../../glossary.md#term-workstream--workstream) its work falls into ([DEC-012](../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+**Preconditions:** **From [UC-064](UC-064-define-milestones-and-workstreams.md):** The [project](../../../core/glossary.md#term-project--project) declares the [workstreams](../../glossary.md#term-workstream--workstream) its work falls into ([DEC-012](../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 **Assumptions:**
 
