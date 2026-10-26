@@ -54,7 +54,7 @@ COR-025's scope test picks the kind, its three tests in order:
 
 Read `.pkit/decisions/README.md`'s **Writing a record** section. Which disciplines bind depends on the kind:
 
-- **Every record**, whatever its kind: lead with meaning, principles, not inventory, and the role named rather than its current holder (COR-046). It states the present, with no log of its revisions.
+- **Every record**, whatever its kind: lead with meaning, principles, not inventory, the role named rather than its current holder (COR-046), and defined terms. It states the present, with no log of its revisions.
 - **An ADR** adds architectural fit. Its readers are the project's architects, maintainers and on-call engineers, not the methodology's.
 - **A COR**, the maintainers' case, adds the axiom discipline and project-neutrality.
 
@@ -102,6 +102,7 @@ Before showing the draft, walk it against each discipline that binds its kind (s
 - *Lead with meaning* (every record): is the title short and declarative? Does a plain-language summary open the record so a reader grasps the decision in under a minute before the rigor? Do any sentences pile up cross-references and bury their own meaning? If the decision isn't recoverable on a first read, revise the on-ramp before showing it.
 - *Principles, not inventory* (every record): does the body capture rules among alternatives, or has it slipped into enumerating state? Tag candidate content as *rule* or *state*; state gets a one-line cross-reference, not enumeration.
 - *The role, not its current holder* (every record): would a sentence become false if a path, module or function it names were renamed, with no decision changed? Then it meant the role: name the part instead, sharply enough that only one thing could play it.
+- *Defined terms* (every record): does every term have a definition in the project's accepted records or the methodology's, or is it generic English or a tool the record names? Define a new term where it is first used.
 - *Architectural fit* (ADR): does the record answer "what did we build / why these boundaries / why this technology"? If it answers "how do we work / what's our process", it belongs in PRJ.
 - *Axiom* (COR): every term used has a prior definition in an earlier core record, is generic English/Markdown/filesystem vocabulary, or names a known external tool.
 - *Project-neutrality* (COR): would the record make sense, and apply, read in any project that adopts the methodology? If it says how the methodology's own source project is built, it belongs in that project's PRJ records.

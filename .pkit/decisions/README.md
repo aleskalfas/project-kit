@@ -292,7 +292,7 @@ Records in `core/` are managed by project-kit. **Do not edit them** — they are
 
 ## Writing a record
 
-A record is read long after it is written, by people and agents who were not there when it was decided. The disciplines below keep its decision readable and durable. Every record follows the first three, and states the present with no log of its revisions ("Refining an accepted record" above). An architecture record adds a fourth discipline, and a core record two more.
+A record is read long after it is written, by people and agents who were not there when it was decided. The disciplines below keep its decision readable and durable. Every record follows the first four, and states the present with no log of its revisions ("Refining an accepted record" above). An architecture record adds a fourth discipline, and a core record two more.
 
 ### Every record
 
@@ -300,6 +300,7 @@ A record is read long after it is written, by people and agents who were not the
 - **Principles, not inventory.** A record captures a rule chosen among viable alternatives, with the reason that tells them apart. It lists no current state, such as paths, commands, files or the present members of a set. That state lives in a reference document the record points at, such as an area's README, so new content never forces an edit to a decision, and a reader can tell the rule from its present members. Before drafting, tag each piece of content as a rule or as state, give state one cross-reference, not a list, and count an item between the two as state unless its reason is contested.
 - **Name the role, not its current holder.** Where a record means whatever plays a part, such as what owns a boundary or answers a question, it names the part, not the component that plays it today. Where the name is itself what the record decides, or belongs to something outside the project, the record names it plainly. Either way it describes the part sharply enough that only one thing could play it ([COR-046](core/COR-046-records-name-roles.md)).
 
+- **Defined terms.** A record uses only terms that the project's accepted records or the methodology's define, generic English, and the tools it names. A term it needs that no record defines, it defines where it first uses it, or it waits for the record that decides the term. A core record holds the stricter form below, the axiom discipline.
 ### An architecture record (ADR)
 
 - **Architectural fit.** An ADR records what the project built and why: a system boundary, a technology, an integration pattern, a key abstraction or a deployment topology. How the project works, its workflow, tooling and process, is a PRJ record's ([COR-025](core/COR-025-adr-decision-space.md), "Distinct from PRJ"). A decision that touches both takes its architectural side into an ADR, which cites a PRJ record for the rest.
