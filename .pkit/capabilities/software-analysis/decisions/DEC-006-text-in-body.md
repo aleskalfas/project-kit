@@ -1,7 +1,7 @@
 ---
 id: DEC-006
 title: An artefact's text lives in its body alone, and a fingerprint triggers a requirement's revisits
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
