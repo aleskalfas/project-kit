@@ -63,12 +63,13 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Protocol, cast
 
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
+from jsonschema.protocols import Validator
 from referencing import Registry, Resource
-from referencing.jsonschema import DRAFT202012
+from referencing.jsonschema import DRAFT202012, SchemaRegistry
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
@@ -233,11 +234,13 @@ def _shape_findings(config: Mapping[str, Any], schema: Mapping[str, Any]) -> lis
     Sorted by position, then message, so the order never depends on the
     validator's traversal.
     """
-    registry = Registry().with_resource(
+    empty: SchemaRegistry = Registry()
+    registry = empty.with_resource(
         uri=schema.get("$id", f"{CONFIG_SCHEMA_KIND}.schema.json"),
         resource=Resource.from_contents(schema, default_specification=DRAFT202012),
     )
-    validator = Draft202012Validator(schema, registry=registry)
+    # Typed by the protocol: the class's own `iter_errors` keeps an untyped overload.
+    validator = cast(Validator, Draft202012Validator(schema, registry=registry))
     findings: list[ConfigFinding] = []
     for error in validator.iter_errors(config):
         findings.extend(_render_schema_error(error))
@@ -251,7 +254,9 @@ def _render_schema_error(error: ValidationError) -> list[ConfigFinding]:
     if not unknown:
         return [ConfigFinding(pointer, Severity.ERROR, error.message)]
 
-    known = tuple((error.schema.get("properties") or {}).keys())
+    # An `additionalProperties` violation, the one `unknown_keys` reports, has an object schema.
+    properties: Mapping[str, Any] = cast("Mapping[str, Any]", error.schema).get("properties") or {}
+    known = tuple(properties.keys())
     findings: list[ConfigFinding] = []
     for key in unknown:
         key_pointer = f"{pointer}/{_pointer_token(key)}"
@@ -270,7 +275,7 @@ def _docs_findings(target_root: Path, docs: Any, flagged: frozenset[str]) -> lis
     if not isinstance(docs, Mapping):
         return []
     findings: list[ConfigFinding] = []
-    for audience, value in docs.items():
+    for audience, value in cast("Mapping[str, Any]", docs).items():
         pointer = f"/{DOCS_KEY}/{audience}"
         if pointer in flagged or not isinstance(value, str) or not value:
             continue  # the shape pass already reported it
@@ -462,13 +467,15 @@ def _records_read(definition: Path) -> frozenset[str]:
     if end is None:
         return frozenset()
     try:
-        data: Any = YAML(typ="safe").load("\n".join(lines[1:end]))
+        data = _safe_load("\n".join(lines[1:end]))
     except YAMLError:
         return frozenset()
     if not isinstance(data, Mapping):
         return frozenset()
     reads: Any = cast("Mapping[str, Any]", data).get("reads")
-    records: Any = reads.get("records") if isinstance(reads, Mapping) else None
+    records: Any = (
+        cast("Mapping[str, Any]", reads).get("records") if isinstance(reads, Mapping) else None
+    )
     if not isinstance(records, list):
         return frozenset()
     return frozenset(str(record) for record in cast("list[Any]", records))
@@ -504,10 +511,10 @@ def _connections_findings(
     resolved = functools.cache(lambda: wiring.shared_wiring(target_root))
     findings: list[ConfigFinding] = []
     for key in (PROVIDERS_KEY, SELECTIONS_KEY):
-        entries = connections.get(key)
+        entries = cast("Mapping[str, Any]", connections).get(key)
         if not isinstance(entries, Mapping):
             continue
-        for address, capability in entries.items():
+        for address, capability in cast("Mapping[str, Any]", entries).items():
             pointer = f"/{CONNECTIONS_KEY}/{key}/{_pointer_token(address)}"
             if pointer in flagged or not isinstance(capability, str) or not capability:
                 continue  # the shape pass already reported it
@@ -673,17 +680,30 @@ def _load_yaml(path: Path) -> tuple[Any, str | None]:
     except OSError as exc:
         return None, f"unreadable: {exc}."
     try:
-        return YAML(typ="safe").load(text), None
+        return _safe_load(text), None
     except YAMLError as exc:
         return None, f"does not parse as YAML: {str(exc).splitlines()[0]}"
+
+
+class _SafeLoader(Protocol):
+    """The part of ruamel.yaml's `YAML` this module calls, typed: the library leaves
+    `load`'s stream parameter untyped."""
+
+    def load(self, stream: str) -> object: ...
+
+
+def _safe_load(text: str) -> object:
+    """The YAML text as ruamel.yaml's safe loader reads it."""
+    loader = cast(_SafeLoader, YAML(typ="safe"))
+    return loader.load(text)
 
 
 def _string_keys(obj: Any) -> Any:
     """Every mapping key as text, recursively — JSON Schema and the renderer know only text keys."""
     if isinstance(obj, Mapping):
-        return {str(k): _string_keys(v) for k, v in obj.items()}
+        return {str(k): _string_keys(v) for k, v in cast("Mapping[object, object]", obj).items()}
     if isinstance(obj, list):
-        return [_string_keys(x) for x in obj]
+        return [_string_keys(x) for x in cast("list[object]", obj)]
     return obj
 
 
