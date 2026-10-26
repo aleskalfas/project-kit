@@ -4,6 +4,8 @@ title: Compose every pkit comment from structured data through one render seam
 status: proposed
 date: 2026-09-15
 author: Aleš Kalfas <kalfas.ales@gmail.com>
+waits-on:
+  issue: 795
 ---
 
 ## Summary
