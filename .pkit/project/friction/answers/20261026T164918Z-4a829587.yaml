@@ -1,0 +1,13 @@
+answers:
+  - artefact: .pkit/scratchpad/README.md
+    read:
+      - moved-f1e0965759a0.yaml
+    revalidated:
+      at: 2026-10-26T16:49:18Z
+      outcome: unchanged
+      unchanged-because: scratchpads.py now reads a reported note's issues through the backbone's one issue reader, github_issues.py, which pkit decisions proposed shares. The read is still live and pull-only, stores nothing, and gives state unknown offline, now within 30 seconds, so the README's account of the listing holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-scratchpad-note
+    revalidated:
+      at: 2026-10-26T16:49:26Z
+      outcome: unchanged
+      unchanged-because: scratchpads.py now reads a reported note's issues through the backbone's one issue reader, github_issues.py, as before live and storing nothing. A note's folders, its states and what it produces are as they were, so the term's definition and distinctions hold.
