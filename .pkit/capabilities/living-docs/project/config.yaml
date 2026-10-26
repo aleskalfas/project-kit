@@ -30,6 +30,7 @@ places:
   .pkit/adapters/claude-code/README.md: user
   .pkit/agents/README.md: user
   .pkit/capabilities/demo-recording/README.md: user
+  .pkit/capabilities/doc-examples/README.md: user
   .pkit/capabilities/evidence/README.md: user
   .pkit/capabilities/living-docs/README.md: user
   .pkit/capabilities/project-management/README.md: user

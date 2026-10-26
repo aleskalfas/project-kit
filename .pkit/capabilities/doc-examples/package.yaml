@@ -1,0 +1,32 @@
+schema_version: 1
+component:
+  kind: capability
+  name: doc-examples
+  version: 0.1.0
+description: Executed documentation checks — a page's console examples run as tests, so a change in behaviour fails wherever it comes from.
+requires_backbone: ">=1.149.0,<2.0.0"
+# The default pages are the documents of living-docs' page type (DEC-001 point
+# 3), so the range names living-docs itself. The dependency is optional: a
+# project that names the types of its pages needs no living-docs (COR-030).
+requires_capabilities:
+  - name: living-docs
+    version: ">=0.1.0,<1.0.0"
+    optional: true
+
+# The CLI holds only queries, which run nothing of the project's (DEC-001
+# point 11). The run itself, `scripts/run-examples.py`, is a program started by
+# its path and no command here (point 9).
+commands:
+  pages:
+    script: scripts/pages.py
+    help: "List the pages whose console examples the run reads (DEC-001 point 3): the documents of the types `.pkit/capabilities/doc-examples/project/config.yaml` names, or of living-docs' page type when it names none, read from `pkit friction artefacts`. `--json` prints the pages document the run reads, with the repository's root and the run's configuration: the setup step, the folders before `PATH`, the variables and the project's placeholders. Exit 1, naming the fix, when the configuration or the selection cannot be read. A query: read-only, offline; `pkit sync` provisions its dependencies. It runs nothing of the project's."
+    query-contract: true
+  validate:
+    script: scripts/validate.py
+    help: "Validate the run's configuration and the form of each console fence (DEC-001 point 11): a selection the run cannot read, a project's placeholder whose name is not in upper case, two placeholders of the project's form with one name and a fence that cannot be read are errors, and a fence under another name for a shell session a warning; --json prints the findings document `pkit validate` reads. A query: read-only, offline; `pkit sync` provisions its dependencies. It runs nothing of the project's."
+    query-contract: true
+
+# The `doc-examples:examples` member of `pkit validate` (COR-055 point 3).
+validators:
+  examples:
+    command: validate

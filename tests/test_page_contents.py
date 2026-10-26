@@ -1,8 +1,8 @@
 """The pages' contents lists, `scripts/page_contents.py` (#2053).
 
 - **Which pages:** the artefacts living-docs' page type types, wherever they lie,
-  as the console fences' run chooses them; a page without the markers is left
-  alone.
+  as the backbone's discovery reads them; a document no place types, or one that
+  declares no page kind, is none, and a page without the markers is left alone.
 - **What the list holds:** one item for each second-level heading, in the page's
   order, outside fenced code; a heading of another level is none. Markers under a
   second-level heading of their own leave that section out, and markers in the
@@ -22,7 +22,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from scripts import console_fences as cf
 from scripts import page_contents as pc
 
 from project_kit.document_parts import heading_slug
@@ -328,7 +327,7 @@ def test_markers_that_make_no_one_pair_fail_and_update_writes_nothing(
 # --- which pages, and the command line ------------------------------------------------------
 
 
-def test_the_pages_are_those_the_console_fences_run_reads(
+def test_the_pages_are_the_artefacts_of_living_docs_page_type_wherever_they_lie(
     make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
     repo: AdopterRepo = make_adopter_repo(capabilities=("living-docs",))
@@ -344,10 +343,11 @@ def test_the_pages_are_those_the_console_fences_run_reads(
             "GUIDE.md": _page("Out of both roots."),
             "NOTES.md": _page("Declared, with no type."),
             "docs/guide.md": _page("Under the user root."),
+            "docs/kindless.md": "---\nreader: user\n---\n\n# No kind\n",
         }
     )
 
-    assert pc.pages(repo.root) == cf.pages(repo.root) == ["GUIDE.md", "docs/guide.md"]
+    assert pc.pages(repo.root) == ["GUIDE.md", "docs/guide.md"]
 
 
 def test_the_command_line_checks_the_pages_and_exits_as_it_finds(

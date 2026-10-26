@@ -19,3 +19,6 @@ components:
     name: living-docs
     manifest: .pkit/capabilities/living-docs/manifest.yaml
     origin: incubated-in-repo
+  - kind: capability
+    name: doc-examples
+    manifest: .pkit/capabilities/doc-examples/project/manifest.yaml
