@@ -561,8 +561,11 @@ def release(issue_number: int, clone: Clone, config: dict, *, run: Run | None = 
     """Release every owner of ``issue_number`` as it closes (DEC-035 point 4).
 
     Posts a ``release`` event for each instance the comment log holds, where the
-    log is this clone's account's, and removes each ``instance:N`` label. In
-    ``comment`` mode it then regenerates the owner mirror."""
+    log is this clone's account's, and removes each ``instance:N`` label. In a
+    project with a topology the log's claims are judged against the seats'
+    holders, as the claim and the guard judge them: a claim that counts, or one
+    that cannot be judged, is released, and a void claim is no owner to release.
+    In ``comment`` mode it then regenerates the owner mirror."""
     gh = run or _runner(config)
     n = issue_number
     issue = _read(gh, n)
@@ -571,8 +574,12 @@ def release(issue_number: int, clone: Clone, config: dict, *, run: Run | None = 
     assignees = _assignees(issue)
     account = clone.login if clone.login in assignees else (assignees[0] if assignees else None)
     logged = ownership.resolve_owner(
-        comments=_comments(issue), labels=[], assignee_login=account, selector="comment"
-    ).owners
+        comments=_comments(issue),
+        labels=[],
+        assignee_login=account,
+        selector="comment",
+        holders=clone.holders,
+    ).claimants
     labelled = ownership.resolve_owner(
         comments=[], labels=_labels(issue), assignee_login=account, selector="label"
     ).owners

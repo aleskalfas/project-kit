@@ -713,3 +713,22 @@ def test_the_guard_refuses_a_claim_it_cannot_judge(ic, root) -> None:
     decision = _guard(ic, gh, _seat_clone(ic, root))
     assert decision.refused
     assert "its seat is not among the seats read" in decision.line
+
+
+def test_a_release_judges_claims_as_the_claim_and_the_guard_do(ic, root) -> None:
+    """A claim that counts, and one that cannot be judged, are released. A claim
+    whose clone no longer holds its seat is no owner, so none is posted for it."""
+    gh = FakeGitHub()
+    gh.add(7)
+    gh.post(7, _seat_stamp(ic, "worker-1", 1, "k1"))
+    gh.post(7, _seat_stamp(ic, "worker-2", 2, "k2"))
+    gh.post(7, _seat_stamp(ic, "worker-3", 3, "k3"))
+    holders = {
+        "worker-1": ic.ownership.Holder(ic.ownership.SEAT_FREE),
+        "worker-2": _held(ic),
+        "worker-3": ic.ownership.Holder(ic.ownership.SEAT_UNREAD),
+    }
+    result = ic.release(7, _seat_clone(ic, root, holders=holders), {}, run=gh)
+    assert result.outcome == ic.RELEASED
+    assert result.line == "[ok] ownership: #7 released (instance 2, instance 3)."
+    assert _events(gh, 7) == ["claim 1", "claim 2", "claim 3", "release 2", "release 3"]
