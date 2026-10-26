@@ -17,7 +17,7 @@ pkit:
         - .pkit/adapters/claude-code/_resolve_agent.py
         - .pkit/agents/core/rule-set-reviewer.md
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, COR-062, COR-064, ADR-051, ADR-052, "ADR-065#11"]
-      artefact: [.pkit/lifecycle/README.md#seed-paths]
+      artefact: [.pkit/lifecycle/README.md#seed-paths, .pkit/decisions/README.md#citing]
 ---
 
 # Agents
@@ -102,7 +102,7 @@ Body prose cites the same references the frontmatter declares. The validator ext
 - **Rule ids** count too (COR-051): `RS-CMN-003`, an extension point `RS-CMN-003#cause-location`, and a method rule set's rule with its component in brackets, `[living-docs:RS-LDOC-003]`. They are not declared in frontmatter; each must resolve to a rule of an installed rule set, and `pkit refs validate` reports one that does not.
 - **Role and point addresses** count in brackets (COR-019, COR-053): `[pkit::documentation]`, `[pkit::documentation:readers]`. They are not declared in frontmatter; each must name a role or point an installed capability declares, and `pkit refs validate` reports one that does not — and reports a bracketed token carrying `::` that is not an address as malformed.
 - **Hook names** count when they appear: `project-management.create-issue` (regex `^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){1,2}$`).
-- **A point of a record** is held to its record (COR-058 point 1): `COR-058 point 3`, `PRJ-002 D1`, `COR-050#14`, `[project-management:DEC-055] point 3`. `pkit refs validate` warns, without failing, of one that names a point its record neither holds nor retires (the decisions README, "Citing").
+- **A point of a record** is held to its record: `COR-058 point 3`, `PRJ-002 D1`, `COR-050#14`, `[project-management:DEC-055] point 3`. `pkit refs validate` warns, without failing, of one that names a point its record neither holds nor retires ([the decisions README, "Citing"](../decisions/README.md#citing)).
 - **Not counted**: anything inside fenced code blocks, HTML comments, or strikethrough.
 
 The discipline: cite paths in backticks, cite records by ID, mention hooks by name. The validator can extract unambiguously without ad-hoc prose parsing.

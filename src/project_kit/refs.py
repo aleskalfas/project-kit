@@ -803,9 +803,10 @@ class UnheldPoint:
 def point_citations(text: str, *, capability: str | None = None) -> list[PointCitation]:
     """Every citation of a record's point in `text`, in order (`POINT_CITATION_RE`).
 
-    Front matter, fenced code, inline code and HTML comments are quoted or data, not
-    prose, and hold none. A capability's decision cited bare, `DEC-035`, or as a link's
-    text is `capability`'s, the component whose text it is; else, a link into a
+    Front matter, fenced code, inline code, HTML comments and strikethrough are quoted,
+    data or withdrawn, not prose, and hold none. A capability's decision cited bare,
+    `DEC-035`, or as a link's text is `capability`'s, the component whose text it is;
+    else, a link into a
     capability's `decisions` folder names its capability. Outside a capability, a bare
     `DEC-NNN` is the decision of the one capability the text cites it of in full, in
     brackets or by a link, and a citation of one cited of none or of several is left
@@ -860,7 +861,7 @@ def _cited_record(
 
 def _prose(text: str) -> str:
     """`text` with what holds no prose blanked, every line kept where it was: front
-    matter, fenced code, inline code and HTML comments."""
+    matter, fenced code, inline code, HTML comments and strikethrough."""
     text = HTML_COMMENT_RE.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
     lines = text.split("\n")
     if lines and lines[0].strip() == "---":
@@ -880,7 +881,8 @@ def _prose(text: str) -> str:
         elif fence is not None:
             lines[index] = ""
         else:
-            lines[index] = _CODE_SPAN.sub(lambda code: " " * len(code.group(0)), line)
+            blank = _CODE_SPAN.sub(lambda code: " " * len(code.group(0)), line)
+            lines[index] = STRIKETHROUGH_RE.sub(lambda struck: " " * len(struck.group(0)), blank)
     return "\n".join(lines)
 
 

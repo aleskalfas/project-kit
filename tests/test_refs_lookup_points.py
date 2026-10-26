@@ -272,12 +272,13 @@ def test_a_citation_may_break_a_line_but_not_a_paragraph() -> None:
 
 
 def test_quoted_material_holds_no_citation() -> None:
-    """Front matter, fenced code, inline code and HTML comments are not prose."""
+    """Front matter, fenced code, inline code, HTML comments and strikethrough are not
+    prose."""
     text = (
         "---\ntitle: COR-058 point 9\n---\n"
         "`COR-058 point 9` is quoted.\n<!-- COR-058 point 9 -->\n"
         "```\nCOR-058 point 9\n```\n"
-        "COR-058 point 1 is prose.\n"
+        "~~COR-058 point 9~~ is struck. COR-058 point 1 is prose.\n"
     )
     assert _cited(text) == [(9, "COR-058", ("1",))]
 
