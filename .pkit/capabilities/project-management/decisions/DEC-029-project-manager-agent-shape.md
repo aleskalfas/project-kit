@@ -36,9 +36,11 @@ The autonomous-coordination behaviour (intent → filed work with one approval g
 
 The rationale for invisible-not-visible is captured in the source scratchpad's Q1 resolution: today's `pm-agent` already infers PM vs Implementer from request shape with no explicit signal — extending the same pattern to "batch vs single" within PM-direction is consistent with existing behaviour and minimises the user-facing surface.
 
+**A seat's role sets the direction** (refinement per [project-management:DEC-059-topology-of-seats]). An agent session that holds a seat of the project's topology reads the seat's role, and runs that role's procedure from the pm composite skill. The role takes the place of inference from the request. A planner's seat acts in PM-direction, with batch planning as its usual variation, a worker's seat in Implementer-direction, and a lead's seat in both, within the seat's scope. The role never stands in for a person's authorisation, and a session that holds no seat infers its mode from the request, as above.
+
 ### Procedure carrier: new sub-procedure in the existing pm composite skill
 
-The autonomous flow's steps live in **`batch-plan.md`**, a new sub-procedure of the pm composite skill, sibling to today's `create-issue.md` / `validate-body.md` / `transition-state.md`. The agent body stays thin and dispatches to it when batch-planning is inferred.
+The autonomous flow's steps live in **`batch-plan.md`**, a new sub-procedure of the pm composite skill, sibling to today's `create-issue.md` / `validate-body.md` / `transition-state.md`. The agent body stays thin and dispatches to it when batch-planning is inferred. Each role a seat may hold has its procedure in the same composite skill, beside batch planning, and an agent of another definition that a seat names follows those procedures too (refinement per [project-management:DEC-059-topology-of-seats]).
 
 The sub-procedure carries:
 

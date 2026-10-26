@@ -6,6 +6,8 @@ date: 2026-06-23
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [DEC-059](DEC-059-topology-of-seats.md).** In a project that declares a topology of seats in its committed configuration, a clone takes part by taking a seat, and its number is the seat's. Overturned for such a project: point 1's typed number as the sign that a clone takes part, point 2's pool of four numbers for each assignee, point 3's claim at creation by a clone in a planner's seat, and the Rationale's statement that no committed registry is needed. A project with no topology keeps this record whole. DEC-059's "What this overturns, and what stands" lists each passage.
+
 When one person runs several clones of the same repository — each with its own
 agent session driving the work-tracker — every issue shows the same human as
 assignee, so no clone can tell which in-flight work belongs to which clone, and
@@ -53,7 +55,9 @@ A clone sets its own identity with a
 git-ignored runtime file (declared via the capability's `runtime_ignore:`
 key per [pkit:ADR-009] rule 7, so it is never committed). A clone with
 no instance id set behaves exactly as today — no marking, no guard, no
-signing. The presence of the id is the sole activation gate.
+signing. The presence of the id is the sole activation gate. The same runtime file
+keeps a key the clone generates the first time it claims on a state issue (refinement
+per [project-management:DEC-058-state-issues]).
 
 > **Refined by [DEC-045](DEC-045-named-per-user-instances.md).** Opt-in and
 > additive on top of the numeric id: a clone's identity may also carry a
@@ -103,7 +107,11 @@ that observes the fold strips the label** — the engine fold itself stays
 realm-blind. Work is redistributed with `handoff-issue` extended by
 `--to-instance <N>` (push), `--to-instance self` (pull/claim), and
 `--recursive` (subtree). Reclaim between one person's own clones changes only
-the label, not the assignee.
+the label, not the assignee. In a project with a topology, an owner also releases
+a Task once it stops work on it, and its work renews the claim as it goes on. A
+claim on a Task In Progress that its work has not renewed within a generous limit
+lapses, and a claim counts only while its clone holds the claim's seat (refinement
+per [project-management:DEC-059-topology-of-seats]).
 
 ### 5. Changing the assignee strips the label
 
@@ -127,7 +135,11 @@ no atomic claim), the claiming verb **re-reads after stamping**; if two
 instance labels are present it has detected a collision and the
 **higher-numbered instance auto-backs-off** (removes its label, abandons the
 claim, notifies). The **lowest instance number wins** — a tie-break both
-clones compute identically from the labels alone, with no coordination.
+clones compute identically from the labels alone, with no coordination. In a
+project with a topology, a claim that no longer counts is no claim, so the guard
+does not refuse on it. Every command that writes as the owner reads the claim
+first, and a session whose claim no longer counts parks its work (refinement per
+[project-management:DEC-059-topology-of-seats]).
 
 ### 7. Listings show every issue, signed by owner
 
