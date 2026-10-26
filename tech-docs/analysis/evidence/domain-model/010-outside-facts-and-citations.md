@@ -153,3 +153,21 @@ A citation is the text `[ev:<slug>]`, right after the claim it backs. Its slug i
 - A citation names an evidence record, never a URL (DEC-001).
 - One token names one record, so two records take two tokens, never a list (DEC-001).
 - Text of its form is no citation in a fenced code block or an HTML comment of a Markdown file. Nor is it one in its scope's `evidence.yaml` (DEC-003).
+
+## Where these concepts are used
+
+**Outside fact:**
+
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+
+**Evidence record:**
+
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+
+**Evidence scope:**
+
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)
+
+**Citation:**
+
+- [UC-036 — Ground a claim in its source](../use-case-model/use-cases/UC-036-ground-claim.md)

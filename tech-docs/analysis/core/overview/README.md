@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:00a44fff7af762ec19ea9c7eb0c7fe7037218d17f346be584ecc70afa1fc3673 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:e2f4075a8947e55b166d635d2b4f9584c70c46cd67f957fe13a67e9cedf036a7 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -13,6 +13,17 @@ This analysis describes what core does: who uses it, what they do with it, and w
 Develop the methodology in its own source repository, and extend it with capabilities, adapters, and a project's own skills and agent definitions.
 
 **Builds on:** no other area.
+
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
 
@@ -33,6 +44,17 @@ Develop the methodology in its own source repository, and extend it with capabil
 Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits.
 
 **Builds on:** [010-develop](#010-develop).
+
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
 
@@ -62,6 +84,17 @@ Set up a project once, so its people and AI agents work with the same backbone c
 Record a project's decisions and rules, and check, answer and land each change to it, so what the project states stays true as it changes.
 
 **Builds on:** [010-develop](#010-develop) and [020-set-up](#020-set-up).
+
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
 
@@ -96,6 +129,14 @@ Release the backbone and each component on its own version, so projects can move
 
 **Builds on:** [010-develop](#010-develop) and [030-change](#030-change).
 
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+
 **Its requirements:** none.
 
 **Its use cases:**
@@ -108,6 +149,17 @@ Release the backbone and each component on its own version, so projects can move
 Put the system on a machine and into another project, run each project at the version it pins and keep it current, and report what goes wrong with it, each report linked to its fix.
 
 **Builds on:** [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change) and [040-release](#040-release).
+
+**Its concepts:**
+
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 **Its requirements:**
 

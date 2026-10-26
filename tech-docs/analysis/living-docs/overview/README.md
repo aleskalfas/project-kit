@@ -1,6 +1,6 @@
 # Overview of the analysis of living-docs
 
-<!-- pkit:overview reads=4 fingerprint=sha256:dc34946b91905b2789f38145d668bdd54e54aab747474d906efe70ac38752911 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:454d06bd42923039c3a6c61965ca113c84f2141f979850f6835e59c439f54d19 -->
 
 [Living documentation keeps each documentation space true for its readers](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md).
 

@@ -107,3 +107,16 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 
 - The project's file of workstreams is authoritative, and a board's field reflects it (DEC-018).
 - Its slug is 2 to 40 lowercase letters, digits and single hyphens (DEC-018).
+
+## Where these concepts are used
+
+**Classification axis:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md)
+
+**Workstream:**
+
+- [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md)
+- [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md)
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md)

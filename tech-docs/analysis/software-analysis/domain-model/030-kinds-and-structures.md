@@ -184,3 +184,28 @@ A candidate is an [analysis](../glossary.md#term-analysis--analysis) [artefact](
 
 - A person confirms each candidate before it is committed (DEC-001 point 9).
 - Where an accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) decides behaviour the code lacks, a candidate describes that behaviour as the record decides. Each such step is a [shortfall](../glossary.md#term-shortfall--shortfall) (DEC-001 point 9).
+
+## Where these concepts are used
+
+**Artefact kind:** None.
+
+**Declared structure:**
+
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
+- [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md)
+
+**Hint:**
+
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
+
+**Tightening:**
+
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
+
+**Candidate:**
+
+- [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md)
+- [REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it](../requirements/functional/REQ-050-agent-proposes.md)

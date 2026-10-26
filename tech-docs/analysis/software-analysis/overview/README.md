@@ -1,6 +1,6 @@
 # Overview of the analysis of software-analysis
 
-<!-- pkit:overview reads=4 fingerprint=sha256:9f747f7117cbbff5cc8796b13eb14b813890d71d323a8a45bebb5f62b968a4ea -->
+<!-- pkit:overview reads=5 fingerprint=sha256:ba1627d1ab1c0bc4415bbe999d7266f1deed28f9b538ca008ae814a547df352f -->
 
 [Software analysis keeps actors, use cases, journeys and terms true as the software changes](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md).
 
