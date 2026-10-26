@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:25a0a7ef4cd0fedcbd603514d32886772f6095ce5b711249cdd6abfbc6b838b6 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:74f02354538b65c17a68316675269414014c971371b5d05ae5d4893bf5cbefdc -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -64,7 +64,7 @@ Have each pull request reviewed by the reviewers its change requires, and land i
 
 **Its use cases:**
 
-- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md) ([not built yet](#not-built-yet): variant 1b)
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md) ([not built yet](#not-built-yet): variant 1b, step 9)
 
 ### 040-work-in-parallel
 
@@ -173,6 +173,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md): variant 1a, decided by `COR-004`, tracked in `#1938`
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md): variant 7a, decided by `project-management:DEC-007`, tracked in `#1215`
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md): variant 1b, decided by `COR-004`, tracked in `#1938`
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md): step 9, decided by `COR-064#2`, tracked in `#2122`
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md): step 8, decided by `project-management:DEC-014`, tracked in `#1761`
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/010-plan/UC-063-plan-intent.md): step 9, decided by `project-management:DEC-029`, tracked in `#1761`
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/010-plan/UC-064-define-milestones-and-workstreams.md): step 4, decided by `project-management:DEC-016`, tracked in `#1939`

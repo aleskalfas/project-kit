@@ -6,6 +6,8 @@ date: 2026-10-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [software-analysis:DEC-006-text-in-body].** A requirement's statement, measure and scope live in its body, and its revisits fire on `obligation`, a fingerprint of the three. Overturned: point 4's front-matter fields for the three, as fields and as the link's trigger, with the reasons and the alternative behind them. Among what stands: what each says, that a change to any of them changes the obligation, `actors`, `refines` and the link's targets. DEC-006's "What this overturns, and what stands" lists each passage.
+
 ## Context
 
 A use case holds one actor's goal and how the system fulfils it. Some of what a system must do binds many use cases at once, and no single use case is its home:

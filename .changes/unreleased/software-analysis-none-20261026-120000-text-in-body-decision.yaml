@@ -1,0 +1,12 @@
+component: software-analysis
+kind: none
+body: >
+  Design-ahead: the new record [software-analysis:DEC-006-text-in-body],
+  accepted, moves an analysis artefact's text into its body as its only home:
+  a term's definition, a requirement's statement, measure and scope, and an
+  actor's needs. An actor's summary goes. A requirement's revisits fire on
+  `obligation`, a versioned fingerprint of its three texts. DEC-002 is partly
+  superseded, and DEC-001, DEC-003, DEC-004 and DEC-005 are refined beside it.
+  Nothing you run changes yet. The issues that build it carry their own
+  changesets, and the release that moves the trigger comes after the one that
+  ships the fingerprint.

@@ -113,7 +113,7 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, board_fields
+from _lib import axis_labels, board_fields, issue_list
 from _lib.gh import gh_run, load_adopter_config
 
 CAPABILITY_NAME = "project-management"
@@ -236,13 +236,13 @@ def take_inventory(config: dict[str, Any], *, sample_limit: int) -> Inventory:
     refuses rather than draft from an empty inventory.
     """
     labels_raw = _read_labels(config)
-    issues = _read_issue_sample(config, limit=sample_limit)
-    if labels_raw is None and issues is None:
+    sample = _read_issue_sample(config, limit=sample_limit)
+    if labels_raw is None and sample is None:
         return Inventory(read_ok=False)
 
     labels_truncated = labels_raw is not None and len(labels_raw) == LABELS_LIMIT
     labels_raw = labels_raw or []
-    issues = issues or []
+    issues, sample_truncated = sample or ([], False)
 
     # Per-label issue usage across the sample (how many sampled issues carry it).
     usage: dict[str, int] = {name: 0 for name in labels_raw}
@@ -286,7 +286,7 @@ def take_inventory(config: dict[str, Any], *, sample_limit: int) -> Inventory:
         open_count=open_count,
         closed_count=closed_count,
         sampled_issue_count=len(issues),
-        sample_truncated=len(issues) == sample_limit,
+        sample_truncated=sample_truncated,
         labels_truncated=labels_truncated,
         has_blocked_label=has_blocked,
         milestones_in_use=sorted(milestones),
@@ -328,38 +328,34 @@ def _read_labels(config: dict[str, Any]) -> list[str] | None:
     ]
 
 
-def _read_issue_sample(config: dict[str, Any], *, limit: int) -> list[dict[str, Any]] | None:
-    """A sample of issues (open + closed) with title/labels/milestone/state.
+def _read_issue_sample(
+    config: dict[str, Any], *, limit: int
+) -> tuple[list[dict[str, Any]], bool] | None:
+    """A sample of issues (open + closed) with title/labels/milestone/state, and
+    whether the sample filled ``limit``.
 
     A READ (``gh issue list --state all``). ``None`` on failure. The sample is
     bounded by ``limit``; the caller flags truncation when the sample fills it, so
     the coverage signal is never silently capped.
+
+    The listing runs through the capability's one read of its issues, which
+    leaves state issues out (DEC-058 point 3), so no state issue is evidence for
+    a binding. Whether the sample filled ``limit`` is judged by what ``gh``
+    returned, state issues included.
     """
     try:
-        proc = gh_run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--state",
-                "all",
-                "--limit",
-                str(limit),
-                "--json",
-                "number,title,labels,milestone,state",
-            ],
+        listing = issue_list.list_issues(
             config,
+            ["--state", "all", "--limit", str(limit)],
+            fields="number,title,labels,milestone,state",
+            gh_call=gh_run,
             check=False,
         )
     except FileNotFoundError:
         return None
-    if proc.returncode != 0:
+    if listing.rows is None:
         return None
-    try:
-        data = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        return None
-    return data if isinstance(data, list) else None
+    return list(listing.rows), listing.returned == limit
 
 
 def _read_board_fields(config: dict[str, Any]) -> tuple[list[dict[str, Any]], bool]:

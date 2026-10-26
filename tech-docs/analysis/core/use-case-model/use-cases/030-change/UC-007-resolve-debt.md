@@ -46,6 +46,10 @@ pkit:
         - COR-062#1
         - COR-062#5
         - COR-062#7
+        - COR-064#1
+        - COR-064#3
+        - COR-064#4
+        - COR-064#5
         - ADR-034#1
         - ADR-055#5
         - ADR-066#1
@@ -73,7 +77,7 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) after each push to the [default branch](../../../glossary.md#term-default-branch--default-branch) and on a schedule. The check reports its [findings](../../../glossary.md#term-finding--finding) and never fails on them ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)).
-- **AI agent** (`ACT-ai-agent`): an agent an installed [capability](../../../glossary.md#term-capability--capability) ships for an [artefact](../../../glossary.md#term-artefact--artefact)'s type proposes each [answer](../../../glossary.md#term-answer--answer). It gives its evidence and the commands that write it. It runs none of those commands, since each answer is a person's decision ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **AI agent** (`ACT-ai-agent`): an agent an installed [capability](../../../glossary.md#term-capability--capability) ships for an [artefact](../../../glossary.md#term-artefact--artefact)'s type proposes each [answer](../../../glossary.md#term-answer--answer). It gives its evidence and the commands that write it. It runs none of those commands, since each answer is a person's decision, or the delegate's ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and [COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides)).
 - **Operator** (`ACT-operator`): is asked before a command that writes an answer changes a repository other than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:** **From [UC-034](UC-034-land-change.md):** The [default branch](../../../glossary.md#term-default-branch--default-branch) holds [debt](../../../glossary.md#term-debt--debt): a [change](../../../glossary.md#term-change--change) that landed there left an [artefact](../../../glossary.md#term-artefact--artefact) stale, or deferred its [answer](../../../glossary.md#term-answer--answer).
@@ -81,7 +85,7 @@ pkit:
 **Assumptions:**
 
 - The [project](../../../glossary.md#term-project--project)'s continuous integration runs the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) on the [default branch](../../../glossary.md#term-default-branch--default-branch), as project-kit's `friction-report.yml` does ([ADR-055 point 5](../../../../../architecture/decisions/ADR-055-first-adopter-analysis-and-living-docs.md#5-friction-check-enforcing-from-the-day-it-exists)).
-- An [answer](../../../glossary.md#term-answer--answer) that no [change](../../../glossary.md#term-change--change) of the writer's own owes is a person's decision, shown to the person word for word before it is written. Nothing at run time stops an agent writing one ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and core rule 20).
+- An [answer](../../../glossary.md#term-answer--answer) that no [change](../../../glossary.md#term-change--change) of the writer's own owes is a person's decision, shown to the person word for word before it is written. Where a person named a delegate, the delegate may decide it instead ([COR-064 point 1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides)). Nothing at run time stops an agent writing one ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and core rule 20).
 
 **Trigger:** The [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) reports [debt](../../../glossary.md#term-debt--debt) on the [default branch](../../../glossary.md#term-default-branch--default-branch).
 
@@ -102,7 +106,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit friction revalidate` and `pkit friction defer` run no such check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-5. The developer lands the answers in a change of their own. Its [change check](../../../glossary.md#term-change-check--change-check) flags each answer the change was not asked for as `not asked for by this change`.
+5. The developer lands the answers in a change of their own. Its [change check](../../../glossary.md#term-change-check--change-check) flags each answer the change was not asked for as `not asked for by this change`. A [reviewer](../../../glossary.md#term-reviewer--reviewer) checks each such answer, whoever decided it ([COR-064 point 4](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)).
 6. The next [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) finds each answered artefact `current`, or `deferred` where the developer deferred it.
 
 **Variants:**
@@ -123,6 +127,7 @@ pkit:
 - **4a.** The artefact still describes what is wanted, and a [change](../../../glossary.md#term-change--change) broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
 - **4b.** An anchor is dead, such as a path whose files were removed. The developer corrects the anchor in the block, and revalidates the artefact, since its anchor list changed. The [change check](../../../glossary.md#term-change-check--change-check) asks for that revalidation, so it is not flagged at step 5.
 - **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. `pkit friction revalidate` names the files of both in the new revalidation's `read`, so the new revalidation replaces the two (COR-062 points [5](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#5-what-an-answer-replaces) and [7](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
+- **4d.** A person named a delegate, and an agent other than the delegate drafted the answer. The delegate decides it on the developer's behalf, from what the files hold (COR-064 points [1](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#1-the-answers-a-delegate-decides) and [3](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#3-never-on-an-answer-it-drafted-and-from-what-the-files-hold)). It refers to the developer an answer only an account could settle, such as whether a change was meant. The developer is told afterwards what it decided ([COR-064 point 5](../../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#5-the-person-is-told-not-asked)).
 
 - **5a.** An answer the developer gives is `updated`, so the artefact's content changed. Each artefact anchored to it owes an answer in the same change ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)), and the path rejoins at step 4 for each one.
 

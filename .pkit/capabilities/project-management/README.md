@@ -14,7 +14,7 @@ pkit:
         - .pkit/capabilities/project-management/adapters/**
         - .pkit/capabilities/project-management/decisions/**
         - .pkit/capabilities/project-management/package.yaml
-      record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
+      record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, COR-064, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
 ---
 
 # project-management capability
@@ -313,8 +313,8 @@ A bare `DEC-NNN` is not checked. Each capability numbers its own decisions, so a
 Each id the check reads is looked up through `pkit`, and one that no record holds is reported as `body.predicted-decision-id`, naming it. Where `pkit` gives no answer for an id, one notice, `body.decision-ids-unchecked`, names the ids not checked and why, at the rule's severity:
 
 ```
-[warning] body.predicted-decision-id: cites COR-064, which no record holds. Cite a decision only once its record exists, and describe one not yet written without an id.
-[warning] body.decision-ids-unchecked: decision ids not checked (COR-064): the records could not be read — `pkit` is not on PATH. None is reported as predicted on that ground.
+[warning] body.predicted-decision-id: cites COR-999, which no record holds. Cite a decision only once its record exists, and describe one not yet written without an id.
+[warning] body.decision-ids-unchecked: decision ids not checked (COR-999): the records could not be read — `pkit` is not on PATH. None is reported as predicted on that ground.
 ```
 
 `validate-issue` and `edit-issue` run the same checks.
@@ -619,6 +619,27 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 | `set-instance --clear` | Unset — revert to the non-participating no-op default. |
 
 Setting the id touches no issue — the per-issue ownership *marker* is written by the lifecycle commands (`create-issue` / `start-work` / `handoff-issue`), which read this id. That marker's substrate is selectable (`comment` default, or `label`) per [project-management:DEC-043-ownership-substrate-selection]; the identity here is orthogonal to that choice.
+
+The same runtime file keeps the clone's **key**. The clone generates it the first time it claims on a state issue (below), and keeps it whatever its number. Setting or clearing the id keeps the key. Whoever copies a clone clears its runtime file, since two clones that share a key cannot be told apart.
+
+**How an ownership event reads.** The audit-log facility ([project-management:DEC-044-audit-log-facility], `scripts/_lib/audit_log.py`) builds each ownership event's comment. Its hidden stamp, `<!-- pkit:audit v=1 event=claim ... -->`, names the instance and carries an id made once for the act. In a project with a topology it also names the seat, the seat's number and the clone's key. The stamps written before the facility, `<!-- pkit:instance-owner v=1 ... -->`, still read as the same events, so an issue claimed under them keeps its owner. `schemas/audit-log.yaml` declares the stamp and every event type.
+
+#### State issues — shared state that changes while agents work (per [project-management:DEC-058-state-issues])
+
+A **state issue** holds one piece of shared state that changes while agents work, such as which clone holds a seat ([project-management:DEC-059-topology-of-seats]). It sits outside the work hierarchy: it has no type, no parent, no label, no assignee and no milestone. A hidden marker, `<!-- pkit:state-issue v=1 kind=<kind> key=<key> -->`, says which kind of state it holds and for which key. The marker sits in its first comment and in its description.
+
+- **The comments are the record.** Each change is one comment, built by the audit-log facility: a claim, a release, or a release by force with its reason
+- **The description shows the state.** A region of the description shows who holds the state, rewritten whole after each change. A stray edit to the region is rebuilt, and nothing is lost
+- **The first claim on a free state holds.** Another clone's claim on a held state counts for nothing, and stays void after the holder releases
+- **A comment counts only from an author who may write:** a member where the membership gate is closed, and otherwise an account GitHub records as having write access or more. The access is read once for each author in a run
+- **No command of the lifecycle acts on a state issue.** The read of a single issue refuses one, and the board's reads leave its card out. Every listing of issues runs through the one read of issues, which leaves state issues out
+
+`scripts/_lib/state_issues.py` is the one module that reads and writes a state issue ([pkit:ADR-071]), and `schemas/state-issues.yaml` holds the marker, the region and the kinds of state. The commands that create, take, release and list seats come later, so no command creates a state issue yet.
+
+Two things no code enforces, for a person to watch once seats are in use:
+
+- **After an account loses its access or is deleted,** its comments stop counting. A seat's holder may then change, since a void claim may hold, or an earlier holder return. Check the listing of seats, and release by force each seat whose holder changed
+- **A Task that a board's automation moves back to In Progress** renews no claim, since only an ownership event renews one, and a board's automation posts none. Once claims lapse ([project-management:DEC-059-topology-of-seats] point 9), such a Task's claim may lapse at once
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 
@@ -1313,7 +1334,7 @@ The index records the version of the run's contract each run followed, each arte
 
 #### Deciding the proposals — `show-proposals`, `apply-proposals`, `refuse-proposals`, `answer-question`
 
-You decide each proposal: accept it, reword it or refuse it ([project-management:DEC-056-drift-fixers] point 6). Four commands reach the queue, and the project manager reaches it through them alone, never with file tools. Each refuses inside an agent run, since a fixer only proposes, and one at a time works on the queue, under the drift command's lock.
+You decide each proposal: accept it, reword it or refuse it ([project-management:DEC-056-drift-fixers] point 6). You may instead name a delegate to decide them in your place ("Your delegate may decide them" below). Four commands reach the queue, and the project manager reaches it through them alone, never with file tools. Each refuses inside an agent run, since a fixer only proposes, and one at a time works on the queue, under the drift command's lock.
 
 ```
 pkit pm show-proposals
@@ -1321,6 +1342,14 @@ pkit pm apply-proposals <artefact>... [--because <artefact> <words>]... [--sente
 pkit pm refuse-proposals <artefact>... [--dry-run]
 pkit pm answer-question <artefact> <answer> [--by NAME] [--dry-run]
 ```
+
+**Your delegate may decide them.** You may name one agent, such as the project manager, to decide in your place the answers no change owes ([COR-064](../../decisions/core/COR-064-answer-delegate.md)).
+
+- **Naming and withdrawing.** Name it in the friction key of the backbone configuration (COR-064 point 2). The CLI reference's ["Configuration file"](../../cli/README.md#configuration-file) <!-- unanchored: named as the section that gives the key, whose meaning rests on COR-064, which the page anchors --> names the key. It counts once the default branch holds it. Telling it to stop stops it in that session, and removing the name stops it everywhere.
+- **Which proposals.** A proposal is the delegate's to decide only where the capability that owns its type hands its answers on. A capability whose record keeps them for a person keeps them for you.
+- **How it decides.** It reads every word of each proposal, judges it from what the files hold, and accepts, rewords or refuses it. It never changes a proposal's outcome or its diff.
+- **What stays yours.** An answer it drafted, a question a fixer held, one only an account could settle, and everything else you decide, such as a merge. It decides nothing where the project chose no reviewer of the answers.
+- **What you are told.** A reviewer checks each answer it decided. The pull request that writes them tells you what it decided and what it refused, as information.
 
 **Checked again first.** Before a proposal is shown, and again before it is applied, it is checked at the default branch's commit. It is set aside where its artefact is no longer stale, or its friction differs from what it was judged against. It is set aside too where it was judged under another version of the run's contract, or its files no longer read. A proposal set aside is never shown or applied, and the next `fix-drift` dispatches it again.
 
@@ -1336,7 +1365,7 @@ It prints each question a fixer held, with the command that answers it, and list
 **Accepting.** What you accept reaches the default branch through an ordinary pull request. The project manager files a Task, cuts its branch from the default branch and runs `apply-proposals` there. It then opens the pull request, and you authorise its merge.
 
 - **It refuses, writing nothing,** on the default branch or on no branch, and where an artefact's file differs from the default branch's. It refuses too where an `unchanged` justification still holds a placeholder for you to fill, such as `<the defect reference>`, and no `--because` gives your words.
-- **Upstream first,** it applies each diff, then runs its writer, `pkit friction revalidate`. The writer is built from the answer's fields, never from a command a fixer wrote, and runs with `--yes`, since you accepted it word for word.
+- **Upstream first,** it applies each diff, then runs its writer, `pkit friction revalidate`. The writer is built from the answer's fields, never from a command a fixer wrote, and runs with `--yes`, since you, or your delegate, accepted it word for word.
 - **A diff that no longer applies** is set aside. A writer that fails leaves the file as it was, and its proposal keeps waiting.
 - **Your words.** `--because` gives them for an `unchanged` justification, and `--sentence` for an `updated` sentence. Each is held to the line an answer's own words are held to.
 - **For the description,** it prints the `## What changed in each updated document` section, one sentence for each `updated` answer.

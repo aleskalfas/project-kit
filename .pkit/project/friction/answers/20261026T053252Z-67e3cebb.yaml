@@ -1,0 +1,57 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T05:32:52Z
+      outcome: unchanged
+      unchanged-because: "This change lets a delegate decide a fixer's proposal where its type's owner hands it on, and software-analysis keeps its agent's proposals for a person until #2123. Main's changes reword the README for view backlinks and for hints in a form the check accepts. Judged together, the README's account of proposing and deciding holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T05:32:57Z
+      outcome: unchanged
+      unchanged-because: "This change lets a delegate decide answers no change owes, and software-analysis DEC-001 point 5 still keeps its agent's proposals for a person until #2123. Main's changes have the skill run the links and overview commands, and change how the tests find a use case's hint. Judged together, the agent proposes only, as stated."
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043351Z-18f0a630.yaml
+      - 20261026T044036Z-27b55495.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T05:33:02Z
+      outcome: unchanged
+      unchanged-because: "This change lets a delegate decide a fixer's proposal where its type's owner hands it on, and software-analysis DEC-001 point 5 keeps its proposals for a person until #2123. Main declares the form of a view's closing links and rewords the validate command's help on hints. Judged together, the developer still decides each answer, as step 7a and the rest describe."

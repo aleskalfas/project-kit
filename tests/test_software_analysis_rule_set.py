@@ -437,12 +437,13 @@ def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
     assert data["version"] == "1.0.0"
     # Each rule's answers live in this tree's answer files (COR-062 point 1).
     location = SAN.relative_to(REPO).as_posix()
-    deferred = {
-        entry.location.removeprefix(f"{location}#")
-        for found in answer_files.working_tree_files(REPO).values()
-        for entry in found.entries
-        if entry.location.startswith(f"{location}#") and entry.deferrals
-    }
+    deferral_reasons: dict[str, list[str | None]] = {}
+    for found in answer_files.working_tree_files(REPO).values():
+        for entry in found.entries:
+            if entry.location.startswith(f"{location}#"):
+                rule_id = entry.location.removeprefix(f"{location}#")
+                reasons = deferral_reasons.setdefault(rule_id, [])
+                reasons.extend(deferral.reason for deferral in entry.deferrals)
     assert set(ORIGINS) | {SOURCE_RULE} == set(JUDGEMENT_RULES)
     assert [rule_id for rule_id in JUDGEMENT_RULES if rule_id in data["checks"]] == [LOGIC_RULE]
     for rule_id, (statement, anchors) in JUDGEMENT_RULES.items():
@@ -452,12 +453,16 @@ def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
             assert entry["origin"] == {"decision": ORIGINS[rule_id]}, rule_id
         assert entry["pkit"]["friction"]["anchors"] == {"record": anchors}, rule_id
         # A change to a point it rests on asks for its revalidation, so it may carry
-        # one. It carries no deferral and no reason for having no anchors.
+        # one, or a deferral to the follow-up that rewrites it: DEC-006 leaves the rules
+        # that read a text in front matter as they are until the data home ends. A
+        # deferral holds only if its reason names an open follow-up (COR-050 point 3).
+        # It carries no reason for having no anchors, a person's answer (point 1).
         assert set(entry["pkit"]["friction"]) <= {"anchors", "revalidated"}, rule_id
         revalidated = entry["pkit"]["friction"].get("revalidated", {})
         assert isinstance(revalidated, dict), rule_id
         assert "deferred" not in revalidated, rule_id
-        assert rule_id not in deferred, rule_id
+        for reason in deferral_reasons.get(rule_id, []):
+            assert reason and re.search(r"#\d+", reason), rule_id
         assert "checks" not in entry, rule_id
         section = _section(body, rule_id)
         assert section.split("\n\n")[1] == statement, rule_id

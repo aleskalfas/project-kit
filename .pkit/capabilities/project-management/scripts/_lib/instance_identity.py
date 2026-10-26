@@ -13,11 +13,17 @@ GitHub, and is substrate-selectable (``_lib/instance_ownership`` / DEC-043). Thi
 file is *per clone*, local, never shared, and substrate-independent — it answers
 only "which of my clones is this," the first half of the ``(assignee, instance)``
 owner pair (DEC-035 point 2).
+
+The same file keeps the clone's **key**, which the clone generates the first
+time it claims on a state issue (DEC-035 point 1, refined for
+[project-management:DEC-058-state-issues]). Writing or clearing the instance id
+keeps the key.
 """
 
 from __future__ import annotations
 
 import json
+import secrets
 from pathlib import Path
 
 #: The clone-local identity file, relative to the capability root. Git-ignored via
@@ -59,20 +65,84 @@ def write_instance_id(capability_root: Path, instance: int) -> Path:
     """
     if not isinstance(instance, int) or isinstance(instance, bool) or instance < 1:
         raise ValueError("instance id must be a positive integer")
-    path = identity_path(capability_root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"instance": instance}) + "\n", encoding="utf-8")
-    return path
+    return _write_field(capability_root, "instance", instance)
 
 
 def clear_instance_id(capability_root: Path) -> bool:
     """Unset this clone's identity (revert to the no-op default).
 
-    Returns ``True`` if a file was removed, ``False`` if none was set. Idempotent —
-    clearing an already-unset clone is a no-op, not an error.
+    Returns ``True`` if an id was removed, ``False`` if none was set. Idempotent —
+    clearing an already-unset clone is a no-op, not an error. The clone's key
+    stays: it names the clone, whatever its number.
     """
     path = identity_path(capability_root)
-    if path.is_file():
+    data = _read_data(path)
+    if data is None:
+        if path.is_file():
+            path.unlink()
+            return True
+        return False
+    if "instance" not in data:
+        return False
+    del data["instance"]
+    if data:
+        path.write_text(json.dumps(data) + "\n", encoding="utf-8")
+    else:
         path.unlink()
-        return True
-    return False
+    return True
+
+
+# ---- the clone's key (DEC-058 point 5) ---------------------------------------
+
+#: The bytes of randomness in a clone's key.
+_KEY_BYTES = 16
+
+
+def read_clone_key(capability_root: Path) -> str | None:
+    """This clone's key, or ``None`` when it has none yet.
+
+    The key tells one clone's claim on a state issue from another's under one
+    account, whether or not either has an instance number ([project-management:
+    DEC-058-state-issues] point 5). It sits beside the instance id in the same
+    git-ignored runtime file, and is never committed. A file that cannot be read
+    holds no key.
+    """
+    data = _read_data(identity_path(capability_root))
+    key = data.get("key") if data is not None else None
+    return key if isinstance(key, str) and key else None
+
+
+def ensure_clone_key(capability_root: Path) -> str:
+    """This clone's key, generated and kept the first time it is asked for.
+
+    The first claim on a state issue asks for it, so a clone that never claims
+    one writes nothing. Whoever copies a clone clears its runtime file, since two
+    clones that share a key cannot be told apart (DEC-058 point 5).
+    """
+    existing = read_clone_key(capability_root)
+    if existing is not None:
+        return existing
+    key = secrets.token_hex(_KEY_BYTES)
+    _write_field(capability_root, "key", key)
+    return key
+
+
+def _read_data(path: Path) -> dict | None:
+    """The runtime file's fields, or None when it is absent or unreadable."""
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _write_field(capability_root: Path, name: str, value: object) -> Path:
+    """Set one field of the runtime file, keeping the others."""
+    path = identity_path(capability_root)
+    data = _read_data(path) or {}
+    data[name] = value
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data) + "\n", encoding="utf-8")
+    return path

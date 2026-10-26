@@ -7,7 +7,9 @@ under the write-path contract of ADR-037. Two records, two jobs:
   post, recording the methodology version the issue/PR was *born under*.
   It answers "was this filed before or after the buggy upgrade?".
 - **Footer** — a self-replacing, versions-only region at the foot of the
-  body carrying the version of the *current* touch.
+  body carrying the version of the *current* touch. A comment the
+  capability posts ends with the same versions line, written once
+  (`render_comment_footer`, DEC-052).
 
 This module is the **sole constructor** of both (ADR-037): every
 body-writing script routes its written-back body through `stamp()`, and
@@ -196,13 +198,27 @@ def render_footer(versions: Versions) -> str:
     leading bullet, no heading, no checkbox, no file:line), then the end
     sentinel.
     """
+    return f"{MARKER_START}\n\n---\n{_versions_line(versions)}\n{MARKER_END}"
+
+
+def render_comment_footer(versions: Versions) -> str:
+    """The footer that ends a comment the capability posts (DEC-052).
+
+    The same `<sub>` line as the body footer's, with no sentinels: a comment
+    is posted once and never rewritten, so its footer is a static stamp of
+    the versions in force at the post.
+    """
+    return _versions_line(versions)
+
+
+def _versions_line(versions: Versions) -> str:
+    """The `<sub>` line that names the three versions."""
     line = f"<sub>🧰 pkit · tree `{versions.tree}` · pm `{versions.capability}`"
     if versions.cli is not None:
         line += f" · cli `{versions.cli}`"
         if versions.drifted:
             line += " ⚠"
-    line += "</sub>"
-    return f"{MARKER_START}\n\n---\n{line}\n{MARKER_END}"
+    return line + "</sub>"
 
 
 def strip_footer(body: str) -> str:

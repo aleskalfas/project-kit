@@ -77,3 +77,41 @@ def test_corrupt_file_reads_as_unset(ident, tmp_path: Path) -> None:
 
     path.write_text('{"instance": "two"}', encoding="utf-8")  # wrong type
     assert ident.read_instance_id(tmp_path) is None
+
+
+# ---- the clone's key (DEC-058 point 5) ------------------------------------------
+
+
+def test_a_clone_has_no_key_until_it_is_asked_for_one(ident, tmp_path: Path) -> None:
+    assert ident.read_clone_key(tmp_path) is None
+    assert not ident.identity_path(tmp_path).exists()
+
+
+def test_the_key_is_generated_once_and_kept(ident, tmp_path: Path) -> None:
+    key = ident.ensure_clone_key(tmp_path)
+    assert key and len(key) == 32
+    assert ident.ensure_clone_key(tmp_path) == key
+    assert ident.read_clone_key(tmp_path) == key
+    # A key alone sets no instance id: the activation gate stays off.
+    assert ident.read_instance_id(tmp_path) is None
+
+
+def test_two_clones_get_keys_of_their_own(ident, tmp_path: Path) -> None:
+    assert ident.ensure_clone_key(tmp_path / "a") != ident.ensure_clone_key(tmp_path / "b")
+
+
+def test_setting_and_clearing_the_id_keeps_the_key(ident, tmp_path: Path) -> None:
+    key = ident.ensure_clone_key(tmp_path)
+    ident.write_instance_id(tmp_path, 4)
+    assert ident.read_clone_key(tmp_path) == key and ident.read_instance_id(tmp_path) == 4
+    assert ident.clear_instance_id(tmp_path) is True
+    assert ident.read_instance_id(tmp_path) is None
+    assert ident.read_clone_key(tmp_path) == key
+    assert ident.clear_instance_id(tmp_path) is False  # the key alone is no id
+
+
+def test_a_corrupt_file_holds_no_key(ident, tmp_path: Path) -> None:
+    path = ident.identity_path(tmp_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{ not json", encoding="utf-8")
+    assert ident.read_clone_key(tmp_path) is None

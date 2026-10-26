@@ -119,7 +119,7 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any
 
-from _lib import body_parent_ref
+from _lib import body_parent_ref, issue_list
 
 # Sibling module — the gh shell-out helper that pins the adopter's host/owner
 # (DEC-023). Imported the same way `_lib.substrate_writes` does, with a defensive
@@ -1594,36 +1594,25 @@ def fetch_issue_corpus(
     partial instead of presenting a short answer as the whole one. ``state``
     likewise exists for renderers; a gate must not filter, since a closed child
     still counts.
+
+    The listing runs through the capability's one read of its issues
+    (:func:`issue_list.list_issues`), which leaves state issues out, so no
+    state issue is ever a row of the corpus (DEC-058 point 3).
     """
-    args = [
-        "gh",
-        "issue",
-        "list",
-        "--state",
-        state,
-        "--limit",
-        str(limit),
-        "--json",
-        fields,
-    ]
     try:
-        proc = _gh_call(args, config)
+        listing = issue_list.list_issues(
+            config, ["--state", state, "--limit", str(limit)], fields=fields, gh_call=_gh_call
+        )
     except FileNotFoundError:
         return None
-    if proc.returncode != 0:
+    if listing.rows is None:
         return None
-    try:
-        parsed = json.loads(proc.stdout or "[]")
-    except (ValueError, json.JSONDecodeError):
-        return None
-    if not isinstance(parsed, list):
-        return None
-    rows = tuple(row for row in parsed if isinstance(row, dict))
+    rows = tuple(row for row in listing.rows if isinstance(row, dict))
     # Measure the ceiling against what `gh` RETURNED, not against what survived
-    # filtering: a dropped non-dict row would otherwise make a struck ceiling
-    # read as complete. Measured against the limit actually requested, so a
-    # renderer's lowered limit is judged against its own ask.
-    return IssueCorpus(rows=rows, complete=len(parsed) < limit)
+    # filtering: a dropped non-dict row or state issue would otherwise make a
+    # struck ceiling read as complete. Measured against the limit actually
+    # requested, so a renderer's lowered limit is judged against its own ask.
+    return IssueCorpus(rows=rows, complete=listing.returned < limit)
 
 
 def resolve_children(

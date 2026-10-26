@@ -45,7 +45,7 @@ from ruamel.yaml.error import YAMLError
 # pre-check and the DEC-032 contribution collector, per COR-007) and the
 # DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, default_branch
+from _lib import axis_carriage, axis_labels, bootstrap_gate, default_branch, issue_list
 from _lib.agents import agent_deploy_path, agent_is_deployed
 from _lib.classification_rules import title_prefix_by_value
 from _lib.gh import gh_project_run
@@ -2051,24 +2051,15 @@ def _check_title_prefix_alignment(
             )
         ]
 
-    # Fetch a sample of open issues.
-    proc = subprocess.run(
-        [
-            "gh",
-            "issue",
-            "list",
-            "--state",
-            "open",
-            "--limit",
-            str(_TITLE_PREFIX_SAMPLE_LIMIT),
-            "--json",
-            "number,title,labels",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
+    # Fetch a sample of open issues of work, through the capability's one read
+    # of its issues, which leaves state issues out (DEC-058 point 3). It runs
+    # `gh` with no adopter `gh:` block, as this check always has.
+    listing = issue_list.list_issues(
+        {},
+        ["--state", "open", "--limit", str(_TITLE_PREFIX_SAMPLE_LIMIT)],
+        fields="number,title,labels",
     )
-    if proc.returncode != 0:
+    if listing.returncode != 0:
         return [
             CheckResult(
                 "title-prefix alignment",
@@ -2077,10 +2068,7 @@ def _check_title_prefix_alignment(
             )
         ]
 
-    try:
-        issues = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        issues = []
+    issues = list(listing.rows or ())
 
     if not issues:
         return [

@@ -58,7 +58,8 @@ on-surface facts a comment must not restate *as its point*:
 ### Two content categories
 
 - **pkit-authored payload** — the capability composes the text (filing, audit/override,
-  move, verdict). Governed by the house style below.
+  move, verdict, and the events the audit-log facility of
+  [project-management:DEC-044-audit-log-facility] builds). Governed by the house style below.
 - **pass-through** — the text is the user's or the adopter's (freeform comments per
   [project-management:DEC-047-freeform-comment-verb]; hook messages). The capability
   **frames** it (the marker + footer below) but **never authors or restyles the
@@ -143,6 +144,9 @@ here):
 | move | the transition `<from> → <to>` + **intent** (trigger + causation); a **reason-bearing** move carries its reason as its own paragraph (the rule above) |
 | verdict | the review **findings** + the machine gate signal |
 | freeform · hook | pass-through — the user's / adopter's words, framed, never restyled (markers `pkit-freeform` / `pkit-hook`) |
+| claim · handoff · abandon · release | the **instance** that claims, hands over, abandons or releases an issue of work, with its name where it has one, and for a handoff the **instance it goes to**. In a project with a topology it also names the **seat, the seat's number and the clone's key**, a handoff those of its target (refinement per [project-management:DEC-059-topology-of-seats]) |
+| state-marker | the **marker** that makes the issue a state issue, naming the **kind of state and its key**. GitHub records its author, which decides whether a read accepts the issue (refinement per [project-management:DEC-058-state-issues]) |
+| state-claim · state-release · state-force-release | the state's **key**, the **clone's key** and **where the clone lies**. A release by force also carries its **reason** (refinement per [project-management:DEC-058-state-issues]) |
 
 **Composition — one mutation, one comment.** When a single mutation is both a move and an
 override (a gated transition that required a bypass), it is **one** comment, honouring

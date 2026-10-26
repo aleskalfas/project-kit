@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "audit-log.schema.json",
+  "title": "Audit-log facility stamp and event types",
+  "description": "Formal shape of audit-log.yaml — the machine stamp of the audit-log facility (DEC-044) and the event types it builds and parses, each with the family of the seam that posts it and its payload fields. `scripts/_lib/audit_log.py` is the one builder and parser. Companion per COR-018 / the .pkit/schemas/ area conventions.",
+  "x-pkit-id-collection": "/events",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "stamp",
+    "events"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "source": {
+      "$ref": "refs.schema.json#/$defs/source"
+    },
+    "stamp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prefix",
+        "version",
+        "act_field"
+      ],
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "description": "The stamp's signature, after `<!-- `."
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The version of the stamp's grammar, written as `v=<version>`."
+        },
+        "act_field": {
+          "$ref": "#/$defs/field_name",
+          "description": "The field that carries the id made once for each act."
+        },
+        "legacy": {
+          "type": "array",
+          "description": "Stamps written before the facility, which the parser still reads.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "prefix",
+              "version",
+              "fields"
+            ],
+            "properties": {
+              "prefix": {
+                "type": "string"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/field_name"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "events": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "$ref": "#/$defs/entry"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Event types. Keys are the stamp's `event` values; values match $defs.entry."
+    }
+  },
+  "$defs": {
+    "event_ref": {
+      "type": "string",
+      "pattern": "^\\[audit-log:[a-z][a-z0-9-]*\\]$",
+      "description": "Narrowed cross-schema reference token (COR-019) pointing at an event type in `audit-log.yaml`."
+    },
+    "field_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "description": "A payload field's name, as the stamp writes it."
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "fields",
+        "required",
+        "summary"
+      ],
+      "properties": {
+        "family": {
+          "type": "string",
+          "enum": [
+            "ownership",
+            "state-issue"
+          ],
+          "description": "The seam that posts the event: the ownership seam (ADR-041) or the state-issue seam (ADR-071)."
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/field_name"
+          },
+          "description": "The payload's fields, in the order the stamp writes them."
+        },
+        "required": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/field_name"
+          },
+          "description": "The fields an event of this type cannot do without."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What the event records, for a person."
+        }
+      },
+      "description": "One event type of the facility."
+    }
+  }
+}

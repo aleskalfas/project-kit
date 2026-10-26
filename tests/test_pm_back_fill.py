@@ -382,6 +382,32 @@ def test_board_item_ids_keyed_on_repo_and_number(bf, monkeypatch) -> None:
     assert item_ids[("other/repo", 42)] == "ITEM_OTHER_42"
 
 
+def test_board_item_ids_leave_a_state_issues_card_out(bf, monkeypatch) -> None:
+    """A state issue holds no work, so the board's read maps no card of one
+    (DEC-058 point 3, ADR-071 point 6)."""
+    queries: list[str] = []
+
+    def card(item_id: str, number: int, body: str) -> dict:
+        repo = {"nameWithOwner": TARGET_REPO}
+        return {"id": item_id, "content": {"number": number, "body": body, "repository": repo}}
+
+    def fake_gh_run(args, config, **kwargs):
+        queries.append(args[args.index("-f") + 1])
+        nodes = [
+            card("ITEM_STATE", 7, "<!-- pkit:state-issue v=1 kind=seat key=planner -->\n"),
+            card("ITEM_WORK", 8, "## What\n\nwork\n"),
+        ]
+        page = {"pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": nodes}
+        return subprocess.CompletedProcess(
+            args, 0, stdout=json.dumps({"data": {"node": {"items": page}}}), stderr=""
+        )
+
+    monkeypatch.setattr(bf, "gh_run", fake_gh_run)
+    item_ids = bf._resolve_board_item_ids({}, "PROJ_NODE", [{"number": 7}, {"number": 8}])
+    assert item_ids == {(TARGET_REPO, 8): "ITEM_WORK"}
+    assert "number body repository" in queries[0]
+
+
 def test_field_value_resolves_target_repo_item_not_a_colliding_one(bf) -> None:
     """End-to-end of the discriminator: with a colliding #42 on the board, the
     field write for the TARGET repo's #42 carries the target's item id — the other
@@ -769,6 +795,58 @@ def test_no_truncation_flag_when_below_limit(bf, tmp_path, monkeypatch, capsys) 
     assert bf.main() == 0
     plan = json.loads(capsys.readouterr().out)
     assert plan["truncated"] is False
+
+
+# ----- #2139: a state issue is never back-filled ---------------------
+
+_STATE_ISSUE = {
+    "number": 2,
+    "title": "Seat planner",
+    "milestone": None,
+    "body": "<!-- pkit:state-issue v=1 key=seat-planner -->\n## Current state\n",
+}
+
+
+def _plan_with_a_state_issue(bf, tmp_path, monkeypatch, capsys, *, limit: str) -> dict:
+    """The --json plan over a corpus of one work issue and one state issue."""
+    cap = _cap_root_with_hooks(tmp_path, MILESTONE_ONLY_HOOKS)
+
+    def fake_gh_run(args, config, **kwargs):
+        if args[:3] == ["gh", "issue", "list"]:
+            rows = [{"number": 1, "title": "one", "milestone": None, "body": ""}, _STATE_ISSUE]
+            return subprocess.CompletedProcess(args, 0, stdout=json.dumps(rows), stderr="")
+        if args[:3] == ["gh", "repo", "view"]:
+            return subprocess.CompletedProcess(
+                args, 0, stdout=json.dumps({"nameWithOwner": TARGET_REPO}), stderr=""
+            )
+        return subprocess.CompletedProcess(args, 0, stdout="{}", stderr="")
+
+    monkeypatch.setattr(bf, "load_adopter_config", lambda _r: {})
+    monkeypatch.setattr(bf, "gh_run", fake_gh_run)
+    _patch_gate_checks(bf, monkeypatch, auth_ok=True, repo_ok=True, map_ok=True)
+    monkeypatch.setattr(
+        sys, "argv", ["back-fill.py", "--capability-root", str(cap), "--limit", limit, "--json"]
+    )
+    assert bf.main() == 0
+    return json.loads(capsys.readouterr().out)
+
+
+def test_a_state_issue_is_never_back_filled(bf, tmp_path, monkeypatch, capsys) -> None:
+    """The corpus is read through the one read of issues, which leaves a state
+    issue out (DEC-058 point 3), so the plan proposes nothing for it."""
+    plan = _plan_with_a_state_issue(bf, tmp_path, monkeypatch, capsys, limit="500")
+    assert [c["issue_number"] for c in plan["proposed"]] == [1]
+    assert plan["truncated"] is False
+
+
+def test_a_full_page_holding_a_state_issue_is_still_truncated(
+    bf, tmp_path, monkeypatch, capsys
+) -> None:
+    """Two issues at a limit of two reached the limit, though one is a state
+    issue: the issues past the page were never read."""
+    plan = _plan_with_a_state_issue(bf, tmp_path, monkeypatch, capsys, limit="2")
+    assert [c["issue_number"] for c in plan["proposed"]] == [1]
+    assert plan["truncated"] is True
 
 
 # ----- G2: the hook→back-fill coupling is surfaced in the report ------
