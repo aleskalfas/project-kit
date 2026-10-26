@@ -292,7 +292,7 @@ Records in `core/` are managed by project-kit. **Do not edit them** — they are
 
 ## Writing a record
 
-A record is read long after it is written, by people and agents who were not there when it was decided. The disciplines below keep its decision readable and durable. Every record follows the first four, and states the present with no log of its revisions ("Refining an accepted record" above). An architecture record adds a fourth discipline, and a core record two more.
+A record is read long after it is written, by people and agents who were not there when it was decided. The disciplines below keep its decision readable and durable. Every record follows the first four, and states the present with no log of its revisions ("Refining an accepted record" above). An architecture record adds one more discipline, and a core record two more.
 
 ### Every record
 
