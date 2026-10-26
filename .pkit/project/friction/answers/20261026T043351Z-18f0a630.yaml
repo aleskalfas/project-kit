@@ -1,0 +1,101 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T04:33:51Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-001-migration-runs-again.md
+    read:
+      - moved-1642990d8efc.yaml
+    revalidated:
+      at: 2026-10-26T04:33:57Z
+      outcome: unchanged
+      unchanged-because: The change adds tests of where a list's hint stands in the analysis templates, and changes nothing a migration run again does.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-artefact-kind
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:34:03Z
+      outcome: unchanged
+      unchanged-because: The change rewords three hints and examples in the kinds' declaration, and adds or removes no kind, place or layout of parts.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-a8c0e3229666.yaml
+    revalidated:
+      at: 2026-10-26T04:34:09Z
+      outcome: unchanged
+      unchanged-because: The change rewords hints and examples and leaves a part still holding its hint to the placeholder check, and each kind's parts, ids and labels stay as listed.
+  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-hint
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:34:17Z
+      outcome: unchanged
+      unchanged-because: A list's hint now stands on a line of its own below its label, still one line the stamp leaves where a writer fills the part, so the definition holds.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-050-agent-proposes.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-61845b86011c.yaml
+    revalidated:
+      at: 2026-10-26T04:34:23Z
+      outcome: unchanged
+      unchanged-because: The change updates only the pattern by which the tests find a use case's hint below its Main path label, and nothing of what the agent proposes.
+  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - moved-4b37d865f237.yaml
+    revalidated:
+      at: 2026-10-26T04:34:30Z
+      outcome: unchanged
+      unchanged-because: A part still holding its hint is now left to the placeholder check, and where an artefact's structure binds, and a record's being held always, stay as stated.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-070-choose-parts.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+    revalidated:
+      at: 2026-10-26T04:34:37Z
+      outcome: unchanged
+      unchanged-because: The template still shows each part with its hint and example, and the agent still fills each part as its hint says, so every step holds.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020620Z-1374d2d2.yaml
+      - 20261026T022436Z-27f24e90.yaml
+      - 20261026T023001Z-a030112b.yaml
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T04:34:45Z
+      outcome: unchanged
+      unchanged-because: The change rewords the validate command's help on hints left in, and nothing of how a revalidation is recorded after a change.
