@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
+from dataclasses import dataclass, field
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING
 
 import click
@@ -213,6 +214,10 @@ def _report_workspace(target_root: Path) -> None:
 
 
 def _report_claude_adapter(target_root: Path) -> None:
+    """Settings, then the skills and agents under `.claude/`, each listed under
+    where pkit deployed it from, or as the project's own (#2085)."""
+    from project_kit.agents import agent_locations
+
     click.echo()
     click.echo("  " + cli_render.style("heading", "Adapter: claude-code"))
 
@@ -227,58 +232,146 @@ def _report_claude_adapter(target_root: Path) -> None:
         value = "not present (run 'pkit merge-settings')"
     click.echo(f"    {'settings.json':<18} {value}")
 
-    kit_managed: list[tuple[str, str]] = []
-    user_managed: list[str] = []
+    for line in _deployed_lines(
+        "skills", _deployed_skills(target_root), remedy="pkit deploy-skills"
+    ):
+        click.echo(line)
+    # The deploy command is named only where something ships an agent to deploy.
+    ships_agents = any(_count_artifacts(folder) for _, folder in agent_locations(target_root))
+    for line in _deployed_lines(
+        "agents",
+        _deployed_agents(target_root),
+        remedy="pkit deploy-agents" if ships_agents else None,
+    ):
+        click.echo(line)
+
+
+@dataclass
+class _Deployed:
+    """What `.claude/` holds of one kind, skills or agents, by who it belongs to.
+
+    `by_owner` holds what pkit deployed, by where it was deployed from: `core`,
+    `project` (the project namespace) or a capability's name — `core` and
+    `project` are reserved capability names, so the three never meet. `own` is
+    what the project added itself, which pkit does not deploy. `stale` is a
+    deployed copy nothing ships any longer, which the next deploy removes.
+    """
+
+    by_owner: dict[str, list[str]] = field(default_factory=dict)
+    own: list[str] = field(default_factory=list)
+    stale: list[str] = field(default_factory=list)
+
+    def add(self, owner: str, line: str) -> None:
+        self.by_owner.setdefault(owner, []).append(line)
+
+
+def _deployed_skills(target_root: Path) -> _Deployed:
+    """The skills `.claude/skills/` holds, each under where its link leads."""
+    found = _Deployed()
     skills_dir = target_root / ".claude" / "skills"
-    if skills_dir.is_dir():
-        for entry in sorted(skills_dir.iterdir()):
-            link_target = _kit_skill_link_target(entry)
-            if link_target is not None:
-                kit_managed.append((entry.name, link_target))
-            else:
-                user_managed.append(entry.name)
+    if not skills_dir.is_dir():
+        return found
+    for entry in sorted(skills_dir.iterdir()):
+        link = _skill_link(entry)
+        owner = _skill_owner(link) if link is not None else None
+        if owner is None:
+            found.own.append(entry.name)
+        else:
+            found.add(owner, f"{entry.name} -> {link}")
+    return found
 
-    if kit_managed:
-        click.echo(f"    {'skills deployed':<18} {len(kit_managed)} kit-managed:")
-        for name, target in kit_managed:
-            click.echo(f"                         {name} -> {target}")
-    else:
-        click.echo(f"    {'skills deployed':<18} 0 (run 'pkit deploy-skills')")
 
-    if user_managed:
-        click.echo(f"    {'':<18} {len(user_managed)} user-managed (untouched by pkit):")
-        for name in user_managed:
-            click.echo(f"                         {name}")
+def _deployed_agents(target_root: Path) -> _Deployed:
+    """The agents `.claude/agents/` holds, each under the folder that deploys it.
 
-    # Agents deploy as resolved copies (not symlinks), so we can't
-    # discriminate kit-managed from user-managed by readlink as we do for
-    # skills. Use the deploy-time marker the adapter writes into the
-    # frontmatter (`# managed-by: project-kit`) — same source-of-truth
-    # the deploy primitive uses for its own kit-vs-user content guard.
-    kit_agent_names = _source_agent_names(target_root)
-    deployed: list[str] = []
-    user_agents: list[str] = []
+    Agents deploy as resolved copies, not symlinks, so the deploy-time marker
+    the adapter writes into the front matter (`# managed-by: project-kit`)
+    tells pkit's copy from the project's own — the guard the deploy primitive
+    itself uses. A marked copy belongs to the first folder shipping its name,
+    in the deploy's order (`agents.agent_locations`).
+    """
+    from project_kit.agents import agent_locations, find_agent_file
+
+    found = _Deployed()
     agents_dir = target_root / ".claude" / "agents"
-    if agents_dir.is_dir():
-        for entry in sorted(agents_dir.iterdir()):
-            if entry.is_file() and entry.suffix == ".md":
-                name = entry.stem
-                if name in kit_agent_names and _has_kit_marker(entry):
-                    deployed.append(name)
-                else:
-                    user_agents.append(name)
+    if not agents_dir.is_dir():
+        return found
+    locations = agent_locations(target_root)
+    for entry in sorted(agents_dir.iterdir()):
+        if not (entry.is_file() and entry.suffix == ".md"):
+            continue
+        name = entry.stem
+        if not _has_kit_marker(entry):
+            found.own.append(name)
+            continue
+        owner = next(
+            (ns for ns, folder in locations if find_agent_file(folder, name) is not None), None
+        )
+        if owner is None:
+            found.stale.append(name)
+        else:
+            found.add(owner, name)
+    return found
 
-    if deployed:
-        click.echo(f"    {'agents deployed':<18} {len(deployed)} kit-managed:")
-        for name in deployed:
-            click.echo(f"                         {name}")
-    elif kit_agent_names:
-        click.echo(f"    {'agents deployed':<18} 0 (run 'pkit deploy-agents')")
 
-    if user_agents:
-        click.echo(f"    {'':<18} {len(user_agents)} user-managed (untouched by pkit):")
-        for name in user_agents:
-            click.echo(f"                         {name}")
+def _deployed_lines(label: str, deployed: _Deployed, *, remedy: str | None) -> list[str]:
+    """One group per owner — core, each capability by name, the project
+    namespace — then the project's own, then what the next deploy removes.
+
+    With nothing deployed, the first line names the deploy command `remedy`
+    when it is given.
+    """
+    owners = sorted(deployed.by_owner, key=lambda o: (o == "project", o != "core", o))
+    groups = [
+        (f"{len(deployed.by_owner[o])} deployed from {_owner_phrase(o)}:", deployed.by_owner[o])
+        for o in owners
+    ]
+    if deployed.own:
+        groups.append(
+            (f"{len(deployed.own)} the project's own, which pkit does not deploy:", deployed.own)
+        )
+    if deployed.stale:
+        groups.append(
+            (
+                f"{len(deployed.stale)} no longer shipped, which the next `pkit sync` removes:",
+                deployed.stale,
+            )
+        )
+    lines: list[str] = []
+    head = label
+    if not deployed.by_owner and remedy is not None:
+        lines.append(f"    {head:<18} 0 deployed (run '{remedy}')")
+        head = ""
+    for title, names in groups:
+        lines.append(f"    {head:<18} {title}")
+        head = ""
+        lines.extend(f"{_LIST_INDENT}{name}" for name in names)
+    return lines
+
+
+def _owner_phrase(owner: str) -> str:
+    if owner == "core":
+        return "core"
+    if owner == "project":
+        return "the project namespace"
+    return f"capability {owner}"
+
+
+def _skill_owner(link: str) -> str | None:
+    """Where a deployed skill's link leads: `core` or `project` for
+    `.pkit/skills/<namespace>/`, the capability's name for
+    `.pkit/capabilities/<name>/skills/`; None for anywhere else."""
+    parts = PurePosixPath(link).parts
+    for i, part in enumerate(parts[:-2]):
+        if part != ".pkit":
+            continue
+        area, owner = parts[i + 1], parts[i + 2]
+        if area == "skills" and owner in ("core", "project"):
+            return owner
+        if area == "capabilities" and parts[i + 3 : i + 4] == ("skills",):
+            return owner
+        return None
+    return None
 
 
 def _report_capabilities(target_root: Path, source_kit: Path) -> None:
@@ -791,27 +884,22 @@ def _count_artifacts(parent: Path) -> int:
     return count
 
 
-def _kit_skill_link_target(entry: Path) -> str | None:
-    """Return the kit-relative symlink target if `entry` is a kit-managed skill.
+def _skill_link(entry: Path) -> str | None:
+    """The link a deployed skill `entry` under `.claude/skills/` carries, or None.
 
     Pre-COR-015: `.claude/skills/<name>` is a directory-symlink to
     `.pkit/skills/<ns>/<name>/`. Post-COR-015: `.claude/skills/<name>/`
-    is a real directory containing a `SKILL.md` symlink to
-    `.pkit/skills/<ns>/<name>.md` (flat) or `.pkit/skills/<ns>/<name>/<name>.md`
-    (folder). Both shapes return the resolved source path; non-kit
-    entries return None.
+    is a real directory containing a `SKILL.md` symlink to the skill's file in
+    `.pkit/skills/<ns>/` or in a capability's `skills/` folder, flat
+    (`<name>.md`) or folder (`<name>/<name>.md`). Both shapes return the link
+    as written; an entry with neither returns None. Where the link leads is
+    `_skill_owner`'s question.
     """
     if entry.is_symlink():
-        link = os.readlink(entry)
-        if "/.pkit/skills/" in link:
-            return link
-        return None
-    if entry.is_dir():
-        inner = entry / "SKILL.md"
-        if inner.is_symlink():
-            link = os.readlink(inner)
-            if "/.pkit/skills/" in link:
-                return link
+        return os.readlink(entry)
+    inner = entry / "SKILL.md"
+    if entry.is_dir() and inner.is_symlink():
+        return os.readlink(inner)
     return None
 
 
@@ -832,18 +920,3 @@ def _has_kit_marker(agent_file: Path) -> bool:
     except OSError:
         return False
     return _KIT_AGENT_MARKER in head
-
-
-def _source_agent_names(target_root: Path) -> set[str]:
-    """Names of every kit-shipped agent across core/ and project/ namespaces."""
-    names: set[str] = set()
-    for ns in ("core", "project"):
-        ns_dir = target_root / ".pkit" / "agents" / ns
-        if not ns_dir.is_dir():
-            continue
-        for entry in ns_dir.iterdir():
-            if entry.is_file() and entry.suffix == ".md":
-                names.add(entry.stem)
-            elif entry.is_dir() and (entry / f"{entry.name}.md").is_file():
-                names.add(entry.name)
-    return names
