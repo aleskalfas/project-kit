@@ -28,6 +28,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/decisions.py
+        - src/project_kit/decisions_proposed.py
         - src/project_kit/decisions_validate.py
         - src/project_kit/decisions_check_diff.py
         - src/project_kit/record_points.py
@@ -96,8 +97,8 @@ pkit:
 
 4. The system checks the slug and the namespace. It numbers the record one past the highest its namespace's folder holds, in the working tree or on the [default branch](../../../glossary.md#term-default-branch--default-branch) ([COR-054 point 3](../../../../../../.pkit/decisions/core/COR-054-default-branch.md#3-the-override-is-a-base-not-a-declaration)).
 5. The system stamps `<PREFIX>-<NNN>-<slug>.md` with `status: proposed`, today's date and the author git names. It writes the four sections, with a first [point](../../../glossary.md#term-point--point) heading under the Decision, `### 1. Point title` ([COR-058 point 1](../../../../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)). It prints `Stamped: <path>`.
-6. The developer writes the title, the context, each point under a heading of its own, the rationale and the implications. Each point keeps its id for good ([COR-058 point 3](../../../../../../.pkit/decisions/core/COR-058-record-points.md#3-a-new-point-takes-the-next-unused-number-and-no-point-is-renumbered)).
-7. The developer runs `pkit decisions validate`. The system checks that no two records of one namespace share an id, and that each record's id matches its file name. It checks each record's points, retired ids and stubs too ([COR-058 point 7](../../../../../../.pkit/decisions/core/COR-058-record-points.md#7-what-validation-checks)).
+6. The developer writes the title, the context, each point under a heading of its own, the rationale and the implications. Each point keeps its id for good ([COR-058 point 3](../../../../../../.pkit/decisions/core/COR-058-record-points.md#3-a-new-point-takes-the-next-unused-number-and-no-point-is-renumbered)). Where the record's acceptance waits on an issue, a date or another record, the developer names that condition in `waits-on`.
+7. The developer runs `pkit decisions validate`. The system checks that no two records of one namespace share an id, and that each record's id matches its file name. It checks each record's points, retired ids and stubs too ([COR-058 point 7](../../../../../../.pkit/decisions/core/COR-058-record-points.md#7-what-validation-checks)). It checks that each `waits-on` names one condition of a known kind.
 8. The developer runs `pkit decisions check-diff`. The system compares each record the [change](../../../glossary.md#term-change--change) touches with where the branch left its [base](../../../glossary.md#term-base--base). It also compares the ids the change takes with those the base took since ([COR-058 point 8](../../../../../../.pkit/decisions/core/COR-058-record-points.md#8-a-changes-numbering-is-checked-against-its-base)).
 9. The developer commits the record as `proposed`. Work that builds on it waits until the merge authoriser accepts it ([UC-040](UC-040-accept-through-review.md)).
 
@@ -124,6 +125,7 @@ pkit:
 - **7b.** A record's points break what [COR-058 point 7](../../../../../../.pkit/decisions/core/COR-058-record-points.md#7-what-validation-checks) holds, such as a stub whose sentence differs from its entry. The system fails, naming `<file>#<id>`, and the path rejoins at step 6. A duplicate point id, a gap in the ids or a misspelt point heading draws only a warning.
 - **7c.** A line of a record narrates its own revision, such as an amendment heading or a correction stamped with a date. The system warns of it, naming the file and the line, and never fails on it. The developer states the fact plainly instead.
 - **7d.** The project holds a record as a synced copy, such as a core record in a project that is not the source repository. [Validation](../../../glossary.md#term-validation--validation) reads that record for its id alone, since the project cannot mend it ([COR-055 point 1](../../../../../../.pkit/decisions/core/COR-055-validation.md#1-what-validation-owns)).
+- **7e.** A record's `waits-on` names no one condition of a known kind, such as an issue written with its `#`, which opens a comment in YAML. The system fails, naming `<file>:/waits-on`, and the path rejoins at step 6. A `waits-on` on an accepted record draws only a warning.
 - **8a.** The [base](../../../glossary.md#term-base--base) resolves to no commit. The check refuses and names its fix, and never guesses a base ([COR-054 point 4](../../../../../../.pkit/decisions/core/COR-054-default-branch.md#4-unresolved-report-never-guess) and [REQ-004](../../../requirements/quality/REQ-004-missing-answer-never-clean.md)). The path rejoins at step 8.
 - **8b.** Another [change](../../../glossary.md#term-change--change) landed a record of the same number on the default branch since the branch left it. The check fails, naming the record and the next unused number, since the first to land keeps its number. The developer moves the record to the next unused number, and the path rejoins at step 7.
 - **8c.** The change renumbers a point, or drops one without retiring it. The check fails, naming `<file>#<id>`, and the path rejoins at step 6.

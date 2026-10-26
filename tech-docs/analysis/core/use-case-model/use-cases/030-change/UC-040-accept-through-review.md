@@ -14,6 +14,7 @@ pkit:
   friction:
     anchors:
       path:
+        - src/project_kit/decisions_proposed.py
         - src/project_kit/rule_sets.py
         - src/project_kit/rule_set_reading.py
         - src/project_kit/cli.py
@@ -65,9 +66,10 @@ pkit:
 **Variants:**
 
 - **1a.** The merge authoriser holds the draft wrong. The [change](../../../glossary.md#term-change--change) revises it, and the path rejoins at step 1. A draft rejected before it lands is deleted, since no status marks a record rejected. A [rule](../../../glossary.md#term-rule--rule) that already landed proposed is withdrawn instead, and keeps its id ([COR-051 point 4](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate)).
-- **2a.** The draft is a [decision record](../../../glossary.md#term-decision-record--decision-record). No command shows where a record binds, so the merge authoriser reads its decision and its rationale. The path goes on at step 3.
+- **1b.** The draft is a [decision record](../../../glossary.md#term-decision-record--decision-record) that landed `proposed`, and the merge authoriser runs `pkit decisions proposed` to find it. The [system](../../../glossary.md#term-system--system) lists the [project](../../../glossary.md#term-project--project)'s own proposed records, due first, and writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)). A record is due once its `waits-on` condition has passed, or once it names none and its `date` is over 30 days old. A change opened to accept it then holds the draft, and the path goes on at step 1.
+- **2a.** The draft is a decision record. No command shows where a record binds, so the merge authoriser reads its decision and its rationale. The path goes on at step 3.
 - **3a.** Accepting the rule brings each [artefact](../../../glossary.md#term-artefact--artefact) its sets reach under it. The change owns each break of the rule there, and the rule-set [reviewer](../../../glossary.md#term-reviewer--reviewer) withholds its approval for each settled one ([COR-060 point 1](../../../../../../.pkit/decisions/core/COR-060-brought-under-breaks.md#1-one-kind-whatever-brings-the-text-under-the-rule)). The change mends the text, or narrows a scope to leave a file out until it is mended ([COR-060 point 2](../../../../../../.pkit/decisions/core/COR-060-brought-under-breaks.md#2-no-exception-of-its-own)).
-- **3b.** A set of the [project](../../../glossary.md#term-project--project)'s own inherits the rule's set. Accepting the rule needs a new major of that set. Each pin on the old major then holds back every rule of the set ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). [Validation](../../../glossary.md#term-validation--validation) fails on each such pin until the project reviews the new major and updates the pin.
+- **3b.** A set of the project's own inherits the rule's set. Accepting the rule needs a new major of that set. Each pin on the old major then holds back every rule of the set ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). [Validation](../../../glossary.md#term-validation--validation) fails on each such pin until the project reviews the new major and updates the pin.
 - **3c.** The merge authoriser approved the record's addition and its acceptance together, as [UC-037](UC-037-record-decision.md) variant 9a says. The record lands `accepted` in the commit that adds it.
 - **5a.** The rule's origin cites a decision record that is still proposed. Validation fails, naming the rule. The cited record is accepted first, through this same use case, and the path rejoins at step 5.
 - **7a.** The merge authoriser works alone, and commits the acceptance straight to the [default branch](../../../glossary.md#term-default-branch--default-branch), as [UC-034](UC-034-land-change.md) variant 1a says. No [pull request](../../../glossary.md#term-pull-request--pull-request) carries it.
