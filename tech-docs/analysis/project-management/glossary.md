@@ -649,7 +649,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#owner).
 
 **Distinctions:**
 
-- **Assignee:** the GitHub account an [issue](#term-issue--issue) is assigned to. One person's instances all share the assignee, so the owner pairs the assignee with one instance ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-an-instancen-github-label-paired-with-the-assignee)).
+- **Assignee:** the GitHub account an [issue](#term-issue--issue) is assigned to. One person's instances all share the assignee, so the owner pairs the assignee with one instance ([DEC-035 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee)).
 - **A lock:** a hold that no one else can take at the same moment. GitHub offers no lock, so two instances may both take one issue at once. The higher-numbered instance then gives the issue up (DEC-035 point 6).
 - **A file's owner:** the [methodology](../core/glossary.md#term-methodology--methodology) or the [project](../core/glossary.md#term-project--project), under the core's [rule](../core/glossary.md#term-rule--rule) that every file has one owner. A file's owner has nothing to do with an issue.
 - **A seat's holder:** the clone that holds a [seat](#term-seat--seat). The seat's [state issue](#term-state-issue--state-issue) shows which clone that is. An owner holds an issue of work, and a holder holds a seat ([DEC-058 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#5-a-claim-on-a-state-issue-takes-the-shape-of-a-claim-on-a-task)).
