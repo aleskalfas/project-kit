@@ -39,6 +39,9 @@ holds it, and this module calls nothing of the friction engine.
   section, the record's status, supersession and title fields, its preamble
   (the text before its first section) and Summary, and the Decision's text
   outside every point and stub. A stub is no point, and stands on nothing.
+  `RecordPoints.shared_extents` gives those parts every point stands on, which
+  the numbering check also reads, to tell an accepted record's change outside
+  its points (COR-058 point 8's command).
 - `RecordPoints.anchored` gives what an anchor on one point finds in the
   record (COR-050 point 7): a live point, an id two live points share, a
   retired id with its successors, a record whose points are a list, or
@@ -355,13 +358,24 @@ class RecordPoints:
         if point is None or self.decision is None:
             return None
         fields = {key: self.front_matter[key] for key in GROUND_FIELDS if key in self.front_matter}
+        return PointGround(
+            point=point, fields=fields, extents=(point.extent, *self.shared_extents())
+        )
+
+    def shared_extents(self) -> tuple[Extent, ...]:
+        """The parts of the record every point stands on, in the body's order: its
+        preamble, its Summary section and the Decision's text outside every point and
+        stub, an empty part left out; none without a Decision. What a change to an
+        accepted record alters outside its points is told by them too
+        (`decisions_check_diff`)."""
+        if self.decision is None:
+            return ()
         shared = [self._preamble()]
         summary = self._summary()
         if summary is not None:
             shared.append(summary)
         shared += self._outside_points()
-        shared = sorted((e for e in shared if e.end > e.start), key=lambda e: e.start)
-        return PointGround(point=point, fields=fields, extents=(point.extent, *shared))
+        return tuple(sorted((e for e in shared if e.end > e.start), key=lambda e: e.start))
 
     def standing(self, point_id: str) -> Standing | None:
         """What an anchor on the live point `point_id` stands on, as the checks compare it

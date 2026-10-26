@@ -12,6 +12,7 @@ the id.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -515,6 +516,176 @@ def test_a_record_the_default_branch_holds_at_its_own_path_is_no_clash(repo: Git
     repo.write({ours: _record(_points("1"), record_id="PRJ-002")})
 
     assert _found(repo) == []
+
+
+# --- the accepted records the change alters ---------------------------------------------
+
+_Change = decisions_check_diff.ChangedRecord
+_Point = decisions_check_diff.PointChange
+
+
+def _changed(repo: GitRepo) -> list[decisions_check_diff.ChangedRecord]:
+    """Each accepted record the change alters or removes, through the module."""
+    head = decisions_check_diff.head_records(repo.root)
+    fork = repo.git("merge-base", "main", "HEAD").stdout.strip()
+    tip = repo.git("rev-parse", "main").stdout.strip()
+    report = decisions_check_diff.check(repo.root, head, base="main", fork=fork, tip=tip)
+    return list(report.changed)
+
+
+def test_each_point_an_accepted_record_gains_loses_or_alters_is_listed(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "2", "3"))})
+    retired = 'retired-points:\n  "2": []\n'
+    stub = _stub("2", "Its content is in no other point.")
+    edited = _point("1", text="Narrowed") + stub + _points("3", "4")
+    repo.write({RECORD: _record(edited, extra=retired)})
+
+    points = (
+        _Point("1", "altered", "Point 1"),
+        _Point("2", "retired", "Point 2"),
+        _Point("4", "added", "Point 4"),
+    )
+    assert _changed(repo) == [_Change(RECORD, "PRJ-001", points)]
+    result = _run()
+    assert result.exit_code == 0, result.output
+    assert "1 accepted record(s) the change alters or removes" in result.output
+    assert (
+        f"PRJ-001 (`{RECORD}`): point 1 (Point 1) altered, point 2 (Point 2) retired and "
+        "point 4 (Point 4) added"
+    ) in result.output
+
+
+def test_an_edit_to_one_of_two_points_sharing_an_id_is_listed(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "2") + _point("2", title="Again"))})
+    repo.write({RECORD: _record(_points("1", "2") + _point("2", title="Again", text="Edited"))})
+
+    assert _changed(repo) == [_Change(RECORD, "PRJ-001", (_Point("2", "altered", "Point 2"),))]
+
+
+def test_text_outside_the_points_is_told_by_what_it_is_and_a_reflow_is_no_change(
+    repo: GitRepo,
+) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "2"))})
+    reflowed = _point("1") + "### 2. Point 2\n\nText\nof 2.\n\n"
+    repo.write({RECORD: _record(reflowed)})
+    assert _changed(repo) == []
+
+    repo.write({RECORD: _record(_points("1", "2")).replace("Because.", "Because, and more.")})
+    assert _changed(repo) == [_Change(RECORD, "PRJ-001", other=True)]
+    assert f"PRJ-001 (`{RECORD}`): its other text altered" in _run().output
+
+    repo.write({RECORD: _record(_points("1", "2")).replace("What.", "What, and more.")})
+    assert _changed(repo) == [_Change(RECORD, "PRJ-001", shared=True)]
+
+    superseded = _record(_points("1", "2")).replace("status: accepted", "status: superseded")
+    repo.write({RECORD: superseded})
+    assert _changed(repo) == [_Change(RECORD, "PRJ-001", fields=("status",))]
+    assert f"PRJ-001 (`{RECORD}`): its status altered" in _run().output
+
+
+def test_a_record_with_no_points_is_read_as_text_its_points_would_stand_on(
+    repo: GitRepo,
+) -> None:
+    _branch(repo, {RECORD: _record("One choice, no parts.\n\n")})
+    repo.write({RECORD: _record("One choice, widened, no parts.\n\n")})
+
+    assert _changed(repo) == [_Change(RECORD, "PRJ-001", shared=True)]
+
+
+def test_a_record_not_accepted_at_the_branch_point_is_not_listed(repo: GitRepo) -> None:
+    """A proposed record binds nothing yet, and a record the change adds has no branch
+    point's state: neither is an accepted record the change alters."""
+    proposed = _record(_points("1")).replace("status: accepted", "status: proposed")
+    _branch(repo, {RECORD: proposed})
+    added = f"{PROJECT}/PRJ-002-b.md"
+    repo.write(
+        {RECORD: _record(_points("1", "2")), added: _record(_points("1"), record_id="PRJ-002")}
+    )
+
+    assert _changed(repo) == []
+    assert "accepted record(s) the change alters" not in _run().output
+
+
+def test_a_record_in_list_form_is_listed_whole(repo: GitRepo) -> None:
+    _branch(repo, {RECORD: _record(_LIST)})
+    repo.write({RECORD: _record(_LIST.replace("Two.", "Two, widened."))})
+
+    assert _changed(repo) == [_Change(RECORD, "PRJ-001", list_form=True)]
+    assert "altered as a whole, since its points are a list" in _run().output
+
+
+def test_an_accepted_record_the_change_removes_is_listed(repo: GitRepo) -> None:
+    other = f"{PROJECT}/PRJ-002-b.md"
+    _branch(
+        repo, {RECORD: _record(_points("1")), other: _record(_points("1"), record_id="PRJ-002")}
+    )
+    repo.git("rm", "-q", RECORD)
+
+    assert _changed(repo) == [_Change(RECORD, "PRJ-001", removed=True)]
+    assert f"PRJ-001 (`{RECORD}`): removed" in _run().output
+
+
+def test_a_named_head_is_read_from_git_and_the_json_document_lists_the_changes(
+    repo: GitRepo,
+) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "2"))})
+    repo.commit("narrow", {RECORD: _record(_point("1", text="Narrowed") + _points("2"))})
+    head = repo.git("rev-parse", "HEAD").stdout.strip()
+    repo.checkout("main")  # the working tree holds the branch point's record
+
+    assert "No decision record differs from main" in _run().output
+    result = _run("--base", "main", "--head", head, "--json")
+
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.stdout)
+    assert document["schema_version"] == 1
+    assert document["head"] == head
+    assert document["compared"] == 1
+    assert document["findings"] == []
+    assert document["accepted_changes"] == [
+        {
+            "path": RECORD,
+            "record": "PRJ-001",
+            "points": [{"id": "1", "change": "altered", "title": "Point 1"}],
+            "fields": [],
+            "shared_text": False,
+            "other_text": False,
+            "list_form": False,
+            "removed": False,
+        }
+    ]
+
+
+def test_the_json_document_carries_the_findings_and_the_exit_stays_an_error(
+    repo: GitRepo,
+) -> None:
+    _branch(repo, {RECORD: _record(_points("1", "2"))})
+    repo.write({RECORD: _record(_points("1"))})
+
+    result = _run("--json")
+
+    assert result.exit_code == 1
+    document = json.loads(result.stdout)
+    assert [f["location"] for f in document["findings"]] == [f"{RECORD}#2"]
+    assert document["findings"][0]["severity"] == "error"
+    assert document["errors"] == 1
+    assert document["accepted_changes"][0]["points"] == [
+        {"id": "2", "change": "removed", "title": "Point 2"}
+    ]
+
+
+def test_a_head_that_names_no_commit_is_refused_and_no_record_gives_an_empty_document(
+    repo: GitRepo,
+) -> None:
+    _branch(repo, {RECORD: _record(_points("1"))})
+    refused = _run("--head", "nowhere")
+    assert refused.exit_code == 1
+    assert "--head 'nowhere' names no commit of this repository." in refused.output
+
+    repo.git("rm", "-q", RECORD)
+    empty = json.loads(_run("--json").stdout)
+    assert empty["compared"] == 0
+    assert empty["accepted_changes"] == []
 
 
 # --- which records, and the command ---------------------------------------------------
