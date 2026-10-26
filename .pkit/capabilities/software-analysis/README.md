@@ -778,8 +778,8 @@ Each kind's template in `templates/` is its structure rendered, so it shows exac
   **Goal:** <!-- pkit:hint … Example: … -->
   ```
 
-- **A list's hint stands where the list goes.** A part you write as a list, a use case's *Main path* and the *Variants* of a use case or a journey, holds its hint on a line of its own below its label, after a blank line. Its example is the list's first item, such as `1. The analyst chooses Export.`, so the example, written in the hint's place, opens the list. A journey's *Steps* holds its hint on its label's line, since the stamp writes its items.
-- **Each example passes the check.** Written in its hint's place, each example holds its part's form. A test stamps every kind, writes each example in its hint's place, and the check passes the result.
+- **A list's hint stands where the list goes.** A part you write as a list, a use case's *Main path* and the *Variants* of a use case or a journey, holds its hint on a line of its own below its label, after a blank line. Its example is the list's first item, such as ``1. The analyst chooses `Export`.``, so the example, written in the hint's place, opens the list. A journey's *Steps* holds its hint on its label's line, since the stamp writes its items.
+- **Each example passes the check.** Written in its hint's place, each example holds its part's form.
 - **A front-matter field's hint is its placeholder too.** Where the stamp leaves a field for you to fill, it writes the field's hint as the field's text: the same marked comment, with the field's example after it. Those fields are an actor's `needs`, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to`. A field that takes a list holds one item, its hint. A YAML parse reads the hint as text, so the front matter stays valid while you fill it. The template's front matter, written by hand, shows the same hints, and a test holds the two equal. An actor's `needs`, shortened in the same way:
 
   ```yaml
@@ -787,7 +787,7 @@ Each kind's template in `templates/` is its structure rendered, so it shows exac
     - '<!-- pkit:hint … Example: … -->'
   ```
 
-- **A hint left in,** in a field or in the body, is refused by the placeholder check whatever the format rule's status, and the message repeats the hint. The mark is matched outside code spans and fenced code, so a text may quote it. The structure check leaves a part that still holds its hint to the placeholder check, so each part left unfilled is reported once.
+- **A hint left in,** in a field or in the body, is refused by the placeholder check whatever the format rule's status, and the message repeats the hint. The mark is matched outside code spans and fenced code, so a text may quote it.
 - **A hint is advice.** What binds is a part's presence, its order and its form. A hint names no style.
 - **A collection file's head,** the glossary's heading and its opening, is written once, when the stamp creates the file. The opening's first sentence says what the file holds. After that it is yours to reword.
 - **A revalidation record carries no hints,** since its stamp writes every part from its command line. Its template shows each part's example, as one planned record.
