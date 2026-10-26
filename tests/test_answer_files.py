@@ -21,7 +21,7 @@ from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit.cli import main
-from project_kit.friction_discovery import Anchor
+from project_kit.friction_discovery import Anchor, discover_artefacts
 from tests.adopter_repo import MakeAdopterRepo
 from tests.friction_documents import (
     CONFIG,
@@ -394,6 +394,33 @@ def test_an_answer_follows_the_renames_of_its_artefacts_file(timeline: Timeline)
     assert report.answers is not None and report.answers["home"] == "files"
     assert [r["file"] for r in report.answers["revalidations"]] == ["one.yaml"]
     assert answered in _points(result)
+
+
+def test_the_working_tree_follows_a_move_committed_or_not(timeline: Timeline) -> None:
+    """An answer in the working tree may name an artefact under every path its file had: the
+    renames HEAD's history holds, and one the working tree makes and has not committed, as
+    the change check reads a working tree (COR-062 point 10; #2108)."""
+    root = timeline.adopter.root
+    timeline.start({"docs/old.md": bare_guide(), "docs/a.md": _collection("n1")})
+    timeline.rename("docs/old.md", "docs/mid.md")
+    (root / "docs" / "area").mkdir()
+    timeline.adopter.git("mv", "docs/mid.md", GUIDE)
+    timeline.adopter.git("mv", "docs/a.md", "docs/area/a.md")
+    assert af.working_renames(root) == {GUIDE: "docs/mid.md", "docs/area/a.md": "docs/a.md"}
+    found = {a.location: a for a in discover_artefacts(root).artefacts}
+    locations = af.working_locations(root)
+    assert locations(found[GUIDE]) == (GUIDE, "docs/mid.md", "docs/old.md")
+    assert locations(found["docs/area/a.md#n1"]) == ("docs/area/a.md#n1", "docs/a.md#n1")
+
+
+def test_before_the_first_commit_an_artefact_has_its_own_location_alone(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo()
+    adopter.write({CONFIG: friction_config(), GUIDE: bare_guide()})
+    (guide,) = [a for a in discover_artefacts(adopter.root).artefacts if a.location == GUIDE]
+    assert af.working_renames(adopter.root) == {}
+    assert af.working_locations(adopter.root)(guide) == (GUIDE,)
 
 
 def _collection(*ids: str) -> str:
