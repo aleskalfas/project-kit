@@ -28,8 +28,8 @@ pkit:
 
 **Verified by:** None.
 
-**Rationale:** Clones coordinate through GitHub, so the only state they keep is each clone's number and the marks on the issues (DEC-035). [EPIC](../../glossary.md#term-epic--epic) #943 sets the outcome this serves: with every session killed, each clone finds where it was from GitHub and the clone's number. The [owner](../../glossary.md#term-owner--owner) is written on the [issue](../../glossary.md#term-issue--issue) itself, so it survives a session that died (DEC-043 point 4). Each [Task](../../glossary.md#term-task--task)'s branch is named after the Task, so the branch is found from the issue (DEC-013).
+**Rationale:** Clones coordinate through GitHub, so the only state they keep is each clone's number and the marks on the issues (DEC-035). [EPIC](../../../glossary.md#term-epic--epic) #943 sets the outcome this serves: with every session killed, each clone finds where it was from GitHub and the clone's number. The [owner](../../../glossary.md#term-owner--owner) is written on the [issue](../../../glossary.md#term-issue--issue) itself, so it survives a session that died (DEC-043 point 4). Each [Task](../../../glossary.md#term-task--task)'s branch is named after the Task, so the branch is found from the issue (DEC-013).
 
 ## Open for the design
 
-Where the work was heading beyond its branch is decided by no record yet, as `UC-086` says. #2096 asks that an agent's direction be found from GitHub alone. This requirement holds what the records decide: what an [instance](../../glossary.md#term-instance--instance) owns, and each [Task](../../glossary.md#term-task--task)'s branch.
+Where the work was heading beyond its branch is decided by no record yet, as `UC-086` says. #2096 asks that an agent's direction be found from GitHub alone. This requirement holds what the records decide: what an [instance](../../../glossary.md#term-instance--instance) owns, and each [Task](../../../glossary.md#term-task--task)'s branch.

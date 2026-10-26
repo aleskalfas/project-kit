@@ -25,4 +25,4 @@ pkit:
 
 **Verified by:** None.
 
-**Rationale:** Two [instances](../../glossary.md#term-instance--instance) that work on one [issue](../../glossary.md#term-issue--issue) step on each other, and the work is done twice (DEC-035). GitHub offers no atomic claim, so a clash can only be caught and resolved, never prevented (DEC-035 point 6). The lower number wins, since both instances work it out from the marks alone, and either may keep the issue (DEC-035). The comment log keeps that tie-break where no label can be created (DEC-043 point 3).
+**Rationale:** Two [instances](../../../glossary.md#term-instance--instance) that work on one [issue](../../../glossary.md#term-issue--issue) step on each other, and the work is done twice (DEC-035). GitHub offers no atomic claim, so a clash can only be caught and resolved, never prevented (DEC-035 point 6). The lower number wins, since both instances work it out from the marks alone, and either may keep the issue (DEC-035). The comment log keeps that tie-break where no label can be created (DEC-043 point 3).
