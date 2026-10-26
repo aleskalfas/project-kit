@@ -913,8 +913,7 @@ def _ids_linked(
         raise Refused(f"the kinds' declared structure could not be read: {exc}") from exc
     artefact = Artefact(kind, new_id, location, location, False, {}, {}, folder=within.folder)
     named = id_links.named(analysis, within.listing, within.folder)
-    nothing = links.Vocabulary((), {})
-    return links.document(artefact, text, nothing, parted[kind], named, terms=False).linked
+    return links.document(artefact, text, None, parted[kind], named=named).linked
 
 
 def _write_view(

@@ -51,16 +51,16 @@ pkit:
 
 **Assumptions:**
 
-- The [harness](../../../glossary.md#term-harness--harness) records a [session anchor](../../../glossary.md#term-session-anchor--session-anchor) as a session starts, and the session anchor does not move with `cd`. The [system](../../../glossary.md#term-system--system) reads Claude Code's from `CLAUDE_PROJECT_DIR` (ADR-034 [point](../../../glossary.md#term-point--point) 1).
-- An agent routes no write around the system's own commands. Nothing checks such a route, and only core rule 19 asks it of the agent (COR-039 point 3).
+- The [harness](../../../glossary.md#term-harness--harness) records a [session anchor](../../../glossary.md#term-session-anchor--session-anchor) as a session starts, and the session anchor does not move with `cd`. The [system](../../../glossary.md#term-system--system) reads Claude Code's from `CLAUDE_PROJECT_DIR` ([ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever)).
+- An agent routes no write around the system's own commands. Nothing checks such a route, and only core rule 19 asks it of the agent ([COR-039 point 3](../../../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md#3-honest-about-reach--an-interlock-not-a-security-boundary)).
 
 **Trigger:** An agent runs a command of the [system](../../../glossary.md#term-system--system) that changes a repository's state on its hosting service, such as merging a [pull request](../../../glossary.md#term-pull-request--pull-request). It runs the command from a working directory in a repository other than the [session anchor](../../../glossary.md#term-session-anchor--session-anchor)'s.
 
 **Main path:**
 
 1. The agent runs the command, such as `pkit pull-request merge <number> --subject "<title>"`.
-2. Before the command reads or sends anything, the cross-repository guard compares two repositories, from git alone (ADR-034 [point](../../../glossary.md#term-point--point) 1). They are the working directory's and the [session anchor](../../../glossary.md#term-session-anchor--session-anchor)'s.
-3. The two are different repositories, and no terminal can be asked. So the [system](../../../glossary.md#term-system--system) refuses and changes nothing, as COR-039 point 1 asks. It exits with status `1` (`cli.py`). It names two ways on: `Run it from a session rooted in <target>, or pass --allow-foreign-repo to confirm the change there.`
+2. Before the command reads or sends anything, the cross-repository guard compares two repositories, from git alone ([ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever)). They are the working directory's and the [session anchor](../../../glossary.md#term-session-anchor--session-anchor)'s.
+3. The two are different repositories, and no terminal can be asked. So the [system](../../../glossary.md#term-system--system) refuses and changes nothing, as [COR-039 point 1](../../../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md#1-operator-gated-not-blocked) asks. It exits with status `1` (`cli.py`). It names two ways on: `Run it from a session rooted in <target>, or pass --allow-foreign-repo to confirm the change there.`
 4. The agent stops, and asks the operator whether to write in that repository (core rule 19).
 5. The operator confirms the write.
 6. The agent runs the command again with `--allow-foreign-repo`.
@@ -68,9 +68,9 @@ pkit:
 
 **Variants:**
 
-- **1a.** The command is one that an installed [capability](../../../glossary.md#term-capability--capability) ships. COR-039 [point](../../../glossary.md#term-point--point) 2 puts the check in that capability's own code too, and the capability's analysis states it.
-- **1b.** The agent writes a file with a file tool at an absolute path outside the [session anchor](../../../glossary.md#term-session-anchor--session-anchor)'s directory. An [adapter](../../../glossary.md#term-adapter--adapter)'s [permission hook](../../../glossary.md#term-permission-hook--permission-hook) may ask the operator to confirm such a write, naming both paths (ADR-034 point 2). Claude Code's hook asks for `Edit` and `Write` where no [grant](../../../glossary.md#term-grant--grant) decides the call, and compares paths, so it asks for a linked worktree too. Without the hook, nothing asks.
-- **1c.** The agent changes the other repository around the [system](../../../glossary.md#term-system--system)'s commands, such as with `git -C <path> push` or `gh -R <repository>`. No guard sees the write (ADR-034 point 5). The permission code allows `cd <path> && git commit` wherever `vcs` is granted, since it strips the leading `cd` (ADR-025 point 1).
+- **1a.** The command is one that an installed [capability](../../../glossary.md#term-capability--capability) ships. [COR-039 point 2](../../../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md#2-enforced-at-the-program-that-owns-the-mutation-where-it-can-see-both-sides) puts the check in that capability's own code too, and the capability's analysis states it.
+- **1b.** The agent writes a file with a file tool at an absolute path outside the [session anchor](../../../glossary.md#term-session-anchor--session-anchor)'s directory. An [adapter](../../../glossary.md#term-adapter--adapter)'s [permission hook](../../../glossary.md#term-permission-hook--permission-hook) may ask the operator to confirm such a write, naming both paths ([ADR-034 point 2](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#2-one-detectable-corner-at-the-intent-layer--a-small-honest-catch-not-the-lever)). Claude Code's hook asks for `Edit` and `Write` where no [grant](../../../glossary.md#term-grant--grant) decides the call, and compares paths, so it asks for a linked worktree too. Without the hook, nothing asks.
+- **1c.** The agent changes the other repository around the [system](../../../glossary.md#term-system--system)'s commands, such as with `git -C <path> push` or `gh -R <repository>`. No guard sees the write ([ADR-034 point 5](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#5-a-discipline-grade-interlock-not-a-security-boundary)). The permission code allows `cd <path> && git commit` wherever `vcs` is granted, since it strips the leading `cd` ([ADR-025 point 1](../../../../../architecture/decisions/ADR-025-segment-conservative-bash-allow.md#1-phase-1--strip-a-leading-cd-decide-on-the-remainder)).
 - **1d.** The command changes files rather than the hosting service, such as `pkit new decision` or `pkit sync`. At its entry, before it reads anything, the command compares the two repositories as step 2 does ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)). The path goes on at step 3.
 
 > [!WARNING]
@@ -82,14 +82,14 @@ pkit:
 > - `release merge`
 > - `release publish-notes`
 >
-> ADR-034 point 1 decides that every `pkit` command that writes runs the guard, and #1765 tracks it.
+> [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs the guard, and #1765 tracks it.
 
-- **1e.** The command is `pkit report`, which files a [report](../../../glossary.md#term-report--report) on the repository of the [distribution](../../../glossary.md#term-distribution--distribution). That write lies outside the guard by its kind. It is confirmed at a terminal, and with nobody to ask it is only drafted (ADR-047 points 1 and 2).
+- **1e.** The command is `pkit report`, which files a [report](../../../glossary.md#term-report--report) on the repository of the [distribution](../../../glossary.md#term-distribution--distribution). That write lies outside the guard by its kind. It is confirmed at a terminal, and with nobody to ask it is only drafted (ADR-047 points [1](../../../../../architecture/decisions/ADR-047-report-cross-repo-write.md#1-outside-the-interlock-by-category-not-by-flag) and [2](../../../../../architecture/decisions/ADR-047-report-cross-repo-write.md#2-never-silent-realized-as-confirm-or-draft)).
 - **2a.** The working directory lies in a linked worktree of the session's repository, or in another clone whose `origin` matches the session's. The system counts it as the session's own repository. The write goes ahead with no question, and the use case ends.
-- **2b.** The system finds no session anchor, or one side lies in no git repository. It reads only Claude Code's, so under another [harness](../../../glossary.md#term-harness--harness) it finds none. The guard has nothing to compare, so the write goes ahead. Its verdict says `undetermined`, never that the target is the session's own (ADR-061 point 6).
+- **2b.** The system finds no session anchor, or one side lies in no git repository. It reads only Claude Code's, so under another [harness](../../../glossary.md#term-harness--harness) it finds none. The guard has nothing to compare, so the write goes ahead. Its verdict says `undetermined`, never that the target is the session's own ([ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes)).
 - **2c.** git cannot be asked, such as when it does not respond in time. The system warns that the guard `could not compare`, and the write goes ahead.
 - **2d.** `GH_REPO` is set in the environment, so `gh` acts on a repository the working directory does not hold. The guard compares directories alone, so it does not see the write (`session_guard.py`).
-- **3a.** A terminal is at hand on standard input and standard error, as when the operator runs the command. The system asks `Make the change there anyway? [y/N]` (ADR-034 point 4). A yes makes the write, and the use case ends. Any other reply refuses it.
+- **3a.** A terminal is at hand on standard input and standard error, as when the operator runs the command. The system asks `Make the change there anyway? [y/N]` ([ADR-034 point 4](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#4-operator-gated-not-blocked)). A yes makes the write, and the use case ends. Any other reply refuses it.
 - **3b.** The command is a dry run, which `pkit pull-request land`, `pkit release merge` and `release publish-notes` offer. The system asks nothing and refuses, saying that a run at a terminal would ask. With `--allow-foreign-repo`, it previews the confirmed run.
 - **5a.** The operator declines, or chooses to open a session rooted in the other repository. The agent writes nothing there, and the use case ends.
 
@@ -97,7 +97,7 @@ pkit:
 
 **Minimal guarantees:**
 
-- A write the [backbone](../../../glossary.md#term-backbone--backbone)'s guard refused makes no request of the hosting service (ADR-061 [point](../../../glossary.md#term-point--point) 6 and `session_guard.py`).
-- Where the target is another repository, a command with no terminal never asks. It refuses unless the call carries the confirmation (COR-039 point 1 and `session_guard.py`).
+- A write the [backbone](../../../glossary.md#term-backbone--backbone)'s guard refused makes no request of the hosting service ([ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes) and `session_guard.py`).
+- Where the target is another repository, a command with no terminal never asks. It refuses unless the call carries the confirmation ([COR-039 point 1](../../../../../../.pkit/decisions/core/COR-039-session-repo-mutation-boundary.md#1-operator-gated-not-blocked) and `session_guard.py`).
 - Where the guard cannot compare, its verdict says so, and never reads the target as the session's own (ADR-061 point 6).
 - A command writes only in the directory the guard cleared (`session_guard.py`).

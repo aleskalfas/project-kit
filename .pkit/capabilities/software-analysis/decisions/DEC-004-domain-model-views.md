@@ -173,7 +173,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 - **Noun forms only.** A mention is the name or a declared noun form as written, its first letter in either case, and no other form. A term declares only forms that cannot read as a verb, such as "payments", never "orders" (DEC-001 point 1).
 - **Whole words.** A mention stands whole, never part of a longer word or of a compound. So "order's" holds a mention of "order", and "pre-order" holds none.
 - **The longest first.** Where two mentions overlap, the one that starts first is taken, and of two that start together, the longer. So "payment method" wins over "payment", and "order line" over "order".
-- **What is skipped:** code spans and fenced blocks, headings, bold labels, comments, links and other markup, and the lines that link a term and its section. A mention of an artefact's id is no mention of a term, linked or not (DEC-001 point 14).
+- **What is skipped:** code spans and fenced blocks, headings, bold labels, comments, links and other markup, the lines that link a term and its section, and each citation of a record or a rule, linked or not (DEC-001 point 13). A mention of an artefact's id is no mention of a term, linked or not (DEC-001 point 14).
 - **An actor's name.** An actor's name holds no mention of a term whose name is only part of it, such as "component" in "component author". An actor named by its name uses no concept. The names are those of the analysis's actors in force, and of the actors its glossary's head lists from another analysis.
   - **A whole name** that is a term's name is still a mention, since it may name either. The term tells the two apart, and the escape marks the actor (DEC-001 point 1).
   - **A shortened name** is no data, so a term in it is a mention, and the escape serves there too.
@@ -194,7 +194,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 - **A withdrawn view** keeps the section it held, as it keeps the rest of its text (DEC-001 point 3). The command and the check read none of it.
 
 **Written by a command, held by the check.** Nobody writes these links by hand.
-- **The command,** `pkit analysis link`, writes each section's link to its term, the mentions' links and each view's closing section, in every analysis that keeps a domain model. It reads a body only to place its links, as the stamp reads the glossary to place a term's link. Its data comes from front matter, where a tool reads an artefact's data (DEC-001 point 1), and from the declared structures:
+- **The command,** `pkit analysis link`, writes each section's link to its term, the mentions' links and each view's closing section, in every analysis that keeps a domain model. It writes the links of citations too, in every analysis (DEC-001 point 13). It reads a body only to place its links, as the stamp reads the glossary to place a term's link. The data of the links to terms comes from front matter, where a tool reads an artefact's data (DEC-001 point 1), and from the declared structures:
   - each term's name, noun forms and other senses
   - each view's `explains`
   - each actor's name, and whether it gives a summary
@@ -212,7 +212,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
   - **Its words.** The heading is fixed in English, as a box's label is (DEC-001, Rationale). A project cannot relabel it, since the section is no part. Each label is its concept's heading, in the analysis's own words.
 - **Its cost.** A change that adds or renames a term, or rewords a section, may move links. It runs the command before validation passes. Such a change moves the first mentions across every artefact that names the term, so two branches may conflict there. The command, run again on the merged text, mends them.
   - **Across analyses:** a term renamed in an analysis another builds on moves the links in that other analysis too. In one repository, the change that renames it runs the command there.
-- **A project without a domain model** sees no mention's link to a term written or held. The command writes the links of ids in every analysis, one without views included (DEC-001 point 14).
+- **A project without a domain model** sees no mention's link to a term written or held. The command writes the links of citations and of ids in every analysis, one without views included (DEC-001 points 13 and 14).
 
 ### 8. Its place in the build order
 
@@ -387,7 +387,7 @@ A documentation page that is no architecture view may rest on a view's section (
   - **The links command,** `pkit analysis link`, writes the section's link, the mentions' links and each view's closing section (point 7). The stamp writes a new view's closing section.
   - **The links' form,** declared on each place of the capability, and the closing section's on the views' places (point 7). Friction sets aside each link of those forms. The declaration needs a backbone that reads it.
   - **The structure** reads a view's closing section as no part (point 2).
-  - **Who runs the command.** The authoring skill runs it after any artefact is written, since any artefact may name another by its id (DEC-001 point 14). Whoever applies a revalidation that rewords a section runs it too.
+  - **Who runs the command.** The authoring skill runs it after any artefact is written, since any artefact may cite a record or name another by its id (DEC-001 points 13 and 14). Whoever applies a revalidation that rewords a section runs it too.
   - **The structure holds** a view's headings to the names of the terms its `explains` lists, in sentence case, where the format rule binds. The stamp writes them so. Each heading gives a slug of its own (point 2).
   - **The structure holds each section's *Why*** where the format rule binds, as it holds the section's other parts: present, before the explanation and the section's labels, and filled or `None.`. The stamp writes it with its hint. The structure reads it as its paragraph alone, and the explanation below it (point 2).
   - **A project's own structure** that places an addition to a concept's section before its explanation is refused, as one that places it before any opening is.

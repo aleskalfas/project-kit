@@ -6,17 +6,24 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""software-analysis capability — link: an analysis's links (DEC-001 point 14, DEC-004 point 7).
+"""software-analysis capability — link: an analysis's links (DEC-001 points 13 and 14,
+DEC-004 point 7).
 
-In every analysis, it links the first mention of each artefact by its id in each section
-to that artefact: a use case, a journey, a requirement, an actor or a view to its file,
-and a term to its glossary entry, by a path from the file. An id alone names an artefact
-of its own analysis, and `core:UC-021` one of an analysis it builds on. A bold label is
-read for ids, so a journey's seams and a precondition's producers link theirs, and a
-journey's step line links its use case's id. An artefact's own id takes no link.
+In every analysis, it links the first citation of each record, point and rule in each
+section of each artefact in force to what it cites: a record's file, a point's
+heading, a rule's heading. `_lib/citations.py` states the forms a citation takes, and
+`pkit refs lookup --json`, in one call, says where each leads, with the host's anchor
+of a heading. A citation that resolves to nothing takes no link, and is named.
+
+In every analysis, it also links the first mention of each artefact by its id in each
+section to that artefact: a use case, a journey, a requirement, an actor or a view to its
+file, and a term to its glossary entry, by a path from the file. An id alone names an
+artefact of its own analysis, and `core:UC-021` one of an analysis it builds on. A bold
+label is read for ids, so a journey's seams and a precondition's producers link theirs,
+and a journey's step line links its use case's id. An artefact's own id takes no link.
 
 In every analysis that keeps a domain model — its `domain-model/` folder holds a
-view — it writes each section's link to its term, right below the section's
+view — it also writes each section's link to its term, right below the section's
 heading, and links the first mention of each term in each section to the term's
 entry in the glossary: in a view's opening and its sections, in each glossary entry
 below its heading, and in each part of an actor's, a use case's, a journey's and a
@@ -31,18 +38,18 @@ friction artefacts --json`, and takes its data from front matter and the declare
 structures alone: each term's name, `noun-forms` and `other-senses`, each view's
 `explains`, an actor's `summary`, and the labels that open each part, as the project's
 own structures relabel and add them, and each artefact's id and file. It reads a body
-only to place its links. It
-writes a file only where its links change, each whole or not at all, with the file's
-own line ends, and needs no network. `pkit analysis validate` holds what it writes,
-whatever any rule's status.
+only to place its links, at the mentions, the citations and the ids its text makes. It
+writes a file only where its links change, each whole or not at all, with the file's own
+line ends, and needs no network. `pkit analysis validate` holds what it writes, whatever
+any rule's status.
 
 Usage:
   pkit analysis link    write the links, and name each file written
 
 Exit codes:
   0  written, or nothing to write
-  1  the analysis or the kinds' declared structure could not be read, or a file could
-     not be read or written
+  1  the analysis or the kinds' declared structure could not be read, the citations
+     could not be looked up, or a file could not be read or written
 """
 
 from __future__ import annotations
@@ -62,14 +69,15 @@ def main() -> int:
     argparse.ArgumentParser(
         prog="pkit analysis link",
         description=(
-            "Write the links of each analysis: the first mention of each artefact by its id "
-            "in each section linked to that artefact (software-analysis DEC-001 point 14), "
-            "and, in each analysis that keeps a domain model, the links between its terms and "
-            "its views (DEC-004 point 7): each view section's link to its term, and the "
-            "first mention of each term in each section linked to its glossary entry, in the "
-            "views, the glossary entries, and each part of the actors, use cases, journeys "
-            "and requirements. Each view ends with where its concepts are used. Writes only "
-            "where a link changes; `pkit analysis validate` holds the links."
+            "Write the links of the analysis: in every analysis, the first citation of each "
+            "record, point and rule in each section linked to what it cites (software-analysis "
+            "DEC-001 point 13), and the first mention of each artefact by its id in each "
+            "section linked to that artefact (DEC-001 point 14); in each analysis that keeps "
+            "a domain model, each view section's link to its term, and the first mention of "
+            "each term in each section linked to its glossary entry, in the views, the "
+            "glossary entries, and each part of the actors, use cases, journeys and "
+            "requirements (DEC-004 point 7). Each view ends with where its concepts are used. "
+            "Writes only where a link changes; `pkit analysis validate` holds the links."
         ),
     ).parse_args()
 
@@ -90,7 +98,7 @@ def main() -> int:
         return 1
     read: dict[str, str | None] = {}
     crlf: dict[str, bool] = {}
-    for rel in links.files(analysis, listing, kinds):
+    for rel in links.files(analysis, listing):
         try:
             text = (root / rel).read_bytes().decode("utf-8")
         except (OSError, UnicodeDecodeError) as exc:
@@ -105,9 +113,24 @@ def main() -> int:
             return 1
         crlf[rel] = "\r" in text
         read[rel] = text.replace("\r\n", "\n")
-    planned = links.plan(analysis, listing, read, kinds)
+    try:
+        lookups = backbone.lookup(root, links.asked(analysis, listing, read, kinds))
+    except Unreadable as exc:
+        print(
+            f"error: the citations could not be looked up: {exc}; nothing is linked.",
+            file=sys.stderr,
+        )
+        return 1
+    planned = links.plan(analysis, listing, read, kinds, lookups)
     written = 0
     for linked in planned:
+        for d in linked.departures:
+            if d.how == links.UNRESOLVED:
+                print(
+                    f"note: {linked.path}:{d.line}: `{d.text}` takes no link: {d.wanted} "
+                    f"(DEC-001 point 13)"
+                )
+        mended = [d for d in linked.departures if d.how != links.UNRESOLVED]
         if linked.linked == linked.text:
             continue
         target = root / linked.path
@@ -118,10 +141,10 @@ def main() -> int:
         except (Refused, OSError) as exc:
             print(f"error: {linked.path} could not be written: {exc}", file=sys.stderr)
             return 1
-        print(f"linked {linked.path} ({len(linked.departures)} link(s) written or mended)")
+        print(f"linked {linked.path} ({len(mended)} link(s) written or mended)")
         written += 1
     if not planned:
-        print("No analysis holds an artefact to link, so no link is written.")
+        print("The analysis holds no artefact in force, so no link is written.")
     elif not written:
         print("Every link is as it should be; nothing written.")
     return 0

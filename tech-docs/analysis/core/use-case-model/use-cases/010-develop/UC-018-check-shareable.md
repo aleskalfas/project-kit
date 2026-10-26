@@ -37,8 +37,8 @@ pkit:
 
 **Assumptions:**
 
-- A [project](../../../glossary.md#term-project--project) that pulls the [capability](../../../glossary.md#term-capability--capability) takes it whole, at a ref of the repository where it is authored. That project gates the capability on the [range](../../../glossary.md#term-range--range) the capability declares (COR-041 and ADR-040 [point](../../../glossary.md#term-point--point) 4). The fetch that would pull it is not built yet (`manifest.py`), so this check is what the author has today.
-- The author has run the capability on each [backbone](../../../glossary.md#term-backbone--backbone) [version](../../../glossary.md#term-version--version) its range admits. The check reads the range's form, never that claim, which the author owns (ADR-040 point 5).
+- A [project](../../../glossary.md#term-project--project) that pulls the [capability](../../../glossary.md#term-capability--capability) takes it whole, at a ref of the repository where it is authored. That project gates the capability on the [range](../../../glossary.md#term-range--range) the capability declares ([COR-041](../../../../../../.pkit/decisions/core/COR-041-external-source-distribution.md) and [ADR-040 point 4](../../../../../architecture/decisions/ADR-040-external-source-write-path.md#4-ordering-load-bearing-fetch--read-fetched-manifest--compatibility-gate--activate-or-refuse)). The fetch that would pull it is not built yet (`manifest.py`), so this check is what the author has today.
+- The author has run the capability on each [backbone](../../../glossary.md#term-backbone--backbone) [version](../../../glossary.md#term-version--version) its range admits. The check reads the range's form, never that claim, which the author owns ([ADR-040 point 5](../../../../../architecture/decisions/ADR-040-external-source-write-path.md#5-the-author-owns-the-compatibility-claim-the-consumer-validates-it-at-fetch-time)).
 
 **Trigger:** The author means to let other repositories pull the [capability](../../../glossary.md#term-capability--capability).
 
@@ -47,7 +47,7 @@ pkit:
 1. The author runs `pkit release check-shareable <name>` in the [project](../../../glossary.md#term-project--project).
 2. The [system](../../../glossary.md#term-system--system) finds the [capability](../../../glossary.md#term-capability--capability)'s [package metadata](../../../glossary.md#term-package-metadata--package-metadata) among the [components](../../../glossary.md#term-component--component) under `.pkit/`.
 3. The system checks that the package metadata holds a `component:` mapping with a `component.version`, since a project that pulls the capability pins it by [version](../../../glossary.md#term-version--version).
-4. The system checks that `requires_backbone` is a [range](../../../glossary.md#term-range--range) bounded on both sides, of the form `>=LOW,<HIGH`. The gate of a project that pulls the capability can evaluate such a range (ADR-040 [point](../../../glossary.md#term-point--point) 4).
+4. The system checks that `requires_backbone` is a [range](../../../glossary.md#term-range--range) bounded on both sides, of the form `>=LOW,<HIGH`. The gate of a project that pulls the capability can evaluate such a range ([ADR-040 point 4](../../../../../architecture/decisions/ADR-040-external-source-write-path.md#4-ordering-load-bearing-fetch--read-fetched-manifest--compatibility-gate--activate-or-refuse)).
 5. The system looks in the package metadata for a path that only the author's machine has, such as one under `/Users/`.
 6. The system prints `shareability check: <name> is ready to be shared — ok.`, and exits 0.
 

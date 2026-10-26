@@ -27,4 +27,4 @@ pkit:
 
 **Verified by:** Tests find that every [reviewer](../../../glossary.md#term-reviewer--reviewer) agent that can run commands states the same section on what its read-only covers. Its source and its deployed copy both state it, and name the workspace for its working files. Nothing checks at run time what a reviewer changed.
 
-**Rationale:** A [reviewer](../../../glossary.md#term-reviewer--reviewer)'s verdict is worth only its independence, as the agents README says of reviewers. COR-024 keeps the critic read-only to preserve that independence, and COR-057 [point](../../../glossary.md#term-point--point) 1 says the rule-set reviewer changes nothing it reviews.
+**Rationale:** A [reviewer](../../../glossary.md#term-reviewer--reviewer)'s verdict is worth only its independence, as the agents README says of reviewers. [COR-024](../../../../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md) keeps the critic read-only to preserve that independence, and [COR-057 point 1](../../../../../../.pkit/decisions/core/COR-057-rule-set-reviewer.md#1-what-it-judges) says the rule-set reviewer changes nothing it reviews.

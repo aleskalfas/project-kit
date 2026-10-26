@@ -310,22 +310,30 @@ def requirement(
     )
 
 
+#: A shipped example's citation of the example project's own record, such as `(PRJ-003)`.
+_EXAMPLE_CITATION = re.compile(r" \(PRJ-[0-9]+\)")
+
+
 def fill(repo: AdopterRepo) -> None:
     """Every placeholder the stamp left in the analysis written over with its own words,
     as a person fills each — the check fails an artefact still holding one. Each part's
-    hint is written over with its example. Then the links are written, as the authoring
-    skill runs `pkit analysis link` after any artefact is written: a journey's step lines
-    name their use cases by id, which link to them (DEC-001 point 14). The overview is
-    generated, and holds nothing a person fills (DEC-003 point 8). An actor's `summary` is
-    drawn there, so where an overview is kept, it is written anew after, as a person runs
-    its command."""
+    hint is written over with its example. An example cites a record of the example's
+    project, which no adopter here holds, so its citation is left out: the check would
+    warn of one that resolves to nothing (software-analysis DEC-001 point 13). Then the
+    links are written, as the authoring skill runs `pkit analysis link` after any artefact
+    is written: a journey's step lines name their use cases by id, which link to them
+    (DEC-001 point 14). The overview is generated, and holds nothing a person fills
+    (DEC-003 point 8). An actor's `summary` is drawn there, so where an overview is kept,
+    it is written anew after, as a person runs its command."""
     overviews = [
         p for p in (repo.root / ANALYSIS).rglob("README.md") if p.parent.name == "overview"
     ]
     for path in sorted((repo.root / ANALYSIS).rglob("*.md")):
         if (repo.root / RECORDS) in path.parents or path in overviews:
             continue
-        text = HINT.sub(r"\g<example>", path.read_text(encoding="utf-8"))
+        text = HINT.sub(
+            lambda m: _EXAMPLE_CITATION.sub("", m["example"]), path.read_text(encoding="utf-8")
+        )
         path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
     linked = run_script(repo, LINK)
     assert linked.returncode == 0, linked.stderr

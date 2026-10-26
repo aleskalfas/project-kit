@@ -464,8 +464,9 @@ def test_two_sections_naming_each_other_s_terms_are_each_mended(project: Adopter
 
 def test_an_analysis_with_no_domain_model_takes_no_link(bare: AdopterRepo) -> None:
     """A glossary with no view beside it is never linked to its terms nor held, a link
-    written in it by hand included (DEC-004 point 7). It names no artefact by its id, so
-    the links of ids write nothing either (DEC-001 point 14)."""
+    written in it by hand included (DEC-004 point 7). It cites no record and names no
+    artefact by its id, so the links of citations and of ids write nothing either (DEC-001
+    points 13 and 14)."""
     stamped(bare, "term", "order", "--name", "order", "--path", "src/run.py")
     stamped(bare, "term", "payment", "--name", "payment", "--path", "src/run.py")
     fill(bare)

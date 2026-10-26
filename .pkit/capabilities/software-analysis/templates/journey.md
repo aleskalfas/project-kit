@@ -41,4 +41,4 @@ pkit:
 
 **Postconditions:** <!-- pkit:hint The state that shows the whole path succeeded. Example: The analyst holds a file with their first report. -->
 
-**Minimal guarantees:** <!-- pkit:hint What still holds when the path stops before its end. Name the record or code each rests on. Write `None.` when there is none. Example: Stopping after any step leaves every saved report as it was (DEC-003). -->
+**Minimal guarantees:** <!-- pkit:hint What still holds when the path stops before its end. Name the record or code each rests on. Write `None.` when there is none. Example: Stopping after any step leaves every saved report as it was (PRJ-003). -->

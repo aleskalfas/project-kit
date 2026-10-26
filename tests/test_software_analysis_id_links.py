@@ -449,7 +449,7 @@ def test_each_step_line_links_its_use_case_and_counts_first(tmp_path: Path) -> N
         "2. UC-002 — Read\n3. UC-001 — Run\n   - **Needs from step 2 (UC-002):** UC-003 too.\n"
     )
     artefact = model.Artefact("journey", "JRN-001", path, path, False, {}, {})
-    out = links.document(artefact, text, links.Vocabulary((), {}), journey, named).linked
+    out = links.document(artefact, text, None, journey, named=named).linked
 
     def to(n: int) -> str:
         return f"[UC-00{n}](../use-cases/UC-00{n}-x.md)"
@@ -469,14 +469,14 @@ def test_a_goal_and_an_actor_s_first_sentence_stay_plain_of_ids(tmp_path: Path) 
     named = _named()
     case = "# UC-007 — T\n\n**Goal:** Read UC-008.\n\n**Trigger:** UC-008 ends.\n"
     artefact = model.Artefact("use-case", "UC-007", HERE, HERE, False, {}, {})
-    out = links.document(artefact, case, links.Vocabulary((), {}), kinds["use-case"], named)
+    out = links.document(artefact, case, None, kinds["use-case"], named=named)
     assert out.linked == case.replace("**Trigger:** UC-008", f"**Trigger:** [UC-008]({READ_TO})")
     actor_path = "tech-docs/analysis/use-case-model/actors/ACT-x.md"
     actor = model.Artefact(
         "actor", "ACT-x", actor_path, actor_path, False, {"summary": "Reads UC-008."}, {}
     )
     text = "# ACT-x — X\n\nReads UC-008. Then UC-008 again.\n"
-    written = links.document(actor, text, links.Vocabulary((), {}), kinds["actor"], named).linked
+    written = links.document(actor, text, None, kinds["actor"], named=named).linked
     assert written == text.replace(
         "Then UC-008", "Then [UC-008](../use-cases/020-read/UC-008-read.md)"
     )

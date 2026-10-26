@@ -43,7 +43,7 @@ pkit:
 
 - **Operator** (`ACT-operator`): is asked before `pkit connections providers set` writes in a repository other than the session's own, so no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-**Preconditions:** **From [UC-023](UC-023-add-or-remove-capability.md) or [UC-016](../010-develop/UC-016-keep-capability.md):** Two or more installed [capabilities](../../../glossary.md#term-capability--capability) provide one [role](../../../glossary.md#term-role--role). So the role has no provider until the [project](../../../glossary.md#term-project--project) selects one (COR-053 [point](../../../glossary.md#term-point--point) 1).
+**Preconditions:** **From [UC-023](UC-023-add-or-remove-capability.md) or [UC-016](../010-develop/UC-016-keep-capability.md):** Two or more installed [capabilities](../../../glossary.md#term-capability--capability) provide one [role](../../../glossary.md#term-role--role). So the role has no provider until the [project](../../../glossary.md#term-project--project) selects one ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
 
 **Assumptions:** None.
 
@@ -56,22 +56,22 @@ pkit:
 3. At its entry, before it reads anything, the system checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 > [!WARNING]
-> **Not built yet:** `pkit connections providers set` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+> **Not built yet:** `pkit connections providers set` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-4. The system checks that the [capability](../../../glossary.md#term-capability--capability) is installed, and that it provides the role (COR-053 point 7).
-5. The system shows the edit it would make to the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration): the entry `connections.providers.<role>` in `.pkit/project/config.yaml`. It asks `Set connections.providers.<role> = '<capability>' in .pkit/project/config.yaml?` (COR-048 point 5).
+4. The system checks that the [capability](../../../glossary.md#term-capability--capability) is installed, and that it provides the role ([COR-053 point 7](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
+5. The system shows the edit it would make to the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration): the entry `connections.providers.<role>` in `.pkit/project/config.yaml`. It asks `Set connections.providers.<role> = '<capability>' in .pkit/project/config.yaml?` ([COR-048 point 5](../../../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent)).
 6. On a yes, the system writes the entry, and prints `set connections.providers.<role> = <capability>  (.pkit/project/config.yaml)`.
 7. The adopter runs `pkit validate`. The role has its provider, so [validation](../../../glossary.md#term-validation--validation) passes it, and the [backbone](../../../glossary.md#term-backbone--backbone) resolves the role's [connection points](../../../glossary.md#term-connection-point--connection-point) through the selected capability.
 
 **Variants:**
 
-- **1a.** The adopter runs `pkit validate` first. It fails with `role '<role>' is provided by <providers> and no provider is selected`, naming the command that writes the selection (COR-053 [point](../../../glossary.md#term-point--point) 1).
+- **1a.** The adopter runs `pkit validate` first. It fails with `role '<role>' is provided by <providers> and no provider is selected`, naming the command that writes the selection ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
 - **2a.** The adopter passes `--dry-run`. The [system](../../../glossary.md#term-system--system) shows the edit it would make, prints `Dry run: nothing written.`, and writes nothing.
 - **2b.** The adopter passes `--yes` with `--dry-run`. The system refuses with `--yes and --dry-run exclude each other: one writes, the other never does.`, and writes nothing.
 - **4a.** The [capability](../../../glossary.md#term-capability--capability) is not installed. The system refuses, naming `pkit capabilities install <capability>` and the installed providers of the [role](../../../glossary.md#term-role--role), and writes nothing. The path rejoins at step 2.
 - **4b.** The capability does not provide the role. The system refuses, naming the roles it provides and the installed providers of the role, and writes nothing. The path rejoins at step 2.
 - **4c.** The entry names the capability already. The system prints `connections.providers.<role> is already <capability>; nothing to write.`, and the use case ends.
-- **5a.** Standard input is no terminal, and the adopter gave no `--yes`. The system refuses, naming the command to run with `--yes`, and writes nothing (COR-048 point 5).
+- **5a.** Standard input is no terminal, and the adopter gave no `--yes`. The system refuses, naming the command to run with `--yes`, and writes nothing ([COR-048 point 5](../../../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent)).
 - **5b.** The adopter passes `--yes`. The system asks nothing, and the path goes on at step 6.
 - **5c.** The adopter declines. The system writes nothing, and the use case ends.
 
@@ -79,6 +79,6 @@ pkit:
 
 **Minimal guarantees:**
 
-- A selection names only an installed [capability](../../../glossary.md#term-capability--capability) that provides the [role](../../../glossary.md#term-role--role) (COR-053 [point](../../../glossary.md#term-point--point) 7 and `connections_config.py`).
-- With nobody to ask and no `--yes`, nothing is written (COR-048 point 5 and `project_config.py`).
-- A role that two installed capabilities provide fails [validation](../../../glossary.md#term-validation--validation) until the [project](../../../glossary.md#term-project--project) selects one (COR-053 point 1 and `connections.py`).
+- A selection names only an installed [capability](../../../glossary.md#term-capability--capability) that provides the [role](../../../glossary.md#term-role--role) ([COR-053 point 7](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys) and `connections_config.py`).
+- With nobody to ask and no `--yes`, nothing is written ([COR-048 point 5](../../../../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent) and `project_config.py`).
+- A role that two installed capabilities provide fails [validation](../../../glossary.md#term-validation--validation) until the [project](../../../glossary.md#term-project--project) selects one ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles) and `connections.py`).

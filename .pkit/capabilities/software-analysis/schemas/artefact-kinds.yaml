@@ -118,7 +118,7 @@ kinds:
         text: Assumptions
         allows-none: true
         hint: What must also be true for the use case to work, but nothing in the system secures. Name the record that admits each. Write `None.` when there is none.
-        example: The disk keeps the file as the system wrote it (DEC-003).
+        example: The disk keeps the file as the system wrote it (PRJ-003).
       - id: trigger
         type: label
         text: Trigger
@@ -147,7 +147,7 @@ kinds:
         text: Minimal guarantees
         allows-none: true
         hint: What the system still guarantees when the use case ends early or fails. Name the record or code each rests on. Write `None.` when there is none.
-        example: A failed export leaves no partial file (DEC-003).
+        example: A failed export leaves no partial file (PRJ-003).
 
   journey:
     sections:
@@ -184,7 +184,7 @@ kinds:
         text: Minimal guarantees
         allows-none: true
         hint: What still holds when the path stops before its end. Name the record or code each rests on. Write `None.` when there is none.
-        example: Stopping after any step leaves every saved report as it was (DEC-003).
+        example: Stopping after any step leaves every saved report as it was (PRJ-003).
 
   term:
     head:
@@ -281,7 +281,7 @@ kinds:
             text: Always true
             allows-none: true
             hint: What holds of every instance, as a record decides it, naming the record. Write `None.` when no record decides one.
-            example: An order once settled is never changed (DEC-007).
+            example: An order once settled is never changed (PRJ-007).
 
   quality-requirement:
     shown-as: Quality
