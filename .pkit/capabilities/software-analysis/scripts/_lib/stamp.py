@@ -77,6 +77,8 @@ measure and where it holds — and each body part. The check fails each until it
 is written.
 It writes a journey's step lines under *Steps*, each use case's id and title
 as the form asks, and leaves the part's hint above them for the hand-overs.
+Each id it writes links to its artefact as `pkit analysis link` writes it, a
+step line's to its use case (DEC-001 point 13, `_ids_linked`).
 It refuses a journey with a step that is a use case of another actor: a
 journey is one actor's path across use cases (point 1), and the check holds a
 journey in force to the same. It refuses a use case naming its own actor among
@@ -131,6 +133,7 @@ from _lib import (
     backbone,
     forms,
     history,
+    id_links,
     links,
     markdown,
     numbering,
@@ -160,6 +163,7 @@ from _lib.model import (
     USE_CASE,
     VIEW,
     Analysis,
+    Artefact,
     Unreadable,
     identity,
     number_of,
@@ -296,15 +300,16 @@ def stamp(
         text = _added_entry(root, target, place, kind, new_id, request, analysis)
         location = f"{place}#{new_id}"
     else:
-        folder = f"{place}/{request.area}" if request.area else place
+        area = f"{place}/{request.area}" if request.area else place
         # An actor's id is its slug, so its file is named by the id alone.
         name = new_id if kind == ACTOR else f"{new_id}-{request.slug}"
-        location = f"{folder}/{name}.md"
+        location = f"{area}/{name}.md"
         target = root / location
         refuse_links(root, target, location)
         if target.exists():
             raise Refused(f"{location} exists already")
         text = _document(root, kind, new_id, request, analysis)
+        text = _ids_linked(root, text, location, kind, new_id, analysis, Within(listing, folder))
 
     recorded = write_and_record(root, target, location, text, record)
     if recorded:
@@ -884,6 +889,32 @@ def _closed(
     headings = {term_id: views.heading(analysis, term_id) for term_id in request.explains}
     closing = links.closing(location, request.explains, headings, listed, used, shown_as)
     return links.ending_with(text, closing)
+
+
+def _ids_linked(
+    root: Path,
+    text: str,
+    location: str,
+    kind: str,
+    new_id: str,
+    analysis: Analysis,
+    within: Within,
+) -> str:
+    """A new actor's, use case's, journey's or requirement's `text` with each id it names
+    linked as `pkit analysis link` writes it, such as a journey's step lines to their use
+    cases (DEC-001 point 13). Its parts hold hints, which name no id, so only what the
+    stamp writes from data takes a link. Refused where the kinds' declared structure
+    cannot be read, since the parts would be a guess."""
+    if kind not in links.PARTED:
+        return text
+    try:
+        parted = links.parted(root)
+    except structure.Unreadable as exc:
+        raise Refused(f"the kinds' declared structure could not be read: {exc}") from exc
+    artefact = Artefact(kind, new_id, location, location, False, {}, {}, folder=within.folder)
+    named = id_links.named(analysis, within.listing, within.folder)
+    nothing = links.Vocabulary((), {})
+    return links.document(artefact, text, nothing, parted[kind], named, terms=False).linked
 
 
 def _write_view(

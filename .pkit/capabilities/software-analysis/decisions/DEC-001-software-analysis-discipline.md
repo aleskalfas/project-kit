@@ -175,6 +175,7 @@ Where an artefact's text names an artefact by its id, the id links to that artef
 
 **Written by the command, held by the check.** Nobody writes these links by hand.
 - **The command,** `pkit analysis link`, writes them. It reads a body only to place its links, at the ids the text names (point 1). Each target is where the backbone's discovery finds the artefact's file.
+- **The stamp** links each id it writes, such as a journey's step lines, as the command would. It writes a new view's closing section the same way (DEC-004 point 7). So an id the stamp writes passes the check as written.
 - **The check** reports a link missing, one extra and one whose target is stale, and names the command. It holds them whatever any rule's status, as it holds the links to terms. An id that names nothing takes no link, and the check says nothing of it.
 - **A link written by hand** is held as the command's where its words are an id and its target a file's path. So it is extra where the command writes none. The writer's own are a link to a web address, and one to a heading other than a term's entry. Nor do the lines that link a term and its section hold a link of an id (DEC-004 point 7).
 
@@ -188,7 +189,7 @@ Where an artefact's text names an artefact by its id, the id links to that artef
 - **Every artefact at once.** The links reach every analysis, and every artefact that names another. So the first run changes most of them, and validation fails until it runs. The cost was weighed where no release had shipped the capability, so no project held an analysis these links could fail.
 - **What the reviewer reads.** Friction sets the links aside, so a run asks no answer. Each artefact it changes is altered all the same, so the rule-set reviewer reads each in that change (COR-057 point 1).
 - **A link of the form written by hand** is set aside too, under words of its own. The form reads a link's target alone, so a writer's link to an artefact's file by its title can be re-pointed unseen. Its words still count.
-- **A new artefact** names its ids plain, as the stamp writes it. It holds hints until a writer fills them, and it passes validation once filled and linked. The authoring skill runs the command after any artefact is written.
+- **An id a writer adds** takes its link only once the command runs, so validation fails until then. The authoring skill runs the command after any artefact is written.
 
 ### 4. Every artefact says what makes it true
 
@@ -580,7 +581,7 @@ So the direction from the analysis treats a record that ships as it treats the p
 - **What the system does not do yet** follows this record into the capability too (point 1). That is a use case's `shortfalls`, the check of its boxes and records, the overview's list of open shortfalls, and a proposed judgement rule of `SAN`.
 - **An actor's `summary`** follows this record into the capability too (point 1). The actor kind's schema gains the field, its structure the field's hint and a form on its opening that holds the two equal. Its template gains the field, which the stamp writes holding its hint.
 - **One name, one concept** follows this record into the capability too. Validation refuses a name two terms share, within an analysis and across those it builds on, whatever any rule's status, as it refuses a shared id (points 1 and 2). A judgement rule of `SAN` holds the rest. The term kind's schema gains `noun-forms` and `other-senses`.
-- **The links of ids** follow this record into the capability (point 13). `pkit analysis link` writes them in every analysis, and the check holds them whatever any rule's status. The forms of a journey's steps and a precondition's producers, and the append-only check, read an id's link as its id. Each place declares the links' form, and the shipped example of a use case's other actors names it plain.
+- **The links of ids** follow this record into the capability (point 13). `pkit analysis link` writes them in every analysis, the stamp in a new artefact, and the check holds them whatever any rule's status. The forms of a journey's steps and a precondition's producers, and the append-only check, read an id's link as its id. Each place declares the links' form, and the shipped example of a use case's other actors names it plain.
 - **Projects** keep their analyses under their internal documentation root, one per component that keeps one. They choose each kind's parts when they adopt the capability, and build each analysis from its concepts up (point 12). They keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
 - **A project's use cases** anchor the records they rest on or are answered by, and the views that realise them. The project's records and views carry no anchor on the analysis (point 11).
 - **A change to a kind's structure** carries the migration of the live artefacts with it, and settles how a part it adds is answered and what friction the migration raises on their dependants.
