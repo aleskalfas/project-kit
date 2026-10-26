@@ -6,7 +6,7 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""software-analysis capability — link: an analysis's links (DEC-001 point 13, DEC-004 point 7).
+"""software-analysis capability — link: an analysis's links (DEC-001 point 14, DEC-004 point 7).
 
 In every analysis, it links the first mention of each artefact by its id in each section
 to that artefact: a use case, a journey, a requirement, an actor or a view to its file,
@@ -63,7 +63,7 @@ def main() -> int:
         prog="pkit analysis link",
         description=(
             "Write the links of each analysis: the first mention of each artefact by its id "
-            "in each section linked to that artefact (software-analysis DEC-001 point 13), "
+            "in each section linked to that artefact (software-analysis DEC-001 point 14), "
             "and, in each analysis that keeps a domain model, the links between its terms and "
             "its views (DEC-004 point 7): each view section's link to its term, and the "
             "first mention of each term in each section linked to its glossary entry, in the "

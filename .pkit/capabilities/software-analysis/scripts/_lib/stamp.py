@@ -78,7 +78,7 @@ is written.
 It writes a journey's step lines under *Steps*, each use case's id and title
 as the form asks, and leaves the part's hint above them for the hand-overs.
 Each id it writes links to its artefact as `pkit analysis link` writes it, a
-step line's to its use case (DEC-001 point 13, `_ids_linked`).
+step line's to its use case (DEC-001 point 14, `_ids_linked`).
 It refuses a journey with a step that is a use case of another actor: a
 journey is one actor's path across use cases (point 1), and the check holds a
 journey in force to the same. It refuses a use case naming its own actor among
@@ -902,7 +902,7 @@ def _ids_linked(
 ) -> str:
     """A new actor's, use case's, journey's or requirement's `text` with each id it names
     linked as `pkit analysis link` writes it, such as a journey's step lines to their use
-    cases (DEC-001 point 13). Its parts hold hints, which name no id, so only what the
+    cases (DEC-001 point 14). Its parts hold hints, which name no id, so only what the
     stamp writes from data takes a link. Refused where the kinds' declared structure
     cannot be read, since the parts would be a guess."""
     if kind not in links.PARTED:

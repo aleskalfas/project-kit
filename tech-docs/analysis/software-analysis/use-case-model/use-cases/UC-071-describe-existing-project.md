@@ -39,7 +39,7 @@ pkit:
         - software-analysis:DEC-001#1
         - software-analysis:DEC-001#9
         - software-analysis:DEC-001#12
-        - software-analysis:DEC-001#13
+        - software-analysis:DEC-001#14
         - software-analysis:DEC-004#7
         - ADR-034#1
         - COR-004
@@ -88,7 +88,7 @@ pkit:
 > **Not built yet:** `pkit analysis new` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 6. The system gives a [use case](../../glossary.md#term-use-case--use-case), a journey or a requirement the next free number, past every number the [default branch](../../../core/glossary.md#term-default-branch--default-branch)'s history gave ([REQ-051](../../requirements/functional/REQ-051-id-names-one-artefact.md)). It writes the candidate whole, and rewrites the analysis's overview.
-7. The agent fills each part as its [hint](../../glossary.md#term-hint--hint) says, then runs `pkit analysis link` and `pkit analysis validate --preview`. The system links each id the candidate names to that id's [artefact](../../../core/glossary.md#term-artefact--artefact) (DEC-001 point 13). It holds each candidate to its kind's [declared structure](../../glossary.md#term-declared-structure--declared-structure) where the format [rule](../../../core/glossary.md#term-rule--rule) binds, and reports what a proposed rule would find ([REQ-053](../../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)).
+7. The agent fills each part as its [hint](../../glossary.md#term-hint--hint) says, then runs `pkit analysis link` and `pkit analysis validate --preview`. The system links each id the candidate names to that id's [artefact](../../../core/glossary.md#term-artefact--artefact) (DEC-001 point 14). It holds each candidate to its kind's [declared structure](../../glossary.md#term-declared-structure--declared-structure) where the format [rule](../../../core/glossary.md#term-rule--rule) binds, and reports what a proposed rule would find ([REQ-053](../../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)).
 8. The agent shows the developer each candidate, with the code, the document or the record it is drawn from. The developer confirms it, and only a confirmed candidate is committed (DEC-001 point 9 and [REQ-050](../../requirements/functional/REQ-050-agent-proposes.md)).
 9. The agent goes on with the requirements that bind the whole system, then the use cases, then the journeys (DEC-001 point 12). It stamps each as in step 4, and shows it to the developer as in step 8.
 10. Where an accepted [decision record](../../../core/glossary.md#term-decision-record--decision-record) decides behaviour the code lacks, the candidate use case describes it as the decision record decides. The step takes its box and its entry in `shortfalls`, naming that record and the issue that tracks building it (DEC-001 points 1 and 9).

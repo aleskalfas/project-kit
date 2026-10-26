@@ -4,7 +4,7 @@ custom:
   category: Added
 body: >
   Every mention of an analysis artefact by its id now links to it, as DEC-001
-  point 13 decides (#2109). In every analysis, a domain model or none,
+  point 14 decides (#2109). In every analysis, a domain model or none,
   `pkit analysis link` links the first mention of each artefact's id in each
   section: a use case, a journey, a requirement, an actor or a view to its
   file, and a term to its glossary entry, by a path from the file. A bold

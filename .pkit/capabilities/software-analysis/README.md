@@ -193,7 +193,7 @@ The stamp reads the analysis through the core's reading command, `pkit friction 
 
 ## Linking ids: `pkit analysis link`
 
-In every analysis, `pkit analysis link` links each artefact your text names by its id to that artefact, so a reader reaches it in one click (DEC-001 point 13). A journey's steps and seams lead to its use cases, and a use case to the use cases it relies on.
+In every analysis, `pkit analysis link` links each artefact your text names by its id to that artefact, so a reader reaches it in one click (DEC-001 point 14). A journey's steps and seams lead to its use cases, and a use case to the use cases it relies on.
 
 - **What it writes.** The first mention of each artefact by its id in each section links to it, such as `[UC-082](../use-cases/080-set-up/UC-082-set-up-topology.md)`. A use case, a journey, a requirement, an actor or a view links to its file, and a term to its glossary entry. The target is a path from the file's folder.
 - **What a mention is.** An id, whole: `UC-082`, `JRN-004`, `REQ-012`, `ACT-developer`, `VIEW-orders-and-payments` or `TERM-change`. No letter, digit, hyphen, slash, underscore or `#` may join it, so `UC-082-setup.md` holds none. A number written with other zeros names the same artefact, as `UC-82` names `UC-082`.

@@ -95,7 +95,7 @@ each with what it reads:
   use case in `relies-on` has a hand-over of its own. A line that opens with
   `**Needs from` is a hand-over, and one that is neither label breaks the form.
   A link around an id, as `pkit analysis link` writes one on a step line or in a
-  label, is read as the id alone (`ids_read_plain`, DEC-001 point 13).
+  label, is read as the id alone (`ids_read_plain`, DEC-001 point 14).
 - **`outcomes-match-front-matter`:** one item for each entry of the record's
   `outcomes`, in the same order. Item n opens with `**<id> — <outcome>.**` for
   the n-th entry, exactly, and text follows.
@@ -588,7 +588,7 @@ _ID_LINK = re.compile(
 
 def ids_read_plain(text: str) -> str:
     """`text` with each link around an artefact's id read as the id alone, as a form that
-    holds an id to data reads it (DEC-001 point 13): a journey's step lines and seams, and
+    holds an id to data reads it (DEC-001 point 14): a journey's step lines and seams, and
     a precondition's producers."""
     return _ID_LINK.sub(r"\g<id>", text) if "](" in text else text
 

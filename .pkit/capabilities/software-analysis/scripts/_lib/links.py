@@ -1,5 +1,5 @@
 """The links between an analysis's terms and its views (DEC-004 point 7), and the links of
-the ids its text names (DEC-001 point 13).
+the ids its text names (DEC-001 point 14).
 
 In every analysis, the first mention of each artefact by its id in each section links to
 that artefact (`id_links`): in the same sections as the links to terms, read in a bold
@@ -402,7 +402,7 @@ class Difference:
     """How one written link departs from what the command writes: `how`, the line it is
     on, counted from 1 in the file, the mention's text, the target written and the
     target wanted, and the term wanted, each `None` where there is none. `of_id` says the
-    link is one of an artefact's id (DEC-001 point 13), and `term` then gives the artefact
+    link is one of an artefact's id (DEC-001 point 14), and `term` then gives the artefact
     wanted."""
 
     how: str
@@ -578,7 +578,7 @@ def _skipped(
 ) -> tuple[list[tuple[int, int]], list[int]]:
     """The spans of `text` no mention is read in, and where each escape ends. A mention of
     an id is read in a bold label, so `labels` false leaves labels out of the spans
-    (DEC-001 point 13)."""
+    (DEC-001 point 14)."""
     hidden = _hidden_lines(text, hide)
     masked = _masked(text, hidden)
     spans = list(hidden)
@@ -684,7 +684,7 @@ Quiet = Callable[[str], Sequence[tuple[int, int]]]
 
 @dataclass(frozen=True)
 class Ids:
-    """What a section's ids are linked by (DEC-001 point 13): the artefacts its analysis's
+    """What a section's ids are linked by (DEC-001 point 14): the artefacts its analysis's
     text names, the id of the artefact that holds the text, whose own id takes no link,
     and what says a datum again there, which stays plain."""
 
@@ -887,7 +887,7 @@ class Departure:
     term: str | None
     defined: bool = False
     closing: bool = False  # the view's closing section, missing or stale
-    of_id: bool = False  # a link of an artefact's id, `term` the artefact (DEC-001 point 13)
+    of_id: bool = False  # a link of an artefact's id, `term` the artefact (DEC-001 point 14)
 
 
 @dataclass(frozen=True)
@@ -913,7 +913,7 @@ def glossary(
     """The glossary at `path`, LF `text`, with the mentions' links of each of `entries`, the
     terms in force it holds, written: each entry's section as the backbone spans it,
     below its heading. The links to terms are written where `terms`, and the links of ids
-    where `named` is given (DEC-001 point 13), an entry's own id taking none."""
+    where `named` is given (DEC-001 point 14), an entry's own id taking none."""
     lines = text.split("\n")
     departures: list[Departure] = []
     for entry in sorted(entries, key=lambda e: e.span or (0, 0), reverse=True):
@@ -946,7 +946,7 @@ def view(
     own link is. Its closing section is written last, as `closing` gives its lines, in
     place of any it holds; where `closing` is `None`, what is built on its concepts is
     not known here, and the section it holds is kept as written. The links of ids are
-    written where `named` is given (DEC-001 point 13), the view's own id taking none."""
+    written where `named` is given (DEC-001 point 14), the view's own id taking none."""
     path = artefact.path
     ids = Ids(named, artefact.id) if named is not None else None
     whole = text.split("\n")
@@ -1084,7 +1084,7 @@ def terms_linked(text: str, path: str, vocabulary: Vocabulary) -> frozenset[str]
     """The ids of the terms the body of `text`, the file at `path`, links to, below its
     front matter, by a link to the term's entry outside code and comments, as the
     command writes one: its target from the file's folder (`Term.target`). A link whose
-    text is an id, a term's included, is no use of a term (DEC-001 point 13)."""
+    text is an id, a term's included, is no use of a term (DEC-001 point 14)."""
     targets = {term.target(path): term.id for term in vocabulary.terms}
     lines = text.split("\n")
     _plain, found, _ids = _strip("\n".join(lines[body_start(lines) :]), ())
@@ -1252,7 +1252,7 @@ def _quiet(
     of the links of ids, and where the links of ids count first: a goal whole, and the
     first sentence of an actor's opening where the actor gives a summary, plain of both;
     each step's line of a journey's steps plain of the links to terms alone, since its use
-    case's id links to that datum, first (DEC-001 point 13). The opening is the part its
+    case's id links to that datum, first (DEC-001 point 14). The opening is the part its
     first heading opens, or the text above the first mark, before any label."""
     goal, steps = _texts(kind, GOAL), _texts(kind, STEPS)
     summary = artefact.fields.get(SUMMARY)
@@ -1290,7 +1290,7 @@ def document(
     mentions' links written in each part of its body, read as `kind` gives its parts:
     from each heading and each label it declares to the next, the text above the first a
     part too (`_quiet` says what stays plain). The links to terms are written where
-    `terms`, and the links of ids where `named` is given (DEC-001 point 13), the
+    `terms`, and the links of ids where `named` is given (DEC-001 point 14), the
     artefact's own id taking none."""
     lines = text.split("\n")
     start = body_start(lines)
@@ -1354,7 +1354,7 @@ def plan(
     each view in force, and, read as `kinds` gives their parts (`parted`), each actor, use
     case, journey and requirement in force, left out where `kinds` is `None`. The links of
     ids reach every analysis, and the links to terms and the views those that keep a
-    domain model (DEC-001 point 13; DEC-004 point 7). `read` gives each file's text by its
+    domain model (DEC-001 point 14; DEC-004 point 7). `read` gives each file's text by its
     path, LF line ends, `None` where it cannot be read, which is left out. Each view's
     closing section is written from the documents as the command writes them, and kept as
     written where `kinds` is `None`."""

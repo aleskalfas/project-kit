@@ -1148,7 +1148,7 @@ def test_every_kind_stamped_and_filled_carries_its_structure(
         if (project.root / RECORDS) not in path.parents:
             path.write_text(_written(path.read_text(encoding="utf-8")), encoding="utf-8")
     # The journey's step lines name their use cases by id, which link to them, as the
-    # authoring skill has `pkit analysis link` write (DEC-001 point 13).
+    # authoring skill has `pkit analysis link` write (DEC-001 point 14).
     link(project)
     project.write(accepting_san(project))
     code, document = _validate(project, "--json")

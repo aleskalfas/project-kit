@@ -161,7 +161,7 @@ def test_a_use_case_main_numbered_too_takes_the_next_free_number_with_every_refe
 ) -> None:
     """`topic` numbers UC-002, steps a journey through it, names it in a record and in
     main's UC-001; main numbers UC-002 meanwhile. Renumbered, `topic`'s takes UC-003, and
-    every mention follows, the links of its id to its file included (DEC-001 point 13):
+    every mention follows, the links of its id to its file included (DEC-001 point 14):
     the check and the number comparison pass, and so does the check once main is merged
     in."""
     assert stamped(branched, "use-case", "mine", "--actor", "ACT-tester") == "UC-002"
@@ -293,7 +293,7 @@ def test_a_requirement_takes_the_number_named_and_what_refines_it_follows(
 def test_another_analysis_s_qualified_mention_follows(project: AdopterRepo) -> None:
     """Ids are unique across a repository's analyses (DEC-001 point 3), so billing's
     mention of the core's use case, `core:UC-003`, names it, and follows it, its link to the
-    core's file included (DEC-001 point 13)."""
+    core's file included (DEC-001 point 14)."""
     listed = (
         SETTINGS_TEXT + "analyses:\n  - {component: core, folder: core}\n"
         "  - component: billing\n    folder: billing\n    builds-on:\n      - {analysis: core}\n"

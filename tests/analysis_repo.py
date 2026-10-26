@@ -315,7 +315,7 @@ def fill(repo: AdopterRepo) -> None:
     as a person fills each — the check fails an artefact still holding one. Each part's
     hint is written over with its example. Then the links are written, as the authoring
     skill runs `pkit analysis link` after any artefact is written: a journey's step lines
-    name their use cases by id, which link to them (DEC-001 point 13). The overview is
+    name their use cases by id, which link to them (DEC-001 point 14). The overview is
     generated, and holds nothing a person fills (DEC-003 point 8). An actor's `summary` is
     drawn there, so where an overview is kept, it is written anew after, as a person runs
     its command."""

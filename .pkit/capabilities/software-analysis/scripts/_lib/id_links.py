@@ -1,4 +1,4 @@
-"""The links of each mention of an analysis artefact by its id (DEC-001 point 13).
+"""The links of each mention of an analysis artefact by its id (DEC-001 point 14).
 
 **What a mention is** (`MENTION`): an artefact's id, whole, in running text — a use
 case's, a journey's or a requirement's, `UC-082`, `JRN-004`, `REQ-012`, in any spelling of

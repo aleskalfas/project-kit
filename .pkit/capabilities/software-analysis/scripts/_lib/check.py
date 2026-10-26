@@ -128,7 +128,7 @@ What is checked, each against the record's words:
   and each part of an actor, a use case, a journey and a requirement, against what
   `pkit analysis link` writes (`_lib/links.py`) — a link missing, extra or stale,
   the message naming the command.
-- **The links of ids** (point 13), whatever any rule's status, in every analysis:
+- **The links of ids** (point 14), whatever any rule's status, in every analysis:
   each first mention of an artefact by its id in each section, in the same files and
   parts, against what `pkit analysis link` writes — a link missing, extra or stale,
   the message naming the command.
@@ -1543,7 +1543,7 @@ def _senses(own: Sequence[Artefact]) -> list[Finding]:
 def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
     """Each section's link to its term, and the mentions' links, in every analysis that
     keeps a domain model (DEC-004 point 7), and the links of the ids each analysis's text
-    names (DEC-001 point 13), whatever any rule's status: a link missing, one extra and one
+    names (DEC-001 point 14), whatever any rule's status: a link missing, one extra and one
     whose target is stale, each against what `pkit analysis link` writes
     (`_lib/links.py`), in the glossary, the views, and the actors, use cases, journeys and
     requirements. An analysis whose folder of views holds none is read for the links of
@@ -1615,8 +1615,8 @@ def _link_message(d: links.Departure) -> str:
 
 
 def _id_link_message(d: links.Departure) -> str:
-    """What a departure of an id's link says, and what mends it (DEC-001 point 13)."""
-    mend = "run `pkit analysis link`, which writes the links (DEC-001 point 13)"
+    """What a departure of an id's link says, and what mends it (DEC-001 point 14)."""
+    mend = "run `pkit analysis link`, which writes the links (DEC-001 point 14)"
     if d.how == links.MISSING:
         return (
             f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "

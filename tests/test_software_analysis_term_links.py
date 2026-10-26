@@ -465,7 +465,7 @@ def test_two_sections_naming_each_other_s_terms_are_each_mended(project: Adopter
 def test_an_analysis_with_no_domain_model_takes_no_link(bare: AdopterRepo) -> None:
     """A glossary with no view beside it is never linked to its terms nor held, a link
     written in it by hand included (DEC-004 point 7). It names no artefact by its id, so
-    the links of ids write nothing either (DEC-001 point 13)."""
+    the links of ids write nothing either (DEC-001 point 14)."""
     stamped(bare, "term", "order", "--name", "order", "--path", "src/run.py")
     stamped(bare, "term", "payment", "--name", "payment", "--path", "src/run.py")
     fill(bare)
@@ -904,7 +904,7 @@ def _bodies(linked: bool) -> dict[str, str]:
         return f"[{text}](../../glossary.md#term-{slug}--{slug})" if linked else text
 
     def case(case_id: str, slug: str) -> str:
-        """A use case's id in a journey, linked to its file (DEC-001 point 13)."""
+        """A use case's id in a journey, linked to its file (DEC-001 point 14)."""
         return f"[{case_id}](../use-cases/{case_id}-{slug}.md)" if linked else case_id
 
     order, customer = k("order", "order"), k("customer", "customer")

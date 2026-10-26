@@ -1,6 +1,6 @@
 """software-analysis: each mention of an artefact by its id links to it (#2109).
 
-Held to software-analysis DEC-001 point 13:
+Held to software-analysis DEC-001 point 14:
 
 - **the links** — in every analysis, a domain model or none, `pkit analysis link` links
   the first mention of each artefact by its id in each section to that artefact: a use
@@ -202,7 +202,7 @@ def _errors(repo: AdopterRepo) -> list[tuple[str, str]]:
     ]
 
 
-MEND = "run `pkit analysis link`, which writes the links (DEC-001 point 13)"
+MEND = "run `pkit analysis link`, which writes the links (DEC-001 point 14)"
 
 
 def _line(text: str, needle: str) -> int:
@@ -221,7 +221,7 @@ def test_the_command_links_each_first_mention_of_an_id_with_no_domain_model(
     case, a seam's and a precondition's ids inside the bold, an actor and a requirement,
     each first in its part. A goal, code, a web link, an id naming nothing and the
     artefact's own stay plain. The analysis then passes the check, the format rule
-    accepted included, and a second run writes nothing (DEC-001 point 13)."""
+    accepted included, and a second run writes nothing (DEC-001 point 14)."""
     fronts = {rel: _read(project, rel).split("\n---\n", 1)[0] for rel in BODIES}
     link(project)
     for rel, body in BODIES_LINKED.items():
@@ -238,7 +238,7 @@ def test_the_command_links_each_first_mention_of_an_id_with_no_domain_model(
 def test_the_check_reports_an_id_s_link_missing_extra_or_stale(project: AdopterRepo) -> None:
     """Whatever any rule's status, the check reports each first mention of an id left
     unlinked, a link where none belongs, and one whose target is stale, and names the
-    command, which mends each (DEC-001 point 13)."""
+    command, which mends each (DEC-001 point 14)."""
     found = _errors(project)
     first = _line(_read(project, JOURNEY), "1. UC-001 — Run the suite")
     assert (
@@ -270,7 +270,7 @@ def test_the_check_reports_an_id_s_link_missing_extra_or_stale(project: AdopterR
 
 def test_a_renamed_file_moves_each_link_to_it(project: AdopterRepo) -> None:
     """A use case's file renamed, its id kept, leaves each link to it stale until the
-    command runs (DEC-001 point 13)."""
+    command runs (DEC-001 point 14)."""
     link(project)
     moved = f"{USE_CASES}/UC-003-share-the-suite.md"
     project.write({moved: _read(project, SHARE)})
@@ -353,7 +353,7 @@ def test_a_mention_of_an_id_is_read_whole_and_first(text: str, linked: str) -> N
 def test_an_id_names_the_artefact_that_spells_it_so_first() -> None:
     """Of two artefacts whose numbers are one, which validation refuses, a mention names
     the one whose id it spells as written, and another spelling the one that writes its
-    number in its one spelling (DEC-001 points 3 and 13)."""
+    number in its one spelling (DEC-001 points 3 and 14)."""
     alias = "tech-docs/analysis/use-case-model/use-cases/020-read/UC-0008-alias.md"
     path = "tech-docs/analysis/model.md"
     analysis = model.Analysis(
@@ -377,7 +377,7 @@ def test_an_id_names_the_artefact_that_spells_it_so_first() -> None:
 def test_an_id_written_with_an_analysis_names_one_it_builds_on() -> None:
     """`core:UC-021` names the core's use case where the text's analysis builds on the
     core; an id of another analysis written alone, or of one it does not build on, takes no
-    link (DEC-001 points 2 and 13)."""
+    link (DEC-001 points 2 and 14)."""
     core = {
         "UC-021": id_links.Target(
             "UC-021", "tech-docs/analysis/core/use-case-model/use-cases/UC-021-x.md"
@@ -393,7 +393,7 @@ def test_an_id_written_with_an_analysis_names_one_it_builds_on() -> None:
 
 def test_an_id_holds_no_mention_of_a_term() -> None:
     """A term named `core` takes no link inside `core:UC-021`, linked or not, and its own
-    mention elsewhere still takes one (DEC-001 point 13, DEC-004 point 7)."""
+    mention elsewhere still takes one (DEC-001 point 14, DEC-004 point 7)."""
     core_term = links.Term("TERM-core", "core", "tech-docs/analysis/glossary.md")
     core = {
         "UC-021": id_links.Target(
@@ -410,7 +410,7 @@ def test_an_id_holds_no_mention_of_a_term() -> None:
 def test_a_link_of_an_id_written_by_hand_is_held_unless_it_leads_to_a_heading() -> None:
     """A link whose words are an id and whose target is a file's path is the command's:
     on a later mention it is extra, and taken out. One to a web address, or to a heading
-    other than a term's entry, is the writer's own (DEC-001 point 13)."""
+    other than a term's entry, is the writer's own (DEC-001 point 14)."""
     text = (
         f"[UC-008]({READ_TO}) then [UC-008]({READ_TO}) and "
         "[UC-008](../020-read/UC-008-read.md#steps)."
@@ -431,7 +431,7 @@ def test_a_link_of_an_id_written_by_hand_is_held_unless_it_leads_to_a_heading() 
 def test_each_step_line_links_its_use_case_and_counts_first(tmp_path: Path) -> None:
     """Each step line links its use case's id, a use case taken twice at both its steps,
     whatever a hand-over before names; a later mention of that use case in the steps takes
-    none (DEC-001 point 13)."""
+    none (DEC-001 point 14)."""
     journey = links.parted(tmp_path)["journey"]
     path = "tech-docs/analysis/use-case-model/journeys/JRN-001-x.md"
     named = id_links.Named(
@@ -484,7 +484,7 @@ def test_a_goal_and_an_actor_s_first_sentence_stay_plain_of_ids(tmp_path: Path) 
 
 def test_a_term_s_id_is_no_use_of_the_term() -> None:
     """The terms an artefact uses are read from the links of its mentions: a link of a
-    term's id counts none (DEC-001 point 13, DEC-004 point 7)."""
+    term's id counts none (DEC-001 point 14, DEC-004 point 7)."""
     order = links.Term("TERM-order", "order", "tech-docs/analysis/glossary.md")
     vocabulary = links.Vocabulary((order,), {order.id: ("order",)})
     path = "tech-docs/analysis/use-case-model/use-cases/UC-1.md"
@@ -499,7 +499,7 @@ def test_a_term_s_id_is_no_use_of_the_term() -> None:
 
 def test_the_forms_read_an_id_s_link_as_the_id() -> None:
     """A step line, a seam's label and a precondition's producers read an id's link as the
-    id alone, so a linked id matches its data (DEC-001 point 13)."""
+    id alone, so a linked id matches its data (DEC-001 point 14)."""
     assert forms.ids_read_plain("[UC-001](../x/UC-001-a.md) — Run") == "UC-001 — Run"
     assert forms.ids_read_plain("[core:ACT-ai](../../core/a/ACT-ai.md)") == "core:ACT-ai"
     assert forms.ids_read_plain("[a run](UC-001-a.md)") == "[a run](UC-001-a.md)"
@@ -511,7 +511,7 @@ def test_the_forms_read_an_id_s_link_as_the_id() -> None:
 
 def test_the_append_only_comparison_reads_an_id_s_link_as_the_id() -> None:
     """A step whose id only gained a link keeps its text, so linking ids renumbers nothing
-    and hides no renumbering (DEC-001 point 13)."""
+    and hides no renumbering (DEC-001 point 14)."""
     (kind,) = [k for name, k in structure.read_kinds().items() if name == "use-case"]
     body = (
         "---\nid: UC-007\n---\n\n# UC-007 — T\n\n**Main path:**\n\n1. The tester runs UC-008.\n\n"

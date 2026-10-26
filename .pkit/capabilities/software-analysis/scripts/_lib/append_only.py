@@ -27,7 +27,7 @@ changes meaning.
   variant by its step's number and its letter, in either case. Its text is what
   follows, white space folded, and a link around an id read as the id, so the
   links `pkit analysis link` writes and moves change no step's text (DEC-001
-  point 13). The text at the merge-base is read from the clone alone
+  point 14). The text at the merge-base is read from the clone alone
   (`backbone.text_at`).
 - **What it reports,** for each step or variant the merge-base held:
   - **renumbered:** its text stands under another number or letter, one the
