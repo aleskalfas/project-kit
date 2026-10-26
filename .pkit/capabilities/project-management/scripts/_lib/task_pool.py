@@ -18,10 +18,18 @@ and ``next-task`` takes the first ready Task through ``start-work``. Two halves:
   Tasks in Backlog, and those In Progress where the clone may take one over, that
   are not assigned to another account, fall in the seat's scope and name no open
   issue among their dependencies. It ranks them by priority, then by number.
-- :func:`in_pool` judges one candidate by its owner, as the ownership seam folds
-  it (``_lib/instance_claims.read_owner``). A Task in Backlog that any instance
-  owns, this clone's own among them, is not in the pool, as point 7 says: a lead
-  starts what it filed through ``start-work``.
+- :func:`in_pool` and :func:`owned_by` judge one candidate by its owner, as the
+  ownership seam folds it (``_lib/instance_claims.read_owner``). A Task in Backlog
+  with an owner is not in the pool, as point 7 says.
+
+This clone's own Tasks come first
+---------------------------------
+A lead owns what it files (point 7), and the clash guard refuses that Task to
+every other clone. A Task in Backlog that this clone's instance owns is its own
+work, outside the pool, and :func:`ordered` puts it before every pool Task. Its
+own Tasks rank by priority, then by number, among themselves. A clone claims only
+a Task its account is assigned to, so only such a Task in Backlog may be its own
+(:func:`may_be_own`), and only these owners are read before the first start.
 
 Dependencies are prose
 ----------------------
@@ -52,7 +60,7 @@ priority is read, and a scope that names a part on that axis does not take it.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -94,12 +102,17 @@ class Candidate:
     workstream: str | None
     kind: str | None
     rank: int
+    #: Whether the Task is assigned to this clone's account.
+    assigned: bool = False
 
-    def describe(self) -> str:
-        """How a line names the Task: its number, title, priority and state."""
+    def describe(self, *, own: bool = False) -> str:
+        """How a line names the Task: its number, title, priority and state, and
+        whether it is this clone's own."""
         where = (
             "in Backlog" if self.state == BACKLOG else "In Progress, its claim no longer counting"
         )
+        if own:
+            where += ", this clone's own"
         return f"#{self.number} {self.title} (priority {self.priority or 'not read'}, {where})"
 
 
@@ -279,6 +292,7 @@ def _candidate(
         workstream=workstream,
         kind=kind,
         rank=order.get(priority or "", len(order)),
+        assigned=bool(assignees),
     )
 
 
@@ -323,6 +337,29 @@ def in_pool(resolution: ownership.OwnershipResolution, state: str) -> bool:
     if state == BACKLOG:
         return not claimants
     return bool(resolution.judgements) and not claimants
+
+
+def owned_by(resolution: ownership.OwnershipResolution, instance: int, state: str) -> bool:
+    """Whether a Task in ``state`` is the own work of the clone numbered
+    ``instance``: a Task in Backlog whose one claim is this clone's, and counts.
+
+    A lead owns what it files (DEC-059 point 7), and the clash guard refuses that
+    Task to every other clone, so it is this clone's own, outside the pool."""
+    return state == BACKLOG and resolution.claimants == {instance} and instance in resolution.owners
+
+
+def may_be_own(candidate: Candidate) -> bool:
+    """Whether ``candidate`` may be this clone's own Task: a Task in Backlog
+    assigned to this clone's account. A clone claims only a Task its account is
+    assigned to (``instance_claims.claim``), so no other Task is its own."""
+    return candidate.state == BACKLOG and candidate.assigned
+
+
+def ordered(ready: Sequence[Candidate], own: Collection[int]) -> list[Candidate]:
+    """``ready`` in the order a clone takes it: the Tasks numbered in ``own``,
+    this clone's own, first, then the rest. Each part keeps the order of
+    :func:`candidates`, by priority, then by number."""
+    return [c for c in ready if c.number in own] + [c for c in ready if c.number not in own]
 
 
 def taken_by_another(resolution: ownership.OwnershipResolution | None, instance: int) -> bool:

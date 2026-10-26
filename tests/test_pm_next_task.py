@@ -203,18 +203,44 @@ def test_a_task_another_instance_holds_is_skipped(run, nt, capsys) -> None:
     assert pool.github.writes() == []
 
 
-def test_a_task_this_clone_owns_in_backlog_is_not_in_the_pool(run, nt, capsys) -> None:
-    """DEC-059 point 7: a ready Task has no owner. A lead owns what it files,
-    and starts it through start-work, as the line says."""
+def test_this_clones_own_tasks_come_before_the_pool(run, nt, capsys) -> None:
+    """A lead owns what it files (DEC-059 point 7), and the clash guard refuses
+    that Task to every other clone. It is this clone's own work, outside the
+    pool, so it comes first, and its own Tasks rank by priority among themselves."""
     pool = Pool()
-    pool.add(10, assignees=("me",))
+    pool.add(10, priority="Low", assignees=("me",))
+    pool.add(11, priority="High")
+    pool.add(12, priority="Medium", assignees=("me",))
+    pool.github.post(10, _stamp(nt, 2))
+    pool.github.post(12, _stamp(nt, 2))
+    rc, starts = run(pool, instance=2)
+    assert (rc, starts) == (0, [(12, False)])
+    out = capsys.readouterr().out
+    assert "with no scope, its own first, then the highest in priority." in out
+    assert "next-task: #12 [Task] do the thing (priority Medium, in Backlog, this clone's own)" in (
+        out
+    )
+
+
+def test_this_clones_own_task_waiting_on_an_open_issue_is_skipped(run, nt) -> None:
+    pool = Pool()
+    pool.add(10, assignees=("me",), body="Feature: #1\n\n## Dependencies\n\n- #30\n")
+    pool.add(11, priority="Low")
+    pool.add(30, title="[Feature] the foundation")
     pool.github.post(10, _stamp(nt, 2))
     rc, starts = run(pool, instance=2)
-    assert (rc, starts) == (nt.EXIT_NONE_READY, [])
-    assert (
-        "  skipped #10: owned by this clone, instance 2, so it is not in the shared pool. "
-        "Start it with pkit pm start-work 10" in capsys.readouterr().out
-    )
+    assert (rc, starts) == (0, [(11, False)])
+
+
+def test_a_task_another_instance_of_this_account_owns_is_still_skipped(run, nt, capsys) -> None:
+    pool = Pool()
+    pool.add(10, priority="Low", assignees=("me",))
+    pool.add(11, priority="Low")
+    pool.github.post(10, _stamp(nt, 3))
+    rc, starts = run(pool, instance=2)
+    assert (rc, starts) == (0, [(11, False)])
+    assert "  skipped #10: held by instance 3" in capsys.readouterr().out
+    assert pool.github.writes() == []
 
 
 def test_a_task_assigned_to_another_account_is_skipped(run) -> None:

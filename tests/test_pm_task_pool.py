@@ -153,6 +153,39 @@ def test_a_task_assigned_to_this_clones_account_is_ready(tp, readers) -> None:
     assert _ready(tp, readers, [_row(10, assignees=("me",))]) == [10]
 
 
+def test_only_a_backlog_task_assigned_to_this_clones_account_may_be_its_own(tp, readers) -> None:
+    """A clone claims only a Task its account is assigned to, so only these
+    Tasks' owners are read before the pool's."""
+    rows = [
+        _row(10, assignees=("me",)),
+        _row(11),
+        _row(12, assignees=("me",), state_label="state:in-progress"),
+    ]
+    found = tp.candidates(
+        rows,
+        open_numbers=[10, 11, 12],
+        login="me",
+        scope=None,
+        takes_over=True,
+        readers=readers,
+    )
+    assert [c.number for c in found if tp.may_be_own(c)] == [10]
+
+
+def test_this_clones_own_tasks_come_first_then_the_pool(tp, readers) -> None:
+    rows = [
+        _row(1, priority="High"),
+        _row(2, priority="Low"),
+        _row(3, priority="Medium"),
+        _row(4, priority="Low"),
+    ]
+    ready = tp.candidates(
+        rows, open_numbers=[1, 2, 3, 4], login="me", scope=None, takes_over=False, readers=readers
+    )
+    assert [c.number for c in tp.ordered(ready, {2, 3})] == [3, 2, 1, 4]
+    assert [c.number for c in tp.ordered(ready, set())] == [1, 3, 2, 4]
+
+
 def test_a_task_in_progress_is_kept_only_where_the_clone_takes_over(tp, readers) -> None:
     rows = [_row(10, state_label="state:in-progress")]
     assert _ready(tp, readers, rows) == []
@@ -180,6 +213,9 @@ def test_a_candidate_names_itself(tp, readers) -> None:
         readers=readers,
     )
     assert candidate.describe() == "#10 [Task] do the thing (priority High, in Backlog)"
+    assert candidate.describe(own=True) == (
+        "#10 [Task] do the thing (priority High, in Backlog, this clone's own)"
+    )
     assert (candidate.kind, candidate.workstream) == ("feature", "cli")
 
 
@@ -236,6 +272,21 @@ def test_a_backlog_task_is_in_the_pool_only_with_no_owner(tp) -> None:
     assert not tp.in_pool(_owner(tp, [_stamp(tp, 2)]), tp.BACKLOG)
     assert not tp.in_pool(_owner(tp, [_stamp(tp, 3)]), tp.BACKLOG)
     assert not tp.in_pool(_owner(tp, [_stamp(tp, 2), _stamp(tp, 1)]), tp.BACKLOG)
+
+
+def test_a_backlog_task_this_clone_alone_claims_is_its_own(tp) -> None:
+    """DEC-059 point 7: a lead owns what it files. That Task is this clone's own
+    work, outside the pool, and comes before it."""
+    assert tp.owned_by(_owner(tp, [_stamp(tp, 2)]), 2, tp.BACKLOG)
+    assert not tp.owned_by(_owner(tp, []), 2, tp.BACKLOG)
+    assert not tp.owned_by(_owner(tp, [_stamp(tp, 3)]), 2, tp.BACKLOG)
+    assert not tp.owned_by(_owner(tp, [_stamp(tp, 2), _stamp(tp, 1)]), 2, tp.BACKLOG)
+    assert not tp.owned_by(_owner(tp, [_stamp(tp, 2)]), 2, tp.IN_PROGRESS)
+    claim = [_stamp(tp, 2, "worker-2", "k2")]
+    held = tp.ownership.Holder(tp.ownership.SEAT_HELD, "me", "k2")
+    free = tp.ownership.Holder(tp.ownership.SEAT_FREE)
+    assert tp.owned_by(_owner(tp, claim, {"worker-2": held}), 2, tp.BACKLOG)
+    assert not tp.owned_by(_owner(tp, claim, {"worker-2": free}), 2, tp.BACKLOG)
 
 
 def test_a_task_whose_seat_was_released_returns_to_the_pool(tp) -> None:

@@ -8,9 +8,10 @@ body: >
   Task is an open Task in Backlog with no owner, not assigned to another
   account, whose `## Dependencies` section names no open issue by `#N`. In a
   project with a topology it may also be a Task In Progress whose claim no
-  longer counts. The highest in priority goes first, within the scope of the
-  seat the clone holds, and a clone with no seat, or a planner's seat, takes
-  nothing there. Where another instance claims the Task first, the first claim
+  longer counts. The clone's own Tasks in Backlog go first, then the pool,
+  each the highest in priority first, within the scope of the seat the clone
+  holds. In a project with a topology, a clone with no seat, or a planner's
+  seat, takes nothing. Where another instance claims the Task first, the first claim
   holds, and the clone takes the next ready Task. It exits 5 when no Task is
   ready. `start-work` now also stops before the move when its claim finds
   another instance's claim made after the clash guard passed, so two clones

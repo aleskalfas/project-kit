@@ -16,8 +16,10 @@ the scope of the seat this clone holds, and starts it, claimed, through
 `start-work`. A ready Task is an open Task in Backlog with no owner whose
 `## Dependencies` section names no open issue (DEC-005), or, in a project with a
 topology, a Task In Progress whose claim no longer counts (DEC-059 point 9).
-`_lib/task_pool` reckons readiness, and its docstring says which references the
-section is read for.
+A Task in Backlog that this clone's instance owns, as a lead owns what it files,
+is its own work, outside the pool: with its dependencies closed and within the
+scope, it comes before every pool Task. `_lib/task_pool` reckons readiness, and
+its docstring says which references the section is read for.
 
 Steps:
   - The gates `start-work` runs: the bootstrap gate, membership (DEC-021) and
@@ -27,10 +29,11 @@ Steps:
     takes nothing. Outside a topology a clone takes with no scope.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
     state issues out. The ready Tasks are ranked from it.
-  - Where the clone takes part in instance ownership, each Task in turn is read
-    and its owner folded (`_lib/instance_claims.read_owner`). A Task in Backlog
-    that any instance owns, this clone's own among them, is skipped, as is one
-    that cannot be read: a Task with an owner is not in the pool.
+  - Where the clone takes part in instance ownership, the owner of each Task in
+    Backlog assigned to its account is read first and folded
+    (`_lib/instance_claims.read_owner`). The Tasks this clone owns come first,
+    then the pool. The owner of each other Task is read in turn, and a Task
+    another instance holds is skipped, as is one that cannot be read.
   - `start-work <N> --yes` starts the first free Task. Where it fails and the
     Task is now another instance's, the first claim held: this clone backs off
     and takes the next ready Task. Any other failure stops the run.
@@ -164,10 +167,26 @@ def main() -> int:
     print(f"next-task: {_pool_line(len(ready), taker)}")
 
     clone = taker.clone
-    unread = 0
-    for candidate in ready:
-        if clone is not None:
+    # This clone's own Tasks come before the pool: only a Task assigned to its
+    # account may be its own, so only those owners are read before the first start.
+    read: dict[int, instance_ownership.OwnershipResolution | None] = {}
+    own: set[int] = set()
+    if clone is not None:
+        for candidate in filter(task_pool.may_be_own, ready):
             resolution = instance_claims.read_owner(candidate.number, clone, config)
+            read[candidate.number] = resolution
+            if resolution is not None and task_pool.owned_by(
+                resolution, clone.instance, candidate.state
+            ):
+                own.add(candidate.number)
+    unread = 0
+    for candidate in task_pool.ordered(ready, own):
+        mine = False
+        if clone is not None:
+            if candidate.number in read:
+                resolution = read.pop(candidate.number)
+            else:
+                resolution = instance_claims.read_owner(candidate.number, clone, config)
             if resolution is None:
                 unread += 1
                 print(
@@ -176,11 +195,11 @@ def main() -> int:
                     file=sys.stderr,
                 )
                 continue
-            if not task_pool.in_pool(resolution, candidate.state):
-                held = _held(resolution, candidate.number, clone.instance)
-                print(f"  skipped #{candidate.number}: {held}")
+            mine = task_pool.owned_by(resolution, clone.instance, candidate.state)
+            if not mine and not task_pool.in_pool(resolution, candidate.state):
+                print(f"  skipped #{candidate.number}: {_held(resolution)}")
                 continue
-        print(f"next-task: {candidate.describe()}")
+        print(f"next-task: {candidate.describe(own=mine)}")
         if not args.dry_run and not args.yes and sys.stdin.isatty():
             reply = input(f"Start #{candidate.number}? [y/N] ").strip().lower()
             if reply not in ("y", "yes"):
@@ -270,22 +289,19 @@ def _pool_line(count: int, taker: task_pool.Taker) -> str:
             parts.append("types " + ", ".join(scope.types))
         within = "within the scope of " + " and ".join(parts)
     noun = "Task is" if count == 1 else "Tasks are"
-    return f"{count} {noun} ready for {who}, {within}, the highest in priority first."
+    order = (
+        "the highest in priority first"
+        if taker.clone is None
+        else "its own first, then the highest in priority"
+    )
+    return f"{count} {noun} ready for {who}, {within}, {order}."
 
 
-def _held(resolution: instance_ownership.OwnershipResolution, number: int, instance: int) -> str:
-    """Why Task ``number`` is not in the pool: who holds it. A Task this clone's
-    own instance owns is named with the command that starts it."""
+def _held(resolution: instance_ownership.OwnershipResolution) -> str:
+    """Why a Task is neither this clone's own nor in the pool: who holds it."""
     if not resolution.claimants:
         return "In Progress with no claim ever made on it, so it is nobody's to take over"
-    first = min(resolution.claimants)
-    owner = instance_claims.owner_named(resolution, first)
-    if first == instance:
-        return (
-            f"owned by this clone, {owner}, so it is not in the shared pool. "
-            f"Start it with pkit pm start-work {number}"
-        )
-    return f"held by {owner}"
+    return f"held by {instance_claims.owner_named(resolution, min(resolution.claimants))}"
 
 
 def _start_work(

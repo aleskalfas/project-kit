@@ -735,17 +735,17 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 
 #### Taking the next ready Task — `next-task` (per [project-management:DEC-059-topology-of-seats] point 7)
 
-`pkit pm next-task` takes the next ready Task from one pool that every seat shares, and starts it, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It ranks the ready Tasks by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
+`pkit pm next-task` takes the next ready Task from one pool that every seat shares, and starts it, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It takes this clone's own Tasks first, then the shared pool. Among its own Tasks, and then in the pool, it ranks by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
 
 A ready Task is one of two kinds:
 
-- **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue. A Task that this clone's own instance owns is not in the pool either: a lead owns what it files, and starts it with `start-work`
+- **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue. A Task in Backlog that this clone's own instance owns is its own work, outside the pool, as a lead owns what it files. It comes first where its dependencies are closed and it falls in the seat's scope
 - **A Task In Progress whose claim no longer counts,** in a project with a topology, since the seat that claimed it was released. No claim lapses yet
 
 What else holds a Task back:
 
 - **An assignee of another account,** since `start-work` refuses such a Task and points to `handoff-issue`
-- **A claim that counts,** folded as the clash guard folds it, and an owner that cannot be read
+- **Another instance's claim,** folded as the clash guard folds it, and an owner that cannot be read
 - **The scope of the seat,** in a project with a topology. A Task falls in the scope where it matches each part the scope names: its workstream and its type
 - **An axis that a board carries,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
 
