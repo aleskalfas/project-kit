@@ -91,7 +91,16 @@ there instead, and changes nothing else.
           the run, and so does a remote reviewer's `[person]` finding on a PR
           whose author cannot be read, since its verdict cannot be told from
           the author's own (#1485); this step comes before the answers', so
-          such a stop has written nothing.
+          such a stop has written nothing. Beside the findings, a line each:
+          every decision record accepted where the head left the PR's base
+          that the change alters, with each point it adds, alters or retires,
+          as the backbone lists them at the pinned head
+          (`_lib.accepted_records`, `pkit decisions check-diff --json`,
+          #2161), counted among the findings to judge. They stand for the
+          head, so a `--yes` for it covers them. At a later head an earlier
+          head's authorisation covers, a list other than the one at the head
+          authorised, or one that cannot be read there, stops a `--yes` run
+          at `ready:`. A list that cannot be read stops the run.
   answers The change check's list of the answers the change wrote, and the
           friction settings it alters, derived at the pinned head against the
           PR's base (`_lib.friction_answers`), each `updated` document with the
@@ -137,8 +146,9 @@ there instead, and changes nothing else.
           with answers merges under the same authorisation as any other; a
           run the findings to judge hold stops at `ready:`. So does a run at
           a later head an earlier head's authorisation covers, where it finds
-          a finding to judge, an answer the change check did not ask for, or
-          a change to the fixers' grant list other than the one at the head
+          a reviewer's finding to judge, an answer the change check did not
+          ask for, or a change to the fixers' grant list, or a list of the
+          accepted records the change alters, other than the one at the head
           authorised; one that merges says which head and why it was covered. Its gates,
           refusals and queue handling are done-work's own; land-work decides
           on how its run ended (`done_work.run`), never on its exit code.
@@ -175,6 +185,7 @@ from ruamel.yaml import YAML
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import (
+    accepted_records,
     bootstrap_gate,
     drift_queue,
     fixers,
@@ -431,15 +442,23 @@ class _FindingsEnd:
     #: Why this run's `--yes` does not cover them, or None when it does — or
     #: when there is no `--yes`, or nothing for it to cover (DEC-055 point 3).
     held: str | None = None
+    #: How many accepted decision records the change alters it printed (#2161).
+    records: int = 0
+    #: Why an earlier head's authorisation does not cover those records at the pinned
+    #: head, as the `ready:` line says it, or "": the list differs from the one at the
+    #: head authorised, or that one could not be read.
+    records_moved: str = ""
 
     def phrase(self) -> str:
-        """What the `ready:` line asks the person to judge, with why a `--yes`
-        does not cover it — `, 1 finding to judge above (…)` — or ""."""
-        if not self.count:
+        """What the `ready:` line asks the person to judge — the `[person]` findings
+        and the accepted records the change alters — with why a `--yes` does not
+        cover it: `, 1 finding to judge above (…)`, or ""."""
+        shown = self.count + self.records
+        if not shown:
             return ""
-        noun = "finding" if self.count == 1 else "findings"
+        noun = "finding" if shown == 1 else "findings"
         held = f" ({self.held})" if self.held else ""
-        return f", {self.count} {noun} to judge above{held}"
+        return f", {shown} {noun} to judge above{held}"
 
 
 # How the ci step ended, when it did not stop the run.
@@ -610,14 +629,17 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
 def _uncovered(head: _Head, to_judge: _FindingsEnd, answers: _AnswersEnd) -> str:
     """Why the authorisation for an earlier head does not cover the pinned head after
     all, as the `ready:` line says it, or "": the later head holds what needs the
-    person — a finding to judge, an answer the change check did not ask for (DEC-055
-    point 3), or a change to the fixers' grant list other than the one at the head
-    authorised (DEC-056 point 2)."""
+    person — a reviewer's `[person]` finding, an answer the change check did not ask
+    for (DEC-055 point 3), a change to the fixers' grant list other than the one at
+    the head authorised (DEC-056 point 2), or a list of the accepted records the
+    change alters other than the one at the head authorised (`_records_moved`)."""
     if not head.authorised:
         return ""
     needs: list[str] = []
     if to_judge.count:
         needs.append(f"{to_judge.count} finding{'' if to_judge.count == 1 else 's'} to judge")
+    if to_judge.records_moved:
+        needs.append(to_judge.records_moved)
     if answers.unasked:
         one = answers.unasked == 1
         needs.append(f"{answers.unasked} answer{'' if one else 's'} this change was not asked for")
@@ -1602,14 +1624,93 @@ def _findings(
     """Print each `[person]` finding whole, from each reviewer's latest verdict
     as the merge gate selects it, and say whether this run's `--yes` covers
     them (DEC-055 point 3). A verdict that no longer stands for the pinned
-    head, by the gate's freshness rule, is printed marked stale.
+    head, by the gate's freshness rule, is printed marked stale. Then print
+    each accepted decision record the change alters, a line each (#2161).
 
     `found` is what the run found at its start, None when it read nothing or
-    holds nothing. A run with no `[person]` finding prints nothing, and goes
-    on as it would without the step. Stops the run when the verdicts cannot
-    be read, the head moved, or — with a `[person]` finding to show — the
-    reviewers whose verdicts count cannot be resolved, as when a remote
-    reviewer's verdict carries one and the PR's author cannot be read."""
+    holds nothing. A run with neither prints nothing, and goes on as it would
+    without the step. Stops the run when the verdicts cannot be read, the head
+    moved, or — with a `[person]` finding to show — the reviewers whose
+    verdicts count cannot be resolved, as when a remote reviewer's verdict
+    carries one and the PR's author cannot be read; and when the accepted
+    records the change alters cannot be read.
+
+    The accepted records are derived from the pinned head and where it left
+    its base, so they stand for the head and are there when the run starts:
+    a `--yes` for that head covers them, as it covers a `[person]` finding
+    whose verdict the run found at its start, standing for the head. The
+    `ready:` stop that names the head shows them, and the pm skill has them
+    shown before any `--yes` is asked for. At a later head an earlier head's
+    authorisation covers, the list must be the one at the head authorised
+    (`_records_moved`): a merge of the base can move where the head left it,
+    and so the list, though the author changed nothing but answers."""
+    judged = _person_verdicts(head, config, capability_root)
+    altered = _accepted_records(head)
+    moved = _records_moved(head, altered)
+    if not judged and not altered:
+        return _FindingsEnd(records_moved=moved)
+    for one in judged:
+        _print_findings(one)
+    for line in accepted_records.lines(altered):
+        print(f"  {line}")
+    count = sum(len(one.findings) for one in judged)
+    stale = sum(len(one.findings) for one in judged if not one.freshness.fresh)
+    held = _held(args, head, judged, found) if judged else None
+    shown = count + len(altered)
+    _say(f"{FINDINGS}: {shown}, above" + (f" ({stale} marked stale)" if stale else ""))
+    return _FindingsEnd(count, held, records=len(altered), records_moved=moved)
+
+
+def _accepted_records(head: _Head) -> tuple[accepted_records.Altered, ...]:
+    """The accepted decision records the change alters, derived at the pinned head
+    against the PR's base (`accepted_records.derive`, #2161). Stops the run when they
+    cannot be read, since what the step cannot read it cannot show."""
+    issue, number = head.issue, head.pr_number
+    if not head.base_branch:
+        raise _Stop(
+            EXIT_UNREADABLE,
+            f"{FINDINGS}: PR #{number}'s base branch could not be read, so the accepted "
+            f"records this change alters cannot be listed. Nothing was merged; run "
+            f"`land-work {issue}` again",
+        )
+    derived = accepted_records.derive(head.oid, head.base_branch)
+    if derived.problem is not None:
+        raise _Stop(
+            EXIT_UNREADABLE,
+            f"{FINDINGS}: the accepted records this change alters at {short_sha(head.oid)} "
+            f"could not be read — {derived.problem}. Nothing was merged; run "
+            f"`land-work {issue}` again",
+        )
+    return derived.records
+
+
+def _records_moved(head: _Head, records: tuple[accepted_records.Altered, ...]) -> str:
+    """Where the head is a later one an earlier head's authorisation covers, why that
+    authorisation does not cover the accepted records the change alters, or "": the list
+    differs from the one at the head authorised, or that one could not be read. The
+    person was shown the list at that head, so another list at the later head is one
+    nobody was shown, as another change to the fixers' grant list is (DEC-056 point 2).
+    A merge of the base can bring one: where the head left the base moves, so a record
+    the base accepted meanwhile can join the list."""
+    if not head.authorised:
+        return ""
+    earlier = short_sha(head.authorised)
+    found = accepted_records.derive(head.authorised, head.base_branch)
+    if found.problem is not None:
+        return f"accepted records this change alters that could not be read at {earlier}"
+    if found.records != records:
+        return f"a change to accepted records other than the one at {earlier}"
+    return ""
+
+
+def _person_verdicts(
+    head: _Head, config: dict[str, Any], capability_root: Path
+) -> list[_PersonVerdict]:
+    """Each latest verdict carrying a `[person]` finding, as the merge gate selects it,
+    judged by the gate's freshness rule; none where no marked verdict carries one.
+    Stops the run when the verdicts cannot be read, the head moved, or — with a
+    `[person]` finding to show — the reviewers whose verdicts count cannot be
+    resolved."""
     issue, number = head.issue, head.pr_number
     data = _view(number, _FINDINGS_VIEW, config)
     if isinstance(data, str):
@@ -1630,7 +1731,7 @@ def _findings(
     # Only a marked verdict carrying a `[person]` finding needs the gate's
     # selection: without one there is nothing to show, from anyone.
     if not any(_person(verdict) for verdict in marked_candidates(comments)):
-        return _FindingsEnd()
+        return []
     # A remote verdict counts only from someone other than the PR's author:
     # with no author read, `gate_membership` counts none, so a remote
     # reviewer's `[person]` finding would go unshown, though its verdict may
@@ -1653,22 +1754,13 @@ def _findings(
         author_login=author,
     )
     freshness = review.freshness_rule(data)
-    judged = [
+    return [
         _PersonVerdict(verdict, person, freshness.assess(verdict))
         for verdict in gate_candidates(
             comments, local_reviewer_ok=local_ok, remote_reviewer_ok=remote_ok
         )
         if (person := _person(verdict))
     ]
-    if not judged:
-        return _FindingsEnd()
-    for one in judged:
-        _print_findings(one)
-    count = sum(len(one.findings) for one in judged)
-    stale = sum(len(one.findings) for one in judged if not one.freshness.fresh)
-    held = _held(args, head, judged, found)
-    _say(f"{FINDINGS}: {count}, above" + (f" ({stale} marked stale)" if stale else ""))
-    return _FindingsEnd(count, held)
 
 
 def _unresolved(issue: int, why: str) -> _Stop:

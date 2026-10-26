@@ -1,0 +1,14 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit decisions check-diff` lists, and fails nothing on, each record accepted
+  at the branch point that the change alters or removes: each point the head
+  adds, alters or retires, with its title, each of the record's title, status
+  and supersession fields that changed, and a change to the text its points
+  stand on or to its other text. Whether such an edit changes what the record
+  decides is for whoever accepts it to judge, by the one test the decisions
+  README's "Refining an accepted record" now states. `--head <rev>` reads a
+  commit's records from git objects, and `--json` prints the findings and the
+  list as one document, for a landing command that shows the list.
