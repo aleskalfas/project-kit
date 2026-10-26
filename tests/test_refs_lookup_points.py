@@ -77,12 +77,13 @@ def test_a_repeated_anchor_takes_a_number_and_differs_from_the_slug() -> None:
 FRONT = "---\nid: {id}\ntitle: A record\nstatus: accepted\ndate: 2026-10-21\n{extra}---\n\n"
 
 
-def _record(root: Path, rel: str, decision: str, *, extra: str = "") -> None:
+def _record(root: Path, rel: str, decision: str, *, extra: str = "", lead: str = "") -> None:
     record_id = Path(rel).name.split("-", 2)
     path = root / rel
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         FRONT.format(id="-".join(record_id[:2]), extra=extra)
+        + lead
         + "## Context\n\nWhy.\n\n## Decision\n\n**The choice.**\n\n"
         + decision
         + "\n## Rationale\n\n### 2. Not a point\n\nA heading outside the Decision.\n",
@@ -90,10 +91,18 @@ def _record(root: Path, rel: str, decision: str, *, extra: str = "") -> None:
     )
 
 
+#: The top line of the fixture's records that a later record overturns in part.
+PARTIAL = (
+    "**Partially superseded by [COR-904](COR-904-later.md).** Overturned: point 1's "
+    "single write. Among what stands: the rest."
+)
+
+
 @pytest.fixture
 def records(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """A core record with numbered points and a stub, a project record with labelled
-    points, and a core record whose points are still a list."""
+    points, and a core record whose points are still a list; and two records another
+    overturns in part, one with points and a stub, one whose points are a list."""
     for ns in ("core", "project"):
         (tmp_path / ".pkit" / "decisions" / ns).mkdir(parents=True)
     _record(
@@ -111,6 +120,19 @@ def records(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     )
     _record(
         tmp_path, ".pkit/decisions/core/COR-901-listed.md", "1. **First.** Text.\n2. **Second.**\n"
+    )
+    _record(
+        tmp_path,
+        ".pkit/decisions/core/COR-902-overturned.md",
+        "### 1. Seeds are written once\n\nText.\n\n### 2. Retired\nIts content is in point 1.\n",
+        extra='retired-points:\n  "2": ["1"]\n',
+        lead=f"> {PARTIAL}\n\nWhat the record decides.\n\n",
+    )
+    _record(
+        tmp_path,
+        ".pkit/decisions/core/COR-903-overturned-listed.md",
+        "1. **First.** Text.\n2. **Second.**\n",
+        lead=f"> {PARTIAL}\n\n",
     )
     monkeypatch.chdir(tmp_path)
     return tmp_path
@@ -183,6 +205,74 @@ def test_a_capability_s_decision_resolves_its_points_too() -> None:
     assert found[1].anchor == "1-what-it-keeps-and-in-what-shape"
 
 
+# --- a point of a record another overturns in part --------------------------------------------
+
+
+def test_a_point_of_a_partly_superseded_record_comes_with_its_top_line(records: Path) -> None:
+    """A point overturned in part stays as it stood, and only the record's top line says
+    so (COR-058 point 5), so the lookup gives that line with any point it returns: a live
+    point, a retired one's stub, and a point of a record whose points are a list. A record
+    looked up whole, a point that does not resolve, and a record no other overturns give
+    none."""
+    found = refs.lookup_citations(
+        records,
+        ["COR-902#1", "COR-902#2", "COR-903#1", "COR-902", "COR-902#9", "COR-900#1"],
+    )
+    assert [(f.anchor, f.partial_supersession) for f in found] == [
+        ("1-seeds-are-written-once", PARTIAL),
+        ("2-retired", PARTIAL),
+        (None, PARTIAL),
+        (None, None),
+        (None, None),
+        ("1-anchors-name-parts", None),
+    ]
+    assert found[4].problem == "COR-902 holds no point 9"
+
+
+@pytest.mark.parametrize(
+    ("body", "line"),
+    [
+        # The top line as records write it, quoted, its marks dropped.
+        (f"> {PARTIAL}\n\n## Context\n", PARTIAL),
+        # A paragraph wrapped over several lines reads as one line.
+        (
+            "> **Partially superseded by COR-904.** Overturned:\n> point 1.\n\n## Context\n",
+            "**Partially superseded by COR-904.** Overturned: point 1.",
+        ),
+        # Unquoted, in italics, and below a first-level heading that titles the body.
+        (
+            "# A record\n\n*Partially superseded by COR-904.*\n\nMore.\n",
+            "*Partially superseded by COR-904.*",
+        ),
+        # A quote that goes on after its first paragraph: the first paragraph alone.
+        (
+            "> **Partially superseded by COR-904.** Of three rules, one is overturned:\n>\n"
+            "> - **One** — *overturned*.\n",
+            "**Partially superseded by COR-904.** Of three rules, one is overturned:",
+        ),
+        # A record superseded whole, a line further down, the words inside a sentence,
+        # and a body that opens with its first section: no partial supersession.
+        ("> **Superseded by COR-904.**\n\n## Context\n", None),
+        ("What it decides.\n\n> **Partially superseded by COR-904.**\n", None),
+        ("> This record is partially superseded by COR-904.\n", None),
+        ("## Context\n\n> **Partially superseded by COR-904.**\n", None),
+    ],
+)
+def test_the_top_line_is_the_first_paragraph_of_the_body(body: str, line: str | None) -> None:
+    assert refs.partial_supersession(document_parts.Body.read(body)) == line
+
+
+def test_a_point_of_a_record_this_repository_overturns_in_part_says_so() -> None:
+    """In this repository, project-management DEC-059 overturns DEC-035 point 1 for a
+    project with a topology, while the point stands as it stood: its lookup carries
+    DEC-035's top line, which names DEC-059."""
+    found = refs.lookup_citations(REPO, ["project-management:DEC-035#1", "COR-001"])
+    line = found[0].partial_supersession
+    assert line is not None
+    assert line.startswith("**Partially superseded by [DEC-059](DEC-059-topology-of-seats.md).**")
+    assert found[1].partial_supersession is None
+
+
 def test_the_command_answers_a_point_and_several_citations_as_data(records: Path) -> None:
     """Plain, a point's file and its heading's anchor on a line, and exit 1 naming a point
     that does not resolve; with `--json`, each citation answered in one document, in
@@ -210,6 +300,7 @@ def test_the_command_answers_a_point_and_several_citations_as_data(records: Path
                 "path": ".pkit/decisions/core/COR-900-anchors.md",
                 "anchor": "1-anchors-name-parts",
                 "received": False,
+                "partial_supersession": None,
             },
             {
                 "id": "COR-999",
@@ -219,6 +310,27 @@ def test_the_command_answers_a_point_and_several_citations_as_data(records: Path
                 "path": None,
                 "anchor": None,
                 "received": False,
+                "partial_supersession": None,
             },
         ],
     }
+
+
+def test_the_command_prints_a_partly_superseded_record_s_top_line_after_its_point(
+    records: Path,
+) -> None:
+    """Plain, the record's top line on the line after the point's place, so a reader sent
+    to the point reads it; with `--json`, in `partial_supersession`, the point's place
+    alone in `paths`, so a script that reads the places reads what it read before."""
+    record = ".pkit/decisions/core/COR-902-overturned.md"
+    runner = CliRunner()
+    plain = runner.invoke(main, ["refs", "lookup", "COR-902#1"])
+    assert plain.exit_code == 0, plain.output
+    assert plain.output.splitlines() == [f"{record}#1-seeds-are-written-once", PARTIAL]
+    whole = runner.invoke(main, ["refs", "lookup", "COR-902"])
+    assert whole.output.splitlines() == [record]
+    as_json = runner.invoke(main, ["refs", "lookup", "--json", "COR-902#1"])
+    assert as_json.exit_code == 0, as_json.output
+    (answer,) = json.loads(as_json.output)["lookups"]
+    assert answer["paths"] == [f"{record}#1-seeds-are-written-once"]
+    assert answer["partial_supersession"] == PARTIAL
