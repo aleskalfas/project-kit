@@ -242,6 +242,7 @@ from project_kit.answer_files import (
     Liveness,
     LiveRevalidation,
     Moved,
+    Starts,
     StateAnswers,
     WorkingNames,
     block_answers,
@@ -3075,6 +3076,9 @@ class _ChangeAnswers:
     - `tip`: the base's tip's, where it is not the merge-base, read with its own
       history: what the answered-apart report reads (COR-062 point 7).
 
+    Each is read with where each artefact was last added in that history
+    (`answer_files.Starts`): an entry removed and added back starts its answers again.
+
     An answer file the change adds is one it **wrote** (`wrote`) unless it puts back
     a file its base's history held, its path and content (COR-062 point 3).
     """
@@ -3103,6 +3107,8 @@ class _ChangeAnswers:
             or any(map(is_answer_file, base_side.files))
         )
         self._head_history: History | None = None
+        self._head_names: HistoryNames | None = None
+        self._head_starts: Starts | None = None
         self._head: StateAnswers | None = None
         self._own: StateAnswers | None = None
         self._tip: StateAnswers | None = None
@@ -3130,15 +3136,32 @@ class _ChangeAnswers:
         return tuple(location_of(artefact, name) for name in names)
 
     @property
+    def head_names(self) -> HistoryNames:
+        """The names the head's history agrees with (`HistoryNames`), read once."""
+        if self._head_names is None:
+            self._head_names = HistoryNames(self.head_history, self.behind.blobs)
+        return self._head_names
+
+    @property
+    def head_starts(self) -> Starts:
+        """Where each artefact starts in the head's history (`Starts`), read once."""
+        if self._head_starts is None:
+            walker = Walker(self.head_history, self.behind.blobs)
+            self._head_starts = Starts(self.head_names, walker)
+        return self._head_starts
+
+    @property
     def head(self) -> StateAnswers:
         if self._head is None:
-            names = HistoryNames(self.head_history, self.behind.blobs)
+            names = self.head_names
+            predates = self.head_starts.predates
             commit = CommitTree(self.root, self.head_state.commit, self.behind.blobs)
             if self.head_state.named is None:
                 honoured = WorkingNames(commit_files(commit), names).honoured
-                self._head = StateAnswers(working_tree_files(self.root), honoured, self.locations)
+                files = working_tree_files(self.root)
             else:
-                self._head = StateAnswers(commit_files(commit), names.honoured, self.locations)
+                honoured, files = names.honoured, commit_files(commit)
+            self._head = StateAnswers(files, honoured, self.locations, predates=predates)
         return self._head
 
     @property
@@ -3151,9 +3174,13 @@ class _ChangeAnswers:
         if own == self.head_state.commit:
             return self.head
         if self._own is None:
-            names = HistoryNames(self.head_history, self.behind.blobs)
             tree = CommitTree(self.root, own, self.behind.blobs)
-            self._own = StateAnswers(commit_files(tree), names.honoured, self.locations)
+            self._own = StateAnswers(
+                commit_files(tree),
+                self.head_names.honoured,
+                self.locations,
+                predates=self.head_starts.predates,
+            )
         return self._own
 
     @property
@@ -3163,8 +3190,14 @@ class _ChangeAnswers:
         if self._tip is None:
             history = read_history(self.root, self.base_state.tip)
             names = HistoryNames(history, self.behind.blobs)
+            starts = Starts(names, Walker(history, self.behind.blobs))
             tree = CommitTree(self.root, self.base_state.tip, self.behind.blobs)
-            self._tip = StateAnswers(commit_files(tree), names.honoured, head_locations(history))
+            self._tip = StateAnswers(
+                commit_files(tree),
+                names.honoured,
+                head_locations(history),
+                predates=starts.predates,
+            )
         return self._tip
 
     # --- the files ---------------------------------------------------------------------

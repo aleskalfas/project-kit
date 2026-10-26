@@ -419,6 +419,61 @@ def test_an_entry_moved_between_collection_files_is_not_followed(timeline: Timel
     assert result.prunable == ("one.yaml",)
 
 
+def test_an_entry_removed_and_added_back_starts_its_answers_again(timeline: Timeline) -> None:
+    """An entry's history starts again where it was last added to its file (COR-050 point 3,
+    COR-062 point 6): the answer file that answered it before its removal answers it no more.
+    It has no live answer, its point is where it was added back, and a change to its anchor
+    after that is asked of it from there."""
+    timeline.start({"docs/a.md": _collection("n1", "n2")})
+    timeline.commit(
+        "answer",
+        {answer_path("one"): answers(entry("docs/a.md#n1", at=T1, deferred=((CLI, "until #12"),)))},
+    )
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
+    timeline.commit("remove the entry", {"docs/a.md": _collection("n2")})
+    added = timeline.commit("add it back", {"docs/a.md": _collection("n1", "n2")})
+    result = _check(timeline)
+    report = _report(result, "docs/a.md#n1")
+    assert report.answers is not None
+    assert (report.answers["revalidations"], report.answers["deferrals"]) == ([], [])
+    assert _points(result, "docs/a.md#n1") == [added]
+    assert report.state is fr.ArtefactState.CURRENT
+    assert result.prunable == ("one.yaml",)
+
+    changed = timeline.commit("change the CLI again", {"src/cli/main.py": "print('v3')\n"})
+    result = _check(timeline)
+    assert [
+        (f.kind.value, f.origin.sha if f.origin else None)
+        for f in result.findings
+        if f.location == "docs/a.md#n1"
+    ] == [("stale", changed)]
+
+
+def test_an_entry_its_file_kept_keeps_its_answers(timeline: Timeline) -> None:
+    """Only an entry removed and added back starts again. One its file held throughout keeps
+    its answer and its point, whatever else the file lost and got back, and so does one a
+    line of work removed where the merge kept it."""
+    repo = timeline.adopter
+    timeline.start({"docs/a.md": _collection("n1", "n2")})
+    answered = timeline.commit(
+        "answer", {answer_path("one"): answers(entry("docs/a.md#n1", at=T1))}
+    )
+    timeline.commit("remove the other entry", {"docs/a.md": _collection("n1")})
+    timeline.commit("add the other back", {"docs/a.md": _collection("n1", "n2")})
+    repo.checkout("side", create=True)
+    timeline.commit("side: remove the entry", {"docs/a.md": _collection("n2")})
+    repo.checkout("main")
+    merging = repo.git("merge", "-q", "--no-ff", "--no-commit", "side", check=False)
+    assert merging.returncode == 0, merging.stdout + merging.stderr
+    timeline.commit("merge side, keeping the entry", {"docs/a.md": _collection("n1", "n2")})
+    result = _check(timeline)
+    report = _report(result, "docs/a.md#n1")
+    assert report.answers is not None
+    assert [r["file"] for r in report.answers["revalidations"]] == ["one.yaml"]
+    assert _points(result, "docs/a.md#n1") == [answered]
+    assert result.prunable == ()
+
+
 # --- answered apart --------------------------------------------------------------------
 
 

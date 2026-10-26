@@ -2172,22 +2172,26 @@ def _rules(**entries: dict[str, Any]) -> str:
     return f"---\n{json.dumps(front)}\n---\n\n{body}"
 
 
-def test_a_collection_entry_deleted_and_restored_reads_as_new_in_both_checks(
+def test_a_collection_entry_deleted_and_restored_starts_its_answers_again_in_both_checks(
     timeline: Timeline,
 ) -> None:
-    """The history before the move, in blocks: the entry restored carrying its old `at`
-    starts its history again there, moved on `restore`."""
+    """An entry's history starts again where it was last added to its file (COR-050 point 3,
+    COR-062 point 6). Restored with the `at` it carried, it writes no answer: the answer file
+    that answered it before its deletion is still there, and answers it no more. The change
+    that restores it finds it new; merged, it has no live answer and its point is where it was
+    restored, so a later change to its anchor is debt from that change. The entry kept beside
+    it keeps its answer file and its point."""
     repo = timeline.adopter
-    with blocks_in_history():
-        timeline.start({"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})})
-        changed = timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
-        timeline.commit("drop RS-1", {"docs/rules.md": _rules(**{"RS-2": {"at": T1}})})
-        repo.checkout("restore", create=True)
-        restored = timeline.commit(
-            "restore RS-1",
-            {"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})},
-        )
-    _moved(timeline)
+    timeline.start({"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})})
+    files = answer_file_names(repo.root)
+    changed = timeline.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+    timeline.commit("drop RS-1", {"docs/rules.md": _rules(**{"RS-2": {"at": T1}})})
+    repo.checkout("restore", create=True)
+    restored = timeline.commit(
+        "restore RS-1",
+        {"docs/rules.md": _rules(**{"RS-1": {"at": T1}, "RS-2": {"at": T1}})},
+    )
+    assert answer_file_names(repo.root) == files and len(files) == 2
     change = fc.run_change_check(repo.root, "main")
     assert [(f.location, f.answer) for f in change.findings] == [
         ("docs/rules.md#RS-1", fc.Answer.NEW)
@@ -2197,6 +2201,28 @@ def test_a_collection_entry_deleted_and_restored_reads_as_new_in_both_checks(
     result = _run(timeline)
     assert _point(result, "docs/rules.md#RS-1") == restored
     assert _summary(result) == [("stale", "docs/rules.md#RS-2", "path:src/core/**", changed)]
+    revalidated = {
+        r.location: [found["file"] for found in r.answers["revalidations"]]
+        for r in result.artefact_reports
+        if r.answers is not None
+    }
+    assert revalidated["docs/rules.md#RS-1"] == []
+    assert len(revalidated["docs/rules.md#RS-2"]) == 1
+    assert len(result.prunable) == 1
+
+    repo.checkout("again", create=True)
+    again = timeline.commit("change the engine again", {"src/core/engine.py": "ENGINE = 3\n"})
+    change = fc.run_change_check(repo.root, "main")
+    assert _friction(change) == [
+        ("docs/rules.md#RS-1", "path:src/core/**"),
+        ("docs/rules.md#RS-2", "path:src/core/**"),
+    ]
+    repo.checkout("main")
+    timeline.merge("again")
+    assert _summary(_run(timeline)) == [
+        ("stale", "docs/rules.md#RS-1", "path:src/core/**", again),
+        ("stale", "docs/rules.md#RS-2", "path:src/core/**", changed),
+    ]
 
 
 def test_an_entry_moved_to_another_collection_with_an_earlier_at_reads_as_new(
