@@ -832,6 +832,30 @@ def test_a_lost_claim_whose_withdrawal_fails_still_stops(run_main, sw, capsys) -
     assert "[stopped] start-work #42: instance 1 claimed it" in err
 
 
+def test_a_claim_made_first_after_the_guard_stops_before_the_move(run_main, sw, capsys) -> None:
+    """Instance 3 claims after the guard's read and before this clone's claim
+    reads the issue. The first claim holds, whatever its number, so this clone,
+    instance 2, writes no claim and does not move the issue (DEC-059 point 7)."""
+    github = _assigned_42()
+
+    def rival(number: int, seen: int) -> None:
+        if seen == 1:
+            github.post(number, _stamp(sw, "claim", 3))
+
+    github.on_view = rival
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == sw.EXIT_CLAIM_LOST
+    assert mutations == [("branch", "fix/42-do-the-thing"), ("assignee", "me")]
+    captured = capsys.readouterr()
+    assert "#42 is owned by instance 3, so this clone, instance 2, did not claim it" in (
+        captured.out
+    )
+    assert "[stopped] start-work #42: instance 3 claimed it first, and the first claim holds" in (
+        captured.err
+    )
+    assert "git checkout main && git branch -D fix/42-do-the-thing" in captured.err
+
+
 def test_a_failed_claim_still_starts_the_work(run_main, capsys) -> None:
     github = _assigned_42()
     github.failing.add("comment")

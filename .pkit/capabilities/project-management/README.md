@@ -658,7 +658,7 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 **The marker is a comment unless you choose the label.** Each claim, withdrawal and release is then an event comment, and the issue's description shows the current owner. That owner line is derived from the comments, rewritten after each event, and kept above the provenance footer. Where your repository can create labels, `substrate: label` in the capability's `project/instance-ownership.yaml` selects the `instance:N` label instead, created on first use.
 
-**Two clones can claim one issue in the same instant.** GitHub has no atomic claim, so a claim reads the issue again after writing. Where a lower-numbered instance claimed too, the higher one withdraws its claim, and `start-work` stops before the move with exit code 2. This catches a clash rather than preventing it: a clone whose re-read came first keeps its claim, and both claims stay on the issue.
+**Two clones can claim one issue in the same instant.** GitHub has no atomic claim, so a claim reads the issue again after writing. Where a lower-numbered instance claimed too, the higher one withdraws its claim. `start-work` then stops before the move with exit code 2, as it does where its claim finds another instance's claim made after the clash guard passed. This catches a clash rather than preventing it: a clone whose re-read came first keeps its claim, and both claims stay on the issue.
 
 **In a project with a topology of seats** ([project-management:DEC-059-topology-of-seats]), a clone takes part by holding a seat, and its instance number is the seat's. A clone in a planner's seat files with no owner, so its work enters the shared pool, and every other seat claims what it files. A claim counts only while the clone its stamp names holds the seat the stamp names. A seat's release thus frees its clone's work with no write to the issues.
 
@@ -732,6 +732,43 @@ seats:
 The check compares a change with a base, so it is no member of `pkit validate`, which takes no base. Run it among the checks of a pull request. It reads no GitHub.
 
 `scripts/_lib/topology.py` is the one reader of the topology. Every command that acts as a seat reads the topology through it, from the default branch. `schemas/topology.schema.json` holds the file's shape.
+
+#### Taking the next ready Task — `next-task` (per [project-management:DEC-059-topology-of-seats] point 7)
+
+`pkit pm next-task` takes this clone's own Task, else the next ready Task from one pool that every seat shares. It starts the Task, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It ranks this clone's own Tasks, and then the pool's, by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
+
+A ready Task is one of two kinds:
+
+- **An open Task in Backlog with no owner,** whose `## Dependencies` section names no open issue
+- **A Task In Progress whose claim no longer counts,** in a project with a topology, since the seat that claimed it was released. No claim lapses yet
+
+**This clone's own Tasks.** A Task in Backlog that this clone's instance owns is this clone's own work, outside the pool, as a lead owns what it files. Such a Task comes first where its `## Dependencies` section names no open issue and it falls in the seat's scope.
+
+What else holds a Task back:
+
+- **An assignee of another account,** since `start-work` refuses such a Task and points to `handoff-issue`
+- **Another instance's claim,** folded as the clash guard folds it, and an owner that cannot be read
+- **The scope of the seat,** in a project with a topology. A Task falls in the scope where it matches each part the scope names: its workstream and its type
+- **An axis that a board carries,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
+
+**How dependencies are read.** Dependencies are prose ([project-management:DEC-005-linking-and-containment]), so `next-task` reads each `#N` that the `## Dependencies` section names. It skips what an HTML comment, a fenced code block or a code span holds. It skips a reference to another repository's issue (`owner/repo#N`), an issue named only by its address, and the Task itself. A number that is no open issue holds nothing back, whether it is closed, a pull request or not there.
+
+**Two clones at once never both start one Task.** Where `start-work` fails and the Task is now another instance's, the first claim held. This clone then takes the next ready Task. Any other failure of `start-work` stops the run, with its exit code.
+
+**Who takes.** Outside a topology, a clone takes with no scope, and a clone with no instance id reads no owner. In a project with a topology, a clone that holds no seat takes nothing, and nor does a planner's seat, which builds none of the work. The seat's scope comes from the reading of the topology, and no command reads the topology for instance ownership yet.
+
+`--dry-run` says which Task it would start, and runs `start-work --dry-run` on it. The command asks before it starts a Task, unless `--yes` is given. A listing that reaches `--limit`, 1000 open issues by default, refuses, since a dependency it did not return could be open.
+
+| Exit | Meaning |
+|---|---|
+| 0 | A Task was started, or a dry run said which it would start |
+| 1 | Membership refused, or the foreign-repo guard did |
+| 2 | A clone that holds no seat, or a planner's seat, or a listing that reached `--limit` |
+| 3 | The open issues could not be read, or a ready Task's owner could not be read and no other Task was free |
+| 5 | No Task is ready for this clone, so nothing was started |
+| other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |
+
+`scripts/_lib/task_pool.py` reckons which Tasks are ready, once for every command that needs it ([project-management:DEC-025-parallelization-primitive]).
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 

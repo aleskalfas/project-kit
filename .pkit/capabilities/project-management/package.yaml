@@ -175,6 +175,9 @@ commands:
   start-work:
     script: scripts/start-work.py
     help: "Workflow wrapper (DEC-026): Backlog → In Progress. Creates branch + sets assignee; composes over move-issue."
+  next-task:
+    script: scripts/next-task.py
+    help: "Take the next ready Task from the shared pool (DEC-059 point 7) and start it, claimed, through start-work. Ready: an open Task in Backlog, with no owner and not assigned to another account, whose ## Dependencies section names no open issue by #N, or, in a project with a topology, a Task In Progress whose claim no longer counts. This clone's own Tasks in Backlog come first, then the shared pool, each the highest in priority first (DEC-012), then the lowest number, within the scope of the seat this clone holds; a clone with no seat, or a planner's seat, takes nothing in a project with a topology. Where another instance claims the Task first, the first claim holds, and this clone takes the next ready Task. --dry-run says which it would start; asks before starting unless --yes. Exit 5 when no Task is ready."
   create-draft:
     script: scripts/create-draft.py
     help: "Workflow wrapper (DEC-026): opens a draft PR for an in-progress branch. No issue-state transition."
