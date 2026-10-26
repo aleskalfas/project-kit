@@ -11,7 +11,7 @@ from click.testing import CliRunner
 
 from project_kit import data_points as dp
 from project_kit.cli import main, status
-from project_kit.status import _data_point_lines
+from project_kit.status import _data_point_lines, _skill_owner
 from tests.adopter_repo import MakeAdopterRepo
 
 
@@ -84,29 +84,144 @@ def test_status_uses_pkit_source_bin_env_var(installed_target: Path) -> None:
     assert "/fake/pkit" in result.output
 
 
+OWN = "the project's own, which pkit does not deploy:"
+ITEM = " " * 25  # the indent of an entry listed under a status line's label
+MARKER = "# managed-by: project-kit (deploy-agents.sh) — do not edit; regenerated on sync"
+
+
+def _deploy_skill(root: Path, name: str, source: str) -> None:
+    """`.claude/skills/<name>/SKILL.md` linked to `source`, as deploy-skills.sh links it."""
+    folder = root / ".claude" / "skills" / name
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "SKILL.md").symlink_to(f"../../../{source}")
+
+
+def _deploy_agent(root: Path, name: str, *, marked: bool = True) -> None:
+    """`.claude/agents/<name>.md`, carrying deploy-agents.sh's marker when `marked`."""
+    path = root / ".claude" / "agents" / f"{name}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    marker = f"{MARKER}\n" if marked else ""
+    path.write_text(f"---\n{marker}name: {name}\n---\nbody\n", encoding="utf-8")
+
+
+def _deployed(output: str) -> list[str]:
+    """The adapter section's lines after `settings.json`."""
+    return _section(output, "Adapter: claude-code").splitlines()[1:]
+
+
 def test_status_detects_kit_skill_in_per_name_dir_symlink_form(installed_target: Path) -> None:
     """Per COR-015, kit skills deploy as `.claude/skills/<name>/SKILL.md` symlinks.
 
-    The status walker must recognise this shape as kit-managed, not as
-    user content. Pre-fix behaviour misread the real directory and listed
-    every kit skill under "user-managed".
+    The status walker must recognise this shape as deployed from core, not as
+    the project's own. Pre-fix behaviour misread the real directory and listed
+    every kit skill as the project's.
     """
     name = "decision-author"
-    deploy_dir = installed_target / ".claude" / "skills" / name
-    deploy_dir.mkdir(parents=True, exist_ok=True)
-    inner = deploy_dir / "SKILL.md"
-    if not inner.exists():
-        inner.symlink_to(f"../../../.pkit/skills/core/{name}.md")
+    _deploy_skill(installed_target, name, f".pkit/skills/core/{name}.md")
 
     runner = CliRunner()
     result = runner.invoke(status, [])
     assert result.exit_code == 0
     out = result.output
-    assert "kit-managed" in out
+    assert "1 deployed from core:" in out
     assert f"{name} ->" in out
-    # The name must NOT appear under "user-managed".
-    kit_block, _, _rest = out.partition("user-managed")
+    kit_block, _, _rest = out.partition(OWN)
     assert name in kit_block
+
+
+def test_status_names_the_deploy_commands_when_nothing_is_deployed(installed_target: Path) -> None:
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    assert _deployed(result.output) == [
+        f"    {'skills':<18} 0 deployed (run 'pkit deploy-skills')",
+        f"    {'agents':<18} 0 deployed (run 'pkit deploy-agents')",
+    ]
+
+
+def test_status_lists_a_capabilitys_skills_and_agents_under_the_capability(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A skill linked into a capability's `skills/`, and a marked agent copy a
+    capability ships, are listed under that capability, never as the project's
+    own (#2085). Only what the project added itself is the project's own."""
+    monkeypatch.setenv("PKIT_SOURCE_BIN", "/fake/pkit")
+    root = make_adopter_repo(capabilities=("project-management",)).root
+    _deploy_skill(root, "decision-author", ".pkit/skills/core/decision-author.md")
+    _deploy_skill(root, "pm", ".pkit/capabilities/project-management/skills/pm/pm.md")
+    notes = root / ".claude" / "skills" / "my-notes"
+    notes.mkdir(parents=True)
+    (notes / "SKILL.md").write_text("---\nname: my-notes\n---\n", encoding="utf-8")
+    _deploy_agent(root, "critic")
+    _deploy_agent(root, "project-manager")
+    _deploy_agent(root, "my-agent", marked=False)
+
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    pad = " " * 18
+    assert _deployed(result.output) == [
+        f"    {'skills':<18} 1 deployed from core:",
+        f"{ITEM}decision-author -> ../../../.pkit/skills/core/decision-author.md",
+        f"    {pad} 1 deployed from capability project-management:",
+        f"{ITEM}pm -> ../../../.pkit/capabilities/project-management/skills/pm/pm.md",
+        f"    {pad} 1 {OWN}",
+        f"{ITEM}my-notes",
+        f"    {'agents':<18} 1 deployed from core:",
+        f"{ITEM}critic",
+        f"    {pad} 1 deployed from capability project-management:",
+        f"{ITEM}project-manager",
+        f"    {pad} 1 {OWN}",
+        f"{ITEM}my-agent",
+    ]
+
+
+def test_status_lists_the_project_namespace_last_and_a_copy_nothing_ships_apart(
+    installed_target: Path,
+) -> None:
+    """What deploys from the project namespace is listed after core's, and a
+    marked copy whose source is gone is what the next deploy removes, not the
+    project's own."""
+    (installed_target / ".pkit" / "agents" / "project" / "my-reviewer.md").write_text(
+        "---\nname: my-reviewer\n---\n", encoding="utf-8"
+    )
+    _deploy_skill(installed_target, "my-skill", ".pkit/skills/project/my-skill.md")
+    _deploy_skill(installed_target, "schema", ".pkit/skills/core/schema/schema.md")
+    _deploy_agent(installed_target, "my-reviewer")
+    _deploy_agent(installed_target, "critic")
+    _deploy_agent(installed_target, "retired-agent")
+
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    pad = " " * 18
+    assert _deployed(result.output) == [
+        f"    {'skills':<18} 1 deployed from core:",
+        f"{ITEM}schema -> ../../../.pkit/skills/core/schema/schema.md",
+        f"    {pad} 1 deployed from the project namespace:",
+        f"{ITEM}my-skill -> ../../../.pkit/skills/project/my-skill.md",
+        f"    {'agents':<18} 1 deployed from core:",
+        f"{ITEM}critic",
+        f"    {pad} 1 deployed from the project namespace:",
+        f"{ITEM}my-reviewer",
+        f"    {pad} 1 no longer shipped, which the next `pkit sync` removes:",
+        f"{ITEM}retired-agent",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("link", "owner"),
+    [
+        ("../../../.pkit/skills/core/decision-author.md", "core"),
+        ("../../../.pkit/skills/project/mine/mine.md", "project"),
+        # The form before COR-015: the deployed folder is itself the link.
+        ("../../.pkit/skills/core/schema", "core"),
+        ("../../../.pkit/capabilities/project-management/skills/pm/pm.md", "project-management"),
+        ("/repo/.pkit/capabilities/living-docs/skills/docs-author.md", "living-docs"),
+        ("../../../.pkit/capabilities/project-management/agents/pm.md", None),
+        ("../../../.pkit/skills/other/x.md", None),
+        ("../../../my-skills/notes.md", None),
+    ],
+)
+def test_a_skill_belongs_to_where_its_link_leads(link: str, owner: str | None) -> None:
+    assert _skill_owner(link) == owner
 
 
 def test_status_reports_agents_inventory(installed_target: Path) -> None:
@@ -120,28 +235,21 @@ def test_status_reports_agents_inventory(installed_target: Path) -> None:
 def test_status_detects_kit_managed_agent_copy(installed_target: Path) -> None:
     """Kit-managed agents are detected via the deploy-time marker on the resolved copy."""
     name = "methodology-reviewer"
-    deployed = installed_target / ".claude" / "agents" / f"{name}.md"
-    deployed.parent.mkdir(parents=True, exist_ok=True)
-    deployed.write_text(
-        f"---\n# managed-by: project-kit (deploy-agents.sh) — do not edit\n"
-        f"name: {name}\n---\nresolved body\n",
-        encoding="utf-8",
-    )
+    _deploy_agent(installed_target, name)
 
     runner = CliRunner()
     result = runner.invoke(status, [])
     assert result.exit_code == 0
     out = result.output
-    assert "agents deployed" in out
-    # The name must appear under kit-managed, not user-managed.
-    kit_block, _, _ = out.partition("user-managed")
+    assert f"{'agents':<18} 1 deployed from core:" in out
+    kit_block, _, _ = out.partition(OWN)
     assert name in kit_block
 
 
-def test_status_classifies_unmarked_name_collision_as_user_managed(
+def test_status_classifies_unmarked_name_collision_as_the_projects_own(
     installed_target: Path,
 ) -> None:
-    """An adopter-authored file with a kit name but no marker is user content.
+    """An adopter-authored file with a kit name but no marker is the project's own.
 
     Regression: prior status logic classified by name alone, so a
     restored adopter `product-manager.md` showed as kit-managed even
@@ -160,24 +268,20 @@ def test_status_classifies_unmarked_name_collision_as_user_managed(
     result = runner.invoke(status, [])
     assert result.exit_code == 0
     out = result.output
-    # Should NOT appear in the kit-managed block.
-    kit_block, _, user_block = out.partition("user-managed")
+    kit_block, _, user_block = out.partition(OWN)
     assert name not in kit_block
     assert name in user_block
 
 
-def test_status_classifies_unknown_agent_as_user_managed(installed_target: Path) -> None:
-    """Agents at `.claude/agents/` whose name doesn't match a source kit agent are user content."""
-    deployed = installed_target / ".claude" / "agents" / "my-custom-agent.md"
-    deployed.parent.mkdir(parents=True, exist_ok=True)
-    deployed.write_text("---\nname: my-custom-agent\n---\n", encoding="utf-8")
+def test_status_classifies_unknown_agent_as_the_projects_own(installed_target: Path) -> None:
+    """Agents at `.claude/agents/` whose name doesn't match a source kit agent are the project's."""
+    _deploy_agent(installed_target, "my-custom-agent", marked=False)
 
     runner = CliRunner()
     result = runner.invoke(status, [])
     assert result.exit_code == 0
     assert "my-custom-agent" in result.output
-    # Must show up in the user-managed section, not kit-managed.
-    _, _, user_block = result.output.partition("user-managed")
+    _, _, user_block = result.output.partition(OWN)
     assert "my-custom-agent" in user_block
 
 
