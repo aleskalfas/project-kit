@@ -25,10 +25,12 @@ the name of the seat it took are read from
 its runtime file (``_lib/instance_identity``). A clone that holds no seat marks
 no issue and is guarded by nothing. A claim names the seat, its number and the
 clone's key, in the audit-log facility's stamp (point 9). It counts only while
-that clone holds that seat, judged when it is read, so a seat's release frees
-its clone's claims with no write (point 5). A planner's seat files with no
-owner, so its work enters the shared pool, and every other seat claims at
-filing; a worker claims at ``start-work`` (point 7). Renewal, lapse and parking
+that clone holds that seat, and only where the clone made it after its current
+take of the seat, judged when it is read. So a seat's release frees its clone's
+claims for good, with no write, even where the same clone takes the seat again
+(point 5). A planner's seat files with no owner, so its work enters the shared
+pool, and every other seat claims at filing; a worker claims at ``start-work``
+(point 7). Renewal, lapse and parking
 are not built yet.
 
 **The seat is confirmed before each write** (DEC-059 point 6). Every command
@@ -513,9 +515,15 @@ class SeatHolders(Mapping[str, ownership.Holder]):
 
 def holder_of(state: topology.SeatState) -> ownership.Holder:
     """A seat's state as the ownership fold reads it: held by a clone, by its
-    account and key, free, or unread."""
+    account, its key and its take of the seat, free, or unread."""
     if state.state == topology.HELD and state.holder is not None:
-        return ownership.Holder(ownership.SEAT_HELD, state.holder.account, state.holder.clone)
+        fold = state.read.fold if state.read is not None else None
+        return ownership.Holder(
+            ownership.SEAT_HELD,
+            state.holder.account,
+            state.holder.clone,
+            fold.take if fold is not None else None,
+        )
     if state.state == topology.FREE:
         return ownership.Holder(ownership.SEAT_FREE)
     return ownership.Holder(ownership.SEAT_UNREAD)

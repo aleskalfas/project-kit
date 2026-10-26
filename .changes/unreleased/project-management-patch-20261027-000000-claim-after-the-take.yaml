@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  In a project with a topology, a claim on an issue now counts only where its
+  clone made it after its current take of the claim's seat (DEC-059 point 5,
+  #2182). Before, a clone that took its seat again after a release, by itself
+  or by force, revived every claim it made before the release. A Task another
+  seat took over while the seat was free then had two owners, and the clash
+  guard refused the taker's next write. The take is the claim on the seat's
+  state issue that made the clone its holder, and the claim's comment must
+  have a higher id than the take's, since GitHub numbers the comments of every
+  issue from one sequence. A Task whose claim no longer counts returns to the
+  pool, and its clone claims it again from its seat.
