@@ -237,7 +237,7 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#captur
 
 **Distinctions:**
 
-- **The text it names:** the standard, specification or other text outside the repository. Nothing fetches it, so a change to it is seen only once a person records the version they read (DEC-001 point 4).
+- **The text it names:** the standard, specification or other text outside the repository. Nothing fetches it, so a change to it is seen only once a person records the version they read ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 - **Source repository:** where the [backbone](../core/glossary.md#term-backbone--backbone) or a [component](../core/glossary.md#term-component--component) is authored. A captured source names a text outside the repository, never a repository the [project](../core/glossary.md#term-project--project) syncs from.
 
 ## TERM-documentation-space — documentation space
@@ -248,7 +248,7 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#docume
 
 **Distinctions:**
 
-- **Documentation root:** a folder the [backbone configuration](../core/glossary.md#term-backbone-configuration--backbone-configuration) names for internal or for user-facing readers. It is a default [place](../core/glossary.md#term-place--place) of the space it serves, and a space's pages may lie outside it too (DEC-001 point 1).
+- **Documentation root:** a folder the [backbone configuration](../core/glossary.md#term-backbone-configuration--backbone-configuration) names for internal or for user-facing readers. It is a default [place](../core/glossary.md#term-place--place) of the space it serves, and a space's pages may lie outside it too ([DEC-001 point 1](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 - **Place:** a path or glob where the [backbone](../core/glossary.md#term-backbone--backbone) looks for documents. A place outside every root belongs to the space the [project](../core/glossary.md#term-project--project) assigns it to (DEC-001 point 1).
 
 ## TERM-onboarding-plan — onboarding plan
@@ -259,7 +259,7 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 
 **Distinctions:**
 
-- **Proposal:** a drafted edit with its evidence. The agent writes proposals only once the plan is approved, and the plan itself changes nothing (DEC-001 point 8).
+- **Proposal:** a drafted edit with its evidence. The agent writes proposals only once the plan is approved, and the plan itself changes nothing ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 - **A mapping from code to documents:** a work-tracking [capability](../core/glossary.md#term-capability--capability)'s list of which documents a change of code obliges. The plan turns its rules into [page](#term-page--page) anchors, and retiring the mapping is a separate change for its owner (DEC-001 point 8).
 
 ## TERM-page — page
@@ -270,7 +270,7 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#page).
 
 **Distinctions:**
 
-- **Unclassified document:** a document in a space's places that declares no [page kind](#term-page-kind--page-kind). It is no page, and onboarding classifies it (DEC-001 point 4).
+- **Unclassified document:** a document in a space's places that declares no [page kind](#term-page-kind--page-kind). It is no page, and onboarding classifies it ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
 - **Decision record:** a document a page anchors. It is never a page, whatever [place](../core/glossary.md#term-place--place) it lies in (DEC-001 point 4).
 - **Page kind:** what a page declares in `kind`, such as `reference`. Declaring it is what makes a document a page (DEC-001 point 4).
 
@@ -282,8 +282,8 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#page-k
 
 **Distinctions:**
 
-- **Artefact type:** what the [backbone](../core/glossary.md#term-backbone--backbone) gives a document from its [place](../core/glossary.md#term-place--place), such as `living-docs:page`. A document of a root takes the [page](#term-page--page) type only where it names a page kind (DEC-001 point 4).
-- **Template:** the starting shape a writer fills in. What a tool checks is the kind's structure, declared apart in `schemas/page-kinds.yaml`, and a template may show more than it (DEC-001 point 3).
+- **Artefact type:** what the [backbone](../core/glossary.md#term-backbone--backbone) gives a document from its [place](../core/glossary.md#term-place--place), such as `living-docs:page`. A document of a root takes the [page](#term-page--page) type only where it names a page kind ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
+- **Template:** the starting shape a writer fills in. What a tool checks is the kind's structure, declared apart in `schemas/page-kinds.yaml`, and a template may show more than it ([DEC-001 point 3](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#3-what-the-shared-rules-require)).
 
 ## TERM-proposal — proposal
 
@@ -293,8 +293,8 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 
 **Distinctions:**
 
-- **Answer:** the statement in a [page](#term-page--page)'s `friction` block that settles its [friction](../core/glossary.md#term-friction--friction). A proposal names the [answer](../core/glossary.md#term-answer--answer) to give once it is applied, and a person gives that answer (COR-050 point 3).
-- **Onboarding plan:** the outline of a whole onboarding. The agent drafts proposals only once a person approves it (DEC-001 point 8).
+- **Answer:** the statement in a [page](#term-page--page)'s `friction` block that settles its [friction](../core/glossary.md#term-friction--friction). A proposal names the [answer](../core/glossary.md#term-answer--answer) to give once it is applied, and a person gives that answer ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **Onboarding plan:** the outline of a whole onboarding. The agent drafts proposals only once a person approves it ([DEC-001 point 8](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 - **A proposed decision record or rule:** one whose status is `proposed`, which binds nothing yet. A proposal is no record, and never binds.
 
 ## TERM-reader — reader
@@ -305,8 +305,8 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#reader
 
 **Distinctions:**
 
-- **Actor:** a role an analysis names. A reader's id is distinct from an actor's, so the readers an analysis [capability](../core/glossary.md#term-capability--capability) gives stand beside the defaults (DEC-001 point 7).
-- **A documentation space's audience:** users, or maintainers, whom the whole space serves. Each page of the space names one reader (DEC-001 point 1).
+- **Actor:** a role an analysis names. A reader's id is distinct from an actor's, so the readers an analysis [capability](../core/glossary.md#term-capability--capability) gives stand beside the defaults ([DEC-001 point 7](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#7-connections)).
+- **A documentation space's audience:** users, or maintainers, whom the whole space serves. Each page of the space names one reader ([DEC-001 point 1](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 
 ## TERM-reader-review — reader-review
 
@@ -316,7 +316,7 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 
 **Distinctions:**
 
-- **Change review:** a review of a diff for documentation it left missing or contradicted, which belongs to code review. A reader-review looks at the [page](#term-page--page), not the diff (DEC-001 point 6).
+- **Change review:** a review of a diff for documentation it left missing or contradicted, which belongs to code review. A reader-review looks at the [page](#term-page--page), not the diff ([DEC-001 point 6](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review)).
 - **Validation:** it checks the parts of `LDOC`'s rules that living-docs enforces, such as a page's [reader](#term-reader--reader). A reader-review leaves those parts to it, and judges the rest of each [rule](../core/glossary.md#term-rule--rule) (DEC-001 point 6).
 - **An executed check:** a run that follows the documentation, such as a simulated reader running a guide. living-docs runs none (DEC-001 point 6).
 
@@ -328,7 +328,7 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#space-
 
 **Distinctions:**
 
-- **`LDOC`:** the rule set living-docs ships, which every space definition inherits. It takes no scope, so its rules bind on a [page](#term-page--page) only through a set of the [project](../core/glossary.md#term-project--project)'s own that selects it (DEC-001 point 2).
+- **`LDOC`:** the rule set living-docs ships, which every space definition inherits. It takes no scope, so its rules bind on a [page](#term-page--page) only through a set of the [project](../core/glossary.md#term-project--project)'s own that selects it ([DEC-001 point 2](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#2-definitions-kept-apart-from-content)).
 - **Template:** a writer's tool in the definitions location, such as a page template copied there. It is never a page, and holds no rule (DEC-001 point 2).
 
 ## TERM-unclassified-document — unclassified document
@@ -339,6 +339,6 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#unclas
 
 **Distinctions:**
 
-- **Page:** a document of the [page](#term-page--page) type, or one that names its page kind in an untyped [place](../core/glossary.md#term-place--place) of the project's outside every root. An unclassified document is neither (DEC-001 point 4).
-- **A document another owner claims:** such as an analysis [artefact](../core/glossary.md#term-artefact--artefact), a [decision record](../core/glossary.md#term-decision-record--decision-record) or a rule-set file. It is its owner's, and never counts as unclassified (DEC-001 points 1 and 4).
+- **Page:** a document of the [page](#term-page--page) type, or one that names its page kind in an untyped [place](../core/glossary.md#term-place--place) of the project's outside every root. An unclassified document is neither ([DEC-001 point 4](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)).
+- **A document another owner claims:** such as an analysis [artefact](../core/glossary.md#term-artefact--artefact), a [decision record](../core/glossary.md#term-decision-record--decision-record) or a rule-set file. It is its owner's, and never counts as unclassified (DEC-001 points [1](../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces) and 4).
 - **A document passed over:** one that lies only in an unassigned place of [rule sets](../core/glossary.md#term-rule-set--rule-set) outside every root, such as that place's `README.md`. It is neither a page nor unclassified (DEC-001 point 1).

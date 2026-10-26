@@ -46,4 +46,4 @@ pkit:
 
 **States:** <!-- pkit:hint The concept's states, and the events that move it from one to the next. Add a state diagram after the text where it has a life cycle. Write `None.` when it has none. Example: An order is open until a payment settles it, and settled until it is sent. -->
 
-**Always true:** <!-- pkit:hint What holds of every instance, as a record decides it, naming the record. Write `None.` when no record decides one. Example: An order once settled is never changed (DEC-007). -->
+**Always true:** <!-- pkit:hint What holds of every instance, as a record decides it, naming the record. Write `None.` when no record decides one. Example: An order once settled is never changed (PRJ-007). -->

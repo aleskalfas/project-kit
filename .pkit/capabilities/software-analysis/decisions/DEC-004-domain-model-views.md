@@ -130,7 +130,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 **The term's link to its section.** A term a view explains links to that view's section on it.
 - **Where:** an unlabelled line under the term's heading in the glossary, before its first part, where a reader reads the term. The link names the view's file and the section, such as `domain-model/010-orders-and-payments.md#order`. The section's name is its heading's slug, as COR-050 point 2 makes it. A slug is in lower case, so it is the slug of the term's name, the heading's capital aside.
 - **Written and held.** The stamp writes the link from the view's `explains`, its file's name and the term's name. The capability's check holds it equal to the view in force that explains the term, whatever any rule's status. A term no view explains carries no link.
-- **No part.** The term kind ships no part for the link, so no live term needs a migration (DEC-001 point 1). The structure check reads the line as no part, and a project's closed list of labels does not refuse it. A project without a domain model sees no change to its glossary.
+- **No part.** The term kind ships no part for the link, so no live term needs a migration (DEC-001 point 1). The structure check reads the line as no part, and a project's closed list of labels does not refuse it. A project without a domain model sees no change to its glossary from this link.
 - **A named exception.** The link is the reverse of the view's anchor on the term. No accepted point stores the reverse of an anchor (DEC-001 point 11, DEC-002 point 7). This link stores one, as a named exception: a copy for navigation, which the check holds equal, so it never drifts.
 - **What it meets.** A copy in another artefact's body changes with every edit elsewhere, and flags that artefact's dependants (DEC-003 point 9). That is this link's cost, which this record accepts.
 - **No anchor.** The link draws no anchor, so the term rests on nothing the view states.
@@ -173,7 +173,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 - **Noun forms only.** A mention is the name or a declared noun form as written, its first letter in either case, and no other form. A term declares only forms that cannot read as a verb, such as "payments", never "orders" (DEC-001 point 1).
 - **Whole words.** A mention stands whole, never part of a longer word or of a compound. So "order's" holds a mention of "order", and "pre-order" holds none.
 - **The longest first.** Where two mentions overlap, the one that starts first is taken, and of two that start together, the longer. So "payment method" wins over "payment", and "order line" over "order".
-- **What is skipped:** code spans and fenced blocks, headings, bold labels, comments, links and other markup, and the lines that link a term and its section.
+- **What is skipped:** code spans and fenced blocks, headings, bold labels, comments, links and other markup, the lines that link a term and its section, and each citation of a record or a rule, linked or not (DEC-001 point 13).
 - **An actor's name.** An actor's name holds no mention of a term whose name is only part of it, such as "component" in "component author". An actor named by its name uses no concept. The names are those of the analysis's actors in force, and of the actors its glossary's head lists from another analysis.
   - **A whole name** that is a term's name is still a mention, since it may name either. The term tells the two apart, and the escape marks the actor (DEC-001 point 1).
   - **A shortened name** is no data, so a term in it is a mention, and the escape serves there too.
@@ -194,7 +194,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 - **A withdrawn view** keeps the section it held, as it keeps the rest of its text (DEC-001 point 3). The command and the check read none of it.
 
 **Written by a command, held by the check.** Nobody writes these links by hand.
-- **The command,** `pkit analysis link`, writes each section's link to its term, the mentions' links and each view's closing section, in every analysis that keeps a domain model. It reads a body only to place its links, as the stamp reads the glossary to place a term's link. Its data comes from front matter, where a tool reads an artefact's data (DEC-001 point 1), and from the declared structures:
+- **The command,** `pkit analysis link`, writes each section's link to its term, the mentions' links and each view's closing section, in every analysis that keeps a domain model. It writes the links of citations too, in every analysis (DEC-001 point 13). It reads a body only to place its links, as the stamp reads the glossary to place a term's link. The data of the links to terms comes from front matter, where a tool reads an artefact's data (DEC-001 point 1), and from the declared structures:
   - each term's name, noun forms and other senses
   - each view's `explains`
   - each actor's name
@@ -212,7 +212,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
   - **Its words.** The heading is fixed in English, as a box's label is (DEC-001, Rationale). A project cannot relabel it, since the section is no part. Each label is its concept's heading, in the analysis's own words.
 - **Its cost.** A change that adds or renames a term, or rewords a section, may move links. It runs the command before validation passes. Such a change moves the first mentions across every artefact that names the term, so two branches may conflict there. The command, run again on the merged text, mends them.
   - **Across analyses:** a term renamed in an analysis another builds on moves the links in that other analysis too. In one repository, the change that renames it runs the command there.
-- **A project without a domain model** sees no link written or held.
+- **A project without a domain model** sees no link to a term written or held.
 
 ### 8. Its place in the build order
 
@@ -303,7 +303,7 @@ A documentation page that is no architecture view may rest on a view's section (
 - **Why the escape lies in the body.** It marks one place in a text, which only the body holds. It is no data about a term, and the command reads the body to place its links anyway.
 - **Why this is no marking of each use.** DEC-001 rejects marking each use of a term so that a script checks it. Here no writer marks a use: the command writes the links from the data. Whether a word names the concept stays a reader's judgement, which a wrong link only shows.
 - **Why a listed term links to the entry the repository holds.** In one repository, the text and the entry it links to are read at one commit, so they agree. The head names the version the analysis builds on, and its own link keeps it.
-- **Why only where a domain model is kept.** The links join the glossary to the views, so each concept is two clicks from its explanation, wherever it is mentioned. A project takes them with its domain model, and one without views sees no change, as for the term's link.
+- **Why only where a domain model is kept.** The links to terms join the glossary to the views, so each concept is two clicks from its explanation, wherever it is mentioned. A project takes them with its domain model, and one without views sees no change, as for the term's link.
 - **What that costs.** A project takes the links with its first view and keeps them, since no view is deleted. One that tries a domain model and withdraws it keeps its links, and the cost of keeping them.
 
 **Why a view leads back to what is built on its concepts.** A reader who starts from a concept asks which functionality is built on it (DEC-005 point 3). The links ran one way, from an artefact to the terms it mentions, and nothing led back. The maintainer found it on 26 October, reviewing a change to project-management's analysis as a newcomer would read it ([project-kit#2104](https://github.com/aleskalfas/project-kit/issues/2104)).
@@ -387,7 +387,7 @@ A documentation page that is no architecture view may rest on a view's section (
   - **The links command,** `pkit analysis link`, writes the section's link, the mentions' links and each view's closing section (point 7). The stamp writes a new view's closing section.
   - **The links' form,** declared on each place of the capability, and the closing section's on the views' places (point 7). Friction sets aside each link of those forms. The declaration needs a backbone that reads it.
   - **The structure** reads a view's closing section as no part (point 2).
-  - **Who runs the command.** The authoring skill runs it after any artefact is written, where the analysis keeps a domain model. Whoever applies a revalidation that rewords a section runs it too.
+  - **Who runs the command.** The authoring skill runs it after any artefact is written, since any artefact may cite a record (DEC-001 point 13). Whoever applies a revalidation that rewords a section runs it too.
   - **The structure holds** a view's headings to the names of the terms its `explains` lists, in sentence case, where the format rule binds. The stamp writes them so. Each heading gives a slug of its own (point 2).
   - **The structure holds each section's *Why*** where the format rule binds, as it holds the section's other parts: present, before the explanation and the section's labels, and filled or `None.`. The stamp writes it with its hint. The structure reads it as its paragraph alone, and the explanation below it (point 2).
   - **A project's own structure** that places an addition to a concept's section before its explanation is refused, as one that places it before any opening is.

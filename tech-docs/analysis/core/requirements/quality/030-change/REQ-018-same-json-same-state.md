@@ -24,7 +24,7 @@ pkit:
 
 **Verified by:** Tests run the [change check](../../../glossary.md#term-change-check--change-check), the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check), the [debt](../../../glossary.md#term-debt--debt) listing, the explanation of an [artefact](../../../glossary.md#term-artefact--artefact) and the listing of artefacts twice over one state. Each finds the two documents equal. No test runs `friction since` twice.
 
-**Rationale:** No record decides it. The requirement is its own home, and merging the [change](../../../glossary.md#term-change--change) that adds it approves it (software-analysis DEC-002 [point](../../../glossary.md#term-point--point) 8).
+**Rationale:** No record decides it. The requirement is its own home, and merging the [change](../../../glossary.md#term-change--change) that adds it approves it ([software-analysis DEC-002 point 8](../../../../../../.pkit/capabilities/software-analysis/decisions/DEC-002-analysis-requirements.md#8-what-approves-a-requirement-and-the-record-it-rests-on)).
 
 The CLI reference gives each of these documents as stable, its keys sorted, and says that [components](../../../glossary.md#term-component--component) read them, never the human view. A reader that compares two runs then sees only what changed in the repository.
 
