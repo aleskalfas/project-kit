@@ -130,6 +130,7 @@ from project_kit.friction_history import (
     Points,
     Walker,
     carrier,
+    read_history,
 )
 from project_kit.working_tree import working_tree
 
@@ -1097,6 +1098,64 @@ def head_locations(history: History | None) -> Callable[[Artefact], tuple[str, .
     return locations
 
 
+def working_renames(target_root: Path) -> Mapping[str, str]:
+    """By its path in the working tree, the path HEAD holds of each file the working tree
+    renamed: git's own rename detection over the tracked files, as the change check reads
+    a working tree's diff. None where HEAD names no commit."""
+    listed = run_git(
+        target_root,
+        "diff",
+        "-M",
+        "--name-status",
+        "-z",
+        "--no-color",
+        "HEAD",
+        "--",
+        accept=(0, 128),
+    )
+    if listed.returncode != 0:
+        return {}
+    tokens = [t for t in listed.stdout.decode("utf-8", "surrogateescape").split("\0") if t]
+    return {e.path: e.old_path for e in parse_name_status(tokens) if e.old_path is not None}
+
+
+def working_locations(target_root: Path) -> Callable[[Artefact], tuple[str, ...]]:
+    """`StateAnswers.locations` for the working tree, as the change check reads it: the
+    artefact's location under every name its file had in HEAD's history (`History.names`),
+    its own first, and, where the working tree renamed the file, under every name the path
+    it was renamed from had (COR-062 point 10). A move is followed whether or not it is
+    committed. An entry moved between collection files is not: its old location is none of
+    these. HEAD's history is read once, on the first call; before the first commit, or
+    outside a git repository, the artefact's own location alone."""
+    read: list[tuple[History, Mapping[str, str]] | None] = []
+
+    def locations(artefact: Artefact) -> tuple[str, ...]:
+        if not read:
+            listed = run_git(
+                target_root,
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                "HEAD^{commit}",
+                accept=(0, 1, 128),
+            )
+            head = listed.stdout.decode().strip() if listed.returncode == 0 else ""
+            read.append(
+                (read_history(target_root, head), working_renames(target_root)) if head else None
+            )
+        found = read[0]
+        if found is None:
+            return (location_of(artefact),)
+        history, moved_from = found
+        names = dict.fromkeys(history.names(artefact.path))
+        earlier = moved_from.get(artefact.path)
+        if earlier is not None:
+            names.update(dict.fromkeys(history.names(earlier)))
+        return tuple(location_of(artefact, name) for name in names)
+
+    return locations
+
+
 # --- a change's answer files --------------------------------------------------------
 
 
@@ -1630,5 +1689,7 @@ __all__ = [
     "read_answer_file",
     "refuse_unmoved",
     "unmoved",
+    "working_locations",
+    "working_renames",
     "working_tree_files",
 ]
