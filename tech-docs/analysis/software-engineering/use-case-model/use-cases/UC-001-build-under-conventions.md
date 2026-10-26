@@ -51,6 +51,7 @@ pkit:
 - The agent works within the permission model, never around it (core rules 14 and 15).
 - The agent changes no other repository, unless the person it works for confirms it (core rule 19).
 - The agent retries once a step that failed for a cause outside its own work, such as a locked signing key. It first checks that the step did not take effect. If it fails again, the agent stops and reports (core rule 21).
+- Before it changes files, the agent looks up the accepted records their anchors lead to, and reads those tied to them directly (core rule 22).
 - In project-kit, the agent runs the tests of what it changed, and leaves the full suite to the pre-push hook and CI (project rule 2).
 - In project-kit, every commit is signed, and signing is never switched off. A commit that fails to sign waits a minute before its one retry (project rule 4).
 
