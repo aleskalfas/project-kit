@@ -384,7 +384,7 @@ $ pkit project-management create-issue --type task --title "Add the app" 2>&1 | 
 - **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch and pull-request conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
 - **Developers** → [`software-engineering`](.pkit/capabilities/software-engineering/README.md): an agent that writes code to *your* conventions, plus a code-review panel on your pull requests. When a pattern recurs, you can package it as a capability of your own, from the primitives already there: decisions, schemas, skills and agents.
 
-**Install capabilities in any order.** Both documentation roots start as `docs/`, and no install changes them. The first time [living-docs](.pkit/capabilities/living-docs/README.md#a-fresh-project-the-first-stamp-sets-the-roots-apart) creates a space, it offers to move the internal root, which holds the maintainers' documents, to `tech-docs/`.
+Both documentation roots start as `docs/`, and no install changes them. The first time [living-docs](.pkit/capabilities/living-docs/README.md#a-fresh-project-the-first-stamp-sets-the-roots-apart) creates a space, it offers to move the internal root, which holds the maintainers' documents, to `tech-docs/`. Nothing an install placed in `docs/` before then moves with it. So create that space before you install software-analysis, or the rule set its install writes stays among your user documents.
 
 **What actually gates on day one,** with the defaults (honestly — no more than this), is the structural checks your CI can run:
 
