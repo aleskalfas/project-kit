@@ -1,0 +1,568 @@
+answers:
+  - artefact: .pkit/decisions/README.md
+    read:
+      - moved-300b8204a467.yaml
+    revalidated:
+      at: 2026-10-26T01:37:26Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    read:
+      - moved-0fe260ad4d42.yaml
+    revalidated:
+      at: 2026-10-26T01:37:34Z
+      outcome: unchanged
+      unchanged-because: The decisions README gains only that a record and a rule set keep their front matter in their own file, never in a sidecar. The gate on proposed records, which this term defines, is untouched.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact
+    read:
+      - moved-3933dda7eeb0.yaml
+    revalidated:
+      at: 2026-10-26T01:37:43Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 now says front matter in that record is a document's data, in its file or in a sidecar COR-063 reads. The definition, a document with front matter or a keyed entry in a place, holds under that reading.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact-type
+    read:
+      - moved-78df703a1a01.yaml
+    revalidated:
+      at: 2026-10-26T01:37:52Z
+      outcome: unchanged
+      unchanged-because: COR-056 point 2 adds that a type registry entry may allow a document of the type to keep its data in a sidecar. A type is still a declared name given by the place holding the file, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-change
+    read:
+      - moved-33f1dff90c56.yaml
+    revalidated:
+      at: 2026-10-26T01:38:00Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that a document whose sidecar went missing is not new where its data comes back. A change is still a unit of work that lands on the branch it targets, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-change-check
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-539b6877a665.yaml
+    revalidated:
+      at: 2026-10-26T01:38:07Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds only that a document whose sidecar went missing is not new where its data returns. The change check still compares a head with its base and lists every answer the diff wrote, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-friction
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-fcf368d3df19.yaml
+    revalidated:
+      at: 2026-10-26T01:38:17Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1, 5 and 6 add that front matter may sit in a sidecar, that a sidecar is part of its document for a path anchor, and that data back from a sidecar gap is not new. Friction, a changed ground with no answer standing, reads the same, so the definition holds.
+      deferred:
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_check.py
+          reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_repository.py
+          reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#1
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#5
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#6
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+        - anchor:
+            kind: record
+            value: COR-050#9
+          reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-head
+    read:
+      - moved-6626866e52ac.yaml
+    revalidated:
+      at: 2026-10-26T01:38:24Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 5 and 6 add that a sidecar is part of its document for a path anchor and that data back from a sidecar gap is no new artefact. The head is still the later state a check compares with the base, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-package-metadata
+    read:
+      - moved-8b694a3bf8e4.yaml
+    revalidated:
+      at: 2026-10-26T01:38:32Z
+      outcome: unchanged
+      unchanged-because: COR-056 point 2 adds a sidecar permission to a type registry entry. Package metadata still declares what a component adds to the backbone, its types among them, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-place
+    read:
+      - moved-0ae594146a73.yaml
+    revalidated:
+      at: 2026-10-26T01:38:39Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 adds that front matter in that record is a document's data in its file or in a sidecar. A place still bounds where the backbone looks for documents that carry anchors, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-rule-set
+    read:
+      - moved-b553c80c6420.yaml
+    revalidated:
+      at: 2026-10-26T01:38:45Z
+      outcome: unchanged
+      unchanged-because: COR-051 point 2 adds that a rule-set file holds its data in its front matter and never in a sidecar. The definition, a collection file of named statements with its version, inheritance and scope, holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-whole-repository-check
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-6038b46e1ac7.yaml
+    revalidated:
+      at: 2026-10-26T01:38:51Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that a document whose sidecar went missing is not new where its data comes back. The whole-repository check still compares each artefact with its revalidation point and never fails, so the definition holds.
+  - artefact: tech-docs/analysis/core/domain-model/030-capabilities-areas-and-connection-points.md
+    read:
+      - 20261025T205437Z-a3b903e8.yaml
+      - moved-517cd38da793.yaml
+    revalidated:
+      at: 2026-10-26T01:38:57Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds only that the methodology's container may sit in a sidecar that COR-063 reads. This view's roles, connection points, versions and wiring say nothing of where the container sits, so they hold.
+  - artefact: tech-docs/analysis/core/domain-model/010-the-system-and-its-methodology.md
+    read:
+      - moved-172e742805fb.yaml
+    revalidated:
+      at: 2026-10-26T01:39:03Z
+      outcome: unchanged
+      unchanged-because: COR-051 point 2 adds only that a rule-set file keeps its data in its front matter, never in a sidecar. This view's account of rules, rule sets and the acceptance gate holds as written.
+  - artefact: tech-docs/analysis/core/domain-model/070-artefacts-and-friction.md
+    read:
+      - moved-cd4ddc4f6d5e.yaml
+    revalidated:
+      at: 2026-10-26T01:39:09Z
+      outcome: unchanged
+      unchanged-because: "COR-050, COR-051 and COR-056 gain pointers to COR-063: front matter may sit in a sidecar a type allows, and a rule set keeps its own. The view's artefact, place and type read true, since a sidecar holds the same data and no command writes one yet."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "The view has an artefact carry its answers, which COR-062 moves to answer files, and names no debt answered apart. #1779 builds it and rewrites the view."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the view shows them carried by the artefact. #1779 builds it and rewrites the view."
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-ci-pipeline.md
+    read:
+      - moved-e1d3065e2944.yaml
+    revalidated:
+      at: 2026-10-26T01:39:13Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers to COR-063 in points 1, 5 and 6 on where a document's data may sit. The pipeline's needs, running the checks unattended against one base, are untouched.
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-024-checks-where-rule-binds.md
+    revalidated:
+      at: 2026-10-26T01:39:17Z
+      outcome: unchanged
+      unchanged-because: COR-051 point 2 adds that a rule-set file keeps its data in its front matter, never in a sidecar. Where a rule binds and which checks enforce it are untouched, so the requirement holds.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-045-propose-page-fix.md
+    read:
+      - moved-ee7b915ffa8a.yaml
+    revalidated:
+      at: 2026-10-26T01:39:22Z
+      outcome: unchanged
+      unchanged-because: "COR-050 point 5 makes a sidecar part of its document for a path anchor, and point 6 keeps data back from a sidecar gap from being new. Proposing a page fix rests on neither, and pages keep front matter until living-docs decides on sidecars under #2075, so the steps hold."
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-047-onboard-documents.md
+    read:
+      - moved-60786988cb3d.yaml
+    revalidated:
+      at: 2026-10-26T01:39:27Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 lets front matter sit in a sidecar, and point 6 keeps data back from a sidecar gap from being new. Onboarding gives a document anchors in its front matter, the only home a page has until living-docs allows a sidecar, so the steps hold.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261025T003621Z-53316d8f.yaml
+    revalidated:
+      at: 2026-10-26T01:39:32Z
+      outcome: unchanged
+      unchanged-because: COR-050 points 1 and 6 add where a document's data may sit and that data back from a sidecar gap is not new. Deciding an answer the change was not asked for rests on neither, so the steps hold.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-043-set-up-space.md
+    read:
+      - moved-d45e53f4f973.yaml
+    revalidated:
+      at: 2026-10-26T01:39:37Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 lets front matter sit in a sidecar, and COR-056 point 2 lets a type registry entry allow one. Setting up a space names its roots, places and page type as before, so the steps hold.
+  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-044-write-page.md
+    read:
+      - moved-953310b098f2.yaml
+    revalidated:
+      at: 2026-10-26T01:39:43Z
+      outcome: unchanged
+      unchanged-because: "COR-050 point 1 lets a document's front matter sit in a sidecar its type allows, and point 6 keeps data back from a sidecar gap from being new. Step 7 writes a page's front matter in the file, still a legal home, and living-docs decides on sidecars for pages under #2075."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-063-plan-intent.md
+    read:
+      - moved-a96d5bbf8b57.yaml
+    revalidated:
+      at: 2026-10-26T01:39:48Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds only that the container may sit in a sidecar COR-063 reads. Planning intent reads the use-case data point the backbone resolves, as before, so the steps hold.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-071-describe-existing-project.md
+    read:
+      - moved-a7d5eb0e91b3.yaml
+    revalidated:
+      at: 2026-10-26T01:39:53Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 lets front matter sit in a sidecar, and point 6 keeps data back from a sidecar gap from being new. Describing an existing project stamps artefacts in front matter, and a new artefact still counts as revalidated, so the steps hold.
+  - artefact: tech-docs/analysis/software-analysis/use-case-model/use-cases/UC-073-revalidate-after-change.md
+    read:
+      - moved-2ac1be36d925.yaml
+    revalidated:
+      at: 2026-10-26T01:39:59Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 5 makes a sidecar part of its document for a path anchor, and point 6 keeps data back from a sidecar gap from being new. Revalidating an analysis artefact after a change rests on neither, so the steps hold.
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-fb33f94647c6.yaml
+    revalidated:
+      at: 2026-10-26T01:40:04Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers to COR-063 in points 1, 5 and 6 on where a document's data may sit. This view's changes, bases, heads and checks of two states are untouched, so it holds.
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - moved-e5885d842901.yaml
+    revalidated:
+      at: 2026-10-26T01:40:11Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers to COR-063 on where a document's data may sit. The README's agents, conventions overlay and review panel do not rest on that, so the page holds.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its account of the answers its reviewers check keeps them in the artefact, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "DEC-032 D1 now leaves the answer folder out of the touches-code floor, which the README's account of that floor does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-055
+          reason: "DEC-055 now covers a later head by the answer files the change adds and prints answers made apart. #1779 builds it and rewrites the README's account of the landing."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-e74c084a6ef5.yaml
+    revalidated:
+      at: 2026-10-26T01:40:16Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds only that the container may sit in a sidecar COR-063 reads. Connecting a capability declares roles, points and processes in its package metadata as before, so the steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-developer.md
+    read:
+      - moved-4b4237b8c57c.yaml
+    revalidated:
+      at: 2026-10-26T01:40:20Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that a document whose sidecar went missing is not new where its data comes back. The developer's needs from the checks and the answers are untouched, so the actor holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-b82457b5436c.yaml
+    revalidated:
+      at: 2026-10-26T01:40:26Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 reads front matter as a document's data in either home, and point 6 keeps data back from a sidecar gap from being new. Step 1's anchors in the pkit front matter, and step 3's new document counted as revalidated, hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-26T01:40:31Z
+      outcome: unchanged
+      unchanged-because: The decisions README gains that a record and a rule set keep their front matter in their own file, never in a sidecar. Accepting a record through review is untouched, so the steps hold.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-062-review-and-land.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - moved-a808f0db0388.yaml
+    revalidated:
+      at: 2026-10-26T01:40:36Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers to COR-063 in points 1, 5 and 6 on where a document's data may sit. Reviewing and landing a change lists its answers from the answer files it adds, as before, so the steps hold.
+  - artefact: .pkit/process/README.md
+    read:
+      - moved-61683c1961c7.yaml
+    revalidated:
+      at: 2026-10-26T01:40:41Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds only that the container may sit in a sidecar COR-063 reads. The process area's connections and their address forms are untouched, so the page holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-26T01:40:46Z
+      outcome: unchanged
+      unchanged-because: COR-051 point 2 now says a rule-set file keeps its data in its front matter, never in a sidecar. Step 2 gives the set's name and version in its front matter, so the steps hold.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T01:40:51Z
+      outcome: unchanged
+      unchanged-because: COR-053 point 10 adds only that the container may sit in a sidecar COR-063 reads. The capability's roles, connection points and data points are untouched, so the page holds.
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T205437Z-a3b903e8.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001046Z-b1bfc4dd.yaml
+      - moved-e20d8eb259bb.yaml
+    revalidated:
+      at: 2026-10-26T01:40:56Z
+      outcome: unchanged
+      unchanged-because: "COR-050 points 1 and 5, COR-053 point 10 and COR-056 point 2 gain pointers to COR-063. The README's literals, container key and type registry describe what the backbone reads today, front matter in the file, and #2077 adds the sidecar when the backbone reads one."
+  - artefact: .pkit/agents/README.md
+    read:
+      - moved-fcb206299a38.yaml
+    revalidated:
+      at: 2026-10-26T01:41:01Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains pointers to COR-063 on where a document's data may sit. An agent definition's front matter is a harness's file format, which keeps its meaning under COR-063, so the page holds.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T174422Z-ea676633.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T202350Z-6a1bd668.yaml
+      - 20261025T221052Z-9302b480.yaml
+      - 20261025T234102Z-0231f155.yaml
+      - moved-69dea4023970.yaml
+    revalidated:
+      at: 2026-10-26T01:41:12Z
+      outcome: unchanged
+      unchanged-because: "COR-050 gains pointers to COR-063, and the decisions README says a record and a rule set keep their front matter. The prose lint reads front matter in the file, where every ruled artefact keeps its data until #2078 teaches the lint the sidecar, so the guide holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-067
+          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-053
+          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-a164d961d8b1.yaml
+    revalidated:
+      at: 2026-10-26T01:41:16Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that a document whose sidecar went missing is not new where its data comes back. Resolving debt on the default branch does not rest on that, so the steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-26T01:41:21Z
+      outcome: unchanged
+      unchanged-because: The decisions README now says a record keeps its frontmatter in its own file, never in a sidecar. Recording a decision stamps the record with its frontmatter in the file, so the steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-7a369d906fdb.yaml
+    revalidated:
+      at: 2026-10-26T01:41:25Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that a document whose sidecar went missing is not new where its data comes back. Answering a stale artefact in answer files is untouched, so the steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - moved-62a2bb3ba5d0.yaml
+    revalidated:
+      at: 2026-10-26T01:41:30Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that data back from a sidecar gap makes no new artefact. Checking a change before a push runs the same change check against the same base, so the steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-c95d6fad77f9.yaml
+    revalidated:
+      at: 2026-10-26T01:41:35Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that data back from a sidecar gap is not a new artefact. Gating merges on the change check as a required status is untouched, so the steps hold.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-40743155218d.yaml
+    revalidated:
+      at: 2026-10-26T01:41:40Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 reads front matter as a document's data in its file or a sidecar. Adopting the system declares places and installs capabilities as before, so the journey holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-26T01:41:45Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 reads front matter as data in either home, and point 5 makes a sidecar part of its document for a path anchor. Delivering a change reads artefacts in their places as before, so the journey holds.
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-005
+    read:
+      - moved-cf1897716e93.yaml
+    revalidated:
+      at: 2026-10-26T01:41:50Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 1 reads front matter as data in either home, and point 5 makes a sidecar part of its document for a path anchor. The rule's anchors on code, decisions and artefacts name the same targets, so it holds.
+  - artefact: .pkit/capabilities/software-analysis/README.md
+    read:
+      - moved-2dccacfe6269.yaml
+    revalidated:
+      at: 2026-10-26T01:41:55Z
+      outcome: unchanged
+      unchanged-because: "COR-050, COR-051 and COR-053 gain pointers to COR-063 on where a document's data may sit. The analysis keeps its data in front matter until software-analysis decides on sidecars under #2076, so the README holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T01:42:01Z
+      outcome: unchanged
+      unchanged-because: "COR-050 and COR-051 gain pointers to COR-063 on where a document's data may sit. The commands read front matter in the file today, and #2077 documents the sidecar here when the backbone reads one, so the reference holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T01:43:17Z
+      outcome: unchanged
+      unchanged-because: "COR-050 and COR-051 gain pointers to COR-063, and front matter in COR-050 is a document's data in either home. Judged together with the GUIDE rewrite and the engine keeping answers in answer files alone: the friction example writes and reads an answer file, and the quoted init lines are untouched, so the README holds."
+  - artefact: .pkit/schemas/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-b1ddbb959267.yaml
+    revalidated:
+      at: 2026-10-26T01:42:11Z
+      outcome: unchanged
+      unchanged-because: "COR-050, COR-051 and COR-053 gain pointers to COR-063. The container and friction block are described as the backbone reads them today, in front matter in the file, and #2077 adds the sidecar to this README when the backbone reads one."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/schemas/backbone/**
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/backbone_schemas.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/data_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_discovery.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: ADR-056
+          reason: "ADR-056 point 2 gains a location rule for answer files, which the README's binding order does not list. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, whose files' schema is a backbone file schema. #1779 builds it and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It models the friction block with its answers, which COR-062 moves to answer files with a schema of their own. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README models in the block. #1779 builds it and rewrites it."
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - moved-96e1f9e9c108.yaml
+    revalidated:
+      at: 2026-10-26T01:42:16Z
+      outcome: unchanged
+      unchanged-because: "COR-050, COR-051, COR-053 and COR-056 gain pointers to COR-063 on where a document's data may sit. Pages keep their data in front matter until living-docs allows a sidecar under #2075, so the README holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says two branches revalidating one page conflict in its block and friction resolve takes the base side's answer, which COR-062 replaces. #1779 builds it and rewrites the passage."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README keeps in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passage #1779 rewrites, since a revalidation would claim the whole README holds."
