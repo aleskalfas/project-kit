@@ -31,6 +31,7 @@ pkit:
         - COR-053#8
         - COR-054#3
         - COR-056
+        - COR-062
       artefact:
         - TERM-anchor
         - TERM-place
@@ -53,7 +54,7 @@ pkit:
 
 A document is true only against something, such as the code it explains or a decision it applies ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). When that changes and the document does not, it goes stale, and a review of the edit seldom sees it (COR-050). Rules need the same tracking, and must reach only the [artefacts](../glossary.md#term-artefact--artefact) meant for them ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md), [COR-056](../../../../.pkit/decisions/core/COR-056-artefact-types.md)).
 
-An artefact in a [place](../glossary.md#term-place--place) declares its anchors, the things that make it true. When one of them changes, the artefact has [friction](../glossary.md#term-friction--friction) until an [answer](../glossary.md#term-answer--answer) stands for the edit. The [change check](../glossary.md#term-change-check--change-check) finds the friction a [change](../glossary.md#term-change--change) brings, and the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) reports the [debt](../glossary.md#term-debt--debt) left on the [default branch](../glossary.md#term-default-branch--default-branch).
+An artefact in a [place](../glossary.md#term-place--place) declares its anchors, the things that make it true. When one of them changes, the artefact has [friction](../glossary.md#term-friction--friction) until an [answer](../glossary.md#term-answer--answer) stands for the edit. A [change](../glossary.md#term-change--change) writes its answers in files of its own, outside the artefacts, so they never conflict with another change's answers ([COR-062](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md)). The [change check](../glossary.md#term-change-check--change-check) finds the friction a change brings, and the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) reports the [debt](../glossary.md#term-debt--debt) left on the [default branch](../glossary.md#term-default-branch--default-branch).
 
 What an [anchor](../glossary.md#term-anchor--anchor) names is a path, a record or an artefact, or a part of one. What it stands on is what the checks compare between two states to tell whether the anchor changed ([COR-050 point 5](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)). An anchor on a record's [point](../glossary.md#term-point--point) names the point, but stands on the point's section and on what says whether and how the record binds.
 
@@ -64,7 +65,7 @@ Some anchors matter the other way too. A requirement anchors the test that verif
 ```mermaid
 classDiagram
   accTitle: Artefacts and friction
-  accDescr: A place holds artefacts, and gives most of them their artefact type. An artefact carries its anchors and its answers. Friction is a finding on an artefact, and a revalidation or a deferral, which are answers, settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. Package metadata declares revisit links on places. A revisit link names trigger fields and takes link targets, which are anchors. The change check asks for a revisit of each link target, and an answer may record that revisit. A rule set holds rules, and selects artefacts by artefact type. A component ships package metadata, which declares its places and its artefact types.
+  accDescr: A place holds artefacts, and gives most of them their artefact type. An artefact carries its anchors. An answer is on an artefact, and lives apart from it, in a file of the change that wrote it. Friction is a finding on an artefact, and a revalidation or a deferral, which are answers, settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. Package metadata declares revisit links on places. A revisit link names trigger fields and takes link targets, which are anchors. The change check asks for a revisit of each link target, and an answer may record that revisit. A rule set holds rules, and selects artefacts by artefact type. A component ships package metadata, which declares its places and its artefact types.
   class Place["Place"]
   class Artefact["Artefact"]
   class Anchor["Anchor"]
@@ -92,7 +93,7 @@ classDiagram
   Place o-- Artefact : holds
   Place --> ArtefactType : gives
   Artefact "1" *-- "*" Anchor : carries
-  Artefact "1" *-- "*" Answer : carries
+  Answer "*" ..> "1" Artefact : is on
   Friction --|> Finding
   Friction ..> Artefact : is on
   Answer ..> Friction : settles
@@ -116,14 +117,16 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How an edit leaves an artefact or a link target behind, and how each is answered
-  accDescr: A change edits what an anchor names, or an artefact's list of anchors, and the artefact has friction. The change check finds it. A revalidation in the change, updated or unchanged, clears the friction. A deferral clears it too, and leaves deferred debt on the default branch. Friction nobody answered stays on the default branch as stale debt. The whole-repository check reports both kinds of debt, and never fails. A change that edits a trigger field owes a revisit of each link target, which the change check asks for. A change to what the link target stands on, or a revisit entry, unchanged or deferred, meets the revisit. Otherwise the revisit stays unmet, and the link target is a finding of the change check.
+  accDescr: A change edits what an anchor names, or an artefact's list of anchors, and the artefact has friction. The change check finds it. A revalidation in the change, updated or unchanged, clears the friction. A deferral clears it too, and leaves deferred debt on the default branch. Friction nobody answered stays on the default branch as stale debt. Two revalidations of one artefact answered apart, neither reading the other, leave answered-apart debt until a revalidation reads both. The whole-repository check reports each kind of debt, and never fails. A change that edits a trigger field owes a revisit of each link target, which the change check asks for. A change to what the link target stands on, or a revisit entry, unchanged or deferred, meets the revisit. Otherwise the revisit stays unmet, and the link target is a finding of the change check.
   E([A change edits what an anchor names, or the list of anchors]) --> F[Friction on the artefact]
   F -->|the change check finds it| A{Answer in the change?}
   A -->|revalidation, updated or unchanged| CL[Friction cleared]
   A -->|deferral| DF["Friction cleared, deferred debt on the default branch"]
   A -->|none, and the change lands| SD[Stale debt on the default branch]
+  CL -->|another change revalidated it apart, neither reading the other| AA["Answered-apart debt on the default branch"]
   DF -->|reported by| W["Whole-repository check, which never fails"]
   SD -->|reported by| W
+  AA -->|reported by| W
   T([A change edits a trigger field of a revisit link]) --> RO[Revisit owed for each link target]
   RO -->|the change check asks for it| M{Met in the change?}
   M -->|what the link target stands on changed| RM[Revisit met]
@@ -189,20 +192,20 @@ A place is a path or glob that the [project](../glossary.md#term-project--projec
 
 Defined in [TERM-artefact](../glossary.md#term-artefact--artefact).
 
-**Why:** Descriptions of what the [system](../glossary.md#term-system--system) must do and documentation both go stale when what they rest on changes ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). [Components](../glossary.md#term-component--component) that must not depend on each other keep them, so the mechanism that finds staleness is shared (COR-050). An artefact is the unit it works on, and carries its own anchors and answers ([COR-050 point 1](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
+**Why:** Descriptions of what the [system](../glossary.md#term-system--system) must do and documentation both go stale when what they rest on changes ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). [Components](../glossary.md#term-component--component) that must not depend on each other keep them, so the mechanism that finds staleness is shared (COR-050). An artefact is the unit it works on, and carries its own anchors ([COR-050 point 1](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)).
 
 An artefact is a document with front matter, or a keyed entry of a collection file, in a declared [place](../glossary.md#term-place--place). It carries its own anchors. Each entry of this analysis's glossary is one.
 
 **Attributes:**
 
 - its own fields, such as its id and its status, which belong to the component that defines it (COR-050 point 1)
-- its `friction` block, which holds its anchors and its answers (COR-050 point 1)
+- its `friction` block, which holds its anchors (COR-050 point 1)
 - one [artefact type](../glossary.md#term-artefact-type--artefact-type), or none ([COR-056 point 1](../../../../.pkit/decisions/core/COR-056-artefact-types.md#1-what-a-type-is))
 
 **Relations:**
 
 - A place holds it (COR-050 point 1).
-- It carries anchors, and the answers that stand for edits to what they name (COR-050 points 1 and [3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- It carries anchors (COR-050 point 1). Its answers, for edits to what the anchors name, lie in [answer](../glossary.md#term-answer--answer) files apart from it ([COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation), [COR-062 point 1](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)).
 - A [decision record](../glossary.md#term-decision-record--decision-record) is an artefact only where a place holds it (COR-050 point 1).
 
 **States:** None.
@@ -216,22 +219,24 @@ An artefact is a document with front matter, or a keyed entry of a collection fi
 
 Defined in [TERM-answer](../glossary.md#term-answer--answer).
 
-**Why:** Whether an [artefact](../glossary.md#term-artefact--artefact) still holds after what it rests on changed is a judgement no tool can make ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). Kept in the artefact, not in one tool's pull-request description, that judgement needs nothing but the repository (COR-050).
+**Why:** Whether an [artefact](../glossary.md#term-artefact--artefact) still holds after what it rests on changed is a judgement no tool can make ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). Kept in the repository, not in one tool's pull-request description, that judgement needs nothing else (COR-050). Kept in a file only its own [change](../glossary.md#term-change--change) writes, it never conflicts with another change's answer on the same artefact ([COR-062](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md)).
 
-An answer is a statement in an artefact's `friction` block. It settles an edit to what the artefact rests on, or a [revisit](../glossary.md#term-revisit--revisit) its [revisit links](../glossary.md#term-revisit-link--revisit-link) ask for. It is a revalidation, a deferral or a revisit entry.
+An answer is a statement in an answer file, which one change adds to the folder the [backbone](../glossary.md#term-backbone--backbone) keeps for answers ([COR-062 point 1](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). It settles an edit to what an artefact rests on, or a [revisit](../glossary.md#term-revisit--revisit) its [revisit links](../glossary.md#term-revisit-link--revisit-link) ask for. It is a revalidation, a deferral or a revisit entry.
 
 **Attributes:**
 
 - a revalidation: the record that the artefact was reviewed against what changed. It holds its time, `at`, and its outcome, `updated` or `unchanged`, with why the artefact still holds where it is `unchanged` ([COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - a deferral: the [anchor](../glossary.md#term-anchor--anchor) whose [friction](../glossary.md#term-friction--friction) it puts off, and a reason ([COR-050 point 4](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals))
 - a revisit entry: the [link target](../glossary.md#term-link-target--link-target) it stands for, its outcome and its reason ([COR-050 point 16](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes))
+- the artefact it is on, by its location, and the other answer files on that artefact that it read (COR-062 points 1 and [4](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#4-each-answer-names-what-it-read))
 
 **Relations:**
 
-- It lives on its artefact, never in a [pull request](../glossary.md#term-pull-request--pull-request)'s description ([COR-050 point 6](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
+- It lives in an answer file apart from its artefact, never in a [pull request](../glossary.md#term-pull-request--pull-request)'s description ([COR-050 point 6](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks), COR-062 point 1).
+- It replaces the answers of its kind on its artefact that it read ([COR-062 point 5](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#5-what-an-answer-replaces)).
 - A revalidation or a deferral clears friction ([COR-050 point 5](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#5-when-an-anchor-has-changed-and-what-answers-it)).
 - A revisit entry answers for one link target (COR-050 point 16).
-- The [change check](../glossary.md#term-change-check--change-check) lists every answer a [change](../glossary.md#term-change--change) wrote, word for word, and a [reviewer](../glossary.md#term-reviewer--reviewer) works from that list (COR-050 point 3).
+- The [change check](../glossary.md#term-change-check--change-check) lists every answer a change wrote, word for word, and a [reviewer](../glossary.md#term-reviewer--reviewer) works from that list (COR-050 point 3).
 
 **States:** None.
 
@@ -239,6 +244,8 @@ An answer is a statement in an artefact's `friction` block. It settles an edit t
 
 - An `unchanged` revalidation says why the artefact still holds, in words that change with it (COR-050 point 3).
 - An outcome is a record of what happened, and is never read to work out friction (COR-050 point 3).
+- A change never rewrites an answer file its [base](../glossary.md#term-base--base) holds, so an answer that landed stays as it was written ([COR-062 point 3](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#3-a-change-adds-answer-files-and-rewrites-none-its-base-holds)).
+- Two revalidations of one artefact, neither of which read the other, were answered apart. They are [debt](../glossary.md#term-debt--debt) until a revalidation that reads both judges their combined state ([COR-062 point 7](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
 
 ## Friction
 
@@ -246,7 +253,7 @@ Defined in [TERM-friction](../glossary.md#term-friction--friction).
 
 **Why:** People forget to update what depends on what they changed, and nobody notices until a reader is misled ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). Friction marks each such [artefact](../glossary.md#term-artefact--artefact) at the edit that left it behind, while the fix is still cheap (COR-050).
 
-Friction is a [finding](../glossary.md#term-finding--finding) that something an artefact rests on changed, with no [answer](../glossary.md#term-answer--answer) standing for it. What changed may be what an [anchor](../glossary.md#term-anchor--anchor) names, or the list of anchors. A [change](../glossary.md#term-change--change) that edits `src/project_kit/release.py` brings friction to `.pkit/release/README.md` until the page carries an answer.
+Friction is a [finding](../glossary.md#term-finding--finding) that something an artefact rests on changed, with no [answer](../glossary.md#term-answer--answer) standing for it. What changed may be what an [anchor](../glossary.md#term-anchor--anchor) names, or the list of anchors. A [change](../glossary.md#term-change--change) that edits `src/project_kit/release.py` brings friction to `.pkit/release/README.md` until the change gives the page an answer.
 
 **Attributes:**
 
@@ -298,7 +305,7 @@ Defined in [TERM-whole-repository-check](../glossary.md#term-whole-repository-ch
 
 **Why:** What a [change](../glossary.md#term-change--change) leaves unanswered stays on the [default branch](../glossary.md#term-default-branch--default-branch) once it lands ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). The whole-repository check asks the [change check](../glossary.md#term-change-check--change-check)'s question of every [artefact](../glossary.md#term-artefact--artefact), so that state stays visible (COR-050).
 
-The whole-repository check compares every artefact, at the latest commit, with its revalidation point. Its revalidation point is the commit where the artefact first carried its latest revalidation ([COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). It reports, and never fails. `pkit friction check --all` runs it.
+The whole-repository check compares every artefact, at the latest commit, with its revalidation point. Its revalidation point is the commit where the artefact's answers first carried its latest revalidation ([COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation), [COR-062 point 6](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#6-each-value-keeps-its-point-across-homes)). It reports, and never fails. `pkit friction check --all` runs it.
 
 **Attributes:** None.
 
@@ -318,11 +325,11 @@ Defined in [TERM-debt](../glossary.md#term-debt--debt).
 
 **Why:** An [artefact](../glossary.md#term-artefact--artefact) left out of date on the [default branch](../glossary.md#term-default-branch--default-branch), by [friction](../glossary.md#term-friction--friction) nobody answered or by a deferral, must stay in view ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). Derived from git on each run, debt never drifts the way a separate ledger would (COR-050).
 
-Debt is a [finding](../glossary.md#term-finding--finding) of the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check), dated from the commit it originates in. It is stale, where a [change](../glossary.md#term-change--change) nobody answered left an artefact behind, or deferred, where a deferral put an [answer](../glossary.md#term-answer--answer) off.
+Debt is a [finding](../glossary.md#term-finding--finding) of the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check), dated from the commit it originates in. It is stale, where a [change](../glossary.md#term-change--change) nobody answered left an artefact behind, or deferred, where a deferral put an [answer](../glossary.md#term-answer--answer) off. It is answered apart where two revalidations of one artefact, neither of which read the other, left their combined state unjudged ([COR-062 point 7](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
 
 **Attributes:**
 
-- its kind, stale or deferred ([COR-050 point 9](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger))
+- its kind, stale, deferred or answered apart ([COR-050 point 9](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger), COR-062 point 7)
 - the commit it originates in, with its author and its date (COR-050 point 9)
 
 **Relations:**
@@ -336,6 +343,7 @@ Debt is a [finding](../glossary.md#term-finding--finding) of the [whole-reposito
 
 - No ledger keeps it: each run derives it from git again (COR-050 point 9).
 - A deferral never expires on its own, and its age is shown ([COR-050 point 4](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
+- Answered-apart debt is never stale and fails nothing. The next revalidation that reads both clears it (COR-062 point 7).
 
 ## Revisit link
 
@@ -419,7 +427,7 @@ A trigger field is one of an [artefact](../glossary.md#term-artefact--artefact)'
 
 Defined in [TERM-revisit](../glossary.md#term-revisit--revisit).
 
-**Why:** The question belongs to the [change](../glossary.md#term-change--change) that alters the source, so the [change check](../glossary.md#term-change-check--change-check) asks it ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). What a [link target](../glossary.md#term-link-target--link-target) names may be no [artefact](../glossary.md#term-artefact--artefact), such as a test file, so the source records the reason (COR-050).
+**Why:** The question belongs to the [change](../glossary.md#term-change--change) that alters the source, so the [change check](../glossary.md#term-change-check--change-check) asks it ([COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)). What a [link target](../glossary.md#term-link-target--link-target) names may be no [artefact](../glossary.md#term-artefact--artefact), such as a test file, so the reason is recorded among the source's answers (COR-050).
 
 A revisit is the judgement a change owes, once it edits a [trigger field](../glossary.md#term-trigger-field--trigger-field), of whether one link target still stands. The change meets it by changing what the link target stands on, or by a revisit entry among the source's answers. `pkit friction revisit` writes the entry.
 
@@ -467,7 +475,7 @@ A rule set is a collection file of rules that artefacts must satisfy. It has its
 
 **Relations:**
 
-- Each of its rules is an artefact of its own (COR-051 point 2).
+- Each of its rules is an artefact of its own, whose answers to [friction](../glossary.md#term-friction--friction) lie in [answer](../glossary.md#term-answer--answer) files apart from the set (COR-051 point 2).
 - Its scope selects artefacts by path or by artefact type (COR-051 point 2).
 - A rule set the [backbone](../glossary.md#term-backbone--backbone) or a [component](../glossary.md#term-component--component) ships takes no scope. It binds only through a set of the project's own that inherits it (COR-051 points 6 and 7).
 
