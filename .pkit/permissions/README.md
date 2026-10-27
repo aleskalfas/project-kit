@@ -20,6 +20,8 @@ pkit:
         - src/project_kit/run_rules.py
         - .pkit/schemas/permission-runs.schema.json
         - .pkit/permissions/project/grants.yaml
+        - .pkit/capabilities/project-management/permissions/grants.yaml
+        - .pkit/rules/core.md
         - .pkit/skills/core/capability-author.md
       record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-032, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact:
@@ -27,6 +29,8 @@ pkit:
         - .pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json
         - .pkit/cli/README.md#folders-a-sync-writes
         - .pkit/cli/README.md#init
+        - .pkit/cli/README.md#sync
+        - .pkit/cli/README.md#agents-run-agent---folder-dir----commit-sha---rules-of-capabilitycommand---files-to-dir---limit-seconds---effort-level---json
         - .pkit/cli/README.md#schemas-validate-path
         - .pkit/cli/README.md#standard-flags
         - .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy

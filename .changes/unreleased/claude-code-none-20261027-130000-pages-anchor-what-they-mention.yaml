@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The adapter's README anchors the commands, files and records
+  its statements rest on. Its text is unchanged, and nothing you run
+  changes.
