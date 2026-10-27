@@ -5313,7 +5313,9 @@ def refs_validate() -> None:
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    issues = refs_mod.validate_corpus(target_root)
+    found = refs_mod.validate_corpus(target_root)
+    issues = [issue for issue in found if issue.kind not in refs_mod.WARNING_KINDS]
+    warnings = [issue for issue in found if issue.kind in refs_mod.WARNING_KINDS]
     lines = [
         cli_render.style(
             "title",
@@ -5323,13 +5325,24 @@ def refs_validate() -> None:
     ]
     if not issues:
         lines.append("  " + cli_render.style("strong", "All checks passed."))
-        click.echo("\n".join(lines) + "\n", nl=False)
-        return
-    lines.append("  " + cli_render.style("strong", f"{len(issues)} issue(s) found:"))
-    for issue in issues:
-        lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    else:
+        lines.append("  " + cli_render.style("strong", f"{len(issues)} issue(s) found:"))
+        for issue in issues:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
+    if warnings:
+        lines.append(
+            "  "
+            + cli_render.style(
+                "strong",
+                f"{len(warnings)} warning(s) of a citation naming a point its record does not "
+                "hold, which do not fail the check:",
+            )
+        )
+        for issue in warnings:
+            lines += [f"    {issue.location}", f"      → {issue.diagnosis}"]
     click.echo("\n".join(lines) + "\n", nl=False)
-    raise SystemExit(1)
+    if issues:
+        raise SystemExit(1)
 
 
 @refs.command("show")
@@ -6378,6 +6391,10 @@ def decisions_validate() -> None:
     successor the record neither holds nor retires, or a retired id named as its
     own successor. Warns, without failing, of
     a duplicate id, a gap in the ids and a misspelt point heading.
+
+    Then warns, without failing, of each citation in those records that names a
+    point its record neither holds nor retires, written as `#N`, `point N` or a
+    label, such as `DEC-035 D6` where DEC-035 numbers its points.
     """
     from project_kit import decisions_validate as decisions_mod
 
@@ -6389,6 +6406,7 @@ def decisions_validate() -> None:
     decisions_mod.print_narration(decisions_mod.revision_narration(target_root))
     points = decisions_mod.point_findings(target_root)
     decisions_mod.print_points(points)
+    decisions_mod.print_point_citations(decisions_mod.point_citation_findings(target_root))
     point_errors = sum(1 for finding in points if finding.severity.fails)
     if not report.is_clean or point_errors:
         failed = [

@@ -139,7 +139,7 @@ The remote path's invocation is **adopter-managed** — the kit does not ship th
 
 ### Path 2: Local agent (kit-invoked)
 
-When a local-registered agent reviews, it runs on the developer's machine via a kit-shipped command (see "Invocation commands" below). The agent's output is posted as a PR comment by the **developer's** gh identity, with a structured attestation indicating the local path:
+When a local-registered agent reviews, it runs on the developer's machine via a kit-shipped command (see "Invocation command (local path)" below). The agent's output is posted as a PR comment by the **developer's** gh identity, with a structured attestation indicating the local path:
 
 - Comment first line exactly `Reviewer agent (local, <name>): APPROVED` — where `<name>` matches an entry in `review.agents.local_registered:`.
 - The comment carries the verdict marker (see "The verdict signal").

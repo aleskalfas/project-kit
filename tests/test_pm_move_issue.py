@@ -63,8 +63,8 @@ def mi():
 def workflow() -> dict:
     """Compact fixture mirroring workflow.yaml's transitions block.
 
-    Review is task-only (DEC-006, amendment #38). The old parent-typed
-    review→done row has been removed: containers never enter Review, so
+    Review is task-only (DEC-006, "State machine" and "Cascade rule"). No
+    parent-typed review→done row exists: containers never enter Review, so
     no closure path from Review is needed for them.
     """
     return {
@@ -223,11 +223,11 @@ def test_find_transition_user_authorised_severity_parsed(mi, workflow) -> None:
 
 
 def test_find_transition_review_to_done_not_available_for_parent_types(mi, workflow) -> None:
-    """review → done is NOT available to epic/feature/umbrella (DEC-006, amendment #38).
+    """review → done is NOT available to epic/feature/umbrella (DEC-006, "Cascade rule").
 
     Containers never enter Review via forward cascade (the cap is in-progress),
-    so no closure path from Review is needed for them.  The old workaround row
-    has been removed from workflow.yaml.
+    so no closure path from Review is needed for them, and workflow.yaml holds
+    no such row.
     """
     for parent_type in ("epic", "feature", "umbrella"):
         t = mi._find_transition(workflow, "review", "done", parent_type)
@@ -253,7 +253,7 @@ def test_legal_targets_filters_by_type(mi, workflow) -> None:
 
 
 def test_legal_targets_review_to_done_not_available_for_parent_types(mi, workflow) -> None:
-    """Parents have no review → done transition (DEC-006, amendment #38).
+    """Parents have no review → done transition (DEC-006, "Cascade rule").
 
     Containers never enter Review via the forward cascade; their closure path
     is in-progress → done (cascade-eligibility-close).
@@ -574,13 +574,13 @@ def test_noop_does_not_require_transition_in_workflow(mi, workflow) -> None:
     assert mi._find_transition(workflow, "done", "done", "task") is None
 
 
-# ---- DEC-006 amendment #38 — container forward-cascade cap at in-progress -------
+# ---- DEC-006 "Cascade rule" — container forward-cascade cap at in-progress ------
 #
 # A child entering review (or done) must NOT promote its container to review.
 # The forward cascade is scoped to todo → backlog → in-progress; containers
 # reach done only via the closure cascade (in-progress → done,
-# cascade-eligibility-close). The fix lives in _cascade_forward_target, which
-# caps the ancestor's bump target at in-progress regardless of the child state.
+# cascade-eligibility-close). _cascade_forward_target caps the ancestor's
+# bump target at in-progress regardless of the child state.
 
 
 def test_cascade_forward_target_caps_review_at_in_progress(mi) -> None:
@@ -639,7 +639,7 @@ def test_state_is_behind_in_progress_not_behind_in_progress(mi) -> None:
 
 def test_cascade_review_child_bumps_behind_container_to_in_progress(mi) -> None:
     """A container that is behind (todo/backlog) gets bumped to in-progress,
-    not to review, when a child enters review (DEC-006, amendment #38).
+    not to review, when a child enters review (DEC-006, "Cascade rule").
     """
     capped = mi._cascade_forward_target("review")  # == "in-progress"
     assert mi._state_is_behind("todo", capped)

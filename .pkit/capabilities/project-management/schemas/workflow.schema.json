@@ -82,7 +82,7 @@
         "forward": { "$ref": "#/$defs/cascade_rule" },
         "downward": { "$ref": "#/$defs/cascade_rule" }
       },
-      "description": "Pm-LOCAL (DEC-033 D3, amended by DEC-034; engine ignores). The FORWARD + downward cascade behaviours. Forward cascades upward through ancestors; downward is explicitly disallowed. The CLOSURE cascade moved onto the shared `process.cascade` slot (COR-037 / DEC-034) and is no longer here."
+      "description": "Pm-LOCAL (DEC-033 D3, partially superseded by DEC-034; engine ignores). The FORWARD + downward cascade behaviours. Forward cascades upward through ancestors; downward is explicitly disallowed. The CLOSURE cascade is the shared `process.cascade` slot (COR-037 / DEC-034), not this block."
     },
     "closure_triggers": {
       "type": "array",

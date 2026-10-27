@@ -6,15 +6,7 @@ date: 2026-08-12
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-> pkit records what it does to an issue/PR in two roles with a clear hierarchy. Where the project keeps an **engine journal** — substrate-neutral, append-only, one entry per pkit-governed move with actor + pkit version; opt-in and off by default (COR-033 point 7) — it is the **canonical audit trail**. Where it does not, the canonical audit trail is **the tracker**: the GitHub timeline plus pkit's audit comments. **GitHub comments are a configurable, provenance-stamped *projection*** of what pkit governs, never a second source of truth: intensity `off` / `audit` *(default)* / `full`. Override/authorisation justifications (a DEC-014 bypass, a `--force`) are the `audit` floor — the *why* that must survive even a failed mutation and be visible to a reviewer. `full` stamps **every** governed mutation with the pkit + capability versions, making the **governance boundary** visible: a GitHub timeline event with **no matching pkit record** is an out-of-band (ungoverned) change — machine-detectable via `pkit pm history <N> --check-drift` where a journal is kept. `history` and `--check-drift` say "journal logging is not enabled for this project" where it is not. One canonical comment format from a single schema field, exactly **one** audit comment per audited mutation, a uniform `<!-- pkit-audit -->` marker.
-
-> **Amended by [project-management:DEC-052-comment-house-style].** The audit/override comment
-> keeps the authoriser only when the poster differs from the authoriser (dropped when
-> self-posted), the move comment is reframed as the intent-log, and an overridden move is one
-> comment carrying both payloads. The uniform `<!-- pkit-audit -->` marker becomes the
-> per-kind marker model, and the sole-writer rule generalises from `move-issue` to *each
-> governed transition's own mutator* (`close-issue` / `close-pr` / `reopen-issue` included) —
-> preserving the one-comment-per-mutation guarantee. Projection-level *coverage* is unchanged.
+> pkit records what it does to an issue/PR in two roles with a clear hierarchy. Where the project keeps an **engine journal** — substrate-neutral, append-only, one entry per pkit-governed move with actor + pkit version; opt-in and off by default (COR-033 P7) — it is the **canonical audit trail**. Where it does not, the canonical audit trail is **the tracker**: the GitHub timeline plus pkit's audit comments. **GitHub comments are a configurable, provenance-stamped *projection*** of what pkit governs, never a second source of truth: intensity `off` / `audit` *(default)* / `full`. Override/authorisation justifications (a DEC-014 bypass, a `--force`) are the `audit` floor — the *why* that must survive even a failed mutation and be visible to a reviewer. `full` stamps **every** governed mutation with the pkit + capability versions, making the **governance boundary** visible: a GitHub timeline event with **no matching pkit record** is an out-of-band (ungoverned) change — machine-detectable via `pkit pm history <N> --check-drift` where a journal is kept. `history` and `--check-drift` say "journal logging is not enabled for this project" where it is not. One canonical comment format from a single schema field, exactly **one** audit comment per audited mutation, written by the mutator of the governed transition and tagged with its kind's marker (point 4).
 
 ## Context
 
@@ -28,7 +20,7 @@ The load-bearing observation: **the timeline already logs label changes**, so a 
 
 ### 1. Where the canonical audit trail lives follows the project's journal setting
 
-Journal logging is the project's choice and off by default (COR-033 point 7: `process.journal` in the backbone configuration, with `enabled` and `committed`).
+Journal logging is the project's choice and off by default (COR-033 P7: `process.journal` in the backbone configuration, with `enabled` and `committed`).
 
 - **Logging on — the engine journal is the canonical audit trail.** Substrate-neutral (the COR-033 process engine), append-only, one entry per pkit-governed move with actor + pkit version. It is **reliable-and-complete**: a move that fails to journal is surfaced, not silently dropped. GitHub's timeline and comments are **projections** of this trail, never the source of truth. Committed journals (`committed: true`) make it shared, reviewable and durable. Clone-local journals (`committed: false`) record only the moves made from that clone, and go with it.
 - **Logging off — the tracker is the canonical audit trail.** The GitHub timeline records every state change, governed or not, with actor and timestamp; pkit's audit comments add what the timeline cannot — the *why* of an override at `audit`, and at `full` the provenance of every governed mutation. pkit keeps no second record.
@@ -53,12 +45,14 @@ The drift check also needs `state` to be carried by labels; where the board or a
 
 ### 4. Format + single-poster rules
 
-Exactly **one** audit comment per audited mutation — the underlying mutator (`move-issue`) is the sole audit-comment writer; wrappers pass the reason through rather than posting their own. **One** canonical format, sourced from a single schema field (`validation-severity.yaml`'s `audit_comment_template`), carrying a `<!-- pkit-audit -->` marker + actor + transition + reason, and — at `full` — provenance. Consistent with the existing `<!-- pkit-verdict -->` / `<!-- pkit-provenance -->` / `<!-- pkit-hook -->` markers.
+Exactly **one** audit comment per audited mutation — the underlying mutator of each governed transition is the sole audit-comment writer, `move-issue` for a move; wrappers pass the reason through rather than posting their own. **One** canonical format, sourced from a single schema field (`validation-severity.yaml`'s `audit_comment_template`), carrying a marker + actor + transition + reason, and — at `full` — provenance. Consistent with the existing `<!-- pkit-verdict -->` / `<!-- pkit-provenance -->` / `<!-- pkit-hook -->` markers.
+
+Within that format the comment follows the house style. The marker names the comment's kind, from the house style's roster of kinds: an audited move carries `pkit-move`, and a standalone override `pkit-override`. The actor is the authoriser, kept only where the poster is someone else, and a move's comment carries its intent: what triggered the move and what caused it. An overridden move is one comment carrying both payloads, and `close-issue`, `close-pr` and `reopen-issue` each write the single comment of the transition they perform (refinement per [project-management:DEC-052-comment-house-style]).
 
 ## Rationale
 
 - **Why the engine journal, not the timeline, is canonical where it is kept.** The timeline is substrate-specific (GitHub), un-exportable, un-greppable, and cannot distinguish governed from manual changes — leaning on it as *the* journal contradicts the methodology's neutrality (COR-014). The engine journal is neutral and complete; making it reliable is the load-bearing move.
-- **Why the tracker is canonical where no journal is kept.** A journal is only an audit trail if it lives somewhere the project can rely on. Excluded from version control it is local to one clone, absent from pull requests, and lost with the clone; committed, it adds a changed file to every move. Whether that trade is worth it is the project's call (COR-033 point 7). Without a journal the timeline is the one record every change reaches, and the audit comments carry what it cannot. Naming it as the canonical trail keeps the model honest instead of pointing at a record that is not there.
+- **Why the tracker is canonical where no journal is kept.** A journal is only an audit trail if it lives somewhere the project can rely on. Excluded from version control it is local to one clone, absent from pull requests, and lost with the clone; committed, it adds a changed file to every move. Whether that trade is worth it is the project's call (COR-033 P7). Without a journal the timeline is the one record every change reaches, and the audit comments carry what it cannot. Naming it as the canonical trail keeps the model honest instead of pointing at a record that is not there.
 - **Why comments at all, given the timeline.** Two things the timeline can't give: the *why* of an override, and *provenance* (which pkit version governed the change). The latter yields the governance boundary — the single strongest reason to project pkit's actions onto the issue.
 - **Why configurable intensity.** The tension is noise-vs-completeness, and it is project-specific: a solo repo wants quiet (`audit`); a regulated / multi-person adopter wants the full governed trail (`full`). A knob dissolves the tension without a one-size policy.
 - **Why `audit` is the default.** Override justifications are load-bearing (DEC-014's survive-failure / visible-to-reviewer property) and low-volume; the full governed trail is opt-in for those who need the boundary.
@@ -72,13 +66,12 @@ Exactly **one** audit comment per audited mutation — the underlying mutator (`
 
 ## Implications
 
-- **`move-issue` becomes the sole audit-comment writer;** the wrappers (`promote-issue`, `start-work`, …) stop posting their own audit/hook comment for the transition and pass the reason to `move-issue` — killing the #672 double-post.
+- **Each governed transition's mutator becomes the sole writer of its audit comment,** `move-issue` for a move; the wrappers (`promote-issue`, `start-work`, …) stop posting their own audit/hook comment for the transition and pass the reason to `move-issue` — killing the #672 double-post.
 - **`validation-severity.yaml`'s `audit_comment_template`** becomes the single format source, extended to marker + actor + transition + reason (+ provenance at `full`); every poster renders from it. The current hardcoded `[audit] transition …` line in `move-issue` is corrected to the template.
 - **New config:** a pm project-config key `audit.projection: off | audit | full` (default `audit`) per the adopter-config pattern, read by the mutators.
 - **Engine journal reliability:** where a journal is kept, `_journal_move`'s best-effort no-op becomes a surfaced failure (the trail is load-bearing there); the engine entry records actor + version. With logging off the engine accepts the move and records nothing, which is not a failure.
 - **New read:** `pkit pm history <N>` renders the journal; `--check-drift` diffs journal vs timeline for the governance boundary. Both read whether logging is on from the engine's status read (`journal_logging`) and report "journal logging is not enabled for this project" when it is off.
-- **Marker vocabulary** gains `<!-- pkit-audit -->`.
+- **Marker vocabulary** gains the audit comment's kind markers (point 4).
 - **Autonomous transitions** get a comment only at `full` (provenance); at `audit`/`off` they live in the timeline, and in the engine journal where one is kept — resolving #672's "looked unlogged" by making the level explicit and adding the `history` read.
 - **Relationship to DEC-014:** this is the model DEC-014's audit-comment mechanic plugs into; DEC-014's `bypassable-with-audit` remains the `audit`-floor trigger, now rendered through the single canonical format.
 - **Tracking:** implementation slices under EPIC #690 (format reconciliation / single-poster / intensity config / engine-journal reliability / `history` + `--check-drift`); the #672-noted format-fix folds in as one slice.
-- **Acceptance gate:** `proposed`; needs maintainer sign-off before the implementation Features are built.

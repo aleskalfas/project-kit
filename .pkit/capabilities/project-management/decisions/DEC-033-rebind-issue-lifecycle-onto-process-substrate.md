@@ -6,6 +6,8 @@ date: 2026-06-21
 author: Ales Kalfas
 ---
 
+> **Partially superseded by [DEC-034](DEC-034-cascade-slot-binding.md).** pm's closure cascade binds to the shared cascade slot of [COR-037](../../../decisions/core/COR-037-process-cascade.md), a declaration the engine reads. Overturned, for the closure fold alone: the cascade staying capability-local, with the engine ignoring it and the wrappers running the closure semantics. D3 says so, and so do D1's cross-subject effects, D5's retained cascade, the plain-terms summary, the Rationale's boundary and the rejected pull of `cascade` into the shared shape. Among what stands: D3's other fields (`closure_triggers`, `pr_state_effect`, `source`, `display_name`), pm's forward cascade, and D3's content-free boundary, since the shared slot is itself content-free.
+
 ## Context
 
 The issue-lifecycle state machine (`schemas/workflow.yaml`) is the shipped instance the shared process substrate was generalised from ([COR-033](../../../decisions/core/COR-033-process-substrate.md)). COR-033's grounding (per [COR-007](../../../decisions/core/COR-007-pattern-extraction.md)) calls for rebinding this capability onto the substrate to prove the shape against a real, shipped instance.
@@ -22,13 +24,11 @@ The issue lifecycle is keyed — many issues, each at its own position — relyi
 
 ### D2 — Conform the definition
 
-Each state replaces its `inferred_from` prose with `detection: { mode: classified, predicate: { run: <pm's lifecycle classifier> } }` — one predicate, named by all five states, that answers which state the issue is in ([COR-033](../../../decisions/core/COR-033-process-substrate.md) point 5). The per-state detectors stay registered, for direct use. Each transition gains `gate: { kind, predicate }` (the checkbox close-gate → `deterministic`; the PR-merge gate → `authorisation-artifact`, cross-authority). `subject: { cardinality: keyed, key: issue-number }`; add `id` + `version`; bump `schema_version` 2 → 3.
+Each state replaces its `inferred_from` prose with `detection: { mode: classified, predicate: { run: <pm's lifecycle classifier> } }` — one predicate, named by all five states, that answers which state the issue is in ([COR-033](../../../decisions/core/COR-033-process-substrate.md) P5). The per-state detectors stay registered, for direct use. Each transition gains `gate: { kind, predicate }` (the checkbox close-gate → `deterministic`; the PR-merge gate → `authorisation-artifact`, cross-authority). `subject: { cardinality: keyed, key: issue-number }`; add `id` + `version`; bump `schema_version` 2 → 3.
 
 ### D3 — pm-local fields stay
 
 `cascade`, `closure_triggers`, `pr_state_effect`, `source`, `display_name` remain in `workflow.yaml` (the engine ignores them); pm's wrappers continue to run the cascade + closure semantics. The shared shape is not polluted with pm domain fields.
-
-> **Amended in part by [DEC-034](DEC-034-cascade-slot-binding.md).** Once the shared cascade slot shipped ([COR-037](../../../decisions/core/COR-037-process-cascade.md)), pm's **closure** cascade was rebound onto it (the slot is itself content-free, so D3's boundary rationale is preserved). The *other* D3 fields (`closure_triggers`, `pr_state_effect`, `source`, `display_name`) and pm's **forward** cascade remain capability-local as decided here.
 
 ### D4 — Predicate commands
 
@@ -57,5 +57,4 @@ Rebinding the shipped instance is COR-033's grounding requirement — it proves 
 - **Surface change.** A `schema_version` bump on the kit-shipped `workflow.yaml` + delegated CLI behaviour (the `keyed` widening itself is COR-032's surface change). The `.pkit/VERSION` bump lands with the change-set's PR (per the project's version policy); the warn-on-override migration ships in the **same** change-set (COR-010).
 - **Behaviour parity is the acceptance bar.** The rebind is structural, not behavioural — the issue lifecycle must behave identically post-rebind. Concretely, the producer's tests must prove: (a) a **position truth-table** — identical state resolution across every (issue-state × milestone × labels × board) input, pre/post (state *order* in `workflow.yaml` orders the engine's reading, which takes the first state whose detection is true; with one classifier at most one of the five is true, so the order decides nothing among pm's own states); (b) **transition legality + gate outcomes** match (checkbox close-gate, PR-merge cross-authority); (c) **bypass/audit/TTY-confirm/membership/cascade** behaviours preserved through the wrapper (these stay wrapper-side, not engine gates); (d) parent in-progress inference (a descendant walk) runs **pm-locally**, not in the engine.
 - **pm is the first keyed binding** — it grounds the `keyed` slot shipped by COR-032.
-- **Tooling gap noted:** capability DECs are not stampable by `pkit new decision` (only core/project/adr); this record was hand-authored. Worth filling that gap separately.
-- **Acceptance gate.** This record must be `accepted` *after* COR-032 (which it cites) is accepted; it cites COR-033, COR-032, COR-010, COR-007.
+- **Records it rests on:** COR-032, whose `keyed` slot it binds, and COR-033, COR-010 and COR-007.

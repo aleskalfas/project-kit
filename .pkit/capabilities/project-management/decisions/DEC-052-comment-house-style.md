@@ -16,8 +16,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 > transition, or the current version. Every posted comment wears one **frame** — a per-kind
 > `<!-- pkit-<kind> -->` marker plus a universal `<sub>🧰 pkit · … </sub>` provenance footer
 > — and authored payloads additionally follow the house style below. It fixes *what* each
-> comment carries and *how it reads*; *how the string is composed* is a companion ADR
-> (authored next).
+> comment carries and *how it reads*; *how the string is composed* is a companion ADR's.
 
 ## Context
 
@@ -108,8 +107,8 @@ seam): once that schema exists, adding or changing a kind is a **schema entry go
 the boundary rule**, not a rewrite of this record — the *principles-not-inventory* split.
 Until then the current roster lives here (the table below); relocating it is an
 implementation step, not a re-decision. The load-bearing **decisions** certain kinds carry
-— filing's keep-not-drop, the override and move amendments to DEC-049, the verdict grammar
-deferred to #795 — live in the Rationale and Implications below, **not** in the table, so
+— filing's keep-not-drop, the override and move refinements of DEC-049, the verdict grammar
+left to DEC-028 — live in the Rationale and Implications below, **not** in the table, so
 the table stays pure payload inventory that relocates without residue.
 
 **Rules every kind obeys:**
@@ -187,32 +186,32 @@ never rewrites a human's words.
 
 ## Implications
 
-- **Amends the audit/journal model** ([project-management:DEC-049-audit-journal-model]):
+- **Refines the audit/journal model** ([project-management:DEC-049-audit-journal-model] point 4):
   the override comment drops the authoriser only when it equals the comment-author
   (keeping it on the bot-authored path, where it is off-surface); the move comment is
   reframed as the intent-log; an overridden move is one comment carrying both payloads
   (the composition rule above), preserving the one-comment-per-mutation invariant.
-  DEC-049's **sole-writer** rule — named there as `move-issue` — is generalised to *the
-  underlying mutator of each governed transition*: reason-bearing closures and reopens
+  DEC-049's **sole-writer** rule names *the underlying mutator of each governed
+  transition*, `move-issue` for a move: reason-bearing closures and reopens
   (`close-issue`, `close-pr`, `reopen-issue`) each write their own single comment, bringing
   those transitions into audit-content scope while keeping the no-double-post guarantee (one
   comment per mutation, written by the mutator, never a wrapper).
-  DEC-049's uniform `<!-- pkit-audit -->` marker is refined to the **per-kind** marker model
-  (an audited move carries `pkit-move`, a standalone override `pkit-override`), so an audited
-  mutation is tagged by its kind rather than one generic audit marker.
+  DEC-049's marker follows the **per-kind** marker model (an audited move carries
+  `pkit-move`, a standalone override `pkit-override`), so an audited mutation is tagged by
+  its kind rather than one generic audit marker.
   Projection-level *coverage* is unchanged (DEC-049's) — this record fixes only the
   *content* each level projects.
-- **Amends the version-provenance stamp** ([project-management:DEC-041-version-provenance-stamp]):
+- **Refines the version-provenance stamp** ([project-management:DEC-041-version-provenance-stamp] point 1):
   the footer is universal on **comments** the capability posts (pass-through included),
   not only bodies. On a comment it is a **static, write-once** stamp — a different object
   from DEC-041's *self-replacing* body region (whose strip-and-reissue seam is ADR-037's),
   so writing provenance onto comments is the companion render-seam ADR's concern, not
   ADR-037's body seam. The filing comment is **kept** — it remains the load-bearing
-  birth-version record — and wears the house-style frame **prospectively**: new filing
-  comments use it; existing immutable ones are not edited (no back-fill, per DEC-041). Its
+  birth-version record — and wears the house-style frame; an immutable one posted without
+  the frame is never edited (no back-fill, per DEC-041). Its
   recorded content (the birth versions + date) is unchanged.
-- **Amends the freeform-comment convention**
-  ([project-management:DEC-047-freeform-comment-verb]): pass-through comments carry the
+- **Refines the freeform-comment convention**
+  ([project-management:DEC-047-freeform-comment-verb] point 6): pass-through comments carry the
   frame (marker + footer) around the user's untouched payload.
 - **The roster is inventory, destined for the schema.** The *set* of kinds and each kind's
   payload is inventory: it lives in the table above **today** and moves to
@@ -222,22 +221,17 @@ never rewrites a human's words.
   accepted) keeps the schema and the reading code in sync. A new *rule* — like the
   reason-bearing grammar this record adds — is still a decision here: the split is durable
   rules in the DEC, evolving roster in the schema.
-- **Back-references land on acceptance.** The three records amended above
-  ([project-management:DEC-049-audit-journal-model],
-  [project-management:DEC-041-version-provenance-stamp],
-  [project-management:DEC-047-freeform-comment-verb]) each gain an
-  `> **Amended by [project-management:DEC-052]**` note when this DEC is accepted, per the
-  bidirectional precedent DEC-050 set with DEC-032 / DEC-046.
+- **Each record refined above points here.** DEC-049 point 4, DEC-041 point 1 and DEC-047
+  point 6 each name this record where they state what it refines.
 - **Out of scope — the render seam.** *How* the string is composed — the renderer, its
   structured input contract (`format(data) → string`), where it lives, the
   `parse(render(x)) == x` round-trip guarantee, and **where comment provenance is written**
   (the static footer + immutable filing comment on comments, which ADR-037's body
   strip-and-reissue seam does not cover) — is a project-architectural concern captured in a
-  separate ADR authored next (ordering: this DEC fixes *what* is rendered; the ADR fixes
-  *how it holds*).
+  separate ADR (this DEC fixes *what* is rendered; the ADR fixes *how it holds*).
 - **Out of scope — the aggregated review verdict grammar.** The one-review-per-round
-  format and the merge-gate parser it reshapes are Feature #795's amendment to the
-  agent-as-approver model ([project-management:DEC-028-agent-as-approver-paths]); this
-  record fixes only the verdict comment's *content boundary + frame*, not the grammar.
+  format and the merge-gate parser it reshapes are the agent-as-approver model's to decide
+  ([project-management:DEC-028-agent-as-approver-paths]); this record fixes only the
+  verdict comment's *content boundary + frame*, not the grammar.
 - Realisation aligns every comment poster to the model through the shared renderer; the
   #690 audit-restyle folds in as the first consumer.

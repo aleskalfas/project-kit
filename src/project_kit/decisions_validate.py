@@ -81,6 +81,13 @@ record neither holds nor retires are errors. A duplicate id, a gap in the
 ids and a misspelt point heading are warnings. Of the front matter, only the
 field's shape is read, so a project's own fields pass.
 
+**A citation of a point is held to its record too** (`point_citation_findings`,
+COR-058 point 1), over the same records. A citation in a record that names a point
+its record neither holds nor retires — `DEC-035 D6` where DEC-035 numbers its points,
+or `point 9` past its last — is a warning. The
+citations are read and resolved by `refs`, which reads agents' and skills' bodies the
+same way, so the two checks agree.
+
 **The numbering check reads records as this module finds them.** It compares a
 change with its base (COR-058 point 8), so it reads records at a commit too,
 where no folder is on disk: `record_space` says which file is a record, of
@@ -497,6 +504,33 @@ def _excerpt(line: str, start: int) -> str:
     return f'"{tail}"'
 
 
+# --- citations of a point (COR-058 point 1) ----------------------------------
+
+
+def point_citation_findings(target_root: Path) -> tuple[DecisionIssue, ...]:
+    """Every citation in a record that names a point its record neither holds nor retires.
+
+    The records read are those `revision_narration` reads, and a citation is read and
+    held to its record by `refs` (`point_citations`, `CitedPoints`), each cited record
+    once. A bare `DEC-NNN` in a capability's record is that capability's decision. One
+    finding per point, at `<path>:<line>`. Warnings, never errors: the citations are
+    read from prose, for the reason narration warns (ADR-058 point 6).
+    """
+    from project_kit import refs
+
+    reader = refs.CitedPoints(target_root)
+    adr = adr_folder(target_root)
+    found: list[DecisionIssue] = []
+    for rel, text in _refined_records(target_root):
+        space = record_space(Path(rel).as_posix(), adr) or ""
+        capability = space.removeprefix("capability:") if space.startswith("capability:") else None
+        found.extend(
+            DecisionIssue(location=f"{rel}:{unheld.citation.line}", message=unheld.message)
+            for unheld in reader.unheld(refs.point_citations(text, capability=capability))
+        )
+    return tuple(found)
+
+
 # --- a record's points (COR-058 point 7) -------------------------------------
 
 
@@ -814,14 +848,16 @@ def outcome(target_root: Path) -> Outcome:
     """The `decisions` member of `pkit validate`: every record's front matter
     (`validate.decision_frontmatter_issues`), the id spaces (`validate_decision_ids`) and
     the errors on records' points (`point_findings`), then revision narration
-    (`revision_narration`) and the warnings on records' points. Each leaves a synced
-    copy of a record out (`synced_record_test`), so the member reports nothing on one."""
+    (`revision_narration`), the warnings on records' points and the citations of a
+    point a record does not hold (`point_citation_findings`). Each leaves a synced copy
+    of a record out (`synced_record_test`), so the member reports nothing on one."""
     from project_kit.validate import decision_frontmatter_issues
 
     front_matter = decision_frontmatter_issues(target_root)
     report = validate_decision_ids(target_root)
     narration = revision_narration(target_root)
     points = point_findings(target_root)
+    citations = point_citation_findings(target_root)
     errors = (
         *(Finding(issue.location, issue.diagnosis) for issue in front_matter),
         *(Finding(issue.location, issue.message) for issue in report.issues),
@@ -830,6 +866,7 @@ def outcome(target_root: Path) -> Outcome:
     warnings = (
         *(Finding(issue.location, issue.message, severity=Severity.WARNING) for issue in narration),
         *(finding for finding in points if not finding.severity.fails),
+        *(Finding(issue.location, issue.message, severity=Severity.WARNING) for issue in citations),
     )
     rules = f" and {report.rules_checked} rule(s)" if report.rules_checked else ""
     summary = (
@@ -882,6 +919,24 @@ def print_narration(narration: tuple[DecisionIssue, ...]) -> None:
         )
     )
     for issue in narration:
+        click.echo(f"    {issue.location}")
+        click.echo(f"      → {issue.message}")
+
+
+def print_point_citations(citations: tuple[DecisionIssue, ...]) -> None:
+    """Render the warnings of a citation naming a point its record does not hold, after
+    the findings on records' points; nothing when there are none."""
+    if not citations:
+        return
+    click.echo(
+        "  "
+        + cli_render.style(
+            "strong",
+            f"{len(citations)} warning(s) of a citation naming a point its record does not "
+            'hold, which do not fail the check (.pkit/decisions/README.md, "Citing"):',
+        )
+    )
+    for issue in citations:
         click.echo(f"    {issue.location}")
         click.echo(f"      → {issue.message}")
 

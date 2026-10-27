@@ -6,12 +6,7 @@ date: 2026-06-30
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-When a bug surfaces in an issue or PR workflow, the first question is *which version of the methodology was in force when this was filed* — did the bug predate an upgrade or arrive with it. This record decides that the capability records that version provenance directly on the issue, in two complementary places: a **one-time, immutable filing comment** posted at creation (the load-bearing record that answers the before/after-upgrade question), and a **self-replacing footer** at the foot of the body that always reflects the version of the last script-mediated touch. Both are written only by the capability's scripts, never typed by an agent or a human. This record fixes *what* gets recorded and *why*; the structural contract that makes the footer tamper-proof — how every body write strips and reissues it — is pinned in a companion ADR (authored next).
-
-> **Amended by [project-management:DEC-052-comment-house-style].** The provenance footer is
-> extended from bodies to **comments** the pm capability posts (pass-through included), where
-> it is a **static, write-once** stamp rather than the self-replacing body region; the
-> immutable filing comment is kept and wears the house-style frame prospectively.
+When a bug surfaces in an issue or PR workflow, the first question is *which version of the methodology was in force when this was filed* — did the bug predate an upgrade or arrive with it. This record decides that the capability records that version provenance directly on the issue, in two complementary places: a **one-time, immutable filing comment** posted at creation (the load-bearing record that answers the before/after-upgrade question), and a **self-replacing footer** at the foot of the body that always reflects the version of the last script-mediated touch. Both are written only by the capability's scripts, never typed by an agent or a human. This record fixes *what* gets recorded and *why*; the structural contract that makes the footer tamper-proof — how every body write strips and reissues it — is pinned in a companion ADR, ADR-037.
 
 ## Context
 
@@ -24,6 +19,8 @@ The capability already routes every issue/PR mutation through its own scripts �
 ### 1. Record provenance in two places with two distinct jobs
 
 Provenance is written by two classes of script, by class not by roster: the **creating scripts** — those that bring a new issue or PR into being — post a **single immutable comment** recording the filed-under versions and the calendar date, never edited afterward, so it preserves the birth version even after later edits; and the **body-writing scripts** maintain a **footer** at the end of the body carrying the versions of the *current* touch. Which concrete commands populate each class is owned by the command surface per [project-management:DEC-020-methodology-as-executable-commands], not pinned here. The comment answers "what version was this filed under?" (the stated goal); the footer answers "what version is on it now?" (at-a-glance, and the drift signal when current and filed-under differ). The comment is the load-bearing record; the footer is a convenience that the comment can always backstop.
+
+The footer also ends every **comment** the capability posts, pass-through included. On a comment it is a **static, write-once** stamp, not the self-replacing body region. The immutable filing comment is kept and wears the house-style frame. It is never edited, so one posted without the frame stays without it (refinement per [project-management:DEC-052-comment-house-style]).
 
 ### 2. The footer carries versions only; the date lives in the comment
 
@@ -58,7 +55,7 @@ Issues created before the capability adopted this convention, and issues created
 ## Implications
 
 - **A companion ADR** — [ADR-037](../../../../tech-docs/architecture/decisions/ADR-037-provenance-write-path-contract.md) — pins the structural write contract this record depends on: the strip-then-reissue footer seam, the read-side strip so an agent never sees the footer bytes, and the guard that proves no body write bypasses the seam. It joins the capability's existing seam-family ADRs as their provenance-side member. This DEC stays at the what/why level and must not be treated as the structural spec.
-- **A new `provenance_marker` entry** in the body-structure schema carries the validation exemption: the footer region is methodology-managed, stripped before the body validators and checkbox extractors scan, and constrained in shape so an un-stripped footer cannot collide with a scanned construct. It is authored via the schema skill once this record is accepted, mirroring the existing `Integration:` marker exemption in the body-structure rules per [project-management:DEC-010-issue-body-minimum-structure].
+- **A new `provenance_marker` entry** in the body-structure schema carries the validation exemption: the footer region is methodology-managed, stripped before the body validators and checkbox extractors scan, and constrained in shape so an un-stripped footer cannot collide with a scanned construct. It mirrors the existing `Integration:` marker exemption in the body-structure rules per [project-management:DEC-010-issue-body-minimum-structure].
 - **The two script classes from item 1** take on the new behaviour: the creating scripts gain the one-time filing comment, the body-writing scripts gain the footer via the seam. The reusable comment-idempotency marker the lifecycle-hook engine already ships is reused rather than reinvented.
 - **A surface change.** A new convention adopters observe on every script-filed issue is a surface change, so it bumps the capability version. The schema addition is additive (no `schema_version` bump, no migration); retrofitting footers onto existing issues, were it ever wanted, is a back-fill data concern, not a schema migration.
 - **No new hard-reject.** Provenance never gates a transition or a close. Its failure mode is absence (items 5 and 6), surfaced as the stamp-less gap, not a validation finding — except a defensive warning when a provenance region appears anywhere but its sanctioned trailing position.
