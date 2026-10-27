@@ -1,0 +1,306 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/decisions/README.md
+          reason: "The decisions README now has a person accept a record in the change that proposes it, before it lands, as COR-066 decides once accepted. Variant 1a still has a rule land proposed, and the assumptions still leave open who accepts a decision record. #2191 realizes COR-066, and this use case follows it there."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/decisions/README.md
+          reason: "The decisions README now has a record set to accepted in its change before it lands, as COR-066 decides once accepted. Step 9 and the postconditions still end with the record proposed, accepted later through UC-040, and variant 9a lands it accepted only when its addition and acceptance were approved together. #2191 realizes COR-066, and this use case follows it there."
+        - anchor:
+            kind: record
+            value: COR-025
+          reason: "COR-025 is now partially superseded by COR-066 for landing ADRs proposed. This use case still ends with a record, an ADR included, committed as proposed and accepted later through UC-040. #2191 realizes COR-066, and this use case follows it there."
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T174422Z-ea676633.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T202350Z-6a1bd668.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221052Z-9302b480.yaml
+      - 20261025T234102Z-0231f155.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - moved-69dea4023970.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: artefact
+            value: .pkit/decisions/README.md
+          reason: "The decisions README now has a record opened as proposed in its change and set to accepted there before it lands, as COR-066 decides once accepted. Step 3 of adding a core record still says to open it as proposed while discussion is open and promote it once agreed, which lets a record land proposed. #2191 realizes COR-066, and this step follows it there."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-025
+          reason: "COR-025 is now partially superseded by COR-066, so a record reaches the default branch only accepted, after a person accepts it in its change. This journey lands its change after UC-037, which leaves the record proposed, and keeps acceptance through UC-040 outside the journey. #2191 realizes COR-066, and this journey follows it there."
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - moved-300b8204a467.yaml
+    revalidated:
+      at: 2026-10-26T23:12:31Z
+      outcome: updated
+  - artefact: .pkit/scratchpad/README.md
+    read:
+      - moved-f1e0965759a0.yaml
+    revalidated:
+      at: 2026-10-26T23:12:38Z
+      outcome: unchanged
+      unchanged-because: COR-006 gains only a top line saying COR-065 overturns its sentence that the five shapes are content peers. This README relies on COR-006 for scratchpad notes as a shape of their own and for its discriminator, which stand. COR-065 keeps a note outside the projection, exploring a question before a record exists.
+  - artefact: .pkit/skills/README.md
+    read:
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - moved-e0ed2ab4bd21.yaml
+    revalidated:
+      at: 2026-10-26T23:12:40Z
+      outcome: unchanged
+      unchanged-because: COR-006 gains only a top line saying COR-065 overturns its sentence that the five shapes are content peers. This README relies on COR-006 for skills as procedure and as content written for no harness in particular, which stand. It states no peer relation between the shapes.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-definition
+    read:
+      - moved-68215f35f244.yaml
+    revalidated:
+      at: 2026-10-26T23:12:48Z
+      outcome: unchanged
+      unchanged-because: COR-006 gains only a top line saying COR-065 overturns its sentence that the five shapes are content peers. The term relies on COR-006 for calling the definition an agent and for a remit set apart from a skill, which stand.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-harness
+    read:
+      - moved-5afd94f23afa.yaml
+    revalidated:
+      at: 2026-10-26T23:12:53Z
+      outcome: unchanged
+      unchanged-because: COR-006 gains only a top line saying COR-065 overturns its sentence that the five shapes are content peers. The term relies on COR-006 only for content written for no harness in particular, which an adapter carries into one, and that stands.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-skill
+    read:
+      - 20261026T140722Z-b2a1e987.yaml
+      - moved-e1441ee14b28.yaml
+    revalidated:
+      at: 2026-10-26T23:12:59Z
+      outcome: unchanged
+      unchanged-because: COR-006 gains only a top line saying COR-065 overturns its sentence that the five shapes are content peers. The term relies on COR-006 for a skill holding a procedure, set apart from an agent definition and its remit, which stands.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-decision-record
+    read:
+      - moved-3b4afefa77c5.yaml
+    revalidated:
+      at: 2026-10-26T23:13:05Z
+      outcome: unchanged
+      unchanged-because: "COR-006 and COR-025 gain only top lines saying COR-065 and COR-066 overturn parts of them: the shapes as content peers, and ADRs landing proposed. The term relies on them for a record stating the why of a choice and for the ADR namespace, which stand. Its statuses and gate say nothing of when a record lands."
+  - artefact: tech-docs/analysis/core/domain-model/010-the-system-and-its-methodology.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - moved-172e742805fb.yaml
+    revalidated:
+      at: 2026-10-26T23:13:11Z
+      outcome: unchanged
+      unchanged-because: "COR-006 and COR-025 gain only top lines saying COR-065 and COR-066 overturn parts of them: the shapes as content peers, and ADRs landing proposed. The view relies on them for a choice recorded with its reasons and kept apart from the steps that carry it out, which COR-065 point 5 confirms. Its record is proposed until accepted in review, which says nothing of when it lands."
+  - artefact: tech-docs/analysis/core/domain-model/020-parts-of-the-system.md
+    read:
+      - moved-50028840c950.yaml
+    revalidated:
+      at: 2026-10-26T23:13:17Z
+      outcome: unchanged
+      unchanged-because: "COR-006 and COR-025 gain only top lines saying COR-065 and COR-066 overturn parts of them: the shapes as content peers, and ADRs landing proposed. The view relies on them for each kind of content in a home of its own, for skills, agent definitions and adapters, and for a project's ADR namespace, which stand."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-26T23:13:23Z
+      outcome: unchanged
+      unchanged-because: Read with the two earlier answers, on the lookup of a point and on the new check-diff flags, every step holds as written. COR-006 now gains only a top line saying COR-065 overturns its sentence that the shapes are content peers. Step 1 takes from COR-006 a skill for a procedure and an agent definition for a remit, which stands.
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-26T23:13:29Z
+      outcome: unchanged
+      unchanged-because: Read with the two earlier answers, on the lookup of a point and on the new check-diff flags, the page holds as written. COR-006 now gains only a top line saying COR-065 overturns its sentence that the shapes are content peers. The page relies on COR-006 for content written for no harness in particular, which an adapter translates, and that stands.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-26T23:13:42Z
+      outcome: unchanged
+      unchanged-because: Read with the three earlier answers, the text as updated to cite the decisions README for the disciplines holds against the lookup of a point and the new check-diff flags. COR-006 now gains only a top line saying COR-065 overturns its sentence that the shapes are content peers. Step 2 relies on COR-006 for content placed in the kind of artefact that carries it, which stands, and COR-065 point 5 confirms it.
+  - artefact: .pkit/agents/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - moved-fcb206299a38.yaml
+    revalidated:
+      at: 2026-10-26T23:13:48Z
+      outcome: unchanged
+      unchanged-because: COR-006 gains only a top line saying COR-065 overturns its sentence that the five shapes are content peers. This README relies on COR-006 for agents as roles that cite rather than embed, and for the split between skills and agents, which stand. COR-065 point 1 keeps an artefact citing a record rather than restating it.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - moved-0fe260ad4d42.yaml
+    revalidated:
+      at: 2026-10-26T23:13:55Z
+      outcome: unchanged
+      unchanged-because: Read with the two earlier answers, on the README's lookup section and its section on writing a record, the gate stands. The README now adds that a person accepts a record in the change that proposes it, before work rests on it. Work still builds only on accepted records and rules, as the term defines. Its distinction, a status moved in a reviewed change and accepted by a person's review, fits that.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T23:14:00Z
+      outcome: unchanged
+      unchanged-because: "The decisions README's acceptance gate now adds that a person accepts a record in the change that proposes it, before work in that change rests on it. The introduction's claim still holds: the rules tell agents to build only on accepted decisions, and a draft starts as proposed, as the stamp still writes."

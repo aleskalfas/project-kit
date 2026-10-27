@@ -6,6 +6,8 @@ date: 2026-05-27
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [COR-066](COR-066-accepted-before-landing.md).** Overturned: "ADRs land as `proposed`", since a record reaches the default branch only accepted, after a person accepts it in the change that proposes it. The rest stands, a person's acceptance as a separate act included.
+
 ## Context
 
 The methodology today defines three decision-record contexts:

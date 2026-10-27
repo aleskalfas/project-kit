@@ -1,0 +1,136 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/decisions/README.md
+          reason: "The decisions README now has a person accept a record in the change that proposes it, before it lands, as COR-066 decides once accepted. Variant 1a still has a rule land proposed, and the assumptions still leave open who accepts a decision record. Main's later answer on this use case, for rules 7 and 12 stating what is built, changes none of this. #2191 realizes COR-066, and this use case follows it there."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/decisions/README.md
+          reason: "The decisions README now has a record set to accepted in its change before it lands, as COR-066 decides once accepted. Step 9 and the postconditions still end with the record proposed, accepted later through UC-040, and variant 9a lands it accepted only when its addition and acceptance were approved together. Main's later answer on this use case, for rules 7 and 12 stating what is built, changes none of this. #2191 realizes COR-066, and this use case follows it there."
+        - anchor:
+            kind: record
+            value: COR-025
+          reason: "COR-025 is now partially superseded by COR-066 for landing ADRs proposed. This use case still ends with a record, an ADR included, committed as proposed and accepted later through UC-040. Main's later answer on this use case changes none of this. #2191 realizes COR-066, and this use case follows it there."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T230218Z-61712646.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-025
+          reason: "COR-025 is now partially superseded by COR-066, so a record reaches the default branch only accepted, after a person accepts it in its change. This journey lands its change after UC-037, which leaves the record proposed, and keeps acceptance through UC-040 outside the journey. Main's later answers on this journey, for validation right after an upgrade and for a worker mending its own pull requests, change none of this. #2191 realizes COR-066, and this journey follows it there."
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-27T01:43:16Z
+      outcome: unchanged
+      unchanged-because: The decisions README's acceptance gate now has a person accept a record in the change that proposes it, before work there rests on it, and main's core rules 7 and 12 now state what is built. The README's account, that the rules load into every session and tell agents to build only on accepted decisions, and its grep of rule 2, still hold for both.

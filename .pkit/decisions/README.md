@@ -14,7 +14,7 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6"]
+      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", "COR-065", "COR-066#1", "COR-066#4"]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -169,7 +169,7 @@ The **`author`** field captures responsibility for the record — git-style `Nam
 
 ## Statuses
 
-- **`proposed`** — under discussion. Not binding. **Implementation must not depend on the record's content** — see "The acceptance gate" below.
+- **`proposed`** — under discussion, within the change that proposes it. Not binding. **Implementation must not depend on the record's content** — see "The acceptance gate" below. A proposed record no longer reaches the default branch ([COR-066](core/COR-066-accepted-before-landing.md) point 1); one already there stays until a person accepts it or it is deleted (point 4).
 - **`accepted`** — in effect. Implementation must comply.
 - **`superseded`** — replaced by a newer record. The successor sets `supersedes: PRJ-NNN` (or `COR-NNN`) in its frontmatter; the superseded record adds a *Superseded by …* line at the top of its body. The superseded record is preserved as historical material — never deleted.
 
@@ -179,7 +179,7 @@ Supersession is always within a single namespace.
 
 ## The acceptance gate
 
-Implementation work — code, content, tooling, downstream decisions — depends only on **accepted** decisions. Proposed records are draft hypotheses, useful for discussion but not authoritative. Authoring work that would cite a still-proposed record violates the gate; either accept the record first (a one-line status flip and a commit) or pause the implementation.
+Implementation work — code, content, tooling, downstream decisions — depends only on **accepted** decisions. Proposed records are draft hypotheses, useful for discussion but not authoritative. Authoring work that would cite a still-proposed record violates the gate; either accept the record first (a one-line status flip and a commit) or pause the implementation. A person accepts a record in the change that proposes it, before work in that change rests on it, and an agent writes `accepted` only once a person has. Work in that change, or in a change built on it that lands no earlier, may then rest on the record ([COR-066](core/COR-066-accepted-before-landing.md) point 1).
 
 The gate applies to every kind of dependent work:
 
@@ -300,7 +300,7 @@ The recommended path is the kit's authoring command (specified in `.pkit/cli/REA
 pkit new decision project <slug>
 ```
 
-This stamps `PRJ-NNN-slug.md` with the schema's frontmatter, the four section headers and a first point heading, `### 1. Point title`, under `## Decision`. You fill in the body and flip status to `accepted` once agreed.
+This stamps `PRJ-NNN-slug.md` with the schema's frontmatter, the four section headers and a first point heading, `### 1. Point title`, under `## Decision`. You fill in the body, and a person accepts the record in its change, before it lands.
 
 The stamped heading puts the record's points in the heading form from the start ("Schema" above):
 
@@ -314,7 +314,7 @@ If you prefer to author by hand, the procedure is:
 
 1. Pick the next available number in `project/`. `pkit new decision` numbers a record for you. A number picked by hand can be one another change has landed on the default branch since your branch left it. `pkit decisions check-diff` finds that ("Checking a change's numbering" above).
 2. Create `PRJ-NNN-slug.md` with the frontmatter and the four sections above. Leave out the example's `retired-points` and its stub, and number your points from 1 with no gap.
-3. Open it as `proposed` if it is still under discussion, `accepted` once agreed.
+3. Open it as `proposed` while it is discussed in its change, and set it to `accepted` there once a person accepts it, before it lands.
 
 The directory listing in `project/` serves as the index — file names carry their slugs, and most projects' corpora are small enough that no separate index is needed. If yours grows numerous, a `README.md` index can be added inside `project/` as a convenience.
 
