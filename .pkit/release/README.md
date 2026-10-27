@@ -985,8 +985,8 @@ human-gated automation. They **never auto-merge** — a human reviews the releas
 PR and merges it with `pkit release merge <pr>` (the sanctioned path above); the
 automation only proposes and, post-merge, tags.
 
-**1. `release-pr.yml` — open the release PR.** Triggered by `workflow_dispatch`
-(manual) or a weekly `schedule`. It:
+**1. `release-pr.yml` — open the release PR.** Started by hand only
+(`workflow_dispatch`): a release is cut when the maintainer starts it. It:
 
 - Computes the release from the pending changesets (`pkit release plan --json`)
   and **no-ops cleanly** when nothing moves a version (an empty release, or only
