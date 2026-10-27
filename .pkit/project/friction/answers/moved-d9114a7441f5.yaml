@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md
-    revalidated:
-      at: 2026-10-25T00:34:35Z
-      outcome: unchanged
-      unchanged-because: The agents README's Friction writers now says where the writers write and drops the answer owed after a conflict. A reviewer still writes nothing on what it judges.

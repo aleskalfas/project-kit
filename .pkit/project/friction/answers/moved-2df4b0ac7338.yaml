@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-006
-    revalidated:
-      at: 2026-10-20T22:11:48Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 2 changes only its line on the overview's folder. The version a glossary head's links to another analysis name is untouched.

@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-declared-structure
-    revalidated:
-      at: 2026-10-24T22:53:59Z
-      outcome: unchanged
-      unchanged-because: structure.py now parses the kinds' declaration once for each text of it. What a kind declares, and how a body is read against it, is untouched.

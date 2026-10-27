@@ -1,6 +1,0 @@
-answers:
-  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-007
-    revalidated:
-      at: 2026-10-22T16:24:53Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.

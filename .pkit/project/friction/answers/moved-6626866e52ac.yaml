@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-head
-    revalidated:
-      at: 2026-10-23T08:13:57Z
-      outcome: unchanged
-      unchanged-because: COR-050 point 5 reads derived links under the head's declaration in the change check. What the head is stays as defined.

@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-063-plan-intent.md
-    revalidated:
-      at: 2026-10-25T02:59:28Z
-      outcome: unchanged
-      unchanged-because: edit-issue now warns of a decision id that no record holds. Step 8 says only that edit-issue checks each body it writes, which still holds.

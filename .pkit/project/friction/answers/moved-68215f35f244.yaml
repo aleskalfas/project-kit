@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-definition
-    revalidated:
-      at: 2026-10-24T04:34:09Z
-      outcome: unchanged
-      unchanged-because: The agent stamp now refuses a core or capability folder the project receives as synced copies. An agent definition is still a deployed document with one remit, so the definition holds.

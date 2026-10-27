@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-005
-    revalidated:
-      at: 2026-10-20T22:11:47Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 2's change names the overview's folder as the reader's entry point. The core's five areas, and where its use cases lie, are untouched.

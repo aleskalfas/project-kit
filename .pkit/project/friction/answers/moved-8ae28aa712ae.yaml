@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-004
-    revalidated:
-      at: 2026-10-20T22:11:45Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 2 calls the overview the reader's entry point. Each analysis keeps its own overview in its own folder, so where an artefact lies is untouched.

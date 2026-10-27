@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-revalidation-outcome
-    revalidated:
-      at: 2026-10-24T02:12:38Z
-      outcome: unchanged
-      unchanged-because: The term still names the four outcomes and how they map onto the two answers. The change makes pkit analysis propose answer a boxed regression updated, as its distinctions already say.
