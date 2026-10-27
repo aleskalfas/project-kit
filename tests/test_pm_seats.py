@@ -7,9 +7,10 @@ state issue. It holds at most one seat, takes up the one it holds, and releases
 a retired one first. A seat is released by its clone, or by force from the
 organizer seat's clone or on a person's authorisation, with its reason logged.
 The listing shows each seat, its role and its holder, and names the state
-issues no seat names. These tests pin each, against a failing and a passing
-case. GitHub is the in-memory fake of the state-issue tests, and the backbone's
-reading of the default branch and git are fakes.
+issues no seat names. It names too each Task in Review a released seat left,
+with the pull request from its branch (#2196). These tests pin each, against a
+failing and a passing case. GitHub is the in-memory fake of the state-issue
+tests, and the backbone's reading of the default branch and git are fakes.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ for entry in (SCRIPTS, TESTS):
         sys.path.insert(0, str(entry))
 
 from _lib import audit_log, default_branch, instance_identity, provenance  # noqa: E402
+from _lib import instance_ownership as ownership  # noqa: E402
 from _lib import state_issues as si  # noqa: E402
 from _lib import topology as tp  # noqa: E402
 
@@ -483,3 +485,131 @@ def test_every_write_these_commands_run_comes_from_the_seam(root: Path) -> None:
             ev = audit_log.parse(argv[5])
             assert ev is not None and ev.type in si.EVENTS
     assert all("--search" not in argv for argv in repo.calls)
+
+
+# ---- the Tasks in Review a released seat left (DEC-059 points 5 and 9) ---------------
+
+
+def _task(
+    repo: FakeRepo,
+    number: int,
+    title: str,
+    *,
+    state: str = "review",
+    claims: tuple[tuple[str, str], ...] = (),
+    account: str = "you",
+) -> None:
+    """A Task in ``state``, assigned to ``account``, with a claim of each seat
+    and clone key ``claims`` names, as `start-work` posts one: the seat's
+    number is its place in the topology."""
+    repo.add(
+        number, "## What\n\nwork\n", title=title, labels=(f"state:{state}",), assignees=(account,)
+    )
+    names = [s["name"] for s in SEATS]
+    for seat, clone in claims:
+        instance = names.index(seat) + 1
+        body = ownership.format_event_comment(
+            event="claim", instance=instance, seat=seat, seat_number=instance, clone=clone
+        )
+        repo.post(number, body, author=account)
+
+
+def _release_event(repo: FakeRepo, number: int, name: str, holder: tuple[str, str]) -> None:
+    """The holder's own release of the seat, as `release-seat` posts it."""
+    release = audit_log.event(si.RELEASE, key=name, clone=holder[1], place="host:/clone")
+    repo.post(number, audit_log.build(release, versions=VERSIONS), author=holder[0])
+
+
+LEFT_HEADING = (
+    "Tasks in Review that a released seat left, each for a person to land or to hand over to "
+    "a worker (DEC-059 points 5 and 9):"
+)
+
+
+def test_the_listing_names_each_task_in_review_a_released_seat_left_with_its_pull_request(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The seat's release freed its clone's claims, so no worker's loop takes up
+    its Tasks in Review: the listing names each, with the open pull request from
+    its branch, for a person to land or hand over."""
+    repo = _repo(worker_1=("you", "k7"), worker_2=("you", "k8"))
+    _task(repo, 50, "Add the dispatcher", claims=(("worker-1", "k7"),))
+    _task(repo, 53, "Write its tests", claims=(("worker-1", "k7"),))
+    _task(repo, 51, "Still in its seat", claims=(("worker-2", "k8"),))
+    _task(repo, 52, "Back in the pool", state="in-progress", claims=(("worker-1", "k7"),))
+    _task(repo, 54, "Handed on", claims=(("worker-1", "k7"), ("worker-2", "k8")))
+    _task(repo, 55, "Never claimed")
+    repo.prs = {60: "feat/50-add-the-dispatcher", 61: "feat/51-still", 62: "feat/500-other"}
+    assert _force(root, repo, "worker-1", yes=True) == 0
+    capsys.readouterr()
+    written = len(repo.writes())
+    assert _list(root, repo) == 0
+    out = capsys.readouterr().out
+    left = out[out.index(LEFT_HEADING) :].splitlines()
+    assert left == [
+        LEFT_HEADING,
+        "  seat worker-1, clone k7 of @you:",
+        "    #50 Add the dispatcher: pull request #60",
+        "    #53 Write its tests: no open pull request from its branch",
+    ]
+    assert len(repo.writes()) == written
+
+
+def test_a_seat_its_own_clone_took_again_frees_none_of_the_claims_it_released(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A claim made before the clone's current take of the seat counts for
+    nothing (#2182), so its Task in Review is still the person's to hand back."""
+    repo = _repo(worker_1=("you", "k7"))
+    _task(repo, 50, "Add the dispatcher", claims=(("worker-1", "k7"),))
+    _release_event(repo, 12, "worker-1", ("you", "k7"))
+    _claim(repo, 12, "worker-1", ("you", "k7"))
+    repo.prs = {60: "feat/50-add-the-dispatcher"}
+    assert _list(root, repo) == 0
+    out = capsys.readouterr().out
+    assert "  2. worker-1 (worker, agent project-manager), #12: held by @you, clone k7" in out
+    assert f"{LEFT_HEADING}\n  seat worker-1, clone k7 of @you:\n" in out
+    assert "    #50 Add the dispatcher: pull request #60" in out
+
+
+def test_no_tasks_log_is_read_until_a_seat_is_released(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Before any release, no claim has stopped counting for one, so the
+    listing reads no Task's log and lists no pull request."""
+    repo = _repo(worker_1=("you", "k7"))
+    _task(repo, 50, "Add the dispatcher", claims=(("worker-1", "k7"),))
+    assert _list(root, repo) == 0
+    assert LEFT_HEADING not in capsys.readouterr().out
+    assert not any("/issues/50/" in " ".join(argv) for argv in repo.calls)
+    assert not any(argv[1] == "pr" for argv in repo.calls)
+
+
+def test_the_listing_says_which_task_or_pull_request_it_could_not_read(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo(worker_1=("you", "k7"))
+    _task(repo, 50, "Add the dispatcher", claims=(("worker-1", "k7"),))
+    _task(repo, 51, "Write its tests", claims=(("worker-1", "k7"),))
+    _release_event(repo, 12, "worker-1", ("you", "k7"))
+    repo.failing.update({"page:51", "pr-list"})
+    assert _list(root, repo) == 3
+    captured = capsys.readouterr()
+    assert "    #50 Add the dispatcher: its pull request could not be read" in captured.out
+    assert "#51" not in captured.out
+    assert "the log of #51, in Review, could not be read" in captured.err
+    assert "the open pull requests could not be listed" in captured.err
+
+
+def test_text_from_a_task_cannot_forge_a_line_of_the_listing(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A Task's title, and the key its claim names, are anyone's text."""
+    repo = _repo(worker_1=("you", "k\n[ok] forged"))
+    _task(repo, 50, "x\n[ok] forged line\x1b[2J", claims=(("worker-1", "k\n[ok] forged"),))
+    _release_event(repo, 12, "worker-1", ("you", "k\n[ok] forged"))
+    assert _list(root, repo) == 0
+    out = capsys.readouterr().out
+    assert "\n[ok] forged" not in out and "\x1b" not in out
+    assert "  seat worker-1, clone k\\n[ok] forged of @you:" in out
+    assert "    #50 x\\n[ok] forged line\\x1b[2J: no open pull request from its branch" in out
