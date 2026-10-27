@@ -1335,6 +1335,24 @@ def test_sync_refuses_content_newer_than_this_pkit_and_writes_nothing(
     assert _tree_bytes(installed_target) == before
 
 
+def test_sync_content_downgrade_refusal_names_reverting_each_upgrade(
+    installed_target: Path,
+) -> None:
+    """The way back to an older version reverts each upgrade's commit, which
+    restores the files a migration edited outside `.pkit/` too (ADR-049 point 3).
+    A checkout of `.pkit/` alone would leave them as the upgrade left them."""
+    _record_content_version(installed_target, _NEWER)
+
+    message = _refusal(installed_target)
+
+    assert (
+        "To take the project back to an older version, revert the commit of each upgrade "
+        "since that version, `git revert <commit>`, which restores every file those "
+        "upgrades changed, inside `.pkit/` and outside."
+    ) in message
+    assert "git checkout" not in message
+
+
 def test_sync_refuses_a_pin_newer_than_this_pkit(installed_target: Path) -> None:
     """The pin names the version the project runs at, so a pin ahead of this pkit
     refuses even where the recorded content is this pkit's own version."""
@@ -1522,7 +1540,9 @@ def test_sync_stops_over_an_incomplete_upgrade(
     installed_target: Path, completed: str | None
 ) -> None:
     """The last upgrade incomplete, this pkit at its target: sync stops and names
-    `pkit upgrade`, and for a migration that fails every time, a fix or a rollback."""
+    `pkit upgrade`, and for a migration that fails every time, a fix or a rollback.
+    The rollback reverts the upgrade's commit, since a migration may edit files
+    outside `.pkit/` that a checkout of `.pkit/` leaves behind (ADR-049 point 3)."""
     _record_states(installed_target, _INSTALLED_BACKBONE, completed)
     before = _tree_bytes(installed_target)
 
@@ -1535,7 +1555,13 @@ def test_sync_stops_over_an_incomplete_upgrade(
         assert "the last upgrade of this project is incomplete" in message
         assert f"running the backbone migrations from {completed}" in message
     assert "Run `pkit upgrade`" in message
-    assert "`git checkout <ref> -- .pkit/`" in message
+    assert (
+        "roll the project back by reverting the upgrade's commit, `git revert <commit>`, "
+        "which restores both recorded versions and every file the upgrade changed, "
+        "inside `.pkit/` and outside."
+    ) in message
+    assert "An upgrade not yet committed is undone over every file `git status` lists." in message
+    assert "git checkout" not in message
     assert _tree_bytes(installed_target) == before
 
 
