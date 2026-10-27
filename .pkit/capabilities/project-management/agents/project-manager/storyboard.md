@@ -11,7 +11,7 @@ consumers:
 
 This storyboard covers the **autonomous batch-planning flow** the `project-manager` agent runs when a user supplies fuzzy intent + reference material and wants the work sliced into issues filed correctly. The flow is one variation of the agent's PM-direction mode per [project-management:DEC-029-project-manager-agent-shape]; the user does not name it explicitly, the agent infers it from the request shape.
 
-Scenarios 12 and 13 walk one round of each loop a seat's role runs, a planner's and a worker's, through the pm skill's `work-loop` sub-procedure ([project-management:DEC-059-topology-of-seats] point 8). There the seat's role sets the direction, in place of inference from the request.
+Scenarios 12 and 13 walk one round of each loop a seat's role runs, a planner's and a worker's, through the pm skill's `work-loop` sub-procedure ([project-management:DEC-059-topology-of-seats] point 8). There the seat's role sets the direction, in place of inference from the request. Scenario 14 walks a worker's later round: a pull request that conflicts with the default branch, a fix round, and a pull request that a released seat left in Review.
 
 The flow operates on:
 
@@ -500,3 +500,38 @@ A platform starts a session in a sandbox's clone, with `PKIT_AGENT=project-manag
 - `pkit pm open-pr 320 --draft --body-file <file>`, then `pkit pm review-work 320`, which checks the body, makes the pull request ready and moves #320 to Review.
 - `pkit pm next-task --yes` again exits 5, since #321 names #320, which is still open. The loop ends, and the seat stays taken, so a new session in this clone takes it up.
 - The worker merges nothing. The person lands PR #330 through the merge gate, or asks the worker to, and authorises the merge of its head. A verdict on PR #330 that asks for changes comes first in the next round, fixed on #320's branch.
+
+## Scenario 14: A worker's later round
+
+### Trigger
+
+A new session starts in the clone of Scenario 13, which holds seat 2, `worker-a`. Other pull requests have merged since its last round, and a reviewer has judged one of its own.
+
+### Preconditions
+
+- The topology of Scenario 12. The person released the seat `worker-b` by force, since its sandbox was lost.
+- This clone has two Tasks in Review. PR #330 of #320 no longer merges, since another merge changed the report module it changes. On PR #332 of #322, the code reviewer's verdict at the head holds one blocking finding and one advisory finding.
+- #325, which `worker-b` built, is in Review with its PR #340. No Task in the pool is ready for this clone.
+
+### Walkthrough
+
+> **Operator:** Go on as the worker.
+>
+> **project-manager:** *Listing the seats…* *Taking up seat 2, `worker-a`…* *Reading my pull requests in Review…* PR #330 conflicts with `main`, and on PR #332 the code reviewer asks for changes. I'll mend both before I take a Task.
+>
+> **project-manager:** *Merging `main` into #320's branch…* I resolved one conflict in the report module, the checks pass, and it's pushed. *Fixing PR #332's blocking finding…* Fixed and pushed, and I answered its advisory finding in the body. Both wait for your landing again.
+>
+> **project-manager:** *Taking the next ready Task…* No Task is ready for this clone, so I'm ending the loop and keeping the seat.
+>
+> **User:** Take over #325 too. It was `worker-b`'s, and its PR #340 is still in Review.
+>
+> **project-manager:** *Fetching #325's branch…* PR #340 of `worker-b`, the seat you released, is mine to mend from now on. It merges cleanly, and no reviewer has judged it yet, so it waits for your landing. #325 stays with no owner, since a hand-over moves no claim between clones yet.
+
+### Behind the scenes
+
+- `pkit pm seats` marks seat 2 as this clone's, so `pkit pm take-seat`, with no name, takes it up. Its `role:` line reads `worker`.
+- The clone's Task branches are `feat/320-export-csv` and `feat/322-csv-headers`, and `pkit pm show-issue` reads both Tasks in Review. `pkit pm show-pr feat/320-export-csv` reads `mergeable: CONFLICTING`. `pkit pm show-pr feat/322-csv-headers` reads a `CHANGES_REQUESTED` that is not marked stale.
+- The conflict comes first. `git fetch origin`, then `git merge origin/main` on #320's branch, the conflict resolved, the checks run, and `git push` once `pkit pm seats` still marks the seat. Never a rebase or a force-push, since either rewrites the head the reviewers judged. The resolved conflict is an edit, so the person's landing reviews the new head, and they authorise it afresh.
+- The fix round follows. `pkit pm show-pr feat/322-csv-headers --field review` gives the findings, and only the `[block]` one is fixed, on #322's branch. `pkit pm edit-pr 332 --body-file <file>` answers the `[advisory]` one in the body.
+- `pkit pm next-task --yes` exits 5. It never offers #325, which is in Review, outside the pool (DEC-059 point 7). A released seat's pull request in Review is the person's to land or hand over, so the worker waits for the person to tell it.
+- The person hands #325 over. `git fetch origin`, then `git checkout -B feat/325-csv-footer origin/feat/325-csv-footer`. From the next round on, step 1 of the loop reads PR #340 with the clone's own. `handoff-issue` does not move a claim between clones yet, so #325 keeps no owner.

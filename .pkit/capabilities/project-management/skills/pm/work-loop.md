@@ -50,7 +50,10 @@ A planner never takes a Task, and `next-task` refuses a planner's seat. It close
 
 A worker takes ready work and builds it up to its merge (DEC-059 point 2). Each round builds one Task in this clone, and opens its pull request.
 
-1. **Go on with what this clone has in flight.** Look at this clone's Task branches, named `<type>/<N>-<slug>`, and read each Task's state with `pkit pm show-issue <N>`. A Task In Progress that this clone was building goes on, on its branch. A Task in Review whose pull request a verdict asks to change gets its fix round first: read it with `pkit pm show-pr <PR> --field review`, and fix only the blocking findings on its branch. Take a new Task only once nothing is in flight, and the working tree is clean.
+1. **Go on with what this clone has in flight,** each time the loop starts and each time it comes back here after `review-work`. Look at this clone's Task branches, named `<type>/<N>-<slug>`, and read each Task's state with `pkit pm show-issue <N>`. A Task In Progress that this clone was building goes on, on its branch. Read the pull request of each Task in Review by its branch, `pkit pm show-pr <branch>`, and go through these in order:
+   - **It conflicts with the default branch,** where the `mergeable:` line reads `CONFLICTING`. On the Task's branch, fetch, merge the default branch in, resolve the conflicts, run the checks, and push. Never rebase and never force-push, since either rewrites the head the reviewers judged ([project-management:DEC-013-branch-and-pr-conventions]). Where the line reads `UNKNOWN`, GitHub has not worked out the answer yet, so read the pull request again before you take a Task.
+   - **A verdict at its head asks for changes:** a `CHANGES_REQUESTED` on the `review:` line that is not marked stale. Run the fix round of [transition-state](transition-state.md)'s review step: read the findings with `pkit pm show-pr <branch> --field review`, fix only the blocking ones, and push. Answer each advisory finding in the pull request's body, with `pkit pm edit-pr <PR> --body-file <file>`, or file it as a follow-up. Leave each finding for a person to the person.
+   - **Nothing left to mend:** take a new Task only once nothing is in flight, no pull request of yours waits on you, and the working tree is clean. No one needs to tell you of a conflict or a verdict, since each round looks. The person may also hand you back a pull request their landing stopped on.
 2. **Take the next Task:** `pkit pm next-task --yes`. It takes this clone's own Task in Backlog, or the next ready Task in the seat's scope, and starts it through `start-work`. Starting a Task is the worker's own move, which no person authorises (`workflow.yaml`), so `--yes` is yours to pass.
    - **0:** its last line names the Task it started. Build it.
    - **5:** no Task is ready for this clone. Say so, and end the loop, keeping the seat.
@@ -65,9 +68,14 @@ A worker takes ready work and builds it up to its merge (DEC-059 point 2). Each 
    - **A refusal of the body:** mend the body with `pkit pm edit-pr <PR> --body-file <file>`, and run `review-work` again.
    - **A refusal by the clash guard, or of your seat:** stop the loop, and tell the person.
    - **Exit 3,** GitHub failed: run the command once more. Any other refusal, of either command, ends the loop with what it printed.
-6. **Take the next Task.** Leave the clone clean, with everything committed and pushed, since the next `start-work` cuts its branch here. Then go back to 1.
+6. **Take the next Task.** Leave the clone clean, with everything committed and pushed, since the next `start-work` cuts its branch here. Then go back to 1, which reads your pull requests again before the next Task.
 
 **The merge is the person's.** A role never authorises a merge ([project-management:DEC-059-topology-of-seats] point 8). Land a pull request only where the person asks you to, through [transition-state](transition-state.md)'s review step. Merge it only on their authorisation for that head.
+
+**A pull request that a released seat left in Review.** A release frees every claim of the seat's clone, and the pool holds only Tasks in Backlog and In Progress ([project-management:DEC-059-topology-of-seats] points 5 and 7). So `next-task` never offers a Task in Review that a released seat left. Such a Task waits on its reviewers and the person (point 9). The person decides it: they land it as it stands, or hand it to a worker ([project-management:DEC-035-instance-ownership] point 4).
+
+- **Take one up only where the person hands it to you.** Fetch its branch and put the branch in place, as for a Task taken over in step 3. From then on the branch is among your Task branches, and step 1 mends its pull request
+- **Your own seat released by force:** the release freed your claims, so your Tasks in Review are the person's to hand back. Go on with one only where they do, once they have you take a seat again
 
 **A foundation's choice that does not hold.** Make no other choice in its place. Say so on the Task with `pkit pm comment-issue <N> --body "<what does not hold, and why>"`, and tell the person, since the change goes through a Task of its own (DEC-060 point 5). No record decides yet how your Task waits for that change, so end the loop until the person says. The Task stays stopped, and later rounds pass over it, until they do.
 
@@ -80,3 +88,5 @@ Keep the seat between rounds and between sessions, since a new session in this c
 ## Not in the loop yet
 
 DEC-059 point 9 decides that the work renews a Task's claim, and that the procedure checks the claim before each push. A session whose claim passed to another clone then parks its work. No command carries these yet, and no claim lapses yet. A claim still passes to another clone after a release by force, though, and a push passes through no command. So before each push, check that `pkit pm seats` still marks your seat `← this clone`, and where it does not, push nothing and tell the person.
+
+DEC-035 point 4 hands a Task to another clone with `handoff-issue --to-instance`, which is not built: `handoff-issue` does not move a claim between clones yet. So a pull request in Review that the person hands you keeps no owner, and no clash guard keeps another clone off it. No command lists a released seat's Tasks in Review yet either.

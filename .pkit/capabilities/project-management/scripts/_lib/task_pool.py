@@ -10,6 +10,10 @@ kinds:
 - in a project with a topology, a Task In Progress whose claim no longer counts,
   since its seat was released (point 9). Lapse is not built yet.
 
+A Task in Review is neither, even where its seat was released: it waits on its
+reviewers and a person, who lands it or hands it over (point 9,
+[project-management:DEC-035-instance-ownership] point 4).
+
 Readiness is reckoned here once ([project-management:DEC-025-parallelization-primitive]),
 and ``next-task`` takes the first ready Task through ``start-work``. Two halves:
 
@@ -338,10 +342,14 @@ def in_pool(resolution: ownership.OwnershipResolution, state: str) -> bool:
     In Backlog, no claim counts or stands unjudged: the Task has no owner. In
     Progress, a claim was made and none counts or stands unjudged, so the Task
     has returned to the pool (point 9). A Task In Progress that no claim was ever
-    made on is nobody's to take over."""
+    made on is nobody's to take over. A Task in any other state is never in the
+    pool: one in Review that a released seat left waits on its reviewers and a
+    person, who hands it over (point 9, DEC-035 point 4)."""
     claimants = resolution.claimants
     if state == BACKLOG:
         return not claimants
+    if state != IN_PROGRESS:
+        return False
     return bool(resolution.judgements) and not claimants
 
 
