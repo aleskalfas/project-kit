@@ -430,6 +430,15 @@ def test_the_listing_shows_each_seat_its_role_and_its_holder(
     assert repo.writes() == []
 
 
+def test_the_listing_shows_the_milestones_a_scope_names() -> None:
+    scope = tp.Scope(("cli",), (), ("Sprint 1", "Phase 2: ship it"))
+    seat = tp.Seat("sprinter", 6, tp.WORKER, scope=scope, state_issue=16)
+    assert LIST.seat_line(tp.SeatState(seat, tp.FREE), mine=False) == (
+        "  6. sprinter (worker, agent project-manager, scope: workstreams cli with "
+        'milestones "Sprint 1" and "Phase 2: ship it"), #16: free'
+    )
+
+
 def test_the_listing_names_the_state_issues_no_seat_names(
     root: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

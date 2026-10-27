@@ -70,6 +70,7 @@ class Pool:
     def __init__(self) -> None:
         self.github = FakeGitHub()
         self.titles: dict[int, str] = {}
+        self.milestones: dict[int, str] = {}
         self.listed: list[list[str]] = []
         self.returncode = 0
 
@@ -83,10 +84,19 @@ class Pool:
         assignees: tuple[str, ...] = (),
         body: str = "Feature: #1\n\n## What\n\nx\n",
         title: str = "[Task] do the thing",
+        milestone: str | None = None,
+        workstream: str = "cli",
     ) -> None:
-        labels = (f"state:{state}", f"priority:{priority}", f"type:{kind}", "workstream:cli")
+        labels = (
+            f"state:{state}",
+            f"priority:{priority}",
+            f"type:{kind}",
+            f"workstream:{workstream}",
+        )
         self.github.add(number, assignees=assignees, labels=labels, body=body)
         self.titles[number] = title
+        if milestone is not None:
+            self.milestones[number] = milestone
 
     def list(self, argv: list[str], _config: dict, **_kw: Any) -> subprocess.CompletedProcess[str]:
         self.listed.append(list(argv))
@@ -97,12 +107,13 @@ class Pool:
     def issue(self, number: int) -> dict[str, Any]:
         """Issue `number` as `gh` returns it to a listing or to `gh issue view`."""
         held = self.github.issues[number]
+        milestone = self.milestones.get(number)
         return {
             "number": number,
             "title": self.titles[number],
             "labels": [{"name": n} for n in held.labels],
             "assignees": [{"login": a} for a in held.assignees],
-            "milestone": None,
+            "milestone": None if milestone is None else {"number": 3, "title": milestone},
             "state": "OPEN",
             "body": held.body,
         }
@@ -463,10 +474,16 @@ def test_a_clone_that_holds_no_seat_takes_nothing(run, nt, monkeypatch, capsys) 
     assert "this clone holds no seat of the project's topology" in capsys.readouterr().err
 
 
-def _scoped_topology(nt, holder: tuple[str, str] | None = ("me", "k2"), *, retired: bool = False):
+def _scoped_topology(
+    nt,
+    holder: tuple[str, str] | None = ("me", "k2"),
+    *,
+    retired: bool = False,
+    scope: dict[str, list[str]] | None = None,
+):
     """The run's snapshot of a topology whose second seat, `tester`, takes only
-    Tasks of the type `test`, and the in-memory GitHub of its state issues.
-    `tester` is held by `holder`, and this clone took it."""
+    Tasks of the type `test`, or what `scope` names, and the in-memory GitHub
+    of its state issues. `tester` is held by `holder`, and this clone took it."""
     claims = nt.instance_claims
     repo = FakeRepo()
     seat_issue(claims, repo, 11, "planner")
@@ -478,7 +495,7 @@ def _scoped_topology(nt, holder: tuple[str, str] | None = ("me", "k2"), *, retir
             "role": "worker",
             "state_issue": 12,
             "retired": retired,
-            "scope": {"types": ["test"]},
+            "scope": scope or {"types": ["test"]},
         },
     ]
     doc = {"schema_version": 1, "seats": seats}
@@ -498,6 +515,55 @@ def test_a_seat_takes_within_the_scope_its_topology_gives_it(run, nt, capsys) ->
         "1 Task is ready for seat tester, instance 2, within the scope of types test"
         in capsys.readouterr().out
     )
+
+
+def test_a_seat_whose_scope_names_milestones_takes_only_their_tasks(run, nt, capsys) -> None:
+    """DEC-059 point 2: the seat takes only ready Tasks in a milestone its scope
+    names, from the default branch's topology, and says why it skips the others.
+    A Task in no milestone falls outside such a scope."""
+    pool = Pool()
+    pool.add(20, priority="High")
+    pool.add(21, priority="Low", milestone="Sprint 1")
+    pool.add(22, priority="High", milestone="Later")
+    pool.add(23, priority="Medium")
+    seated, _repo = _scoped_topology(nt, scope={"milestones": ["Sprint 1"]})
+    rc, starts = run(pool, seated=seated)
+    assert (rc, starts) == (0, [(21, False)])
+    out = capsys.readouterr().out
+    assert (
+        '1 Task is ready for seat tester, instance 2, within the scope of milestones "Sprint 1"'
+        in out
+    )
+    assert "  skipped #20, #23: outside the scope, in no milestone" in out
+    assert '  skipped #22: outside the scope, in the milestone "Later"' in out
+
+
+def test_a_seat_whose_scope_names_milestones_and_workstreams_takes_what_matches_both(
+    run, nt, capsys
+) -> None:
+    pool = Pool()
+    pool.add(20, priority="High", milestone="Sprint 1", workstream="docs")
+    pool.add(21, priority="Low", milestone="Sprint 1")
+    pool.add(22, priority="High")
+    scope = {"workstreams": ["cli"], "milestones": ["Sprint 1", "Sprint 2"]}
+    seated, _repo = _scoped_topology(nt, scope=scope)
+    rc, starts = run(pool, seated=seated)
+    assert (rc, starts) == (0, [(21, False)])
+    out = capsys.readouterr().out
+    assert 'within the scope of workstreams cli and milestones "Sprint 1", "Sprint 2"' in out
+    assert "  skipped #20: outside the scope, in the workstream docs" in out
+    assert "  skipped #22: outside the scope, in no milestone" in out
+
+
+def test_a_seat_whose_milestones_hold_no_ready_task_starts_nothing(run, nt, capsys) -> None:
+    pool = Pool()
+    pool.add(20)
+    seated, _repo = _scoped_topology(nt, scope={"milestones": ["Sprint 1"]})
+    rc, starts = run(pool, seated=seated)
+    assert (rc, starts) == (nt.EXIT_NONE_READY, [])
+    out = capsys.readouterr().out
+    assert "  skipped #20: outside the scope, in no milestone" in out
+    assert "no Task is ready for this clone" in out
 
 
 def test_a_seat_that_cannot_be_confirmed_takes_nothing(run, nt, capsys) -> None:

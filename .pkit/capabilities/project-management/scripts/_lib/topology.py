@@ -43,11 +43,13 @@ The check
 ---------
 :func:`parse` reports what the file says wrong of itself: a shape the schema
 (``schemas/topology.schema.json``) refuses, a seat name used twice, more than one
-organizer seat, a seat that names no state issue, and two seats that name one.
+organizer seat, a seat that names no state issue, and two seats that name one. A
+scope's milestone part that is no list of titles is such a shape (point 2).
 :func:`check` adds what needs more than the file: a scope that names a workstream
 or a type the project does not declare, a topology under the ``label`` ownership
 substrate (point 9), and each seat of the base deleted or moved rather than
-retired. :func:`check_change` reads all of it for one run, the base as the
+retired. Milestones live on GitHub, so it never checks that a milestone a scope
+names exists. :func:`check_change` reads all of it for one run, the base as the
 backbone resolves it, with COR-054's override, and says which commit it read.
 
 The file's readings and the check read no GitHub, and write nothing. Every git
@@ -107,7 +109,7 @@ AGENT_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
 
 _TOP_KEYS = frozenset({"schema_version", "pkit_schema", "binds_to", "settings", "seats"})
 _SEAT_KEYS = frozenset({"name", "role", "agent", "scope", "organizer", "state_issue", "retired"})
-_SCOPE_KEYS = frozenset({"workstreams", "types"})
+_SCOPE_KEYS = frozenset({"workstreams", "types", "milestones"})
 _SETTINGS_KEYS = frozenset({"release_mode"})
 
 # What a problem is about. A caller tells them apart by these codes.
@@ -153,11 +155,13 @@ class Problem:
 
 @dataclass(frozen=True)
 class Scope:
-    """What narrows a seat's own pool: workstreams, types of the type axis, or
-    both (DEC-059 point 7). A Task falls in it where it matches each part named."""
+    """What narrows a seat's own pool: workstreams, types of the type axis,
+    milestones by their titles, or several of these (DEC-059 points 2 and 7). A
+    Task falls in it where it matches each part named."""
 
     workstreams: tuple[str, ...] = ()
     types: tuple[str, ...] = ()
+    milestones: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -352,10 +356,18 @@ def _scope(raw: object, where: str, problems: list[Problem]) -> Scope | None:
             )
             value = []
         parts[key] = tuple(value)
-    if not parts["workstreams"] and not parts["types"]:
+    # A milestone is named by its title, which holds more than blanks.
+    titles = raw.get("milestones", [])
+    if not isinstance(titles, list) or not all(isinstance(t, str) and t.strip() for t in titles):
+        problems.append(
+            Problem(SHAPE, f"{where} has a scope whose `milestones` is no list of titles.")
+        )
+        titles = []
+    parts["milestones"] = tuple(titles)
+    if not any(parts.values()):
         problems.append(Problem(SHAPE, f"{where} has a scope that names nothing."))
         return None
-    return Scope(parts["workstreams"], parts["types"])
+    return Scope(parts["workstreams"], parts["types"], parts["milestones"])
 
 
 def _across(seats: list[Seat]) -> list[Problem]:

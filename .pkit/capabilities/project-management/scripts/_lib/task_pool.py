@@ -17,11 +17,13 @@ reviewers and a person, who lands it or hands it over (point 9,
 Readiness is reckoned here once ([project-management:DEC-025-parallelization-primitive]),
 and ``next-task`` takes the first ready Task through ``start-work``. Two halves:
 
-- :func:`candidates` reads the open issues of work that the one read of issues
+- :func:`pool` reads the open issues of work that the one read of issues
   returns (``_lib/issue_list``), and reads no more of GitHub. It keeps the open
   Tasks in Backlog, and those In Progress where the clone may take one over, that
-  are not assigned to another account, fall in the seat's scope and name no open
-  issue among their dependencies. It ranks them by priority, then by number.
+  are not assigned to another account and name no open issue among their
+  dependencies. It ranks those in the seat's scope by priority, then by number,
+  and lists apart those the scope leaves out, each with its reason.
+  :func:`candidates` returns the ranked ones alone.
 - :func:`in_pool` and :func:`owned_by` judge one candidate by its owner, as the
   ownership seam folds it (``_lib/instance_claims.read_owner``). A Task in Backlog
   with an owner is not in the pool, as point 7 says.
@@ -50,10 +52,14 @@ The scope
 ---------
 A seat's scope (``_lib/topology.Scope``) narrows the pool of its own seat, and
 reserves nothing for it. A Task falls in it where it matches each part the scope
-names: its workstream among the scope's workstreams, and its type among the
-scope's types. :func:`in_scope` takes the scope as its input, and :func:`taker`
-reads it from the one place it lives, the seat this clone holds
-(``instance_claims.Seat.scope``), which the run's reading of the topology fills.
+names: its workstream among the scope's workstreams, its type among the scope's
+types, and the title of its milestone among the scope's milestones (DEC-059
+point 2). A Task in no milestone falls outside a scope that names milestones.
+The milestone comes from the row the listing returns, so the scope reads no more
+of GitHub. :func:`outside_scope` decides it, and says which part a Task does not
+match. It takes the scope as its input, and :func:`taker` reads it from the one
+place it lives, the seat this clone holds (``instance_claims.Seat.scope``), which
+the run's reading of the topology fills.
 
 The axes are read through the read seam (``axis_labels.resolve_read``), and a
 Task's type falls back to its title's prefix, as ``start-work`` reads it. An axis
@@ -108,6 +114,8 @@ class Candidate:
     rank: int
     #: Whether the Task is assigned to this clone's account.
     assigned: bool = False
+    #: The title of the Task's milestone, or None where it is in none.
+    milestone: str | None = None
 
     def describe(self, *, own: bool = False) -> str:
         """How a line names the Task: its number, title, priority and state, and
@@ -118,6 +126,25 @@ class Candidate:
         if own:
             where += ", this clone's own"
         return f"#{self.number} {self.title} (priority {self.priority or 'not read'}, {where})"
+
+
+@dataclass(frozen=True)
+class Outside:
+    """A ready Task that the seat's scope leaves out, and why: the first part
+    of the scope it does not match, in words a line can carry."""
+
+    candidate: Candidate
+    reason: str
+
+
+@dataclass(frozen=True)
+class Pool:
+    """What one listing gives a taker: the ready Tasks in its scope, the
+    highest in priority first, and the ready Tasks its scope leaves out, by
+    number."""
+
+    ready: tuple[Candidate, ...]
+    outside: tuple[Outside, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -215,17 +242,87 @@ def dependencies(body: str, *, own: int | None = None) -> tuple[int, ...]:
 # ---- the scope (DEC-059 point 7) ---------------------------------------------
 
 
-def in_scope(kind: str | None, workstream: str | None, scope: topology.Scope | None) -> bool:
-    """Whether a Task of type ``kind`` in ``workstream`` falls in ``scope``: it
-    matches each part the scope names. No scope takes every Task."""
+def outside_scope(
+    scope: topology.Scope | None,
+    *,
+    kind: str | None,
+    workstream: str | None,
+    milestone: str | None,
+) -> str | None:
+    """Why a Task of type ``kind``, in ``workstream`` and in the milestone titled
+    ``milestone``, falls outside ``scope``: the first part named that it does not
+    match. None where it matches each part, and where there is no scope, which
+    takes every Task. A Task in no milestone falls outside a milestone part.
+    What GitHub holds is shown on one line, as ``topology.shown`` writes it."""
     if scope is None:
-        return True
+        return None
+    shown = topology.shown
     if scope.workstreams and workstream not in scope.workstreams:
-        return False
-    return not scope.types or kind in scope.types
+        return f"in the workstream {shown(workstream)}" if workstream else "in no workstream"
+    if scope.types and kind not in scope.types:
+        return f"of the type {shown(kind)}" if kind else "of no type"
+    if scope.milestones and milestone not in scope.milestones:
+        return f'in the milestone "{shown(milestone)}"' if milestone else "in no milestone"
+    return None
+
+
+def in_scope(
+    kind: str | None,
+    workstream: str | None,
+    scope: topology.Scope | None,
+    milestone: str | None = None,
+) -> bool:
+    """Whether a Task of type ``kind``, in ``workstream`` and ``milestone``,
+    falls in ``scope``: it matches each part the scope names."""
+    return outside_scope(scope, kind=kind, workstream=workstream, milestone=milestone) is None
 
 
 # ---- the listing -------------------------------------------------------------
+
+
+def pool(
+    rows: Iterable[Any],
+    *,
+    open_numbers: Iterable[int],
+    login: str | None,
+    scope: topology.Scope | None,
+    takes_over: bool,
+    readers: Readers,
+) -> Pool:
+    """The open Tasks the pool may hand out, apart from those ``scope`` leaves out.
+
+    ``rows`` are the open issues of work, as the listing returns them in
+    :data:`LIST_FIELDS`. ``open_numbers`` are the numbers of every open issue,
+    state issues among them. ``login`` is this clone's account: a Task assigned
+    to another account is left out, since ``start-work`` refuses it. A Task In
+    Progress is kept only where ``takes_over``. A Task held back by an open
+    dependency is neither ready nor left out by the scope. Owners are not judged
+    here."""
+    still_open = frozenset(open_numbers)
+    order = _priorities(readers.classification)
+    ready: list[Candidate] = []
+    outside: list[Outside] = []
+    for row in rows:
+        candidate = _candidate(row, login, takes_over, readers, order)
+        if candidate is None:
+            continue
+        body = str(row.get("body") or "")
+        if any(n in still_open for n in dependencies(body, own=candidate.number)):
+            continue
+        reason = outside_scope(
+            scope,
+            kind=candidate.kind,
+            workstream=candidate.workstream,
+            milestone=candidate.milestone,
+        )
+        if reason is None:
+            ready.append(candidate)
+        else:
+            outside.append(Outside(candidate, reason))
+    return Pool(
+        tuple(sorted(ready, key=lambda c: (c.rank, c.number))),
+        tuple(sorted(outside, key=lambda o: o.candidate.number)),
+    )
 
 
 def candidates(
@@ -237,31 +334,22 @@ def candidates(
     takes_over: bool,
     readers: Readers,
 ) -> list[Candidate]:
-    """The open Tasks the pool may hand out, the highest in priority first.
-
-    ``rows`` are the open issues of work, as the listing returns them in
-    :data:`LIST_FIELDS`. ``open_numbers`` are the numbers of every open issue,
-    state issues among them. ``login`` is this clone's account: a Task assigned
-    to another account is left out, since ``start-work`` refuses it. A Task In
-    Progress is kept only where ``takes_over``. Owners are not judged here."""
-    still_open = frozenset(open_numbers)
-    order = _priorities(readers.classification)
-    out: list[Candidate] = []
-    for row in rows:
-        candidate = _candidate(row, login, scope, takes_over, readers, order)
-        if candidate is None:
-            continue
-        body = str(row.get("body") or "")
-        if any(n in still_open for n in dependencies(body, own=candidate.number)):
-            continue
-        out.append(candidate)
-    return sorted(out, key=lambda c: (c.rank, c.number))
+    """The ready Tasks in ``scope``, the highest in priority first: the
+    :attr:`Pool.ready` of :func:`pool`, which says what the arguments are."""
+    found = pool(
+        rows,
+        open_numbers=open_numbers,
+        login=login,
+        scope=scope,
+        takes_over=takes_over,
+        readers=readers,
+    )
+    return list(found.ready)
 
 
 def _candidate(
     row: Any,
     login: str | None,
-    scope: topology.Scope | None,
     takes_over: bool,
     readers: Readers,
     order: Mapping[str, int],
@@ -291,8 +379,6 @@ def _candidate(
     if kind is None:
         kind = classification_rules.kind_from_title(title, dict(readers.classification))
     workstream = axis_labels.resolve_read("workstream", labels, readers.substrate_map)
-    if not in_scope(kind, workstream, scope):
-        return None
     priority = axis_labels.resolve_read("priority", labels, readers.substrate_map)
     return Candidate(
         number=row["number"],
@@ -303,7 +389,16 @@ def _candidate(
         kind=kind,
         rank=order.get(priority or "", len(order)),
         assigned=bool(assignees),
+        milestone=_milestone(row),
     )
+
+
+def _milestone(row: Mapping[str, Any]) -> str | None:
+    """The title of the row's milestone, as the listing returns it: an object
+    with a ``title``, or null where the issue is in no milestone."""
+    milestone = row.get("milestone")
+    title = milestone.get("title") if isinstance(milestone, dict) else None
+    return title if isinstance(title, str) and title else None
 
 
 def _priorities(classification: Mapping[str, Any]) -> dict[str, int]:

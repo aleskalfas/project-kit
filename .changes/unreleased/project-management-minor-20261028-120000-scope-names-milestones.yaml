@@ -1,0 +1,12 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A seat's scope in `project/topology.yaml` may name milestones by their
+  titles, beside workstreams and types (DEC-059 point 2, #2256). Such a seat
+  takes only ready Tasks in one of the milestones it names, so a Task in no
+  milestone falls outside it. `pkit pm next-task` names the ready Tasks the
+  seat's scope leaves out, one line for each reason, and `pkit pm seats` shows
+  the milestones in each scope. `pkit pm check-topology` refuses a milestone
+  part that is no list of titles, and reads no GitHub to find the milestones.

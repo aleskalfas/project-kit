@@ -438,6 +438,7 @@ def seat_line(state: topology.SeatState, *, mine: bool) -> str:
             for label, names in (
                 ("workstreams", seat.scope.workstreams),
                 ("types", seat.scope.types),
+                ("milestones", tuple(f'"{t}"' for t in seat.scope.milestones)),
             )
             if names
         ]

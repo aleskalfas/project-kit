@@ -55,6 +55,7 @@ def _row(
     assignees: tuple[str, ...] = (),
     body: str = "Feature: #1\n\n## What\n\nx\n",
     state: str = "OPEN",
+    milestone: str | None = None,
 ) -> dict[str, Any]:
     labels = [state_label, f"type:{kind}", f"workstream:{workstream}"]
     if priority is not None:
@@ -64,7 +65,8 @@ def _row(
         "title": title,
         "labels": [{"name": n} for n in labels],
         "assignees": [{"login": a} for a in assignees],
-        "milestone": None,
+        # As `gh issue list --json milestone` returns it: an object, or null.
+        "milestone": None if milestone is None else {"number": 7, "title": milestone},
         "state": state,
         "body": body,
     }
@@ -82,8 +84,24 @@ def _ready(tp, readers, rows, *, open_numbers=(), scope=None, takes_over=False) 
     return [c.number for c in found]
 
 
-def _scope(workstreams: tuple[str, ...] = (), types: tuple[str, ...] = ()) -> Any:
-    return importlib.import_module("_lib.topology").Scope(workstreams, types)
+def _scope(
+    workstreams: tuple[str, ...] = (),
+    types: tuple[str, ...] = (),
+    milestones: tuple[str, ...] = (),
+) -> Any:
+    return importlib.import_module("_lib.topology").Scope(workstreams, types, milestones)
+
+
+def _outside(tp, readers, rows, scope) -> list[tuple[int, str]]:
+    found = tp.pool(
+        rows,
+        open_numbers=[r["number"] for r in rows],
+        login="me",
+        scope=scope,
+        takes_over=False,
+        readers=readers,
+    )
+    return [(o.candidate.number, o.reason) for o in found.outside]
 
 
 # ---- dependencies (DEC-005) ------------------------------------------------------
@@ -243,6 +261,75 @@ def test_a_scope_takes_what_matches_each_part_it_names(tp, readers) -> None:
 def test_no_scope_takes_every_task(tp) -> None:
     assert tp.in_scope(None, None, None)
     assert not tp.in_scope(None, None, _scope(types=("test",)))
+
+
+def test_a_scope_with_milestones_takes_only_the_tasks_in_one_of_them(tp, readers) -> None:
+    """DEC-059 point 2: a milestone part narrows the pool to the Tasks in one of
+    the milestones it names."""
+    rows = [
+        _row(1, milestone="Sprint 1"),
+        _row(2, milestone="Sprint 2"),
+        _row(3, milestone="Later"),
+        _row(4),
+    ]
+    scope = _scope(milestones=("Sprint 1", "Sprint 2"))
+    assert _ready(tp, readers, rows, scope=scope) == [1, 2]
+    assert _ready(tp, readers, rows) == [1, 2, 3, 4]
+
+
+def test_a_task_in_no_milestone_falls_outside_a_scope_that_names_milestones(tp, readers) -> None:
+    rows = [_row(4)]
+    assert _ready(tp, readers, rows, scope=_scope(milestones=("Sprint 1",))) == []
+    assert _ready(tp, readers, rows, scope=_scope(workstreams=("cli",))) == [4]
+    assert not tp.in_scope("feature", "cli", _scope(milestones=("Sprint 1",)))
+    assert tp.in_scope("feature", "cli", _scope(milestones=("Sprint 1",)), "Sprint 1")
+
+
+def test_a_scope_with_milestones_and_workstreams_takes_what_matches_both(tp, readers) -> None:
+    rows = [
+        _row(1, workstream="cli", milestone="Sprint 1"),
+        _row(2, workstream="docs", milestone="Sprint 1"),
+        _row(3, workstream="cli", milestone="Later"),
+        _row(4, workstream="cli"),
+    ]
+    scope = _scope(workstreams=("cli",), milestones=("Sprint 1",))
+    assert _ready(tp, readers, rows, scope=scope) == [1]
+
+
+def test_a_ready_task_the_scope_leaves_out_carries_its_reason(tp, readers) -> None:
+    """`next-task` says why it skips each ready Task its seat's scope leaves out."""
+    rows = [
+        _row(1, workstream="cli", milestone="Sprint 1"),
+        _row(2, workstream="docs", milestone="Sprint 1"),
+        _row(3, workstream="cli", milestone="Later"),
+        _row(4, workstream="cli"),
+        _row(5, kind="docs", workstream="cli", milestone="Sprint 1"),
+    ]
+    scope = _scope(workstreams=("cli",), types=("feature",), milestones=("Sprint 1",))
+    assert _outside(tp, readers, rows, scope) == [
+        (2, "in the workstream docs"),
+        (3, 'in the milestone "Later"'),
+        (4, "in no milestone"),
+        (5, "of the type docs"),
+    ]
+    assert _outside(tp, readers, rows, None) == []
+
+
+def test_a_task_that_is_not_ready_is_not_said_to_be_left_out(tp, readers) -> None:
+    """Only a Task the pool would hand out is named as left out by the scope:
+    one held back by an open dependency, or one that is no ready Task, is not."""
+    rows = [
+        _row(1, body="Feature: #1\n\n## Dependencies\n\n- #9\n"),
+        _row(2, state_label="state:todo"),
+        _row(9, title="[Feature] the foundation"),
+    ]
+    assert _outside(tp, readers, rows, _scope(milestones=("Sprint 1",))) == []
+
+
+def test_a_milestone_title_read_from_github_is_shown_on_one_line(tp, readers) -> None:
+    rows = [_row(1, milestone="Later\n\x1b[2Jnow")]
+    ((_, reason),) = _outside(tp, readers, rows, _scope(milestones=("Sprint 1",)))
+    assert reason == 'in the milestone "Later\\n\\x1b[2Jnow"'
 
 
 # ---- the owner (DEC-035 point 6, DEC-059 point 9) -----------------------------------

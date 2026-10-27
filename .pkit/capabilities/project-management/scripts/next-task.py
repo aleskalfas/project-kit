@@ -31,7 +31,9 @@ Steps:
     A clone that holds no seat, holds a planner's seat or whose seat cannot be
     confirmed takes nothing. Outside a topology a clone takes with no scope.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
-    state issues out. The ready Tasks are ranked from it.
+    state issues out. The ready Tasks are ranked from it. A ready Task the
+    seat's scope leaves out is skipped: a line names those Tasks for each
+    reason, such as a Task in no milestone the scope names (DEC-059 point 2).
   - Where the clone takes part in instance ownership, the owner of each Task in
     Backlog assigned to its account is read first and folded
     (`_lib/instance_claims.read_owner`). The Tasks this clone owns come first,
@@ -58,6 +60,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -166,7 +169,7 @@ def main() -> int:
         classification=_read_schema(capability_root, "classification.yaml", yaml_loader),
         substrate_map=axis_labels.load_substrate_map(capability_root),
     )
-    ready = task_pool.candidates(
+    found = task_pool.pool(
         listing.rows or (),
         open_numbers=_numbers(listing),
         login=invoker.github_login,
@@ -174,7 +177,10 @@ def main() -> int:
         takes_over=taker.takes_over,
         readers=readers,
     )
+    ready = found.ready
     print(f"next-task: {_pool_line(len(ready), taker)}")
+    for line in _outside_lines(found.outside):
+        print(line)
 
     clone = taker.clone
     # This clone's own Tasks come before the pool: only a Task assigned to its
@@ -297,6 +303,8 @@ def _pool_line(count: int, taker: task_pool.Taker) -> str:
             parts.append("workstreams " + ", ".join(scope.workstreams))
         if scope.types:
             parts.append("types " + ", ".join(scope.types))
+        if scope.milestones:
+            parts.append("milestones " + ", ".join(f'"{t}"' for t in scope.milestones))
         within = "within the scope of " + " and ".join(parts)
     noun = "Task is" if count == 1 else "Tasks are"
     order = (
@@ -305,6 +313,19 @@ def _pool_line(count: int, taker: task_pool.Taker) -> str:
         else "its own first, then the highest in priority"
     )
     return f"{count} {noun} ready for {who}, {within}, {order}."
+
+
+def _outside_lines(outside: Iterable[task_pool.Outside]) -> list[str]:
+    """One line for each reason the seat's scope leaves ready Tasks out, naming
+    those Tasks by number, so a long backlog outside the scope costs a line for
+    each reason rather than one for each Task."""
+    numbers: dict[str, list[str]] = {}
+    for skipped in outside:
+        numbers.setdefault(skipped.reason, []).append(f"#{skipped.candidate.number}")
+    return [
+        f"  skipped {', '.join(named)}: outside the scope, {reason}"
+        for reason, named in numbers.items()
+    ]
 
 
 def _held(resolution: instance_ownership.OwnershipResolution) -> str:
