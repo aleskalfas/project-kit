@@ -3252,7 +3252,6 @@ def test_the_reason_names_the_kind_of_form_not_the_command(decide_mod, catalog, 
         "git push origin HEAD:refs/heads/feat-*",
         "git -C ~/repo push origin main",
         "git -C sub status",
-        "git -c core.pager=cat log",
         "git add *.py",
         "git add src/*.py",
         "git log -- '*.md'",
@@ -4244,3 +4243,355 @@ def test_filter_and_uv_run_hook_and_decide_parity(decide_mod, catalog):
             }
             d_hook, _ = decide_mod.hook_decide(model, catalog, payload)
             assert d_decide == d_hook == expected, (cmd, subject)
+
+
+# ---- a deny reads the command a runner runs, and git's configuration (#1990) --
+#
+# ADR-025 point 5: a deny is matched on the command a listed runner runs, as on
+# the runner: `env`, `command`, `exec`, `nice`, `nohup`, `timeout`, `time`,
+# `xargs`, `uv run`, find's `-exec`, `-execdir`, `-ok` and `-okdir`, and `sh`,
+# `bash`, `zsh` or `dash` given `-c`, whose script is read again one level
+# deep. Where the core cannot read what a runner runs, every deny may bind: no
+# grant allows the command, and every guardrail is named. Configuration a git
+# command sets or writes (`-c`, `--config-env`, `git config` of an `alias.*`,
+# `remote.*.push`, `remote.*.mirror` or `include*` key) keeps a deny on git
+# from telling, as `HOME=…` does. Grants stay as written, save point 2's glob
+# case: a pathname pattern that may expand to a word opening with `-`, before
+# the subcommand or flag a grant names, keeps that grant from allowing.
+
+_GUARDRAILS = ["destructive-fs", "privilege-escalation", "vcs-history-rewrite"]
+
+# (command, the guardrail it runs): denied in every posture.
+_RUNNER_DENIES = [
+    # the architect's table on #1990
+    ("find . -exec rm -rf {} +", "destructive-fs"),
+    ("xargs rm -rf", "destructive-fs"),
+    ("env rm -rf ~", "destructive-fs"),
+    ("sh -c 'rm -rf ~'", "destructive-fs"),
+    ("uv run rm -rf ~", "destructive-fs"),
+    # find's other forms, its `\;` terminator, and more than one clause
+    ("find . -name x -exec rm -rf {} \\;", "destructive-fs"),
+    ("find . -execdir rm -r {} +", "destructive-fs"),
+    ("find . -ok rm -rf {} \\;", "destructive-fs"),
+    ("find . -okdir rm -rf {} +", "destructive-fs"),
+    ("find . -exec true \\; -exec rm -rf {} +", "destructive-fs"),
+    ("find . -exec rm + -rf {} \\;", "destructive-fs"),
+    ("find . -exec rm -rf {} ';'", "destructive-fs"),
+    # xargs behind a pipe and behind its options
+    ("ls | xargs rm -rf", "destructive-fs"),
+    ("xargs -0 rm -rf", "destructive-fs"),
+    ("xargs -I{} rm -rf {}", "destructive-fs"),
+    ("xargs -I {} rm -rf {}", "destructive-fs"),
+    ("xargs -n 1 -P4 rm -rf", "destructive-fs"),
+    ("xargs --null --max-args=1 rm -rf", "destructive-fs"),
+    # env behind its options and assignments, and by its path
+    ("env -i rm -rf ~", "destructive-fs"),
+    ("env - rm -rf ~", "destructive-fs"),
+    ("env -u HOME FOO=1 rm -rf ~", "destructive-fs"),
+    ("env -- rm -rf ~", "destructive-fs"),
+    ("/usr/bin/env rm -rf ~", "destructive-fs"),
+    ("env PATH=/tmp/x sudo id", "privilege-escalation"),
+    # a shell given `-c`, in a bundle or behind its other options
+    ('bash -c "rm -rf ~"', "destructive-fs"),
+    ("zsh -c 'rm -rf ~'", "destructive-fs"),
+    ("dash -c 'rm -rf ~'", "destructive-fs"),
+    ("/bin/sh -ec 'rm -rf ~'", "destructive-fs"),
+    ("bash -o pipefail -c 'rm -rf ~'", "destructive-fs"),
+    ("bash --norc -lc 'git push --force origin main'", "vcs-history-rewrite"),
+    ("sh -c 'cd /x && rm -rf ~'", "destructive-fs"),
+    ("sh -c 'git status; sudo id'", "privilege-escalation"),
+    # a sure deny wins where the script also holds what the core cannot read
+    ("xargs sh -c 'rm -rf \"$@\"' _", "destructive-fs"),
+    # uv run behind its options, and uv's own before `run`
+    ("uv run --directory /x rm -rf ~", "destructive-fs"),
+    ("uv run --with x -- rm -rf ~", "destructive-fs"),
+    ("uv --quiet run rm -rf ~", "destructive-fs"),
+    ("uv run -q git push -f origin main", "vcs-history-rewrite"),
+    ("uv run --python=3.12 -m x && uv run git push origin +main", "vcs-history-rewrite"),
+    # the other runners
+    ("nice rm -rf ~", "destructive-fs"),
+    ("nice -n 5 rm -rf ~", "destructive-fs"),
+    ("nice -10 rm -rf ~", "destructive-fs"),
+    ("nohup rm -rf ~", "destructive-fs"),
+    ("timeout 5 rm -rf ~", "destructive-fs"),
+    ("timeout -s KILL --preserve-status 5 rm -rf ~", "destructive-fs"),
+    ("time rm -rf ~", "destructive-fs"),
+    ("time -p rm -rf ~", "destructive-fs"),
+    ("command rm -rf ~", "destructive-fs"),
+    ("command -p rm -rf ~", "destructive-fs"),
+    ("exec rm -rf ~", "destructive-fs"),
+    ("exec -a x rm -rf ~", "destructive-fs"),
+    # a runner behind a runner, and a guardrail behind a leading `cd`
+    ("env nice xargs rm -rf", "destructive-fs"),
+    ("find . -exec env rm -rf {} +", "destructive-fs"),
+    ("xargs git push --force origin main", "vcs-history-rewrite"),
+    ("env sudo id", "privilege-escalation"),
+    ("cd /x && xargs sudo rm", "privilege-escalation"),
+    # the forms point 5 lists hold behind a runner too
+    ("env /bin/rm -fr build", "destructive-fs"),
+    ("xargs git push -uf origin main", "vcs-history-rewrite"),
+]
+
+
+@pytest.mark.parametrize("command,privilege", _RUNNER_DENIES)
+def test_a_deny_binds_on_the_command_a_runner_runs(decide_mod, catalog, command, privilege):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "deny", f"{command!r}: {why}"
+        assert privilege in why, why
+
+
+# A runner whose command the core cannot read: every guardrail may bind.
+_UNREAD_RUNNERS = [
+    # the architect's table on #1990
+    "find . -exec sh -c 'rm \"$1\"' _ {} \\;",
+    "env -S 'rm -rf ~'",
+    # an option of the runner the core does not know
+    "env --split-string='rm -rf ~'",
+    "xargs -Z rm -rf x",
+    "nohup --weird rm -rf ~",
+    "uv run --no-such-option rm -rf ~",
+    # a word the shell expands where the runner's options or program stand
+    "env $CMD",
+    "xargs $CMD",
+    "find . -exec $CMD {} +",
+    "find . $X",
+    "find . -e[x]ec rm -rf {} +",
+    "find . {-exec,-print} rm -rf {} +",
+    "env -* rm -rf ~",
+    "timeout $T rm -rf ~",
+    'sh -c "$CMD"',
+    # a script holding a construct the core cannot read, or nested deeper
+    "bash -c 'rm $(cat list)'",
+    "sh -c \"sh -c 'rm -rf ~'\"",
+    "xargs sh -c 'bash -c \"rm -rf ~\"'",
+]
+
+
+@pytest.mark.parametrize("command", _UNREAD_RUNNERS)
+def test_a_runner_the_core_cannot_read_names_every_guardrail(decide_mod, catalog, command):
+    request = _bash(command, "operator")
+    d, why = decide_mod.decide(MODEL, catalog, request)
+    assert d == "abstain", f"{command!r}: {why}"
+    d, why = decide_mod.decide(MODEL, catalog, request, posture="strict")
+    assert d == "deny", f"{command!r}: {why}"
+    hidden = decide_mod.hidden_guardrails(MODEL, catalog, request)
+    assert sorted(hidden) == _GUARDRAILS, (command, hidden)
+    for phrases in hidden.values():
+        assert "a command a runner runs that the core cannot read" in phrases, hidden
+
+
+def test_a_runner_the_core_cannot_read_keeps_a_grant_on_it_from_allowing(decide_mod, catalog):
+    # A grant on the runner still allows what it runs where the core reads it
+    # and no deny binds, but not where the core cannot read it.
+    model = {
+        "posture": "lenient",
+        "grants": [
+            *MODEL["grants"],
+            {"subject": "operator", "privilege": _tok("uv-run"), "effect": "allow"},
+        ],
+    }
+    for command, verdict in (
+        ("uv run pytest -q", "allow"),
+        ("uv run --directory /x pkit validate", "allow"),
+        ("uv run --with x --frozen -p 3.12 pytest", "allow"),
+        ("uv run -m pytest tests/*.py", "allow"),
+        ("uv run sh -c 'git status'", "allow"),
+        ("uv run --no-such-option pytest", "abstain"),
+        ("uv run $TOOL", "abstain"),
+        ("uv run rm -rf ~", "deny"),
+    ):
+        d, why = decide_mod.decide(model, catalog, _bash(command, "operator"))
+        assert d == verdict, (command, why)
+
+
+# (command, what keeps the deny on git from telling): git configuration the
+# command sets or writes, which may hold an alias or a forced refspec.
+_GIT_CONFIG_COMMANDS = [
+    # the architect's table on #1990
+    "git -c alias.p='push --force' p",
+    "git -c remote.origin.push=+main push",
+    "git config alias.pf 'push --force'",
+    # the cost the record accepts: every `git -c`
+    "git -c core.quotepath=off status",
+    "git -c core.pager=cat log",
+    "git -C . -c x=y status",
+    "git --config-env=alias.p=P p",
+    "git -[c] alias.p=push p",
+    # git config of the keys that may set a forced push or an alias
+    "git config --global include.path ~/x",
+    "git config includeIf.gitdir:~/x.path y",
+    "git config remote.origin.mirror true",
+    "git config REMOTE.origin.PUSH +main",
+    "git config set alias.x y",
+    "git config --add alia?.x y",
+    # behind a runner
+    "env git -c alias.p=x p",
+]
+
+
+@pytest.mark.parametrize("command", _GIT_CONFIG_COMMANDS)
+def test_git_configuration_a_command_sets_keeps_a_deny_from_telling(decide_mod, catalog, command):
+    request = _bash(command, "operator")
+    d, why = decide_mod.decide(MODEL, catalog, request)
+    assert d == "abstain", f"{command!r}: {why}"
+    assert "vcs-history-rewrite" in why and "configuration the command sets" in why, why
+    d, why = decide_mod.decide(MODEL, catalog, request, posture="strict")
+    assert d == "deny", f"{command!r}: {why}"
+    hidden = decide_mod.hidden_guardrails(MODEL, catalog, request)
+    assert list(hidden) == ["vcs-history-rewrite"], (command, hidden)
+
+
+@pytest.mark.parametrize(
+    "command,verdict",
+    [
+        # the architect's table on #1990: no deny binds on what find runs, and
+        # an alias in a file git reads is the grant's breadth
+        ("find . -name x -exec grep -l y {} +", "abstain"),
+        ("find . -name x -exec grep -l y {} \\;", "abstain"),
+        ("git pf", "allow"),
+        # a runner that runs no guarded command is decided as before
+        ("env git status", "abstain"),
+        ("xargs grep x", "abstain"),
+        ("find . -name '*.py'", "abstain"),
+        ("find . \\( -name a -o -name b \\) -print", "abstain"),
+        ("sh x.sh", "abstain"),
+        ("bash -n x.sh", "abstain"),
+        ("command -v git", "abstain"),
+        ("time git status", "abstain"),
+        # `-c` behind git's subcommand is the subcommand's, and other keys of
+        # git config are the grant's breadth
+        ("git commit -c HEAD", "allow"),
+        ("git grep -c foo", "allow"),
+        ("git config user.name x", "allow"),
+        ("git config --list", "allow"),
+        ("git push origin main", "allow"),
+        # the segments `_SEP` yields are still read, `\;` cut, so a deny
+        # still errs toward binding there
+        ("echo \\; rm -rf ~", "deny"),
+    ],
+)
+def test_a_command_no_deny_binds_behind_is_decided_as_before(decide_mod, catalog, command, verdict):
+    request = _bash(command, "operator")
+    d, why = decide_mod.decide(MODEL, catalog, request)
+    assert d == verdict, f"{command!r}: {why}"
+    assert decide_mod.hidden_guardrails(MODEL, catalog, request) == {}, command
+
+
+def test_the_runner_reading_is_bounded(decide_mod, catalog):
+    # A crafted chain of runners or options must not stall the hook: past the
+    # runners the core reads, it cannot tell, and defers.
+    for command in (
+        "env " * 40 + "rm -rf ~",
+        "nice " * 40 + "git status",
+        "xargs -0 " * 400 + "true",
+    ):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+        assert d in ("deny", "abstain"), (command[:40], why)
+    d, _ = decide_mod.decide(MODEL, catalog, _bash("env " * 40 + "git status", "operator"))
+    assert d == "abstain"
+
+
+# Point 2's glob case: a narrow grant, one naming a subcommand or flags.
+_NARROW = {
+    "npm-version": {
+        "description": "npm --version",
+        "recognize": {"bash": [{"cmd": "npm", "flag_any": ["--version"]}]},
+    },
+    "docker-ps": {
+        "description": "docker ps",
+        "recognize": {"bash": [{"cmd": "docker", "subcommand": ["ps"]}]},
+    },
+}
+
+
+@pytest.mark.parametrize(
+    "command,verdict",
+    [
+        ("docker ps", "allow"),
+        ("docker --debug ps", "allow"),
+        ("docker -* ps", "abstain"),
+        ("docker -[H] ps", "abstain"),
+        ("docker ps -*", "allow"),
+        ("docker ps *.txt", "allow"),
+        ("npm --version", "allow"),
+        ("npm -* --version", "abstain"),
+        ("npm --version -*", "allow"),
+        ("npm '-*' --version", "allow"),
+        ("npm -\\* --version", "allow"),
+        ("npm \\-* --version", "abstain"),
+    ],
+)
+def test_a_pathname_pattern_before_what_a_narrow_grant_names_keeps_it_from_allowing(
+    decide_mod, catalog, command, verdict
+):
+    wide = {"privileges": {**catalog["privileges"], **_NARROW}}
+    model = {
+        "posture": "lenient",
+        "grants": [
+            *MODEL["grants"],
+            {
+                "subject": "operator",
+                "privilege": [_tok("docker-ps"), _tok("npm-version")],
+                "effect": "allow",
+            },
+        ],
+    }
+    d, why = decide_mod.decide(model, wide, _bash(command, "operator"))
+    assert d == verdict, (command, why)
+    if verdict == "abstain":
+        assert "pathname pattern" in why and "*" not in why, why
+        d, why = decide_mod.decide(model, wide, _bash(command, "operator"), posture="strict")
+        assert d == "deny", (command, why)
+
+
+def test_uv_run_behind_a_pathname_pattern_is_not_allowed(decide_mod, catalog):
+    # uv is a runner as well as a narrow grant: a pathname pattern among its
+    # options keeps the core from reading what it runs, and one after the
+    # program it runs is that program's argument.
+    model = {
+        "posture": "lenient",
+        "grants": [
+            *MODEL["grants"],
+            {"subject": "operator", "privilege": _tok("uv-run"), "effect": "allow"},
+        ],
+    }
+    for command, verdict in (
+        ("uv run x", "allow"),
+        ("uv -* run x", "abstain"),
+        ("uv -[q] run pytest", "abstain"),
+        ("uv run pytest *.py", "allow"),
+        ("uv run ruff check -*", "allow"),
+        ("uv run pytest tests/*.py", "allow"),
+    ):
+        d, why = decide_mod.decide(model, catalog, _bash(command, "operator"))
+        assert d == verdict, (command, why)
+
+
+def test_a_grant_naming_only_the_program_matches_a_glob_as_written(decide_mod, catalog):
+    # `git` and `gh` grants name the program alone, so a pathname pattern
+    # after it is read as written. Before git's subcommand one may still be
+    # `-c`, which keeps the deny on git from telling.
+    for command, verdict in (
+        ("git add -*", "allow"),
+        ("gh pr list -*", "allow"),
+        ("git -* status", "abstain"),
+    ):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+        assert d == verdict, (command, why)
+
+
+def test_runners_hook_and_decide_parity(decide_mod, catalog):
+    """The runners are read in the shared core, so hook_decide and decide
+    agree (ADR-002 / ADR-003)."""
+    for cmd, expected in (
+        ("find . -exec rm -rf {} +", "deny"),
+        ("env -S 'rm -rf ~'", "abstain"),
+        ("git -c alias.p='push --force' p", "abstain"),
+        ("git pf", "allow"),
+        ("find . -name x -exec grep -l y {} +", "abstain"),
+    ):
+        d_decide, _ = decide_mod.decide(MODEL, catalog, _bash(cmd, "operator"))
+        payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+        d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)
+        assert d_decide == d_hook == expected, cmd

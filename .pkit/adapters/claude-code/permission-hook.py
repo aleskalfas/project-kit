@@ -8,7 +8,8 @@ decides via the shared, harness-neutral decision core
 (`.pkit/permissions/decide.py`) and prints a `permissionDecision`, or abstains.
 Where the core abstains on a call that may hide a form of a guardrail, the
 hook asks the person instead, except in auto or bypass mode, where the person
-chose not to be asked. On an Edit/Write to a foreign path it asks in every mode.
+chose not to be asked (ADR-025 point 7). On an Edit/Write to a foreign path it
+asks in every mode.
 
 Runtime: bare system `python3` — NO uv, no PEP-723 metadata, no third-party
 deps at startup. Running under bare python3 is required so the hook can start
@@ -159,14 +160,16 @@ def main() -> int:
     except Exception as exc:  # inert: capture must never affect enforcement
         _debug(f"diagnostic capture fault (inert): {exc!r}")
 
-    # A guardrail the core cannot tell (ADR-025 point 2, #1982): where the core
-    # abstained on a Bash call that may hide a form of a guardrail, such as
-    # `git push origin --forc[e]`, Claude Code's own rules, such as the
-    # baseline's `Bash(git:*)`, would run it unasked. The core's abstain is a
-    # prompt, so the hook asks the person. A strict posture has denied such a
-    # call already. The reason names the guardrails and the kinds of form,
-    # never the command's text. A fault keeps the abstain. The `pkit
-    # permissions probe` drives `hook_decide` alone, so it reports the abstain.
+    # A guardrail the core cannot rule out (ADR-025 point 7, #1982, #1990):
+    # where the core abstained on a Bash call that may hide a form of a
+    # guardrail, such as `git push origin --forc[e]`, git configuration the
+    # call sets, or a command a runner runs that the core cannot read, Claude
+    # Code's own rules, such as the baseline's `Bash(git:*)` or `Bash(find:*)`,
+    # would run it unasked. So the hook asks the person. A strict posture has
+    # denied such a call already. The reason names the guardrails and the
+    # kinds of form, never the command's text. A fault keeps the abstain. The
+    # `pkit permissions probe` drives `hook_decide` alone, so it reports the
+    # abstain.
     # In auto or bypass mode the person chose not to be asked, and a hook's
     # ask would prompt them all the same, so the hook defers there and the
     # harness's own mode decides (#2004). It reads the mode from the payload
@@ -190,7 +193,7 @@ def main() -> int:
                     "ask",
                     f"the guardrail {sorted(hidden)} may bind on what the shell runs ({kinds}), "
                     f"which the permission code cannot see: confirm the command "
-                    f"(ADR-025 point 2: the core defers, and the harness's own rules may allow it)",
+                    f"(ADR-025 point 7: the core defers, and the harness's own rules may allow it)",
                 )
         except Exception as exc:  # the ask must never break fail-open
             _debug(f"hidden-guardrail check fault → ignore: {exc!r}")

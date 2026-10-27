@@ -166,8 +166,8 @@ _EXPORT_OPERAND = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\+?=|[ \t]*$)")
 # variables and cannot be complete: a variable outside it that changes which
 # program runs is a hole on the allow side, to be added here when found. The
 # program's own settings, such as `GIT_PAGER`, are not here: what a granted
-# program is told to run is the grant's breadth, as with
-# `git -c core.fsmonitor=…`, which a `git` grant already lets run any program.
+# program is told to run is the grant's breadth, as a pager set in git's
+# configuration file is.
 _PROGRAM_VAR = re.compile(
     r"^(?:[A-Za-z0-9_]*(?:PATH|path)|LD_[A-Za-z0-9_]*|DYLD_[A-Za-z0-9_]*"
     r"|BASH_ENV|ENV|ZDOTDIR|NULLCMD|READNULLCMD|PYTHON[A-Za-z0-9_]*|PERL[A-Za-z0-9_]*"
@@ -224,7 +224,95 @@ _UNSEEN_KIND = {
     "glob": "a pathname pattern",
     "config": "an assignment to a variable that changes the program's configuration",
     "options": "more options before a subcommand than the core reads",
+    "git-config": "configuration the command sets or writes",
+    "runner": "a command a runner runs that the core cannot read",
 }
+# The splitter that finds what a runner runs (#1990, ADR-025 point 5): `_SEP`,
+# save that a `;` behind a backslash, where whitespace or the start of the
+# command stands before that backslash, is no separator. The shell passes such
+# a `\;` on as the word `;`, as find's terminator in `find . -exec rm {} \;`.
+# Nothing quotes a backslash that whitespace stands before, and inside quotes a
+# `;` is a word anyway. The denies still read each segment `_SEP` yields, so
+# this only adds what a runner runs across a `\;`.
+_RUN_SEP = re.compile(r"\s*(?:&&|\|\||\||(?<![ \t\n]\\)(?<!\A\\);|&|\n)\s*")
+# The runners whose command a deny reads (#1990, ADR-025 point 5), with the
+# options of each that the core knows, as GNU's, BSD's and the shells' read
+# them. Each holds, in turn:
+# - the short options that take no value, `-` among them where a lone `-` is
+#   one, as `env -` is `env -i`
+# - those that take a value, in the rest of their word or the next word
+# - those that take a value only in the rest of their word, as GNU xargs's `-i`
+# - the long options that take no value, or one only after `=`
+# - those that take a value, after `=` or in the next word
+# Any other option keeps the core from reading what the runner runs. `uv run`,
+# find's `-exec`, and a shell given `-c` are read on their own terms.
+_RUNNERS = {
+    "env": (
+        "-iv0", "uCPLU", "",
+        frozenset({"ignore-environment", "null", "debug", "list-signal-handling",
+                   "block-signal", "default-signal", "ignore-signal"}),
+        frozenset({"unset", "chdir"}),
+    ),
+    "command": ("pvV", "", "", frozenset(), frozenset()),
+    "exec": ("cl", "a", "", frozenset(), frozenset()),
+    "nice": ("0123456789", "n", "", frozenset(), frozenset({"adjustment"})),
+    "nohup": ("", "", "", frozenset(), frozenset()),
+    "timeout": (
+        "v", "sk", "",
+        frozenset({"preserve-status", "foreground", "verbose"}),
+        frozenset({"signal", "kill-after"}),
+    ),
+    "time": (
+        "pvaqlh", "of", "",
+        frozenset({"portability", "verbose", "append", "quiet"}),
+        frozenset({"output", "format"}),
+    ),
+    "xargs": (
+        "0rtpxo", "ILnPsEdaJRS", "ile",
+        frozenset({"null", "no-run-if-empty", "verbose", "interactive", "exit", "open-tty",
+                   "show-limits", "replace", "max-lines", "eof"}),
+        frozenset({"arg-file", "delimiter", "max-args", "max-procs", "max-chars",
+                   "process-slot-var"}),
+    ),
+}
+# uv's own options and `uv run`'s, as clap reads them: the same five parts as
+# `_RUNNERS` holds. uv is a runner only through its `run` subcommand.
+_UV_OPTIONS = (
+    "msUnqvhV", "wifPCp", "",
+    frozenset({
+        "all-extras", "no-dev", "only-dev", "dev", "no-default-groups", "all-groups", "module",
+        "no-editable", "exact", "no-env-file", "isolated", "active", "no-active", "no-sync",
+        "locked", "frozen", "script", "gui-script", "all-packages", "no-project", "no-index",
+        "upgrade", "no-sources", "reinstall", "compile-bytecode", "no-build-isolation",
+        "no-build", "no-binary", "no-cache", "refresh", "managed-python", "no-managed-python",
+        "no-python-downloads", "quiet", "verbose", "system-certs", "native-tls", "offline",
+        "no-progress", "no-config", "help", "version", "preview", "no-preview",
+    }),
+    frozenset({
+        "extra", "no-extra", "group", "no-group", "only-group", "no-editable-package",
+        "env-file", "with", "with-editable", "with-requirements", "package", "python-platform",
+        "index", "default-index", "index-url", "extra-index-url", "find-links",
+        "index-strategy", "keyring-provider", "upgrade-package", "upgrade-group", "resolution",
+        "prerelease", "prerelease-package", "fork-strategy", "exclude-newer",
+        "exclude-newer-package", "no-sources-package", "reinstall-package", "link-mode",
+        "config-setting", "config-settings-package", "no-build-isolation-package",
+        "no-build-package", "no-binary-package", "cache-dir", "refresh-package", "python",
+        "color", "allow-insecure-host", "directory", "project", "config-file",
+        "python-preference", "preview-features",
+    }),
+)
+# The shells whose `-c` script a deny reads, one level deep.
+_SHELLS = frozenset({"sh", "bash", "zsh", "dash"})
+# find's actions that run a command.
+_FIND_RUNS = ("-exec", "-execdir", "-ok", "-okdir")
+# How many runners, one behind another, the core reads in a segment. Past them
+# it cannot tell, so a crafted chain never stalls the hook.
+_RUNNER_HOPS = 8
+# A key of git's configuration that may set an alias or a forced push (#1990):
+# an alias, a remote's push refspec or mirror flag, and an include, which may
+# pull in any of them. Section and key names are read in any case, as git
+# reads them.
+_GIT_CONFIG_KEY = re.compile(r"alias\.|include|remote\..*\.(?:push|mirror)$", re.IGNORECASE)
 # fmt: on
 
 
@@ -661,6 +749,315 @@ def _export_prefix(words: list[tuple[str, str]]) -> int:
     return 0
 
 
+# ---- what a runner runs, and git's configuration (#1990) --------------------
+#
+# A deny is matched on the command a listed runner runs, as well as on the
+# runner (ADR-025 point 5): `env`, `command`, `exec`, `nice`, `nohup`,
+# `timeout`, `time`, `xargs`, `uv run`, find's `-exec`, `-execdir`, `-ok` and
+# `-okdir`, and `sh`, `bash`, `zsh` or `dash` given `-c`, whose script is read
+# again as a command, one level deep. Where the core cannot read what a runner
+# runs, every deny may bind. Configuration a git command sets or writes keeps a
+# deny on git from telling, as an assignment that changes its configuration
+# does. Only the denies read these: a grant still matches the command as
+# written, since reading a runner for a grant would widen what it allows.
+
+
+def _expands(text: str) -> bool:
+    """Does the shell turn this word, as written, into something the core
+    cannot read: an expansion, a substitution or a redirection (`_UNTRUSTED`),
+    a pathname pattern or a brace expansion? Where such a word stands among a
+    runner's options or names its program, the core cannot read what the
+    runner runs."""
+    return bool(_UNTRUSTED.search(text)) or _globbed(text) or _brace_expansion(text)
+
+
+def _skip_options(rest: list[tuple[str, str]], spec: tuple[Any, ...]) -> int | None:
+    """Where a runner's command starts among the words after the runner: past
+    the options `spec` names (`_RUNNERS`), as getopt reads them, up to the
+    first word that is no option, or past `--`. None where an option is one
+    the core does not know, or where a word the shell expands stands among the
+    options or names the program."""
+    short_flags, short_values, short_attached, long_flags, long_values = spec
+    index = 0
+    while index < len(rest):
+        text, word = rest[index]
+        if _expands(text):
+            return None
+        if word == "--":
+            return index + 1
+        if word == "-" and "-" in short_flags:
+            index += 1
+            continue
+        if word.startswith("--"):
+            name = word[2:].split("=", 1)[0]
+            if name in long_values and "=" not in word:
+                index += 1
+                if index < len(rest) and _expands(rest[index][0]):
+                    return None
+            elif name not in long_flags and name not in long_values:
+                return None
+            index += 1
+            continue
+        if not word.startswith("-") or word == "-":
+            return index
+        for at, char in enumerate(word[1:], start=1):
+            if char in short_values:
+                if at == len(word) - 1:
+                    index += 1
+                    if index < len(rest) and _expands(rest[index][0]):
+                        return None
+                break
+            if char in short_attached:
+                break
+            if char == "-" or char not in short_flags:
+                return None
+        index += 1
+    return index
+
+
+def _uv_command(
+    rest: list[tuple[str, str]],
+) -> tuple[list[list[tuple[str, str]]], str | None, bool]:
+    """The command `uv run` runs, as `_runner_commands` gives it: past uv's own
+    options, the `run` subcommand and its options. Nothing where uv runs no
+    `run`. `--env-file` loads variables the core never sees, so it counts as
+    an assignment that changes the program's configuration."""
+    start = _skip_options(rest, _UV_OPTIONS)
+    if start is None:
+        return [], None, True
+    if start >= len(rest) or rest[start][1] != "run":
+        return [], None, False
+    after = _skip_options(rest[start + 1 :], _UV_OPTIONS)
+    if after is None:
+        return [], None, True
+    end = start + 1 + after
+    given = any(word.split("=", 1)[0] == "--env-file" for _, word in rest[:end])
+    return ([rest[end:]] if end < len(rest) else []), ("config" if given else None), False
+
+
+def _may_name_a_find_action(word: str) -> bool:
+    """May a pathname pattern of find's own expand to an action that runs a
+    command (`_FIND_RUNS`)? Always where it holds a character zsh's
+    EXTENDED_GLOB reads, which the standard library's matcher does not."""
+    return any(char in word for char in "^#~") or any(
+        fnmatch.fnmatchcase(action, word) for action in _FIND_RUNS
+    )
+
+
+def _find_commands(rest: list[tuple[str, str]]) -> tuple[list[list[tuple[str, str]]], bool]:
+    """The commands find runs, each from after an action of `_FIND_RUNS` up to
+    its `;`, or its `+` right behind `{}`, as GNU and BSD find end one. And
+    whether a word of find's own may hide such an action: an expansion, a
+    brace expansion, or a pathname pattern that may expand to one. A
+    substitution or a redirection there hides none, so find's `\\(` is read."""
+    commands: list[list[tuple[str, str]]] = []
+    index = 0
+    while index < len(rest):
+        text, word = rest[index]
+        if word in _FIND_RUNS:
+            start = end = index + 1
+            while end < len(rest):
+                ender = rest[end][1]
+                if ender == ";" or (ender == "+" and end > start and rest[end - 1][1] == "{}"):
+                    break
+                end += 1
+            commands.append(rest[start:end])
+            index = end + 1
+            continue
+        if "$" in text or "`" in text or _brace_expansion(text):
+            return commands, True
+        if _globbed(text) and _may_name_a_find_action(word):
+            return commands, True
+        index += 1
+    return commands, False
+
+
+def _shell_script(rest: list[tuple[str, str]]) -> tuple[bool, str | None]:
+    """The script a shell given `-c` runs, from the words after the shell's
+    name: the first word that is no option, where an option bundle holding
+    `c` came before it. `-o` and `-O` take the next word, as `--rcfile` and
+    `--init-file` do. Also whether the core cannot read it: a word the shell
+    expands where an option may stand, or as the script itself. None where
+    the shell is given no `-c`."""
+    has_c = False
+    index = 0
+    while index < len(rest):
+        text, word = rest[index]
+        if word in ("--", "-"):
+            index += 1
+            break
+        if not (len(word) > 1 and word[0] in "-+"):
+            break
+        if _expands(text):
+            return True, None
+        if word.startswith("--"):
+            index += 2 if word in ("--rcfile", "--init-file") else 1
+            continue
+        has_c = has_c or (word[0] == "-" and "c" in word[1:])
+        index += 2 if ("o" in word[1:] or "O" in word[1:]) else 1
+    if index >= len(rest):
+        return False, None
+    text, word = rest[index]
+    if not has_c:
+        return _expands(text), None
+    return _expands(text), word
+
+
+def _runner_commands(
+    name: str, rest: list[tuple[str, str]]
+) -> tuple[list[list[tuple[str, str]]], str | None, bool]:
+    """The commands the runner `name` runs, given the words after it; the
+    configuration kind it hands them, "config" where `env` assigns, or `uv run`
+    loads, a variable that changes it; and whether the core cannot read them.
+    Nothing for a program that is no runner, and for a shell, whose `-c`
+    script `_runner_parts` reads."""
+    if name == "find":
+        commands, unread = _find_commands(rest)
+        return commands, None, unread
+    if name == "uv":
+        return _uv_command(rest)
+    spec = _RUNNERS.get(name)
+    if spec is None:
+        return [], None, False
+    index = _skip_options(rest, spec)
+    if index is None:
+        return [], None, True
+    given = None
+    if name == "env":
+        # env reads every word holding `=` before its program as an
+        # assignment, quoted or not.
+        while index < len(rest) and "=" in rest[index][1]:
+            if _expands(rest[index][0]):
+                return [], None, True
+            if _CONFIG_VAR.match(rest[index][1]):
+                given = "config"
+            index += 1
+    if name == "timeout":
+        # timeout's duration stands before its program.
+        if index < len(rest) and _expands(rest[index][0]):
+            return [], None, True
+        index += 1
+    return ([rest[index:]] if index < len(rest) else []), given, False
+
+
+def _git_configures(words: list[tuple[str, str]]) -> str | None:
+    """"git-config" where a git command sets configuration, which may hold an
+    alias or a forced refspec (#1990, ADR-025 point 5): `-c` or `--config-env`
+    before its subcommand, or `git config` naming a key `_GIT_CONFIG_KEY`
+    matches. A word the shell expands where such an option or key may stand
+    counts too. Configuration git reads from its files is the grant's breadth,
+    and no such setting."""
+    if not words or _program_name(words[0][1]) != "git":
+        return None
+    rest = words[1:]
+    places = _subcommand_candidates(rest)
+    for text, word in rest[: places[-1] if places else len(rest)]:
+        if word == "-c" or word.startswith("--config-env"):
+            return "git-config"
+        if _may_open_flag(text, word) or _brace_expansion(text):
+            return "git-config"
+    for place in places:
+        if rest[place][1] != "config":
+            continue
+        for text, word in rest[place + 1 :]:
+            if _GIT_CONFIG_KEY.match(word) or _globbed(text) or _brace_expansion(text):
+                return "git-config"
+    return None
+
+
+def _names_runner(words: list[tuple[str, str]]) -> bool:
+    """Does a segment whose words the core cannot read name a runner? Its
+    first word is read with its quotes and backslashes dropped."""
+    name = _program_name(re.sub(r"[\"'\\]", "", words[0][0]))
+    return name in _RUNNERS or name in _SHELLS or name in ("find", "uv")
+
+
+def _runner_parts(
+    words: list[tuple[str, str]], kind: str | None, depth: int
+) -> tuple[list[tuple[list[tuple[str, str]], str | None]], bool]:
+    """Each command the runner at the front of `words` runs, read through
+    every runner behind it, with the configuration kind it carries; and
+    whether the core cannot read one. A shell's `-c` script is split and read
+    again as a command (`_deny_parts`), one level deep: a script at `depth` 1
+    that runs another is deeper nesting. Past `_RUNNER_HOPS` runners the core
+    cannot tell."""
+    parts: list[tuple[list[tuple[str, str]], str | None]] = []
+    opaque = False
+    pending = [(words, kind)]
+    hops = 0
+    while pending:
+        current, carried = pending.pop()
+        hops += 1
+        if hops > _RUNNER_HOPS:
+            return parts, True
+        name = _program_name(current[0][1])
+        if name in _SHELLS:
+            unread, script = _shell_script(current[1:])
+            opaque = opaque or unread
+            if script is not None and depth > 0:
+                opaque = True
+            elif script is not None:
+                inner, inner_opaque = _deny_parts(script, depth + 1)
+                parts.extend((found, found_kind or carried) for found, found_kind in inner)
+                opaque = opaque or inner_opaque or bool(_doubts(script))
+            continue
+        commands, given, unread = _runner_commands(name, current[1:])
+        opaque = opaque or unread
+        for command in commands:
+            if not command:
+                continue
+            if _expands(command[0][0]):
+                opaque = True
+                continue
+            handed = carried or given
+            parts.append((command, handed or _git_configures(command)))
+            pending.append((command, handed))
+    return parts, opaque
+
+
+def _deny_parts(
+    command: str, depth: int
+) -> tuple[list[tuple[list[tuple[str, str]], str | None]], bool]:
+    """The commands a deny reads in a Bash command, each with what keeps a
+    deny on its program from telling its configuration ("config", "git-config"
+    or None); and whether the core cannot read what a runner runs.
+
+    Each segment `_SEP` yields is one, as the denies read it before #1990. So
+    is each command a runner runs, found in the segments `_RUN_SEP` yields,
+    which keep find's `\\;` in its segment. An assignment that changes the
+    program's configuration counts where the shell hands it on: in front of a
+    command, for that command, and in a segment that only assigns or exports,
+    `builtin export` included, for the segments after it.
+
+    It reads the command with each redirection that writes no file removed
+    (#2002), so a program behind one, as in `2>/dev/null rm -rf ~`, is the
+    program a deny reads."""
+    cleaned = _without_harmless_redirections(command).strip()
+    parts: list[tuple[list[tuple[str, str]], str | None]] = []
+    opaque = False
+    for splitter in (_SEP, _RUN_SEP):
+        inherited: str | None = None
+        for raw in splitter.split(cleaned):
+            read = _words(raw)
+            words = read if read is not None else [(tok, tok) for tok in raw.split()]
+            exported = _export_prefix(words)
+            count = len(words) if exported else _assignments(words)
+            assigned = any(_CONFIG_VAR.match(text) for text, _ in words[exported:count])
+            configured = "config" if assigned else None
+            rest = words[count:]
+            if not rest:
+                inherited = inherited or configured
+                continue
+            kind = inherited or configured
+            if splitter is _SEP:
+                parts.append((rest, kind or _git_configures(rest)))
+                continue
+            behind, unread = _runner_parts(rest, kind, depth)
+            parts.extend(behind)
+            opaque = opaque or unread or (read is None and _names_runner(rest))
+    return parts, opaque
+
+
 def _deny_forms(
     catalog: dict[str, Any], request: dict[str, Any]
 ) -> tuple[set[str], dict[str, set[str]]]:
@@ -668,37 +1065,25 @@ def _deny_forms(
     the program reads, and those it may match in a form the core cannot see,
     each with what keeps the core from seeing it (the keys of `_UNSEEN_KIND`).
 
-    An assignment that changes the program's configuration counts where the
-    shell hands it on: in front of a command, for that command, and in a
-    segment that only assigns or exports, `builtin export` included, for the
-    segments after it.
-
-    It reads the command with each redirection that writes no file removed
-    (#2002), so a program behind one, as in `2>/dev/null rm -rf ~`, is the
-    program a deny reads."""
+    It reads each command `_deny_parts` finds: each segment, and each command
+    a listed runner runs (#1990). Where the core cannot read what a runner
+    runs, every privilege a Bash recognizer names may bind unseen."""
     if request.get("type") != "bash":
         return set(), {}
-    parts: list[tuple[list[tuple[str, str]], bool]] = []
-    inherited = False
-    for raw in _SEP.split(_without_harmless_redirections(request.get("command", "")).strip()):
-        words = _segment_words(raw)
-        exported = _export_prefix(words)
-        count = len(words) if exported else _assignments(words)
-        configured = any(_CONFIG_VAR.match(text) for text, _ in words[exported:count])
-        if words[count:]:
-            parts.append((words[count:], inherited or configured))
-        else:
-            inherited = inherited or configured
+    parts, opaque = _deny_parts(request.get("command", ""), 0)
     sure: set[str] = set()
     unsure: dict[str, set[str]] = {}
     for name, spec in catalog.get("privileges", {}).items():
-        for rule in spec.get("recognize", {}).get("bash", []):
-            for words, configured in parts:
-                form = _rule_form(rule, words, configured)
+        rules = spec.get("recognize", {}).get("bash", [])
+        for rule in rules:
+            for words, kind in parts:
+                form = _rule_form(rule, words, kind is not None)
                 if form == "sure":
                     sure.add(name)
                 elif form:
-                    unsure.setdefault(name, set()).add(form)
+                    unsure.setdefault(name, set()).add(kind if form == "config" and kind else form)
+        if opaque and rules:
+            unsure.setdefault(name, set()).add("runner")
     return sure, {name: kinds for name, kinds in unsure.items() if name not in sure}
 # fmt: on
 
@@ -1020,6 +1405,51 @@ def _uncovered_segments(
     ]
 
 
+def _named_behind_glob(rule: dict[str, Any], words: list[tuple[str, str]]) -> bool:
+    """Does a pathname pattern that may expand to a word opening with `-` stand
+    before the subcommand `rule` names, as `_matches_bash` finds it, or before
+    the first of its flags the segment holds? Such a word may be an option
+    that takes the next word as its value. Never for a rule naming neither."""
+    toks = [word for _, word in words]
+    limit = 0
+    if "subcommand" in rule:
+        limit = next((i for i, tok in enumerate(toks) if i and not tok.startswith("-")), 0)
+    if "flag_any" in rule:
+        flags = [i for i, tok in enumerate(toks) if tok in rule["flag_any"]]
+        limit = max(limit, flags[0] if flags else 0)
+    return any(_may_open_flag(text, word) for text, word in words[1:limit])
+
+
+def _glob_widened(
+    catalog: dict[str, Any], request: dict[str, Any], allowed: set[str]
+) -> list[list[str]]:
+    """The segments of a Bash request that the `allowed` privileges cover only
+    through a recognizer naming a subcommand or flags, behind a pathname
+    pattern that may expand to a word opening with `-` (#1990, ADR-025 point
+    2). The subcommand or flag the grant names may then be an option's value,
+    so the command may not be the one the grant names. A grant naming only
+    the program still matches a pathname pattern as written."""
+    if request.get("type") != "bash":
+        return []
+    privileges = catalog.get("privileges", {})
+    widened: list[list[str]] = []
+    for raw in _SEP.split(_without_harmless_redirections(request.get("command", "")).strip()):
+        words = _segment_words(raw)
+        words = words[_assignments(words):]
+        if not words:
+            continue
+        toks = [word for _, word in words]
+        rules = [
+            rule
+            for name in sorted(allowed)
+            for rule in privileges.get(name, {}).get("recognize", {}).get("bash", [])
+            if _matches_bash(rule, toks)
+        ]
+        if rules and all(_named_behind_glob(rule, words) for rule in rules):
+            widened.append(toks)
+    return widened
+
+
 def _shown_program(toks: list[str]) -> str:
     """How a reason names an uncovered segment: its program when that is a bare
     word, such as `sh` or `python3`, and `<other>` otherwise. A path, an
@@ -1169,6 +1599,22 @@ def decide(
         # names only each uncovered segment's program, never its arguments,
         # which may hold a path or a secret the diagnostic log redacts.
         uncovered = _uncovered_segments(catalog, request, allowed)
+        # A pathname pattern that may expand to an option, before the
+        # subcommand or flag a grant names, keeps that grant from allowing
+        # (#1990, ADR-025 point 2). The reason names the program alone.
+        widened = [] if uncovered else _glob_widened(catalog, request, allowed)
+        if widened:
+            programs = sorted({_shown_program(toks) for toks in widened})
+            if posture == "strict":
+                return "deny", (
+                    f"strict posture: a pathname pattern may expand to an option "
+                    f"the grant on the {programs} segment(s) does not name"
+                )
+            return "abstain", (
+                f"a pathname pattern may expand to an option the grant on the "
+                f"{programs} segment(s) does not name — fail closed, defer to the "
+                f"harness's normal flow"
+            )
         if not uncovered:
             return "allow", f"allow grant for {subject} on {sorted(hits)}"
         programs = sorted({_shown_program(toks) for toks in uncovered})
