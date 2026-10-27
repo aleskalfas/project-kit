@@ -2721,13 +2721,18 @@ def _the_change_wrote_no_answers(monkeypatch: pytest.MonkeyPatch, answers: Modul
     """land-work's step that lists the answers (`documents this change affects:`),
     answered as for a change that wrote none: the landings these rows walk are the
     ones a change with no answers takes, which the step leaves as they were
-    (project-management DEC-055)."""
+    (project-management DEC-055). The merge as it would land passes the change check
+    too: the head holds the base its own check read (DEC-055 point 6)."""
 
     def derive(head: str, base: str | None) -> Any:
         document = {"schema_version": 1, "base": {"commit": "", "outdated": False}}
         return answers.Derivation(head, document={**document, "answers": [], "unreadable": []})
 
+    def merged(head: str, base: str, *, checked: Any = None) -> Any:
+        return answers.Merged(head, merge=head, document={"failed": False, "findings": []})
+
     monkeypatch.setattr(answers, "derive", derive)
+    monkeypatch.setattr(answers, "merged", merged)
 
 
 def _release(args: list[str]) -> str:

@@ -11,7 +11,8 @@
 Lands an issue's pull request in one command: waits for the checks on the PR's
 head, has the reviewers whose verdicts are not fresh review that head, shows
 the findings they left for a person to judge, lists the answers the change
-wrote, and merges it through `done-work`. It composes
+wrote, runs the change check on the merge with the base as it stands, and
+merges it through `done-work`. It composes
 the verbs' own functions — the CI gate's reading (`_lib.ci_checks`),
 `review-pr`'s review, `done-work`'s merge — and adds no review loop or merge
 mechanic of its own. The rules it adds are on the answers the change wrote
@@ -136,6 +137,19 @@ there instead, and changes nothing else.
           the change must be the one at the head authorised: any other, or
           one that cannot be read there, stops a `--yes` run at `ready:`, as
           an answer the change check did not ask for does.
+  merge check
+          The change check on the merge as it would land: the PR's base
+          fetched, the merge of the pinned head with its tip built as a commit
+          on no branch, and `pkit friction check --json` run from a temporary
+          checkout of it against the tip, the head named as the change's own
+          head (`PKIT_CHECK_HEAD`), as the checks on a PR run it
+          (`friction_answers.merged`, DEC-055 point 6). Where the head holds
+          the tip its own check read, that check serves and nothing runs
+          again. A check that fails there stops the run, with nothing merged,
+          naming each document it fails on, a line each; in warning mode its
+          findings are printed and stop nothing. A merge that conflicts stops
+          the run with the merge to make, and a check that cannot be read
+          stops it too. Its line begins `merge check:` (`MERGE_CHECK`).
   merge   `done-work` with the pinned head. Without `--yes`, off a terminal,
           land-work merges nothing: it runs `done-work`'s gates as a dry run
           and stops with a `ready:` line naming the head and the command that
@@ -173,7 +187,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
@@ -279,6 +293,9 @@ _HAND_WRITTEN = "a list written by hand"
 GRANTS = "a change to which fixers may start"
 #: How the line of the step that prints the `[person]` findings begins.
 FINDINGS = "findings to judge"
+#: How the line of the step that checks the merge as it would land begins (DEC-055
+#: point 6).
+MERGE_CHECK = "merge check"
 #: What that step reads of the PR: the verdicts and what the freshness rule
 #: reads, and the author the gate excludes.
 _FINDINGS_VIEW = (*REVIEW_VIEW_FIELDS, "author")
@@ -403,6 +420,9 @@ class _AnswersEnd:
     #: How many revalidations on the base's tip the merge would leave answered apart
     #: from the change's own (`friction_answers.apart`); their lines are in `told` too.
     apart: int = 0
+    #: The change check's document at the pinned head, which serves the check of the
+    #: merge where the head holds the base's tip it read (`friction_answers.merged`).
+    checked: Mapping[str, Any] | None = None
 
     def phrase(self) -> str:
         """What the `ready:` line says of the lines above it —
@@ -616,6 +636,9 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
             "done-work once the checks pass and the review approves"
         )
         return EXIT_MERGED
+    # Last before the ready stop, the prompt or the merge: the merge as it would land,
+    # with the base as it stands now (DEC-055 point 6).
+    _merge_check(head, answers)
     if args.dry_run:
         return _merge(args, head, config, reading)
     uncovered = _uncovered(head, to_judge, answers)
@@ -1205,7 +1228,8 @@ def _answers(
     body = _read_body(head, config)
     if not derived.listed:
         _warn_unread(friction_answers.strip(body))
-        return _no_answers(args, head, body, config, capability_root, grants, moved, apart)
+        end = _no_answers(args, head, body, config, capability_root, grants, moved, apart)
+        return replace(end, checked=document)
     if derived.outdated:
         _refuse_moved_base(derived, head)
     settings = derived.settings
@@ -1272,6 +1296,7 @@ def _answers(
         grants=grants,
         grants_moved=moved,
         apart=len(apart),
+        checked=document,
     )
     if friction_answers.current(body, section):
         _say(f"{STEP}: {written}, {_LISTED}")
@@ -1566,6 +1591,93 @@ def _write_body(head: _Head, body: str, config: dict[str, Any]) -> str:
     finally:
         with contextlib.suppress(OSError):
             Path(path).unlink()
+
+
+# ---- the merge as it would land ----------------------------------------------
+
+
+def _merge_check(head: _Head, answers: _AnswersEnd) -> None:
+    """The change check on the merge of the pinned head with the PR's base as it stands,
+    fetched now (`friction_answers.merged`, DEC-055 point 6), said in one line. Stops the
+    run, with nothing merged, where the check fails there, naming each document it
+    fails on above the line; where the merge conflicts; and where the check cannot be
+    read. The answers step has written the list into the description by then, as it
+    stands for the head. A base the head already holds, at the tip the head's own check
+    read, is that check's: nothing is run again."""
+    issue, sha, base = head.issue, short_sha(head.oid), head.base
+    found = friction_answers.merged(head.oid, head.base_branch, checked=answers.checked)
+    if found.problem is not None:
+        raise _Stop(
+            EXIT_UNREADABLE,
+            f"{MERGE_CHECK}: the change check on {sha} merged with {base} could not be read "
+            f"— {friction_answers.shown(found.problem)}. Nothing was merged; run "
+            f"`land-work {issue}` again",
+        )
+    merge_into = (
+        f"Merge {base} into {head.branch} (`git merge {head.remote}/{base}`), "
+        if found.merge != head.oid
+        else ""
+    )
+    if found.conflicts:
+        files = _files([friction_answers.shown(path) for path in found.conflicts])
+        raise _Stop(
+            EXIT_NEEDS_CHANGE,
+            f"{MERGE_CHECK}: refused — {sha} conflicts with {base} as it stands, at "
+            f"{short_sha(found.tip)}, in {files}. Merge {base} into {head.branch} (`git merge "
+            f"{head.remote}/{base}`), resolve the conflicts, push, and run `land-work {issue}` "
+            "again. Nothing was merged",
+        )
+    tip = short_sha(found.tip)
+    where = (
+        f"{sha} merged with {base} at {tip}"
+        if found.merge != head.oid
+        else f"{sha}, which holds {base} at {tip}"
+    )
+    documents = _print_findings_at_merge(found.failing)
+    if not found.failed:
+        # In warning mode the check fails nothing: what it finds is shown, and stops
+        # nothing (COR-050 point 12).
+        reported = (
+            f", and reports {_count(len(documents), 'document')} above, which the project's "
+            "friction mode fails nothing on: for information"
+            if documents
+            else ""
+        )
+        _say(f"{MERGE_CHECK}: the change check passes on {where}{reported}")
+        return
+    named = (
+        f", on {_count(len(documents), 'document')} ({', '.join(documents)}), above"
+        if documents
+        else ", on findings this command does not name: `pkit friction check` names them"
+    )
+    settle = (
+        f"{merge_into}settle each finding there"
+        if merge_into
+        else f"Settle each finding in {head.branch}"
+    )
+    raise _Stop(
+        EXIT_NEEDS_CHANGE,
+        f"{MERGE_CHECK}: refused — the change check fails on {where}{named}. {settle}, push, "
+        f"and run `land-work {issue}` again. Nothing was merged",
+    )
+
+
+def _print_findings_at_merge(findings: tuple[Mapping[str, Any], ...]) -> list[str]:
+    """Each finding a line, `<document>: <kind> — <message>`, every character a terminal
+    would act on escaped; the documents they are on, each once, in order."""
+    shown = friction_answers.shown
+    documents: list[str] = []
+    for finding in findings:
+        location = shown(str(finding.get("location") or "?"))
+        kind, message = str(finding.get("kind") or "?"), str(finding.get("message") or "")
+        print(f"  {location}: {shown(kind)} — {shown(message)}")
+        if location not in documents:
+            documents.append(location)
+    return documents
+
+
+def _count(count: int, noun: str) -> str:
+    return f"{count} {noun}" + ("" if count == 1 else "s")
 
 
 # ---- findings to judge -----------------------------------------------------
