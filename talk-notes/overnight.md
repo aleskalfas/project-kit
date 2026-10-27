@@ -9,6 +9,14 @@ Updated through the day. Each item says what it needs.
 3. **[#2240](https://github.com/aleskalfas/project-kit/pull/2240) — guardrails see through wrappers and git configuration** (#1990, ADR-025 edit).
 4. **#2214 — ADR-041 and the ownership code agree** (ADR-041 point 7 edit). After the release.
 
+## Cleanup (EPIC [#2243](https://github.com/aleskalfas/project-kit/issues/2243))
+
+- Part 1, how work is run: [#2244](https://github.com/aleskalfas/project-kit/issues/2244), clone 1.
+- Part 2, the core and its install: [#2245](https://github.com/aleskalfas/project-kit/issues/2245), clone 2.
+- Part 3, living docs and analysis: [#2246](https://github.com/aleskalfas/project-kit/issues/2246), the main session.
+- The board after the triage: [#2247](https://github.com/aleskalfas/project-kit/issues/2247).
+- Usage is short: the talk comes first, rc1 is built after Friday, and the fix rounds of #2240, #2242 and #2224 are parked.
+
 ## Decided today
 
 - **Release candidates (#2211):** a candidate's versions live only in its tag; the `rcN` suffix on backbone and moved components; a candidate raises no floor; candidates run their release's migrations, re-runs safe, a shipped script corrected only by a new one; `pkit upgrade --pre` opts in, a plain upgrade never moves onto a candidate; cut through the existing release workflow with a "pre-release" input (`pkit release --pre`), tag only, GitHub pre-release; the final is cut from the last candidate's commit and a PR brings its versions into main, main never frozen. Follow-up after 2.0.0: dev versions on main (`2.0.0.dev0`).
