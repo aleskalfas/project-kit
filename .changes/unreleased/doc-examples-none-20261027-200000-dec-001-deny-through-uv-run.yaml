@@ -1,0 +1,6 @@
+component: doc-examples
+kind: none
+body: >
+  The record DEC-001 drops a sentence of a rejected alternative's reasoning,
+  which said a deny on a call through `uv run` does not bind. A deny now reads
+  the command `uv run` runs. What the record decides is unchanged.
