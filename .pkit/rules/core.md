@@ -16,7 +16,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 6. **Settings-file changes go through the merge primitive.** Do not edit fixed-path config files (`.claude/settings.json`, `.gitignore`, etc.) directly to add core-shipped content; the adapter merges baseline + project additions. Edit only the project-additions side. See COR-002.
 
-7. **Surface changes ship a migration in the same change-set.** A change that alters an installed adopter's state observably and breaks against it — file or directory renames / removals in kit-owned trees, schema_version bumps in YAML schemas, breaking CLI signature changes, capability subtree restructures — must include a migration script at the affected tier (backbone / adapter / capability) in the same commit or PR. The migration is idempotent (per rule 5 above). Pure additions, documentation refinements, behaviour-preserving fixes don't trigger. Before committing, check the diff for triggers; `pkit migrations check-diff` (when available) verifies coverage; CI gates the merge. See COR-010 ("Migrations are mandatory on adopter-breaking surface changes").
+7. **Surface changes ship a migration in the same change-set.** A change that alters an installed adopter's state observably and breaks against it — file or directory renames / removals in kit-owned trees, schema_version bumps in YAML schemas, breaking CLI signature changes, capability subtree restructures — must include a migration script at the affected tier (backbone / adapter / capability) in the same commit or PR. The migration is idempotent (per rule 5 above). Pure additions, documentation refinements, behaviour-preserving fixes don't trigger. Before committing, check the diff for triggers; `pkit migrations check-diff` verifies coverage; CI gates the merge. See COR-010 ("Migrations are mandatory on adopter-breaking surface changes").
 
 ## Tool hygiene
 
@@ -30,7 +30,7 @@ Operational practices that keep work consistent and recoverable.
 
 11. **Validate before assuming state.** Use `pkit status` to see how the methodology is wired in this project (paths, adapter, deployed skills, capabilities, decision counts). Don't infer state from prior sessions; the file system is the source of truth.
 
-12. **Skills and agents are deployed by the adapter, not hand-symlinked.** The adapter's deploy primitive (e.g. `deploy-skills.sh` for Claude Code, plus future `deploy-agents.sh` per COR-013) symlinks canonical content from `.pkit/skills/` and `.pkit/agents/` into the harness's expected location. Editing the deployed symlinks instead of the canonical core-side file violates the no-shared-files invariant.
+12. **Skills and agents are deployed by the adapter, not hand-symlinked.** The adapter's deploy primitives (e.g. `deploy-skills.sh` and `deploy-agents.sh` for Claude Code, the second per COR-013) deploy canonical content from `.pkit/skills/` and `.pkit/agents/` into the harness's expected location: skills as symlinks, agents as copies with their overlay placeholders resolved. Editing the deployed symlinks or copies instead of the canonical core-side file violates the no-shared-files invariant.
 
 13. **Files intended for `@<path>` include omit the H1 and start with prose or H2 sections** *(applies when using the Claude Code harness; other harnesses have different include mechanisms documented in their adapter README)*. The host file owns the H1; the included content nests under it. Place the `@<path>` line after the host's intro paragraph, not at line 1, so the included sections become natural sub-sections of the host. This file is the canonical example: no H1, opens with an italic preface, sections start at H2; CLAUDE.md includes it after its own intro.
 
@@ -61,6 +61,10 @@ How a session relates to repos other than the one it is rooted in.
 ## When a step fails
 
 21. **Retry once a step that failed for a cause outside your own work, then stop.** Such causes include a locked signing key, a service that is down or the network. Before the retry, check that the step did not take effect. If it fails again, stop your work and report what failed. Waiting on something pending is not a retry. Rationale: [project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648#issuecomment-6247728164).
+
+## Before changing files
+
+22. **When you change the system, read first the accepted records its files lead to.** The records are where the system is decided, and the files carry those decisions out. Run `pkit refs records-for` once, with every file your change will commit, and read each record it lists as tied to them directly, at the points it names. Where it reaches a file only through another artefact, read that artefact, the narrowest first, and follow the records it rests on that bear on your change. An empty answer is no sign that no record governs a file. What the lookup reads, and why: the decisions README, "Finding the records a path leads to" ([project-kit#2165](https://github.com/aleskalfas/project-kit/issues/2165)).
 
 ## Where rationale lives
 

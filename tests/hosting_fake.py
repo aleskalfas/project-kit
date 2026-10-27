@@ -794,6 +794,8 @@ class LocalClone:
     elsewhere: dict[Path, str | None] = field(default_factory=dict)
     #: Branches checked out in another worktree: a checkout of one fails.
     held_elsewhere: set[str] = field(default_factory=set)
+    #: The paths with changes not committed in the working tree: none, clean.
+    changes: list[str] = field(default_factory=list)
     #: git does not answer the cross-repository guards' questions — those it is
     #: asked about another directory (`git -C`) — in time.
     comparison_fault: bool = False
@@ -803,10 +805,13 @@ class LocalClone:
 
     def local_deletion(self, branch: str) -> str:
         """What the local clean-up did with `branch`: `deleted`; `kept` or
-        `absent` when a clean-up ran and did not delete it; `none` when none ran."""
+        `absent` when a clean-up ran and did not delete it; `none` when none ran.
+        A clean-up ran when it checked out a branch, or asked whether the
+        working tree is clean, as project-management's and release's do before
+        they decide whether to switch (#2183, #2189)."""
         if branch in self.deleted:
             return "deleted"
-        if not self.checkouts:
+        if not self.checkouts and ["status", "--porcelain"] not in self.calls:
             return "none"
         return "kept" if branch in self.branches else "absent"
 
@@ -863,6 +868,8 @@ class LocalClone:
             return _done(args, stdout="origin\n" if "upstream" in args[1] else "\n")
         if args[:3] == ["symbolic-ref", "--quiet", "--short"]:
             return _done(args, stdout=f"{self.current}\n") if self.current else _done(args, 1)
+        if args == ["status", "--porcelain"]:
+            return _done(args, stdout="".join(f" M {path}\n" for path in self.changes))
         if args[:1] == ["checkout"]:
             self.checkouts.append(args[1])
             if args[1] in self.held_elsewhere:

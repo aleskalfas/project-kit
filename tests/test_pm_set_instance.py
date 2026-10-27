@@ -3,14 +3,18 @@
 Pins the opt-in per-clone id: write/read/clear round-trips, the fail-closed
 tolerance (a missing / corrupt runtime file reads as an unset clone, never an
 error, so the activation gate degrades to the no-op default), and the positive-int
-constraint.
+constraint. In a project with a topology (DEC-059 point 6), the runtime file
+keeps the seat the clone took as a hint, and set-instance refuses a typed number.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -115,3 +119,111 @@ def test_a_corrupt_file_holds_no_key(ident, tmp_path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("{ not json", encoding="utf-8")
     assert ident.read_clone_key(tmp_path) is None
+
+
+# ---- the seat's hint (DEC-059 point 6) ------------------------------------------
+
+
+def test_the_seat_a_clone_took_is_kept_beside_its_key_and_number(ident, tmp_path: Path) -> None:
+    assert ident.read_seat_hint(tmp_path) is None
+    key = ident.ensure_clone_key(tmp_path)
+    ident.write_instance_id(tmp_path, 4)
+    ident.write_seat_hint(tmp_path, "worker-1")
+    assert ident.read_seat_hint(tmp_path) == "worker-1"
+    assert ident.clear_seat_hint(tmp_path) is True
+    assert ident.read_seat_hint(tmp_path) is None
+    assert ident.read_clone_key(tmp_path) == key and ident.read_instance_id(tmp_path) == 4
+    assert ident.clear_seat_hint(tmp_path) is False
+
+
+def test_clearing_the_number_keeps_the_seat(ident, tmp_path: Path) -> None:
+    ident.write_instance_id(tmp_path, 4)
+    ident.write_seat_hint(tmp_path, "worker-1")
+    assert ident.clear_instance_id(tmp_path) is True
+    assert ident.read_seat_hint(tmp_path) == "worker-1"
+    assert ident.clear_seat_hint(tmp_path) is True
+    assert not ident.identity_path(tmp_path).exists()
+
+
+def test_a_seat_is_named_or_not_kept(ident, tmp_path: Path) -> None:
+    with pytest.raises(ValueError):
+        ident.write_seat_hint(tmp_path, "")
+
+
+# ---- set-instance in a project with a topology (DEC-059 point 6) -----------------
+
+SCRIPTS = LIB.parent
+TOPOLOGY_REL = ".pkit/capabilities/project-management/project/topology.yaml"
+
+
+@pytest.fixture(scope="module")
+def script():
+    if str(SCRIPTS) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS))
+    spec = importlib.util.spec_from_file_location(
+        "pm_set_instance_under_test", SCRIPTS / "set-instance.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["pm_set_instance_under_test"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture(autouse=True)
+def fresh_branch(monkeypatch: pytest.MonkeyPatch) -> None:
+    if str(SCRIPTS) not in sys.path:
+        sys.path.insert(0, str(SCRIPTS))
+    from _lib import default_branch
+
+    monkeypatch.setattr(default_branch, "_read", {})
+    monkeypatch.setattr(default_branch, "_warned", set())
+
+
+def _backbone(tip: str | None = "c0ffee") -> Any:
+    def run(argv: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        document = {
+            "schema_version": 1,
+            "default_branch": {"name": "main", "ref": "origin/main", "commit": tip},
+            "base": {"ref": "origin/main", "tip": tip, "fork": tip},
+        }
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    return run
+
+
+def _git(topology: bool) -> Any:
+    text = json.dumps({"schema_version": 1, "seats": [{"name": "w", "role": "worker"}]})
+
+    def run(args: list[str]) -> subprocess.CompletedProcess[str]:
+        if args[0] == "ls-tree":
+            held = f"{TOPOLOGY_REL}\0" if topology else ""
+            return subprocess.CompletedProcess(args, 0, held, "")
+        return subprocess.CompletedProcess(args, 0, text, "")
+
+    return run
+
+
+def _root(tmp_path: Path) -> Path:
+    root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    root.mkdir(parents=True)
+    return root
+
+
+def test_a_typed_number_is_refused_where_the_default_branch_holds_a_topology(
+    script, tmp_path: Path
+) -> None:
+    refusal = script.typed_number_refusal(_root(tmp_path), run=_backbone(), git=_git(True))
+    assert refusal is not None
+    assert "origin/main at c0ffee holds a topology" in refusal
+    assert "`pkit pm take-seat`" in refusal
+
+
+def test_a_typed_number_stands_where_the_default_branch_holds_none(script, tmp_path: Path) -> None:
+    assert script.typed_number_refusal(_root(tmp_path), run=_backbone(), git=_git(False)) is None
+
+
+def test_no_number_is_typed_on_a_guess(script, tmp_path: Path) -> None:
+    """COR-054 point 4: where the default branch cannot be resolved."""
+    refusal = script.typed_number_refusal(_root(tmp_path), run=_backbone(None), git=_git(True))
+    assert refusal is not None and "could not be read from the default branch" in refusal

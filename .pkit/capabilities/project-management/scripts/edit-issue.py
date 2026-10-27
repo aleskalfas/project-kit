@@ -47,7 +47,9 @@ another instance owns is refused at bypassable-with-audit (DEC-014), through
 `_lib/instance_claims`. `--bypass-owner "<reason>"` posts the reason on the
 issue as an audit comment first. In a project with a topology, a claim whose
 clone no longer holds its seat is no claim, and one that cannot be judged
-refuses (DEC-059 point 9).
+refuses (DEC-059 point 9). Before the guard, a clone that took a seat confirms
+it on the seat's state issue, and the edit refuses where it cannot (DEC-059
+point 6).
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/edit-issue.py 42 --body-file new-body.md
@@ -59,7 +61,8 @@ Exit codes:
   0  edited (or dry-run reported, or nothing to change)
   1  membership refusal / validation refusal / a milestone edit that would
      move the issue in the lifecycle or orphan its parent-ref / the clash
-     guard refused an issue another instance owns
+     guard refused an issue another instance owns / this clone's seat could
+     not be confirmed
   2  usage error (issue not found; no mode specified; milestone matches no
      open milestone)
   3  gh failure
@@ -438,7 +441,13 @@ def main() -> int:
 
     # The clash guard (DEC-035 point 6), before anything is written: an edit of
     # an issue another instance owns is refused, unless a bypass posts its reason.
-    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    # A seat is confirmed on its state issue first (DEC-059 point 6).
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return instance_claims.say_unconfirmed("edit-issue", args.issue_number, exc)
     if clone is not None:
         decision = instance_claims.guard(
             args.issue_number,

@@ -15,13 +15,15 @@ not hold fails, as GitHub refuses it.
 
 `use(module, monkeypatch, fake)` routes a loaded `instance_claims` through the
 fake, and `clone_with(module, monkeypatch, instance)` gives every caller of
-`this_clone` that instance id, with no file written under the real capability.
+`this_clone` that instance id, with no file written under the real capability,
+in a project whose default branch declares no topology.
 
 A project with a topology of seats (DEC-059) is stood in for by
 `topology_with(module, monkeypatch, topology, key)`: every `this_clone` reads
-that reading of the topology, as the module that reads it (#2140, #2141) will,
-and `key` as this clone's key, as its runtime file keeps it. The stamp that
-names a seat is the audit-log facility's own.
+that reading of the topology, as `read_topology` builds it from one run's
+snapshot, and `key` as this clone's key, as its runtime file keeps it, beside
+the name of the seat the reading gives. The stamp that names a seat is the
+audit-log facility's own.
 """
 
 from __future__ import annotations
@@ -34,6 +36,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+from tests.pm_state_issue_fakes import COMMENT_IDS
 
 
 @dataclass
@@ -70,12 +74,16 @@ class FakeGitHub:
 
     def post(self, number: int, body: str, author: str | None = None) -> None:
         """A comment on the issue, authored by `author` (the fake's own by default),
-        with the authorship fields an audit writer's retry reads."""
+        with the authorship fields an audit writer's retry reads, and the `url`
+        that holds the id GitHub gives it, from the sequence every fake numbers
+        its comments from (`pm_state_issue_fakes.COMMENT_IDS`)."""
         login = author or self.author
+        cid = next(COMMENT_IDS)
         self.issues[number].comments.append(
             {
                 "author": {"login": login},
                 "body": body,
+                "url": f"https://github.com/o/r/issues/{number}#issuecomment-{cid}",
                 "viewerDidAuthor": login == self.author,
                 "includesCreatedEdit": False,
             }
@@ -161,8 +169,67 @@ def use(module: Any, monkeypatch: pytest.MonkeyPatch, fake: FakeGitHub) -> None:
 
 def clone_with(module: Any, monkeypatch: pytest.MonkeyPatch, instance: int | None) -> None:
     """Every `this_clone` reads `instance` as this clone's id (None: no id set),
-    whatever file the capability root holds."""
+    whatever file the capability root holds, and the default branch as one that
+    declares no topology."""
     monkeypatch.setattr(module, "read_instance_id", lambda _root: instance)
+    monkeypatch.setattr(module, "_snapshot", lambda _root, _config, _login: None)
+
+
+#: The versions a snapshot's footers name.
+_VERSIONS = {"tree": "1.2.3", "capability": "0.9.0", "cli": "1.2.3"}
+
+
+def seat_issue(
+    module: Any, repo: Any, number: int, name: str, holder: tuple[str, str] | None = None
+) -> None:
+    """The state issue `number` of the seat `name`, in `repo` (a
+    `pm_state_issue_fakes.FakeRepo`), held by the clone `holder`, an account and
+    a key, where given."""
+    si = module.state_issues
+    versions = module.provenance.Versions(**_VERSIONS)
+    repo.add(number, si.description("seat", name, si.Fold(None), versions), title=f"Seat {name}")
+    repo.post(number, si.marker_comment("seat", name, versions))
+    if holder is not None:
+        account, key = holder
+        claim = si.audit_log.event(si.CLAIM, key=name, clone=key, place="host:/clone")
+        repo.post(number, si.audit_log.build(claim, versions=versions), author=account)
+
+
+def seat_snapshot(
+    module: Any,
+    doc: dict[str, Any],
+    repo: Any,
+    *,
+    login: str = "me",
+    key: str = "k2",
+    writers: tuple[str, ...] = ("me", "you"),
+) -> Any:
+    """One run's snapshot of the topology `doc` declares, as the default branch
+    holds it, its seats' state issues in `repo`, for this clone of `login` with
+    `key`. `writers` are the members who may write on a state issue."""
+    tp, si = module.topology, module.state_issues
+    topology = tp.parse(doc, ref="origin/main", commit="c0ffee")
+    run = si.StateRun(repo, si.Writers.closed(writers), module.provenance.Versions(**_VERSIONS))
+    return tp.Snapshot(topology, run, si.Clone(login, key, "host:/clone"))
+
+
+def snapshot_with(
+    module: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    snapshot: Any,
+    *,
+    hint: str | None,
+    key: str | None = "k2",
+) -> None:
+    """Every `this_clone` of the loaded `instance_claims` reads `snapshot` as the
+    run's snapshot (None: the default branch declares no topology), `hint` as the
+    seat its runtime file names and `key` as its key. The run starts with no
+    commit named, and the commit it names is forgotten after the test."""
+    monkeypatch.setenv(module.topology.NAMED_ENV, "")
+    monkeypatch.setattr(module, "_snapshot", lambda _root, _config, _login: snapshot)
+    monkeypatch.setattr(module, "read_seat_hint", lambda _root: hint)
+    monkeypatch.setattr(module, "read_clone_key", lambda _root: key)
+    monkeypatch.setattr(module, "clear_seat_hint", lambda _root: hint is not None)
 
 
 def topology_with(
@@ -170,6 +237,9 @@ def topology_with(
 ) -> None:
     """Every `this_clone` of the loaded `instance_claims` reads `topology` as the
     run's reading of the project's topology (None: the project has none), and
-    `key` as this clone's key (None: its runtime file keeps none)."""
-    monkeypatch.setattr(module, "read_topology", lambda _root, _config: topology)
+    `key` as this clone's key (None: its runtime file keeps none). The clone took
+    the seat the reading gives, where it gives one."""
+    seat = getattr(topology, "seat", None)
+    monkeypatch.setattr(module, "read_topology", lambda _root, _config, **_kw: topology)
     monkeypatch.setattr(module, "read_clone_key", lambda _root: key)
+    monkeypatch.setattr(module, "read_seat_hint", lambda _root: seat.name if seat else None)

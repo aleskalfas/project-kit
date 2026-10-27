@@ -10,10 +10,11 @@ pkit:
         - src/project_kit/decisions_check_diff.py
         - src/project_kit/decisions_validate.py
         - src/project_kit/document_parts.py
+        - src/project_kit/path_records.py
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6"]
+      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6"]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -77,7 +78,7 @@ The check reads a bare `DEC-NNN` in a capability's own record, agent or skill as
 
 ### Looking a citation up
 
-`pkit refs lookup` prints where a citation lies, and resolves a point of a record and a rule's heading too.
+`pkit refs lookup` prints where a citation lies, and resolves a point of a record and a rule's heading too. The way back, from a file to the records its anchors lead to, is in "Finding the records a path leads to" below.
 - **A point of a record,** written as an anchor's value, prints its record's file and the anchor GitHub gives its heading: `pkit refs lookup COR-050#14`. A retired point gives its stub's heading. A record whose points are still a list gives a point no heading, so it prints the file alone. An id the record neither holds nor retires does not resolve.
 - **A point of a record that another record overturns in part** also prints the record's top line, *Partially superseded by …*, after the point's place. The point stays as it stood, so a reader sent to the point lands below that line (COR-058 point 5). The line names the overturning record, but not whether this point is among what that record overturns.
 - **A rule** prints its place, and `--json` gives its heading's anchor too.
@@ -191,6 +192,19 @@ The gate applies to every kind of dependent work:
 - **Skills and agents** that automate work depending on a decision verify acceptance before running. The mechanism for declaring and verifying decision dependencies is part of each artifact area's own README (e.g. `.pkit/skills/README.md`, `.pkit/agents/README.md`).
 
 Acceptance is intentionally cheap — flipping `proposed → accepted` is one line and one commit. The friction is not in the flip; it's in the requirement that everyone look at the record and agree before depending on it.
+
+## Finding the records a path leads to
+
+Records are cited, not loaded. No agent reads every record, and one that does not know a record exists cannot follow it. A project also receives every core record and each installed capability's, beside its own. So `pkit refs records-for` goes from the files a change touches to the accepted records their anchors lead to ([COR-050](core/COR-050-anchors-and-friction.md) point 2).
+
+It goes the other way from `pkit refs lookup`, which goes from an id to its file, and it declares nothing new. It takes every file a change will commit in one run.
+- **Tied directly.** A record that a declared place holds is an artefact (COR-050 point 1). Each file its own path anchor matches is tied to the whole record. The artefact at a path ties each record it anchors, whole or at the points it names. These are the records to read before changing the file.
+- **Through another artefact.** An artefact whose path anchor matches a file rests on each record it anchors. Its path anchors and its record anchors are two lists, not pairs, so such a record is related to the file, not shown to govern it. The answer lists these artefacts apart, each with the records it rests on, the one resting on the fewest first. Read the artefact, and follow the records it rests on that bear on the change.
+- **How a path is matched.** An anchor matches a path as both friction checks match it. A path under `friction.exclude` is one no path anchor stands on (COR-050 point 7), so only the artefact at it ties anything. A file not yet written is matched by the globs that would cover it, and a folder is refused.
+- **What it leaves out.** Only accepted records are listed, and a superseded one by each accepted record that replaces it. A path anchor of a record that is not accepted ties nothing. Neither does any anchor of an artefact that arrives by sync, since it was written where the methodology is authored. Artefact anchors, and anchors of a kind a capability registers, are not followed.
+- **The order.** The project's own records come first, then those it receives by sync.
+- **An empty answer** is no sign that no record governs a file, since only what the anchors say is found. The answer says when no artefact carries anchors at all. It also names each file in a place whose front matter could not be read, since its anchors were not read.
+- **With `--json`,** one document answers each path in the order given. It gives the records tied directly with their ties, and the artefacts with the records they rest on. Each record comes with its title, its file and whether it arrives by sync.
 
 ## Refining an accepted record
 

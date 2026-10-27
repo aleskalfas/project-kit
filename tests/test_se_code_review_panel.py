@@ -537,6 +537,64 @@ def test_the_docs_reviewer_reads_the_sentences_as_the_commands_read_them():
 
 
 # ---------------------------------------------------------------------------
+# docs-reviewer judges revalidations answered apart (COR-062 point 7, #2206)
+# ---------------------------------------------------------------------------
+
+_APART_LEAD = (
+    "- **A revalidation that replaces revalidations answered apart must judge their"
+    " combined state**"
+)
+_REPORTED_ONLY_LEAD = (
+    "- **Revalidations answered apart that the change does not replace are reported only.**"
+)
+
+
+def test_the_docs_reviewer_judges_the_combined_state_of_revalidations_answered_apart():
+    """The change check flags each revalidation that replaces revalidations answered
+    apart, and the reviewer checks that it judges their combined state, as core rule 20
+    asks of its writer. The body quotes the flag as the check words it, and names the
+    key of the machine-readable list, so a change to either fails here first."""
+    from project_kit import friction_check as fc
+
+    flagged = fc.WrittenAnswer(
+        artefact="guide",
+        location="docs/guide.md",
+        answer="unchanged",
+        anchor=None,
+        reason="both lines hold",
+        kept=(),
+        asked=True,
+        status=fc.AnswerStatus.STANDS,
+        new=False,
+        replaces_apart=("a.yaml", "b.yaml"),
+    )
+    (flag,) = [f for f in fc._answer_flags(flagged) if "a.yaml and b.yaml" in f]
+    (item,) = [line for line in _answers_check() if line.startswith(_APART_LEAD)]
+    assert f'"{flag.split(" a.yaml", 1)[0]}"' in item
+    assert "replaces_apart" in flagged.as_json() and "`replaces_apart`" in item
+    assert "`pkit friction explain <artefact>`, run at the base" in item
+    # Each outcome a revalidation can give, in the list's own words.
+    items = _sub_items(_answers_check(), _APART_LEAD)
+    assert {label.strip('"') for label in items} == {
+        fc.OUTCOME_WORDS[outcome][:1].upper() + fc.OUTCOME_WORDS[outcome][1:]
+        for outcome in ("updated", "unchanged")
+    }
+    for said in items.values():
+        assert "what changed since each replaced revalidation" in said, said
+        assert "is a `[block]`" in said, said
+
+
+def test_an_answered_apart_finding_is_reported_only_never_a_block():
+    """Answered apart is debt no change owes (COR-062 point 7): the reviewer blocks on
+    none of the check's `answered-apart` findings."""
+    from project_kit import friction_check as fc
+
+    (item,) = [line for line in _answers_check() if line.startswith(_REPORTED_ONLY_LEAD)]
+    assert f"An `{fc.FindingKind.ANSWERED_APART.value}` finding" in item
+    assert "It is never a `[block]`" in item and "as information" in item
+
+
+# ---------------------------------------------------------------------------
 # docs-reviewer checks revisits, and software-engineer writes them
 # (COR-050 points 3 and 16, #1704)
 # ---------------------------------------------------------------------------

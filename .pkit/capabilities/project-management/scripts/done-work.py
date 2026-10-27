@@ -22,7 +22,9 @@ refused at bypassable-with-audit (DEC-014), through `_lib/instance_claims`.
 before anything else, and hands it to the moves this run composes, whose own
 guard finds the comment posted. In a project with a topology, a claim whose
 clone no longer holds its seat is no claim, and one that cannot be judged
-refuses (DEC-059 point 9).
+refuses (DEC-059 point 9). Before the guard, a clone that took a seat confirms
+it on the seat's state issue, and the landing refuses where it cannot (DEC-059
+point 6).
 
 Authorisation (#1760): the merge is the person's to authorise
 ([project-management:DEC-006-state-machine-and-cascade],
@@ -703,8 +705,16 @@ def run(
 
     # The clash guard (DEC-035 point 6), before anything is posted or merged:
     # landing an issue another instance owns is refused, unless a bypass posts
-    # its reason. The moves this run composes are handed the same reason.
-    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    # its reason. The moves this run composes are handed the same reason. A seat
+    # is confirmed on its state issue first (DEC-059 point 6).
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        return _ended(
+            REFUSED, 1, f"[refused] done-work #{args.issue_number}: {exc} Nothing was written."
+        )
     if clone is not None:
         owner_guard = instance_claims.guard(
             args.issue_number,
@@ -1334,9 +1344,10 @@ def _after_merge(
 
     # Branch cleanup — never fatal, after the steps above. The head branch on
     # GitHub is the backbone's to delete, only while its tip is the head that
-    # merged; the local steps warn and continue when the working tree cannot
-    # switch to the default branch (detached HEAD, the default branch held by
-    # another worktree).
+    # merged. The local steps switch only a clone on the head branch with a
+    # clean working tree, fast-forward a clean one on the default branch, and
+    # leave any other where it is (#2183). They warn and continue when the
+    # switch fails (the default branch held by another worktree).
     remote = pr_merge.delete_branch(pr_number, merged_head, config, allow_foreign_repo=confirmed)
     pr_merge.cleanup_local(
         branch, config, cross_repository=cross, merged_head=merged_head, remote=remote

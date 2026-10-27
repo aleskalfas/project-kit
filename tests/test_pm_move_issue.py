@@ -22,7 +22,15 @@ from pathlib import Path
 import pytest
 
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
-from tests.pm_ownership_support import FakeGitHub, clone_with, use
+from tests.pm_ownership_support import (
+    FakeGitHub,
+    clone_with,
+    seat_issue,
+    seat_snapshot,
+    snapshot_with,
+    use,
+)
+from tests.pm_state_issue_fakes import FakeRepo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -32,6 +40,7 @@ CAPABILITY_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 LIB_PATH = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
 
 sys.path.insert(0, str(LIB_PATH))
+from _lib import instance_claims  # noqa: E402
 from _lib.placeholder_detection import (  # noqa: E402
     PHASE_TRANSITION,
     detect_placeholder_residuals,
@@ -1042,7 +1051,9 @@ def _owned_by_instance_3() -> FakeGitHub:
     return github
 
 
-def _move_42(monkeypatch, github: FakeGitHub, *extra: str) -> int:
+def _move_42(monkeypatch, github: FakeGitHub, *extra: str, seats: FakeRepo | None = None) -> int:
+    """Move #42 as instance 2, or, with `seats`, as the clone that took the seat
+    `worker-2`, whose state issue `seats` holds."""
     issue = {
         "title": "[Task] do the thing",
         "labels": ["type:bug", "state:in-progress"],
@@ -1054,7 +1065,11 @@ def _move_42(monkeypatch, github: FakeGitHub, *extra: str) -> int:
     move = MoveIssueInProcess(monkeypatch, issue)
     claims = move.module.instance_claims
     use(claims, monkeypatch, github)
-    clone_with(claims, monkeypatch, 2)
+    clone_with(claims, monkeypatch, 2 if seats is None else None)
+    if seats is not None:
+        doc = {"schema_version": 1, "seats": [{"name": "worker-2", "role": "worker"}]}
+        doc["seats"][0]["state_issue"] = 13
+        snapshot_with(claims, monkeypatch, seat_snapshot(claims, doc, seats), hint="worker-2")
     FakeEngine(status_at("in-progress")).install(monkeypatch)
     argv = [sys.executable, "move-issue.py", "42", "--to", "in-progress", "--yes", *extra]
     return move.run(argv).returncode
@@ -1076,4 +1091,31 @@ def test_bypass_owner_posts_the_reason_and_moves(monkeypatch, capsys) -> None:
     assert _move_42(monkeypatch, github, "--bypass-owner", "its session is gone") == 0
     assert [argv[2] for argv in github.writes()] == ["comment"]
     assert "its session is gone" in github.issues[42].comments[-1]["body"]
+    assert "[noop] already at target state" in capsys.readouterr().out
+
+
+def test_a_move_from_a_seat_this_clone_no_longer_holds_refuses_and_writes_nothing(
+    monkeypatch, capsys
+) -> None:
+    """DEC-059 point 6: the clone's seat is confirmed on its state issue before
+    the guard runs. Another clone took it, so the move refuses, and even a bypass
+    of the guard writes nothing."""
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    seats = FakeRepo()
+    seat_issue(instance_claims, seats, 13, "worker-2", ("me", "k9"))
+    assert _move_42(monkeypatch, github, "--bypass-owner", "mine", seats=seats) == 1
+    assert github.calls == [] and seats.writes() == []
+    err = capsys.readouterr().err
+    assert "[refused] move-issue #42: this clone no longer holds the seat worker-2" in err
+    assert "Nothing was written." in err
+
+
+def test_a_move_from_the_seat_this_clone_holds_goes_on(monkeypatch, capsys) -> None:
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    seats = FakeRepo()
+    seat_issue(instance_claims, seats, 13, "worker-2", ("me", "k2"))
+    assert _move_42(monkeypatch, github, seats=seats) == 0
+    assert seats.writes() == []
     assert "[noop] already at target state" in capsys.readouterr().out

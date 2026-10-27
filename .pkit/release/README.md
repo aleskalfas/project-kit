@@ -843,10 +843,10 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   head branch deleted — on GitHub by the backbone's deletion (`pkit
   pull-request delete-branch`'s, imported), only while its tip is the head
   the PR merged at, in one compare-and-delete request, so a push made after
-  the merge is not lost; then a best-effort local cleanup (switch to the
-  base, fast-forward, delete the local head), so a run from a worktree or a
-  detached HEAD completes once the merge lands. What became of the remote
-  branch is said in one line and does not fail the run: kept — its tip
+  the merge is not lost; then a best-effort local cleanup (below), so a run
+  from a worktree or a detached HEAD completes once the merge lands. What
+  became of the remote branch is said in one line and does not fail the
+  run: kept — its tip
   moved, another open PR uses it as its head or as its base, or GitHub
   refuses to delete it — not there, or asked for with no answer that tells
   whether it was deleted; where it was not deleted, the line names the
@@ -859,6 +859,22 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   the one whose checks were read is warned about. A head that lives in a fork
   is never deleted — its name is the fork author's choice and could name an
   unrelated branch here. No `Closes #N` requirement — a release PR has none.
+- **Leaves a clone with work in progress where it is** (#2189). After the
+  merge, the local cleanup depends on where the clone is:
+  - **On the head branch with a clean working tree**, the run switches the
+    clone to the base and fast-forwards the base. The run deletes the local
+    head on the terms above. Where the switch fails, as when another
+    worktree holds the base, the run warns and keeps the clone on the head
+    branch
+  - **On the base with a clean working tree**, where a release is usually
+    merged from, the run only fast-forwards the base. Any local head is
+    kept, and a fast-forward that fails warns and changes nothing
+  - **Anywhere else**, the run leaves the clone where it is, pulls nothing
+    and keeps any local head, saying so in one line. That is a clone on
+    another branch or a detached HEAD, one with uncommitted changes,
+    untracked files included, or one whose working tree git cannot read. A
+    checkout would move such a clone, with any changes, onto the base,
+    where its next commit could land
 - **Lands through the merge queue** where the base has one, rather than
   around it. The queue makes the squash commit itself, by its own merge
   method and from the repository's squash-commit defaults, ignoring what a

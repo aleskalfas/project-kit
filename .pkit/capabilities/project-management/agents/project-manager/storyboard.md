@@ -5,16 +5,18 @@ consumers:
     namespace: project-management
 ---
 
-# project-manager: batch-planning scripted scenarios
+# project-manager: scripted scenarios of batch planning and the seats' loops
 
 ## Framing
 
 This storyboard covers the **autonomous batch-planning flow** the `project-manager` agent runs when a user supplies fuzzy intent + reference material and wants the work sliced into issues filed correctly. The flow is one variation of the agent's PM-direction mode per [project-management:DEC-029-project-manager-agent-shape]; the user does not name it explicitly, the agent infers it from the request shape.
 
+Scenarios 12 and 13 walk one round of each loop a seat's role runs, a planner's and a worker's, through the pm skill's `work-loop` sub-procedure ([project-management:DEC-059-topology-of-seats] point 8). There the seat's role sets the direction, in place of inference from the request. Scenario 14 walks a worker's later round: a pull request that conflicts with the default branch, a fix round, and a pull request that a released seat left in Review.
+
 The flow operates on:
 
 - **Input state**: the user's fuzzy intent expressed in natural language; reference artifacts the user points the agent at (scratchpad notes under `.pkit/scratchpad/`, handoff documents, related issues, decision records); the capability's eight schemas at runtime (issue-types, workflow, body-format, titles, classification, git-conventions, validation-severity, time-containers); the adopter's `project/config.yaml` and `project/workstreams.yaml`; and, while the use-case point is not off, the use cases settled on the default branch (`UC-NNN`), read through `pkit connections resolve pkit::work-tracking:use-cases --json`, per [project-management:DEC-054-use-case-validation]; over an empty set, the answer kept in this checkout when the Task to author them was declined, read through `pkit pm decline-use-case-task --show --json`.
-- **Mutations**: GitHub issue creation via `create-issue.py`; body edits via `edit-issue.py`; milestone attachment via `gh issue edit`; optional state transitions via `move-issue.py`; audit comments per [project-management:DEC-014-validation-severity-model]; over an empty set, the kept answer to the use-case Task, via `decline-use-case-task`, on approval only.
+- **Mutations**: GitHub issue creation via `create-issue.py`; body edits via `edit-issue.py`; scheduling, with its milestone, via `promote-issue.py`; optional state transitions via `move-issue.py`; audit comments per [project-management:DEC-014-validation-severity-model]; over an empty set, the kept answer to the use-case Task, via `decline-use-case-task`, on approval only.
 - **The single approval gate**: the moment the agent shows the proposed slicing and waits for the user's approval / revision / refusal. No `gh` mutation happens before this gate.
 
 User-facing entry points: invoking the `project-manager` agent with a fuzzy multi-issue ask. No CLI command; no flag; the agent infers batch-planning from the request shape during step 3 of its `How you work` procedure.
@@ -75,7 +77,7 @@ User invokes `project-manager` with fuzzy intent + a pointer to a reference docu
 - **Pause for approval. No `gh` mutation before this point.**
 - On approval: call `create-issue.py` for each ticket in dependency order. After each `[ok] created` response, parse the issue number for use in subsequent `--parent` references.
 - After each issue creation, immediately call `edit-issue.py --body-file` with the real body content (the script's auto-generated template is a placeholder; the agent supplies the actual Outcome / What / Acceptance criteria content).
-- Attach milestones via `gh issue edit` with the milestone title (the create-issue.py `--milestone NUM` path is broken pending #177 fix).
+- Schedule each issue the gate listed as scheduled with `promote-issue --milestone`, the approval as its reason.
 - Surface the final state: issue numbers, links, completion confirmation.
 
 ## Scenario 2: Ambiguous intent
@@ -427,3 +429,109 @@ The user may correct the judgement:
 - No issue says it was planned without use cases: the plan builds nothing a use case would describe.
 - A correction is not a decline. When the user says an issue touches what users do, the slicing step judges again, and Scenario 9's rule applies: read the kept answer, and include the Task unless it was declined earlier today (Scenario 10).
 - When a correction leaves no issue that touches what users do, the plan is back here: no Task, and nothing kept.
+
+## Scenario 12: A planner's round
+
+### Trigger
+
+A session starts in a clone for the planner's seat of the project's topology, and the person gives it an intent for new work.
+
+### Preconditions
+
+- The default branch holds a topology of three seats: `planner`, the organizer seat, and two worker seats with no scope, `worker-a` and `worker-b`. No clone holds the planner's seat, and this clone holds none.
+- The work's Tasks would share two choices that nothing settles yet: the web framework, and the layout of the report modules. No open foundation lists either.
+- The handoff note schedules the work in Milestone 3, which is open.
+- The use-case point is off, as in Scenario 1.
+
+### Walkthrough
+
+> **User:** Take the planner seat, and plan the reporting service from the handoff note.
+>
+> **project-manager:** *Listing the seats…* *Taking the seat planner…* I hold seat 1, the planner's, and both worker seats are free. *Reading the handoff note…*
+>
+> **project-manager:** *Naming the shared choices…* The slices would share two choices that nothing settles yet: the web framework, and the layout of the report modules. So this first plan files the foundation only. T1 records the framework choice for you to accept, and T2 builds a walking skeleton on it, which settles the layout. *Invoking critic on the plan…* Show me the full plan?
+>
+> **User:** Yes.
+>
+> **project-manager:** *Renders the slicing table, with each shared choice and its judgement.* On approval, T1 and T2 go to Backlog under Milestone 3, where a worker may take T1 at once. The four slices wait in the EPIC's outline for a second plan, once you close the foundation's Feature. Approve, revise, or cancel?
+>
+> **User:** Approve.
+>
+> **project-manager:** Filed #301 (EPIC), #302 (the foundation's Feature), #303 (T1) and #304 (T2, after #303), each with no owner. #303 and #304 are in Backlog at High priority, so a worker can take #303 now. I'll plan the slices once you close #302.
+
+### Behind the scenes
+
+- `pkit pm seats` lists the seats, none marked as this clone's. The person named the seat, so the session was started for one: `pkit pm take-seat planner --agent project-manager`. Its `role:` line reads `planner`: the planner's loop, in PM direction.
+- Batch planning reads the seats, then names the shared choices before it slices. Both are open: the framework is settled by T1's record, and the layout by T2's skeleton.
+- The gate shows each choice's judgement, which the person may overrule, and which Tasks go to Backlog on approval. No `gh` mutation happens before the approval.
+- On approval, the EPIC, the Feature, T1 and T2 are filed in that order. From a planner's seat, `create-issue` writes no owner. T2's `## Dependencies` names #303, and the Feature's `## Shared choices` lists the two choices. The EPIC's body holds the intent, and `edit-issue` then names #302 in its `## Outline of the slices`.
+- `pkit pm promote-issue 303 --milestone 3 --reason "<the person's approval of the plan>"`, and the same for #304, puts both in Backlog, where workers take them. The person's approval at the gate is the authorisation those moves need.
+- The planner takes no Task, and closes a container only on the person's authorisation. Closing #302 is the person's to authorise.
+- A later round, once #302 has closed, plans the slices: the planner reads #301's body, and slices against T1's accepted record and T2's merged skeleton, through a gate of their own. The outline then names each slice by number.
+
+## Scenario 13: A worker's round
+
+### Trigger
+
+A platform starts a session in a sandbox's clone, with `PKIT_AGENT=project-manager` in its environment, and asks for a worker.
+
+### Preconditions
+
+- The topology of Scenario 12, with `worker-a` free, and no seat held by this clone.
+- #320 "Export a report as CSV", a slice of the second plan, is in Backlog with no owner, and names no open issue among its dependencies. #321 names #320 among its own.
+
+### Walkthrough
+
+> **Operator:** Work as a worker.
+>
+> **project-manager:** *Listing the seats…* *Taking the first free worker seat…* I hold seat 2, `worker-a`. *Taking the next ready Task…* Started #320 "Export a report as CSV", on its branch `feat/320-export-csv`.
+>
+> **project-manager:** *Reading #320, its EPIC and the framework record…* *Building…* Its tests and checks pass, and both its acceptance criteria are met. *Opening the pull request…* PR #330 is ready for review, and #320 is in Review.
+>
+> **project-manager:** *Taking the next ready Task…* No Task is ready for this clone, since #321 waits on #320. I'm ending the loop, and keeping the seat. The merge of PR #330 is yours.
+
+### Behind the scenes
+
+- `pkit pm seats` marks no seat as this clone's. The operator asked for a role, so `pkit pm take-seat --role worker`, with no `--agent`, since `PKIT_AGENT` names the definition. Its `role:` line reads `worker`: the worker's loop, in Implementer direction.
+- This fresh clone has nothing in flight: no Task branch, and a clean working tree. A clone that had would go on with that Task, or with a fix round, first.
+- `pkit pm next-task --yes`. Starting a Task is the worker's own move, so no person is asked. It starts #320 through `start-work`, which claims it for this clone's instance and cuts its branch here.
+- `pkit pm show-issue 320`, then #320's body, its EPIC's body and the record its foundation settled. The build follows the project's conventions, tests and checks, and the skeleton's patterns.
+- `pkit pm check-criterion 320 1 2` ticks the criteria met. The answers the change check asks are written, and the work is committed and pushed.
+- `pkit pm open-pr 320 --draft --body-file <file>`, then `pkit pm review-work 320`, which checks the body, makes the pull request ready and moves #320 to Review.
+- `pkit pm next-task --yes` again exits 5, since #321 names #320, which is still open. The loop ends, and the seat stays taken, so a new session in this clone takes it up.
+- The worker merges nothing. The person lands PR #330 through the merge gate, or asks the worker to, and authorises the merge of its head. A verdict on PR #330 that asks for changes comes first in the next round, fixed on #320's branch.
+
+## Scenario 14: A worker's later round
+
+### Trigger
+
+A new session starts in the clone of Scenario 13, which holds seat 2, `worker-a`. Other pull requests have merged since its last round, and a reviewer has judged one of its own.
+
+### Preconditions
+
+- The topology of Scenario 12. The person released the seat `worker-b` by force, since its sandbox was lost.
+- This clone has two Tasks in Review. PR #330 of #320 no longer merges, since another merge changed the report module it changes. On PR #332 of #322, the code reviewer's verdict at the head holds one blocking finding and one advisory finding.
+- #325, which `worker-b` built, is in Review with its PR #340. No Task in the pool is ready for this clone.
+
+### Walkthrough
+
+> **Operator:** Go on as the worker.
+>
+> **project-manager:** *Listing the seats…* *Taking up seat 2, `worker-a`…* *Reading my pull requests in Review…* PR #330 conflicts with `main`, and on PR #332 the code reviewer asks for changes. I'll mend both before I take a Task.
+>
+> **project-manager:** *Merging `main` into #320's branch…* I resolved one conflict in the report module, the checks pass, and it's pushed. *Fixing PR #332's blocking finding…* Fixed and pushed, and I answered its advisory finding in the body. Both wait for your landing again.
+>
+> **project-manager:** *Taking the next ready Task…* No Task is ready for this clone, so I'm ending the loop and keeping the seat.
+>
+> **User:** Take over #325 too. It was `worker-b`'s, and its PR #340 is still in Review.
+>
+> **project-manager:** *Fetching #325's branch…* PR #340 of `worker-b`, the seat you released, is mine to mend from now on. It merges cleanly, and no reviewer has judged it yet, so it waits for your landing. #325 stays with no owner, since a hand-over moves no claim between clones yet.
+
+### Behind the scenes
+
+- `pkit pm seats` marks seat 2 as this clone's, so `pkit pm take-seat`, with no name, takes it up. Its `role:` line reads `worker`.
+- The clone's Task branches are `feat/320-export-csv` and `feat/322-csv-headers`, and `pkit pm show-issue` reads both Tasks in Review. `pkit pm show-pr feat/320-export-csv` reads `mergeable: CONFLICTING`. `pkit pm show-pr feat/322-csv-headers` reads a `CHANGES_REQUESTED` that is not marked stale.
+- The conflict comes first. `git fetch origin`, then `git merge origin/main` on #320's branch, the conflict resolved, the checks run, and `git push` once `pkit pm seats` still marks the seat. Never a rebase or a force-push, since either rewrites the head the reviewers judged. The resolved conflict is an edit, so the person's landing reviews the new head, and they authorise it afresh.
+- The fix round follows. `pkit pm show-pr feat/322-csv-headers --field review` gives the findings, and only the `[block]` one is fixed, on #322's branch. `pkit pm edit-pr 332 --body-file <file>` answers the `[advisory]` one in the body.
+- `pkit pm next-task --yes` exits 5. It never offers #325, which is in Review, outside the pool (DEC-059 point 7). A released seat's pull request in Review is the person's to land or hand over, so the worker waits for the person to tell it.
+- The person hands #325 over. `git fetch origin`, then `git checkout -B feat/325-csv-footer origin/feat/325-csv-footer`. From the next round on, step 1 of the loop reads PR #340 with the clone's own. `handoff-issue` does not move a claim between clones yet, so #325 keeps no owner.

@@ -1,0 +1,76 @@
+answers:
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T125321Z-c79100d7.yaml
+      - 20261026T135447Z-827d6480.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T141439Z-0ec32467.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162345Z-546e92b5.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T22:35:07Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+    revalidated:
+      at: 2026-10-26T22:35:31Z
+      outcome: unchanged
+      unchanged-because: Variant 3c names a released seat as a reason an ownership stops counting. The fold now keeps such an ownership void after the same clone takes the seat again, as the variant already says, and lapse stays unbuilt, as its box says.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+    revalidated:
+      at: 2026-10-26T22:35:34Z
+      outcome: unchanged
+      unchanged-because: Variant 2b readies a Task whose ownership's seat was released. The fold now keeps that ownership void after the same clone takes the seat again, so the variant holds as written, and its box on lapse still stands.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T162757Z-3a4706c7.yaml
+    revalidated:
+      at: 2026-10-26T22:35:38Z
+      outcome: unchanged
+      unchanged-because: The use case reads owners and the seats' holders, and says nothing of when a claim counts. A claim made before its clone's current take of the seat now counts for nothing, which changes no step.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-owner
+    revalidated:
+      at: 2026-10-26T22:35:41Z
+      outcome: unchanged
+      unchanged-because: The term says whose instance an issue belongs to, and nothing of when a seat's claim counts. A claim made before its clone's current take of the seat now counts for nothing, which changes no word of it.

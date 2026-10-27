@@ -90,14 +90,17 @@ once in :func:`main` and threaded into every reconcile call.
 With an instance id set (`set-instance`, DEC-035 point 1), each path releases
 the issue's instance ownership once it has closed the issue, before the
 closure cascade (DEC-035 point 4), through `_lib/instance_claims`: whichever
-instance owned it, every owner is cleared. A container that closes through
-`--mode=cascade-eligibility-close` is released here too, so the engine's fold
-stays realm-blind (DEC-035 point 8). `done-work` releases through this script,
-which it runs for each issue its merge closed. A release that fails is a
-warning, and the close stands. A dry run, and a run that finds the issue
-already closed in won't-do or cascade mode, release nothing. With no id set,
-nothing of this runs. In a project with a topology of seats, a clone in a seat
-releases as a clone with an id does (DEC-059 point 9).
+instance owned it, every owner is cleared, except a comment marker another
+account's clone wrote, which is left for that account's clone to release. A
+container that closes through `--mode=cascade-eligibility-close` is released
+here too, so the engine's fold stays realm-blind (DEC-035 point 8). `done-work`
+releases through this script, which it runs for each issue its merge closed. A
+release that fails is a warning, and the close stands. A dry run, and a run
+that finds the issue already closed in won't-do or cascade mode, release
+nothing. With no id set, nothing of this runs. In a project with a topology of
+seats, a clone in a seat releases as a clone with an id does (DEC-059 point 9).
+Its seat is confirmed on the seat's state issue first (DEC-059 point 6). Where
+it cannot be, the issue still closes, and nothing is released, with a warning.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -346,8 +349,19 @@ def main() -> int:
     )
 
     # Instance ownership (DEC-035): None unless this clone set an instance id,
-    # and then nothing below changes.
-    clone = instance_claims.this_clone(capability_root, invoker.github_login, config)
+    # or holds a seat of a topology (DEC-059), and then nothing below changes. A
+    # seat that cannot be confirmed releases nothing, and the close goes on: the
+    # release is the instance's write, and the close is not (DEC-059 point 6).
+    try:
+        clone = instance_claims.this_clone(
+            capability_root, invoker.github_login, config, dry_run=args.dry_run
+        )
+    except instance_claims.Unconfirmed as exc:
+        print(
+            f"[warn] ownership: #{args.issue_number} is closed without a release: {exc}",
+            file=sys.stderr,
+        )
+        clone = None
 
     print(f"close-issue: #{args.issue_number}")
     print(f"  title:        {title}")

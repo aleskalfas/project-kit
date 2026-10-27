@@ -5302,7 +5302,8 @@ def validate(include_refs: bool, only: tuple[str, ...], skip: tuple[str, ...]) -
 
 @main.group()
 def refs() -> None:
-    """Reference-graph operations across agents, skills, decisions, hooks (per COR-013)."""
+    """Reference-graph operations across agents, skills, decisions, hooks (per COR-013),
+    and the lookups between a citation and its file, both ways."""
 
 
 @refs.command("validate")
@@ -5420,6 +5421,47 @@ def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
         click.echo(path)
     if found.partial_supersession is not None:
         click.echo(found.partial_supersession)
+
+
+@refs.command("records-for")
+@click.argument("paths", metavar="PATH...", nargs=-1, required=True)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Print one document answering each path given, in order: the `friction.exclude` "
+    "entry it lies under, each record tied to it directly with its ties, and each artefact "
+    "that anchors it with the records it rests on.",
+)
+def refs_records_for(paths: tuple[str, ...], as_json: bool) -> None:
+    """The accepted records the anchors lead to from each PATH, the project's own first.
+
+    Tied directly: a record whose own path anchor matches the path, and each record the
+    artefact at the path anchors, whole or by point. Apart, each artefact whose path
+    anchor matches the path, the narrowest first, with the records it rests on. A path
+    under `friction.exclude` is one no path anchor stands on. A path no anchor reaches
+    lists nothing, which is no sign that no record governs it. Read-only. Exit 0 when
+    answered, whatever it found; 1 outside a project or when the configuration cannot be
+    read; 2 on a usage error, such as a folder or a path outside the repository."""
+    import json
+
+    from project_kit import friction_discovery, path_records, validators
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    try:
+        rels = [path_records.repository_path(target_root, p, Path.cwd()) for p in paths]
+    except ValueError as exc:
+        raise click.UsageError(f"{exc}.") from exc
+    problem = friction_discovery.unreadable_configuration(target_root)
+    if problem is not None:
+        raise click.ClickException(f"{problem}; `pkit validate` reports it.")
+    answer = validators.as_one_run(lambda: path_records.records_for(target_root, rels))
+    if as_json:
+        click.echo(json.dumps(answer.as_json(), indent=2, ensure_ascii=False))
+        return
+    click.echo(path_records.render_human(answer), nl=False)
 
 
 @refs.command("rename")
