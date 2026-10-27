@@ -69,7 +69,7 @@ Main's head can carry the next release's backbone migrations beside the last rel
 - an untagged install is possible, and nothing checks it
 - a release that moves only a component cuts no tag, so it reaches a project on a tagged install only with the next backbone release
 
-**Why the canonical tag moves.** `latest` gives one command that installs the highest release whenever it runs, and every printed copy of it stays current. It is an install of a release's commit all the same, since the release-tag workflow puts `latest` only on the commit of the highest release tag. The release tags are the versions, so a project records the exact version it runs. Its costs:
+**Why the canonical tag moves.** `latest` gives one command that installs the latest release whenever it runs, and every printed copy of it stays current. It is an install of a release's commit all the same, since the release-tag workflow puts `latest` only on the commit of the highest release tag. The release tags are the versions, so a project records the exact version it runs. Its costs:
 
 - a fetch without force moves no tag a clone already holds, so a clone must force-fetch a moved `latest`, and a fetch of tags without force reports it rejected
 - `latest` lags a release until a run of the release-tag workflow moves it
