@@ -175,7 +175,7 @@ The costs are those of a program started by its path (COR-021). The CLI's help l
 - **The surface left provisional while the capability's version is below 1.0.0.** Rejected. Pages in every project rely on it from the first release, and a provisional surface could break them in a version that claims to break nothing.
 - **A report-only mode for a project's first run.** Not taken. The run is a step the project adds to its CI once its pages pass, and an update writes their outputs for review.
 - **A run that confines its commands, in a container or a sandbox of its own.** Not taken. No such confinement is portable, and the caller's own already applies.
-- **A command of the CLI, with a deny of the run that the capability ships.** Rejected. A deny wins over every allow, so no project could then let any agent run it. Where a project grants a wrapper that runs any program, such as `uv run`, a deny on a call through it is read as the wrapper, and does not bind.
+- **A command of the CLI, with a deny of the run that the capability ships.** Rejected. A deny wins over every allow, so no project could then let any agent run it.
 - **A command of the CLI that asks a person before it runs.** Rejected. With no terminal it needs a flag, and a call carrying the flag is still a call the CLI's grant allows.
 - **Kept results now, feeding the reading-evidence point.** Not taken now. No reader needs them yet (point 10).
 
