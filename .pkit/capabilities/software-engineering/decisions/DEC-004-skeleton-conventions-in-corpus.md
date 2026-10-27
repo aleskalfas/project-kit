@@ -1,7 +1,7 @@
 ---
 id: DEC-004
 title: The software-engineer writes the conventions a walking skeleton sets into the conventions corpus
-status: proposed
+status: accepted
 date: 2026-10-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
