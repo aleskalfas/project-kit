@@ -305,6 +305,17 @@ def test_a_task_in_progress_that_no_claim_was_made_on_is_nobodys(tp) -> None:
     assert not tp.in_pool(_owner(tp, [], {}), tp.IN_PROGRESS)
 
 
+def test_a_released_seat_s_task_in_review_is_never_in_the_pool(tp, readers) -> None:
+    """DEC-059 point 7: the pool holds Tasks in Backlog and In Progress only. A
+    Task in Review waits on its reviewers and a person (point 9), so the person
+    hands it over (DEC-035 point 4), and `next-task` never offers it (#2184)."""
+    free = tp.ownership.Holder(tp.ownership.SEAT_FREE)
+    void = _owner(tp, [_stamp(tp, 1, "worker-1", "k1")], {"worker-1": free})
+    assert not tp.in_pool(void, "review")
+    review = [_row(10, state_label="state:review")]
+    assert _ready(tp, readers, review, takes_over=True) == []
+
+
 def test_taken_by_another_reads_the_lowest_claim(tp) -> None:
     assert tp.taken_by_another(_owner(tp, [_stamp(tp, 3)]), 2)
     assert tp.taken_by_another(_owner(tp, [_stamp(tp, 1), _stamp(tp, 2)]), 2)

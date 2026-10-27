@@ -18,6 +18,10 @@ yet (DEC-060). Held here:
 - **batch planning names the shared choices before it slices,** and a first plan
   files the foundation only (DEC-060)
 - **the storyboard walks one round of each role** the loop serves
+- **the worker mends its own pull requests first** (#2184): one that conflicts
+  with the default branch, by merging that branch in, then a fix round, before
+  the next Task. A released seat's pull request in Review is the person's to
+  hand over, and the storyboard and the README show each situation
 - **the README's exit table of `next-task`** names a declined prompt
 - the checks flag a verb or a flag the capability does not ship, and pass one it does
 """
@@ -216,11 +220,53 @@ def test_the_worker_goes_on_with_what_its_clone_has_in_flight_first() -> None:
     """A new session resumes its Task In Progress, or a fix round, before it takes
     another (DEC-059 point 7), and goes on from a taken-over Task's branch."""
     worker = _section(_text(LOOP), "## 3. The worker's loop")
-    resume = worker.index("**Go on with what this clone has in flight.**")
+    resume = worker.index("**Go on with what this clone has in flight,**")
     assert resume < worker.index("`pkit pm next-task --yes`")
     flat = _flat(worker)
-    assert "Take a new Task only once nothing is in flight, and the working tree is clean." in flat
+    assert (
+        "take a new Task only once nothing is in flight, no pull request of yours waits on "
+        "you, and the working tree is clean." in flat
+    )
     assert "**A Task taken over.**" in flat and "Never force-push" in flat
+
+
+def test_the_worker_mends_its_own_pull_requests_before_the_next_task() -> None:
+    """Each time the loop starts, and each time it comes back after `review-work`,
+    the worker reads its pull requests in Review by their branches: a conflict with
+    the default branch first, then a fix round, and only then the next Task (#2184)."""
+    worker = _section(_text(LOOP), "## 3. The worker's loop")
+    flat = _flat(worker)
+    assert "each time the loop starts and each time it comes back here after `review-work`" in flat
+    assert "`pkit pm show-pr <branch>`" in flat
+    conflict = worker.index("**It conflicts with the default branch,**")
+    fix = worker.index("**A verdict at its head asks for changes:**")
+    assert conflict < fix < worker.index("`pkit pm next-task --yes`")
+    # A conflict is mended by merging the default branch in, never by rewriting.
+    assert "merge the default branch in" in flat
+    assert "Never rebase and never force-push" in flat
+    # The fix round is transition-state's, and carries only the blocking findings.
+    assert "[transition-state](transition-state.md)'s review step" in flat
+    assert "fix only the blocking ones" in flat
+    # The next round comes back to step 1.
+    assert "go back to 1" in _flat(worker.split("6. **Take the next Task.**", 1)[1])
+
+
+def test_a_released_seat_s_pull_request_in_review_is_the_person_s_to_hand_over() -> None:
+    """`next-task` never offers a Task in Review (DEC-059 point 7). It waits on its
+    reviewers and the person, who lands it or hands it over (point 9, DEC-035
+    point 4). A worker takes one up only where the person hands it over (#2184)."""
+    worker = _flat(_section(_text(LOOP), "## 3. The worker's loop"))
+    lead = "**A pull request that a released seat left in Review.**"
+    assert lead in worker
+    paragraph = worker.split(lead, 1)[1]
+    assert "`next-task` never offers a Task in Review" in paragraph
+    assert "[project-management:DEC-059-topology-of-seats] points 5 and 7" in paragraph
+    assert "[project-management:DEC-035-instance-ownership] point 4" in paragraph
+    assert "Take one up only where the person hands it to you." in paragraph
+    # A hand-over moves no claim yet, and the loop says so.
+    assert "`handoff-issue` does not move a claim between clones yet" in _flat(
+        _section(_text(LOOP), "## Not in the loop yet")
+    )
 
 
 def test_the_worker_starts_its_task_with_yes_and_no_person_s_move_is_its_own() -> None:
@@ -290,7 +336,36 @@ def test_the_storyboard_walks_one_round_of_each_role() -> None:
     assert "the same storyboard walks one round of each role's loop" in _flat(_text(AGENT))
 
 
+def test_the_storyboard_shows_each_situation_of_a_later_round_once() -> None:
+    """A conflict, a fix round, and a released seat's pull request in Review, each
+    once, in the round that follows Scenario 13 (#2184)."""
+    text = _text(STORYBOARD)
+    later = _flat(_section(text, "## Scenario 14: A worker's later round"))
+    walk = later.split("### Walkthrough", 1)[1].split("### Behind the scenes", 1)[0]
+    for situation in ("conflicts with `main`", "asks for changes", "you released"):
+        assert walk.count(situation) == 1, situation
+    assert "pkit pm show-pr feat/320-export-csv" in later
+    assert "git merge origin/main" in later and "Never a rebase or a force-push" in later
+    assert "`pkit pm next-task --yes`" in later and "never offers #325" in later
+
+
 # --- the README ------------------------------------------------------------------------------
+
+
+def test_the_readme_says_what_the_worker_does_in_each_situation() -> None:
+    section = _flat(
+        _text(README).split("#### A seat's agent and its loop", 1)[1].split("\n#### ", 1)[0]
+    )
+    assert "a pull request of its own that conflicts with the default branch" in section
+    assert "a fix round on one whose verdict asks for changes" in section
+    assert "**A pull request that a released seat left in Review**" in section
+
+
+def test_the_readme_lists_show_pr_s_mergeable_field_and_its_branch_form() -> None:
+    section = _text(README).split("#### Read-only diagnostics", 1)[1].split("\n#### ", 1)[0]
+    [fields] = [line for line in section.splitlines() if line.startswith("- **`show-pr`**")]
+    assert "`mergeable`" in fields
+    assert "pkit pm show-pr feat/42-add-dispatcher" in section
 
 
 def test_the_readme_s_next_task_exit_table_names_a_declined_prompt() -> None:
