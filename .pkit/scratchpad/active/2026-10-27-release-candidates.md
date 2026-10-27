@@ -13,7 +13,7 @@ How does the release step cut `2.0.0rc1`, a later candidate and the final `2.0.0
 - **The first choice.** The maintainer decided on 27 October that "a release candidate does not consume the changesets. Each candidate is computed from the pending changesets and leaves them pending. The final release consumes them once" (#2211, second comment). The note builds on that decision.
 - **The other choices.** The maintainer decided each of the eight questions on 27 October, in comments on PR #2224. Three of them revised the note's recommendation: the way in and on (choice 5), publishing with one flag name, `--pre` (choice 6), and the final release's source (choice 7). Each section below states the decision, and "Decisions taken" lists them.
 - **Where they are carried.** Each decision is carried by a refinement of an accepted record, PRJ-002, PRJ-004, ADR-049, ADR-063, ADR-064 or ADR-065, or by the new ADR-072. The maintainer accepts them on PR #2224.
-- **Two of them change what PRJ-002 D3 decides.** A candidate's versions are written off main, and the final release that ends a line is cut off main's head. The maintainer authorised both (choices 1 and 7). The other refinements add a candidate's case to what their records decide, and wait for the same acceptance.
+- **Two of them change what PRJ-002 D3 decides.** A candidate's versions are written off main, and the final release that ends a line is cut from a commit behind main's head. The maintainer authorised both (choices 1 and 7). The other refinements add a candidate's case to what their records decide, and wait for the same acceptance.
 - **Its ground is accepted records and the code on `origin/main` at `dc195bf6b`.** Every claim about the code was checked on that tree, most with a read-only probe under the locked `packaging` 26.2.
 - **Words.** A *release* is a version with no pre-release suffix, and a *candidate* is a version `X.Y.ZrcN`. "The latest release" never names a candidate, as PRJ-004 and ADR-063 already read it. A candidate is still a release in COR-059 point 1's sense: a backbone version with its components' versions.
 
@@ -166,6 +166,7 @@ Under (R), main writes the release's floors at the final as today. The question 
 
 - **"Once each" does not hold on the candidate path.** A project that follows every candidate runs a script of `2.0.0/` once on each hop. That is up to once for each candidate, and once more at the final. It holds on the path without candidates, and no option short of a ledger gives it on both. The maintainer waived it for testers who follow every candidate (choice 4).
 - **A script a candidate shipped is corrected only by a new script,** as the maintainer decided (choice 4).
+- **A script merged after the last candidate's source commit** into a folder the final ships would never run for a project at the final. The final is cut from that commit, and a project at 2.0.0 runs no `2.0.0/` script again. So the final's cut and its release PR's merge refuse while main holds such a script, and another candidate, or a later folder, takes it in (PRJ-002 D5, ADR-072 point 3).
 - **A rerun may restore a default the project removed** after the script first ran (COR-010, ADR-065 point 5). Each candidate's notes say so, as a release's do.
 - **The final's own window is unchanged** for a project at 1.149.0, so adopters on the stable path see nothing new.
 
@@ -195,7 +196,7 @@ Under (R), main writes the release's floors at the final as today. The question 
 The maintainer decided choice 5 on 27 October, and revised the recommendation: a flag asks for candidates, each time.
 
 - **`pkit upgrade --pre`** moves a project to the newest release, candidates included, and pins it while it is on a candidate. Testers move within a line with it.
-- **A plain `pkit upgrade`** never moves a project onto a candidate. From a candidate, it takes the project to the final once that is out.
+- **A plain `pkit upgrade`** never moves a project onto a candidate its pin does not name. From a candidate, it takes the project to the final once that is out.
 - **The first hop from 1.149.0,** whose pkit has no `--pre`, is the one-off command, which runs the candidate's own upgrade through the bypass:
 
   ```
@@ -204,7 +205,8 @@ The maintainer decided choice 5 on 27 October, and revised the recommendation: a
 
 - **rc1 ships the pin change.** `pkit pin` accepts `X.Y.ZrcN`, ordered by PEP 440, and refuses an older version as today. So the pin file can name the candidate a project is on, and naming one by hand stays a gesture.
 - **An upgrade to a candidate nobody asked for refuses,** and writes nothing. Where the guard runs, and what counts as asking, ADR-072 points 6 and 7 say.
-- **A move to a candidate always pins.** A project left unpinned at a candidate meets the guard of the candidate's own upgrade, and the sync guard of every 1.x tool. So `--no-pin` is refused on a move to a candidate, and `init` by a candidate pins the project it installs.
+- **A move to a candidate always pins.** A project left unpinned at a candidate meets the guard of the candidate's own upgrade, and the sync guard of every 1.x tool. So `--no-pin` is refused on a move to a candidate, `init` by a candidate pins the project it installs, and `pkit unpin` refuses while the project records a candidate (ADR-072 point 7).
+- **A withdrawn candidate stays the newest** until the next is cut, and `pkit upgrade --pre`, which reads tags alone, may take it. Its Release says it is withdrawn (ADR-072 point 8).
 - **An interrupted move names its way on.** For the first hop, each candidate's notes say: run the same command again. A move between candidates cut short has the remedy ADR-072 point 8 gives.
 - **Testers work on a branch,** and go back by abandoning it. `2.0.0/002-move-answers-to-files.sh` moves answers out of artefacts outside `.pkit/` and adds answer files, so a checkout of `.pkit/` alone no longer brings a project back. PR #2219 made rolling back a revert of each upgrade's commit, which restores the files outside `.pkit/` too (ADR-049 point 3).
 - **Not the global tool.** `uv tool install --force …@v2.0.0rc1` puts every unpinned project on the machine behind a candidate's guard.
@@ -240,6 +242,7 @@ The maintainer decided choices 6 and 7 on 27 October, and revised the recommenda
   - Main is never frozen while candidates are tested, so the note's question of the line's length falls away.
   - A withdrawn last candidate still needs another candidate first.
   - The release PR's head is the tagged commit itself, and `pkit release merge` lands it only while its head is the commit the final's tag names. ADR-072 point 3 says how the step finds the source commit from the tags.
+- **What cannot wait.** A change merged since the source commit that the final would lose or break cannot wait for the next release. Such are a migration in a folder the final ships, an edit to a changeset it consumes, and a range that excludes a version it writes. Before the final's tag, such a change needs another candidate first. After it, the change is reverted on main, or a migration moved to a later folder, and lands again once the release PR has merged (PRJ-002 D5, ADR-072 point 3).
 - **The looser test,** the maintainer's judgement of what may ship untested, was the alternative, and so was main held at the last candidate's commit until the final.
 
 ## 7. Which records change
@@ -249,7 +252,7 @@ The maintainer decided the carriers as recommended (choice 8): PRJ-002 and PRJ-0
 | Record | Change | Why |
 |---|---|---|
 | PRJ-002 | refined in place, with the maintainer's authorisation | It is project-kit's release policy, and (R) and the final's source change what D3 decides. D3, its sentence on the tagged main commit, the Rationale's "one authoring commit, on main" and the Implications' writes on main gain the candidate's case and the final's. A candidate is cut on request from the default branch, from the pending changesets, which stay pending. Its versions exist only in its tag. The final is cut from the last candidate's source commit, and its release PR brings its versions into main. D4 stands under (iii), its title saying a floor rises only in a final release. The mechanics, such as the counter and the refusals, go to the release README, as "Policy, not mechanics" asks. |
-| PRJ-004 | refined in place | It fixes the tag form and the install refs. It gains the tags `vX.Y.ZrcN` on a commit main never holds, never deleted or moved, and no branch as an install ref. `latest` is never on one, only a reader asked for candidates reads them, its Release is marked a pre-release, and notes past the cap are linked. |
+| PRJ-004 | refined in place | It fixes the tag form and the install refs. It gains the tags `vX.Y.ZrcN` on a commit main never holds, never deleted or moved, and no branch as an install ref. `latest` is never on one, and of the readers that pick a version to install, only one asked for candidates picks them. Its Release is marked a pre-release, and notes past the cap are linked. |
 | a new ADR | recommended | One home for the realisation that spans the release step, the range reader, the runner, the pin, the guard and the notes. Only a new record can carry the options and why each was rejected, and ADR-065 already holds 14 points (COR-025). It records `prereleases=True` as a reading for the whole project, since it changes how every adopter's ranges are read, not only a candidate's. |
 | ADR-065 | refined in place | Point 4 gains the hand-over of `--pre` and the guard among upgrade's own checks, and step 4's lower bound in PEP 440 order. Point 8 gains a row for a recorded target that is a candidate above the running pkit, whose remedy is `pkit upgrade --pre`. Point 9's hand-over takes the newest release, candidates included, under `--pre`. Point 12 says a candidate's tag names one content and never moves. |
 | ADR-049 | refined in place | Its pin token widens to `X.Y.ZrcN`, and the refusal's reason, a router change, is corrected. Point 3's `pkit upgrade` raises a pin under `--pre` to the newest release, candidates included. Its rollback, a revert of each upgrade's commit, is main's since PR #2219. |
@@ -279,17 +282,17 @@ The maintainer decided the carriers as recommended (choice 8): PRJ-002 and PRJ-0
 
 1. `pyproject.toml`'s version pattern admits `X.Y.Z(a|b|rc)N`.
 2. The release step's `--pre` mode. It takes the release's plan, suffixes every version it writes and raises no floor. It reads the counter from the remote's tags, refuses as question 1 lists, and leaves the changesets in place. The lint and `publish-notes` read the candidate's heading.
-3. `pkit release check` and `pkit release merge` refuse a pre-release version on the default branch.
+3. `pkit release check` and `pkit release merge` refuse a pre-release version on the default branch, and `pkit release merge` refuses every release PR while a line runs.
 4. `range_admits` passes `prereleases=True`.
 5. The runner's window, and whole public versions in `as_recorded_version`'s callers.
 6. `pkit pin` accepts a candidate, `pkit upgrade --pre` moves to the newest release, candidates included, an upgrade refuses a candidate nobody asked for, a move to a candidate always pins, and `init` by a candidate pins.
 7. `publish-notes` writes through `--notes-file`, links the section past GitHub's cap, and marks a candidate's Release a pre-release.
-8. The `release-pr` workflow's "pre-release" input.
+8. The `release-pr` workflow's "pre-release" input, whose run runs the folder test of ADR-072 point 5 before each cut.
 9. A changeset for the backbone, the docs above, and the add-only rule.
 
 The maintainer then starts the release workflow with its "pre-release" input, which tags `v2.0.0rc1` and publishes its pre-release. Testers move a project, on a branch, with the one-off command.
 
-**Before the last candidate:** the release step's cut of the final, and the release PR's body that links the section, must be in the last candidate's source commit, since the final is cut there. The final's notes are as large as rc1's. `pkit release merge`'s check of the final's release PR lands before that PR merges (ADR-072 point 3).
+**Before the last candidate:** the release step's cut of the final, with its refusal of what cannot wait, and the release PR's body that links the section, must be in the last candidate's source commit, since the final is cut there. The final's notes are as large as rc1's. `pkit release merge`'s check of the final's release PR lands before that PR merges (ADR-072 point 3).
 
 **After the final:** the open questions below.
 
@@ -303,7 +306,7 @@ The maintainer decided each question on 27 October. The decision that a candidat
 4. **The migration window:** (A). A move to a candidate runs its release's folder, and each later hop runs it again, every script idempotent and held by a test. A script a candidate shipped is corrected only by a new script, and "run once each" is waived for testers who follow every candidate ("agree"). Carried by ADR-072 point 5 and ADR-065 point 4.
 5. **The way in and on:** `pkit upgrade --pre` moves a project to the newest release, candidates included, and pins it while on a candidate. A plain `pkit upgrade` never moves a project onto a candidate, and from a candidate takes it to the final once out. The first hop from 1.149.0 is the one-off command, and testers work on a branch ("yes"). Carried by ADR-072 points 6 to 8, with ADR-049, ADR-063, ADR-064 and ADR-065.
 6. **Publishing:** through the existing release path, not a workflow of its own. The `release-pr` workflow gains a "pre-release" input, `pkit release plan --pre` and `apply --pre` write the `rcN` numbers, and the run pushes the tag alone and publishes notes marked pre-release. One flag name on both sides, `--pre`, and `latest` never moves to a candidate ("yes"). Carried by PRJ-004 and ADR-072 point 9.
-7. **The final's source:** the commit the last candidate came from, not main's head. A commit on top of it carries the final versions and takes the tag, and a pull request brings them into main, consuming the changesets the final included. Main is never frozen, and the weekly release run goes, so a release is cut only when the maintainer starts it (#2232, PR #2233) ("ok"). Carried by PRJ-002 D3 and D5, and ADR-072 points 3 and 9.
+7. **The final's source:** the commit the last candidate came from, not main's head. A commit on top of it carries the final versions and takes the tag, and a pull request brings them into main, consuming the changesets the final included. Main is never frozen, and the weekly release run goes, so a release is cut only when the maintainer starts it (#2232, PR #2233) ("ok"). Carried by PRJ-002 D3 and D5, and ADR-072 points 3 and 9, with what review found follows from it: a change merged since that the final would lose or break needs another candidate first, or a revert on main after the tag.
 8. **The records' carriers:** PRJ-002 and PRJ-004 refined, the new ADR-072, and ADR-049, ADR-063, ADR-064 and ADR-065 refined, each pointing to it.
 
 ## Open questions
@@ -314,8 +317,9 @@ Nothing below is decided. Each waits for a case or for 2.0.0.
 - **What is new since the previous candidate,** listed in each candidate's notes beside everything since the last release.
 - **A check of the add-only rule,** if a second line happens (COR-007).
 - **The `version` commands' retirement,** `pkit version bump --pre` and `promote`, as a surface change of its own.
-- **A run that ends a line by mistake.** Started without its "pre-release" input while a line runs, the release workflow cuts the final and pushes its tag before any pull request, so a forgotten input ships the final. An input of its own for the final's run would refuse a run that names neither. The architect recommends it, and it waits for the maintainer before the build for #2211 cuts a final.
-- **Leaving a line without its final.** A cut refuses while a line at another version runs, so a line ends only with its final release. Nothing yet withdraws a whole line.
+- **A run that ends a line by mistake.** Started without its "pre-release" input while a line runs, the release workflow cuts the final and pushes its tag before any pull request, so a forgotten input ships the final. ADR-072 point 9 keeps the one input the maintainer chose. An input of its own for the final's run would refuse a run that names neither. The architect recommends it, and PR #2224 puts it to the maintainer before the build for #2211 cuts a final.
+- **Leaving a line without its final.** A cut refuses while a line at another version runs, and no other release ships while a line runs, so a line ends only with its final release. Nothing yet withdraws a whole line.
+- **New migrations during a line.** While a line runs, `pkit new migration` targets the folder the final ships, since that folder already waits. So each backbone migration merged during a line needs another candidate, or a move to a later folder, before the final. A `check-diff` finding during a line would say so at the pull request, a rule nobody has decided.
 
 ## Review
 
@@ -329,4 +333,5 @@ The critic and the architect read earlier drafts. Their findings changed the not
 - **The architect's escalations.** The change to PRJ-002 D3 is decision 1. The change to D4 is avoided by (iii), and the change to COR-010 by the add-only rule.
 - **The architect's concerns** are answered in questions 1, 5 and 6. They covered the branch, the counter, rising versions, the unchecked candidate commit and the final's source.
 - **The architect's review of the decided records** kept an adopter's own tags from making a line, by asking the test of a running line only in the methodology's source repository. It restored the refusal of a cut while a line at another version runs, and named the two open questions on ending a line. It also found that PR #2233, which removes the weekly run, must land before the code that cuts a final reaches the workflow.
+- **The critic's review of the decided records** found that a migration, a range or a changeset edit merged after the last candidate's source commit could be lost, or break main, when the final lands. So the final's cut and its merge refuse them (PRJ-002 D5, ADR-072 point 3). It also had `pkit unpin` refuse on a candidate, the rollout name what rc1 needs, and the records say that a line holds back every other release and that `--pre` may take a withdrawn candidate.
 - **Not verified:** no wheel was built at a pre-release tag. The build and `--version` run of the release workflow's pre-release run are that check. The router's notice when it cannot fetch a candidate pin shows a generic warning, which is cosmetic.

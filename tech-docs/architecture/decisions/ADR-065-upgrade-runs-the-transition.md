@@ -156,7 +156,7 @@ A project already current returns after these checks, before step 1, and only wr
    - the dependency gates and the collision flow (point 6)
 2. **The target is recorded:** `backbone_version` becomes the target. `completed_version` keeps its value, or stays missing. Then each capability manifest still at its root moves under `project/` (point 2). Each skip chosen in step 1 is recorded in its capability's manifest (point 6).
 3. **Propagation at the target,** through the propagation step: the backbone's trees, every adapter, and every shipped capability with its skips. An adapter the target adds is registered here. Then `.pkit/.gitignore` is rendered, so a migration reads the target's render.
-4. **Backbone migrations,** from `completed_version`, or every one when it is missing (point 5). The lower bound is read in PEP 440 order, so a completion at a candidate sits below its final release's folder, and the next transition runs that folder again. Steps 5 and 6 read each component's lower bound the same way (refinement per ADR-072).
+4. **Backbone migrations,** from `completed_version`, or every one when it is missing (point 5). The lower bound is read in PEP 440 order, so a completion at a candidate sits below its final release's folder, and the next transition runs that folder again. Steps 5 and 6 read each component's lower bound the same way (refinement per ADR-072 point 5).
 5. **Adapter migrations,** each from the version its manifest records. Their scripts are read from the bundle, as a capability's are, so the adapter copy carries no `migrations/`. Each adapter is recorded at its bundled version when its migrations finish.
 6. **Capability migrations,** dependencies first by their `requires_capabilities` (COR-030). Each capability is restamped when its migrations finish.
 7. **Seed paths are created where missing** (point 11), never over one that exists.
@@ -174,7 +174,7 @@ A project already current returns after these checks, before step 1, and only wr
 - **Merge delivery runs its auto-add tier.** A tier that prompts runs only where a person can answer, and none is built (COR-002, COR-059 point 2).
 - **Where a person can answer:** standard input and standard output are both terminals, as ADR-063 point 3 tests. The collision flow and the questions use the same test.
 - **A migration that exits non-zero stops the transition.** The completion is not recorded, and the next upgrade runs the migration again.
-- **First install records the same two states.** It writes the target before it copies anything, registers the adapters after the copy, and writes `completed_version` last. The next `pkit upgrade` finishes an interrupted install, or, after an `init` run by a release candidate, the candidate's upgrade through the bypass does (ADR-072 point 7). That upgrade also pins the project by ADR-064's default, while a finished init writes no pin unless a release candidate ran it (ADR-064 point 3).
+- **First install records the same two states.** It writes the target before it copies anything, registers the adapters after the copy, and writes `completed_version` last. The next `pkit upgrade` finishes an interrupted install, or, after an `init` run by a release candidate, the candidate's upgrade through the bypass does (refinement per ADR-072 point 7). That upgrade also pins the project by ADR-064's default, while a finished init writes no pin unless a release candidate ran it (ADR-064 point 3).
 - **A transition of one capability** (`pkit capabilities upgrade <name>`) runs in the same order for that capability alone (COR-010). It writes neither of the backbone's two keys. Its steps:
   1. the guard (point 7), then step 1 for that capability. Each may refuse, and none writes.
   2. its manifest moves under `project/` where it is still at the root, and each skip chosen in step 1 is recorded
@@ -277,13 +277,13 @@ The guard's message, and upgrade's under the router's fallback, name the remedy 
 |---|---|
 | Pinned, and the router fell back to another installed pkit | Reconnect and run again, since the router runs the pin whenever it can fetch it, or run the pin through `uvx`. Where SSH keys fail, install the pin's version from the repository's HTTPS URL, and the router then runs it with no fetch. To move on purpose, `pkit unpin` and then `pkit upgrade`. Not a bare `pkit upgrade`, which refuses here (point 9). |
 | No manifest, or a recorded version that is no version | `pkit upgrade`, which writes the manifest at its target and replays (point 5) |
-| The recorded target is a candidate above the running pkit | `pkit upgrade --pre`, which hands over to that candidate or a newer one, whose upgrade finishes the move. No latest release finishes it while its line runs (point 9, refinement per ADR-072). |
+| The recorded target is a candidate above the running pkit | `pkit upgrade --pre`, which hands over to that candidate or a newer one, whose upgrade finishes the move. No latest release finishes it while its line runs (point 9, refinement per ADR-072 point 8). |
 | The running pkit older than the content or the pin | the remedies #1212 gives. Content ahead of its pin also names `pkit upgrade`, which finishes the interrupted raise. |
 | The transition incomplete | `pkit upgrade`. For a migration that fails every time, fix its cause and run again, or roll the project back by reverting the upgrade's commit. The revert restores every file the upgrade changed, in `.pkit/` and outside it (ADR-049 point 3). |
 | Pinned, the content behind the pin, the pin's code running | `pkit upgrade`, whose routed child finishes the pin (point 9) |
 | Unpinned, the running pkit newer than the content | **Move:** `pkit upgrade`, which pins by default (`--no-pin` keeps it unpinned) and may first update the tool (`--no-self-update` declines). **Stay:** `pkit pin`, which pins at the content's version, so the router runs that version. **A pipeline:** commit a pin, or install the project's version. |
 
-- **The candidate's row binds code from the first candidate on.** A first move onto a candidate, cut short, meets the message of the release the project left. Each candidate's notes name the way on (ADR-072 point 8).
+- **The candidate's row binds code from the first candidate on.** A first move onto a candidate, cut short, meets the message of the release the project left. Each candidate's notes name the way on (refinement per ADR-072 point 8).
 - **How sync knows the router fell back:** by the test point 9 sets, the router's fallback mark without `PKIT_NO_ROUTE`. The fallback only chooses the message. Sync stops under it only where its guard finds a mismatch.
 - **An unpinned project whose installed pkit moves to each new release** meets the stop at every release, until it pins. The changelog says so.
 - **Messages that sent an operator to sync to seed or repair the manifest name upgrade instead.**
@@ -294,7 +294,7 @@ The guard's message, and upgrade's under the router's fallback, name the remedy 
 
 - **The routed child,** the upgrade the router runs under the pin's code, checks three cases, in this order:
   1. **A newer latest release that resolves:** it hands over to the latest through the bypass. Under `pkit upgrade --pre`, the newest release, candidates included, takes the latest release's place (refinement per ADR-072 point 8).
-  2. **A recorded state ahead of the pin,** in `backbone_version` or `completed_version`: upgrade's older-direction check refuses (point 7). Offline, its message names reconnecting, since the latest's upgrade finishes the interrupted raise. Online, no release is newer than the pin, and the message names #1212's remedies. Where the recorded target is a candidate, the message names `pkit upgrade --pre` instead, online or offline, since no latest release finishes that move while its line runs (refinement per ADR-072).
+  2. **A recorded state ahead of the pin,** in `backbone_version` or `completed_version`: upgrade's older-direction check refuses (point 7). Offline, its message names reconnecting, since the latest's upgrade finishes the interrupted raise. Online, no release is newer than the pin, and the message names #1212's remedies. Where the recorded target is a candidate, the message names `pkit upgrade --pre` instead, online or offline, since no latest release finishes that move while its line runs (refinement per ADR-072 point 8).
   3. **Otherwise,** at the latest, ahead of it or offline, the child runs the transition to its pin in its own process. It already runs the pin's code. A project already current at its pin returns before step 1 (point 4).
 - **Handing over first still finishes the pin first.** The latest's upgrade runs from the recorded states, so it finishes the pin's interrupted transition on the way.
 - **The older-direction check comes after the hand-over and before the child's own transition writes anything.** The hand-over is how a project whose content is ahead of its pin moves on.
@@ -358,7 +358,7 @@ The core layer writes a project-owned path only through a writer a record names 
 ### 12. A version identifies content only for a tagged install
 
 - **A tagged install ties each pkit version to one content** (ADR-033). So sync's guard, which compares versions, is sound there and only there.
-- **A release candidate's tag is a tagged install too.** A candidate's version names one content, as PRJ-004 and PRJ-002 D5 keep it (refinement per ADR-072).
+- **A release candidate's tag is a tagged install too.** A candidate's version names one content, as PRJ-004 and PRJ-002 D5 keep it (refinement per ADR-072 point 2).
 - **An untagged install, from main, is vouched for by no version.** Its `VERSION` names the last release, while its files may be newer. The guard compares its version like any other, so the comparison vouches for nothing.
 - **A release that moves only a component** cuts no tag (the release README). Under a tagged install it reaches a project with the next backbone release, through that release's transition.
 

@@ -34,7 +34,7 @@ In an un-pinned project, `pkit upgrade` writes `.pkit/version-pin` at the versio
 
 The flag skips the pin. The project stays un-pinned and keeps following the installed tool. The opt-out holds for one upgrade only: nothing records it, so the next upgrade without the flag pins the project. `pkit unpin` removes a pin the default wrote (ADR-049 point 3), and it too lasts until the next upgrade without the flag. In a pinned project the flag changes nothing, since the upgrade raises the existing pin either way.
 
-On a move to a release candidate the flag is refused, since such a move always pins the project (refinement per [ADR-072](ADR-072-release-candidates.md) point 7). An unpinned project at a candidate would meet the candidate's own guard against a candidate nobody asked for.
+On a move to a release candidate the flag is refused, and `pkit unpin` refuses in a project on a candidate, since a project there always stays pinned (refinement per [ADR-072](ADR-072-release-candidates.md) point 7). An unpinned project at a candidate would meet the candidate's own guard against a candidate nobody asked for.
 
 ### 3. What the default does not reach
 
