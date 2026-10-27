@@ -28,11 +28,13 @@ Get well. Nothing that needs you was done without you; each item below says what
 
 - [#2210](https://github.com/aleskalfas/project-kit/pull/2210): both fixers granted. After each merge they now propose fixes for stale pages and analysis artefacts; tonight the only debt is 7 deferrals waiting on their follow-ups, so nothing to propose yet.
 - [#2215](https://github.com/aleskalfas/project-kit/pull/2215) (#2213): seven shipped pages anchor what they mention, 69 anchors, prose unchanged; 68 passing mentions listed for you to mark.
+- [#2216](https://github.com/aleskalfas/project-kit/pull/2216) (#2212): the adapter, permissions and process pages anchor what they mention (prose unchanged); passing mentions listed for you.
+- [#2220](https://github.com/aleskalfas/project-kit/pull/2220) (#2218): the review run's timing test no longer fails on a loaded CI runner.
 
 ## Found tonight, for you
 
 - **Anchor cycles** (on [#2131](https://github.com/aleskalfas/project-kit/issues/2131)): pages that rest on each other cannot anchor each other, since a cycle fails validation. 43 grounding mentions stay uncovered until you choose a way out (one direction gives way, a mark, or COR-050 allows section-level cycles).
-- **[#2218](https://github.com/aleskalfas/project-kit/issues/2218):** a timing test failed CI on a loaded runner; being fixed.
+
 
 ## The talk
 
