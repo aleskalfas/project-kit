@@ -6,7 +6,7 @@ Updated through the day. Each item says what it needs.
 
 1. **[#2224](https://github.com/aleskalfas/project-kit/pull/2224) — release-candidate records** (choice 8, one acceptance): PRJ-002, PRJ-004, new ADR-072, refinements of ADR-049/063/064/065, and the `CLAUDE.md` sentence. Being updated to your seven choices.
 2. **#2234 — fixers run only when a person starts them, watched** (DEC-056 and ADR-066 edits). Before the release.
-3. **#1990 — guardrails see through wrappers and git configuration** (ADR-025 edit).
+3. **[#2240](https://github.com/aleskalfas/project-kit/pull/2240) — guardrails see through wrappers and git configuration** (#1990, ADR-025 edit).
 4. **#2214 — ADR-041 and the ownership code agree** (ADR-041 point 7 edit). After the release.
 
 ## Decided today
@@ -23,7 +23,9 @@ Updated through the day. Each item says what it needs.
 ## Landed today
 
 - #2194 (COR-065, COR-066, COR-067), #2169 (records hygiene), #2219 (rollback = revert the upgrade's commit), #2227 (six stale pages answered), #2215, #2216 (page anchors), #2220 (timing test), #2210 (fixer grant), #2205, #2208 (answers in answer files), and others overnight.
-- Landing now: #2197 (DEC-004), #2230 (delegate), #2231 (landing guard), #2233 (releases by hand).
+- #2197 (DEC-004), #2230 (delegate), #2231 (landing guard), #2233 (releases by hand), #2235 (#2026, the workspace note for every agent).
+- Landing now: #2237 (#2207, `friction prune`, `friction resolve` retired). Then #2239 runs the prune once on main.
+- #2240 (#1990): reviewers asked for six wording fixes, being made; then back to the reviewers, and to you for the ADR-025 edit.
 
 ## The talk
 
