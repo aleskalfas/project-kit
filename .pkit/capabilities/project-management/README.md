@@ -733,8 +733,9 @@ seats:
   - name: tester
     role: worker
     agent: project-manager    # the default
-    scope:
-      types: [test]           # workstreams, types of the type axis, or both
+    scope:                    # workstreams, types, milestones, or several
+      types: [test]           # values of the type axis
+      milestones: [Sprint 1]  # by their titles
     state_issue: 2211
   - name: old-worker
     role: worker
@@ -743,7 +744,7 @@ seats:
 ```
 
 - **A seat's number is its place in the list,** counted from one. New seats go at the end, and a seat that leaves stays in its place, marked `retired: true`, so no number moves. Renaming a seat retires it and adds a new seat at the end
-- **A scope narrows the work of its own seat,** and reserves nothing for that seat. It names workstreams that `project/workstreams.yaml` declares, values of the type axis, or both
+- **A scope narrows the work of its own seat,** and reserves nothing for that seat. It names workstreams that `project/workstreams.yaml` declares, values of the type axis, milestones by their titles, or several of these. A Task falls in the scope where it matches each part named, and a Task in no milestone falls outside a scope that names milestones
 - **The organizer seat's clone** may release another seat by force. At most one seat is the organizer seat
 - **Each seat names its state issue,** which says who holds the seat. The topology never says who holds a seat
 
@@ -760,11 +761,12 @@ seats:
 - a seat name used twice, or more than one organizer seat
 - a seat that is not retired and names no state issue, or two seats that name one
 - a scope that names a workstream or a type the project does not declare
+- a scope whose `milestones` is no list of titles
 - the `label` substrate in `project/instance-ownership.yaml`, since a label cannot carry what a claim names
 - a seat of the base deleted or moved rather than retired
 - a base that cannot be resolved, while the working tree holds a topology
 
-The check compares a change with a base, so it is no member of `pkit validate`, which takes no base. Run it among the checks of a pull request. It reads no GitHub.
+The check compares a change with a base, so it is no member of `pkit validate`, which takes no base. Run it among the checks of a pull request. It reads no GitHub, so it never checks that a milestone a scope names exists.
 
 **Taking a seat.** `pkit pm take-seat [<name>] [--role planner|worker|lead] --agent <definition>` takes the seat named for this clone. Without a name it takes the first free seat in the topology's order, or the first free one of the role. It says which commit of the default branch it read, and then the seat's name, its number, its role and the agent definition it names. From then on the clone acts as that seat's instance.
 
@@ -818,8 +820,10 @@ What else holds a Task back:
 
 - **An assignee of another account,** since `start-work` refuses such a Task and points to `handoff-issue`
 - **Another instance's claim,** folded as the clash guard folds it, and an owner that cannot be read
-- **The scope of the seat,** in a project with a topology. A Task falls in the scope where it matches each part the scope names: its workstream and its type
+- **The scope of the seat,** in a project with a topology. A Task falls in the scope where it matches each part the scope names: its workstream, its type and its milestone's title. A Task in no milestone falls outside a scope that names milestones
 - **An axis that a board carries,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
+
+**What it says of the scope.** After the count of ready Tasks, `next-task` names each ready Task that the seat's scope leaves out. It writes one line for each reason, such as `skipped #20, #23: outside the scope, in no milestone`. It names only a Task that nothing else in the listing holds back, and reads no owner for it.
 
 **How dependencies are read.** Dependencies are prose ([project-management:DEC-005-linking-and-containment]), so `next-task` reads each `#N` that the `## Dependencies` section names. It skips what an HTML comment, a fenced code block or a code span holds. It skips a reference to another repository's issue (`owner/repo#N`), an issue named only by its address, and the Task itself. A number that is no open issue holds nothing back, whether it is closed, a pull request or not there.
 

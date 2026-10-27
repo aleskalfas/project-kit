@@ -39,7 +39,7 @@ These concepts serve the use cases in [040-work-in-parallel](../overview/README.
 ```mermaid
 classDiagram
   accTitle: Parallel work
-  accDescr: A topology declares seats, and the settings the seats share. A seat may give the seat's agent a scope, which names workstreams and kinds of work. A seat has one state issue, keyed by the seat's name. An instance holds at most one seat, and takes the seat's name and number. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee.
+  accDescr: A topology declares seats, and the settings the seats share. A seat may give the seat's agent a scope, which names workstreams, kinds of work and Milestones. A seat has one state issue, keyed by the seat's name. An instance holds at most one seat, and takes the seat's name and number. An issue belongs to at most one owner, which is one instance, paired with the issue's assignee.
   class Topology {
     seats
     shared settings
@@ -54,6 +54,7 @@ classDiagram
   class Scope {
     workstreams
     kinds of work
+    Milestones
   }
   class Instance {
     number
@@ -70,12 +71,14 @@ classDiagram
     description
   }
   class Workstream
+  class Milestone
   class Issue
   Topology "1" --> "1..*" Seat : declares
   Seat "1" --> "0..1" Scope : may give its agent
   Seat "1" --> "1" StateIssue : has
   Instance "0..1" --> "0..1" Seat : holds
   Scope "*" --> "*" Workstream : names
+  Scope "*" --> "*" Milestone : names by title
   Owner "*" --> "1" Instance : is one
   Issue "*" --> "0..1" Owner : belongs to
 ```
@@ -167,25 +170,27 @@ A seat is one place in a [topology](../glossary.md#term-topology--topology), and
 
 Defined in [TERM-scope](../glossary.md#term-scope--scope).
 
-**Why:** Some [seats](../glossary.md#term-seat--seat) do one kind of work only, such as testing. A scope narrows the work such a seat's agent takes, and reserves nothing for that seat ([DEC-059](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
+**Why:** Some [seats](../glossary.md#term-seat--seat) do one kind of work only, such as testing, or take only the work a person puts into a [Milestone](../glossary.md#term-milestone--milestone). A scope narrows the work such a seat's agent takes, and reserves nothing for that seat ([DEC-059](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
 
-A scope is the part of a [project](../../core/glossary.md#term-project--project)'s work that one agent of a [topology](../glossary.md#term-topology--topology) takes issues from. A scope names [workstreams](../glossary.md#term-workstream--workstream), kinds of work such as `test` or `docs`, or both ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). A [Task](../glossary.md#term-task--task) falls in a scope where the Task matches each part the scope names. A seat with no scope takes from all the project's ready Tasks.
+A scope is the part of a [project](../../core/glossary.md#term-project--project)'s work that one agent of a [topology](../glossary.md#term-topology--topology) takes issues from. A scope names [workstreams](../glossary.md#term-workstream--workstream), kinds of work such as `test` or `docs`, Milestones by their titles, or several of these ([DEC-059 points 2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and 7). A [Task](../glossary.md#term-task--task) falls in a scope where the Task matches each part the scope names. A seat with no scope takes from all the project's ready Tasks.
 
 **Attributes:**
 
 - the workstreams it names ([DEC-045 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy))
-- the kinds of work it names (DEC-059 point 7)
+- the kinds of work it names ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool))
+- the titles of the Milestones it names ([DEC-059 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope))
 
 **Relations:**
 
-- A seat may give the seat's agent a scope ([DEC-059 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)).
-- A scope names workstreams and kinds of work, and changes no workstream and no kind of work (DEC-045 point 3 and DEC-059 point 7).
+- A seat may give the seat's agent a scope (DEC-059 point 2).
+- A scope names workstreams, kinds of work and Milestones, and changes none of them (DEC-045 point 3 and DEC-059 points 2 and 7).
 
 **States:** None.
 
 **Always true:**
 
 - A scope reserves nothing for its seat, so the other seats keep all the ready Tasks (DEC-059 point 7).
+- A Task in no Milestone falls outside a scope that names Milestones (DEC-059 point 2).
 - A workstream that no seat may take is warned of, and never blocked. Several seats that may take one workstream draw no warning (DEC-059 point 7).
 
 ## Instance
