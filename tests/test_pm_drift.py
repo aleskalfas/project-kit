@@ -694,20 +694,38 @@ def test_each_fixer_starts_with_its_brief_its_folder_and_the_bounds(drift, tmp_p
 # --- a watched run ------------------------------------------------------------------------
 
 
-def _watched(drift, tmp_path: Path, write: Any = None):
+_DEFINITION = Path(".claude/agents/living-docs.md")
+
+
+def _watched(
+    drift,
+    tmp_path: Path,
+    write: Any = None,
+    *,
+    at_commit: str | None = "the commit's definition",
+    in_checkout: str | None = None,
+):
     """`run_watched` with a stub copy and a stub of the backbone's unconfined
-    run: the copy is a folder of `tmp_path`, and `write(workspace)` stands in
-    for what the fixer writes."""
+    run: the copy is a folder of `tmp_path`, and `write(workspace, files_to)`
+    stands in for what the fixer writes. `at_commit` is the deployed
+    definition the commit holds, and `in_checkout` the one the person's
+    checkout holds, each None for none."""
     import contextlib
 
     copy = tmp_path / "copy"
-    made: list[Path] = []
+    checkout = tmp_path / "repo"
+    checkout.mkdir()
+    if in_checkout is not None:
+        (checkout / _DEFINITION).parent.mkdir(parents=True)
+        (checkout / _DEFINITION).write_text(in_checkout)
     started: list[dict[str, Any]] = []
 
     @contextlib.contextmanager
     def copy_at(repo_root, commit):
         copy.mkdir()
-        made.append(copy)
+        if at_commit is not None:
+            (copy / _DEFINITION).parent.mkdir(parents=True)
+            (copy / _DEFINITION).write_text(at_commit)
         try:
             yield copy
         finally:
@@ -716,10 +734,12 @@ def _watched(drift, tmp_path: Path, write: Any = None):
             shutil.rmtree(copy)
 
     def run_agent(agent, brief, **kw):
-        started.append({"agent": agent, "brief": brief, **kw})
+        started.append(
+            {"agent": agent, "brief": brief, "deployed": (copy / _DEFINITION).read_text(), **kw}
+        )
         workspace = copy / ".agent-workspace" / "fix-drift"
         if write is not None:
-            write(workspace)
+            write(workspace, files)
         return drift.agent_runs.AgentRun("finished", 0, output="Fixer result (x): ...")
 
     files = tmp_path / "queue" / "runs" / "r1" / "living-docs"
@@ -731,7 +751,7 @@ def _watched(drift, tmp_path: Path, write: Any = None):
         files_to=files,
         limit_seconds=60,
         effort="low",
-        repo_root=tmp_path / "repo",
+        repo_root=checkout,
         copy=copy_at,
         start=run_agent,
     )
@@ -739,15 +759,17 @@ def _watched(drift, tmp_path: Path, write: Any = None):
 
 
 def test_a_watched_fixer_runs_unconfined_in_a_working_copy_of_its_own(drift, tmp_path) -> None:
-    def write(workspace: Path) -> None:
+    def write(workspace: Path, files_to: Path) -> None:
         (workspace / "docs/a.md").mkdir(parents=True)
         (workspace / "docs/a.md" / "answer.json").write_text("{}")
 
-    run, started, files, copy = _watched(drift, tmp_path, write)
+    run, started, files, copy = _watched(drift, tmp_path, write, in_checkout="the checkout's")
     [call] = started
     # The backbone's unconfined form, in the copy, never the person's checkout.
     assert call["folder"] == copy and call["limit_seconds"] == 60 and call["effort"] == "low"
     assert "commit" not in call and "rules_of" not in call
+    # The definition the commit deploys is the one that runs.
+    assert call["deployed"] == "the commit's definition"
     # The drift command names the run's folders itself.
     workspace = copy / ".agent-workspace" / "fix-drift"
     assert call["brief"] == f"Read `{copy}`. Write `{workspace}`."
@@ -757,11 +779,26 @@ def test_a_watched_fixer_runs_unconfined_in_a_working_copy_of_its_own(drift, tmp
     assert not copy.exists()
 
 
+def test_where_the_commit_deploys_no_definition_the_checked_one_runs(drift, tmp_path) -> None:
+    """A project that keeps its deployed definitions out of git has none at the
+    commit: the drift command checked the one in the person's checkout, so that
+    one is put in the copy, and runs (DEC-056 point 3)."""
+    run, started, _, _ = _watched(drift, tmp_path, at_commit=None, in_checkout="the checkout's")
+    [call] = started
+    assert call["deployed"] == "the checkout's" and run.ending == "finished"
+
+
+def test_a_watched_run_with_no_deployed_definition_is_refused(drift, tmp_path) -> None:
+    run, started, _, _ = _watched(drift, tmp_path, at_commit=None, in_checkout=None)
+    assert started == [] and run.ending == "refused"
+    assert "deployed neither at the commit nor in your checkout" in run.reason
+
+
 def test_a_watched_runs_link_sets_its_files_aside(drift, tmp_path) -> None:
     secret = tmp_path / "secret"
     secret.write_text("key")
 
-    def write(workspace: Path) -> None:
+    def write(workspace: Path, files_to: Path) -> None:
         (workspace / "docs/a.md").mkdir(parents=True)
         (workspace / "docs/a.md" / "evidence.md").symlink_to(secret)
         (workspace / "docs/a.md" / "answer.json").write_text("{}")
@@ -769,6 +806,38 @@ def test_a_watched_runs_link_sets_its_files_aside(drift, tmp_path) -> None:
     run, _, files, _ = _watched(drift, tmp_path, write)
     assert run.breached and any("evidence.md" in change for change in run.changes)
     assert not (files / "docs/a.md" / "evidence.md").exists()
+
+
+def test_a_fixer_that_writes_the_queue_itself_sets_its_files_aside(drift, tmp_path) -> None:
+    """The fixer's settings may let it write the queue's folder for its run.
+    What it put there skipped the copy's guards, so the run is set aside, and
+    a link it planted is never written through."""
+    secret = tmp_path / "secret"
+    secret.write_text("key")
+
+    def write(workspace: Path, files_to: Path) -> None:
+        (workspace / "evidence.md").write_text("mine")
+        (files_to / "evidence.md").symlink_to(secret)
+
+    run, _, _, _ = _watched(drift, tmp_path, write)
+    assert run.breached and any("written during the run" in change for change in run.changes)
+    assert secret.read_text() == "key"
+
+
+def test_a_watched_runs_copy_is_bounded_in_depth(drift, tmp_path) -> None:
+    def write(workspace: Path, files_to: Path) -> None:
+        deep = workspace.joinpath(*["d"] * (drift.COPY_LIMIT_DEPTH + 2))
+        deep.mkdir(parents=True)
+        (deep / "f").write_text("x")
+
+    run, _, _, _ = _watched(drift, tmp_path, write)
+    assert run.breached and any("folders deep" in change for change in run.changes)
+
+
+def test_the_copy_refuses_each_name_git_reads_as_its_own(drift) -> None:
+    for name in (".git", ".GIT", ".git.", ".git ", "git~1", ".git::$INDEX_ALLOCATION", ".g‌it"):
+        assert drift.names_git(name), name
+    assert not drift.names_git(".github") and not drift.names_git("git")
 
 
 def test_a_commit_that_holds_the_workspace_refuses_a_watched_run(drift, tmp_path) -> None:
@@ -1239,7 +1308,7 @@ def test_a_copy_with_no_deployed_agents_checks_them_in_the_checkout(drift, tmp_p
         ),
         (
             {("pkit", "agents", "rules"): {"refused": "no deny of every call"}},
-            "no fixer can be confined",
+            "the rules of a fixer's run are refused",
         ),
     ],
 )
@@ -1287,7 +1356,9 @@ def test_a_model_deny_for_every_agent_that_refuses_a_run_stops_the_check(
 
     copy = tmp_path / "copy"
     copy.mkdir()
-    with pytest.raises(drift.Stop, match=r"no fixer can be confined.*the model deny of vcs"):
+    with pytest.raises(
+        drift.Stop, match=r"the rules of a fixer's run are refused.*the model deny of vcs"
+    ):
         drift.read_at(copy, "a" * 40, run)
 
 
@@ -1347,7 +1418,8 @@ def _stubbed_run(
     @contextlib.contextmanager
     def copy_at(repo_root, commit):
         copy = tmp_path / f"copy-{len(copies)}"
-        copy.mkdir()
+        (copy / _DEFINITION).parent.mkdir(parents=True)
+        (copy / _DEFINITION).write_text("deployed")
         copies.append(copy)
         yield copy
 

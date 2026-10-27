@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import errno
 import hashlib
 import json
 import os
@@ -56,7 +57,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, BinaryIO
 
 from _lib import agent_runs, default_branch, fixers
 
@@ -85,9 +86,28 @@ TEMP_FOLDER = ".tmp"
 WATCHED_WORKSPACE = (".agent-workspace", "fix-drift")
 
 #: What the copy of a watched run's files takes, as the backbone bounds the
-#: copy of a confined run's: its size, and its folders and files.
+#: copy of a confined run's: its size, its folders and files, and how deep its
+#: folders go.
 COPY_LIMIT_BYTES = 64 * 1024 * 1024
 COPY_LIMIT_ENTRIES = 10_000
+COPY_LIMIT_DEPTH = 32
+
+#: How the copy opens a folder and a file: never through a link (the
+#: backbone's `agent_confinement`).
+_FOLDER_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+_FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+_NEW_FILE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+
+#: What git's own guard reads as `.git`: any case, trailing dots and spaces,
+#: an NTFS stream, the short name, and the characters HFS+ ignores.
+_HFS_IGNORED = frozenset(
+    chr(code)
+    for code in (*range(0x200C, 0x2010), *range(0x202A, 0x202F), *range(0x206A, 0x2070), 0xFEFF)
+)
+_NTFS_GIT = re.compile(r"(?:\.git|git~1)[. ]*(?:[:\\].*)?", re.DOTALL)
+
+#: Where a session started in a folder finds an agent's deployed definition.
+DEPLOYED = (".claude", "agents")
 
 #: The bounds (DEC-056 point 4), each set as the review command sets its own:
 #: a flag, else a variable, else the default.
@@ -219,8 +239,10 @@ def name_problem(name: str) -> str | None:
 
 
 def names_git(part: str) -> bool:
-    """Whether a file system may read one part of a path as `.git`."""
-    return part.rstrip(". ").lower() in (".git", "git~1")
+    """Whether a file system may read one part of a path as `.git`, as git's
+    own guard judges it, and the backbone's copy of a run's files."""
+    stripped = "".join(char for char in part if char not in _HFS_IGNORED)
+    return any(_NTFS_GIT.fullmatch(form.casefold()) for form in (part, stripped))
 
 
 def plain(text: str) -> str:
@@ -276,8 +298,8 @@ def pin_commit(repo_root: Path, run: Runner = subprocess.run) -> str:
 @contextlib.contextmanager
 def copy_at(repo_root: Path, commit: str, run: Runner = subprocess.run) -> Iterator[Path]:
     """A detached working copy of `commit`, outside the person's checkout, for
-    the command's own reading; removed on every exit. The fixers run in clones
-    of their own, which the backbone makes (ADR-066 point 7)."""
+    the command's own reading; removed on every exit. Each watched fixer runs
+    in a clone of its own (`clone_at`, ADR-066 point 10)."""
     parent = Path(tempfile.mkdtemp(prefix="pkit-drift-"))
     copy = parent / "copy"
     added = run(
@@ -383,7 +405,10 @@ def read_at(
     check = _json(["pkit", "friction", "check", "--all", "--json"], copy, run)
     rules = _json(["pkit", "agents", "rules", RULES_OF, "--json"], copy, run)
     if rules.get("refused"):
-        raise Stop(f"no fixer can be confined at {commit[:12]}: {rules['refused']}")
+        raise Stop(
+            f"the rules of a fixer's run are refused at {commit[:12]}, so no fixer starts: "
+            f"{rules['refused']}"
+        )
     forms = tuple(str(f) for f in rules.get("forms") or [])
     setups = {agent: setup_fingerprint(copy, agent) for agent in point.agents}
     return Reading(commit, point, checked, answers, check, artefacts, forms, setups)
@@ -1168,7 +1193,8 @@ def run_watched(
     and the project's there, and writes its workspace inside the clone, where a
     session started in the clone may write (`WATCHED_WORKSPACE`). A commit that
     holds anything at the workspace's first folder refuses the run, and the
-    workspace is made as folders of its own.
+    workspace is made as folders of its own. The agent's definition that runs
+    is the one the drift command checked (`place_definition`).
 
     The drift command names the run's folders in the brief itself, since the
     backbone fills a brief's markers only for a confined run. Once the run
@@ -1183,6 +1209,9 @@ def run_watched(
             workspace = make_watched_workspace(working_copy)
             if isinstance(workspace, agent_runs.AgentRun):
                 return workspace
+            refusal = place_definition(working_copy, repo_root, agent)
+            if refusal is not None:
+                return refusal
             run = start(
                 agent,
                 fill_folders(brief, working_copy=working_copy, workspace=workspace),
@@ -1205,8 +1234,9 @@ def clone_at(repo_root: Path, commit: str, run: Runner = subprocess.run) -> Iter
     """A clone of the repository at `commit`, detached, for one watched fixer:
     outside the person's checkout, with a git folder of its own, so nothing the
     fixer does to the clone reaches the person's references, hooks or
-    configuration. It borrows the repository's objects by reference, read
-    only, and keeps no remote to push to. Removed on every exit."""
+    configuration, and it holds no hook. Git reads the repository's objects by
+    reference and writes none of them, and the clone keeps no remote to push
+    to. Removed on every exit."""
     parent = Path(tempfile.mkdtemp(prefix="pkit-fixer-"))
     clone = parent / "copy"
     at = ["git", "-C", str(clone)]
@@ -1252,6 +1282,48 @@ def make_watched_workspace(working_copy: Path) -> Path | agent_runs.AgentRun:
     return workspace
 
 
+def place_definition(working_copy: Path, checkout: Path, agent: str) -> agent_runs.AgentRun | None:
+    """Make the definition of `agent` that runs the one the drift command
+    checked (`read_at`, DEC-056 point 3). Where the commit deploys it, that one
+    runs. Where the commit deploys none, as in a project that keeps its deployed
+    definitions out of git, the one in the person's `checkout` is copied into
+    the clone. None once it is in place, or the refused run: deployed nowhere,
+    or held at the commit as something other than a folder and a file."""
+    relative = Path(*DEPLOYED, f"{agent}.md")
+    shown = relative.as_posix()
+    target = working_copy / relative
+    folders = (working_copy / DEPLOYED[0], working_copy.joinpath(*DEPLOYED))
+    if any(f.is_symlink() or (os.path.lexists(f) and not f.is_dir()) for f in folders):
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"the commit holds `{DEPLOYED[0]}` or `{'/'.join(DEPLOYED)}` as no folder",
+        )
+    if os.path.lexists(target):
+        if target.is_symlink() or not target.is_file():
+            return agent_runs.AgentRun(
+                agent_runs.REFUSED,
+                reason=f"the commit holds `{shown}` as something other than a file",
+            )
+        return None
+    source = checkout / relative
+    if not source.is_file():
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"the agent {agent} is deployed neither at the commit nor in your checkout, "
+            f"at `{shown}`",
+        )
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    except OSError as exc:
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"the definition in your checkout, `{shown}`, cannot be put in the copy: "
+            f"{exc.strerror or exc}",
+        )
+    return None
+
+
 def fill_folders(brief: str, *, working_copy: Path, workspace: Path) -> str:
     """A watched run's brief with its folders named in place of their markers.
     Quoted data holds no marker (`neutralised`), so only the frame changes."""
@@ -1259,65 +1331,190 @@ def fill_folders(brief: str, *, working_copy: Path, workspace: Path) -> str:
 
 
 def copy_files(workspace: Path, files_to: Path) -> list[str]:
-    """Copy a watched run's workspace into `files_to`, as the backbone copies a
-    confined run's: folders and regular files only, never through a symbolic
-    link, no file with more than one link, no part a file system may read as
-    `.git`, within `COPY_LIMIT_BYTES` and `COPY_LIMIT_ENTRIES`. Returns each
-    entry refused, with why, and copies the rest."""
-    refused: list[str] = []
-    size = entries = 0
-    for folder, subfolders, files in os.walk(workspace):
-        here = Path(folder)
-        relative = here.relative_to(workspace)
-        kept: list[str] = []
-        for name in sorted([*subfolders, *files]):
-            shown = (relative / name).as_posix()
-            path = here / name
-            entries += 1
-            if entries > COPY_LIMIT_ENTRIES:
-                return [*refused, f"more than {COPY_LIMIT_ENTRIES} files and folders"]
+    """Copy a watched run's workspace into `files_to`, with the guards of the
+    backbone's copy of a confined run's files (`agent_confinement.copy_files`,
+    ADR-066 point 7). Returns each entry refused, one line each, and copies
+    the rest.
+
+    Each folder and file is opened from its parent folder, following no link,
+    on both sides. So a process the run left behind cannot swap a link in for a
+    folder and have it followed. Only folders and regular files are copied. A
+    link is refused, as is anything else, a file with more than one link, a
+    name a file system may read as `.git`, and an entry that already exists in
+    `files_to`. The copy is bounded in bytes, entries and depth. And since the
+    fixer's settings may let it write the queue, a `files_to` that is not empty
+    when the copy starts refuses the copy whole: what is in it skipped these
+    guards."""
+    copier = _Copy(bytes_left=COPY_LIMIT_BYTES)
+    try:
+        target = os.open(files_to, _FOLDER_FLAGS)
+    except OSError as exc:
+        return [f"refused: the run's folder in the queue: {_why_not_opened(exc)}"]
+    try:
+        try:
+            written = sorted(os.listdir(target))
+        except OSError as exc:
+            return [
+                f"refused: the run's folder in the queue: cannot be read: {exc.strerror or exc}"
+            ]
+        if written:
+            return [
+                f"refused: {_shown(name)}: written during the run into the run's folder in the "
+                "queue, not copied from its workspace"
+                for name in written
+            ]
+        try:
+            handle = os.open(workspace, _FOLDER_FLAGS)
+        except OSError as exc:
+            return [f"refused: .: {_why_not_opened(exc)}"]
+        try:
+            copier.folder(handle, target, "", 0)
+        finally:
+            os.close(handle)
+    finally:
+        os.close(target)
+    return copier.refused
+
+
+def _shown(name: str) -> str:
+    """A path as a line of the copy shows it: as it is, or quoted with its
+    escapes where it holds a character that is not printable."""
+    return name if name.isprintable() else repr(name)
+
+
+def _why_not_opened(exc: OSError) -> str:
+    """Why an entry could not be opened, as a line of the copy names it."""
+    if exc.errno == errno.ELOOP:  # what opening a link without following it gives
+        return "a symbolic link"
+    if exc.errno == errno.ENOTDIR:  # a folder swapped for something else, a link too
+        return "no longer a folder when it was opened"
+    return f"cannot be read: {exc.strerror or exc}"
+
+
+@dataclass
+class _Copy:
+    """One copy of a watched run's files: what is left of its byte bound, the
+    entries it has met, and what it refused."""
+
+    bytes_left: int
+    entries: int = 0
+    stopped: bool = False
+    refused: list[str] = field(default_factory=list[str])
+
+    def refuse(self, name: str, why: str) -> None:
+        self.refused.append(f"refused: {_shown(name)}: {why}")
+
+    def folder(self, handle: int, target: int, rel: str, depth: int) -> None:
+        """Copy what the open folder `handle` holds into the open folder
+        `target`. `rel` names the folder from the workspace, at depth 0."""
+        try:
+            with os.scandir(handle) as listing:
+                names = sorted(entry.name for entry in listing)
+        except OSError as exc:
+            self.refuse(rel or ".", f"cannot be read: {exc.strerror or exc}")
+            return
+        for name in names:
+            if self.stopped:
+                return
+            path = f"{rel}/{name}" if rel else name
+            self.entries += 1
+            if self.entries > COPY_LIMIT_ENTRIES:
+                self.refuse(
+                    path,
+                    f"it and every entry after it: past the bound of {COPY_LIMIT_ENTRIES} "
+                    "entries on the run's files",
+                )
+                self.stopped = True
+                return
             if names_git(name):
-                refused.append(f"{shown}: a name a file system may read as `.git`")
+                self.refuse(path, "a name a file system may read as .git")
                 continue
             try:
-                held = path.lstat()
+                held = os.stat(name, dir_fd=handle, follow_symlinks=False)
             except OSError as exc:
-                refused.append(f"{shown}: {exc.strerror or exc}")
+                self.refuse(path, f"cannot be read: {exc.strerror or exc}")
                 continue
-            if stat.S_ISDIR(held.st_mode):
-                (files_to / relative / name).mkdir(parents=True, exist_ok=True)
-                kept.append(name)
-                continue
+            if stat.S_ISLNK(held.st_mode):
+                self.refuse(path, "a symbolic link")
+            elif stat.S_ISDIR(held.st_mode):
+                self.subfolder(handle, name, target, path, depth + 1)
+            elif stat.S_ISREG(held.st_mode):
+                self.file(handle, name, target, path)
+            else:
+                self.refuse(path, "not a regular file")
+
+    def subfolder(self, parent: int, name: str, target: int, path: str, depth: int) -> None:
+        """Copy the folder `name` of the open folder `parent` into a new folder
+        of the same name in the open folder `target`, each opened from its
+        parent."""
+        if depth > COPY_LIMIT_DEPTH:
+            self.refuse(path, f"past the bound of {COPY_LIMIT_DEPTH} folders deep")
+            return
+        try:
+            handle = os.open(name, _FOLDER_FLAGS, dir_fd=parent)
+        except OSError as exc:
+            self.refuse(path, _why_not_opened(exc))
+            return
+        try:
+            try:
+                os.mkdir(name, 0o700, dir_fd=target)
+                made = os.open(name, _FOLDER_FLAGS, dir_fd=target)
+            except OSError as exc:
+                self.refuse(path, f"cannot be written: {exc.strerror or exc}")
+                return
+            try:
+                self.folder(handle, made, path, depth)
+            finally:
+                os.close(made)
+        finally:
+            os.close(handle)
+
+    def file(self, parent: int, name: str, target: int, path: str) -> None:
+        """Copy the file `name` of the open folder `parent`, judged by what was
+        opened, into a new file of the open folder `target`."""
+        try:
+            handle = os.open(name, _FILE_FLAGS, dir_fd=parent)
+        except OSError as exc:
+            self.refuse(path, _why_not_opened(exc))
+            return
+        with os.fdopen(handle, "rb") as reader:
+            held = os.fstat(reader.fileno())
             if not stat.S_ISREG(held.st_mode):
-                refused.append(f"{shown}: a symbolic link or a special file, not a regular file")
-                continue
-            if held.st_nlink > 1:
-                refused.append(f"{shown}: a file with more than one link")
-                continue
-            size += held.st_size
-            if size > COPY_LIMIT_BYTES:
-                return [*refused, f"the files are larger than {COPY_LIMIT_BYTES} bytes"]
-            problem = _copy_one(path, files_to / relative / name)
-            if problem:
-                refused.append(f"{shown}: {problem}")
-        subfolders[:] = [name for name in subfolders if name in kept]
-    return refused
+                self.refuse(path, "not a regular file")
+            elif held.st_nlink > 1:
+                self.refuse(path, "a file with more than one link")
+            elif held.st_size > self.bytes_left:
+                self.refuse(path, self._past_the_bytes())
+            else:
+                copied = self._write(reader, target, name)
+                if isinstance(copied, str):
+                    self.refuse(path, copied)
+                else:
+                    self.bytes_left -= copied
 
+    def _write(self, reader: BinaryIO, target: int, name: str) -> int | str:
+        """Write what `reader` holds into `name`, a new file of the open folder
+        `target`. The bytes written, or why not, the file then removed."""
+        try:
+            written = os.open(name, _NEW_FILE_FLAGS, 0o600, dir_fd=target)
+        except OSError as exc:
+            return f"cannot be written: {exc.strerror or exc}"
+        size = 0
+        with os.fdopen(written, "wb") as writer:
+            while chunk := reader.read(1024 * 1024):
+                size += len(chunk)
+                if size > self.bytes_left:
+                    break
+                writer.write(chunk)
+        if size > self.bytes_left:
+            with contextlib.suppress(OSError):
+                os.unlink(name, dir_fd=target)
+            return self._past_the_bytes()
+        return size
 
-def _copy_one(source: Path, target: Path) -> str | None:
-    """Copy one regular file, opened without following a link; why not, or None."""
-    try:
-        handle = os.open(source, os.O_RDONLY | os.O_NOFOLLOW)
-    except OSError as exc:
-        return f"it cannot be opened ({exc.strerror or exc})"
-    with os.fdopen(handle, "rb") as stream:
-        held = os.fstat(stream.fileno())
-        if not stat.S_ISREG(held.st_mode) or held.st_nlink > 1:
-            return "it changed into something other than a file with one link"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        with target.open("wb") as out:
-            shutil.copyfileobj(stream, out)
-    return None
+    @staticmethod
+    def _past_the_bytes() -> str:
+        return f"past the bound of {COPY_LIMIT_BYTES} bytes on the run's files"
 
 
 # --- gathering -----------------------------------------------------------------------
