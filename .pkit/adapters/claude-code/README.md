@@ -32,26 +32,27 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 .pkit/adapters/claude-code/
 ├── README.md                          # this file
 ├── settings/
-│   ├── core/settings.json             # kit baseline — universal allows + denies
+│   ├── core/settings.json             # kit baseline — universal allows + denies, and the start hook's registration
 │   └── project/settings.json          # adopter's project-specific additions
 ├── merge-settings.sh                  # merges the settings baseline + project additions into .claude/settings.json
 ├── merge-claude-md.sh                 # ensures root CLAUDE.md loads the kit rules via @-includes
 ├── deploy-skills.sh                   # creates .claude/skills/ symlinks pointing back at .pkit/skills/
 ├── deploy-agents.sh                   # writes resolved agent copies into .claude/agents/
 ├── undeploy-capability.sh             # removes one capability's deployed skills and agents from .claude/
-├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, storyboard paths
+├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, storyboard paths, the workspace sentence
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
 ├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
-└── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
+├── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
+└── session-start-hook.py              # the start hook: the workspace sentence at each session's and subagent's start
 ```
 
 ### `settings/`
 
 The kit's permissions story for Claude Code — what allows and denies are pre-configured in adopters' `.claude/settings.json`. Two halves per the universal area pattern (COR-005):
 
-- **`core/settings.json`** — kit baseline. Universal allows (`gh`, `git`, `ssh`, common UNIX tools, kit-shipped script execution, agent-tool allows, `Skill(update-config)`) and universal safety denies (`git push --force` variants, `git reset --hard`, `rm -rf` family, `sudo`). The discriminator is "would every project-kit adopter benefit?"
+- **`core/settings.json`** — kit baseline. Universal allows (`gh`, `git`, `ssh`, common UNIX tools, kit-shipped script execution, agent-tool allows, `Skill(update-config)`) and universal safety denies (`git push --force` variants, `git reset --hard`, `rm -rf` family, `sudo`). The discriminator is "would every project-kit adopter benefit?" The baseline also registers the start hook under the top-level `hooks` key (*The agent workspace* below).
 - **`project/settings.json`** — adopter's project-specific additions on top of the baseline (language tooling, enterprise hosts, project-specific paths). Adopters typically add allows here; denies stay in the kit baseline.
 
 The file Claude Code actually reads is the adopter's `.claude/settings.json`, merged from these two by `merge-settings.sh`, which `pkit init`, `pkit sync` and `pkit merge` run (COR-002 / COR-004). See **How adopters use this adapter** below.
@@ -86,7 +87,7 @@ A listed skill whose canonical file doesn't resolve — most commonly a composit
 
 ### `deploy-agents.sh`
 
-Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.md` — copies, not symlinks, because the source carries overlay placeholders the deploy substitutes (the agents README, "Deploy mechanics"). `_resolve_agent.py` resolves one agent: it substitutes the `<category>` placeholders from `.pkit/agents/project/overlay.yaml` and carries the agent's execution policy into the deployed front matter.
+Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.md` — copies, not symlinks, because the source carries overlay placeholders the deploy substitutes (the agents README, "Deploy mechanics"). `_resolve_agent.py` resolves one agent: it substitutes the `<category>` placeholders from `.pkit/agents/project/overlay.yaml` and carries the agent's execution policy into the deployed front matter. The resolver ends the agent's body with the workspace sentence (*The agent workspace* below).
 
 **Name collisions.** When more than one location ships an agent of one name, the project's is deployed, else an installed capability's (the first by capability name), else core's — a capability's agent is the discipline's specialisation of a core default ([COR-026](../../decisions/core/COR-026-agent-placement-by-discipline.md)). The agents README, "Name-collision precedence", states the rule and the collisions between capabilities.
 
@@ -380,6 +381,16 @@ The harness-neutral contract is the permissions README's (*The agent workspace*:
 
 **Outside the working directory, none of this holds.** The per-session scratch directory the harness itself offers (its system prompt names one) lies outside a subagent's working directory — a worktree ten levels deep reaches it as `../../../../../../../../../../private/tmp/claude-…` — and absolute `Write` / `Edit` / `Read` allow rules for it in the machine-local settings did not stop the prompts ([#1043](https://github.com/aleskalfas/project-kit/issues/1043)'s field note). The workspace rule in `rules/core.md` takes precedence over that suggestion: intermediate files go in `.agent-workspace/`.
 
+**The sentence that answers the harness's note.** The harness's environment note tells every session and every subagent to keep temporary files in that scratch directory. With enforcement on, an agent that follows the note meets the permission hook's ask on each `Edit` or `Write` there, in every mode (ADR-034 point 2). So the adapter gives every agent one sentence, which names the note by what it says ([#2026](https://github.com/aleskalfas/project-kit/issues/2026)):
+
+> The session scratch directory your environment names is replaced by `.agent-workspace/` at the repository root: keep every intermediate file there, never in that directory.
+
+**Where the sentence arrives.** `session-start-hook.py` gives the sentence as context at each session's start and at each subagent's start. [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks) says the harness adds that context before the conversation's first prompt. The baseline settings register the hook under `SessionStart` and `SubagentStart`, and the merge carries both into `.claude/settings.json`. The resolver ends every agent body the deploy writes with the same sentence.
+
+**Where the start hook does not run.** A confined run loads no project settings, so the start hook does not run there. The runner passes the definition the resolver writes, so the sentence reaches the run all the same. An adopter's own `SessionStart` or `SubagentStart` entry in `.claude/settings.json` wins over the baseline's, as every key outside `permissions` does. Add the adapter's matcher group beside your own to keep both.
+
+**What stays as it was.** The permission hook's ask on an `Edit` or `Write` outside the repository is unchanged. Such a write that the sentence did not stop meets that ask, never a silent allow. No allow rule names the scratch directory (ADR-060, "Alternatives considered").
+
 ### Harness support (`harness-support.yaml`)
 
 The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harness-requirement-declaration.md) point 2): its answer to each requirement in `.pkit/schemas/harness-requirements.yaml`, with the evidence for each. The grades are [the adapters README's](../README.md#harness-requirements), and `pkit harness report` resolves them for a project. In prose:
@@ -395,7 +406,7 @@ The per-adapter enforcement-capability declaration (per COR-028): which dimensio
 
 The install/sync runtime (`pkit init` / `pkit sync`) automates all adapter primitives, invoking them in order. When running manually, the steps are:
 
-1. **Permissions.** Hand-merge `settings/core/settings.json` + `settings/project/settings.json` into your project's `.claude/settings.json`. Per COR-002's merge contract: append-only for adopter content, baseline-enforce for safety denies, idempotent. Or just run `merge-settings.sh`.
+1. **Permissions.** Hand-merge `settings/core/settings.json` + `settings/project/settings.json` into your project's `.claude/settings.json`. Per COR-002's merge contract: append-only for adopter content, baseline-enforce for safety denies, idempotent. Or just run `merge-settings.sh`. The merge also registers the start hook (*The agent workspace* above).
 2. **Rules include.** Run `.pkit/adapters/claude-code/merge-claude-md.sh`. Ensures the root `CLAUDE.md` includes `@.pkit/rules/core.md` so the kit-shipped hard rules and tool-hygiene conventions load into the agent. Idempotent; never clobbers adopter content.
 3. **Skills.** Run `.pkit/adapters/claude-code/deploy-skills.sh`. Creates the `.claude/skills/` symlinks (tracked in git per the project's `.gitignore`, so a fresh clone has the same environment).
 4. **Agents.** Run `.pkit/adapters/claude-code/deploy-agents.sh`.
