@@ -1194,7 +1194,8 @@ def run_watched(
     session started in the clone may write (`WATCHED_WORKSPACE`). A commit that
     holds anything at the workspace's first folder refuses the run, and the
     workspace is made as folders of its own. The agent's definition that runs
-    is the one the drift command checked (`place_definition`).
+    is the one the commit deploys, and a commit that deploys none refuses the
+    run (`deployed_at_commit`).
 
     The drift command names the run's folders in the brief itself, since the
     backbone fills a brief's markers only for a confined run. Once the run
@@ -1209,7 +1210,7 @@ def run_watched(
             workspace = make_watched_workspace(working_copy)
             if isinstance(workspace, agent_runs.AgentRun):
                 return workspace
-            refusal = place_definition(working_copy, repo_root, agent)
+            refusal = deployed_at_commit(working_copy, agent)
             if refusal is not None:
                 return refusal
             run = start(
@@ -1282,44 +1283,25 @@ def make_watched_workspace(working_copy: Path) -> Path | agent_runs.AgentRun:
     return workspace
 
 
-def place_definition(working_copy: Path, checkout: Path, agent: str) -> agent_runs.AgentRun | None:
-    """Make the definition of `agent` that runs the one the drift command
-    checked (`read_at`, DEC-056 point 3). Where the commit deploys it, that one
-    runs. Where the commit deploys none, as in a project that keeps its deployed
-    definitions out of git, the one in the person's `checkout` is copied into
-    the clone. None once it is in place, or the refused run: deployed nowhere,
-    or held at the commit as something other than a folder and a file."""
+def deployed_at_commit(working_copy: Path, agent: str) -> agent_runs.AgentRun | None:
+    """None where the commit deploys `agent`'s definition, as a file in
+    folders of their own, so the definition the harness finds in the clone is
+    the one at the commit; else the refused run (DEC-056 point 3). A project
+    that keeps its deployed definitions out of git has none at the commit,
+    and a watched run there would run a definition that may not have merged,
+    from the person's own agents folder."""
     relative = Path(*DEPLOYED, f"{agent}.md")
     shown = relative.as_posix()
-    target = working_copy / relative
-    folders = (working_copy / DEPLOYED[0], working_copy.joinpath(*DEPLOYED))
-    if any(f.is_symlink() or (os.path.lexists(f) and not f.is_dir()) for f in folders):
+    held = (working_copy / DEPLOYED[0], working_copy.joinpath(*DEPLOYED), working_copy / relative)
+    if any(path.is_symlink() for path in held):
         return agent_runs.AgentRun(
-            agent_runs.REFUSED,
-            reason=f"the commit holds `{DEPLOYED[0]}` or `{'/'.join(DEPLOYED)}` as no folder",
+            agent_runs.REFUSED, reason=f"the commit holds a symbolic link on the way to `{shown}`"
         )
-    if os.path.lexists(target):
-        if target.is_symlink() or not target.is_file():
-            return agent_runs.AgentRun(
-                agent_runs.REFUSED,
-                reason=f"the commit holds `{shown}` as something other than a file",
-            )
-        return None
-    source = checkout / relative
-    if not source.is_file():
+    if not held[-1].is_file():
         return agent_runs.AgentRun(
             agent_runs.REFUSED,
-            reason=f"the agent {agent} is deployed neither at the commit nor in your checkout, "
-            f"at `{shown}`",
-        )
-    try:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-    except OSError as exc:
-        return agent_runs.AgentRun(
-            agent_runs.REFUSED,
-            reason=f"the definition in your checkout, `{shown}`, cannot be put in the copy: "
-            f"{exc.strerror or exc}",
+            reason=f"the commit deploys no definition of {agent} at `{shown}`, so a watched run "
+            "would run one that may not have merged",
         )
     return None
 

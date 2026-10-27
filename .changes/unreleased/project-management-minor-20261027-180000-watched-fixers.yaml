@@ -10,9 +10,9 @@ body: >
   unconfined form, as `review-pr` runs its reviewers: in a clone of the
   default branch's commit made for that fixer, with a git folder of its own
   and no remote, under your settings and the project's, and Ctrl-C stops the
-  run. Where your project keeps its deployed agents out of git, the
-  definition deployed in your checkout, the one the command checked, is
-  copied into the clone and runs. The command copies each fixer's workspace
+  run. The fixer that runs is the one the commit deploys, so where your
+  project keeps its deployed agents out of git, its run is refused. The
+  command copies each fixer's workspace
   into the queue with the guards of the backbone's copy, and sets its files
   aside where they hold a link or a special file, or where the fixer wrote
   into the queue itself. With nobody at a terminal, as in the project manager's

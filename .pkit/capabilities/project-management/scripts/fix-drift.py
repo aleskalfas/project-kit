@@ -54,7 +54,8 @@ What a run does, in order (`_lib/drift.py` holds each step):
           aside. The queue's index in the main working tree's agent workspace
           records each artefact's state.
 
-One run at a time, held by a lock in the queue's folder. The command refuses
+One run at a time, held by a lock in the queue's folder, which a run with
+nobody at a terminal does not take, since it writes nothing. The command refuses
 to start inside an agent run, since a fixer starts no other agent.
 
 Exit codes:
@@ -182,6 +183,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run(args, bounds, capability_root, repo_root, queue, contract)
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
+    if not fixer_cli.at_a_terminal():
+        # Nobody to watch: no fixer starts and the queue is only read, so no lock
+        # is taken, and a person's run never stops this one (DEC-056 point 3).
+        return _run(args, bounds, capability_root, repo_root, queue, contract, watched=False)
     try:
         with drift_queue.lock(queue):
             return _run(args, bounds, capability_root, repo_root, queue, contract)

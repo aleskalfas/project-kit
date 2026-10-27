@@ -779,19 +779,14 @@ def test_a_watched_fixer_runs_unconfined_in_a_working_copy_of_its_own(drift, tmp
     assert not copy.exists()
 
 
-def test_where_the_commit_deploys_no_definition_the_checked_one_runs(drift, tmp_path) -> None:
+def test_where_the_commit_deploys_no_definition_no_watched_run_starts(drift, tmp_path) -> None:
     """A project that keeps its deployed definitions out of git has none at the
-    commit: the drift command checked the one in the person's checkout, so that
-    one is put in the copy, and runs (DEC-056 point 3)."""
-    run, started, _, _ = _watched(drift, tmp_path, at_commit=None, in_checkout="the checkout's")
-    [call] = started
-    assert call["deployed"] == "the checkout's" and run.ending == "finished"
-
-
-def test_a_watched_run_with_no_deployed_definition_is_refused(drift, tmp_path) -> None:
-    run, started, _, _ = _watched(drift, tmp_path, at_commit=None, in_checkout=None)
+    commit. The harness in the clone would find the person's own, which may not
+    have merged, so the run is refused (DEC-056 point 3)."""
+    run, started, files, _ = _watched(drift, tmp_path, at_commit=None, in_checkout="unmerged")
     assert started == [] and run.ending == "refused"
-    assert "deployed neither at the commit nor in your checkout" in run.reason
+    assert "deploys no definition of living-docs" in run.reason
+    assert list(files.iterdir()) == []
 
 
 def test_a_watched_runs_link_sets_its_files_aside(drift, tmp_path) -> None:
@@ -832,6 +827,42 @@ def test_a_watched_runs_copy_is_bounded_in_depth(drift, tmp_path) -> None:
 
     run, _, _, _ = _watched(drift, tmp_path, write)
     assert run.breached and any("folders deep" in change for change in run.changes)
+
+
+def test_the_watched_copy_keeps_the_backbone_s_guards(drift, tmp_path) -> None:
+    """The copy of a watched run's files and the backbone's copy of a confined
+    run's are two copies of one set of guards (ADR-066 point 10). On the same
+    workspace they copy and refuse the same entries, within the same bounds."""
+    import os
+
+    from project_kit import agent_confinement
+
+    secret = tmp_path / "secret"
+    secret.write_text("key")
+    workspace = tmp_path / "workspace"
+    (workspace / "docs/a.md").mkdir(parents=True)
+    (workspace / "docs/a.md" / "answer.json").write_text("{}")
+    (workspace / "docs/a.md" / "evidence.md").symlink_to(secret)
+    (workspace / "one").write_text("x")
+    os.link(workspace / "one", workspace / "two")
+    (workspace / ".GIT").mkdir()
+    os.mkfifo(workspace / "pipe")
+    workspace.joinpath(*["d"] * (drift.COPY_LIMIT_DEPTH + 2)).mkdir(parents=True)
+    results = []
+    for copy_files in (drift.copy_files, agent_confinement.copy_files):
+        files_to = tmp_path / f"to-{len(results)}"
+        files_to.mkdir()
+        refused = copy_files(workspace, files_to)
+        copied = sorted(p.relative_to(files_to).as_posix() for p in files_to.rglob("*"))
+        results.append((sorted(refused), copied))
+    assert results[0] == results[1]
+    # The link, both links of one file, `.GIT`, the pipe and the folder too deep.
+    assert "docs/a.md/answer.json" in results[0][1] and len(results[0][0]) == 6
+    assert (drift.COPY_LIMIT_BYTES, drift.COPY_LIMIT_ENTRIES, drift.COPY_LIMIT_DEPTH) == (
+        agent_confinement.COPY_LIMIT_BYTES,
+        agent_confinement.COPY_LIMIT_ENTRIES,
+        agent_confinement.COPY_LIMIT_DEPTH,
+    )
 
 
 def test_the_copy_refuses_each_name_git_reads_as_its_own(drift) -> None:
@@ -1558,6 +1589,36 @@ def test_a_dry_run_starts_and_writes_nothing(
         )
         assert code == 0 and started == [] and not (queue / "index.json").exists()
         assert "dry run: nothing was started" in capsys.readouterr().out
+
+
+def test_with_nobody_at_a_terminal_the_command_takes_no_lock(
+    command, monkeypatch, tmp_path
+) -> None:
+    """A run that starts no fixer writes nothing, the queue's lock included, so
+    the project manager's run after a merge never waits on a person's run."""
+    import contextlib
+
+    monkeypatch.delenv("PKIT_AGENT_RUN", raising=False)
+    capability_root = tmp_path / ".pkit" / "capabilities" / "project-management"
+    capability_root.mkdir(parents=True)
+    runs: list[dict[str, Any]] = []
+
+    @contextlib.contextmanager
+    def lock(queue):
+        pytest.fail("a run that starts no fixer takes no lock")
+        yield queue  # pragma: no cover
+
+    monkeypatch.setattr(command, "resolve_capability_root", lambda given: capability_root)
+    monkeypatch.setattr(command.bootstrap_gate, "enforce", lambda verb, **kw: True)
+    monkeypatch.setattr(command.session_guard, "enforce", lambda **kw: True)
+    monkeypatch.setattr(command.fixer_cli, "at_a_terminal", lambda: False)
+    monkeypatch.setattr(command.drift_queue, "lock", lock)
+    queue = tmp_path / ".agent-workspace" / "drift"
+    monkeypatch.setattr(command.drift_queue, "folder", lambda root: queue)
+    monkeypatch.setattr(command, "_run", lambda *a, **kw: runs.append(kw) or 0)
+    assert command.main([]) == 0
+    assert runs == [{"watched": False}]
+    assert not queue.exists()
 
 
 def test_a_bad_bound_is_a_usage_error(command, monkeypatch) -> None:
