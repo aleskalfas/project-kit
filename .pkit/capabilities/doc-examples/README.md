@@ -10,7 +10,7 @@ pkit:
         - .pkit/capabilities/doc-examples/permissions/**
         - .pkit/capabilities/doc-examples/package.yaml
       record: ["doc-examples:DEC-001", COR-001, COR-010, COR-017, COR-028, COR-030, COR-050, COR-055, COR-056, "living-docs:DEC-001", "living-docs:DEC-002"]
-      artefact: [".pkit/permissions/README.md#grants-and-verdicts"]
+      artefact: [".pkit/permissions/README.md#grants-and-verdicts", ".pkit/cli/README.md#sync", ".pkit/cli/README.md#validate"]
 ---
 
 # doc-examples capability

@@ -51,11 +51,18 @@ pkit:
         - REQ-021
         - .pkit/decisions/README.md#the-acceptance-gate
         - .pkit/decisions/README.md#the-no-shared-files-invariant
+        - .pkit/decisions/README.md#two-further-id-spaces
         - .pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command
         - .pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip
         - .pkit/lifecycle/README.md#a-new-collision
         - .pkit/lifecycle/README.md#a-data-points-question
+        - .pkit/lifecycle/README.md#what-ships-a-migration
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
+        - .pkit/cli/README.md#init
+        - .pkit/cli/README.md#upgrade
+        - .pkit/cli/README.md#status
+        - .pkit/cli/README.md#friction-check---base-ref---head-rev---json
+        - docs/permissions/README.md#turning-it-on
         - .pkit/capabilities/project-management/README.md#
         - .pkit/capabilities/software-engineering/README.md#
         - .pkit/capabilities/evidence/README.md#
