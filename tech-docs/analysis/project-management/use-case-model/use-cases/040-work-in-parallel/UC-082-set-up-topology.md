@@ -105,7 +105,7 @@ pkit:
    - more than one organizer seat
    - a seat whose state issue is not named
    - a scope that names an unknown workstream or kind of work
-   - a scope whose Milestones are no list of titles
+   - a scope whose Milestones are no list of Milestone numbers
    - a seat deleted or moved against the default branch, rather than retired
 
 8. A person reviews the change, and the change merges like any other. The topology binds once the topology is on the default branch. Every clone reads the topology from there, never from the clone's own branch or working tree (DEC-059 point 1).
@@ -129,7 +129,7 @@ pkit:
 
 - **8a.** A clone has not fetched the default branch since the change merged. The clone reads the topology the clone last fetched. Each command that reads the topology names the commit that the clone read, once in a run ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)). A command that another command runs, such as the `move-issue` that `start-work` runs, repeats no commit the run named already.
 
-**Postconditions:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares each [seat](../../../glossary.md#term-seat--seat), with the seat's number, [state issue](../../../glossary.md#term-state-issue--state-issue) and [scope](../../../glossary.md#term-scope--scope), where the seat has a scope. Each scope names the [workstreams](../../../glossary.md#term-workstream--workstream), the kinds of work or the [Milestones](../../../glossary.md#term-milestone--milestone) that the agent of the scope's seat takes work from.
+**Postconditions:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares each [seat](../../../glossary.md#term-seat--seat), with the seat's number, [state issue](../../../glossary.md#term-state-issue--state-issue) and [scope](../../../glossary.md#term-scope--scope), where the seat has a scope. Each scope names the [workstreams](../../../glossary.md#term-workstream--workstream), the kinds of work or the [Milestones](../../../glossary.md#term-milestone--milestone) that the agent of the scope's seat takes work from. A scope names each Milestone by the Milestone's number, which a rename leaves unchanged.
 
 **Minimal guarantees:**
 

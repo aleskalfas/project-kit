@@ -78,7 +78,7 @@ classDiagram
   Seat "1" --> "1" StateIssue : has
   Instance "0..1" --> "0..1" Seat : holds
   Scope "*" --> "*" Workstream : names
-  Scope "*" --> "*" Milestone : names by title
+  Scope "*" --> "*" Milestone : names by number
   Owner "*" --> "1" Instance : is one
   Issue "*" --> "0..1" Owner : belongs to
 ```
@@ -172,13 +172,13 @@ Defined in [TERM-scope](../glossary.md#term-scope--scope).
 
 **Why:** Some [seats](../glossary.md#term-seat--seat) do one kind of work only, such as testing, or take only the work a person puts into a [Milestone](../glossary.md#term-milestone--milestone). A scope narrows the work such a seat's agent takes, and reserves nothing for that seat ([DEC-059](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
 
-A scope is the part of a [project](../../core/glossary.md#term-project--project)'s work that one agent of a [topology](../glossary.md#term-topology--topology) takes issues from. A scope names [workstreams](../glossary.md#term-workstream--workstream), kinds of work such as `test` or `docs`, Milestones by their titles, or several of these ([DEC-059 points 2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and 7). A [Task](../glossary.md#term-task--task) falls in a scope where the Task matches each part the scope names. A seat with no scope takes from all the project's ready Tasks.
+A scope is the part of a [project](../../core/glossary.md#term-project--project)'s work that one agent of a [topology](../glossary.md#term-topology--topology) takes issues from. A scope names [workstreams](../glossary.md#term-workstream--workstream), kinds of work such as `test` or `docs`, Milestones by their numbers, or several of these ([DEC-059 points 2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and 7). A [Task](../glossary.md#term-task--task) falls in a scope where the Task matches each part the scope names. A seat with no scope takes from all the project's ready Tasks.
 
 **Attributes:**
 
 - the workstreams it names ([DEC-045 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy))
 - the kinds of work it names ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool))
-- the titles of the Milestones it names ([DEC-059 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope))
+- the numbers of the Milestones it names ([DEC-059 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope))
 
 **Relations:**
 
@@ -191,6 +191,7 @@ A scope is the part of a [project](../../core/glossary.md#term-project--project)
 
 - A scope reserves nothing for its seat, so the other seats keep all the ready Tasks (DEC-059 point 7).
 - A Task in no Milestone falls outside a scope that names Milestones (DEC-059 point 2).
+- A rename of a Milestone leaves the Milestone's number unchanged, so a scope that names the Milestone still takes the Milestone's Tasks (DEC-059 point 2).
 - A workstream that no seat may take is warned of, and never blocked. Several seats that may take one workstream draw no warning (DEC-059 point 7).
 
 ## Instance
