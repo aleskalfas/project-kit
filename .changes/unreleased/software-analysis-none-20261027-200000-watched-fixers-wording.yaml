@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  The README and the analysis-resolver no longer say that nobody watches a
+  fixer's run: a person may start it at a terminal and watch it, and nobody
+  can answer the agent during it. The agent works as before.
