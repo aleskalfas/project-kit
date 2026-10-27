@@ -724,9 +724,10 @@ class KeptBaseSide:
 def _kept_base_side(timeline: Timeline, *, edits_body: bool) -> KeptBaseSide:
     """`base`; on main the CLI changed and the guide revalidated; on `topic`, off `base` and
     dated after both, the CLI changed elsewhere and the guide revalidated — its `at` conflicting
-    with main's; then `topic` merges main and keeps main's revalidation, the state `pkit
-    friction resolve` leaves where both sides revalidated. With `edits_body`, topic's
-    revalidation edited the body too, kept by the merge beside main's block, so the merge
+    with main's; then `topic` merges main and keeps main's revalidation, the state a conflict
+    resolved to the base side's answer leaves where both sides revalidated. With
+    `edits_body`, topic's revalidation edited the body too, kept by the merge beside main's
+    block, so the merge
     commit lists the guide; without, the merged guide is main's, and the merge lists nothing.
     A conflict in a block is history before the move, so the history is laid down in
     blocks, and `topic` then moves its answers (`_moved`).

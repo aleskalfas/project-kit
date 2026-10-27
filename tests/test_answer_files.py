@@ -900,6 +900,94 @@ def test_the_check_counts_the_files_a_prune_would_remove(timeline: Timeline) -> 
     }
 
 
+# --- what a prune removes (COR-062 point 8) ------------------------------------------------
+
+
+def _prune(timeline: Timeline) -> tuple[tuple[str, ...], dict[str, str]]:
+    """What a prune removes at HEAD, by name, and what it keeps, by name to why — as the
+    whole-repository check counts it, and as `pkit friction prune` plans it."""
+    from project_kit import friction_prune
+
+    plan = friction_prune.plan_prune(timeline.adopter.root)
+    removes = tuple(af.name_of(rel) for rel in plan.remove)
+    assert _check(timeline).prunable == removes
+    return removes, {af.name_of(k.path): k.why for k in plan.kept}
+
+
+def test_a_prune_keeps_a_file_whose_removal_brings_back_an_answer_it_replaced(
+    timeline: Timeline,
+) -> None:
+    """`one` answers the guide and `other`, `two` read it and `three` read only `two`. `one`
+    stays for its live answer on `other`, so removing `two` would bring its answer on the
+    guide back beside `three` (COR-062 point 8, "What stays replaced"): `two` is kept."""
+    other = document("other", anchors={"path": ["src/core/**"]})
+    timeline.start({GUIDE: bare_guide(), "docs/other.md": other})
+    timeline.commit(
+        "answer both",
+        {answer_path("one"): answers(entry(at=T1), entry("docs/other.md", at=T1))},
+    )
+    timeline.commit(
+        "answer the guide",
+        {answer_path("two"): answers(entry(at=T2, because="the CLI moved", read=("one",)))},
+    )
+    timeline.commit(
+        "answer it again, reading two alone",
+        {answer_path("three"): answers(entry(at=T3, because="moved again", read=("two",)))},
+    )
+    removes, kept = _prune(timeline)
+    assert removes == ()
+    assert list(kept) == ["two.yaml"]
+    assert "brings back the answer on docs/guide.md in one.yaml" in kept["two.yaml"]
+
+    # Once an answer that read `one` replaces them, `two` goes, and `three` with it.
+    timeline.commit(
+        "answer, reading all",
+        {
+            answer_path("four"): answers(
+                entry(at="2026-10-04T10:00:00Z", because="all read", read=("one", "two", "three"))
+            )
+        },
+    )
+    assert _prune(timeline) == (("three.yaml", "two.yaml"), {})
+
+
+def test_files_a_prune_removes_together_bring_nothing_back(timeline: Timeline) -> None:
+    """`two` read `one`, and `three` read only `two`: removed together, neither comes back."""
+    timeline.start({GUIDE: bare_guide()})
+    timeline.commit("answer", {answer_path("one"): answers(entry(at=T1))})
+    timeline.commit(
+        "answer again",
+        {answer_path("two"): answers(entry(at=T2, because="the CLI moved", read=("one",)))},
+    )
+    timeline.commit(
+        "and again",
+        {answer_path("three"): answers(entry(at=T3, because="moved again", read=("two",)))},
+    )
+    assert _prune(timeline) == (("one.yaml", "two.yaml"), {})
+
+
+def test_a_prune_keeps_a_file_a_live_deferral_keeps_its_point_from(timeline: Timeline) -> None:
+    """`two`'s deferral replaces `one`'s and keeps its point (COR-062 point 6). Without
+    `one`, it would start a point of its own, covering the CLI's change between them, so
+    `one` is kept and the change stays friction."""
+    timeline.start({GUIDE: bare_guide()})
+    timeline.commit("defer", {answer_path("one"): answers(entry(deferred=((CLI, "until #1"),)))})
+    changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('v2')\n"})
+    timeline.commit(
+        "reword",
+        {answer_path("two"): answers(entry(read=("one",), deferred=((CLI, "until #2"),)))},
+    )
+    removes, kept = _prune(timeline)
+    assert removes == ()
+    assert list(kept) == ["one.yaml"] and "keeps its point from it" in kept["one.yaml"]
+    stale = [
+        f.origin.sha if f.origin else None
+        for f in _check(timeline).findings
+        if f.location == GUIDE and f.kind is fr.RepositoryFindingKind.STALE
+    ]
+    assert stale == [changed]
+
+
 def test_the_data_binding_never_claims_an_answer_file(timeline: Timeline) -> None:
     from project_kit import data_validate
 

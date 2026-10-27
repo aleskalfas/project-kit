@@ -400,8 +400,9 @@ class RepositoryCheck:
     excluded: int  # artefacts under an excluded path, left out of the measures (point 7)
     surface: int  # paths of the declared surface at HEAD, excluded ones left out
     uncovered: tuple[str, ...]  # those of them no artefact anchors to (point 8)
-    # The answer files HEAD holds, and those in which no answer is live: what a prune
-    # would remove (COR-062 point 8; ADR-068 point 4).
+    # The answer files HEAD holds, and those `pkit friction prune` would remove: no answer
+    # is live in them, and removing them changes none that is (COR-062 point 8; ADR-068
+    # point 4).
     answer_files: int = 0
     prunable: tuple[str, ...] = ()
 
@@ -1668,7 +1669,7 @@ def _check_head(
         surface=surface,
         uncovered=uncovered,
         answer_files=len(judge.answers.files),
-        prunable=() if judge.answers.dormant else judge.answers.prunable(discovery),
+        prunable=() if judge.answers.dormant else judge.answers.prune(discovery).remove,
     )
 
 
@@ -2685,7 +2686,8 @@ def _measure_lines(result: RepositoryCheck) -> list[str]:
     if result.answer_files:
         lines.append(
             f"  Answer files: {result.answer_files} in {answer_files.FOLDER}/, "
-            f"{len(result.prunable)} with no live answer, which a prune would remove"
+            f"{len(result.prunable)} with no live answer, which a prune would remove "
+            f"(`pkit friction prune`)"
         )
     return lines
 
