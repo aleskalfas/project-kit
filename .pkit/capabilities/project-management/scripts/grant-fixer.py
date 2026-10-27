@@ -8,7 +8,7 @@
 """Project-management capability — grant-fixer (DEC-056 point 2).
 
 Grants a fixer: records in the grant list (`fixers` in `project/config.yaml`)
-that the agent may start on its own on the stale artefacts of its types — every
+that the drift command may start the agent on the stale artefacts of its types — every
 type the `pkit::work-tracking:fixers` point gives it, or only those named with
 `--type`. Running it is the person's own answer yes, as answering the question
 of `ask-fixers` is. The change shows in the project's diff, and the grant counts

@@ -7,14 +7,14 @@
 # ///
 """Project-management capability — ask-fixers (DEC-056 point 2).
 
-Asks the person whether each fixer may start on its own: one question for each
-agent the `pkit::work-tracking:fixers` point names, about the types of its
-entries that pass the point's checks and have no answer in the grant list. The
-words are built from the declaration, for example:
+Asks the person whether each fixer may start: one question for each agent the
+`pkit::work-tracking:fixers` point names, about the types of its entries that
+pass the point's checks and have no answer in the grant list. The words are
+built from the declaration, for example:
 
-  living-docs can keep your pages true on its own. After each merge, its agent
-  living-docs proposes a fix for each one that went out of date, and nothing is
-  applied until you approve it. Turn this on? [Y/n]
+  living-docs can keep your pages true. When you run `pkit pm fix-drift` at a
+  terminal, its agent living-docs proposes a fix for each one that went out of
+  date, and nothing is applied until you approve it. Turn this on? [Y/n]
 
 At a terminal — standard input and standard output both — each answer is
 recorded in the grant list (`fixers` in `project/config.yaml`) as it is given:

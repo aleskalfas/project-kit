@@ -5,9 +5,9 @@ artefacts of its type proposes the answer, and the person decides it. Which
 agent fixes which type is `pkit::work-tracking:fixers`, the data point this
 capability defines as the provider of the work-tracking role (COR-052,
 COR-053): one entry per artefact type, `{id, agent, description}` (its
-companion schema, `schemas/fixers.schema.json`). A fixer starts on its own only
-where the project granted it, in the grant list `fixers` of this capability's
-project configuration, empty by default.
+companion schema, `schemas/fixers.schema.json`). A fixer starts only where the
+project granted it, in the grant list `fixers` of this capability's project
+configuration, empty by default.
 
 Five parts, so the commands over them stay thin and the drift command can call
 the same functions:
@@ -90,6 +90,7 @@ LIST_VERB = "list-fixers"
 GRANT_VERB = "grant-fixer"
 REVOKE_VERB = "revoke-fixer"
 ASK_VERB = "ask-fixers"
+DRIFT_VERB = "fix-drift"
 
 #: The backbone's read commands, how long each may take, and the versions of
 #: their documents this reading understands. A document without the key comes
@@ -541,8 +542,8 @@ class GrantChange:
         """The change as a line says it to the person who authorises the merge."""
         if self.answer == GRANTED:
             if self.added:
-                return f"Fixer grant added: {self.agent} may start on its own on {self.type}"
-            return f"Fixer grant removed: {self.agent} no longer starts on its own on {self.type}"
+                return f"Fixer grant added: {self.agent} may start on {self.type}"
+            return f"Fixer grant removed: {self.agent} no longer starts on {self.type}"
         if self.added:
             return f"Fixer refusal added: {self.agent} is refused {self.type}"
         return f"Fixer refusal removed: {self.agent} is no longer refused {self.type}"
@@ -741,8 +742,9 @@ def questions(point: Point, checked: Sequence[Checked], answers: Answers) -> lis
 
 def question_text(question: Question) -> str:
     """The question's words: built from the capability's name and the descriptions
-    of the agent's entries, saying what the agent does on its own after each merge,
-    and that nothing is applied until the person approves it."""
+    of the agent's entries, saying what the agent does when a person runs the
+    drift command at a terminal, and that nothing is applied until the person
+    approves it."""
     kept = _joined(list(dict.fromkeys(e.description for e in question.entries)))
     origins = {e.origin for e in question.entries}
     if len(origins) == 1 and PROJECT_FILLER not in origins:
@@ -750,9 +752,9 @@ def question_text(question: Question) -> str:
     else:
         subject, doer = f"The agent {question.agent}", "it"
     return (
-        f"{subject} can keep {kept} true on its own. After each merge, {doer} proposes a fix "
-        "for each one that went out of date, and nothing is applied until you approve it. "
-        "Turn this on?"
+        f"{subject} can keep {kept} true. When you run `{COMMAND} {DRIFT_VERB}` at a terminal, "
+        f"{doer} proposes a fix for each one that went out of date, and nothing is applied "
+        "until you approve it. Turn this on?"
     )
 
 

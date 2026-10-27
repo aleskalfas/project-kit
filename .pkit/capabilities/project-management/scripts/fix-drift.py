@@ -8,12 +8,21 @@
 # ///
 """Project-management capability — fix-drift (DEC-056 points 3 to 6).
 
-Starts each granted fixer on what the default branch left out of date, and
-gathers its proposals for the person. A fixer only proposes: nothing it returns
-is applied until the person accepts it.
+Starts each granted fixer on what the default branch left out of date, where a
+person started the command at a terminal and watches it, and gathers its
+proposals for the person. A fixer only proposes: nothing it returns is applied
+until the person accepts it.
 
     pkit pm fix-drift [--dry-run] [--force] [--cap N] [--parallel N]
                       [--timeout SECONDS] [--effort LEVEL]
+
+A person started it when standard input and standard output are both
+terminals, the test the fixers question uses (`fixer_cli.at_a_terminal`). An
+agent's session, such as the project manager's after a merge, has no terminal,
+so no fixer starts there: the command lists what went stale, with the fixer
+that would take it, and the command a person runs at a terminal (DEC-056
+point 3). No flag stands in for the terminal, since an agent passes a flag as
+easily as a person does.
 
 What a run does, in order (`_lib/drift.py` holds each step):
 
@@ -30,30 +39,37 @@ What a run does, in order (`_lib/drift.py` holds each step):
   plan    Stale artefacts whose type's fixer is granted, upstream first, at
           most --cap for each fixer. Every other artefact the check reports is
           listed with its reason, and each `none` that stands is listed at
-          every run.
-  run     Each fixer through the backbone's run command, confined to a clone at
-          the commit under `permissions/runs.yaml`'s rules (ADR-066), with one
-          brief. At most --parallel at once, each within --timeout. A start
-          that failed for a cause outside the fixer's work, and wrote nothing,
-          is retried once; failing again, no further fixer starts.
+          every run. With nobody at a terminal the run ends here, having
+          started and written nothing.
+  run     Each fixer watched (DEC-056 point 5): through the backbone's run
+          command in the runner's unconfined form, as `review-pr` runs its
+          reviewers, in a working copy of the commit made for that fixer, under
+          the person's settings and the project's, with one brief. At most
+          --parallel at once, each within --timeout. A start that failed for a
+          cause outside the fixer's work, and wrote nothing, is retried once;
+          failing again, no further fixer starts. An interrupt at the terminal
+          stops the run.
   gather  Each fixer's result lines and answers, read by the run's contract.
-          A breach sets the fixer's files aside. The queue's index in the main
-          working tree's agent workspace records each artefact's state.
+          A link or a special file in its workspace sets the fixer's files
+          aside. The queue's index in the main working tree's agent workspace
+          records each artefact's state.
 
 One run at a time, held by a lock in the queue's folder. The command refuses
 to start inside an agent run, since a fixer starts no other agent.
 
 Exit codes:
-  0  the run completed, whatever each fixer returned; or a dry run
+  0  the run completed, whatever each fixer returned; a run that started no
+     fixer, since nobody was at a terminal; or a dry run
   1  the run could not start: inside an agent run, no main working tree, the
-     lock held, the default branch or the fixers point unreadable, or nothing
-     can be confined
+     lock held, the default branch or the fixers point unreadable, or the
+     rules of a fixer's run that cannot be held
   2  usage error, or the capability is not found
 """
 
 from __future__ import annotations
 
 import argparse
+import functools
 import os
 import sys
 from collections.abc import Sequence
@@ -80,7 +96,8 @@ def _parser() -> argparse.ArgumentParser:
         prog=f"{fixers.COMMAND} {drift.VERB}",
         description=(
             "Start each granted fixer on the artefacts the default branch left out of date, "
-            "confined, and gather its proposals (DEC-056 points 3 to 6)."
+            "watched by the person who started this at a terminal, and gather its proposals "
+            "(DEC-056 points 3 to 6). With nobody at a terminal, list them and start no fixer."
         ),
     )
     parser.add_argument(
@@ -180,7 +197,13 @@ def _run(
     repo_root: Path,
     queue: Path,
     contract: Any,
+    *,
+    watched: bool | None = None,
 ) -> int:
+    """One run. `watched` is whether a person started it at a terminal: None
+    tells it from this process's standard streams (`fixer_cli.at_a_terminal`)."""
+    if watched is None:
+        watched = fixer_cli.at_a_terminal()
     try:
         index = drift_queue.read_index(queue)
     except drift_queue.Unreadable as exc:
@@ -210,7 +233,9 @@ def _run(
     except drift.Stop as stop:
         print(f"error: {stop}. Nothing was started.", file=sys.stderr)
         return 1
-    _print_plan(plan)
+    _print_plan(plan, watched=watched)
+    if not watched and not plan.empty:
+        _print_not_started()
     if args.dry_run:
         print("dry run: nothing was started, and nothing was written.")
         return 0
@@ -218,6 +243,13 @@ def _run(
         print("done: no fixer to start.")
         _print_waiting(index, queue)
         return 0
+    if not watched:
+        _print_waiting(index, queue)
+        return 0
+    print(
+        f"watched: you started this at a terminal, so each fixer runs under your settings and "
+        f"the project's, in a working copy at {reading.commit[:12]}. Ctrl-C stops the run."
+    )
     run = drift.run_id()
     started = drift.now()
     pulls_of = drift.gh_pulls_of(repo_root, gh)
@@ -229,6 +261,7 @@ def _run(
             forms=reading.forms,
             contract={"forms": dict(contract.forms), "reasons": dict(contract.reasons)},
             quotes=[*drift.answered_quotes(candidates), *drift.pr_quotes(candidates, pulls_of)],
+            watched=True,
         )
         for agent, candidates in plan.dispatch.items()
     }
@@ -238,6 +271,7 @@ def _run(
         commit=reading.commit,
         runs_folder=queue / drift_queue.RUNS / run,
         bounds=bounds,
+        start=functools.partial(drift.run_watched, repo_root=repo_root),
     )
     gathered = [
         drift.gather(
@@ -293,13 +327,27 @@ def _say(line: str) -> None:
     print(drift.plain(line))
 
 
-def _print_plan(plan: drift.Plan) -> None:
+def _print_plan(plan: drift.Plan, *, watched: bool) -> None:
+    """What the run dispatches, or, with nobody at a terminal, what went stale
+    and the fixer that would take it; then every artefact it lists."""
     for agent, candidates in plan.dispatch.items():
         names = ", ".join(f"`{c.name}`" for c in candidates)
-        _say(f"dispatch: {agent} on {len(candidates)} artefact(s): {names}")
+        if watched:
+            _say(f"dispatch: {agent} on {len(candidates)} artefact(s): {names}")
+        else:
+            _say(f"stale: {agent} would take {len(candidates)} artefact(s): {names}")
     for listed in plan.listed:
         label = "standing" if listed.standing else "listed"
         _say(f"{label}: `{listed.name}` — {listed.why}")
+
+
+def _print_not_started() -> None:
+    """Why no fixer starts with nobody at a terminal, and the command a person
+    runs to start them (DEC-056 point 3)."""
+    print(
+        "no fixer started: nobody is at a terminal to watch the fixers (DEC-056 point 3).\n"
+        f"  To start them, run at a terminal: {fixers.COMMAND} {drift.VERB}"
+    )
 
 
 def _print_runs(fixers_run: list[drift.FixerRun], gathered: list[drift.Gathered]) -> None:
@@ -310,7 +358,8 @@ def _print_runs(fixers_run: list[drift.FixerRun], gathered: list[drift.Gathered]
         else:
             said = f"finished, exit {run.exit_code}" if run.ending == "finished" else run.ending
             retried = ", started twice" if fixer.retried else ""
-            _say(f"ran: {fixer.agent} — {said}{retried}; check {run.check}")
+            checked = f"; check {run.check}" if run.check != drift.agent_runs.NOT_RUN else ""
+            _say(f"ran: {fixer.agent} — {said}{retried}{checked}")
             if run.reason and run.ending != "finished":
                 _say(f"  why: {run.reason}")
             for command in run.excluded:
