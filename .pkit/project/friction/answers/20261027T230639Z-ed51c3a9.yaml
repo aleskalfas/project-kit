@@ -1,0 +1,129 @@
+answers:
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-27T23:06:39Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-scope
+    revalidated:
+      at: 2026-10-27T23:07:51Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      at: 2026-10-27T23:07:56Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+    revalidated:
+      at: 2026-10-27T23:07:58Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T23:08:01Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-seat
+    revalidated:
+      at: 2026-10-27T23:08:09Z
+      outcome: unchanged
+      unchanged-because: The entry says what a seat holds of its role and its agent definition, and how a clone takes its name. DEC-059 point 2 now lets the seat's scope name milestones, and the entry describes no part of a scope, so it holds.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-topology
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      at: 2026-10-27T23:08:12Z
+      outcome: unchanged
+      unchanged-because: The example's seats have no scope, or scopes of workstreams, and both stay allowed. DEC-059 point 2 only adds milestones to what a scope may name, which the entry does not describe.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planning-agent.md
+    read:
+      - 20261026T212744Z-4789db3b.yaml
+    revalidated:
+      at: 2026-10-27T23:08:15Z
+      outcome: unchanged
+      unchanged-because: The planning agent still files work with no owner into the one shared pool, and reads the topology's scopes as its context. A scope that may also name milestones, as DEC-059 points 2 and 7 now say, changes neither.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T142620Z-f8937159.yaml
+    revalidated:
+      at: 2026-10-27T23:08:18Z
+      outcome: unchanged
+      unchanged-because: Step 3 says a Task falls in each scope whose parts it matches, which covers the milestone part DEC-059 point 2 adds. No step lists the parts a scope may name, so the planning path stands as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T23:08:20Z
+      outcome: unchanged
+      unchanged-because: Variant 2c has the worker take its lapsed Task over again from its seat, as UC-084 variant 2b describes. The milestone part a scope may now name, in DEC-059 point 7, leaves that takeover and every other step as they are.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T23:08:23Z
+      outcome: unchanged
+      unchanged-because: next-task still hands a Task to no seat whose scope leaves it out, as variant 4b says. It now also names the ready Tasks a scope leaves out, and a scope may name milestones, which changes no step of the hand-over.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T23:08:26Z
+      outcome: unchanged
+      unchanged-because: The lead delegates a Task of its own scope to a helper agent. A milestone part in that scope, which DEC-059 point 7 now lists, narrows what the scope holds and leaves the delegation as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+    revalidated:
+      at: 2026-10-27T23:08:29Z
+      outcome: unchanged
+      unchanged-because: The seats listing now shows a scope's milestones beside its workstreams and types. Step 3 names what the listing shows of each seat without its scope, so the use case holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-27T23:08:31Z
+      outcome: unchanged
+      unchanged-because: The journey takes UC-082 and UC-084 for setting up the topology and taking work, and their steps still sit where it places them. Its need from UC-064, the workstreams a scope may name, holds beside the milestones DEC-059 points 2 and 7 add.
