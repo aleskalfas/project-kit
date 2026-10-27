@@ -2032,26 +2032,37 @@ def test_each_reviewers_lines_print_together_in_the_order_of_the_set(
 def test_the_run_waits_for_the_slowest_reviewer_not_their_sum(
     rpr, monkeypatch, tmp_path, cap
 ) -> None:
-    """The gain, timed: four reviewers of 0.3s each take about 0.3s at the
-    default, and at least their sum, 1.2s, with the cap at 1. The default's
-    bound is loose, below what three of them take in a row, so a loaded
-    machine does not fail it: the barrier test proves they overlap."""
+    """The gain, timed by the reviewers' own clocks: four reviewers of 0.3s
+    each, and the run ends after the last of them. From the first one's start
+    to the last one's end takes less than their times added up at the default,
+    and at least that sum with the cap at 1. The run's own work around the
+    reviewers is not timed, so a loaded machine does not fail the default: it
+    fails only if the reviewers ran in turn. The barrier test proves they
+    overlap."""
     slow = 0.3
+    ran: list[tuple[float, float]] = []
 
     def invoke(name, say, sha):
+        start = time.monotonic()
         time.sleep(slow)
+        ran.append((start, time.monotonic()))
         return "APPROVED", "body"
 
     argv = ("--parallel", cap) if cap else ()
     _at_once(rpr, monkeypatch, tmp_path, invoke, argv=argv)
-    began = time.monotonic()
     run = rpr.review()
-    took = time.monotonic() - began
+    ended = time.monotonic()
     assert run.exit_code == 0
+    assert len(ran) == len(_SET)
+    first = min(start for start, _ in ran)
+    last = max(end for _, end in ran)
+    assert last <= ended
+    span = last - first
+    in_turn = sum(end - start for start, end in ran)
     if cap is None:
-        assert took < slow * (len(_SET) - 1), took
+        assert span < in_turn, (span, in_turn)
     else:
-        assert took >= slow * len(_SET), took
+        assert span >= in_turn, (span, in_turn)
 
 
 def test_each_native_review_reads_the_head_just_before_it(
