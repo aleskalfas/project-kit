@@ -16,7 +16,6 @@ body: >
   a link, and a link of any other form, still count. A comparison reads the
   forms of its later state at both states, so the change that brings a
   declaration flags nothing. `pkit rule-sets altered` still lists an artefact
-  changed only in such links, and `pkit friction resolve` advises the outcome
-  the change check bears out. The `packages` check fails a target that does
+  changed only in such links. The `packages` check fails a target that does
   not compile. The key is additive, so no migration is due. A capability that
   declares it needs a backbone that knows it.
