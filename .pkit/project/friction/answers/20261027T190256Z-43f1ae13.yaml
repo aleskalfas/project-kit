@@ -1,0 +1,729 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-release-step
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-d74f55c40d3f.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: PRJ-002#D3
+          reason: "PRJ-002 has the release step cut a release candidate off main, and the final release that ends a line from the last candidate's source commit, neither built yet. The term gains both with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-002#D4
+          reason: "PRJ-002 has the release step cut a release candidate off main, and the final release that ends a line from the last candidate's source commit, neither built yet. The term gains both with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "PRJ-002 has the release step cut a release candidate off main, and the final release that ends a line from the last candidate's source commit, neither built yet. The term gains both with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-ci-pipeline.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-e1d3065e2944.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: PRJ-002
+          reason: "PRJ-002 adds release candidates, cut on request, and a final release that ends a line, whose tag the release workflow pushes before its release PR opens, neither built yet. The note on project-kit's own steps gains them with the build for #2211."
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T044308Z-41eae20f.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-fb33f94647c6.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: PRJ-002
+          reason: "PRJ-002 and PRJ-004 add the release candidate, its line and its tag, and a final release cut from the last candidate's source commit that consumes only the changesets it includes, none built yet. The view gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "PRJ-002 and PRJ-004 add the release candidate, its line and its tag, and a final release cut from the last candidate's source commit that consumes only the changesets it includes, none built yet. The view gains them with the build for #2211."
+  - artefact: tech-docs/analysis/core/domain-model/050-a-projects-own-files.md
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-5078b2005a56.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-049
+          reason: "ADR-049 point 3 lets a pin name a release candidate and keeps a project on one pinned, and ADR-064 point 3 has an init run by a candidate pin the project, none built yet. The view's account of who writes the pin follows with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "ADR-049 point 3 lets a pin name a release candidate and keeps a project on one pinned, and ADR-064 point 3 has an init run by a candidate pin the project, none built yet. The view's account of who writes the pin follows with the build for #2211."
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T205437Z-a3b903e8.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001046Z-b1bfc4dd.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T051427Z-db09293e.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-e20d8eb259bb.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-049#3
+          reason: "ADR-049 point 3 lets a pin name a release candidate, has pkit upgrade --pre raise a pin to one, and has pkit unpin refuse on one, none built yet. The README's rollback by reverting each upgrade's commit holds, and its upgrade flow gains the candidate's pin with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-065
+          reason: "ADR-065 reads the migration window's lower bound in PEP 440 order, and gains pkit upgrade --pre with its remedy for a move to a candidate cut short, none built yet. The README gains them, with ADR-072's rules for migrations a pre-release shipped, in the build for #2211."
+  - artefact: .pkit/release/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - moved-9dcf3fafafed.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: PRJ-002
+          reason: "PRJ-002 and PRJ-004 add release candidates, cut by the release workflow's pre-release run, and a final release that ends a line, cut from the last candidate's source commit with refusals of its own, none built yet. The README gains --pre, the final release's cut and its release PR with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "PRJ-002 and PRJ-004 add release candidates, cut by the release workflow's pre-release run, and a final release that ends a line, cut from the last candidate's source commit with refusals of its own, none built yet. The README gains --pre, the final release's cut and its release PR with the build for #2211."
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T051019Z-da72435c.yaml
+      - 20261026T051427Z-db09293e.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T053814Z-1774e924.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T071913Z-056e87c1.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T230218Z-61712646.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-049
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-063
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-002
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "The records add --pre to pkit release plan and apply and to pkit upgrade, candidate pins, the refusal of pkit unpin on a candidate and an upgrade guard against a candidate nobody asked for, none built yet. The reference gains them with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: PRJ-002#D2
+          reason: "PRJ-002 has the release workflow cut each release candidate, and the final release that ends a line cut from the last candidate's source commit, tagged before its release PR, with refusals of its own, none built yet. The use case gains those paths with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-002#D3
+          reason: "PRJ-002 has the release workflow cut each release candidate, and the final release that ends a line cut from the last candidate's source commit, tagged before its release PR, with refusals of its own, none built yet. The use case gains those paths with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-002#D4
+          reason: "PRJ-002 has the release workflow cut each release candidate, and the final release that ends a line cut from the last candidate's source commit, tagged before its release PR, with refusals of its own, none built yet. The use case gains those paths with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "PRJ-002 has the release workflow cut each release candidate, and the final release that ends a line cut from the last candidate's source commit, tagged before its release PR, with refusals of its own, none built yet. The use case gains those paths with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-065#4
+          reason: "ADR-065 point 4 has an init run by a release candidate refuse unless routing is bypassed and pin the project it installs, which no code does yet. The use case gains that variant with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-065#8
+          reason: "ADR-065 point 8 gains a row for a recorded target that is a release candidate above the running pkit, whose remedy is pkit upgrade --pre, not built yet. The use case's stop on an incomplete transition gains it with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-063
+          reason: "The records add pkit upgrade --pre, an upgrade guard against a release candidate nobody asked for, a move to a candidate that always pins, and candidate tags, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "The records add pkit upgrade --pre, an upgrade guard against a release candidate nobody asked for, a move to a candidate that always pins, and candidate tags, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-065#12
+          reason: "The records add pkit upgrade --pre, an upgrade guard against a release candidate nobody asked for, a move to a candidate that always pins, and candidate tags, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-065#4
+          reason: "The records add pkit upgrade --pre, an upgrade guard against a release candidate nobody asked for, a move to a candidate that always pins, and candidate tags, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-065#9
+          reason: "The records add pkit upgrade --pre, an upgrade guard against a release candidate nobody asked for, a move to a candidate that always pins, and candidate tags, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "The records add pkit upgrade --pre, an upgrade guard against a release candidate nobody asked for, a move to a candidate that always pins, and candidate tags, none built yet. The use case gains them with the build for #2211."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-049
+          reason: "ADR-049 point 3 lets a pin name a release candidate, and ADR-065 points 8 and 9 have pkit upgrade --pre hand over to one and finish a move to one cut short, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-064
+          reason: "ADR-049 point 3 lets a pin name a release candidate, and ADR-065 points 8 and 9 have pkit upgrade --pre hand over to one and finish a move to one cut short, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-065#8
+          reason: "ADR-049 point 3 lets a pin name a release candidate, and ADR-065 points 8 and 9 have pkit upgrade --pre hand over to one and finish a move to one cut short, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: ADR-065#9
+          reason: "ADR-049 point 3 lets a pin name a release candidate, and ADR-065 points 8 and 9 have pkit upgrade --pre hand over to one and finish a move to one cut short, none built yet. The use case gains them with the build for #2211."
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "ADR-049 point 3 lets a pin name a release candidate, and ADR-065 points 8 and 9 have pkit upgrade --pre hand over to one and finish a move to one cut short, none built yet. The use case gains them with the build for #2211."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-changeset
+    read:
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-c7624201d852.yaml
+    revalidated:
+      at: 2026-10-27T19:07:11Z
+      outcome: unchanged
+      unchanged-because: PRJ-002 adds release candidates in its preamble and a new D5, and refines D3 and D4, while D1 and D2 stand as written. The term says what a changeset declares and who judges its kind, which a candidate leaves pending and unchanged, so it holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-surface-change
+    read:
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-a8a20a288112.yaml
+    revalidated:
+      at: 2026-10-27T19:07:18Z
+      outcome: unchanged
+      unchanged-because: PRJ-002 adds release candidates in its preamble and a new D5, and refines D3 and D4, while D1 and D2 stand as written. The term says what a surface change is and who judges it, which holds for a candidate as for a final release.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-version
+    read:
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-318ae20df6a7.yaml
+    revalidated:
+      at: 2026-10-27T19:07:23Z
+      outcome: unchanged
+      unchanged-because: PRJ-002 adds release candidates in its preamble and a new D5, and refines D3 and D4, while D2 stands as written. The term's example of a release step moving the backbone by a changeset's kind holds.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-developer.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-4b4237b8c57c.yaml
+    revalidated:
+      at: 2026-10-27T19:07:30Z
+      outcome: unchanged
+      unchanged-because: PRJ-002 adds release candidates in its preamble and a new D5, and refines D3 and D4, while D1 and D2 stand as written. The developer still declares each change in a changeset, which a candidate leaves pending, so the actor holds.
+  - artefact: tech-docs/analysis/core/domain-model/020-parts-of-the-system.md
+    read:
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-50028840c950.yaml
+    revalidated:
+      at: 2026-10-27T19:07:34Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged COR-006 and COR-025 gaining top lines that name COR-065 and COR-066, which leave the view's homes of content and a project's ADR namespace standing. This change adds release candidates to PRJ-002 and refines D3 and D4, while D2 stands as written. Judged together, the view's account of a version and the kind a person judges for it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-27T19:07:42Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged additions to pkit refs and pkit decisions, pkit release merge's local clean-up, a report-only point-citation warning and the pin help's rollback line, none of which declaring a changeset uses. This change adds release candidates, which consume no changeset and raise no floor, while D1 and D2 stand and a floor still rises only where a changeset declares it (PRJ-002 D4). Judged together, a change still declares its kind and its floors in a changeset, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-version-pin
+    read:
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-1be5954de142.yaml
+    revalidated:
+      at: 2026-10-27T19:07:46Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged ADR-049 point 3's rollback by reverting each upgrade's commit, which the term does not name. This change lets a pin name a release candidate, has pkit upgrade --pre raise a pin to one, keeps a project on a candidate pinned, and has an init run by a candidate pin the project it installs (ADR-049 point 3, ADR-064 point 3). Judged together, the term says what a pin is and tells it from other pins, which holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-9c7c53a9c949.yaml
+    revalidated:
+      at: 2026-10-27T19:07:54Z
+      outcome: unchanged
+      unchanged-because: ADR-065 point 4 adds two of upgrade's own checks, the hand-over of pkit upgrade --pre to a newer release candidate and the refusal of a candidate nobody asked for, both before anything is written. A transition still resolves compatibility in its first step before any write, so the requirement holds.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-methodology-maintainer.md
+    read:
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-48d6ee71f2ab.yaml
+    revalidated:
+      at: 2026-10-27T19:07:58Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged a core record proposed and accepted in the change that lands it, which the actor does not name. This change has the maintainer cut release candidates on request, and the final release that ends a line from the last candidate's source commit (PRJ-002 D5). Judged together, the actor's occasions, every change and every backbone release, and its release policy hold.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T161906Z-06f8050c.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-09637e9d2b39.yaml
+    revalidated:
+      at: 2026-10-27T19:08:07Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 adds the candidate tag, which latest never names, and ADR-063 has the tool step install no candidate, even under pkit upgrade --pre. The operator still puts the CLI on the machine at a release and runs each project at the version it pins, so the actor holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-27T19:08:11Z
+      outcome: unchanged
+      unchanged-because: "Main's answers judged additions to pkit refs and pkit decisions, pkit release merge's local clean-up, a report-only point-citation warning and the pin help's rollback line, none of which this use case relies on. This change keeps the release step the only writer of versions, and has a running line's final release refuse a migration merged into a folder it ships, a refusal UC-008 gains with the build for #2211. Judged together, the release that ships a backbone change still ships its migration in the folder of the version it computes, so every step and variant holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-27T19:08:21Z
+      outcome: unchanged
+      unchanged-because: "Main's answers judged additions to pkit refs and pkit decisions, pkit release merge's local clean-up, a report-only point-citation warning and the pin help's rollback line, none of which this use case relies on. This change keeps the release step the only writer of versions, and has a running line's final release refuse a migration merged into a folder it ships, a refusal UC-008 gains with the build for #2211. Judged together, a component's migration still ships with the version the release step writes for it, so every step and variant holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - 20261027T165518Z-684bb6aa.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-27T19:08:26Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged the release workflow started by hand alone, with no weekly schedule, and the pin help's rollback, none of which the use case describes. This change adds release candidates, which a cut makes only with a backbone version under a candidate tag. Judged together, a final release of components alone cuts no candidate and gets no tag, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-27T19:08:35Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged additions to pkit refs and pkit decisions, a report-only point-citation warning, and the rollback the pin help and the refusal of an older pin name, none of which this use case relies on. This change adds the candidate tag, which latest never names, and has the tool step install no candidate, even under pkit upgrade --pre (ADR-063). Judged together, the CLI's install at latest and its update to the latest release hold.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-40743155218d.yaml
+    revalidated:
+      at: 2026-10-27T19:08:41Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged the rollback sync's stops name, which the journey does not name. This change adds the candidate tag, which ADR-065 point 12 counts a tagged install and latest never names. Judged together, the journey adopts the system at a release, from latest or the release's tag, so it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T230218Z-61712646.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T014157Z-47cc41f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-27T19:08:50Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged UC-037's numbering check, core rules 2, 7, 12 and 22, the refusal over an uncommitted upgrade, pkit release merge's clean-up and a report-only point-citation warning, under which each stage holds. This change adds release candidates, which consume no changeset, and a final release whose release PR leaves the changesets merged after its source commit pending. Judged together, a change still waits for the next release step, so the journey holds.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-025
+          reason: "COR-025 is now partially superseded by COR-066, so a record reaches the default branch only accepted, after a person accepts it in its change. This journey lands its change after UC-037, which leaves the record proposed, and keeps acceptance through UC-040 outside the journey. Main's later answers on this journey, for validation right after an upgrade and for a worker mending its own pull requests, change none of this. #2191 realizes COR-066, and this journey follows it there."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - 20261027T164749Z-013dd8e9.yaml
+      - moved-1849fdf40a4b.yaml
+    revalidated:
+      at: 2026-10-27T19:08:56Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged UC-008's trigger, the release workflow started by hand with no weekly schedule, which the journey does not describe. This change adds the candidate tag, which ADR-065 point 12 counts a tagged install, and pkit upgrade --pre, which only a project that asks takes. Judged together, the journey upgrades a project to a release, from latest or the release's tag, so it holds.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T155116Z-437c4f24.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T014157Z-47cc41f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-27T19:09:05Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the acceptance gate, core rules 7, 12 and 22, create-issue's seat check, check-diff's flags, refs records-for, a point-citation warning and the rollback by reverting each upgrade's commit, under which the README's commands, rules line and account of upgrades hold. This change adds release candidates a person asks for, with pkit upgrade --pre or a pin, which latest never names and a move to which always pins. Judged together, the README's install from latest or a release's tag, and its upgrade to a release, hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T140038Z-7b340df9.yaml
+      - moved-4859ed958bd4.yaml
+    revalidated:
+      at: 2026-10-27T19:09:10Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged additions to pkit refs and pkit decisions, a report-only point-citation warning and the rollback the refusals and the pin help name, none of which upgrading one capability relies on. This change reads a component's lower bound in PEP 440 order, which gives what it gave for every release version, and counts a candidate's tag as tagged (ADR-065 points 4 and 12). Judged together, the capability's upgrade holds.
