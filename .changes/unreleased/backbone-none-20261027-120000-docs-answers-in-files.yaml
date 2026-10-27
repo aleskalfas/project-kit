@@ -1,0 +1,6 @@
+component: backbone
+kind: none
+body: >
+  Internal. The CLI reference and the schemas README now describe answers as
+  they live in answer files: the answer files' schema, its location rule and
+  what validation checks of them. Nothing you run changes.

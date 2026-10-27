@@ -68,7 +68,7 @@ TERM-anchor:
 TERM-answer:
   name: answer
   status: active
-  definition: "statement in an artefact's `friction` block that settles an edit to what the artefact rests on, or a revisit its links ask for"
+  definition: "statement in a change's own file that settles an edit to what an artefact rests on, or a revisit its links ask for"
   pkit:
     friction:
       anchors:
@@ -77,6 +77,7 @@ TERM-answer:
         record:
           - COR-050#3
           - COR-050#4
+          - COR-062#1
 TERM-area:
   name: area
   noun-forms: [areas]
@@ -280,7 +281,7 @@ TERM-data-point:
 TERM-debt:
   name: debt
   status: active
-  definition: "stale or deferred finding of the whole-repository check, dated from the commit it originates in: the change nobody answered, or the deferral"
+  definition: "stale, deferred or answered-apart finding of the whole-repository check, dated from its originating commit: an unanswered change, a deferral, or revalidations answered apart"
   pkit:
     friction:
       anchors:
@@ -289,6 +290,7 @@ TERM-debt:
           - src/project_kit/friction_report.py
         record:
           - COR-050#9
+          - COR-062#7
 TERM-decision-record:
   name: decision record
   noun-forms: [decision records]
@@ -373,6 +375,7 @@ TERM-friction:
           - COR-050#5
           - COR-050#6
           - COR-050#9
+          - COR-062#1
 TERM-grant:
   name: grant
   status: active
@@ -1140,7 +1143,8 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Revalidation:** an answer saying the [artefact](#term-artefact--artefact) was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds ([COR-050 point 3](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - **Deferral:** an answer that puts off one [anchor](#term-anchor--anchor)'s [friction](#term-friction--friction), with a reason naming the follow-up that will answer it ([COR-050 point 4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
 - **Revisit entry:** an answer on a [revisit link](#term-revisit-link--revisit-link)'s source, saying why a [link target](#term-link-target--link-target) still stands or which follow-up will [revisit](#term-revisit--revisit) it ([COR-050 point 16](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#16-a-link-may-ask-for-a-revisit-of-its-targets-when-its-source-changes)).
-- **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live on the artefacts.
+- **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live in answer files, outside the artefacts.
+- **Answer file:** a file that one change adds and no other change writes ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). It holds the change's answers on each artefact, and names the other answer files on that artefact each answer read.
 - **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
 
 ## TERM-area — area
@@ -1345,6 +1349,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Friction:** a [finding](#term-finding--finding) that a [change](#term-change--change) owes an [answer](#term-answer--answer), which the change gives before it merges. [Friction](#term-friction--friction) nobody answered stays on the [default branch](#term-default-branch--default-branch) as stale debt.
 - **Stale and deferred:** stale debt is a change nobody answered, dated from that change. Deferred debt is a deferral, dated from the commit that introduced it ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
+- **Answered apart:** debt that two revalidations of one [artefact](#term-artefact--artefact) leave where neither read the other, dated from the first commit that holds both. Nobody has judged their combined state. It is never stale, and the next revalidation that reads both clears it ([COR-062 point 7](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
 - **Ledger:** no file lists the debt. Each run derives it from git again (COR-050 point 9).
 
 ## TERM-decision-record — decision record
@@ -1414,12 +1419,12 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#friction).
 
-**Example:** a [change](#term-change--change) modifies `src/project_kit/release.py`, and the [change check](#term-change-check--change-check) reports friction on `.pkit/release/README.md` until the page carries an [answer](#term-answer--answer).
+**Example:** a [change](#term-change--change) modifies `src/project_kit/release.py`, and the [change check](#term-change-check--change-check) reports friction on `.pkit/release/README.md` until the change gives the page an [answer](#term-answer--answer).
 
 **Distinctions:**
 
 - **Debt:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) reports on the [default branch](#term-default-branch--default-branch). Friction nobody answered is stale [debt](#term-debt--debt), and a deferral is deferred debt ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
-- **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors and answers ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). It is no [finding](#term-finding--finding).
+- **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). The artefact's answers live in answer files apart from the artefact ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). The block is no [finding](#term-finding--finding).
 
 ## TERM-grant — grant
 
