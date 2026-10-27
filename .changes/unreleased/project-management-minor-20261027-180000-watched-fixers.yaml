@@ -7,9 +7,10 @@ body: >
   you watch it (DEC-056 points 3 and 5). The command tells you started it
   when its standard input and standard output are both terminals. Each
   granted fixer then runs through `pkit agents run` in the runner's
-  unconfined form, as `review-pr` runs its reviewers: in a working copy of
-  the default branch's commit made for that fixer, under your settings and
-  the project's, and Ctrl-C stops the run. The command copies each fixer's
+  unconfined form, as `review-pr` runs its reviewers: in a clone of the
+  default branch's commit made for that fixer, with a git folder of its own
+  and no remote, under your settings and the project's, and Ctrl-C stops the
+  run. The command copies each fixer's
   workspace into the queue, and sets its files aside where they hold a link
   or a special file. With nobody at a terminal, as in the project manager's
   run after a merge, it starts no fixer and writes nothing: it lists each

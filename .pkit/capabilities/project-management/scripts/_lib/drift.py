@@ -1163,29 +1163,26 @@ def run_watched(
 ) -> agent_runs.AgentRun:
     """Run one fixer watched (DEC-056 point 5): through the backbone's run
     command in the runner's unconfined form, as the review command runs its
-    reviewers, in a working copy of `commit` made for this fixer alone, never
-    in the person's checkout. The fixer runs under the person's settings and the
-    project's there, and writes its workspace inside the copy, where a session
-    started in the copy may write (`WATCHED_WORKSPACE`).
+    reviewers, in a clone of `commit` made for this fixer alone (`clone_at`),
+    never in the person's checkout. The fixer runs under the person's settings
+    and the project's there, and writes its workspace inside the clone, where a
+    session started in the clone may write (`WATCHED_WORKSPACE`). A commit that
+    holds anything at the workspace's first folder refuses the run, and the
+    workspace is made as folders of its own.
 
     The drift command names the run's folders in the brief itself, since the
     backbone fills a brief's markers only for a confined run. Once the run
     ends, the workspace's files are copied into `files_to` (`copy_files`), and
-    the copy is removed. An entry the copy refuses sets the run's files aside,
+    the clone is removed. An entry the copy refuses sets the run's files aside,
     as a breach does. Nothing else checks a watched run. Never raises for what
-    the run did; an interrupt removes the copy, then propagates."""
-    copy = copy or copy_at
+    the run did; an interrupt removes the clone, then propagates."""
+    copy = copy or clone_at
     start = start or agent_runs.run_agent
     try:
         with copy(repo_root, commit) as working_copy:
-            workspace = working_copy.joinpath(*WATCHED_WORKSPACE)
-            try:
-                workspace.mkdir(parents=True)
-            except OSError as exc:
-                return agent_runs.AgentRun(
-                    agent_runs.NOT_STARTED,
-                    reason=f"the run's workspace, {workspace}, cannot be made: {exc}",
-                )
+            workspace = make_watched_workspace(working_copy)
+            if isinstance(workspace, agent_runs.AgentRun):
+                return workspace
             run = start(
                 agent,
                 fill_folders(brief, working_copy=working_copy, workspace=workspace),
@@ -1201,6 +1198,58 @@ def run_watched(
             run, check=agent_runs.BREACH, changes=tuple(refused), files=str(files_to)
         )
     return dataclasses.replace(run, files=str(files_to))
+
+
+@contextlib.contextmanager
+def clone_at(repo_root: Path, commit: str, run: Runner = subprocess.run) -> Iterator[Path]:
+    """A clone of the repository at `commit`, detached, for one watched fixer:
+    outside the person's checkout, with a git folder of its own, so nothing the
+    fixer does to the clone reaches the person's references, hooks or
+    configuration. It borrows the repository's objects by reference, read
+    only, and keeps no remote to push to. Removed on every exit."""
+    parent = Path(tempfile.mkdtemp(prefix="pkit-fixer-"))
+    clone = parent / "copy"
+    at = ["git", "-C", str(clone)]
+    cloning = ["git", "clone", "--quiet", "--shared", "--no-checkout", "--template=", "--"]
+    steps = (
+        [*cloning, str(repo_root), str(clone)],
+        [*at, "remote", "remove", "origin"],
+        [*at, "-c", "advice.detachedHead=false", "checkout", "--quiet", "--detach", commit],
+    )
+    try:
+        for argv in steps:
+            done = run(argv, capture_output=True, text=True, check=False)
+            if done.returncode != 0:
+                said = (done.stderr or "").strip().splitlines()
+                raise Stop(
+                    f"a clone of {commit[:12]} cannot be made" + (f": {said[-1]}" if said else "")
+                )
+        yield clone
+    finally:
+        shutil.rmtree(parent, ignore_errors=True)
+
+
+def make_watched_workspace(working_copy: Path) -> Path | agent_runs.AgentRun:
+    """A watched run's workspace in `working_copy`, made as folders of its own;
+    or the refused run, where the commit holds anything at its first folder or
+    a folder cannot be made (ADR-060's guards)."""
+    first = WATCHED_WORKSPACE[0]
+    if os.path.lexists(working_copy / first):
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"the commit holds something at `{first}`, where the run's workspace goes",
+        )
+    workspace = working_copy
+    try:
+        for part in WATCHED_WORKSPACE:
+            workspace = workspace / part
+            workspace.mkdir(mode=0o700)
+    except OSError as exc:
+        return agent_runs.AgentRun(
+            agent_runs.REFUSED,
+            reason=f"the run's workspace, {workspace}, cannot be made: {exc.strerror or exc}",
+        )
+    return workspace
 
 
 def fill_folders(brief: str, *, working_copy: Path, workspace: Path) -> str:

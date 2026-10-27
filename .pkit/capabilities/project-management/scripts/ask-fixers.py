@@ -14,7 +14,8 @@ built from the declaration, for example:
 
   living-docs can keep your pages true. When you run `pkit pm fix-drift` at a
   terminal, its agent living-docs proposes a fix for each one that went out of
-  date, and nothing is applied until you approve it. Turn this on? [Y/n]
+  date, under your settings and the project's. Nothing it proposes is applied
+  until you approve it. Turn this on? [Y/n]
 
 At a terminal — standard input and standard output both — each answer is
 recorded in the grant list (`fixers` in `project/config.yaml`) as it is given:

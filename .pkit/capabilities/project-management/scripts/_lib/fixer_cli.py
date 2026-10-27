@@ -366,8 +366,8 @@ def run_ask_verb(argv: Sequence[str] | None = None) -> int:
         prog=f"{fixers.COMMAND} {fixers.ASK_VERB}",
         description=(
             "Ask whether the drift command may start each declared fixer nobody was asked "
-            "about (DEC-056 point 2), and record each answer. With nobody at a terminal, print each "
-            "question and the command that grants its fixer, and record nothing."
+            "about (DEC-056 point 2), and record each answer. With nobody at a terminal, print "
+            "each question and the command that grants its fixer, and record nothing."
         ),
     )
     parser.add_argument(

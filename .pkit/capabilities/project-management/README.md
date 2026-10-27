@@ -1437,8 +1437,10 @@ A *fixer* is the agent that keeps one type of artefact true. When the default br
 **The question.** `pkit pm ask-fixers` asks one question for each fixer nobody asked you about. Its words come from the declaration, for example:
 
 ```
-living-docs can keep your pages true. When you run `pkit pm fix-drift` at a terminal, its agent living-docs proposes a fix for each one that went out of date, and nothing is applied until you approve it. Turn this on? [Y/n]
+living-docs can keep your pages true. When you run `pkit pm fix-drift` at a terminal, its agent living-docs proposes a fix for each one that went out of date, under your settings and the project's. Nothing it proposes is applied until you approve it. Turn this on? [Y/n]
 ```
+
+A grant counts for every run you start at a terminal, whatever words its question used.
 
 - **At a terminal,** each answer is recorded as you give it. A yes is a grant, and a no is a refusal, so nothing asks about those types again.
 - **With nobody at a terminal,** such as in CI, nothing is granted or recorded. Each question is printed with the one command that grants its fixer.
@@ -1488,9 +1490,9 @@ A tool that writes new files is allowed, for its workspace.
 pkit pm fix-drift [--dry-run] [--force] [--cap N] [--parallel N] [--timeout SECONDS] [--effort LEVEL]
 ```
 
-**You start the fixers, and watch them.** A fixer starts only where you ran the command at a terminal: its standard input and standard output are both terminals, the test the fixers question uses. No flag stands in for that, since an agent passes a flag as easily as you do.
+**You start the fixers, and watch them.** A fixer starts only where you ran the command at a terminal: its standard input and standard output are both terminals, the test the fixers question uses. No flag stands in for that, since an agent passes a flag as easily as you do. An agent can fake a terminal too, so your permission settings, not this test, keep an agent from starting the command so.
 
-- **At a terminal,** each granted fixer runs watched. You see which fixers start and how each ends, and Ctrl-C stops the run.
+- **At a terminal,** each granted fixer runs watched. Before the first starts, the command says that the fixers run under your settings, and that Ctrl-C stops the run. You see which fixers start and how each ends.
 - **With nobody at a terminal,** it starts no fixer and writes nothing. The project manager runs it so after each merge into the default branch, in the session that landed the merge (the pm skill's `fix-drift` sub-procedure). It prints each stale artefact a granted fixer would take, as `stale: <fixer> would take N artefact(s): …`, then `no fixer started: nobody is at a terminal`, and the command to run.
 - **A fixer never starts with nobody watching.** A run nobody watches would be confined ("How a fixer runs" below), and when the command starts one is left to a decision of its own.
 
@@ -1527,11 +1529,11 @@ One run at a time works on the queue, held by a lock. A fixer that reaches its l
 
 **How a fixer runs.** Each starts through the backbone's run command, `pkit agents run`, in the runner's unconfined form, as a reviewer does ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 10). It runs with one brief and no other message:
 
-- **Where.** In a working copy of the commit made for that fixer alone, a linked worktree outside your checkout, with its workspace at `.agent-workspace/fix-drift/` inside it. The harness finds the fixer deployed there, at `.claude/agents/`, or else in your own agents folder.
-- **Under what.** Your settings and the project's in that copy, in the mode they choose, with no flag that bypasses the permission rules. A call they would ask about is refused, since nobody can answer during the run. Nothing else holds the fixer: it may write, or reach the network, wherever those settings let it, and its git commands reach your repository through the worktree's shared git folder.
+- **Where.** In a clone of the commit made for that fixer alone, outside your checkout, with its workspace at `.agent-workspace/fix-drift/` inside it. The clone has a git folder of its own and no remote, and borrows your repository's objects read only, so its git commands reach none of your branches, hooks or configuration. A commit that holds anything at `.agent-workspace` refuses the run. The harness finds the fixer deployed in the clone, at `.claude/agents/`, or else in your own agents folder.
+- **Under what.** Your settings and the project's in that clone, in the mode they or the harness choose, which may approve calls no rule allows. Your checkout's local settings file does not reach the clone. A call that would ask you is refused, since nobody can answer during the run. Nothing else holds the fixer: it may write, push or reach the network wherever those settings let it.
 - **The frame** says that you started the run and watch it, and names the commit, the working copy and the workspace by their paths, and the artefacts with their types. It tells the fixer to propose only, keeping to the command forms the run's rules allow, and gives the result lines the run's contract asks for.
 - **The data** is quoted with its source between markers made new for each run, and never instructs: for each commit behind an artefact's friction, the title and text of the pull request that carried it, cut at 4,000 characters and marked so, or that the work tracker holds none or could not be reached; and for an artefact held in an earlier run, its question, your answer and who gave it.
-- **After the run,** the workspace's folders and regular files are copied into the queue, within 64 MiB and 10,000 entries. A symbolic link, a special file, a file with more than one link or a part named like `.git` sets that fixer's files aside. Then the working copy is removed. Nothing else checks the run.
+- **After the run,** the workspace's folders and regular files are copied into the queue, within 64 MiB and 10,000 entries. A symbolic link, a special file, a file with more than one link or a part named like `.git` sets that fixer's files aside. Then the clone is removed. Nothing else checks the run.
 
 The command refuses to start inside an agent run, since a fixer starts no other agent. The rules this capability declares for a fixer's run (Permissions, below) hold a confined run, which a run nobody watches would take: a clone at the commit, under those rules, checked after it ends.
 

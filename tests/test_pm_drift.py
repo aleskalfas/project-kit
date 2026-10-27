@@ -771,6 +771,69 @@ def test_a_watched_runs_link_sets_its_files_aside(drift, tmp_path) -> None:
     assert not (files / "docs/a.md" / "evidence.md").exists()
 
 
+def test_a_commit_that_holds_the_workspace_refuses_a_watched_run(drift, tmp_path) -> None:
+    import contextlib
+
+    copy = tmp_path / "copy"
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+
+    @contextlib.contextmanager
+    def copy_at(repo_root, commit):
+        copy.mkdir()
+        (copy / ".agent-workspace").symlink_to(elsewhere)
+        yield copy
+
+    files = tmp_path / "files"
+    files.mkdir()
+    run = drift.run_watched(
+        "living-docs",
+        "brief",
+        commit="a" * 40,
+        files_to=files,
+        limit_seconds=60,
+        repo_root=tmp_path,
+        copy=copy_at,
+        start=lambda *a, **kw: pytest.fail("no run starts on a workspace the commit holds"),
+    )
+    assert run.ending == "refused" and "`.agent-workspace`" in run.reason
+    assert list(elsewhere.iterdir()) == []
+
+
+def test_a_watched_fixers_clone_has_a_git_folder_of_its_own(drift, tmp_path) -> None:
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def git(*argv: str, at: Path = repo) -> str:
+        done = subprocess.run(
+            ["git", "-c", "commit.gpgsign=false", "-C", str(at), *argv],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return done.stdout.strip()
+
+    git("init", "-q")
+    (repo / "page.md").write_text("first\n")
+    git("add", "page.md")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "one")
+    first = git("rev-parse", "HEAD")
+    (repo / "page.md").write_text("second\n")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "two")
+    with drift.clone_at(repo, first) as clone:
+        assert (clone / "page.md").read_text() == "first\n"
+        assert (clone / ".git").is_dir()  # no linked worktree: nothing shared but objects
+        assert git("rev-parse", "HEAD", at=clone) == first
+        assert git("remote", at=clone) == ""  # no remote to push to
+        held = clone
+    assert not held.exists()
+    assert git("worktree", "list").count("\n") == 0  # only the checkout itself
+    with pytest.raises(drift.Stop, match="cannot be made"), drift.clone_at(repo, "f" * 40):
+        pass
+
+
 def test_a_watched_run_whose_copy_cannot_be_made_did_not_start(drift, tmp_path) -> None:
     import contextlib
 
@@ -1306,6 +1369,7 @@ def _stubbed_run(
 
     monkeypatch.setattr(drift, "pin_commit", lambda repo_root: "a" * 40)
     monkeypatch.setattr(drift, "copy_at", copy_at)
+    monkeypatch.setattr(drift, "clone_at", copy_at)
     monkeypatch.setattr(drift, "read_at", lambda copy, commit, **kw: reading)
     monkeypatch.setattr(drift, "explain", lambda copy, name: _explained())
     monkeypatch.setattr(drift, "gh_open_pr_files", lambda root, gh: lambda path: False)

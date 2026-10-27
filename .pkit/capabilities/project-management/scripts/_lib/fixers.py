@@ -743,8 +743,8 @@ def questions(point: Point, checked: Sequence[Checked], answers: Answers) -> lis
 def question_text(question: Question) -> str:
     """The question's words: built from the capability's name and the descriptions
     of the agent's entries, saying what the agent does when a person runs the
-    drift command at a terminal, and that nothing is applied until the person
-    approves it."""
+    drift command at a terminal, under whose settings, and that nothing it
+    proposes is applied until the person approves it."""
     kept = _joined(list(dict.fromkeys(e.description for e in question.entries)))
     origins = {e.origin for e in question.entries}
     if len(origins) == 1 and PROJECT_FILLER not in origins:
@@ -753,8 +753,8 @@ def question_text(question: Question) -> str:
         subject, doer = f"The agent {question.agent}", "it"
     return (
         f"{subject} can keep {kept} true. When you run `{COMMAND} {DRIFT_VERB}` at a terminal, "
-        f"{doer} proposes a fix for each one that went out of date, and nothing is applied "
-        "until you approve it. Turn this on?"
+        f"{doer} proposes a fix for each one that went out of date, under your settings and the "
+        "project's. Nothing it proposes is applied until you approve it. Turn this on?"
     )
 
 
