@@ -1,0 +1,56 @@
+answers:
+  - artefact: .pkit/capabilities/software-engineering/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-e5885d842901.yaml
+    revalidated:
+      at: 2026-10-26T23:57:16Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its account of the answers its reviewers check keeps them in the artefact, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "DEC-032 D1 now leaves the answer folder out of the touches-code floor, which the README's account of that floor does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-055
+          reason: "DEC-055 now covers a later head by the answer files the change adds and prints answers made apart. #1779 builds it and rewrites the README's account of the landing."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - moved-8a82930f46b2.yaml
+    revalidated:
+      at: 2026-10-26T23:57:40Z
+      outcome: updated
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261025T003621Z-53316d8f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+    revalidated:
+      at: 2026-10-26T23:57:44Z
+      outcome: unchanged
+      unchanged-because: The agent's diff adds what it writes to the conventions corpus when it builds a walking skeleton, and when it writes none. Its friction answers and its hand-off of each answer the change check did not ask for, which UC-081 describes, are unchanged.
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-hand-off
+    read:
+      - 20261025T003621Z-53316d8f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+    revalidated:
+      at: 2026-10-26T23:57:46Z
+      outcome: unchanged
+      unchanged-because: The agent's diff adds a walking skeleton's corpus entries, and has its hand-off list the conventions the skeleton set where the corpus offers no place. That is still a report to the person it works for, with what the person must decide.
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-conventions-corpus
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-2a0b2e49d5a9.yaml
+    revalidated:
+      at: 2026-10-26T23:57:50Z
+      outcome: unchanged
+      unchanged-because: The agent's diff has a walking skeleton's builder draft entries into the corpus for a person to accept. The corpus is still the project's own coding standards, kept where the project names it and read by the agents that write and review code, and the example and distinctions hold.

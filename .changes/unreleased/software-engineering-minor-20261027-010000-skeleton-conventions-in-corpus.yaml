@@ -1,0 +1,18 @@
+component: software-engineering
+kind: minor
+custom:
+  category: Added
+  requires_capabilities:
+    project-management: release
+body: >
+  The new record DEC-004 has the software-engineer, when it builds a walking
+  skeleton, write each convention that building it settles into the project's
+  conventions corpus, in the skeleton's change (project-management DEC-060).
+  A person accepts the entries once, with that change, before the slices are
+  planned, so every slice reads the conventions as the project's rules. Where
+  the corpus offers no single location the project owns, as the ownership
+  test and the other agents' `owns` decide, the agent writes none and says so.
+  The change merges only once the entries are accepted, so where the agent
+  can reach no person, it hands back the entries and its question, and the
+  change waits in review. The software-engineer's definition and the README say
+  what it writes, and DEC-001 points to the new record.
