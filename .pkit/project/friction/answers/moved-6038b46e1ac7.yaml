@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-whole-repository-check
-    revalidated:
-      at: 2026-10-25T00:38:44Z
-      outcome: unchanged
-      unchanged-because: The whole-repository check leaves an artefact received by sync out of the debt, as an excluded one. It still compares every artefact with its revalidation point, and never fails.

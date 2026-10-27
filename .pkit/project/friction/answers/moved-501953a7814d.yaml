@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/software-analysis/requirements/functional/REQ-052-record-only-with-something-to-say.md
-    revalidated:
-      at: 2026-10-24T21:25:09Z
-      outcome: unchanged
-      unchanged-because: The tests this change adds or alters read an open regression's revalidations at HEAD through the backbone. The tests of what the stamp records and refuses are as they were, so the requirement holds.

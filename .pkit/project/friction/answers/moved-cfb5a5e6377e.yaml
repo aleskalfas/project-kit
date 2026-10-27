@@ -1,6 +1,0 @@
-answers:
-  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-001
-    revalidated:
-      at: 2026-10-23T09:50:52Z
-      outcome: unchanged
-      unchanged-because: DEC-001's rationale now says a renamed term's moved links flag nothing, since friction reads them as their words alone. The rule asks each artefact to carry its kind's structure, which this leaves as it was.

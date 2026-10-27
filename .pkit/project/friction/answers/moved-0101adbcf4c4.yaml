@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-workspace
-    revalidated:
-      at: 2026-10-25T00:38:53Z
-      outcome: unchanged
-      unchanged-because: Only core rule 20 changes, on answers. Rule 16 on the agent workspace says what it said.

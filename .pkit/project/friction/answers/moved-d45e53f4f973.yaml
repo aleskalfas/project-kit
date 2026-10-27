@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/living-docs/use-case-model/use-cases/UC-043-set-up-space.md
-    revalidated:
-      at: 2026-10-24T21:20:23Z
-      outcome: unchanged
-      unchanged-because: REQ-024 now calls the unreadable answer of where the rules bind the backbone's one answer, for the same error. Its steps still meet it, so this use case holds.

@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/software-analysis/glossary.md#TERM-revalidation-proposal
-    revalidated:
-      at: 2026-10-25T00:36:00Z
-      outcome: unchanged
-      unchanged-because: The resolver's body now says the commands it hands over write the artefacts' answers, not their blocks. A proposal is still what the term says.
