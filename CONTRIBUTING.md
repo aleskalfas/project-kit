@@ -84,13 +84,19 @@ Add a check by editing `scripts/check.sh` once; both the hook and CI pick it up.
 
 The findings go to **one tracking issue**, its body rewritten in place when they change, with no comment per run. `scripts/friction_report_body.py` renders the body and counts the findings that need an answer; `scripts/friction_tracking_issue.py` keeps the issue. The run's step summary carries the same body.
 
-The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except a deferral and a `left-out` finding, which owes nothing. The body lists the deferrals with their reasons and holds the two measures, unanchored artefacts and uncovered surface; none of these holds the issue open. With nothing to answer the issue is closed, and none is opened where none exists. A finding that needs an answer reopens it.
+The issue is open exactly while a finding needs an answer (ADR-055 point 5). Every finding needs one except three kinds, which the body lists without holding the issue open:
+
+- a deferral, which is itself an answer, listed with its reason
+- a `left-out` finding, which owes nothing
+- two revalidations of one artefact answered apart, debt that no change owes, counted in the headline apart from what needs an answer (COR-062 point 7, ADR-068 point 6)
+
+The body also holds the two measures, unanchored artefacts and uncovered surface, and neither holds the issue open. With nothing to answer the issue is closed, and none is opened where none exists. A finding that needs an answer reopens it.
 
 The tracking issue is the one the workflow's token opened that carries either sign: the hidden marker `<!-- pkit-friction-report -->` in its body, or the `friction-report` label. A person's issue with those signs is never taken for it. A run puts back whichever sign is missing. The body says that edits to it are lost: the next run rewrites it.
 
 The workflow gates nothing, and never fails on what the check finds. It fails when the check cannot run, a shallow clone included, and when the issue cannot be written: `gh` refuses, or the listing of the token's issues may be incomplete, so the run cannot tell whether a tracking issue exists. It also fails when it finds more than one tracking issue. It then keeps the oldest in step, changes nothing on the others, and names them all in its log and step summary; close the others and remove their marker and label.
 
-Answer what it reports in a pull request like any friction (the friction gate, above): revalidate, or defer with a reason. The next run closes the issue once nothing needs an answer; a deferral stays listed in its body.
+Answer what it reports in a pull request like any friction (the friction gate, above): revalidate, or defer with a reason. The next run closes the issue once nothing needs an answer, and a deferral stays listed in its body. Revalidations answered apart stay listed until the next revalidation of their artefact judges them together and replaces them.
 
 `uv run pkit friction check --all` gives the same report locally from HEAD (uncommitted work is not read), and `--json` the machine form. `uv run pkit friction check --all --json | uv run python scripts/friction_report_body.py -` prints the rendering the issue's body is made from, without the marker and the notice line the publisher sets above it. The publisher runs only in the workflow; run by hand, outside GitHub Actions, it refuses and writes nothing, since an issue a person's token opened is never taken for the tracking issue and would stay open beside it.
 
