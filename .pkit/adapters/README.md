@@ -154,7 +154,7 @@ The layer **detects**; it does not alter the harness's configuration or duplicat
 
 **The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
-**Status.** The requirement set holds two entries: `delegated-result-complete`, and `unattended-confined-run`, which the drift command depends on (ADR-066 point 13). The Claude Code adapter answers both ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
+**Status.** The requirement set holds two entries: `delegated-result-complete`, and `unattended-confined-run`, which a drift command's run nobody watches depends on (ADR-066 point 13). The Claude Code adapter answers both ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
 
 ## Adding a new harness
 

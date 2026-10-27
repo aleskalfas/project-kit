@@ -427,7 +427,7 @@ def agents_run(
     effort: str | None,
     as_json: bool,
 ) -> None:
-    """Run AGENT once, with nobody watching, on the brief read from standard input.
+    """Run AGENT once on the brief read from standard input, with nobody to answer it.
 
     The one way a command starts an agent (ADR-066 point 1). The backbone
     starts the runner the project's adapter registers in its `commands:` tree

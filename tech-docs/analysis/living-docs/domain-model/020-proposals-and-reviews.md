@@ -66,7 +66,7 @@ A proposal is an edit the living-docs agent drafts, and leaves for a person to a
 
 - its diff ([DEC-001 point 5](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#5-fixes-are-proposed-never-applied-blind))
 - its evidence: the change that caused it, and the anchors it rests on (DEC-001 point 5)
-- in a run nobody watches, the page's [answer](../../core/glossary.md#term-answer--answer) as fields, never in its diff (DEC-001 point 5)
+- in a run a command starts, the page's [answer](../../core/glossary.md#term-answer--answer) as fields, never in its diff (DEC-001 point 5)
 
 **Relations:**
 
@@ -78,7 +78,7 @@ A proposal is an edit the living-docs agent drafts, and leaves for a person to a
 **Always true:**
 
 - A statement its page's anchors do not ground is grounded by a new [anchor](../../core/glossary.md#term-anchor--anchor), taken out, or raised with a person as a question. It is never left standing as if it were true (DEC-001 point 5).
-- In a run nobody watches, it changes the page's text and its anchors only (DEC-001 point 5).
+- In a run a command starts, it changes the page's text and its anchors only (DEC-001 point 5).
 
 ## Reader-review
 

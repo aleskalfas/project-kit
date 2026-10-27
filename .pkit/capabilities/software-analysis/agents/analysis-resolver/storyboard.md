@@ -193,11 +193,11 @@ pkit analysis propose UC-007 --unintended "Not meant — that's a bug." --uninte
 
 - The project granted the agent the types of the artefacts the brief names, and the grant is on the default branch.
 - The command made a working copy at the commit it pinned, and a workspace for the run, and the brief names both.
-- Nobody watches the run: there is nobody to ask, and nobody to answer.
+- A person started the command at a terminal and watches the run, but nobody can answer the agent during it.
 
 ### Walkthrough
 
-> **The command's brief:** Started by the drift command, and nobody watches this run. Commit: 5e1f0c2… on the default branch. Working copy: /runs/r7/clone. Workspace: /runs/r7/clone/.agent-workspace/run. Artefacts, upstream first: `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-009-schedule-run.md` (software-analysis:use-case), `docs/how-to/export.md` (export-guide).
+> **The command's brief:** Started by the drift command, which a person started at a terminal and watches. Nobody can answer you during this run. Commit: 5e1f0c2… on the default branch. Working copy: /runs/r7/clone. Workspace: /runs/r7/clone/.agent-workspace/run. Artefacts, upstream first: `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-009-schedule-run.md` (software-analysis:use-case), `docs/how-to/export.md` (export-guide).
 >
 > **The brief's data, quoted between the run's markers:** 9c41e02 "feat(export): write the report as CSV" was carried by https://example.org/pr/212, whose text reads: "Adds a CSV writer for the report, and renames --out to --output, as every other command writes it." For 4b7d1e0 "refactor(cli): tidy the scheduler", the work tracker holds no pull request.
 >

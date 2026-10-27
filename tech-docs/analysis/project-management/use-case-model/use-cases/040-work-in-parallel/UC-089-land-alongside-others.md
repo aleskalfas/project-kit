@@ -64,7 +64,7 @@ pkit:
 4. The worker merges the default branch into the [Task](../../../glossary.md#term-task--task)'s branch, with no conflict, and pushes the new head.
 5. The worker runs `pkit pm land-work <N> --yes --expect-head <sha>`, naming the head the merge authoriser authorised. The [authorisation](../../../glossary.md#term-authorisation--authorisation) covers the new head, since a clean merge of the base counts as no edit (DEC-055 point 3).
 6. Each [reviewer](../../../../core/glossary.md#term-reviewer--reviewer) whose [verdict](../../../glossary.md#term-verdict--verdict) no longer stands on the new base reviews again ([DEC-028](../../../../../../.pkit/capabilities/project-management/decisions/DEC-028-agent-as-approver-paths.md)). The system then merges at the head the [merge gate](../../../glossary.md#term-merge-gate--merge-gate) judged, as `UC-062` steps 6 to 14 describe.
-7. After the merge, the worker runs `pkit pm fix-drift` ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)). The fixers the [project](../../../../core/glossary.md#term-project--project) granted propose answers for what the merge left out of date.
+7. After the merge, the worker runs `pkit pm fix-drift` ([DEC-056 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#3-a-command-starts-the-granted-fixers)). Nobody is at a terminal in the worker's session, so the command starts no fixer. It lists what the merge left out of date, each with the fixer the [project](../../../../core/glossary.md#term-project--project) granted. It also names the command a person runs at a terminal to start them.
 
 **Variants:**
 
@@ -88,5 +88,5 @@ pkit:
 What the worker needs here that no accepted record decides yet:
 
 - **One batch of ready heads** across the agents, which the merge authoriser authorises in one sitting. The maintainer decided on 17 October that decisions reach the person in one batch (#1675), and no record holds that decision yet.
-- **The fixers across clones.** Each clone keeps its own queue and its own lock ([DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)). So agents that land in separate clones may each start fixers on the same out-of-date artefact, and no record decides which agent runs the fixers.
+- **The fixers across clones.** Each clone keeps its own queue and its own lock ([DEC-056 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)). So people who start the fixers in separate clones may each start them on the same out-of-date artefact, and no record decides who runs them.
 - **The review rounds that parallel landings cost.** Each landing sends every other open [pull request](../../../../core/glossary.md#term-pull-request--pull-request) on the same files through another review round (`batch-plan.md`). No record decides how a [topology](../../../glossary.md#term-topology--topology) keeps that cost down.

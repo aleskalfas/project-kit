@@ -389,7 +389,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 **Distinctions:**
 
 - **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s [revalidation outcomes](#term-revalidation-outcome--revalidation-outcome), and a person records each ([DEC-001 point 5](../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md#5-revalidation)).
-- **A run a command starts:** project-management's run of the agent with nobody watching. There the agent writes each [answer](../core/glossary.md#term-answer--answer) as fields, never as a command ([project-management DEC-056 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
+- **A run a command starts:** project-management's run of the agent, in which it can ask nobody. There the agent writes each [answer](../core/glossary.md#term-answer--answer) as fields, never as a command ([project-management DEC-056 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-056-drift-fixers.md#6-the-proposals-wait-for-a-decision)).
 
 ## TERM-revalidation-record — revalidation record
 
