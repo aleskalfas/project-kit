@@ -370,7 +370,7 @@ The release step is the procedure that consumes every pending [changeset](../glo
 **Always true:**
 
 - It is the only writer of version numbers (PRJ-002 D3).
-- A floor rises only where a changeset declares it, and the backbone's upper bound only ever widens ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-on-main)).
+- A floor rises only where a changeset declares it, and the backbone's upper bound only ever widens ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 - It refuses to leave a [range](../glossary.md#term-range--range) that excludes the version it writes for a dependency (PRJ-002 D4).
 
 ## What is built on these concepts

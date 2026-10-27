@@ -145,7 +145,7 @@ The code behind `pkit sync` splits in two: a propagation step, and the sync comm
 A transition of the backbone runs after upgrade's own checks, which depend on the code that runs the upgrade:
 
 - **a pinned project's upgrade under its pin's code:** the hand-over to a newer release, then the older-direction check (point 9)
-- **any other upgrade:** the fallback refusal (point 9), then ADR-063's tool step where it runs, then the refusal of a release candidate nobody asked for (refinement per [ADR-072](ADR-072-release-candidates.md) point 7), then the older-direction check (point 7)
+- **any other upgrade:** the fallback refusal (point 9), then ADR-063's tool step where it runs, then the hand-over of `pkit upgrade --pre` to a newer release candidate and the refusal of a candidate nobody asked for (refinement per [ADR-072](ADR-072-release-candidates.md) points 7 and 8), then the older-direction check (point 7)
 
 A project already current returns after these checks, before step 1, and only writes or raises its pin (ADR-064 point 1). Otherwise these steps run in this order:
 
@@ -277,13 +277,13 @@ The guard's message, and upgrade's under the router's fallback, name the remedy 
 |---|---|
 | Pinned, and the router fell back to another installed pkit | Reconnect and run again, since the router runs the pin whenever it can fetch it, or run the pin through `uvx`. Where SSH keys fail, install the pin's version from the repository's HTTPS URL, and the router then runs it with no fetch. To move on purpose, `pkit unpin` and then `pkit upgrade`. Not a bare `pkit upgrade`, which refuses here (point 9). |
 | No manifest, or a recorded version that is no version | `pkit upgrade`, which writes the manifest at its target and replays (point 5) |
-| The recorded target is a candidate ahead of a pin that names a candidate | `pkit pin <that candidate>`, which freezes the project at the version its content records, then `pkit upgrade`, whose run under that pin finishes the move. No latest release finishes it while its line runs (point 9, refinement per ADR-072). |
+| The recorded target is a candidate above the running pkit | `pkit upgrade --pre`, which hands over to that candidate or a newer one, whose upgrade finishes the move. No latest release finishes it while its line runs (point 9, refinement per ADR-072). |
 | The running pkit older than the content or the pin | the remedies #1212 gives. Content ahead of its pin also names `pkit upgrade`, which finishes the interrupted raise. |
 | The transition incomplete | `pkit upgrade`. For a migration that fails every time, fix its cause and run again, or roll the project back by reverting the upgrade's commit. The revert restores every file the upgrade changed, in `.pkit/` and outside it (ADR-049 point 3). |
 | Pinned, the content behind the pin, the pin's code running | `pkit upgrade`, whose routed child finishes the pin (point 9) |
 | Unpinned, the running pkit newer than the content | **Move:** `pkit upgrade`, which pins by default (`--no-pin` keeps it unpinned) and may first update the tool (`--no-self-update` declines). **Stay:** `pkit pin`, which pins at the content's version, so the router runs that version. **A pipeline:** commit a pin, or install the project's version. |
 
-- **The candidate's row binds code from the first candidate on.** An interrupted move into a line, from a pin that names no candidate, meets the message of the release the project left. Each candidate's notes name the way on (ADR-072 point 8).
+- **The candidate's row binds code from the first candidate on.** A first move onto a candidate, cut short, meets the message of the release the project left. Each candidate's notes name the way on (ADR-072 point 8).
 - **How sync knows the router fell back:** by the test point 9 sets, the router's fallback mark without `PKIT_NO_ROUTE`. The fallback only chooses the message. Sync stops under it only where its guard finds a mismatch.
 - **An unpinned project whose installed pkit moves to each new release** meets the stop at every release, until it pins. The changelog says so.
 - **Messages that sent an operator to sync to seed or repair the manifest name upgrade instead.**
@@ -293,8 +293,8 @@ The guard's message, and upgrade's under the router's fallback, name the remedy 
 ### 9. A pinned project's upgrade runs under the code of its pin or of a newer release
 
 - **The routed child,** the upgrade the router runs under the pin's code, checks three cases, in this order:
-  1. **A newer latest release that resolves:** it hands over to the latest through the bypass.
-  2. **A recorded state ahead of the pin,** in `backbone_version` or `completed_version`: upgrade's older-direction check refuses (point 7). Offline, its message names reconnecting, since the latest's upgrade finishes the interrupted raise. Online, no release is newer than the pin, and the message names #1212's remedies. A recorded target that is a candidate differs, since no latest release finishes that move while its line runs, and on a pin that names a candidate the message names point 8's remedy, online or offline (refinement per ADR-072).
+  1. **A newer latest release that resolves:** it hands over to the latest through the bypass. Under `pkit upgrade --pre`, the newest release, candidates included, takes the latest release's place (refinement per ADR-072 point 8).
+  2. **A recorded state ahead of the pin,** in `backbone_version` or `completed_version`: upgrade's older-direction check refuses (point 7). Offline, its message names reconnecting, since the latest's upgrade finishes the interrupted raise. Online, no release is newer than the pin, and the message names #1212's remedies. Where the recorded target is a candidate, the message names `pkit upgrade --pre` instead, online or offline, since no latest release finishes that move while its line runs (refinement per ADR-072).
   3. **Otherwise,** at the latest, ahead of it or offline, the child runs the transition to its pin in its own process. It already runs the pin's code. A project already current at its pin returns before step 1 (point 4).
 - **Handing over first still finishes the pin first.** The latest's upgrade runs from the recorded states, so it finishes the pin's interrupted transition on the way.
 - **The older-direction check comes after the hand-over and before the child's own transition writes anything.** The hand-over is how a project whose content is ahead of its pin moves on.

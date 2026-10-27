@@ -4,7 +4,8 @@ body: >
   Design-ahead: the records for release candidates, proposed for the
   maintainer. PRJ-002 has a candidate's versions live only in its tag,
   computed from the pending changesets, which stay pending, with its floors
-  waiting for the release that ends the line. PRJ-004 names the candidate's
+  waiting for the release that ends the line, which is cut from the last
+  candidate's source commit. PRJ-004 names the candidate's
   tag as an install ref that never moves. ADR-072 records how the code
   reads a candidate, and ADR-049, ADR-063, ADR-064 and ADR-065 are refined
   to match. It is record text only, and nothing you run changes. The build
