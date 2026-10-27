@@ -23,6 +23,7 @@ pkit:
         - COR-050#3
         - COR-050#12
         - COR-050#16
+        - COR-062#7
         - project-management:DEC-028
         - project-management:DEC-032#D1
         - project-management:DEC-032#D4
@@ -87,7 +88,9 @@ pkit:
 
   The reviewer checks each against what it answers, whoever decided it, through `pkit friction explain` at the base ([COR-064 point 4](../../../../../.pkit/decisions/core/COR-064-answer-delegate.md#4-a-reviewer-checks-every-answer-no-change-owes)). One that does not hold is a `[block]` finding. It also names each in an `[advisory]` finding, since it cannot tell who decided it.
 - **2c.** The list flags "not asked for by this change" a deferral the change rewords on an artefact the check asked about. The reviewer judges it as at step 4 ([software-engineering DEC-002 point 1](../../../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#1-the-panel)).
+- **2d.** The check reports a revalidation on the base's tip that the change's answer on an artefact did not read. Merged, the two are answered apart, debt that the next revalidation of the artefact judges ([COR-062 point 7](../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)). No change owes an answer for that debt, so the reviewer blocks on nothing. The landing command tells the merge authoriser of each such revalidation, as information ([project-management DEC-055 point 3](../../../../../.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md#3-the-review-and-the-authorisation)).
 - **3a.** A reason does not hold against the change: it is false, or it leaves out an edit that makes the artefact untrue. A `[block]` finding quotes the reason and the passage the change made untrue. The answer is mended, and the path rejoins at step 1 on the new head.
+- **3b.** The list flags a revalidation as replacing revalidations answered apart, whose combined state nobody has judged ([COR-062 point 7](../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)). The reviewer reads what changed since each replaced revalidation through `pkit friction explain` at the base. An `unchanged` reason, or an `updated` artefact, that does not hold against what changed since each is a `[block]` finding. The path rejoins at step 1 once the answer is mended.
 - **4a.** The change keeps a deferral as it was, with the anchor and the words the base had. The reviewer does not judge it again, since the review of the change that wrote it was to check it ([COR-050 point 3](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - **4b.** A deferral's reason does not hold, or it names no issue, or a closed one. A `[block]` finding says which, and the path rejoins at step 1 once the deferral is mended.
 - **5a.** An `updated` artefact has no sentence, or only an item the commands cannot read, such as one naming the artefact in bold. The commands read a sentence only from an item that opens with the artefact in a code span. So a `[block]` finding quotes the item, and gives the form ``- `path`: sentence``. The path rejoins at step 1 once the item is mended.
