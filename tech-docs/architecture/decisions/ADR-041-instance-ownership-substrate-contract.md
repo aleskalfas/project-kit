@@ -124,16 +124,47 @@ preserving those semantics atop per-object-atomic comment writes. This ADR pins 
 that rule resolves at the seam in `comment` mode.
 
 **The realization surface.** The ownership read seam and its two constructors are
-realized in a module of their own. The fold resolves one issue's owner from that
-issue's comments and labels, and the constructors build the ownership-event comment
-and the full-overwrite mirror body. The seam reads a log through the one reader of a
-whole comment log, paged to its end, which the state-issue seam shares. The
-audit-log facility's builder builds and parses each event, and a guard test keeps
-every ownership stamp inside the seam and that builder.
+realized in a module of their own. The fold resolves an issue's owner from the
+comments and labels its caller passes, and the constructors build the event comment
+and the mirror body. The seam offers the one reader of a whole comment log, paged to
+its end, which the state-issue seam shares. The audit-log facility's builder builds
+and parses each event, and a guard test keeps every ownership stamp inside the seam
+and that builder.
 
-No lifecycle command calls the seam. Point 7's inputs and results, point 5's
-outcomes and point 4's read of the mirror have no realization. The contract binds
-each participant below, realized or not:
+The lifecycle commands resolve ownership through the fold. `create-issue` claims
+what it files for its own account, except from a planner's seat, and `start-work`
+claims an issue no instance owns. A claim re-reads the issue after it writes its
+marker, and withdraws its claim where a lower instance claimed in the same
+instant. `close-issue` releases the issue's owners as it closes the issue, and
+`done-work` releases through the `close-issue --mode pr-merge` it runs.
+
+The clash guard runs in `start-work`, `review-work`, `done-work`, `promote-issue`,
+`edit-issue` and `move-issue`. It treats a claim that does not count as no claim,
+and one the fold cannot judge as one that counts. In `comment` mode, a claim, a
+back-off and a release regenerate the mirror from the fold, by full overwrite. The
+mirror is written only where the body changes, and a failed write is a warning.
+
+The shared pool is read by `next-task`. It takes over a Task In Progress whose claim
+does not count, and none whose claim the fold cannot judge. For the seat's release,
+`seats` judges each Task in Review against the seats' holders, and names each Task a
+released seat left. It reads each log whole through the shared reader, while the
+other commands fold the comments a `gh issue view` read returns.
+
+Of point 7's inputs, the fold takes the seats' holders, and no time of reading, limit
+or state, so it judges no lapse. It returns the owners whose claims count, and each
+claim that does not count, for no seat named or its seat released. It leaves
+unjudged a claim whose seat is unread or missing from the holders. A failed read of
+the issue is its caller's: the guard refuses, the claim and the release fail, and the
+pool skips the Task.
+
+Point 5's writers build an argv or a body and report no outcome. Their caller reads
+success from `gh`'s exit and a lost race from the re-read fold, and no path reports
+`CLOBBERED`. `handoff-issue` posts no ownership event, and no durability check or
+reconcile report exists. The check before writing is the seat's confirmation and the
+clash guard, and it parks no work.
+
+The signed listing is not built. No function reads the mirror back, and every fold
+reads comments. The contract binds each participant below, built or not:
 
 1. **The ownership fold** (a single ownership-substrate `_lib` seam) — the one read
    point. Reads the mirror for a listing, at one call (DEC-043 Implications "read
@@ -662,8 +693,10 @@ enforced by the seam having no engine-side caller.
   parses the mirror directly. Reads the mirror for a listing, and the issue's whole
   comment log, paged to its end, whenever it folds one (DEC-043 Implications),
   filters by `author.login` authenticity (DEC-043 point 3), and folds the append-only
-  claim/handoff/abandon/release sequence to current ownership. No lifecycle command
-  calls the seam.
+  claim/handoff/abandon/release sequence to current ownership. The lifecycle commands
+  resolve through it, as do the shared pool in `next-task` and, for the seat's
+  release, `seats`. The signed listing is not built, no function reads the mirror back, and
+  only `seats` reads a log through the shared reader.
 - **Comment-log-wins is a seam invariant over the union of both substrates** — a
   comment-log marker is authoritative; a coexisting lingering `instance:N` label is
   residual and does not win, and is stripped on the next ownership mutation (DEC-035
@@ -692,9 +725,10 @@ enforced by the seam having no engine-side caller.
   and durability-check paths impose their own posture); the mirror regenerator
   reports `WROTE` / `CLOBBERED` / `FAILED` (routine render treats
   `CLOBBERED` as benign; a reconcile report may surface it as healed drift).
-  Construction/fold and failure-handling live at different layers. These outcomes
-  have no realization, and the contract requires each to carry enough detail for
-  every caller's posture.
+  Construction/fold and failure-handling live at different layers. The writers build
+  an argv or a body and report no outcome, so each caller reads success from `gh`'s
+  exit. No path reports `CLOBBERED`, `handoff-issue` posts no ownership event, and no
+  durability check or reconcile report exists.
 - **Realm-blindness — the seam has pm-layer consumers only.** The clash guard, the
   signed listing, and the mirror renderer consume the fold, and in a project with a
   topology the shared pool, the check before writing and the seat's release; the engine and its
