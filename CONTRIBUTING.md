@@ -22,7 +22,7 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053", "living-docs:DEC-002", "doc-examples:DEC-001"]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, COR-062, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, "project-management:DEC-053", "living-docs:DEC-002", "doc-examples:DEC-001"]
       artefact:
         - .pkit/capabilities/doc-examples/README.md
         - .pkit/decisions/README.md
