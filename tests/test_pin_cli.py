@@ -311,7 +311,24 @@ def test_pin_older_version_is_refused_and_writes_nothing(
     manifest_text = (tmp_path / ".pkit" / "manifest.yaml").read_text(encoding="utf-8")
     assert "backbone_version: 2.0.0" in manifest_text
     assert "forward-only" in result.output
-    assert "git checkout" in result.output
+    # The rollback reverts each upgrade's commit, which restores the files a
+    # migration edited outside `.pkit/` too (ADR-049 point 3).
+    output = " ".join(result.output.split())
+    assert "revert the commit of each upgrade since the earlier version: git revert <commit>" in (
+        output
+    )
+    assert "inside `.pkit/` and outside" in output
+    assert "git checkout" not in output
+
+
+def test_pin_help_names_reverting_each_upgrade_to_roll_back() -> None:
+    """`pkit pin --help` names the same rollback as the refusal (ADR-049 point 3)."""
+    result = CliRunner().invoke(main, ["pin", "--help"])
+
+    assert result.exit_code == 0, result.output
+    output = " ".join(result.output.split())
+    assert "revert the commit of each upgrade since that version to roll back" in output
+    assert "git checkout" not in output
 
 
 def test_pin_newer_in_routed_context_reconciles_content_not_just_flips_pin(

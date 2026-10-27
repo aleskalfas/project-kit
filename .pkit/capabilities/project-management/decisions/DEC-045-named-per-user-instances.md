@@ -113,7 +113,7 @@ The *expected* owner is derived from the per-user topology file (point 2); the *
 current owner is resolved separately through the ownership seam ([pkit:ADR-041]). The
 clash guard consumes **both** — comparing actual against expected — and, with listings,
 is the **only** consumer; **never** a gate, a transition, or the cascade fold.
-Realm-blindness (DEC-035 point 8, DEC-043 D6) is preserved: naming instances does
+Realm-blindness (DEC-035 point 8, DEC-043 point 6) is preserved: naming instances does
 not make ownership engine state. The named layer thus *refines* DEC-035 where the
 reference is unambiguous and *falls back* to it otherwise — the numeric model stays the
 floor.
@@ -231,12 +231,9 @@ the automatic version waits for lived use of the mechanical one.
   workstream-lifecycle drift, surfaces shared/unassigned at `warning`) and
   **`create-instance`** (clone into a sibling folder + scaffold config; rule-8 confirm
   before filesystem mutation; rule-18 own-machine only; wires pkit setup for the new clone).
-- **DEC-035 gains a reciprocal refinement note** — instances may carry a name and
-  reference workstreams for routing; the flat numeric model, the ownership marker, and the
-  clash mechanics are unchanged and remain the fallback. **This record refines accepted
-  foundational DEC-035, so promotion `proposed → accepted` requires explicit maintainer
-  sign-off**, the same class as DEC-035's handoff-contract sign-off and DEC-043's DEC-035
-  refinement.
+- **DEC-035 point 1 points here** — instances may carry a name and reference
+  workstreams for routing; the flat numeric model, the ownership marker, and the clash
+  mechanics stand and remain the fallback.
 - **No new mesh interaction** ([project-management:DEC-022-methodology-mesh]) — the
   topology is per-user-local operational state, repo-local by nature; `check-mesh` ignores
   it, the same stance DEC-025 takes for lanes. State this so a future author does not wire

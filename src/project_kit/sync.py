@@ -614,8 +614,10 @@ def _mismatch_lines(
             rule,
             remedy,
             "If a migration fails every time, fix its cause and run `pkit upgrade` again, or "
-            "roll the project back with `git checkout <ref> -- .pkit/`, which restores both "
-            "recorded versions.",
+            "roll the project back by reverting the upgrade's commit, `git revert <commit>`, "
+            "which restores both recorded versions and every file the upgrade changed, "
+            "inside `.pkit/` and outside. An upgrade not yet committed is undone over every "
+            "file `git status` lists.",
         ]
     if pin is not None and _is_older(recorded, pin) and _same_version(running, pin):
         return [
@@ -801,8 +803,9 @@ def _content_downgrade_lines(
         "(COR-010), and a pin is never moved down (ADR-049). Nothing was written, and no "
         "flag overrides this refusal.",
         *remedy,
-        "To take the project back to an older version, restore `.pkit/` from git: "
-        "`git checkout <ref> -- .pkit/`.",
+        "To take the project back to an older version, revert the commit of each upgrade "
+        "since that version, `git revert <commit>`, which restores every file those "
+        "upgrades changed, inside `.pkit/` and outside.",
     ]
 
 

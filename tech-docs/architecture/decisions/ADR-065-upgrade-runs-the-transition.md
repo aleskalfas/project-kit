@@ -279,7 +279,7 @@ The guard's message, and upgrade's under the router's fallback, name the remedy 
 | No manifest, or a recorded version that is no version | `pkit upgrade`, which writes the manifest at its target and replays (point 5) |
 | The recorded target is a candidate ahead of a pin that names a candidate | `pkit pin <that candidate>`, which freezes the project at the version its content records, then `pkit upgrade`, whose run under that pin finishes the move. No latest release finishes it while its line runs (point 9, refinement per ADR-072). |
 | The running pkit older than the content or the pin | the remedies #1212 gives. Content ahead of its pin also names `pkit upgrade`, which finishes the interrupted raise. |
-| The transition incomplete | `pkit upgrade`. For a migration that fails every time, fix its cause and run again, or roll back as ADR-049 point 3 sets. |
+| The transition incomplete | `pkit upgrade`. For a migration that fails every time, fix its cause and run again, or roll the project back by reverting the upgrade's commit. The revert restores every file the upgrade changed, in `.pkit/` and outside it (ADR-049 point 3). |
 | Pinned, the content behind the pin, the pin's code running | `pkit upgrade`, whose routed child finishes the pin (point 9) |
 | Unpinned, the running pkit newer than the content | **Move:** `pkit upgrade`, which pins by default (`--no-pin` keeps it unpinned) and may first update the tool (`--no-self-update` declines). **Stay:** `pkit pin`, which pins at the content's version, so the router runs that version. **A pipeline:** commit a pin, or install the project's version. |
 

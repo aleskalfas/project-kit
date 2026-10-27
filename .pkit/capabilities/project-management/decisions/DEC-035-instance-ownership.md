@@ -14,10 +14,10 @@ assignee, so no clone can tell which in-flight work belongs to which clone, and
 the clones step on each other. This decision adds an **opt-in** mechanism so each
 clone marks the issues it owns, sees whose-is-whose at a glance, can hand work
 between clones, and is guarded (advisorily) against acting on another clone's
-work. A clone that does not opt in behaves exactly as today.
+work. A clone that does not opt in behaves as if the facility were not there.
 
 The mechanism is deliberately small: a per-clone identity the clone sets for
-itself, a GitHub label that marks ownership, and ownership side-effects layered
+itself, a marker on the issue that records ownership, and ownership side-effects layered
 onto the lifecycle commands the capability already owns. It is **not** a lock —
 GitHub offers no atomic claim — so the guard *catches and resolves* clashes
 rather than *preventing* them.
@@ -54,23 +54,19 @@ A clone sets its own identity with a
 `set-instance <N>` command that writes a clone-local **instance id** to a
 git-ignored runtime file (declared via the capability's `runtime_ignore:`
 key per [pkit:ADR-009] rule 7, so it is never committed). A clone with
-no instance id set behaves exactly as today — no marking, no guard, no
+no instance id set behaves as if the facility were not there — no marking, no guard, no
 signing. The presence of the id is the sole activation gate. The same runtime file
 keeps a key the clone generates the first time it claims on a state issue (refinement
 per [project-management:DEC-058-state-issues]).
 
-> **Refined by [DEC-045](DEC-045-named-per-user-instances.md).** Opt-in and
-> additive on top of the numeric id: a clone's identity may also carry a
-> human-readable **name** (e.g. `data`, `map`), and a **per-user-local topology
-> file** (never committed) may list the person's named instances and the
-> workstreams each *references* for routing. The *expected* owner of an issue is
-> then derived from its workstream's referencing instance (feeding the pm-layer
-> guard only — realm-blindness preserved); where the reference is absent or
-> shared, the guard falls back to the flat numeric commons behaviour described
-> here. The numeric model, the ownership marker, and the clash mechanics are
-> unchanged and remain the fallback — refinement-in-place, not a supersession.
+A clone's identity may also carry a
+human-readable **name**, such as `data` or `map`, on top of its number. An issue's
+*expected* owner may then come from the instance that references its workstream, and
+that expected owner feeds the pm-layer guard only. Where no instance or several reference the workstream,
+the guard keeps the numeric behaviour described here (refinement per
+[project-management:DEC-045-named-per-user-instances]).
 
-### 2. Ownership is carried by an `instance:N` GitHub label, paired with the assignee
+### 2. Ownership is carried by a marker paired with the assignee
 
 The label reuses the label substrate of
 [project-management:DEC-012-classification-axes] but is **not** a
@@ -81,14 +77,16 @@ pair**: the pool of instance numbers (default 4) is *per-assignee*, so one
 assignee's `instance:2` is distinct from another's. Labels are created lazily
 on first use, so default `bootstrap` is untouched.
 
-> **Refined by [DEC-043](DEC-043-ownership-substrate-selection.md).** The
-> ownership marker's substrate is now *selectable*, "substrate-where-available":
-> the `instance:N` label described here is one binding, kept for repos that can
-> create labels; where they cannot, the marker is carried by a per-instance
-> append-only comment log (source of truth) plus a derived, regenerable
-> owner-mirror in the issue description. Comment-create is per-object atomic, so
-> the same-instant tie-break in point 6 holds unchanged. Refinement-in-place,
-> not a supersession — this label mechanism and the clash-guard semantics stand.
+The marker's substrate is selectable, "substrate-where-available". The `instance:N`
+label described here is one binding, which an operator who knows the repository can
+create labels opts into. By default a per-instance, append-only comment log carries the
+marker as its source of truth, with a derived, regenerable owner mirror in the issue
+description. Comment
+creation is atomic per object, so the same-instant tie-break of point 6 holds on
+either substrate (refinement per [project-management:DEC-043-ownership-substrate-selection]).
+
+Where this record names the label, it means the marker on whichever substrate carries
+it: each stamp, strip, transfer and re-read below acts on that marker.
 
 ### 3. A clone claims at creation, for the whole tree
 
@@ -159,19 +157,19 @@ shared substrate content-free.
 ### How this record extends DEC-026
 
 This DEC **extends the `handoff-issue` contract** of
-[project-management:DEC-026-work-ownership-lifecycle] (new `--to-instance` modes
-and `--recursive`, and a same-assignee/label-only transfer mode); a reciprocal
-note lands on DEC-026 in the same change-set. This is a refinement-in-place, not
-a supersession — DEC-026's existing cross-human handoff behaviour stands.
+[project-management:DEC-026-work-ownership-lifecycle] with the `--to-instance`
+modes, `--recursive`, and a transfer between one person's clones that keeps the
+assignee. DEC-026's handoff between people stands, and its "The seven commands"
+points here.
 
 ## Rationale
 
 **Why opt-in by clone-local id, no committed config.** The single-clone case is
 the overwhelming common one and must stay zero-ceremony; gating on the presence
 of a clone-local id means a non-participating clone is byte-for-byte unchanged.
-Clones coordinate through the GitHub labels (the shared substrate per DEC-003),
-so no committed registry is needed — the feature's entire persistent state is
-the per-clone id plus the labels.
+Clones coordinate through the ownership markers on GitHub (the shared substrate per
+DEC-003), so no committed registry is needed — the feature's entire persistent state
+is the per-clone id plus the markers.
 
 **Why a label paired with the assignee, not the assignee alone or a synthetic
 handle.** GitHub assignees must be real accounts, so a `user@instance` assignee
@@ -235,11 +233,9 @@ principle — noted so a future maintainer does not re-derive it as a COR.
   guard) as wrapper-level behaviour — additive, the same class as branch-
   creation; the engine is untouched.
 - **`handoff-issue` gains `--to-instance <N>`, `--to-instance self`,
-  `--recursive`** and a same-assignee label-only transfer mode — a contract
+  `--recursive`** and a same-assignee, marker-only transfer mode — a contract
   extension on [project-management:DEC-026-work-ownership-lifecycle], which
-  receives a reciprocal note in the same change-set. **Acceptance of this DEC
-  requires explicit human sign-off on this command-contract extension** (the
-  architectural escalation point).
+  points here.
 - **A new schema home for the ownership marker** (its own section/file, not a
   slot in `classification.yaml`), referencing the
   [project-management:DEC-014-validation-severity-model] tokens for the guard.

@@ -6,6 +6,8 @@ date: 2026-05-05
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
+> **Partially superseded by [COR-065](COR-065-records-and-projection.md).** Overturned: the sentence "The five shapes are content peers; none is built on top of another", since where an accepted record decides, the other shapes carry its decision out. The rest stands: each shape keeps its kind of content, and content lives in one place.
+
 ## Context
 
 The methodology's content arrives in five shapes:

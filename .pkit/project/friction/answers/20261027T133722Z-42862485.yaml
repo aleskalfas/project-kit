@@ -1,0 +1,909 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-27T13:37:22Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-seeding
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-c9236b22e28d.yaml
+    revalidated:
+      at: 2026-10-27T13:37:28Z
+      outcome: unchanged
+      unchanged-because: The change to upgrade.py rewords only the rollback the refusal of an older pin names, and the term's example of a seed path restored at the next upgrade says nothing of a rollback.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-sync
+    read:
+      - moved-08da49876ed6.yaml
+    revalidated:
+      at: 2026-10-27T13:37:34Z
+      outcome: unchanged
+      unchanged-because: The change to sync.py rewords only the rollback the guard's stops name, and the term's distinctions say only that sync stops and writes nothing under another version or over an incomplete transition, which still holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-version-transition
+    read:
+      - moved-d172eb182d07.yaml
+    revalidated:
+      at: 2026-10-27T13:37:39Z
+      outcome: unchanged
+      unchanged-because: The change to upgrade.py rewords only the rollback the refusal of an older pin names, and the term says a transition of the backbone only moves forward, which that refusal still keeps.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-propagation
+    read:
+      - moved-c00637729051.yaml
+    revalidated:
+      at: 2026-10-27T13:37:45Z
+      outcome: unchanged
+      unchanged-because: The change to sync.py rewords only the rollback the guard's stops name, and the term's example of installing a capability's subtree from the bundle does not touch it.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-version-pin
+    read:
+      - moved-1be5954de142.yaml
+    revalidated:
+      at: 2026-10-27T13:37:51Z
+      outcome: unchanged
+      unchanged-because: ADR-049 point 3 now rolls a project back by reverting each upgrade's commit, and the term defines the pin as a directive the project owns and tells it from other pins, none of which names a rollback.
+  - artefact: tech-docs/analysis/core/domain-model/050-a-projects-own-files.md
+    read:
+      - moved-5078b2005a56.yaml
+    revalidated:
+      at: 2026-10-27T13:37:57Z
+      outcome: unchanged
+      unchanged-because: ADR-049 now rolls a project back by reverting each upgrade's commit. The view's version pin is still refused when lowered, and the view names no way to roll a project back.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - moved-bcae90c061e0.yaml
+    revalidated:
+      at: 2026-10-27T13:38:04Z
+      outcome: unchanged
+      unchanged-because: The change to test_sync.py adds a test of the rollback a refusal names and rewords one assertion of the stop over an incomplete upgrade. No test of a dry run that writes nothing changed.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-002-project-owned-writers.md
+    read:
+      - moved-e86b26050227.yaml
+    revalidated:
+      at: 2026-10-27T13:38:09Z
+      outcome: unchanged
+      unchanged-because: The change to test_sync.py tests only the rollback the guard's stops name, and no test of which command writes a project-owned path changed.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-010-stop-under-another-version.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-20fbe2c12f23.yaml
+    revalidated:
+      at: 2026-10-27T13:38:16Z
+      outcome: unchanged
+      unchanged-because: The tests of sync's stops still find nothing written under another version or over an incomplete transition. The change only makes them check that the rollback named is a revert of the upgrade's commit.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - moved-8ac526d6eecc.yaml
+    revalidated:
+      at: 2026-10-27T13:38:21Z
+      outcome: unchanged
+      unchanged-because: The change to test_pin_cli.py checks the rollback the refusal of an older pin names and adds a test of the pin help. The tests of a pin written whole and last are untouched.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-bca813b8718e.yaml
+    revalidated:
+      at: 2026-10-27T13:38:36Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-c023390f2be9.yaml
+    revalidated:
+      at: 2026-10-27T13:38:41Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - moved-14cab8fa596f.yaml
+    revalidated:
+      at: 2026-10-27T13:38:47Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-e74c084a6ef5.yaml
+    revalidated:
+      at: 2026-10-27T13:38:52Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-27T13:38:58Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-27T13:39:04Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-677ab7326b1b.yaml
+    revalidated:
+      at: 2026-10-27T13:39:09Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-27T13:39:15Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-27T13:39:20Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-828a24ebf347.yaml
+    revalidated:
+      at: 2026-10-27T13:39:26Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-27T13:39:32Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-50d19a823f20.yaml
+    revalidated:
+      at: 2026-10-27T13:39:37Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-27T13:39:43Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-66d5b1529575.yaml
+    revalidated:
+      at: 2026-10-27T13:39:49Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-c6041f71d67c.yaml
+    revalidated:
+      at: 2026-10-27T13:39:54Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-27T13:40:00Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-c95d6fad77f9.yaml
+    revalidated:
+      at: 2026-10-27T13:40:05Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-27T13:40:11Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-27T13:40:17Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-27T13:40:22Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-27T13:40:28Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-525e5f95da00.yaml
+    revalidated:
+      at: 2026-10-27T13:40:33Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-27T13:40:39Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-27T13:40:45Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-27T13:40:50Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-012-report-problem.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-16225f01f42e.yaml
+    revalidated:
+      at: 2026-10-27T13:40:56Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-013-link-reports.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-441b89549614.yaml
+    revalidated:
+      at: 2026-10-27T13:41:01Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-27T13:41:07Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py rewords only the rollback line of the pkit pin help, and this use case describes neither that help nor a rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-82a9f92cf8a6.yaml
+    revalidated:
+      at: 2026-10-27T13:42:18Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py and sync.py rewords only the rollback the pkit pin help and sync's stops name, and this use case names none of those stops or that help.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-27T13:41:24Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the rollback the refusals and the pkit pin help name. Variant 2c's refusal of a pin in the source repository is another message, which still says to move the checkout with git.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-a4cb7bc0b417.yaml
+    revalidated:
+      at: 2026-10-27T13:42:12Z
+      outcome: unchanged
+      unchanged-because: The change to sync.py rewords only the rollback sync's stops name, and this use case names none of those stops or their remedies.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-27T13:41:39Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py and sync.py rewords only the rollback the pkit pin help and sync's stops name, and the deploy of agent definitions this use case describes is untouched.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - moved-808bb37fbee5.yaml
+    revalidated:
+      at: 2026-10-27T13:41:45Z
+      outcome: unchanged
+      unchanged-because: The change to sync.py and upgrade.py rewords only the rollback their refusals name, and the agent workspace that sync and upgrade make, which this use case describes, is untouched.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-27T13:42:24Z
+      outcome: unchanged
+      unchanged-because: The change to upgrade.py and cli.py rewords only the rollback the refusal of an older pin and the pkit pin help name, and this use case names neither.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-40743155218d.yaml
+    revalidated:
+      at: 2026-10-27T13:42:05Z
+      outcome: unchanged
+      unchanged-because: The change to sync.py rewords only the rollback sync's stops name, and the journey names none of those stops or their remedies.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-27T13:42:30Z
+      outcome: unchanged
+      unchanged-because: "ADR-065 point 8's row and sync's stop over an incomplete transition change only the rollback they name, to a revert of the upgrade's commit. Variant 3d still holds: the stop writes nothing and names pkit upgrade, which finishes the transition."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-27T13:42:37Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the rollback the refusals and the pkit pin help name. The use case's upgrade, its finishing of an incomplete transition and its refusals name no rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - moved-1849fdf40a4b.yaml
+    revalidated:
+      at: 2026-10-27T13:42:43Z
+      outcome: unchanged
+      unchanged-because: The change to upgrade.py rewords only the rollback the refusal of an older pin names. The journey's upgrade stopped by a failing migration is still finished by the next upgrade, and the journey names no rollback.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-4859ed958bd4.yaml
+    revalidated:
+      at: 2026-10-27T13:42:49Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the rollback the refusals and the pkit pin help name, and upgrading one capability as this use case describes it names no rollback.
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-27T13:42:56Z
+      outcome: unchanged
+      unchanged-because: The change to cli.py, sync.py and upgrade.py rewords only the rollback their refusals and the pkit pin help name, and the adapters README describes none of those messages.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-27T13:43:02Z
+      outcome: unchanged
+      unchanged-because: ADR-049 point 3, ADR-065 point 8 and the commands now roll a project back by reverting each upgrade's commit. The README says how an upgrade moves and pins a project, and names no rollback.

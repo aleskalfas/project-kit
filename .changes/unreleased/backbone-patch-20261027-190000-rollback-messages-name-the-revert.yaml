@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  Where `pkit sync`, `pkit upgrade` and `pkit pin` name a way to roll a project
+  back, they now name reverting the commit of each upgrade, `git revert
+  <commit>`, in place of `git checkout <ref> -- .pkit/`. The revert also
+  restores the files a migration edited outside `.pkit/`, which the checkout
+  left as the upgrade wrote them. The guard's stop over an incomplete upgrade
+  adds that an upgrade not yet committed is undone over every file
+  `git status` lists.

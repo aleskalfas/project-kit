@@ -7,6 +7,12 @@ anchor. `--json` answers several citations in one document, each with its file, 
 anchor and whether the file is a synced copy, which a capability's script reads instead
 of looking for a record itself.
 
+A citation of a point in prose, `COR-058 point 3`, `PRJ-002 D1` or `COR-050#14`, is
+held to its record the same way (`refs.point_citations`, `refs.CitedPoints`): one that
+names a point its record neither holds nor retires is a warning of
+`pkit decisions validate`, in a record, and of `pkit refs validate`, in an agent or a
+skill, and fails neither.
+
 The host's anchor (`document_parts.host_anchors`) is GitHub's: the heading's text as it
 renders, in lower case, every character but letters, digits, underscores, spaces and
 hyphens dropped, each space a hyphen, and a repeat numbered.
@@ -334,3 +340,125 @@ def test_the_command_prints_a_partly_superseded_record_s_top_line_after_its_poin
     (answer,) = json.loads(as_json.output)["lookups"]
     assert answer["paths"] == [f"{record}#1-seeds-are-written-once"]
     assert answer["partial_supersession"] == PARTIAL
+
+
+# --- a citation of a point in prose -----------------------------------------------------------
+
+
+def _cited(text: str, capability: str | None = None) -> list[tuple[int, str, tuple[str, ...]]]:
+    return [(c.line, c.record, c.points) for c in refs.point_citations(text, capability=capability)]
+
+
+def test_each_form_of_a_point_citation_is_read_with_its_record_and_its_points() -> None:
+    """A number, a list of numbers, a label alone, an anchor's mark; the record bare, as a
+    link's text, or in brackets with its component; a possessive between them."""
+    text = (
+        "Per COR-058 point 3, and COR-050 points 3, 4 and 16.\n"
+        "PRJ-002 D1 holds, as COR-050#14 and COR-033's P5 do.\n"
+        "See [COR-058](core/COR-058-record-points.md) point 9 and [pkit:COR-010] point 2.\n"
+        "A capability's: [project-management:DEC-035-instance-ownership] D6.\n"
+    )
+    assert _cited(text) == [
+        (1, "COR-058", ("3",)),
+        (1, "COR-050", ("3", "4", "16")),
+        (2, "PRJ-002", ("D1",)),
+        (2, "COR-050", ("14",)),
+        (2, "COR-033", ("P5",)),
+        (3, "COR-058", ("9",)),
+        (3, "COR-010", ("2",)),
+        (4, "project-management:DEC-035", ("D6",)),
+    ]
+
+
+def test_a_citation_may_break_a_line_but_not_a_paragraph() -> None:
+    """A wrapped citation is read on the line it starts on, a block quote's included; a
+    point after a blank line is no part of it, and a record cited whole is no citation."""
+    text = (
+        "Per [project-management:DEC-043-ownership-substrate-selection]\nD3.\n\n"
+        "> As DEC-043\n> point 2 says.\n\nCOR-058\n\nD1 is a heading.\n"
+    )
+    assert _cited(text, "project-management") == [
+        (1, "project-management:DEC-043", ("D3",)),
+        (4, "project-management:DEC-043", ("2",)),
+    ]
+
+
+def test_quoted_material_holds_no_citation() -> None:
+    """Front matter, fenced code, inline code, HTML comments and strikethrough are not
+    prose."""
+    text = (
+        "---\ntitle: COR-058 point 9\n---\n"
+        "`COR-058 point 9` is quoted.\n<!-- COR-058 point 9 -->\n"
+        "```\nCOR-058 point 9\n```\n"
+        "~~COR-058 point 9~~ is struck. COR-058 point 1 is prose.\n"
+    )
+    assert _cited(text) == [(9, "COR-058", ("1",))]
+
+
+def test_a_bare_decision_is_its_text_s_capability_s_or_the_one_cited_in_full() -> None:
+    """In a capability's text a bare `DEC-NNN` is that capability's; elsewhere it is the
+    decision of the one capability the text cites it of in full, and a citation the text
+    does not settle is left out. A link into a capability's folder names its capability."""
+    assert _cited("DEC-035 point 6.", "project-management") == [
+        (1, "project-management:DEC-035", ("6",))
+    ]
+    settled = "[project-management:DEC-035-instance-ownership] says so. DEC-035 D6 too."
+    assert _cited(settled)[-1] == (1, "project-management:DEC-035", ("D6",))
+    assert _cited("DEC-035 D6 alone.") == []
+    assert _cited("[a-cap:DEC-001] and [b-cap:DEC-001]; DEC-001 point 2.") == []
+    linked = "[DEC-002](../../capabilities/software-analysis/decisions/DEC-002-x.md) point 4"
+    assert _cited(linked) == [(1, "software-analysis:DEC-002", ("4",))]
+
+
+def test_a_point_its_record_does_not_hold_is_unheld_and_any_other_is_not(records: Path) -> None:
+    """A live point, a retired one and a number a list shows are held; a number or a label
+    the record neither holds nor retires, or one past a list's end, is not; a record the
+    lookup does not find is left to what resolves records."""
+    text = (
+        "COR-900 point 1, COR-900 point 2, COR-900 point 9, COR-900 D1, PRJ-002 D1, "
+        "PRJ-002 point 2, COR-901 point 2, COR-901 point 3, COR-999 point 1.\n"
+    )
+    unheld = refs.CitedPoints(records).unheld(refs.point_citations(text))
+    assert [(u.citation.record, u.point, u.path) for u in unheld] == [
+        ("COR-900", "9", ".pkit/decisions/core/COR-900-anchors.md"),
+        ("COR-900", "D1", ".pkit/decisions/core/COR-900-anchors.md"),
+        ("PRJ-002", "2", ".pkit/decisions/project/PRJ-002-versions.md"),
+        ("COR-901", "3", ".pkit/decisions/core/COR-901-listed.md"),
+    ]
+    assert unheld[1].message == (
+        "'COR-900 D1' names point D1, which COR-900 does not hold: a point is cited by the id "
+        "its heading carries, as `pkit refs lookup` resolves it (COR-058 point 1)."
+    )
+
+
+def test_decisions_validate_warns_of_a_record_citing_a_point_it_does_not_hold(
+    records: Path,
+) -> None:
+    """At `<file>:<line>`, after the points' findings, and the command still passes."""
+    _record(
+        records,
+        ".pkit/decisions/core/COR-905-cites.md",
+        "### 1. Cites\n\nAs COR-900 point 1 and PRJ-002 D1 say, and COR-900 D3.\n",
+    )
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "1 warning(s) of a citation naming a point its record does not hold" in result.output
+    assert ".pkit/decisions/core/COR-905-cites.md:18" in result.output
+    assert "'COR-900 D3' names point D3, which COR-900 does not hold" in result.output
+
+
+def test_refs_validate_warns_of_an_agent_citing_a_point_and_passes(records: Path) -> None:
+    """An agent's body is read the same way: a warning at `<file>:<line>`, exit 0."""
+    agents = records / ".pkit" / "agents" / "core"
+    agents.mkdir(parents=True)
+    (agents / "reader.md").write_text(
+        "---\nname: reader\ndescription: t\nreads:\n  records: [COR-900]\n---\n"
+        "# Reader\n\nPer COR-900 point 1, and COR-900 point 7.\n",
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(main, ["refs", "validate"])
+    assert result.exit_code == 0, result.output
+    assert "All checks passed." in result.output
+    assert ".pkit/agents/core/reader.md:9" in result.output
+    assert "'COR-900 point 7' names point 7, which COR-900 does not hold" in result.output
+    assert "COR-900 point 1'" not in result.output

@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Changed
+body: >
+  The upgrade to 2.0.0 also rewrites your project's own documents, since it
+  moves their answers into answer files, so `git checkout <ref> -- .pkit/` no
+  longer undoes it. Commit the upgrade on its own, and roll it back by
+  reverting that commit, which brings back every file it changed, inside
+  `.pkit/` and outside.

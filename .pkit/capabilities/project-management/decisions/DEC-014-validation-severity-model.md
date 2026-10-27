@@ -25,7 +25,7 @@ Three severity classes, encoded in [`schemas/validation-severity.yaml`](../schem
 
 The project-manager refuses the operation. No *in-band, reason-based* `--bypass` path; the operation does not proceed on its own.
 
-> **Amended by [project-management:DEC-046-override-flag-convention].** A hard-reject additionally carries a *separate, out-of-band* operator override — `--force` — for the last-resort case where an operator must proceed despite the finding. It is a blunt, boolean, audited override (audited where the substrate can carry the audit), *distinct* from the `--bypass` mechanism this DEC withholds from hard-rejects. The schema entry records this as `force_overridable: true` (orthogonal to `bypassable: false`), so an agent dispatching on the severity token sees that an override exists. This refines the definition below; it does not change `bypassable`, `aborts_operation`, or the `--bypass` semantics.
+An operator who must proceed despite the finding has a *separate, out-of-band* override, `--force`: blunt, boolean, and audited where the substrate can carry the audit. It is *distinct* from the `--bypass` mechanism this record withholds from hard-rejects. The schema entry records it as `force_overridable: true`, beside `bypassable: false`, so an agent dispatching on the severity token sees that an override exists (refinement per [project-management:DEC-046-override-flag-convention]).
 
 Used for rules where allowing through would corrupt downstream logic. Examples in the schema's entry:
 
@@ -91,7 +91,7 @@ Hard rejects protect the methodology's invariants — things downstream logic de
 
 - Every validation rule in this capability is tagged with one of the three severity tokens in its schema entry. The project-manager dispatches on the token at validation time without per-rule logic.
 - The schema's `severity_ref` `$def` (a narrowed cross-schema reference token per COR-019) is referenced from every consuming schema's validations field, so the wiring is machine-checkable.
-- The `--bypass "<reason>"` syntax is the uniform override across the project-manager's surface; the audit-comment template (`Bypassed by <name> <<email>>: <reason>`) is the canonical form posted before any bypassable mutation.
+- The `--bypass "<reason>"` syntax is the uniform override of a `bypassable-with-audit` gate across the project-manager's surface, beside the out-of-band `--force` of a `hard-reject`; the audit-comment template (`Bypassed by <name> <<email>>: <reason>`) is the canonical form posted before any bypassable mutation.
 - The agent's status line aggregates warnings the user can review at any time without blocking the current operation.
 - Future validation rules added to this capability inherit this severity vocabulary — there's no path for new severities outside these three without revising this DEC and the corresponding schema.
-- The override-flag convention — which of `--bypass[-<gate>]` (over a `bypassable-with-audit` gate) versus `--force` (over a `hard-reject` finding or a hard script precondition) a command exposes — is fixed by [project-management:DEC-046-override-flag-convention]. That record also amends the `hard-reject` definition here to carry the out-of-band `--force` override (`force_overridable: true` in the schema).
+- The override-flag convention — which of `--bypass[-<gate>]` (over a `bypassable-with-audit` gate) versus `--force` (over a `hard-reject` finding or a hard script precondition) a command exposes — is fixed by [project-management:DEC-046-override-flag-convention]. That record's points 2 and 4 hold the out-of-band `--force` override of a `hard-reject` (`force_overridable: true` in the schema).
