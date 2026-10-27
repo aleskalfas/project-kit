@@ -28,7 +28,7 @@ When an adopter runs `pkit capabilities install software-engineering`:
 - `decisions/DEC-001-producer-agent-and-conventions-seam.md` — the producer discipline's invariant: the conventions-thin producer, the overlay-resolved seam, the producer/checker boundary, empty-tolerance.
 - `decisions/DEC-002-code-review-panel.md` — the panel decision: its three agents, its home, the per-agent block-threshold and knowledge-split disciplines, and `docs-reviewer`'s check of a change's answers.
 - `decisions/DEC-003-purpose.md` — what the capability is for: code that agents write follows the project's own conventions in every session, and code is reviewed, with its documentation, before the merge gate lets it through.
-- `decisions/DEC-004-skeleton-conventions-in-corpus.md` — the conventions a walking skeleton sets are written into the conventions corpus, and a person accepts them before the skeleton's code is built on them.
+- `decisions/DEC-004-skeleton-conventions-in-corpus.md` — the software-engineer writes the conventions a walking skeleton sets into the conventions corpus, and a person accepts them before the skeleton's code is built on them.
 
 It deliberately ships **no conventions content** — the conventions corpus is adopter-owned and accretes over time (see Adopter setup).
 
@@ -91,13 +91,13 @@ After install:
 
 ### A foundation fills the corpus
 
-New work whose Tasks would share a choice nothing settles yet is planned in two stages ([project-management:DEC-060]). Its foundation comes first: accepted records of its architectural choices, then a walking skeleton. The skeleton is one thin slice, end to end, whose code sets the conventions the later slices share. Its builder also writes those conventions into the corpus, so every later slice reads them as the project's rules ([software-engineering:DEC-004-skeleton-conventions-in-corpus]).
+New work whose Tasks would share a choice nothing settles yet is planned in two stages ([project-management:DEC-060]). Its foundation comes first: accepted records of its architectural choices, then a walking skeleton, one thin slice end to end whose code sets the conventions the later slices share. When the software-engineer builds the skeleton, it also writes those conventions into the corpus, so every later slice reads them as the project's rules ([software-engineering:DEC-004-skeleton-conventions-in-corpus]). Where this capability is installed, DEC-060 asks the same of anyone else who builds one, wherever the corpus offers a location the project owns.
 
-- **Drafted before the code.** The builder drafts an entry for each convention the skeleton settles, such as the layout of the code and its tests. A person accepts the entries before the skeleton's code is built on them. An entry the code later disproves is changed and accepted again before the merge.
-- **Accepted by a person.** Accepting is an act of its own on the entries' text, and authorising the merge accepts none. In a corpus that gives its entries a status, such as a rule set, the builder leaves each one proposed.
-- **Where they go.** An entry goes where the corpus already keeps the project's own conventions, in the form it gives them. In an empty corpus, the builder proposes a form and a place with the entries.
-- **No place, no entries.** The builder writes none where the corpus offers no single place the project owns for them. Examples are a corpus that names nothing, and one that names only a rule set a component ships. It says so before it builds, and lists the conventions in its hand-off, so you can name a place before the slices are planned.
-- **A foundation's conventions only.** A Task that changes a convention a foundation set changes its entry with the code. Beyond a foundation's conventions, nothing here has the software-engineer write to the corpus.
+- **Drafted before the code.** The agent drafts an entry for each convention the skeleton settles, such as the layout of the code and its tests. A person accepts the entries before the skeleton's code is built on them. An entry the code later disproves is changed and accepted again before the merge.
+- **Accepted by a person.** Accepting is an act of its own on the entries' text, and authorising the merge accepts none. In a corpus that gives its entries a status, such as a rule set, the agent leaves each one proposed. Where it can reach no person, it hands back the entries and its question, and its Task waits In Progress with no code built on them.
+- **Where they go.** An entry goes where the corpus already keeps the project's own conventions, in the form it gives them, inside the one location the agent finds for them. In an empty corpus, the agent proposes a form, and a file or section inside that location, with the entries.
+- **No location, no entries.** Of the locations `<project-conventions>` names, the agent writes only inside the one that lies in the repository, is neither managed nor copied in by the methodology (`.pkit/lifecycle/ownership.py`), and is in no other agent's `owns`. A rule set a component ships fails that test. Where no location passes, or more than one does, the agent writes none and says so before it builds. Its hand-off lists each convention with the entry it would have drafted, so you can name a location before the slices are planned.
+- **A foundation's conventions only.** A Task that changes a convention a foundation set changes its entry, where it has one, with the code. Beyond a foundation's conventions, nothing here has the software-engineer write to the corpus.
 
 ## Citing this capability's decisions
 

@@ -3,11 +3,13 @@ kind: minor
 custom:
   category: Added
 body: >
-  The new record DEC-004 has the builder of a walking skeleton write each
-  convention the skeleton settles into the project's conventions corpus
-  (project-management DEC-060). The software-engineer drafts the entries
+  The new record DEC-004 has the software-engineer, when it builds a walking
+  skeleton, write each convention the skeleton settles into the project's
+  conventions corpus (project-management DEC-060). It drafts the entries
   before the skeleton's code, and a person accepts them before the code is
   built on them. So every later slice reads the conventions as the project's
-  rules. Where the corpus offers no single place the project owns, the agent
-  writes none and says so. The software-engineer's definition and the README
-  say what it writes, and DEC-001 points to the new record.
+  rules. Where the corpus offers no single location the project owns, as the
+  ownership test and the other agents' `owns` decide, the agent writes none
+  and says so. Where it can reach no person, it hands back the entries and its
+  question, and builds no code on them. The software-engineer's definition
+  and the README say what it writes, and DEC-001 points to the new record.
