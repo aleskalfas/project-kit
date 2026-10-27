@@ -314,7 +314,7 @@ The core skips each runner's own options it knows, and `timeout`'s duration, and
 
   So `find . -exec sh -c 'rm "$1"' _ {} \;` abstains, naming every guardrail.
 
-A harmless `git -c`, or a runner's option the core does not know, is thus a false prompt. So is a `find` whose words hold an expansion or a brace, quoted or not, such as `find . -name '*.{ts,tsx}'`. Each stays one until the diagnostic log shows which recur and earns a list of safe keys or options ([ADR-025](../../tech-docs/architecture/decisions/ADR-025-segment-conservative-bash-allow.md) point 5).
+A harmless `git -c`, or a runner's option the core does not know, is thus a false prompt. So is a `find` whose words hold an expansion or a brace, quoted or not, or an unquoted bracket, such as `find . -name '*.{ts,tsx}'`. Each stays one until the diagnostic log shows which recur and earns a list of safe keys or options ([ADR-025](../../tech-docs/architecture/decisions/ADR-025-segment-conservative-bash-allow.md) point 5).
 
 **Where Claude Code may allow what the core abstains on for a guardrail, the operator is asked, outside auto and bypass mode.** A harness's native rules may allow a command the core abstains on, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on such a command in a form the core cannot see. An adapter whose harness's rules may allow the command asks the operator rather than abstain, except in auto and bypass mode ([ADR-025](../../tech-docs/architecture/decisions/ADR-025-segment-conservative-bash-allow.md) point 7).
 
