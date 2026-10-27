@@ -34,9 +34,11 @@ In an un-pinned project, `pkit upgrade` writes `.pkit/version-pin` at the versio
 
 The flag skips the pin. The project stays un-pinned and keeps following the installed tool. The opt-out holds for one upgrade only: nothing records it, so the next upgrade without the flag pins the project. `pkit unpin` removes a pin the default wrote (ADR-049 point 3), and it too lasts until the next upgrade without the flag. In a pinned project the flag changes nothing, since the upgrade raises the existing pin either way.
 
+On a move to a release candidate the flag is refused, since such a move always pins the project (refinement per [ADR-072](ADR-072-release-candidates.md) point 7). An unpinned project at a candidate would meet the candidate's own guard against a candidate nobody asked for.
+
 ### 3. What the default does not reach
 
-`init` and `sync` write no pin (ADR-049 point 2). The methodology's source repository is never pinned. Its upgrade hands over to sync, or refuses under code that is not the checkout's own, before any pin is written ([ADR-059](ADR-059-methodology-source-repository.md)).
+`init` and `sync` write no pin (ADR-049 point 2). An `init` run by a release candidate differs: it refuses unless routing is bypassed, and pins the project it installs at that candidate (refinement per ADR-072 point 7). The methodology's source repository is never pinned. Its upgrade hands over to sync, or refuses under code that is not the checkout's own, before any pin is written ([ADR-059](ADR-059-methodology-source-repository.md)).
 
 ### 4. One raise mechanism, on its own reason
 
