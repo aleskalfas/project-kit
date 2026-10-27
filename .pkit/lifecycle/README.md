@@ -966,7 +966,7 @@ A transition is complete when its two recorded states are equal (COR-059 point 6
 
 ### Rolling back an upgrade
 
-A project goes back to an earlier release with git, by reverting the commit of each upgrade since that release, never with pkit, since its migrations run forward only (COR-010). The revert restores every file the upgrade changed, in `.pkit/` and outside it (ADR-049 point 3, ADR-065 point 8).
+A project goes back to an earlier release with git, by reverting the commit of each upgrade since that release, never with pkit, since pkit's migrations run forward only (COR-010). Each revert restores every file its upgrade changed, in `.pkit/` and outside it (ADR-049 point 3, ADR-065 point 8).
 
 - **What an upgrade writes outside `.pkit/`:**
   - the derivable state and merge delivery of step 8, such as the deployed skills and agents and the settings file the adapter merges ("What sync writes", below)
