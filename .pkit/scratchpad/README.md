@@ -7,7 +7,14 @@ pkit:
     anchors:
       path:
         - src/project_kit/scratchpads.py
-      record: [COR-006, COR-012, COR-043]
+      record: [COR-004, COR-005, COR-006, COR-007, COR-012, COR-043]
+      artefact:
+        - .pkit/cli/README.md#new-scratchpad-slug
+        - .pkit/cli/README.md#scratchpad-done-slug---produced-ref
+        - .pkit/cli/README.md#scratchpad-drop-slug
+        - .pkit/cli/README.md#scratchpad-reported-slug-ref
+        - .pkit/cli/README.md#scratchpad-list
+        - .pkit/cli/README.md#report-bug--report-feedback--report-change-request
 ---
 
 # Scratchpad notes
