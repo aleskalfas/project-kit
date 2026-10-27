@@ -1,52 +1,32 @@
-# Night of 27–28 October: what waits for you, and what was done
+# 27 October: state of play
 
-Get well. Nothing that needs you was done without you; each item below says what it needs. This file is updated through the night.
+Updated through the day. Each item says what it needs.
 
-## Waits for you, in the order I'd take them
+## Waits for you (coming back once built and reviewed)
 
-1. ~~Authorise~~ **Landed** [#2194](https://github.com/aleskalfas/project-kit/pull/2194)** (COR-065, COR-066, COR-067, accepted by you this morning). **Ready:** all three reviewers approved at the latest head, their person findings settled (kept). The landing lists the top lines it adds to COR-006 and COR-025 for you to judge.
-2. ~~Authorise~~ **Landed** [#2169](https://github.com/aleskalfas/project-kit/pull/2169)** (records hygiene: 20 project-management records refined in place, no decision changed). **Ready:** caught up with main, and ADR-041 restated by the architect as the code now stands (the seat commands call the ownership seam); reviewers approve, person findings settled (kept). Whichever of #2169 and #2194 lands second needs one small catch-up. The architect found three places where ADR-041 and the code part, which need your decision: [#2214](https://github.com/aleskalfas/project-kit/issues/2214).
-3. **Accepted by you; landing** DEC-004 in [#2197](https://github.com/aleskalfas/project-kit/pull/2197), reworked as you asked: the skeleton is built first, and you accept its convention entries once, with the skeleton's change, before the slices. **Ready:** critic and methodology-reviewer confirmed, the three PR reviewers approve. Note: the rework put a new rule into project-management DEC-060 (whoever lands a skeleton's change merges only after its entries are accepted), a decision of its own to judge with DEC-004.
-4. **Release candidates ([#2211](https://github.com/aleskalfas/project-kit/issues/2211)):** the design is ready ([the note](https://github.com/aleskalfas/project-kit/blob/docs/2211-release-candidates/.pkit/scratchpad/active/2026-10-27-release-candidates.md)), following your decision that a candidate consumes no changesets. It needs eight decisions from you, listed on #2211 with a recommendation each; in short: a candidate's versions live only in its tag (never on main); components get `rcN` versions too; floors wait for the final; a candidate runs its release's migrations, and testers following every candidate re-run them; from 1.x you install a candidate with one explicit command, and nothing moves a project to a candidate unasked; a dispatch-only workflow publishes it as a GitHub pre-release; the final is cut from the last candidate's commit. To keep rc1 possible this week, the records are being drafted tonight on those recommendations, **proposed**, for you to accept or adjust. Nothing is built before you do.
-4b. **Authorise [#2219](https://github.com/aleskalfas/project-kit/pull/2219)** (closes #2217 and #2221): rolling back an upgrade means reverting its commit, since 2.0.0's answer move edits files outside `.pkit/`. The docs first contradicted ADR-049 point 3 and ADR-065 ("check out `.pkit/`"), so under COR-065 the architect refined both records in this PR, and the commands' messages now name `git revert`. **Ready:** five reviewers approve, person findings settled (kept). It refines two accepted records, so it waits for you. Worth having in rc1.
-5. **[#1990](https://github.com/aleskalfas/project-kit/issues/1990)** (guardrails against wrapped commands and git configuration) and **[#2026](https://github.com/aleskalfas/project-kit/issues/2026)** (the harness's scratch directory): the architect's recommendation is recorded on each, for your choice. #1990: refine ADR-025 so a deny reads the command a wrapper runs (`find -exec`, `xargs`, `sh -c`, `env`…), and git configuration a command sets or writes (`git -c`, `git config alias.*`) counts; grants stay as written. #2026: option B, the adapter tells every agent the workspace replaces the harness's scratch directory, no record change.
-6. Smaller: the two deny rules of your 17 October decision ([#1678](https://github.com/aleskalfas/project-kit/issues/1678)'s scope); the two README answers left from #2205; [#2175](https://github.com/aleskalfas/project-kit/pull/2175) (close or keep).
+1. **[#2224](https://github.com/aleskalfas/project-kit/pull/2224) — release-candidate records** (choice 8, one acceptance): PRJ-002, PRJ-004, new ADR-072, refinements of ADR-049/063/064/065, and the `CLAUDE.md` sentence. Being updated to your seven choices.
+2. **#2234 — fixers run only when a person starts them, watched** (DEC-056 and ADR-066 edits). Before the release.
+3. **#1990 — guardrails see through wrappers and git configuration** (ADR-025 edit).
+4. **#2214 — ADR-041 and the ownership code agree** (ADR-041 point 7 edit). After the release.
 
-## New for you since your last message
+## Decided today
 
-- **The fixers cannot run yet ([#2225](https://github.com/aleskalfas/project-kit/issues/2225)).** After #2194 landed, `fix-drift` started the living-docs fixer on four stale pages, and every run was refused: the Claude Code adapter's tested range for confined runs is empty until its author runs the probe (`python3 .pkit/adapters/claude-code/probe-confined-run.py --start-claude --keep`). It starts one real Claude Code run that signs in and spends, so it is yours to run, by design. Until then the grant does nothing.
-- **Release-candidate records: [#2224](https://github.com/aleskalfas/project-kit/pull/2224)** (closes #2223, under #2211), proposed: PRJ-002, PRJ-004, a new ADR-072, and refinements of ADR-049, ADR-063, ADR-064, ADR-065. Reviewed by the critic and the methodology-reviewer. Note: it and #2219 both refine ADR-049 point 3; whichever lands second reconciles the wording.
+- **Release candidates (#2211):** a candidate's versions live only in its tag; the `rcN` suffix on backbone and moved components; a candidate raises no floor; candidates run their release's migrations, re-runs safe, a shipped script corrected only by a new one; `pkit upgrade --pre` opts in, a plain upgrade never moves onto a candidate; cut through the existing release workflow with a "pre-release" input (`pkit release --pre`), tag only, GitHub pre-release; the final is cut from the last candidate's commit and a PR brings its versions into main, main never frozen. Follow-up after 2.0.0: dev versions on main (`2.0.0.dev0`).
+- **Releases only by hand:** the weekly run is removed (#2233); the stale release PR #800 closed (it had blocked every weekly run since 31 August).
+- **The delegate:** the project manager decides answers no change owes (#2230); you are no longer asked about answers.
+- **Fixers:** on request and watched, like the reviewers (#2234); the confined unattended form waits (#2225: Claude Code 2.1.310 needs an adapter fix).
+- **#2026:** option B, the adapter tells every agent the workspace replaces the harness's scratch directory.
+- **#1990:** yes and yes. **#2214:** fix the code for point 1, record points 2 and 3. **#2131:** anchor cycles resolved pair by pair, after the release. **#1678:** scope approved, built after #1990. **#2175** and #2166 closed (superseded by COR-066).
+- **The landing guard (#2231):** DEC-055 point 6 accepted; landing refuses a merge whose combination with main leaves a document stale.
+- **Before the release:** #2207, the prune command and retiring `friction resolve`.
 
-## Done today with you
+## Landed today
 
-- Accepted COR-065, COR-066 and COR-067 (#2194).
-- Both fixers granted (living-docs for pages, analysis-resolver for the analysis), [#2210](https://github.com/aleskalfas/project-kit/pull/2210).
-- Scratchpad on what an answer is, kept active to continue: [the note](https://github.com/aleskalfas/project-kit/blob/docs/scratchpad-reconciliation/.pkit/scratchpad/active/2026-10-27-answers-as-reconciliation.md).
-
-## In progress tonight
-
-- [#2212](https://github.com/aleskalfas/project-kit/issues/2212) and [#2213](https://github.com/aleskalfas/project-kit/issues/2213): shipped pages anchor what they mention (the part of #2131 that needs no decision; passing mentions listed for you to mark).
-
-- [#2217](https://github.com/aleskalfas/project-kit/issues/2217): the 2.0.0 answer move edits files outside `.pkit/`, so the docs and notes say how to roll back an upgrade (revert its commit).
-
-## Landed tonight
-
-- [#2210](https://github.com/aleskalfas/project-kit/pull/2210): both fixers granted. After each merge they now propose fixes for stale pages and analysis artefacts; tonight the only debt is 7 deferrals waiting on their follow-ups, so nothing to propose yet.
-- [#2215](https://github.com/aleskalfas/project-kit/pull/2215) (#2213): seven shipped pages anchor what they mention, 69 anchors, prose unchanged; 68 passing mentions listed for you to mark.
-- [#2216](https://github.com/aleskalfas/project-kit/pull/2216) (#2212): the adapter, permissions and process pages anchor what they mention (prose unchanged); passing mentions listed for you.
-- [#2220](https://github.com/aleskalfas/project-kit/pull/2220) (#2218): the review run's timing test no longer fails on a loaded CI runner.
-
-## Found tonight, for you
-
-- **Anchor cycles** (on [#2131](https://github.com/aleskalfas/project-kit/issues/2131)): pages that rest on each other cannot anchor each other, since a cycle fails validation. 43 grounding mentions stay uncovered until you choose a way out (one direction gives way, a mark, or COR-050 allows section-level cycles).
-
+- #2194 (COR-065, COR-066, COR-067), #2169 (records hygiene), #2219 (rollback = revert the upgrade's commit), #2227 (six stale pages answered), #2215, #2216 (page anchors), #2220 (timing test), #2210 (fixer grant), #2205, #2208 (answers in answer files), and others overnight.
+- Landing now: #2197 (DEC-004), #2230 (delegate), #2231 (landing guard), #2233 (releases by hand).
 
 ## The talk
 
-- [Building blocks](building-blocks.md): block 1 (decisions) and block 2 (rules, drafted for you to react to).
+- [Building blocks](building-blocks.md): block 1 (decisions), block 2 (rules, a draft for you to react to).
 - [Working notes](working-notes.md), [the trial install](trial-run.md), [the demo run plan](demo-run-plan.md).
-
-## Release
-
-- Plan: test 2.0.0 as a release candidate first; the final follows later. #2211 designs candidates as a supported channel.
-- The upgrade rehearsal from 1.149.0 found 2.0.0 safe; its two fixes landed.
+- The release-candidate path is the demo's install: `rc1` once #2224 is accepted and its build lands.
