@@ -42,6 +42,32 @@ answers:
 
 `read` lists the earlier answer files on that document this answer took into account. The newest answer that read the others replaces them. Two answers that never read each other were "answered apart", and are debt until one reads both (COR-062 point 7).
 
+## The principle, in four steps
+
+1. Every document says what it depends on.
+2. When a change alters something a document depends on, the change says what happens to that document: "I fixed it", "it is still right, because …", or "it is wrong until #N".
+3. Someone other than the author checks that this is true, before the merge.
+4. Afterwards, the system remembers when each document was last confirmed. Whatever changed under it since then is out of date, and stays visible until someone deals with it.
+
+Steps 2 and 3 are the honesty check, and they happen inside the change. Step 4 is the memory, and is the only reason anything is kept after the merge. Today the memory is the whole transcript of every answer; step 4 needs two facts per document: when it was last confirmed, and what is still open.
+
+## When the answers are read
+
+While the change is open:
+
+1. **Building:** `pkit friction check` lists each touched document with no answer; the writers add the change's answer file.
+2. **Before each push:** the pre-push hook runs the same check and refuses a push that leaves one unanswered.
+3. **Opening the pull request:** `pkit pm open-pr` writes "Documentation this change affects" into its body, each answer in plain words, for the person who authorises the merge.
+4. **CI:** the change check fails on a missing answer; the documentation check counts a page's answer as meeting its obligation; and a pull request whose only changes since a passing full run are answers runs the short check (`pkit friction since`, ADR-067).
+5. **Review:** the docs-reviewer works from the change check's list, and blocks where a reason does not hold.
+6. **Landing:** `pkit pm land-work` keeps the reviewers' verdicts when everything since the reviewed head lies in answer files, and shows the person the answers.
+
+After the merge:
+
+7. **Each push to the default branch, and on a schedule:** `friction-report.yml` runs `pkit friction check --all`. For each document it finds the commit where its latest answer landed, and reports as debt what changed under it since, and each open deferral, in one tracking issue. The fixers (`fix-drift`), `pkit friction debt` and `explain` read the same.
+
+Moments 1 to 6 need the answers only inside the change. Moment 7 is the only reader after the merge, and it uses only "judged at commit X" and "deferred to #N", never the reasons, the `read` lists or the replaced answers.
+
 ## Why it looks complex
 
 - **373 files** on 27 October, 260 of them from the one-time move out of the documents' blocks (`moved-*.yaml`). Most hold no live answer: newer answers replaced them. Pruning is decided (COR-062 point 8) and not built (#2207).
