@@ -1043,7 +1043,7 @@ def reconcile_pin(target_root: Path, version: str, *, force: bool = False) -> No
       code (via the router bypass), then flip the pin last, atomically;
     - **older** → HARD REFUSE — pkit migrations are forward-only (COR-010), so
       there is no safe downgrade path; nothing is written and no content is
-      touched (`git checkout` is the rollback route).
+      touched (reverting each upgrade's commit is the rollback route).
 
     A version-only token is required: branch names, commit shas, and pre-release /
     build-metadata forms are refused at the boundary, because the router's route-2
@@ -1179,20 +1179,22 @@ def _downgrade_refusal(target: str, current: str) -> str:
     """The refusal message for a downgrade pin (ADR-049 + COR-010).
 
     pkit migrations are forward-only, so there is no safe content path back to an
-    earlier version; rolling back is a git operation, which restores kit-owned
-    *and* project-owned state together — something a forward-only sync cannot."""
+    earlier version; rolling back reverts each upgrade's commit, which restores
+    kit-owned *and* project-owned state together, the files a migration edited
+    outside `.pkit/` included — something a forward-only sync cannot."""
     return (
         f"refusing to pin {target}: it is OLDER than this project's current content "
         f"({current}), and pkit cannot safely downgrade — its migrations are "
         "forward-only (COR-010), so there is no reconcile path back to an earlier "
         "version. Nothing was written and no content was touched.\n"
-        "To roll this project back, `git checkout` the `.pkit/` tree at a commit "
-        "that carried the earlier version:\n"
-        "    git checkout <ref> -- .pkit/\n"
-        "git restores kit-owned and project-owned state together, atomically — "
-        "which a forward-only content sync cannot do. Note this also reverts "
-        f"`.pkit/version-pin` itself (the file you are setting), and it only "
-        "restores a state that already exists in history."
+        "To roll this project back, revert the commit of each upgrade since the "
+        "earlier version:\n"
+        "    git revert <commit>\n"
+        "The reverts restore every file those upgrades changed, kit-owned and "
+        "project-owned, inside `.pkit/` and outside — which a forward-only content "
+        "sync cannot do. Note this also reverts `.pkit/version-pin` itself (the file "
+        "you are setting) where an upgrade wrote it, and it only restores a state "
+        "that already exists in history."
     )
 
 

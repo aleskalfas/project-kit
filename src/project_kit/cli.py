@@ -4810,7 +4810,8 @@ def pin(version: str | None, force: bool) -> None:
                 code, then flip the pin last (atomically); `--force` passes
                 to the target's upgrade;
     - older   → REFUSED — pkit migrations are forward-only (COR-010), so there is
-                no safe downgrade; `git checkout` the `.pkit/` tree to roll back.
+                no safe downgrade; revert the commit of each upgrade since that
+                version to roll back.
 
     Once the directive exists, the pkit router re-execs `uvx project-kit@<pin>` so
     the pinned version serves every command; a global-tool upgrade no longer moves
