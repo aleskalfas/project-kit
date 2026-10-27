@@ -33,7 +33,7 @@ The foundation is one Feature whose body lists the choices it settles, so that a
 
 Where one agent builds all the work in order, the person may fold the skeleton into the first slice, whose merged code then settles the choices of convention. The records still come first.
 
-Where software-engineering is installed, and its conventions corpus offers a location the project owns for them, the choices of convention that the skeleton, or the first slice it is folded into, settles are also drafted into that corpus. A person accepts them before code builds on them (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus], whose point 4 says when the corpus offers such a location).
+Where software-engineering is installed, and the conventions corpus it reads offers a location the project owns for them, the choices of convention that the skeleton, or the first slice it is folded into, settles are also written into that corpus, in the change that builds it (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus], whose point 4 says when the corpus offers such a location). A person accepts them with that change, as an act of its own beside authorising its merge, which accepts none. The change merges only once they are accepted, so they stand before the slices are planned or built on them.
 
 ### 3. The first plan files the foundation, and the second plans the slices
 
@@ -48,7 +48,7 @@ The pool holds these Tasks back in a project with a topology. In a project with 
 
 ### 5. A foundation that proves wrong is changed, never worked around
 
-A Task that finds a choice of the foundation does not hold makes no other choice in its place, and says so on its Task. The change goes through a Task of its own: a record's change through a record the person accepts, as point 2 says, and a convention's change through the skeleton's code, reviewed as code. Where software-engineering is installed and the convention has an entry in its conventions corpus, that Task also changes the entry, and a person accepts the changed entry before code builds on it (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus]).
+A Task that finds a choice of the foundation does not hold makes no other choice in its place, and says so on its Task. The change goes through a Task of its own: a record's change through a record the person accepts, as point 2 says, and a convention's change through the skeleton's code, reviewed as code. Where software-engineering is installed and the convention has an entry in the conventions corpus it reads, that Task also changes the entry, and a person accepts the changed entry with that Task's change, as with the skeleton's, so no slice builds on an entry nobody accepted (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus]).
 
 ## Rationale
 
@@ -66,6 +66,8 @@ A Task that finds a choice of the foundation does not hold makes no other choice
 
 **Why the person may fold the skeleton for one agent.** One agent that builds in order sets each convention once, and its merged code settles the convention for the Tasks after it. The records still come first, since an architectural choice is reviewed before code rests on it, and a pattern in code with no record is drift ([pkit:COR-025]).
 
+**Why a skeleton's conventions also go into the corpus, where software-engineering is installed.** That capability's agents, the one that writes code and the ones that review it, read the project's rules from the conventions corpus, so a convention held only in the skeleton's code reaches none of them ([software-engineering:DEC-004-skeleton-conventions-in-corpus] gives the reasons). That record binds only its own agent, while who builds the foundation and how its Tasks land are this record's to decide, so points 2 and 5 bind every builder and whoever lands the change. A person accepts the entries apart from authorising the merge, since a merge judges the change as a whole, not each entry's text. The entries are written with the skeleton's code, since building it is how they are found, and the change merges only once they are accepted, so no slice is planned or built on entries nobody accepted.
+
 **The cost.** Workers wait while the foundation is built, and on a platform each waiting sandbox costs money. For a new product, nearly all the work waits, which is close to a phase of the project. In a product that stands, only the work that shares the open choice waits, and the rest of the pool goes on.
 
 ### Alternatives considered
@@ -82,6 +84,6 @@ A Task that finds a choice of the foundation does not hold makes no other choice
 
 - **Batch planning** gains the first stage: naming the shared choices, the EPIC with its outline, the foundation's Feature, and the judgement for each choice at the gate. Each role's procedure that slices work follows it (#2143), as does filing a Task during work, which names an open foundation's Feature where point 4 says.
 - **No command changes.** The rule rests on the readiness that DEC-059 point 7 decides, on dependencies, which stay prose (DEC-005), and on the checkbox gate at close.
-- **Named, and not decided here:** how a Task In Progress waits for a change to the foundation, since a dependency holds back only a Task in Backlog; a shared choice found during work, which no foundation named; which of two leads plans a foundation for a choice their scopes share; and a warning for a Task filed without an open foundation among its dependencies.
+- **Named, and not decided here:** how a Task In Progress waits for a change to the foundation, since a dependency holds back only a Task in Backlog; a shared choice found during work, which no foundation named; which of two leads plans a foundation for a choice their scopes share; a warning for a Task filed without an open foundation among its dependencies; and, where software-engineering is installed, how the landing holds a skeleton's change whose corpus entries no person has accepted (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus]).
 - **The analysis of parallel work** (#2096) gains the two stages in its use case of planning across scopes.
 - **DEC-029 and DEC-059 point 7 are refined in place,** each with a pointer to this record, at DEC-029's batch-planning steps and at DEC-059's line on vertical slicing.
