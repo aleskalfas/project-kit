@@ -103,6 +103,12 @@ The maintainer likes **reconciliation** (27 October). It also helps question 2: 
 - **C. Keep the result, drop the transcript.** Commit only what friction needs after the merge: per document, the latest reconciliation's commit marker and open deferrals, in a compact form; the reasons stay in the change's review. Cost: a file that changes accept edits to again brings back conflicts between parallel changes, the problem answer files solved, unless the form is add-only too.
 - **D. A as today, made readable.** Keep committed answers, but prune (#2207), and give the folder a README and a per-document view, so a reader sees state, not history.
 
+- **E. Beside the document, add-only.** Each change adds one small file per document under the document's `.pkit-meta`, such as `.pkit-meta/README.md/<change>.yaml`: near the document, and still conflict-free. A plain sidecar (ADR-070's one file per document) would be rewritten by every change and bring back the conflicts COR-062 removed, worst for a glossary, whose terms share one file. Cost: one change writes in every folder it touches, dead stamps spread through the tree, and a glossary's terms still crowd one place. Not weighed before: sidecars (COR-063, 26 October) came after answer files (COR-062, 19 October).
+
+## What the answers carry, and what the debt is
+
+The answers carry stamps: "this document was checked and holds", or "it is wrong until #N". The debt is worked out each time (`pkit friction debt`, the tracking issue #2107): for each document, the latest stamp against what git says changed under it since. Stale debt is the absence of a stamp, so no file holds it; only deferred debt is written down. A ledger of debt was rejected (COR-050 point 9: it duplicates git and drifts when a change bypasses the check).
+
 ## Forces
 
 - The methodology runs offline and in a sandbox, with no host access, by design (rule 14, COR-028). B weakens that.
