@@ -1,0 +1,23 @@
+# project-kit's topology of seats (project-management DEC-059).
+#
+# Every clone reads this file from the default branch. A seat's number is
+# its place in the list, counted from one: new seats go at the end, and a
+# seat that leaves stays in its place, marked `retired: true`.
+#
+# The planner files the work into one shared pool with no owner; the two
+# workers take the next ready Task from it, with no scope, since the work
+# comes from walks through the whole project (#2250).
+schema_version: 1
+settings:
+  release_mode: tolerant
+seats:
+  - name: planner
+    role: planner
+    organizer: true
+    state_issue: 2251
+  - name: worker-1
+    role: worker
+    state_issue: 2252
+  - name: worker-2
+    role: worker
+    state_issue: 2253
