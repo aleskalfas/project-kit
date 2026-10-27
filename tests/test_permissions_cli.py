@@ -2991,12 +2991,13 @@ def test_decide_verdict_path_byte_identical_to_main():
     #   _runner_commands      → _find_commands, _uv_command, _skip_options,
     #                           _expands (+ _RUNNERS/_CONFIG_VAR)
     #   _uv_command           → _skip_options (+ _UV_OPTIONS)
-    #   _skip_options, _shell_script → _expands
+    #   _skip_options → _expands
+    #   _shell_script → _expands (+ _SHELL_OPTIONS/_BASH_LONG/_ZSH_LONG)
     #   _find_commands        → _brace_expansion, _globbed,
     #                           _may_name_a_find_action (+ _FIND_RUNS)
     #   _git_configures       → _program_name, _subcommand_candidates,
     #                           _may_open_flag, _brace_expansion, _globbed
-    #                           (+ _GIT_CONFIG_KEY)
+    #                           (+ _GIT_CONFIG_KEY/_GIT_SECTION)
     #   _names_runner         → _program_name (+ _RUNNERS/_SHELLS)
     #   _expands              → _globbed, _brace_expansion (+ _UNTRUSTED)
     #   _rule_form    → _structured_form, _pattern_form
@@ -3098,6 +3099,10 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_FIND_RUNS",
         "_RUNNER_HOPS",
         "_GIT_CONFIG_KEY",
+        "_BASH_LONG",
+        "_SHELL_OPTIONS",
+        "_ZSH_LONG",
+        "_GIT_SECTION",
     )
     # A deliberate, reviewed change to a function above names here the rewrite
     # that turns main's side into the change, as (old, new) pairs, so the rest
@@ -3217,6 +3222,10 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_FIND_RUNS",
         "_RUNNER_HOPS",
         "_GIT_CONFIG_KEY",
+        "_BASH_LONG",
+        "_SHELL_OPTIONS",
+        "_ZSH_LONG",
+        "_GIT_SECTION",
     )
     diverged = _verdict_path_divergences(base, working, frozen, sanctioned, introduced)
     named = ", ".join(

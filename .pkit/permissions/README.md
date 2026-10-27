@@ -302,12 +302,12 @@ The core skips each runner's own options it knows, and `timeout`'s duration, and
     - any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`
     - git's repository directories
   - **Where such an assignment counts:** in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it.
-- **Git configuration the command sets or writes,** which may hold an alias or a forced refspec. That is any `-c` or `--config-env` before git's subcommand, or `git config` of an `alias.*`, `remote.*.push`, `remote.*.mirror` or `include*` key, in any case. A pathname pattern or a brace expansion where such an option or key may stand counts too.
+- **Git configuration the command sets or writes,** which may hold an alias or a forced refspec. That is any `-c` or `--config-env` before git's subcommand, or `git config` of an `alias.*`, `remote.*.push`, `remote.*.mirror` or `include*` key, in any case. So is a section renamed into such a key's section. A pathname pattern or a brace expansion where such an option or key may stand counts too.
   - **So these abstain:** `git -c alias.p='push --force' p`, `git config alias.pf 'push --force'`, `git -* status` and every other `git -c`, such as `git -c core.quotepath=off status`.
   - **One verdict for one injection:** `GIT_CONFIG_PARAMETERS=… git push` abstains as an assignment that changes the configuration, as `git -c` does.
 - **A runner whose command the core cannot read.** Any program may then run, so every guardrail among the subject's denies may bind. A deny the core reads for certain still wins. The core cannot read the command in these cases:
   - the runner has an option the core does not know, such as `env -S`
-  - a word the shell expands stands where the runner's options or program stand, or anywhere among find's own words
+  - a word the shell expands stands where the runner's options or program stand, or among find's own words where it may stand for find's action
   - a `-c` script holds a construct the core cannot read, such as `$1`, or runs a shell given `-c` in turn
   - the core cannot read the words of a runner's segment, as where the splitter cuts a quote
   - more runners stand one behind another than the core reads

@@ -15,7 +15,8 @@ body: >
   every guardrail is named as one the core cannot rule out. Git configuration
   a command sets or writes counts as part of the command: any `git -c` or
   `--config-env` before the subcommand, and `git config` of an `alias.*`,
-  `remote.*.push`, `remote.*.mirror` or `include*` key. Each keeps the deny on
+  `remote.*.push`, `remote.*.mirror` or `include*` key, or of a section
+  renamed into such a key's section. Each keeps the deny on
   git from telling, so the core defers, and a strict posture denies, as for
   `GIT_CONFIG_PARAMETERS=…`. Every `git -c`, such as
   `git -c core.quotepath=off status`, is now a prompt where `git` is granted.

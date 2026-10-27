@@ -1284,10 +1284,15 @@ def test_hook_reads_runners_under_the_system_python3(tmp_path):
     if not system.is_file():
         pytest.skip("no system python3 at /usr/bin/python3")
     root = _tree(tmp_path, grants=_GIT_AND_GH)
+    # Python 3.9's matcher refuses a bracket range written backwards, which
+    # must neither fault the decision nor hide a deny on another segment.
     for command, expected in (
         *((command, "deny") for command in _RUNNER_HOOK_DENIES),
         *((command, "ask") for command in _RUNNER_HOOK_ASKS),
         *_RUNNER_HOOK_UNCHANGED,
+        ("git push origin +main; find . -name [z-a]", "deny"),
+        ("find . -name [z-a] -exec rm -rf ~ +", "ask"),
+        ("find . -exec zsh -oerrexit -c 'rm -rf ~' \\;", "deny"),
     ):
         proc = subprocess.run(
             [str(system), str(HOOK)],

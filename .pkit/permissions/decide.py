@@ -233,8 +233,10 @@ _UNSEEN_KIND = {
 # a `\;` on as the word `;`, as find's terminator in `find . -exec rm {} \;`.
 # Nothing quotes a backslash that whitespace stands before, and inside quotes a
 # `;` is a word anyway. The denies still read each segment `_SEP` yields, so
-# this only adds what a runner runs across a `\;`.
-_RUN_SEP = re.compile(r"\s*(?:&&|\|\||\||(?<![ \t\n]\\)(?<!\A\\);|&|\n)\s*")
+# this only adds what a runner runs across a `\;`. It matches no whitespace
+# around a separator, which the reading of a segment's words drops, so a long
+# run of spaces costs it linear time.
+_RUN_SEP = re.compile(r"&&|\|\||\||(?<![ \t\n]\\)(?<!\A\\);|&|\n")
 # The runners whose command a deny reads (#1990, ADR-025 point 5), with the
 # options of each that the core knows, as GNU's, BSD's and the shells' read
 # them. Each holds, in turn:
@@ -303,6 +305,31 @@ _UV_OPTIONS = (
 )
 # The shells whose `-c` script a deny reads, one level deep.
 _SHELLS = frozenset({"sh", "bash", "zsh", "dash"})
+# The options of each shell that the core knows (#1990): the short options
+# that take no value, those that take a word as their value, the long options
+# that take no value and those that take the next word. `sh` is bash or dash,
+# so it knows the options of both. zsh reads `-o`'s value in the rest of its
+# word where any is left, as in `-oerrexit`, and reads `--<name>` as setting
+# the option of that name. Any other option keeps the core from reading the
+# script.
+_BASH_LONG = frozenset({
+    "debugger", "dump-po-strings", "dump-strings", "help", "login", "noediting",
+    "noprofile", "norc", "posix", "pretty-print", "restricted", "verbose", "version",
+})
+_SHELL_OPTIONS = {
+    "bash": ("abcefhiklmnprstuvxBCDEHPT", "oO", _BASH_LONG, frozenset({"init-file", "rcfile"})),
+    "dash": ("abcCefhiIlmnpqsuvVxE", "o", frozenset(), frozenset()),
+    "sh": ("abcefhiklmnpqrstuvxBCDEHIPTV", "oO", _BASH_LONG, frozenset({"init-file", "rcfile"})),
+    "zsh": (
+        "abcdefghijklmnpqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", "o",
+        frozenset({"help", "version"}), frozenset({"emulate"}),
+    ),
+}
+# The name of an option zsh sets through `--<name>`.
+_ZSH_LONG = re.compile(r"^[A-Za-z0-9_-]+$")
+# A section of git's configuration that holds an alias, an include or a
+# remote's push refspec or mirror flag (#1990), read in any case.
+_GIT_SECTION = re.compile(r"(?:alias|include|remote)", re.IGNORECASE)
 # find's actions that run a command.
 _FIND_RUNS = ("-exec", "-execdir", "-ok", "-okdir")
 # How many runners, one behind another, the core reads in a segment. Past them
@@ -838,10 +865,16 @@ def _uv_command(
 def _may_name_a_find_action(word: str) -> bool:
     """May a pathname pattern of find's own expand to an action that runs a
     command (`_FIND_RUNS`)? Always where it holds a character zsh's
-    EXTENDED_GLOB reads, which the standard library's matcher does not."""
-    return any(char in word for char in "^#~") or any(
-        fnmatch.fnmatchcase(action, word) for action in _FIND_RUNS
-    )
+    EXTENDED_GLOB reads, which the standard library's matcher does not, or a
+    bracket expression, which the matcher of one Python refuses where another
+    reads it, as Python 3.9's refuses `[z-a]`. So the hook and the CLI decide
+    alike on any Python. Always too where the matcher refuses the pattern."""
+    if any(char in word for char in "^#~["):
+        return True
+    try:
+        return any(fnmatch.fnmatchcase(action, word) for action in _FIND_RUNS)
+    except re.error:
+        return True
 
 
 def _find_commands(rest: list[tuple[str, str]]) -> tuple[list[list[tuple[str, str]]], bool]:
@@ -872,13 +905,16 @@ def _find_commands(rest: list[tuple[str, str]]) -> tuple[list[list[tuple[str, st
     return commands, False
 
 
-def _shell_script(rest: list[tuple[str, str]]) -> tuple[bool, str | None]:
-    """The script a shell given `-c` runs, from the words after the shell's
-    name: the first word that is no option, where an option bundle holding
-    `c` came before it. `-o` and `-O` take the next word, as `--rcfile` and
-    `--init-file` do. Also whether the core cannot read it: a word the shell
-    expands where an option may stand, or as the script itself. None where
-    the shell is given no `-c`."""
+def _shell_script(name: str, rest: list[tuple[str, str]]) -> tuple[bool, str | None]:
+    """The script the shell `name` given `-c` runs, from the words after its
+    name: the first word that is no option, where a bundle holding `c` came
+    before it. Each option that takes a value takes a word of its own, in
+    the bundle's order, save that zsh reads `-o`'s value in the rest of its
+    word where any is left (`_SHELL_OPTIONS`). Also whether the core cannot
+    read it: an option the core does not know, or a word the shell expands
+    where an option or its value may stand, or as the script itself. None
+    where the shell is given no `-c`."""
+    short_flags, short_values, long_flags, long_values = _SHELL_OPTIONS[name]
     has_c = False
     index = 0
     while index < len(rest):
@@ -890,11 +926,27 @@ def _shell_script(rest: list[tuple[str, str]]) -> tuple[bool, str | None]:
             break
         if _expands(text):
             return True, None
+        index += 1
         if word.startswith("--"):
-            index += 2 if word in ("--rcfile", "--init-file") else 1
+            option = word[2:]
+            if option in long_values:
+                if index < len(rest) and _expands(rest[index][0]):
+                    return True, None
+                index += 1
+            elif option not in long_flags and not (name == "zsh" and _ZSH_LONG.match(option)):
+                return True, None
             continue
-        has_c = has_c or (word[0] == "-" and "c" in word[1:])
-        index += 2 if ("o" in word[1:] or "O" in word[1:]) else 1
+        for at, char in enumerate(word[1:], start=1):
+            if char in short_values:
+                if name == "zsh" and at < len(word) - 1:
+                    break
+                if index < len(rest) and _expands(rest[index][0]):
+                    return True, None
+                index += 1
+                continue
+            if char not in short_flags:
+                return True, None
+            has_c = has_c or (char == "c" and word[0] == "-")
     if index >= len(rest):
         return False, None
     text, word = rest[index]
@@ -959,8 +1011,14 @@ def _git_configures(words: list[tuple[str, str]]) -> str | None:
     for place in places:
         if rest[place][1] != "config":
             continue
-        for text, word in rest[place + 1 :]:
+        after = rest[place + 1 :]
+        # A section renamed into an alias's, a remote's or an include's
+        # section writes such keys too.
+        renames = any(word in ("--rename-section", "rename-section") for _, word in after)
+        for text, word in after:
             if _GIT_CONFIG_KEY.match(word) or _globbed(text) or _brace_expansion(text):
+                return "git-config"
+            if renames and _GIT_SECTION.match(word):
                 return "git-config"
     return None
 
@@ -992,7 +1050,7 @@ def _runner_parts(
             return parts, True
         name = _program_name(current[0][1])
         if name in _SHELLS:
-            unread, script = _shell_script(current[1:])
+            unread, script = _shell_script(name, current[1:])
             opaque = opaque or unread
             if script is not None and depth > 0:
                 opaque = True
@@ -1052,9 +1110,15 @@ def _deny_parts(
             if splitter is _SEP:
                 parts.append((rest, kind or _git_configures(rest)))
                 continue
-            behind, unread = _runner_parts(rest, kind, depth)
-            parts.extend(behind)
-            opaque = opaque or unread or (read is None and _names_runner(rest))
+            # A fault in reading what a runner runs never drops a deny the
+            # segments above bound: the core cannot read the runner, so
+            # every deny may bind on it.
+            try:
+                behind, unread = _runner_parts(rest, kind, depth)
+                parts.extend(behind)
+                opaque = opaque or unread or (read is None and _names_runner(rest))
+            except Exception:
+                opaque = True
     return parts, opaque
 
 

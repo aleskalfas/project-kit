@@ -4300,6 +4300,18 @@ _RUNNER_DENIES = [
     ("bash --norc -lc 'git push --force origin main'", "vcs-history-rewrite"),
     ("sh -c 'cd /x && rm -rf ~'", "destructive-fs"),
     ("sh -c 'git status; sudo id'", "privilege-escalation"),
+    # each `o` or `O` in a bundle takes a word of its own, zsh reads `-o`'s
+    # value in the rest of its word, and a long option may take the next word
+    ("bash -OO extglob nullglob -c 'git push origin +main'", "vcs-history-rewrite"),
+    ("sh -oo errexit nounset -c 'rm -rf ~'", "destructive-fs"),
+    ("zsh -oerrexit -c 'rm -rf ~'", "destructive-fs"),
+    ("zsh -xoerrexit -c 'rm -rf ~'", "destructive-fs"),
+    ("zsh --emulate sh -c 'rm -rf ~'", "destructive-fs"),
+    ("zsh --no-rcs -c 'rm -rf ~'", "destructive-fs"),
+    ("bash --rcfile x -c 'rm -rf ~'", "destructive-fs"),
+    ("bash +o posix -c 'rm -rf ~'", "destructive-fs"),
+    ("dash -eu -c 'rm -rf ~'", "destructive-fs"),
+    ("find . -exec zsh -oerrexit -c 'rm -rf ~' \\;", "destructive-fs"),
     # a sure deny wins where the script also holds what the core cannot read
     ("xargs sh -c 'rm -rf \"$@\"' _", "destructive-fs"),
     # uv run behind its options, and uv's own before `run`
@@ -4351,6 +4363,12 @@ _UNREAD_RUNNERS = [
     "xargs -Z rm -rf x",
     "nohup --weird rm -rf ~",
     "uv run --no-such-option rm -rf ~",
+    "bash --weird -c 'rm -rf ~'",
+    "bash -Z -c 'rm -rf ~'",
+    "dash -Z -c 'rm -rf ~'",
+    "dash --posix -c 'rm -rf ~'",
+    "zsh --emulate=sh -c 'rm -rf ~'",
+    "find . -exec zsh -Q, -c 'rm -rf ~' \\;",
     # a word the shell expands where the runner's options or program stand
     "env $CMD",
     "xargs $CMD",
@@ -4400,6 +4418,9 @@ def test_a_runner_the_core_cannot_read_keeps_a_grant_on_it_from_allowing(decide_
         ("uv run --no-such-option pytest", "abstain"),
         ("uv run $TOOL", "abstain"),
         ("uv run rm -rf ~", "deny"),
+        ("uv run zsh -oerrexit -c 'rm -rf ~'", "deny"),
+        ("uv run bash -OO extglob nullglob -c 'git push origin +main'", "deny"),
+        ("uv run bash -Z -c 'git status'", "abstain"),
     ):
         d, why = decide_mod.decide(model, catalog, _bash(command, "operator"))
         assert d == verdict, (command, why)
@@ -4425,6 +4446,10 @@ _GIT_CONFIG_COMMANDS = [
     "git config REMOTE.origin.PUSH +main",
     "git config set alias.x y",
     "git config --add alia?.x y",
+    # a section renamed into one of those keys' sections
+    "git config --rename-section foo alias",
+    "git config rename-section bar remote.origin",
+    "git config --rename-section foo includeIf.gitdir:x",
     # behind a runner
     "env git -c alias.p=x p",
 ]
@@ -4465,6 +4490,7 @@ def test_git_configuration_a_command_sets_keeps_a_deny_from_telling(decide_mod, 
         ("git grep -c foo", "allow"),
         ("git config user.name x", "allow"),
         ("git config --list", "allow"),
+        ("git config --rename-section foo bar", "allow"),
         ("git push origin main", "allow"),
         # the segments `_SEP` yields are still read, `\;` cut, so a deny
         # still errs toward binding there
@@ -4490,6 +4516,64 @@ def test_the_runner_reading_is_bounded(decide_mod, catalog):
         assert d in ("deny", "abstain"), (command[:40], why)
     d, _ = decide_mod.decide(MODEL, catalog, _bash("env " * 40 + "git status", "operator"))
     assert d == "abstain"
+
+
+def test_a_pattern_the_matcher_refuses_keeps_every_deny(decide_mod, catalog, monkeypatch):
+    # A matcher that refuses a pattern, as Python 3.9's, which the hook runs
+    # under on macOS, refuses a bracket range written backwards: the core
+    # reads the pattern as one that may name find's action, and a deny it
+    # reads on any segment still binds.
+    import re
+
+    def refuse(name: str, pattern: str) -> bool:
+        raise re.error("bad character range")
+
+    monkeypatch.setattr(decide_mod.fnmatch, "fnmatchcase", refuse)
+    for command, verdict in (
+        ("git push origin +main; find . -name x*", "deny"),
+        ("git push -uf origin main; find . -name x*", "deny"),
+        ("find . -name x* -exec rm -rf ~ +", "abstain"),
+    ):
+        request = _bash(command, "operator")
+        d, why = decide_mod.decide(MODEL, catalog, request)
+        assert d == verdict, (command, why)
+        if verdict == "abstain":
+            assert sorted(decide_mod.hidden_guardrails(MODEL, catalog, request)) == _GUARDRAILS
+
+
+def test_a_fault_in_reading_a_runner_keeps_every_deny(decide_mod, catalog, monkeypatch):
+    # Whatever fault the reading of a runner meets, the denies the core reads
+    # on each segment still bind, and every guardrail may bind on the rest.
+    def fault(*args: Any, **kwargs: Any) -> Any:
+        raise ValueError("fault")
+
+    monkeypatch.setattr(decide_mod, "_runner_parts", fault)
+    request = _bash("git push origin +main; find . -name x", "operator")
+    d, why = decide_mod.decide(MODEL, catalog, request)
+    assert d == "deny", why
+    request = _bash("find . -name x -exec grep y {} +", "operator")
+    d, why = decide_mod.decide(MODEL, catalog, request)
+    assert d == "abstain", why
+    assert sorted(decide_mod.hidden_guardrails(MODEL, catalog, request)) == _GUARDRAILS
+
+
+@pytest.mark.parametrize(
+    "command,verdict",
+    [
+        ("git push origin +main; find . -name [z-a]", "deny"),
+        ("find . -name [z-a] -exec rm -rf ~ +", "abstain"),
+        ("find . -name [abc]* -exec rm -rf {} +", "abstain"),
+        ("find . -name '[abc]*' -exec rm -rf {} +", "deny"),
+    ],
+)
+def test_a_bracket_among_finds_words_is_decided_alike_on_every_python(
+    decide_mod, catalog, command, verdict
+):
+    # An unquoted bracket expression among find's own words may name its
+    # action, whatever the interpreter's matcher makes of it, so the hook and
+    # the CLI decide alike on any Python.
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == verdict, (command, why)
 
 
 # Point 2's glob case: a narrow grant, one naming a subcommand or flags.
