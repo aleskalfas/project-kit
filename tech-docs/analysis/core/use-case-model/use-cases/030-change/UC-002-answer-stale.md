@@ -26,16 +26,12 @@ shortfalls:
   - at: 11
     issue: "#1765"
     record: ADR-034#1
-  - at: "9b"
-    issue: "#1765"
-    record: ADR-034#1
 pkit:
   friction:
     anchors:
       path:
         - src/project_kit/friction_check.py
         - src/project_kit/friction_write.py
-        - src/project_kit/friction_resolve.py
         - src/project_kit/default_branch.py
         - .github/workflows/checks.yml
         - .pkit/rules/core.md
@@ -143,10 +139,7 @@ pkit:
 - **7c.** The change moved answers word for word out of the artefacts' blocks into answer files. The check lists them apart, under "Answers moved in this change", and nobody is asked to accept them ([COR-062 point 3](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#3-a-change-adds-answer-files-and-rewrites-none-its-base-holds)).
 - **7d.** An artefact the change revalidates in an answer file has a live revalidation on the base's tip that the change's answer did not read. The check reports that revalidation as `answered-apart`, and never fails on it. Once merged, the two are [debt](../../../glossary.md#term-debt--debt) until a revalidation reads both ([COR-062 point 7](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
 - **9a.** The [project](../../../glossary.md#term-project--project) runs the [change check](../../../glossary.md#term-change-check--change-check) in `warning` mode. The check reports what it finds and passes, so nothing holds the merge on it.
-- **9b.** The [pull request](../../../glossary.md#term-pull-request--pull-request)'s target moved on, and merging the target into the branch conflicts inside a `revalidated` block. `pkit friction resolve` checks the repository as step 11 does. It resolves the block's text, and writes no answer of its own. It names the revalidation still owed, and the path rejoins at step 5.
-
-> [!WARNING]
-> **Not built yet:** `pkit friction resolve` runs no such check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+- **9b.** The [pull request](../../../glossary.md#term-pull-request--pull-request)'s target moved on, and merging the target into the branch conflicts inside a `revalidated` block. Only a line of work open at the move still brings such a conflict ([COR-062 point 11](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#11-the-move-once-and-what-it-costs)). The developer resolves the block's text by hand, and runs the move again, which takes the answer out into an answer file. The path rejoins at step 5.
 
 - **10a.** The [reviewer](../../../glossary.md#term-reviewer--reviewer) finds a passage that does not hold:
   - a reason that does not hold against the change

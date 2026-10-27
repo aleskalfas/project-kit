@@ -20,7 +20,7 @@ pkit:
         - tests/test_capabilities_in_source.py
         - tests/test_settings_consolidate.py
         - tests/test_refs.py
-        - tests/test_friction_resolve.py
+        - tests/test_friction_prune.py
         - tests/test_visibility.py
       record:
         - COR-004
@@ -30,7 +30,7 @@ pkit:
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`
 
-**Verified by:** Tests run `pkit sync`, `pkit init` and `pkit upgrade` with `--dry-run`, and find nothing written. So do tests of `pkit refs rename`, `pkit settings consolidate`, `pkit friction resolve` and each mode of `pkit visibility`. Tests of a [capability](../../glossary.md#term-capability--capability)'s [install](../../glossary.md#term-install--install), registration, upgrade, refresh and uninstall find the same. A test of `pkit merge --dry-run` finds that it prints what it would run, and runs none of it.
+**Verified by:** Tests run `pkit sync`, `pkit init` and `pkit upgrade` with `--dry-run`, and find nothing written. So do tests of `pkit refs rename`, `pkit settings consolidate`, `pkit friction prune` and each mode of `pkit visibility`. Tests of a [capability](../../glossary.md#term-capability--capability)'s [install](../../glossary.md#term-install--install), registration, upgrade, refresh and uninstall find the same. A test of `pkit merge --dry-run` finds that it prints what it would run, and runs none of it.
 
 No test or check finds a command of the class that lacks the flag. Sixteen of the [backbone](../../glossary.md#term-backbone--backbone)'s commands in the class lack it, among them `pkit config set`, `pkit release apply` and `pkit version bump`. Nobody has sorted the [components](../../glossary.md#term-component--component)' commands.
 
