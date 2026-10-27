@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-reviewer
-    revalidated:
-      at: 2026-10-21T14:25:51Z
-      outcome: unchanged
-      unchanged-because: COR-062 keeps who decides an answer, and that a reviewer other than its writer checks it (COR-050 point 3). A reviewer is still defined by its remit, so the definition holds.

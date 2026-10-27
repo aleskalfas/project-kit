@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-041-gates-before-writing.md
-    revalidated:
-      at: 2026-10-25T08:01:39Z
-      outcome: unchanged
-      unchanged-because: "As #2015 asks, the membership tests gain cases where add-member and remove-member refuse off a terminal without --yes. The tests of the membership check itself are unchanged."

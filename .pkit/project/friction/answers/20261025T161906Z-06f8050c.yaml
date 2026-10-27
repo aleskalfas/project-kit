@@ -1,9 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
-    read:
-      - 20261025T160417Z-d8718ac0.yaml
-      - moved-09637e9d2b39.yaml
-    revalidated:
-      at: 2026-10-25T16:19:06Z
-      outcome: unchanged
-      unchanged-because: Running checks now says the short check runs where every later change lies in the change's answers to friction, as friction since reads them. The section still calls whoever holds the repository's settings the operator, so the actor holds.

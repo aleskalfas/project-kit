@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
-    revalidated:
-      at: 2026-10-23T08:53:49Z
-      outcome: unchanged
-      unchanged-because: It moved into project-management's analysis with its id, its anchors and every word, since only project-management meets its needs. The role and its needs hold.

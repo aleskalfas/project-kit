@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-merge-gate
-    revalidated:
-      at: 2026-10-24T06:13:39Z
-      outcome: unchanged
-      unchanged-because: done-work's refusal now names review-pr with the issue's number. What a pull request must meet before it lands is the same.

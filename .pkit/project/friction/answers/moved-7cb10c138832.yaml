@@ -1,6 +1,0 @@
-answers:
-  - artefact: tech-docs/analysis/core/glossary.md#TERM-synced-copy
-    revalidated:
-      at: 2026-10-21T14:25:56Z
-      outcome: unchanged
-      unchanged-because: COR-062 says an artefact received by sync owes no answer, its answers staying with its source. A synced copy is still a file sync writes and the project never edits, so the definition holds.
