@@ -50,6 +50,7 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 Each of these is a `[block]` finding in `docs-reviewer`'s verdict:
 
 - An `unchanged` reason that does not hold against the change.
+- A revalidation that replaces revalidations answered apart, where its `unchanged` reason, or the `updated` document, does not hold against what changed since each of them (COR-062 point 7). An `answered-apart` finding of the change check is debt no change owes, and is never a `[block]`.
 - A deferral the change writes or rewords whose reason does not hold, or that names no open follow-up issue.
 - A document revalidated as `updated` with no sentence on what changed under the description's `## What changed in each updated document`, or with one that does not match the diff. `docs-reviewer` reads that section as the commands that write the list read it. An item they cannot read, such as one naming the document in bold, gives no sentence, and the finding gives the form it needs.
 - For a target that owes an answer, a revisit entry the change writes with a new reason that does not hold against the change, or a `deferred` one that names no open follow-up issue.
