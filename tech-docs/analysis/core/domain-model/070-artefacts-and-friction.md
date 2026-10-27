@@ -117,7 +117,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How an edit leaves an artefact or a link target behind, and how each is answered
-  accDescr: A change edits what an anchor names, or an artefact's list of anchors, and the artefact has friction. The change check finds it. A revalidation in the change, updated or unchanged, clears the friction. A deferral clears it too, and leaves deferred debt on the default branch. Friction nobody answered stays on the default branch as stale debt. Two revalidations of one artefact made apart, neither reading the other, leave answered-apart debt until a revalidation reads both. The whole-repository check reports each kind of debt, and never fails. A change that edits a trigger field owes a revisit of each link target, which the change check asks for. A change to what the link target stands on, or a revisit entry, unchanged or deferred, meets the revisit. Otherwise the revisit stays unmet, and the link target is a finding of the change check.
+  accDescr: A change edits what an anchor names, or an artefact's list of anchors, and the artefact has friction. The change check finds it. A revalidation in the change, updated or unchanged, clears the friction. A deferral clears it too, and leaves deferred debt on the default branch. Friction nobody answered stays on the default branch as stale debt. Two revalidations of one artefact answered apart, neither reading the other, leave answered-apart debt until a revalidation reads both. The whole-repository check reports each kind of debt, and never fails. A change that edits a trigger field owes a revisit of each link target, which the change check asks for. A change to what the link target stands on, or a revisit entry, unchanged or deferred, meets the revisit. Otherwise the revisit stays unmet, and the link target is a finding of the change check.
   E([A change edits what an anchor names, or the list of anchors]) --> F[Friction on the artefact]
   F -->|the change check finds it| A{Answer in the change?}
   A -->|revalidation, updated or unchanged| CL[Friction cleared]
@@ -205,7 +205,7 @@ An artefact is a document with front matter, or a keyed entry of a collection fi
 **Relations:**
 
 - A place holds it (COR-050 point 1).
-- It carries anchors (COR-050 point 1). The answers that stand for edits to what they name are on it, in [answer](../glossary.md#term-answer--answer) files apart from it ([COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation), [COR-062 point 1](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)).
+- It carries anchors (COR-050 point 1). Its answers, for edits to what the anchors name, lie in [answer](../glossary.md#term-answer--answer) files apart from it ([COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation), [COR-062 point 1](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)).
 - A [decision record](../glossary.md#term-decision-record--decision-record) is an artefact only where a place holds it (COR-050 point 1).
 
 **States:** None.
@@ -245,7 +245,7 @@ An answer is a statement in an answer file, which one change adds to the folder 
 - An `unchanged` revalidation says why the artefact still holds, in words that change with it (COR-050 point 3).
 - An outcome is a record of what happened, and is never read to work out friction (COR-050 point 3).
 - A change never rewrites an answer file its [base](../glossary.md#term-base--base) holds, so an answer that landed stays as it was written ([COR-062 point 3](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#3-a-change-adds-answer-files-and-rewrites-none-its-base-holds)).
-- Two revalidations of one artefact, neither of which read the other, were made apart. They are [debt](../glossary.md#term-debt--debt) until a revalidation that reads both judges their combined state ([COR-062 point 7](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
+- Two revalidations of one artefact, neither of which read the other, were answered apart. They are [debt](../glossary.md#term-debt--debt) until a revalidation that reads both judges their combined state ([COR-062 point 7](../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
 
 ## Friction
 

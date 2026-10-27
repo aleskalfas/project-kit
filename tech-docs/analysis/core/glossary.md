@@ -281,7 +281,7 @@ TERM-data-point:
 TERM-debt:
   name: debt
   status: active
-  definition: "stale, deferred or answered-apart finding of the whole-repository check, dated from its origin: a change nobody answered, a deferral, or two revalidations made apart"
+  definition: "stale, deferred or answered-apart finding of the whole-repository check, dated from its origin: a change nobody answered, a deferral, or two revalidations answered apart"
   pkit:
     friction:
       anchors:
@@ -1424,7 +1424,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Debt:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) reports on the [default branch](#term-default-branch--default-branch). Friction nobody answered is stale [debt](#term-debt--debt), and a deferral is deferred debt ([COR-050 point 9](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#9-debt-is-derived-from-git-never-kept-in-a-ledger)).
-- **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). The artefact's answers live in answer files apart from it ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). It is no [finding](#term-finding--finding).
+- **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors ([COR-050 point 1](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts)). The artefact's answers live in answer files apart from the artefact ([COR-062 point 1](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files)). The block is no [finding](#term-finding--finding).
 
 ## TERM-grant — grant
 
