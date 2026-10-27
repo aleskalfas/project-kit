@@ -827,6 +827,12 @@ def test_both_fixers_pass_the_check_as_they_stand(runner: ModuleType, source: st
     assert (
         f"`{path.parent.relative_to(REPO_ROOT).as_posix()}/storyboard.md`" in definition["prompt"]
     )
+    # Resolved as the deploy resolves it, the body ends with the workspace sentence (#2026).
+    note = (
+        "is replaced by `.agent-workspace/` at the repository root: keep every intermediate "
+        "file there, never in that directory."
+    )
+    assert definition["prompt"].rstrip().endswith(note)
 
 
 @_needs_uv

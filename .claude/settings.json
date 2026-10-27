@@ -1,6 +1,27 @@
 {
-  "agent": "project-manager",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/.pkit/adapters/claude-code/session-start-hook.py"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/.pkit/adapters/claude-code/session-start-hook.py"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "*",
@@ -13,6 +34,7 @@
       }
     ]
   },
+  "agent": "project-manager",
   "sandbox": {
     "enabled": false,
     "autoAllowBashIfSandboxed": true,
