@@ -1,0 +1,17 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  `land-work` runs the change check on the merge as it would land, just before
+  it stops ready, asks or merges. It fetches the pull request's base, builds the
+  merge of the pinned head with the base's tip as a commit on no branch, and
+  runs `pkit friction check --json` from a temporary checkout of that merge
+  against the tip, the head named as the change's own head (`PKIT_CHECK_HEAD`).
+  Where the check fails there, the run stops with nothing merged and names each
+  document, so two pull requests that each passed alone can no longer leave a
+  page stale together. In warning mode the findings are printed and stop
+  nothing. A merge that conflicts with the base as fetched stops the run with the
+  merge to make, and a check that cannot be read stops it too. Where the head
+  holds the tip its own check read, that check serves and nothing runs again.

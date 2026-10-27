@@ -66,6 +66,15 @@ updated document's sentence from the change's author:
   document's version 2): where it does, an authorisation for the earlier head
   covers the later one (DEC-055 point 3). An answer that cannot be read is
   never a pass.
+- `merged(head, base)` runs the change check on the merge of a pull request's
+  head with its base as the base stands, fetched first: the merge built as a
+  commit on no branch, checked from a temporary checkout of it against the
+  base's tip, the head named as the change's own head, as the checks on a pull
+  request run it (DEC-055 point 6). `Merged.refused` gives the findings the
+  check fails on there, each naming its document. The whole-repository check
+  is not run at the merge: what a change leaves unanswered is what that check
+  reports once the change merges, save the cases COR-050 names where the two
+  checks part, and a page the base had already left stale is not the change's.
 - `stamp`, `strip`, `find` and `current` place, remove, find and compare the
   section — strip-then-place-exactly-one, as `provenance.stamp` keeps the
   footer. The section sits last, before the provenance footer. A section
@@ -429,18 +438,24 @@ def written(base: str) -> Derivation:
     return Derivation("HEAD", document=found, answers=tuple(_entries(found)))
 
 
-def _run_check(head: str | None, base: str, *, cwd: Path | None) -> Mapping[str, Any] | _NoDocument:
+def _run_check(
+    head: str | None, base: str, *, cwd: Path | None, own_head: str | None = None
+) -> Mapping[str, Any] | _NoDocument:
     """The check's document at `head` — the working directory's, where None — or why
     there is none. Enforcing mode exits 1 on friction and still prints its document,
-    so exit 0 and 1 both carry one."""
+    so exit 0 and 1 both carry one. `own_head`, where given, is the change's own head
+    the check judges what each answer read against (`PKIT_CHECK_HEAD`): a parent of
+    the commit the working directory is at, such as a pull request's head under a
+    merge."""
     named = [] if head is None else ["--head", head]
     argv = [*PKIT, "friction", "check", "--json", "--base", base, *named]
     command = f"`{' '.join(argv)}`"
+    own = {} if own_head is None else {OWN_HEAD: own_head}
     try:
         proc = subprocess.run(
             argv,
             cwd=cwd,
-            env={**os.environ, **UNROUTED},
+            env={**os.environ, **UNROUTED, **own},
             capture_output=True,
             text=True,
             check=False,
@@ -564,6 +579,165 @@ def _coverage(document: Mapping[str, Any], command: str) -> Coverage:
             problem=f"{command}: its answer and the changes it names disagree, so it is no answer"
         )
     return Coverage(since, head, covered, len(inside), tuple(lines))
+
+
+# --- the merge as it would land ------------------------------------------------------
+
+#: The variable that names the change's own head to the change check, where the working
+#: tree is a merge of it (the CLI README, "Friction checks", `PKIT_CHECK_HEAD`).
+OWN_HEAD = "PKIT_CHECK_HEAD"
+#: The finding kinds the change check fails on in enforcing mode (the CLI README,
+#: "Friction checks", "Modes"): the ones a refused merge names. A kind the check fails
+#: on that is missing here still refuses the merge, through the document's `failed`.
+FAILING = frozenset(
+    {
+        "friction",
+        "bump",
+        "dead-anchor",
+        "unresolved-kind",
+        "no-answer",
+        "unrevisited",
+        "answer-file-rewritten",
+        "prune-mixed",
+        "read-incomplete",
+        "answers-nothing",
+    }
+)
+#: Who the merge is made by: it reaches no branch, so it names no person, and git needs
+#: no identity configured to build it.
+_MERGE_IDENTITY = {
+    "GIT_AUTHOR_NAME": "pkit land-work",
+    "GIT_AUTHOR_EMAIL": "land-work@pkit.invalid",
+    "GIT_COMMITTER_NAME": "pkit land-work",
+    "GIT_COMMITTER_EMAIL": "land-work@pkit.invalid",
+}
+
+
+@dataclass(frozen=True)
+class Merged:
+    """The change check on the merge of a pull request's head with its base's tip, as
+    the base stands once fetched (DEC-055 point 6), or why it was not run. `merge` is
+    the commit the check ran at — the head itself where the head holds the tip and its
+    own check read that tip — and `conflicts` the files a merge conflicts in, which
+    leave nothing to check."""
+
+    head: str
+    tip: str = ""
+    merge: str = ""
+    document: Mapping[str, Any] | None = None
+    conflicts: tuple[str, ...] = ()
+    problem: str | None = None
+
+    @property
+    def failed(self) -> bool:
+        """Whether the check fails at the merge, in the mode the project sets."""
+        return bool((self.document or {}).get("failed"))
+
+    @property
+    def failing(self) -> tuple[Mapping[str, Any], ...]:
+        """The findings at the merge of a kind the check fails on in enforcing mode, in
+        its order, whatever the project's mode: in warning mode, what is reported there
+        for information."""
+        findings = (self.document or {}).get("findings")
+        return tuple(
+            f
+            for f in (findings if isinstance(findings, list) else [])
+            if isinstance(f, Mapping) and f.get("kind") in FAILING
+        )
+
+    @property
+    def refused(self) -> tuple[Mapping[str, Any], ...]:
+        """The findings the check fails on at the merge, in its order; none where it
+        does not fail."""
+        return self.failing if self.failed else ()
+
+
+def merged(head: str, base: str, *, checked: Mapping[str, Any] | None = None) -> Merged:
+    """The change check on the merge of commit `head` with the branch `base` as it
+    stands: the base fetched first where it is a remote's, its tip read again through
+    the backbone (COR-054 point 5), the merge built as git merges the two, and the
+    check run on it against the tip, as the checks on a pull request run it — from a
+    checkout of the merge, the head named as the change's own head (COR-062 point 4,
+    `PKIT_CHECK_HEAD`). DEC-055 point 6.
+
+    Nothing the person works on is touched: the merge is a commit object of its own,
+    on no branch (`git merge-tree --write-tree`, `git commit-tree`), never signed —
+    `git commit-tree` signs only when asked to — and the checkout is a temporary one,
+    removed afterwards. `checked`, the change check's document at the head, serves
+    where the head holds the tip it read and that tip is the one the fetch finds: the
+    merge is then the head, and its check is the head's. A merge that conflicts names
+    its files and runs no check. Never a pass on a guess: a base that cannot be
+    fetched or read, a merge git cannot build, and a check that gives no document all
+    give the problem."""
+    problem = _refresh_base(base)
+    if problem is not None:
+        return Merged(head, problem=problem)
+    try:
+        tip = default_branch.branch(base).tip
+    except default_branch.Unanswered as exc:
+        return Merged(head, problem=str(exc))
+    if not tip:
+        return Merged(head, problem=f"the base {base} names no commit")
+    read = _mapping(_mapping(checked).get("base"))
+    if checked is not None and read.get("tip") == tip and read.get("outdated") is False:
+        return Merged(head, tip=tip, merge=head, document=checked)
+    built = _build_merge(head, tip)
+    if built.problem is not None or built.conflicts:
+        return Merged(head, tip=tip, conflicts=built.conflicts, problem=built.problem)
+    with _checkout(built.merge) as (path, why_not):
+        if path is None:
+            why = f"a checkout of the merge {built.merge[:SHORT]} failed: {why_not}"
+            return Merged(head, tip=tip, merge=built.merge, problem=why)
+        found = _run_check(None, tip, cwd=path, own_head=head)
+    if isinstance(found, _NoDocument):
+        return Merged(head, tip=tip, merge=built.merge, problem=found.why)
+    return Merged(head, tip=tip, merge=built.merge, document=found)
+
+
+@dataclass(frozen=True)
+class _Built:
+    """The merge `_build_merge` built, the files it conflicts in, or why git could not
+    build it."""
+
+    merge: str = ""
+    conflicts: tuple[str, ...] = ()
+    problem: str | None = None
+
+
+def _build_merge(head: str, tip: str) -> _Built:
+    """The merge of `head` with `tip`, as git merges two commits, recorded as a commit
+    on no branch whose parents are the tip and the head."""
+    tree = _git("merge-tree", "--write-tree", "--name-only", "--no-messages", "-z", tip, head)
+    fields = [field for field in tree.stdout.split("\0") if field]
+    if tree.returncode == 1 and len(fields) > 1:
+        return _Built(conflicts=tuple(dict.fromkeys(fields[1:])))
+    if tree.returncode != 0 or not fields:
+        said = (tree.stderr or "").strip().splitlines()
+        why = f"git could not merge {head[:SHORT]} with {tip[:SHORT]}"
+        return _Built(problem=why + (f": {said[-1]}" if said else ""))
+    made = subprocess.run(
+        [
+            "git",
+            "commit-tree",
+            fields[0],
+            "-p",
+            tip,
+            "-p",
+            head,
+            "-m",
+            "The merge land-work checks",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, **_MERGE_IDENTITY},
+    )
+    merge = made.stdout.strip()
+    if made.returncode != 0 or not merge:
+        said = (made.stderr or "").strip().splitlines()
+        why = f"git could not record the merge of {head[:SHORT]} with {tip[:SHORT]}"
+        return _Built(problem=why + (f": {said[-1]}" if said else ""))
+    return _Built(merge=merge)
 
 
 @contextlib.contextmanager
