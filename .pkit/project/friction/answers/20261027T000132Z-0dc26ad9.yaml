@@ -1,0 +1,164 @@
+answers:
+  - artefact: .pkit/release/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-9dcf3fafafed.yaml
+    revalidated:
+      at: 2026-10-27T00:01:32Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-27T00:01:37Z
+      outcome: unchanged
+      unchanged-because: "Step 10 still holds: the release pull request lands as one squash commit and its head branch is deleted. The use case says nothing of the local clone after the merge, which is all this change alters."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-27T00:01:44Z
+      outcome: unchanged
+      unchanged-because: The steps of releasing a component, the changesets consumed and the versions and floors written, are untouched. The change alters only which clone pkit release merge moves after a merge, which this use case does not describe.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T230218Z-61712646.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-27T00:02:49Z
+      outcome: unchanged
+      unchanged-because: The journey says nothing of where the local clone is left after pkit release merge, the one thing this change alters. Judged together with the two revalidations answered apart, of UC-037 step 8 numbering check with core rule 22, and of the whole-repository check words over an upgrade whose move is not yet committed, each stage holds as written.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-012-ask-before-another-repository.md
+    read:
+      - moved-ea837339e6b3.yaml
+    revalidated:
+      at: 2026-10-27T00:01:54Z
+      outcome: unchanged
+      unchanged-because: The tests that run release merge in another repository, refused before its first write and let go on by a confirmation, are unchanged. The change adds and adjusts tests of the local clone after a merge, which this requirement does not ask about.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-release-step
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-d74f55c40d3f.yaml
+    revalidated:
+      at: 2026-10-27T00:02:03Z
+      outcome: unchanged
+      unchanged-because: The term names the procedure that makes a release from the pending changesets. Which clone pkit release merge moves after a merge, all this change alters, is no part of that definition.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-surface-change
+    read:
+      - moved-a8a20a288112.yaml
+    revalidated:
+      at: 2026-10-27T00:02:07Z
+      outcome: unchanged
+      unchanged-because: The definition, an alteration an adopter could observe, depend on or break against, declared in a changeset, does not rest on how pkit release merge leaves the local clone, the only behaviour this change alters.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-14cab8fa596f.yaml
+    revalidated:
+      at: 2026-10-27T00:02:10Z
+      outcome: unchanged
+      unchanged-because: The shareability check in release.py, check_shareable and its gaps and warnings, is untouched. The change alters only the local clean-up after pkit release merge lands a release pull request.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-27T00:02:13Z
+      outcome: unchanged
+      unchanged-because: Declaring a changeset and the checks release.py runs on one are untouched. The change alters only the local clean-up after pkit release merge lands a release pull request.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-27T00:02:17Z
+      outcome: unchanged
+      unchanged-because: The version a backbone migration is judged against, and the check that reads it, are untouched in release.py. The change alters only the local clean-up after pkit release merge lands a release pull request.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-27T00:02:20Z
+      outcome: unchanged
+      unchanged-because: The version a component migration is judged against, and the check that reads it, are untouched in release.py. The change alters only the local clean-up after pkit release merge lands a release pull request.
