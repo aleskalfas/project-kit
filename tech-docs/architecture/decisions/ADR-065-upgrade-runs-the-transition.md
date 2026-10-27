@@ -278,7 +278,7 @@ The guard's message, and upgrade's under the router's fallback, name the remedy 
 | Pinned, and the router fell back to another installed pkit | Reconnect and run again, since the router runs the pin whenever it can fetch it, or run the pin through `uvx`. Where SSH keys fail, install the pin's version from the repository's HTTPS URL, and the router then runs it with no fetch. To move on purpose, `pkit unpin` and then `pkit upgrade`. Not a bare `pkit upgrade`, which refuses here (point 9). |
 | No manifest, or a recorded version that is no version | `pkit upgrade`, which writes the manifest at its target and replays (point 5) |
 | The running pkit older than the content or the pin | the remedies #1212 gives. Content ahead of its pin also names `pkit upgrade`, which finishes the interrupted raise. |
-| The transition incomplete | `pkit upgrade`. For a migration that fails every time, fix its cause and run again, or roll back as ADR-049 point 3 sets. |
+| The transition incomplete | `pkit upgrade`. For a migration that fails every time, fix its cause and run again, or roll the project back by reverting the upgrade's commit. The revert restores every file the upgrade changed, in `.pkit/` and outside it (ADR-049 point 3). |
 | Pinned, the content behind the pin, the pin's code running | `pkit upgrade`, whose routed child finishes the pin (point 9) |
 | Unpinned, the running pkit newer than the content | **Move:** `pkit upgrade`, which pins by default (`--no-pin` keeps it unpinned) and may first update the tool (`--no-self-update` declines). **Stay:** `pkit pin`, which pins at the content's version, so the router runs that version. **A pipeline:** commit a pin, or install the project's version. |
 
