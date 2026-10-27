@@ -81,7 +81,7 @@ How the pool is filled:
 
 A seat's scope is an optional filter on that seat's own pool, and reserves nothing for it:
 
-- **What a scope names:** workstreams ([project-management:DEC-045-named-per-user-instances] point 3), Task types from the type axis such as `test` or `docs` ([project-management:DEC-012-classification-axes]), milestones (point 2), or several of these. A Task falls in the scope where it matches each part the scope names. A type, like a workstream, is referenced and never rebound.
+- **What a scope names:** workstreams ([project-management:DEC-045-named-per-user-instances] point 3), Task types from the type axis such as `test` or `docs` ([project-management:DEC-012-classification-axes]), milestones (point 2), or several of these. A Task falls in the scope where it matches each part the scope names. A type or a milestone, like a workstream, is referenced and never rebound.
 - **What waits:** a discipline the type axis does not carry, such as design, waits for a record that decides how a Task carries it.
 - **Who may take a Task:** every seat that builds and has no scope, and every seat whose scope the Task falls in. A workstream that no seat may take is warned of and never blocked ([project-management:DEC-045-named-per-user-instances] point 4). Several seats that may take one workstream are the shared pool, and draw no warning.
 - **The expected owner** of a Task is the seat that alone may take it. The guard warns when another instance takes it ([project-management:DEC-045-named-per-user-instances] point 5).
@@ -160,7 +160,7 @@ DEC-029's mode surface and its procedure carrier, and DEC-043's selector and its
 
 **Why a scope may name a Task's type.** The maintainer put a scope by discipline first, for a specialist's seat. The type axis already says of every Task whether it is a test or docs, so a testing seat can take test Tasks with no new marker. A discipline the axis does not carry, such as design, would need a new classification, which DEC-045 refused to add for instances. Referencing a type, as a scope references a workstream, changes neither.
 
-**Why a scope may name a milestone.** The maintainer decided on 27 October that a worker may take only the work a person puts into its pool, while the rest of the backlog waits for its triage (#2256). A milestone already holds each issue a person puts into it, and an issue is in at most one milestone at a time ([project-management:DEC-016-time-bound-containers]). So a milestone serves as that pool with no new marker. A scope names it by its title, which the listing of issues returns with each Task, so the pool reads nothing more of GitHub.
+**Why a scope may name a milestone.** The maintainer decided that a worker may take only the work a person puts into its pool, while the rest of the backlog waits for its triage (#2256). A milestone already holds each issue a person puts into it, and an issue is in at most one milestone at a time ([project-management:DEC-016-time-bound-containers]). So a milestone serves as that pool with no new marker. A scope names it by its title, which the listing of issues returns with each Task, so the pool reads nothing more of GitHub.
 
 **Why a planner files with no owner.** Under DEC-035 point 3, a planner with an instance would own all it files. Every worker would then have to take each Task over first (DEC-035 point 4). Owning what it files still serves a lead, which builds what it plans.
 
