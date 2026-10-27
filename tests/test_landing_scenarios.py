@@ -859,8 +859,14 @@ _LEFT_MID_TASK = (
     "changes, and keeps the merged branch's local copy (#2183)"
 )
 _RELEASE_SWITCHES_MID_TASK = (
-    "release's own clean-up still switches the clone to the base, carrying the changes, and "
-    f"deletes the branch: #2183 changed project-management's only; {_PLANNED}"
+    "accident: release's own clean-up still switches the clone to the base, carrying the "
+    "changes, and deletes the branch: #2183 changed project-management's only, and #2189 "
+    f"leaves it where it is; {_PLANNED}"
+)
+_RELEASE_LEFT_MID_TASK = (
+    "release's own clean-up keeps landing's rule (#2189): the clone is not on the branch that "
+    "merged, so it is left where it is, with its changes, and the merged branch's local copy is "
+    f"kept; {_PLANNED}"
 )
 
 SCENARIOS: tuple[Scenario, ...] = (
@@ -2166,6 +2172,7 @@ SCENARIOS: tuple[Scenario, ...] = (
         after={
             DONE_WORK: _deleted("merged 0", _DIRECT, local="kept", note=_LEFT_MID_TASK),
             MERGE_PR: _deleted("0 record=ran", _DIRECT, local="kept", note=_LEFT_MID_TASK),
+            RELEASE: _deleted("0", _DIRECT, local="kept", note=_RELEASE_LEFT_MID_TASK),
             LAND_WORK: _deleted("0 merge: merged", _DIRECT, local="kept", note=_LEFT_MID_TASK),
         },
     ),
@@ -2692,8 +2699,8 @@ def land(
         after = "after_merge_pr" in run.hooks
     elif caller == RELEASE:
         # Release's one step after the merge is the branch clean-up, which
-        # starts by checking out the base.
-        after = bool(clone.checkouts)
+        # starts by asking whether the clone's working tree is clean (#2189).
+        after = ["status", "--porcelain"] in clone.calls
     else:
         after = f"move #{ISSUE} to done" in run.moves
     unknown = [request.argv for request in host.requests if request.kind == fake.UNKNOWN]
