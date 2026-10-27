@@ -1597,7 +1597,7 @@ Its scripted flows — a drift resolved, the stop, a regression recorded with it
 
 ### As the fixer of your analysis
 
-Where you grant it, the agent can run after a merge, on the analysis artefacts the merge left out of date, and it only proposes. That makes it the *fixer* of your analysis, declared for each artefact type in the work-tracking role's fixers point ("Connections" below). With project-management installed, that means:
+Where you grant it, the agent can run on the analysis artefacts a merge left out of date, when you start it, and it only proposes. That makes it the *fixer* of your analysis, declared for each artefact type in the work-tracking role's fixers point ("Connections" below). With project-management installed, that means:
 
 - **Nothing starts until you grant it.** How you are asked, and how you grant or revoke a fixer, is in project-management's README, [8. (Optional) Grant the fixers your capabilities declare](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare). Only your answer, or your running the grant command, grants it ([project-management:DEC-056-drift-fixers] point 2).
 - **What a run does.** project-management's drift command, `pkit pm fix-drift`, starts the fixers you granted, once your grant is on the default branch ([project-management:DEC-056-drift-fixers] point 3). It runs the agent on the default branch's stale analysis artefacts, where you started the command at a terminal and watch it, as [its README, "Starting the fixers"](../project-management/README.md#starting-the-fixers--fix-drift) says. The agent runs the same judgment as above, on the artefacts the command names. You can still run the agent yourself, as above.

@@ -1,6 +1,7 @@
 component: backbone
 kind: none
 body: >
-  Internal. The adapters README and the evidence of the harness requirement
-  `unattended-confined-run` say that only a drift command's run nobody
-  watches depends on it. Nothing you run changes.
+  Internal. The adapters and permissions READMEs and the evidence of the
+  harness requirement `unattended-confined-run` say that only a drift
+  command's run nobody watches is confined and depends on it. Nothing you
+  run changes.

@@ -131,7 +131,7 @@ A command of this capability, the drift command, starts the fixers. The harness'
 - **A cap per fixer,** counting only artefacts with no standing proposal, so each run moves on.
 - **A limit on fixers at once,** set as the review command's limit on reviewers is.
 - **A wall-clock limit per fixer.** A fixer that reaches it is marked failed, and is not retried in that run. Each of its artefacts counts as `failed` (point 3).
-- **One run at a time per repository,** held by a lock.
+- **One run at a time per repository,** held by a lock. A run with nobody at a terminal starts no fixer and writes nothing, so it takes none.
 - **An artefact an open pull request already changes** is listed, not dispatched.
 - **A failure outside the fixer's work,** such as an agent that could not start, is retried once (core rule 21). The command first checks that the failed start wrote nothing. If it fails again, the command starts no further fixer and reports what failed.
 
