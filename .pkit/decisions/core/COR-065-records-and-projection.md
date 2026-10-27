@@ -1,7 +1,7 @@
 ---
 id: COR-065
 title: Where an accepted record decides, the rest of the system carries it out
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

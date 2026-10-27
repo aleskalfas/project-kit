@@ -1,7 +1,7 @@
 ---
 id: COR-066
 title: A decision reaches the default branch only accepted
-status: proposed
+status: accepted
 date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
