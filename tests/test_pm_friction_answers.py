@@ -1948,3 +1948,214 @@ def test_the_changes_outside_are_named_with_the_reason_first(
     _answering(fa, monkeypatch, 0, document)
     found = fa.covers("0000000", HEAD, "main")
     assert found.outside == ("it was rebased", f"src/\\x1b[31mx.py ({HEAD[:7]}: added)")
+
+
+# ---- the merge as it would land (DEC-055 point 6, #2228) --------------------------
+
+#: A page a change adds, anchored to the engine. New in its change, it needs no answer.
+CORE_PAGE = "docs/core.md"
+CORE = document("core", anchors={"path": ["src/core/**"]})
+
+
+def _origin(repo: AdopterRepo) -> Path:
+    """A bare origin the repository's `main` is pushed to, so the base is a remote's."""
+    origin = repo.root.parent / f"{repo.root.name}-origin.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(origin)], check=True)
+    repo.git("remote", "add", "origin", str(origin))
+    repo.git("push", "-q", "-u", "origin", "main")
+    return origin
+
+
+def _race(make_adopter_repo: MakeAdopterRepo) -> tuple[AdopterRepo, str, str]:
+    """A base pushed to its origin, and two branches off it that each pass alone:
+    `anchor` adds a page anchored to the engine, and `engine` changes the engine.
+    The clone is left on `main`."""
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    repo.commit("base", files=None)
+    _origin(repo)
+    repo.checkout("anchor", create=True)
+    repo.commit("add a page on the engine", {CORE_PAGE: CORE})
+    anchor = repo.head()
+    repo.checkout("main")
+    repo.checkout("engine", create=True)
+    repo.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+    engine = repo.head()
+    repo.checkout("main")
+    return repo, anchor, engine
+
+
+def _land_elsewhere(repo: AdopterRepo, branch: str) -> str:
+    """`branch` squash-merged into the origin's `main`, as the host lands a pull request,
+    with this clone's `origin/main` left where it was: only a fetch shows the landing."""
+    before = repo.git("rev-parse", "origin/main").stdout.strip()
+    repo.squash_merge(branch)
+    landed = repo.head()
+    repo.git("push", "-q", "origin", "main")
+    repo.git("reset", "-q", "--hard", before)
+    repo.git("update-ref", "refs/remotes/origin/main", before)
+    return landed
+
+
+def test_two_changes_that_pass_alone_are_refused_together(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+) -> None:
+    """The race of #2228: one change adds an anchor, the other changes what it stands
+    on. Each passes merged with the base alone. Once the first lands, the second's
+    merge with the base, fetched, fails the change check on the page."""
+    repo, anchor, engine = _race(make_adopter_repo)
+    for head in (anchor, engine):
+        alone = fa.merged(head, "main")
+        assert alone.problem is None, alone.problem
+        assert (alone.failed, alone.refused, alone.conflicts) == (False, (), ())
+    landed = _land_elsewhere(repo, "anchor")
+
+    found = fa.merged(engine, "main")
+    assert found.problem is None, found.problem
+    assert found.tip == landed
+    assert found.failed
+    assert [(f["location"], f["kind"]) for f in found.refused] == [(CORE_PAGE, "friction")]
+    # The merge is a commit of its own, on no branch, whose parents are the tip and
+    # the head; the clone's branch, working tree and worktrees are as they were.
+    parents = repo.git("rev-list", "--parents", "-n", "1", found.merge).stdout.split()
+    assert parents == [found.merge, landed, engine]
+    assert repo.git("branch", "--all", "--contains", found.merge).stdout == ""
+    assert (repo.current_branch(), repo.git("status", "--porcelain").stdout) == ("main", "")
+    listed = repo.git("worktree", "list", "--porcelain").stdout
+    assert listed.count("worktree ") == 1, listed
+
+
+def test_the_merge_is_built_even_where_signing_is_asked_for(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+) -> None:
+    """The merge reaches no branch, so it is never signed: with signing asked for, and a
+    signing program that refuses (the suite's), it is built all the same."""
+    repo, _anchor, engine = _race(make_adopter_repo)
+    _land_elsewhere(repo, "anchor")
+    repo.git("config", "commit.gpgsign", "true")
+    found = fa.merged(engine, "main")
+    assert found.problem is None, found.problem
+    assert "gpgsig" not in repo.git("cat-file", "-p", found.merge).stdout
+
+
+def test_a_head_that_holds_the_tip_its_own_check_read_is_not_checked_again(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Where the head's own check read the tip the fetch finds, and the head holds it,
+    the merge is the head and that check is the merge's: nothing runs twice."""
+    repo, _anchor, engine = _race(make_adopter_repo)
+    tip = repo.git("rev-parse", "main").stdout.strip()
+    checked = {"failed": False, "findings": [], "base": {"tip": tip, "outdated": False}}
+
+    def no_run(*_: Any, **__: Any) -> Any:
+        raise AssertionError("the check ran again")
+
+    monkeypatch.setattr(fa, "_run_check", no_run)
+    found = fa.merged(engine, "main", checked=checked)
+    assert (found.merge, found.tip, found.document) == (engine, tip, checked)
+    # A head that does not hold the tip its check read is merged and checked anew.
+    moved = {**checked, "base": {"tip": tip, "outdated": True}}
+    with pytest.raises(AssertionError, match="the check ran again"):
+        fa.merged(engine, "main", checked=moved)
+
+
+def test_the_check_runs_at_the_merge_with_the_head_as_its_own_head(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """From a checkout of the merge, against the tip, unrouted, with the head named as
+    the change's own head, as a pull request's checks run it (COR-062 point 4)."""
+    repo, _anchor, engine = _race(make_adopter_repo)
+    landed = _land_elsewhere(repo, "anchor")
+    real = subprocess.run
+    seen: list[tuple[list[str], str, str, str | None, str | None]] = []
+
+    def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if argv[:3] != ["pkit", "friction", "check"]:
+            return real(argv, **kwargs)
+        cwd = str(kwargs.get("cwd"))
+        at = real(["git", "rev-parse", "HEAD"], cwd=cwd, capture_output=True, text=True)
+        env = kwargs.get("env") or {}
+        seen.append(
+            (argv, cwd, at.stdout.strip(), env.get("PKIT_CHECK_HEAD"), env.get("PKIT_NO_ROUTE"))
+        )
+        document = {"schema_version": 1, "failed": False, "findings": [], "answers": []}
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    found = fa.merged(engine, "main")
+    assert found.problem is None, found.problem
+    ((argv, cwd, at, own, unrouted),) = seen
+    assert argv == ["pkit", "friction", "check", "--json", "--base", landed]
+    assert (at, own, unrouted) == (found.merge, engine, "1")
+    assert cwd != str(repo.root) and not Path(cwd).exists()
+
+
+def test_a_merge_that_conflicts_names_its_files_and_checks_nothing(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+) -> None:
+    repo, _anchor, _engine = _race(make_adopter_repo)
+    repo.checkout("cli", create=True)
+    repo.commit("the CLI, one way", {"src/cli/main.py": "print('cli, one way')\n"})
+    head = repo.head()
+    repo.checkout("main")
+    repo.checkout("other", create=True)
+    repo.commit("the CLI, another way", {"src/cli/main.py": "print('cli, another way')\n"})
+    repo.checkout("main")
+    _land_elsewhere(repo, "other")
+    found = fa.merged(head, "main")
+    assert found.problem is None, found.problem
+    assert (found.conflicts, found.document, found.merge) == (("src/cli/main.py",), None, "")
+
+
+def test_a_base_that_cannot_be_fetched_leaves_the_merge_unchecked(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(fa, "_refresh_base", lambda base: "the base origin/main is gone")
+    found = fa.merged(HEAD, "main")
+    assert (found.problem, found.document, found.failed) == (
+        "the base origin/main is gone",
+        None,
+        False,
+    )
+
+
+def test_a_check_with_no_document_at_the_merge_is_a_problem_never_a_pass(
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repo, _anchor, engine = _race(make_adopter_repo)
+    _land_elsewhere(repo, "anchor")
+    monkeypatch.setattr(fa, "_run_check", lambda *_a, **_k: fa._NoDocument("it exited 2: boom"))
+    found = fa.merged(engine, "main")
+    assert found.document is None
+    assert found.problem is not None and "it exited 2: boom" in found.problem
+    listed = repo.git("worktree", "list", "--porcelain").stdout
+    assert listed.count("worktree ") == 1, listed
+
+
+def test_only_the_findings_the_check_fails_on_are_refused(fa: ModuleType) -> None:
+    """The kinds the check fails on in enforcing mode name the documents; what it
+    only reports, such as answers made apart, refuses nothing."""
+    findings = [
+        {"location": "docs/a.md", "kind": "answered", "message": "updated"},
+        {"location": "docs/b.md", "kind": "friction", "message": "src/** changed"},
+        {"location": "docs/c.md", "kind": "answered-apart", "message": "made apart"},
+        {"location": "docs/d.md", "kind": "dead-anchor", "message": "matches no file"},
+    ]
+    found = fa.Merged(
+        HEAD, tip=MERGE_BASE, merge=HEAD, document={"failed": True, "findings": findings}
+    )
+    assert found.failed
+    assert [f["location"] for f in found.refused] == ["docs/b.md", "docs/d.md"]
+    # In warning mode the check fails nothing: the same findings are reported, refused none.
+    passing = fa.Merged(HEAD, document={"failed": False, "findings": findings})
+    assert (passing.failed, passing.refused) == (False, ())
+    assert [f["location"] for f in passing.failing] == ["docs/b.md", "docs/d.md"]
