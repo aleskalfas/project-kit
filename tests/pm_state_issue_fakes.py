@@ -3,18 +3,21 @@
 `FakeRepo` answers the `gh` calls `_lib/state_issues` and `_lib/comment_log`
 make: a page of an issue's comments, an author's access and who opened an issue
 (`gh api`), a read of an issue, a listing of issues, a comment, a description
-written from a file, a new issue, a lock, and a reopen or a close. Every comment
-and issue it is handed is authored by `author`, as GitHub authors one by the
-account `gh` runs as. An issue a test adds is opened by `author` too, unless the
-test names its `opener`. No test reaches GitHub.
+written from a file, a new issue, a lock, and a reopen or a close. It also lists
+the open pull requests, which `prs` holds as each one's head branch by its
+number. Every comment and issue it is handed is authored by `author`, as GitHub
+authors one by the account `gh` runs as. An issue a test adds is opened by
+`author` too, unless the test names its `opener`, and carries the labels and
+assignees the test names. No test reaches GitHub.
 
 `access` maps a login to the level GitHub would answer; a login it lacks
 answers 404. `failing` holds the verbs whose next call fails once (`"comment"`,
 `"edit"`, `"create"`, `"view"`, `"list"`, `"page"`, `"access"`, `"issue"`,
-`"lock"`, `"reopen"`), and `"comment-landed"` for a comment that lands though
-its call fails. `before_post` runs before each comment lands, with the issue's
-number, so a test can post another clone's comment there to stand for one made
-in the same instant.
+`"lock"`, `"reopen"`, `"pr-list"`), `"page:<N>"` for a page of issue N's
+comments, and `"comment-landed"` for a comment that lands though its call
+fails. `before_post` runs before each comment lands, with the issue's number,
+so a test can post another clone's comment there to stand for one made in the
+same instant.
 
 GitHub numbers the comments of every issue from one sequence, so a comment made
 later has the higher id, whichever issue it is on. `COMMENT_IDS` stands for it:
@@ -54,6 +57,20 @@ class FakeIssue:
     args: list[str] = field(default_factory=list)
     opener: str = "me"
     locked: bool = False
+    labels: list[str] = field(default_factory=list)
+    assignees: list[str] = field(default_factory=list)
+
+    def record(self, number: int) -> dict[str, Any]:
+        """The issue as `gh` gives it, in every field a read or a listing asks for."""
+        return {
+            "number": number,
+            "state": self.state,
+            "title": self.title,
+            "body": self.body,
+            "labels": [{"name": name} for name in self.labels],
+            "assignees": [{"login": login} for login in self.assignees],
+            "milestone": None,
+        }
 
 
 @dataclass
@@ -65,6 +82,7 @@ class FakeRepo:
     calls: list[list[str]] = field(default_factory=list)
     before_post: Callable[[int], None] | None = None
     next_issue: int = 100
+    prs: dict[int, str] = field(default_factory=dict)
 
     def add(
         self,
@@ -74,9 +92,16 @@ class FakeRepo:
         title: str = "t",
         state: str = "OPEN",
         opener: str | None = None,
+        labels: tuple[str, ...] = (),
+        assignees: tuple[str, ...] = (),
     ):
         self.issues[number] = FakeIssue(
-            title, body, state, opener=self.author if opener is None else opener
+            title,
+            body,
+            state,
+            opener=self.author if opener is None else opener,
+            labels=list(labels),
+            assignees=list(assignees),
         )
         return self.issues[number]
 
@@ -111,6 +136,8 @@ class FakeRepo:
         self.calls.append(argv)
         if argv[1] == "api":
             return self._api(argv)
+        if argv[1:3] == ["pr", "list"]:
+            return self._list_prs(argv)
         assert argv[1] == "issue", f"unexpected gh call: {argv}"
         verb = argv[2]
         if verb == "create":
@@ -130,8 +157,7 @@ class FakeRepo:
         if verb == "view":
             if self._fails("view"):
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
-            record = {"number": number, "state": issue.state, "title": issue.title}
-            record["body"] = issue.body
+            record = issue.record(number)
             fields = argv[argv.index("--json") + 1].split(",")
             return _done(argv, stdout=json.dumps({f: record[f] for f in fields}))
         if verb == "comment":
@@ -173,18 +199,30 @@ class FakeRepo:
             issue = self.issues[number]
             if state != "all" and issue.state != state.upper():
                 continue
-            record = {"number": number, "state": issue.state, "title": issue.title}
-            record["body"] = issue.body
+            record = issue.record(number)
             rows.append({f: record[f] for f in fields})
+        return _done(argv, stdout=json.dumps(rows[:limit]))
+
+    def _list_prs(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
+        """`gh pr list --state open --limit <n> --json number,headRefName`: the
+        open pull requests, the newest first."""
+        if self._fails("pr-list"):
+            return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+        limit = int(argv[argv.index("--limit") + 1]) if "--limit" in argv else 30
+        fields = argv[argv.index("--json") + 1].split(",")
+        rows = [
+            {f: {"number": number, "headRefName": head}[f] for f in fields}
+            for number, head in sorted(self.prs.items(), reverse=True)
+        ]
         return _done(argv, stdout=json.dumps(rows[:limit]))
 
     def _api(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         path = argv[2]
         page = _PAGE.fullmatch(path)
         if page:
-            if self._fails("page"):
-                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             number, size, index = (int(g) for g in page.groups())
+            if self._fails("page") or self._fails(f"page:{number}"):
+                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             comments = self.issues[number].comments
             chunk = comments[(index - 1) * size : index * size]
             return _done(argv, stdout=json.dumps(chunk))

@@ -8,8 +8,10 @@ real history, or one shaped like it where the backbone cannot be made to report
 a kind; the command itself runs as a subprocess, as the workflow runs it.
 
 Held to: stale debt with what changed and since when; deferrals listed with
-their reason and never counted; the other findings; both measures, never
-counted; the same findings giving the same body; what the findings carry staying
+their reason and never counted; revalidations answered apart listed and counted
+apart from what needs an answer (COR-062 point 7, #2206); the other findings;
+both measures, never counted; the same findings giving the same body; what the
+findings carry staying
 inert text, a path that is no UTF-8 included; the body within its size, cut by
 whole entries, the findings that need an answer last; and nothing rendered from
 a document it cannot fully read.
@@ -30,7 +32,9 @@ from scripts import friction_report_body as report
 
 from project_kit import friction_repository as fr
 from tests.adopter_repo import HISTORY_EPOCH, Author, MakeAdopterRepo
-from tests.friction_documents import T1, Timeline, document, friction_config, guide
+from tests.friction_documents import T1, T2, Timeline, document, friction_config, guide
+from tests.test_answer_files import GUIDE, answer_path, answers, bare_guide
+from tests.test_answer_files import entry as revalidation
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -263,6 +267,53 @@ def test_a_dormant_check_needs_no_answer() -> None:
     assert made["needs_answer"] == 0
     assert made["body"].startswith("**Nothing needs an answer.**\n")
     assert "The check is dormant" in made["body"]
+
+
+# --- answered apart: debt, reported only (COR-062 point 7) ----------------------------------
+
+
+def _answered_apart(timeline: Timeline) -> str:
+    """Two lines of work revalidate the guide, neither reading the other's answer file,
+    and both merge. Returns the merge that first holds both."""
+    repo = timeline.adopter
+    timeline.start({GUIDE: bare_guide()})
+    repo.checkout("one", create=True)
+    timeline.commit("answer on one", {answer_path("one"): answers(revalidation(at=T1))})
+    repo.checkout("main")
+    repo.checkout("two", create=True)
+    timeline.commit("answer on two", {answer_path("two"): answers(revalidation(at=T2))})
+    repo.checkout("main")
+    timeline.merge("one")
+    return timeline.merge("two")
+
+
+def test_answered_apart_is_listed_and_counted_apart_and_needs_no_answer(
+    timeline: Timeline,
+) -> None:
+    """Debt no change owes: it holds the tracking issue open no more than a deferral
+    does, and the headline counts it apart from what needs an answer."""
+    both = _answered_apart(timeline)
+    made = report.publication(_check(timeline.adopter.root))
+    assert made["needs_answer"] == 0
+    body = made["body"]
+    assert body.startswith("**Nothing needs an answer.** Reported only: 1 answered apart.\n")
+    assert "### Other findings" not in body
+    apart = _section(body, "Answered apart")
+    assert f"- `docs/guide.md` · since `{_day(5)}`" in apart
+    assert "one.yaml and two.yaml" in apart and both[:7] in apart
+
+
+def test_answered_apart_is_counted_beside_what_needs_an_answer() -> None:
+    apart = [
+        _finding("answered-apart", f"docs/page_{n}.md", "answered apart: a.yaml and b.yaml")
+        for n in range(2)
+    ]
+    made = report.publication(_document(findings=[_stale(1), *apart]))
+    assert made["needs_answer"] == 1
+    assert made["body"].startswith(
+        "**Needs an answer: 1 stale.** Reported only: 2 answered apart.\n"
+    )
+    assert "answered-apart" not in _section(made["body"], "Stale")
 
 
 # --- how the body is made -----------------------------------------------------------------

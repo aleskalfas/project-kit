@@ -807,8 +807,8 @@ class LocalClone:
         """What the local clean-up did with `branch`: `deleted`; `kept` or
         `absent` when a clean-up ran and did not delete it; `none` when none ran.
         A clean-up ran when it checked out a branch, or asked whether the
-        working tree is clean, as project-management's does before it decides
-        whether to switch (#2183)."""
+        working tree is clean, as project-management's and release's do before
+        they decide whether to switch (#2183, #2189)."""
         if branch in self.deleted:
             return "deleted"
         if not self.checkouts and ["status", "--porcelain"] not in self.calls:

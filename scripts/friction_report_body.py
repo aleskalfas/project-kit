@@ -9,11 +9,15 @@ document: it runs no check, reads no repository and talks to no tracker. It is
 project-kit's own pipeline tooling, no part of what project-kit ships (ADR-055
 point 5).
 
-- **What needs an answer** is every finding but two kinds (`NO_ANSWER_NEEDED`):
-  `deferred`, a deferral being itself an answer (COR-050 point 5), and
-  `left-out`, which the check reports as owing nothing. Deferrals are listed in
-  a section of their own, each with its reason. The two measures (point 8) are
-  rendered and never counted: they say what remains to anchor.
+- **What needs an answer** is every finding but three kinds (`NO_ANSWER_NEEDED`).
+  A deferral, `deferred`, is itself an answer (COR-050 point 5), and the check
+  reports `left-out` as owing nothing. Two revalidations made apart,
+  `answered-apart`, are debt that no change owes, reported only until the next
+  revalidation on the artefact judges them together (COR-062 point 7, ADR-068
+  point 6). Deferrals, each with its reason, and the revalidations answered
+  apart are listed in sections of their own, and the headline counts the latter
+  apart from what needs an answer. The two measures (point 8) are rendered and
+  never counted: they say what remains to anchor.
 - **The same findings, the same body.** The body is a function of the findings
   and the measures — no age, no run time, no HEAD — so a publisher that compares
   bodies changes nothing when nothing changed. A finding says since when by the
@@ -27,9 +31,9 @@ point 5).
   (`caf\\xe9.md`).
 - **Within a body's size.** Trackers cap a body (GitHub at 65 536 characters).
   While the body exceeds `BUDGET`, its lists are shortened by whole entries: the
-  measures first, then the deferrals and what owes nothing, and the findings
-  that need an answer last. Each shortened list ends with how many entries it
-  does not show, and the body says how many in all.
+  measures first, then the deferrals, what was answered apart and what owes
+  nothing, and the findings that need an answer last. Each shortened list ends
+  with how many entries it does not show, and the body says how many in all.
 - **A document it cannot fully read is refused** (`Unreadable`): text that is no
   JSON object, another check's document, a `schema_version` other than
   `DOCUMENT_VERSION`, or one without its findings or its measures. Nothing is
@@ -77,10 +81,13 @@ STALE = "stale"
 DEFERRED = "deferred"
 LEFT_OUT = "left-out"
 OVER_BROAD = "over-broad"
+ANSWERED_APART = "answered-apart"
 
-#: The kinds that need no answer: a deferral is one (COR-050 point 5), and the
-#: check reports `left-out` as owing nothing (the CLI reference, "Friction checks").
-NO_ANSWER_NEEDED = frozenset({DEFERRED, LEFT_OUT})
+#: The kinds that need no answer: a deferral is one (COR-050 point 5), the check
+#: reports `left-out` as owing nothing (the CLI reference, "Friction checks"), and
+#: revalidations answered apart are debt reported only, which no change owes
+#: (COR-062 point 7).
+NO_ANSWER_NEEDED = frozenset({DEFERRED, LEFT_OUT, ANSWERED_APART})
 
 #: The size a body keeps within: GitHub caps an issue body at 65 536 characters,
 #: and the publisher adds lines of its own.
@@ -110,6 +117,11 @@ OTHER = (
     "Dead anchors, anchors of a kind nothing resolves, over-broad anchors, anchors on an id "
     "two artefacts share, what does not read — a file's front matter, or `friction.exclude` "
     "at a revalidation point — and artefacts a shallow clone could not judge."
+)
+APART = (
+    "Two revalidations of one artefact, neither of which read the other: nobody has judged "
+    "their combined state. No change owes an answer for it. The next revalidation on the "
+    "artefact reads both and judges them together (COR-062 point 7)."
 )
 #: What the body says of an over-broad anchor, in place of the check's message.
 OVER_BROAD_SAID = (
@@ -197,6 +209,7 @@ def render(document: Mapping[str, Any], limits: Mapping[str, int | None] | None 
     stale = [f for f in answer if f["kind"] == STALE]
     other = [f for f in answer if f["kind"] != STALE]
     deferred = [f for f in findings if f["kind"] == DEFERRED]
+    apart = [f for f in findings if f["kind"] == ANSWERED_APART]
     left_out = [f for f in findings if f["kind"] == LEFT_OUT]
     sections: list[str] = []
     for title, lead, found, show_kind, group in (
@@ -209,6 +222,13 @@ def render(document: Mapping[str, Any], limits: Mapping[str, int | None] | None 
             False,
             LISTED,
         ),
+        (
+            "Answered apart: debt, reported only and holding nothing open",
+            APART,
+            apart,
+            False,
+            LISTED,
+        ),
         ("Reported, nothing owed", None, left_out, True, LISTED),
     ):
         if found:
@@ -217,7 +237,8 @@ def render(document: Mapping[str, Any], limits: Mapping[str, int | None] | None 
             sections.append("")
     sections += ["### Measures: reported, never failed (COR-050 point 8)", ""]
     sections += _measures(cast("Mapping[str, Any]", document["measures"]), cut)
-    return _joined([_headline(stale, other), "", INTRO, "", *cut.notice(), *sections])
+    headline = _headline(stale, other, apart)
+    return _joined([headline, "", INTRO, "", *cut.notice(), *sections])
 
 
 @dataclass
@@ -247,14 +268,17 @@ class _Cut:
         ]
 
 
-def _headline(stale: Sequence[Any], other: Sequence[Any]) -> str:
+def _headline(stale: Sequence[Any], other: Sequence[Any], apart: Sequence[Any]) -> str:
+    """What needs an answer, and, counted apart from it, what was answered apart."""
     if not stale and not other:
-        return "**Nothing needs an answer.**"
-    parts = [
-        *([f"{len(stale)} stale"] if stale else []),
-        *([f"{len(other)} other finding{'' if len(other) == 1 else 's'}"] if other else []),
-    ]
-    return f"**Needs an answer: {', '.join(parts)}.**"
+        line = "**Nothing needs an answer.**"
+    else:
+        parts = [
+            *([f"{len(stale)} stale"] if stale else []),
+            *([f"{len(other)} other finding{'' if len(other) == 1 else 's'}"] if other else []),
+        ]
+        line = f"**Needs an answer: {', '.join(parts)}.**"
+    return f"{line} Reported only: {len(apart)} answered apart." if apart else line
 
 
 def _finding(finding: Mapping[str, Any], show_kind: bool) -> str:

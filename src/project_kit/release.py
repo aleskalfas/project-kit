@@ -3818,8 +3818,9 @@ def _gh_pr_view(pr_number: int, repo_root: Path) -> dict[str, Any]:
 # that capability's `scripts/_lib/pr_merge.py` (cleanup_local): the
 # capability's scripts run as standalone `uv run --script`s that do not import
 # `project_kit`, and the local branch is not on the hosting service. Keep the
-# two in step: a fix to either (the fork-PR guard, the merged-head guard on the
-# local delete) belongs in both.
+# two in step: a fix to either (the rule of which clone is moved, the fork-PR
+# guard, the merged-head guard on the local delete) belongs in both.
+# `tests/test_local_clean_up_parity.py` holds them to one table of cases.
 
 
 def _warn(message: str) -> None:
@@ -3844,12 +3845,24 @@ def _git_cleanup_local(
     except the branch returned to is the PR's own base (`baseRefName`) — the
     backbone reads no capability config.
 
-    When the checkout cannot happen (detached HEAD, the base branch checked out
-    in another worktree) the pull is skipped — pulling into whatever IS checked
-    out would be wrong — but the branch delete is still attempted. A head with
-    no local copy (a release PR opened by CI) is skipped silently rather than
-    warned about. `-D` (not `-d`) because a squash-merged branch is never an
-    ancestor of the base.
+    The clean-up moves the clone only when it is on the branch that merged
+    with a clean working tree: no uncommitted changes, untracked files
+    included (#2189, as landing's since #2183). A clean clone already on the
+    base, where a release is usually merged from, is fast-forwarded there and
+    never switched; the local head is kept, said in one line, and a
+    fast-forward that fails warns and changes nothing. A clone on another
+    branch, on a detached HEAD, or with uncommitted changes holds someone's
+    work in progress: a checkout would carry it onto the base, for the next
+    commit to land there. Such a clone is left where it is, nothing pulled
+    and the local head kept, said in one line; so is one whose working tree
+    git cannot read.
+
+    When the checkout cannot happen (the base branch checked out in another
+    worktree) the pull is skipped — pulling into whatever IS checked out
+    would be wrong — and the local head, still the branch checked out here,
+    is kept. A head with no local copy (a release PR opened by CI) is skipped
+    silently rather than warned about. `-D` (not `-d`) because a
+    squash-merged branch is never an ancestor of the base.
 
     The local branch goes only with the remote one: it is deleted only when
     `remote`, how the deletion on the service ended, is deleted or gone; one
@@ -3874,16 +3887,40 @@ def _git_cleanup_local(
             check=False,
         )
 
-    notes: list[str] = []
-    result = _git("checkout", base_branch)
-    if result.returncode != 0:
-        _warn(f"git checkout {base_branch} failed: {result.stderr.strip()}")
-    else:
+    def _kept(name: str) -> str:
+        tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
+        return f" Local branch {name} is kept." if tip else ""
+
+    current, why = _read_the_clone(branch, base_branch, _git)
+    if why:
+        return [f"left this clone where it is: {why}.{_kept(repr(branch))}"]
+    if current != branch:
+        # On the base with a clean working tree: fast-forwarded, never
+        # switched, and the merged branch's local copy kept.
         result = _git("pull", "--ff-only")
         if result.returncode != 0:
-            _warn(f"git pull failed: {result.stderr.strip()}")
-        else:
-            notes.append(f"updated local {base_branch!r}.")
+            _warn(
+                f"git pull failed: {result.stderr.strip()}. This clone stays on {base_branch} "
+                f"as it was.{_kept(branch)}"
+            )
+            return []
+        return [
+            f"brought {base_branch!r} up to date in this clone, which is on it, not on "
+            f"{branch!r}, the branch that merged.{_kept(repr(branch))}"
+        ]
+    result = _git("checkout", base_branch)
+    if result.returncode != 0:
+        _warn(
+            f"git checkout {base_branch} failed: {result.stderr.strip()}. This clone stays on "
+            f"{branch}, and local branch {branch} is kept."
+        )
+        return []
+    notes: list[str] = []
+    result = _git("pull", "--ff-only")
+    if result.returncode != 0:
+        _warn(f"git pull failed: {result.stderr.strip()}")
+    else:
+        notes.append(f"updated local {base_branch!r}.")
     if cross_repository:
         return notes
     tip = _git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}").stdout.strip()
@@ -3913,6 +3950,30 @@ def _git_cleanup_local(
     else:
         notes.append(f"deleted local branch {branch!r}.")
     return notes
+
+
+def _read_the_clone(
+    branch: str, base_branch: str, git: Callable[..., subprocess.CompletedProcess[str]]
+) -> tuple[str, str]:
+    """The branch this clone is on ("" on a detached HEAD), and why the local
+    clean-up leaves it where it is: "" when the clone is on `branch`, the
+    branch that merged, or on `base_branch` with a clean working tree.
+
+    Both are read before either is judged, as project-management's copy reads
+    them (`_lib/pr_merge._read_the_clone`)."""
+    current = git("symbolic-ref", "--quiet", "--short", "HEAD").stdout.strip()
+    status = git("status", "--porcelain")
+    if current not in (branch, base_branch):
+        on = repr(current) if current else "a detached HEAD"
+        return current, f"it is on {on}, not on {branch!r}, the branch that merged"
+    if status.returncode != 0:
+        return (
+            current,
+            f"git cannot tell whether its working tree is clean ({status.stderr.strip()})",
+        )
+    if status.stdout.strip():
+        return current, "its working tree has uncommitted changes"
+    return current, ""
 
 
 # --- The shareability check (#494) ---------------------------------------
