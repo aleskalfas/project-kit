@@ -1,0 +1,5 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README now says an artefact's revalidation lives among its
+  answers in answer files, not in its friction block. Nothing you run changes.
