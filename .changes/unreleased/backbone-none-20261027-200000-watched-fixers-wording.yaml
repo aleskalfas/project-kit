@@ -1,7 +1,6 @@
 component: backbone
 kind: none
 body: >
-  Internal. The help of `pkit agents run`, the adapters README and the
-  evidence of the harness requirement `unattended-confined-run` say that
-  only a drift command's run nobody watches takes the confined form. Nothing
-  you run changes.
+  Internal. The adapters README and the evidence of the harness requirement
+  `unattended-confined-run` say that only a drift command's run nobody
+  watches depends on it. Nothing you run changes.
