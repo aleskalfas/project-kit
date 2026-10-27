@@ -1,0 +1,82 @@
+answers:
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-27T12:20:51Z
+      outcome: unchanged
+      unchanged-because: "Added an anchor on COR-013 point 1, which grounds what the page already says: the adapter, not the lifecycle, knows where its harness keeps skills, agents and settings. The prose did not change."
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - moved-5e5765c43552.yaml
+    revalidated:
+      at: 2026-10-27T12:20:54Z
+      outcome: unchanged
+      unchanged-because: Added anchors on the core rules file, the harness requirements file, the lifecycle README's uninstall section, and COR-004, COR-007, COR-016, COR-020 and COR-026. The prose did not change. Each new anchor grounds what the page already says of it.
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - moved-7bd9bf62ec3a.yaml
+      - moved-a08ed9a38659.yaml
+    revalidated:
+      at: 2026-10-27T12:20:57Z
+      outcome: unchanged
+      unchanged-because: "Added anchors on the CLI reference's sync and agents run sections, the core rules file and project-management's grants file. The prose did not change. Each grounds what the page already says: what sync and agents run do, the workspace rule, and the deny that file holds."
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261025T214334Z-3176bb1a.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+    revalidated:
+      at: 2026-10-27T12:21:00Z
+      outcome: unchanged
+      unchanged-because: Added anchors on the CLI reference's sync and schemas validate sections. The prose did not change. Each grounds what the guide already says that command does.
+  - artefact: .pkit/process/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - moved-61683c1961c7.yaml
+    revalidated:
+      at: 2026-10-27T12:21:03Z
+      outcome: unchanged
+      unchanged-because: Added anchors on the lifecycle README's connection, documentation and friction blocks section, and on COR-006, COR-030, COR-032, ADR-009 point 7, ADR-023 point 1 and ADR-057 point 5. The prose did not change. Each grounds what the page already says of that section or record.

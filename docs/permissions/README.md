@@ -23,6 +23,8 @@ pkit:
         - .pkit/permissions/README.md#authoring-a-fragment-pkit-permissions-scaffold-cap
         - .pkit/permissions/README.md#the-permission-prompt-diagnostic-loop
         - .pkit/cli/README.md#surface
+        - .pkit/cli/README.md#sync
+        - .pkit/cli/README.md#schemas-validate-path
         - .pkit/adapters/README.md#currently-shipped
         - .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy
         - .pkit/adapters/claude-code/README.md#settings
