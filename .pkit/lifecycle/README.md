@@ -42,7 +42,7 @@ pkit:
         - .pkit/schemas/backbone/filler.schema.json
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - hatch_build.py
-      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#1", "COR-050#5", "COR-050#12", "COR-050#14", "COR-050#16", COR-052, COR-053, "COR-054#3", COR-055, "COR-056#2", "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", "COR-062#9", "COR-062#11", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
+      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#1", "COR-050#5", "COR-050#12", "COR-050#14", "COR-050#16", COR-052, COR-053, "COR-054#3", COR-055, "COR-056#2", "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", "COR-062#9", "COR-062#11", "ADR-049#3", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
 ---
 
 # Lifecycle
@@ -960,19 +960,18 @@ The merge delivery in step 8 may add to the settings file the adapter's merge wr
 A transition is complete when its two recorded states are equal (COR-059 point 6). The target is written first, so an interrupted transition never reads as finished. An older pkit that applies #1212's refusal reads only `backbone_version`, finds a version newer than its own, and refuses.
 
 - **An interrupted upgrade is finished by the next one.** A migration that exits non-zero stops the upgrade: the completion is not recorded, and no pin is written. The next upgrade finds the two keys apart, propagates again, and runs the backbone migrations from `completed_version`, the stopped one included. So a migration may fail loudly.
-- **A migration that fails every time** is fixed at its cause and the upgrade run again, or the upgrade is undone with git, which restores both keys ("Rolling back an upgrade", below).
+- **A migration that fails every time** is fixed at its cause and the upgrade run again, or the upgrade is undone with git, which restores both keys (ADR-065 point 8, "Rolling back an upgrade", below).
 - **A sync between the two** stops: its guard finds them apart and names `pkit upgrade` ("Sync's guard", below). Sync moves no recorded version.
 - **First install records the same two states:** the target before it copies anything, each adapter registered and recorded after the copy, the completion last. The next upgrade finishes an interrupted install.
 
 ### Rolling back an upgrade
 
-A project goes back to an earlier release with git, never with pkit, since its migrations run forward only (COR-010).
+A project goes back to an earlier release with git, by reverting the commit of each upgrade since that release, never with pkit, since its migrations run forward only (COR-010). The revert restores every file the upgrade changed, in `.pkit/` and outside it (ADR-049 point 3, ADR-065 point 8).
 
 - **What an upgrade writes outside `.pkit/`:**
   - the derivable state and merge delivery of step 8, such as the deployed skills and agents and the settings file the adapter merges ("What sync writes", below)
-  - each file a migration edits, which may be one of the project's own artefacts. The 2.0.0 move of answers, `2.0.0/002-move-answers-to-files.sh`, rewrites the front matter of each of the project's own artefacts whose block holds an answer. It adds the answer files in `.pkit/project/friction/answers/` (COR-062 point 11).
-- **A write outside `.pkit/` needs no record of its own.** The record that decides a migration's change decides what the migration writes, as COR-062 point 11 decides the move of answers.
-- **Undoing an upgrade:** commit the upgrade on its own, and roll it back by reverting that commit, `git revert <commit>`. The revert brings back every file the upgrade's commit changed, inside `.pkit/` and outside, and removes each one it added. The manifest, with its two recorded versions, and the pin file are among them.
+  - each file a migration edits, which may be one of the project's own artefacts. The 2.0.0 move of answers, `2.0.0/002-move-answers-to-files.sh`, rewrites the front matter of each of the project's own artefacts whose block holds an answer (COR-062 point 11).
+- **Undoing an upgrade:** commit the upgrade on its own, and roll it back by reverting that commit, `git revert <commit>`. The revert brings back every file the upgrade's commit changed, inside `.pkit/` and outside. It removes each file the commit added, such as the answer files of the 2.0.0 move in `.pkit/project/friction/answers/`. The manifest, with its two recorded versions, and the pin file are among them.
 - **Not `.pkit/` alone:** `git checkout <ref> -- .pkit/` restores only what lies in `.pkit/`. After the 2.0.0 move, the checkout leaves the blocks of the artefacts outside `.pkit/` without their answers, so an older backbone reads none there. Nor does it remove a file the upgrade added in `.pkit/` that `<ref>` does not hold.
 - **An upgrade not yet committed,** such as one a failing migration stopped, is undone over every file `git status` lists, inside `.pkit/` and outside. Restore each file it lists as changed or deleted, with `git restore --staged --worktree <path>`, and delete each new file the upgrade added.
 - **A revert moves no installed pkit.** Where pkit then runs a release other than the project's, sync's guard stops `pkit sync` and names the remedy ("Sync's guard", below).
