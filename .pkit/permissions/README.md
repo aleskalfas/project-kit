@@ -282,13 +282,13 @@ A recognizer's regex `pattern` is matched with a program's path cut to its name,
 
 The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates every ref the remote holds. It names a refspec opening with `+`, as in `git push origin +main`, through the recognizer field `word_prefix_any`.
 
-**A deny reads the command a runner runs.** A deny matches the command a listed runner runs, in every form above, as well as the runner itself. A grant still matches the runner as written (ADR-025 point 5). The runners:
+**A deny reads the command a runner runs.** A deny matches the command a listed runner runs, in every form above, as well as the runner itself. A grant still matches the runner as written. The runners:
 
 - `env`, `command`, `exec`, `nice`, `nohup`, `timeout`, `time`, `xargs` and `uv run`
 - find's `-exec`, `-execdir`, `-ok` and `-okdir`
 - `sh`, `bash`, `zsh` or `dash` given `-c`, whose script the core splits and reads again as a command, one level deep
 
-The core skips each runner's own options it knows, and `timeout`'s duration, and reads a runner behind a runner. So `find . -exec rm -rf {} +`, `xargs -0 rm -rf`, `env rm -rf ~`, `sh -c 'rm -rf ~'` and `uv run --directory x rm -rf ~` are denied. An assignment that `env` makes counts as a leading assignment does, and a file `uv run --env-file` loads as one that changes the configuration. For a deny alone, find's terminator `\;` is read as the word `;` that find receives, not as a separator.
+The core skips each runner's own options it knows, and `timeout`'s duration, and reads a runner behind a runner. So `find . -exec rm -rf {} +`, `xargs -0 rm -rf`, `env rm -rf ~`, `sh -c 'rm -rf ~'` and `uv run --directory x rm -rf ~` are denied. An assignment that `env` makes counts as a leading assignment does, and a file that `uv run --env-file` loads counts as one that changes the configuration. For a deny alone, find's terminator `\;` is read as the word `;` that find receives, not as a separator.
 
 **Where a deny may bind on what the core cannot see, no grant allows the command.** The core then abstains, naming the deny, and a strict posture denies. Four things keep the core from seeing:
 
@@ -314,9 +314,9 @@ The core skips each runner's own options it knows, and `timeout`'s duration, and
 
   So `find . -exec sh -c 'rm "$1"' _ {} \;` abstains, naming every guardrail.
 
-A harmless `git -c`, or a runner's option the core does not know, is thus a false prompt. So is a `find` whose words hold an expansion or a brace, quoted or not, or an unquoted bracket, such as `find . -name '*.{ts,tsx}'`. Each stays one until the diagnostic log shows which recur and earns a list of safe keys or options ([ADR-025](../../tech-docs/architecture/decisions/ADR-025-segment-conservative-bash-allow.md) point 5).
+A harmless `git -c`, or a runner's option the core does not know, is thus a false prompt. So is a `find` whose words hold an expansion or a brace, quoted or not, or an unquoted bracket, such as `find . -name '*.{ts,tsx}'`. Each stays one until the diagnostic log shows which recur and earns a list of safe keys or options.
 
-**Where Claude Code may allow what the core abstains on for a guardrail, the operator is asked, outside auto and bypass mode.** A harness's native rules may allow a command the core abstains on, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on such a command in a form the core cannot see. An adapter whose harness's rules may allow the command asks the operator rather than abstain, except in auto and bypass mode ([ADR-025](../../tech-docs/architecture/decisions/ADR-025-segment-conservative-bash-allow.md) point 7).
+**Where Claude Code may allow what the core abstains on for a guardrail, the operator is asked, outside auto and bypass mode.** A harness's native rules may allow a command the core abstains on, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on such a command in a form the core cannot see. An adapter whose harness's rules may allow the command asks the operator rather than abstain, except in auto and bypass mode.
 
 [The Claude Code hook](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy) asks the operator on such a command, except in auto and bypass mode, where the operator chose not to be asked. A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it. Where the core cannot tell such a deny, it abstains. The deny side stays a speed bump all the same, not a security boundary.
 
