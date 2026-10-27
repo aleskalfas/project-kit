@@ -1,6 +1,6 @@
 component: backbone
 kind: none
 body: >
-  Internal. The adapters, permissions and process READMEs anchor the
-  commands, files and records their statements rest on. Their text is
-  unchanged, and nothing you run changes.
+  Internal. The schemas, scratchpad and skills READMEs and the root README
+  anchor the command sections, record points and document sections their
+  statements rest on. Only their anchors change, and nothing you run changes.
