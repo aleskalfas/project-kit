@@ -441,7 +441,50 @@ def test_a_reader_refuses_once_where_the_answers_have_not_moved(
     assert result.exit_code != 0
     assert "2 artefacts hold answers in their own block" in result.output
     assert af.MOVE_COMMAND in result.output
+    assert "the move has run" not in result.output
     assert "stale" not in result.output
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        pytest.param(("check", "--all"), id="whole-repository-check"),
+        pytest.param(("debt",), id="debt"),
+        pytest.param(("explain", GUIDE), id="explain"),
+    ],
+)
+def test_a_reader_over_an_uncommitted_move_says_to_commit_it(
+    repo: AdopterRepo, command: tuple[str, ...]
+) -> None:
+    """An upgrade ran the move and is not committed yet. The last commit, which these readers
+    read, still holds the answers in their blocks and no answer file, and the working tree
+    holds the files the move wrote. The reader says the move has run and the upgrade is to
+    be committed, never to run the move again, and reads the answers once it is (#2186)."""
+    _apply(repo, fm.plan_move(repo.root))
+    result = CliRunner().invoke(main, ["friction", *command])
+    assert result.exit_code != 0
+    assert "2 artefacts hold answers in their own block at the last commit" in result.output
+    assert "2 answer files the move wrote" in result.output
+    assert "the move has run" in result.output and "`git commit`" in result.output
+    assert af.MOVE_COMMAND not in result.output and "run the move" not in result.output
+    assert "pkit validate" not in result.output
+
+    repo.commit("upgrade", files=None)
+    after = CliRunner().invoke(main, ["friction", *command])
+    assert "the move has run" not in after.output
+    assert "have not moved" not in after.output
+
+
+def test_a_writer_s_uncommitted_file_is_no_move_that_has_run(repo: AdopterRepo) -> None:
+    """Only a file the move wrote, `moved-…`, says the move has run: an uncommitted answer
+    file of another name leaves the reader naming the move (#2186)."""
+    folder = repo.root / af.FOLDER
+    folder.mkdir(parents=True)
+    (folder / "20261021T093000Z-3f9a2c1d.yaml").write_text("answers: []\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["friction", "check", "--all"])
+    assert result.exit_code != 0
+    assert af.MOVE_COMMAND in result.output
+    assert "the move has run" not in result.output
 
 
 def test_a_reader_reads_no_answer_left_in_a_block_once_the_answers_moved(repo: AdopterRepo) -> None:

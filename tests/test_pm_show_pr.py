@@ -7,9 +7,11 @@ summary builder.
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -596,3 +598,146 @@ def test_review_history_absent_shows_clear_message(sp) -> None:
     s = sp._summarise({"title": "x", "body": "y", "state": "MERGED"})
     assert s["review_history"] == []
     assert sp._field_lines_for(s)["review-history"] == [sp.NO_VERDICT_MESSAGE]
+
+
+# --- mergeable, and a PR named by its branch (#2184) ------------------
+#
+# The worker's loop reads each of its own pull requests in Review at the start
+# of each round: one that conflicts with the default branch is mended first. So
+# the view says whether GitHub can merge the PR, and takes the Task's branch
+# where the worker knows no PR number.
+
+
+@pytest.mark.parametrize("value", ["MERGEABLE", "CONFLICTING", "UNKNOWN"])
+def test_mergeable_is_github_s_value(sp, value) -> None:
+    s = sp._summarise({"title": "x", "body": "y", "state": "OPEN", "mergeable": value})
+    assert s["mergeable"] == value
+    assert sp._field_lines_for(s)["mergeable"] == [value]
+
+
+def test_mergeable_is_read_upper_case_and_absent_prints_nothing(sp) -> None:
+    s = sp._summarise({"title": "x", "body": "y", "state": "OPEN", "mergeable": "conflicting"})
+    assert s["mergeable"] == "CONFLICTING"
+    absent = sp._summarise({"title": "x", "body": "y", "state": "OPEN"})
+    assert absent["mergeable"] == ""
+    assert sp._field_lines_for(absent)["mergeable"] == []
+
+
+def test_mergeable_field_in_valid_fields_list(sp) -> None:
+    assert "mergeable" in sp.PR_FIELD_NAMES
+
+
+def test_default_view_shows_mergeable(sp, capsys) -> None:
+    s = sp._summarise({"title": "x", "body": "y", "state": "OPEN", "mergeable": "CONFLICTING"})
+    sp._print_summary(99, s)
+    lines = capsys.readouterr().out.splitlines()
+    assert "  mergeable:    CONFLICTING" in lines
+
+
+@pytest.mark.parametrize(
+    "ref,expected",
+    [
+        ("99", "99"),
+        ("feat/42-add-dispatcher", "feat/42-add-dispatcher"),
+        ("-R", None),
+        ("--web", None),
+        ("", None),
+        ("feat/42 x", None),
+    ],
+)
+def test_a_pr_is_named_by_its_number_or_its_branch(sp, ref, expected) -> None:
+    """A reference that starts with `-` would reach `gh` as a flag, so it is refused."""
+    assert sp._pr_ref(ref) == expected
+
+
+def test_gh_get_pr_reads_mergeable_and_number_and_passes_a_branch(sp, monkeypatch) -> None:
+    calls: list[list[str]] = []
+
+    def gh_run(argv, config, *, check):
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, stdout='{"number": 99}', stderr="")
+
+    monkeypatch.setattr(sp, "gh_run", gh_run)
+    assert sp._gh_get_pr("feat/42-add-dispatcher", {}) == {"number": 99}
+    [argv] = calls
+    assert argv[:4] == ["gh", "pr", "view", "feat/42-add-dispatcher"]
+    fields = argv[argv.index("--json") + 1].split(",")
+    assert "mergeable" in fields and "number" in fields
+
+
+def _run_main(sp, monkeypatch, argv: list[str], answer: dict | None):
+    """Run show-pr's main with GitHub answering `answer` to `gh pr view`. Returns
+    the exit code, every `gh` argv and each PR number the review was resolved for."""
+    calls: list[list[str]] = []
+    resolved: list[int] = []
+
+    def gh_run(args, config, *, check):
+        calls.append(args)
+        if answer is None:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="no pull requests found")
+        return subprocess.CompletedProcess(args, 0, stdout=json.dumps(answer), stderr="")
+
+    def resolve_review(number, config, capability_root):
+        resolved.append(number)
+        return sp.PrReview(
+            sp.Resolution(),
+            author_delta=sp.author_delta,
+            base_kept=sp.base_kept,
+            ruled_altered=sp.ruled_altered,
+        )
+
+    monkeypatch.setattr(sp, "resolve_capability_root", lambda arg: Path("/nowhere"))
+    monkeypatch.setattr(sp.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(sp, "load_adopter_config", lambda root: {})
+    monkeypatch.setattr(sp, "_read_members", lambda root, loader: [])
+    monkeypatch.setattr(sp, "resolve_invoker_identity", lambda config: "dev")
+    monkeypatch.setattr(
+        sp,
+        "check_membership",
+        lambda members, invoker: SimpleNamespace(allowed=True, refusal_message=""),
+    )
+    monkeypatch.setattr(sp, "gh_run", gh_run)
+    monkeypatch.setattr(sp, "_resolve_review", resolve_review)
+    monkeypatch.setattr(sys, "argv", ["show-pr", *argv])
+    return sp.main(), calls, resolved
+
+
+def test_a_branch_shows_its_pr_under_the_number_github_gives(sp, monkeypatch, capsys) -> None:
+    answer = {
+        "number": 99,
+        "title": "feat(cli): add new dispatcher",
+        "body": "Closes #42",
+        "state": "OPEN",
+        "headRefName": "feat/42-add-dispatcher",
+        "baseRefName": "main",
+        "mergeable": "CONFLICTING",
+    }
+    code, calls, resolved = _run_main(sp, monkeypatch, ["feat/42-add-dispatcher"], answer)
+    assert code == 0
+    assert calls[0][3] == "feat/42-add-dispatcher"
+    # The verdicts are judged for the PR GitHub found for the branch.
+    assert resolved == [99]
+    out = capsys.readouterr().out
+    assert out.startswith("PR #99: feat(cli): add new dispatcher")
+    assert "  mergeable:    CONFLICTING" in out.splitlines()
+
+
+def test_a_branch_with_no_pr_fails_as_a_missing_pr_does(sp, monkeypatch, capsys) -> None:
+    code, _calls, resolved = _run_main(sp, monkeypatch, ["feat/42-add-dispatcher"], None)
+    assert code == 2
+    assert resolved == []
+    assert "feat/42-add-dispatcher" in capsys.readouterr().err
+
+
+def test_a_reference_that_starts_with_a_dash_reaches_no_gh(sp, monkeypatch, capsys) -> None:
+    code, calls, _resolved = _run_main(sp, monkeypatch, ["--", "-R"], {"number": 1})
+    assert code == 2
+    assert calls == []
+    assert "-R" in capsys.readouterr().err
+
+
+def test_mergeable_field_prints_the_bare_value(sp, monkeypatch, capsys) -> None:
+    answer = {"number": 99, "title": "x", "body": "y", "state": "OPEN", "mergeable": "MERGEABLE"}
+    code, _calls, _resolved = _run_main(sp, monkeypatch, ["99", "--field", "mergeable"], answer)
+    assert code == 0
+    assert capsys.readouterr().out == "MERGEABLE\n"

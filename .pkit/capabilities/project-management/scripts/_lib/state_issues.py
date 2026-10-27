@@ -28,8 +28,10 @@ the whole log, and accepts the issue where the earliest marker comment from an
 author who may write names the kind and key. It counts each event comment for
 that key whose author may write, and folds them (:func:`fold`): the first claim
 on a free state holds, another clone's claim on a held state is void, and stays
-void after a release. A read that finds the description's marker gone restores
-it, the one write a read makes. :func:`list_open` asks the one read of issues
+void after a release. The fold names the holder's take too: the id of the
+comment whose claim made it the holder, which a caller passes on to judge a
+claim made elsewhere against it. A read that finds the description's marker
+gone restores it, the one write a read makes. :func:`list_open` asks the one read of issues
 (``_lib/issue_list``) for the state issues it left out of a listing of open
 issues, and :func:`find` reads, in number order, those whose description's
 marker names the key. The issue GitHub numbered first holds the state.
@@ -309,10 +311,15 @@ class StateEvent:
 @dataclass(frozen=True)
 class Fold:
     """The state the counted events give: who holds it, or free, and the
-    events, the void ones marked, for a person to read."""
+    events, the void ones marked, for a person to read.
+
+    ``take`` is the id of the comment whose claim made the holder hold the
+    state, its current take, or None where the state is free. A caller orders
+    another issue's comment against it by GitHub's ids (#2182)."""
 
     holder: Holder | None
     events: tuple[StateEvent, ...] = ()
+    take: int | None = None
 
     @property
     def free(self) -> bool:
@@ -326,31 +333,33 @@ def fold(events: Iterable[StateEvent]) -> Fold:
     holder's account and key changes nothing, and any other claim on a held
     state is void. A release frees the state where it names the holder's account
     and key, and any other is void. A release by force frees whatever holds when
-    it lands. The fold takes no time.
+    it lands. The claim that makes a holder is its take, and a claim by the same
+    clone after a release is a new take. The fold takes no time.
     """
     holder: Holder | None = None
+    take: int | None = None
     out: list[StateEvent] = []
     for ev in events:
         void = False
         if ev.type == CLAIM:
             if holder is None:
-                holder = Holder(ev.author, ev.clone, ev.place)
+                holder, take = Holder(ev.author, ev.clone, ev.place), ev.comment_id
             elif not holder.is_clone(ev.author, ev.clone):
                 void = True
         elif ev.type == RELEASE:
             if holder is not None and holder.is_clone(ev.author, ev.clone):
-                holder = None
+                holder, take = None, None
             else:
                 void = True
         elif ev.type == FORCE_RELEASE:
             if holder is not None:
-                holder = None
+                holder, take = None, None
             else:
                 void = True
         else:
             continue
         out.append(replace(ev, void=void))
-    return Fold(holder, tuple(out))
+    return Fold(holder, tuple(out), take)
 
 
 # ---- reads (ADR-071 points 2 and 3) ---------------------------------------------

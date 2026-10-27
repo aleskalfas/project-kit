@@ -37,6 +37,8 @@ from typing import Any
 
 import pytest
 
+from tests.pm_state_issue_fakes import COMMENT_IDS
+
 
 @dataclass
 class FakeIssue:
@@ -72,12 +74,16 @@ class FakeGitHub:
 
     def post(self, number: int, body: str, author: str | None = None) -> None:
         """A comment on the issue, authored by `author` (the fake's own by default),
-        with the authorship fields an audit writer's retry reads."""
+        with the authorship fields an audit writer's retry reads, and the `url`
+        that holds the id GitHub gives it, from the sequence every fake numbers
+        its comments from (`pm_state_issue_fakes.COMMENT_IDS`)."""
         login = author or self.author
+        cid = next(COMMENT_IDS)
         self.issues[number].comments.append(
             {
                 "author": {"login": login},
                 "body": body,
+                "url": f"https://github.com/o/r/issues/{number}#issuecomment-{cid}",
                 "viewerDidAuthor": login == self.author,
                 "includesCreatedEdit": False,
             }

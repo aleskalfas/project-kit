@@ -550,6 +550,13 @@ def _reused_name(world: World) -> None:
     world.clone.current = "main"
 
 
+def _mid_task(world: World) -> None:
+    """The clone is on its next Task's branch, with a change not yet committed."""
+    world.clone.branches["feat/43-next"] = "sha-base"
+    world.clone.current = "feat/43-next"
+    world.clone.changes.append("src/next.py")
+
+
 def _foreign_refused(world: World) -> None:
     world.anchor = world.elsewhere()
 
@@ -840,6 +847,26 @@ _REQUESTING_ON_LAND = NotToday(
     "imports the landing (#1258): `requesting` is written by `pkit pull-request land`, where "
     "the kill between it and the request is tested; a kill ends release's own run, with nothing "
     "left to read the line"
+)
+#: The requests of a landing on a base without a queue, its head branch deleted.
+_DIRECT = "read×2 merge read branch based-on delete-ref"
+_SWITCHED_MID_TASK = (
+    "accident: the clean-up switches the clone to the default branch, carrying the changes, so "
+    "the next commit lands there; #2183 leaves it where it is"
+)
+_LEFT_MID_TASK = (
+    "the clone is not on the branch that merged, so the clean-up leaves it where it is, with its "
+    "changes, and keeps the merged branch's local copy (#2183)"
+)
+_RELEASE_SWITCHES_MID_TASK = (
+    "accident: release's own clean-up still switches the clone to the base, carrying the "
+    "changes, and deletes the branch: #2183 changed project-management's only, and #2189 "
+    f"leaves it where it is; {_PLANNED}"
+)
+_RELEASE_LEFT_MID_TASK = (
+    "release's own clean-up keeps landing's rule (#2189): the clone is not on the branch that "
+    "merged, so it is left where it is, with its changes, and the merged branch's local copy is "
+    f"kept; {_PLANNED}"
 )
 
 SCENARIOS: tuple[Scenario, ...] = (
@@ -2132,6 +2159,23 @@ SCENARIOS: tuple[Scenario, ...] = (
             ),
         },
     ),
+    Scenario(
+        "clone-mid-task",
+        "The PR lands from a clone on another Task's branch, with changes not yet committed.",
+        _mid_task,
+        Row(
+            _deleted("merged 0", _DIRECT, note=_SWITCHED_MID_TASK),
+            _deleted("0 record=ran", _DIRECT, note=_SWITCHED_MID_TASK),
+            _deleted("0", _DIRECT, note=_RELEASE_SWITCHES_MID_TASK),
+            _deleted("0 merge: merged", _DIRECT, note=_SWITCHED_MID_TASK),
+        ),
+        after={
+            DONE_WORK: _deleted("merged 0", _DIRECT, local="kept", note=_LEFT_MID_TASK),
+            MERGE_PR: _deleted("0 record=ran", _DIRECT, local="kept", note=_LEFT_MID_TASK),
+            RELEASE: _deleted("0", _DIRECT, local="kept", note=_RELEASE_LEFT_MID_TASK),
+            LAND_WORK: _deleted("0 merge: merged", _DIRECT, local="kept", note=_LEFT_MID_TASK),
+        },
+    ),
     # ---- the session ---------------------------------------------------------------------
     Scenario(
         "foreign-repository-refused",
@@ -2655,8 +2699,8 @@ def land(
         after = "after_merge_pr" in run.hooks
     elif caller == RELEASE:
         # Release's one step after the merge is the branch clean-up, which
-        # starts by checking out the base.
-        after = bool(clone.checkouts)
+        # starts by asking whether the clone's working tree is clean (#2189).
+        after = ["status", "--porcelain"] in clone.calls
     else:
         after = f"move #{ISSUE} to done" in run.moves
     unknown = [request.argv for request in host.requests if request.kind == fake.UNKNOWN]

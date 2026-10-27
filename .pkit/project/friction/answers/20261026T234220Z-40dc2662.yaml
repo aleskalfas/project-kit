@@ -1,0 +1,80 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T212744Z-4789db3b.yaml
+    revalidated:
+      at: 2026-10-26T23:42:20Z
+      outcome: unchanged
+      unchanged-because: Step 3 says the agent runs its seat's loop from work-loop.md, and that still holds. The change adds how a worker mends its own pull requests, and leaves a released seat's pull requests in Review to the person, which alters no step or variant of taking a seat.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T085608Z-061b0816.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T141053Z-7af348ef.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T212744Z-4789db3b.yaml
+    revalidated:
+      at: 2026-10-26T23:42:25Z
+      outcome: unchanged
+      unchanged-because: The storyboard gains Scenario 14, a worker's later round, and its framing names it. The batch-planning scenarios this use case rests on are unchanged, so no step or variant of planning an intent changes.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T223507Z-b0cc1cc6.yaml
+    revalidated:
+      at: 2026-10-26T23:42:28Z
+      outcome: unchanged
+      unchanged-because: The pool now says outright that a Task in any state but Backlog or In Progress is never in it. The listing already left such a Task out, so next-task offers the same Tasks, and step 2 and variant 2b hold as written.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T125321Z-c79100d7.yaml
+      - 20261026T135447Z-827d6480.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T141439Z-0ec32467.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T161512Z-bb142951.yaml
+      - 20261026T162345Z-546e92b5.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T174848Z-c4211455.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261026T221544Z-4570798b.yaml
+      - 20261026T223507Z-b0cc1cc6.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T23:42:31Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."

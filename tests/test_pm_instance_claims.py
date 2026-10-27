@@ -850,7 +850,8 @@ def test_each_seats_holder_is_read_once_when_a_claim_names_it(ic, root, monkeypa
     snapshot_with(ic, monkeypatch, snap, hint="worker-2")
     clone = ic.this_clone(root, "me")
     assert clone is not None and clone.holders is not None
-    held = ic.ownership.Holder(ic.ownership.SEAT_HELD, "me", "k1")
+    take = repo.issues[12].comments[-1]["id"]
+    held = ic.ownership.Holder(ic.ownership.SEAT_HELD, "me", "k1", take)
     assert clone.holders["worker-1"] == held and clone.holders.get("worker-1") == held
     assert clone.holders["planner"] == ic.ownership.Holder(ic.ownership.SEAT_FREE)
     assert clone.holders.get("worker-9") is None
@@ -872,6 +873,94 @@ def test_the_guard_judges_claims_against_the_holders_it_reads(ic, root, monkeypa
     gone.add(7)
     gone.post(7, _seat_stamp(ic, "worker-1", 2, "k0"))
     assert _guard(ic, gone, clone).outcome == ic.PASSED
+
+
+# ---- a seat taken again after its release (#2182) --------------------------------
+#
+# A claim counts only where its clone made it after its current take of the seat
+# (DEC-059 points 5 and 9). The seats' state issues and the Tasks are two fakes,
+# which number their comments from one sequence, as GitHub does.
+
+
+def _release_by_force(ic, repo: FakeRepo) -> None:
+    """The organizer releases `worker-1` by force, on its state issue #12."""
+    si, run = ic.state_issues, seat_snapshot(ic, _doc(), repo).run
+    organizer = si.Clone("me", "k0", "host:/organizer")
+    freed = si.force_release(
+        12, ic.topology.SEAT_KIND, "worker-1", organizer, "its session stopped", run
+    )
+    assert freed.outcome == si.RELEASED
+
+
+def _take_again(ic, repo: FakeRepo) -> None:
+    """The clone that held `worker-1`, `me`'s `k1`, takes it again."""
+    si, run = ic.state_issues, seat_snapshot(ic, _doc(), repo).run
+    clone = si.Clone("me", "k1", "host:/clone")
+    assert si.claim(12, ic.topology.SEAT_KIND, "worker-1", clone, run).outcome == si.CLAIMED
+
+
+def _clone_in(ic, root, monkeypatch, repo: FakeRepo, seat: str = "worker-2", key: str = "k2"):
+    """This clone in `seat`, with `key`, as a new run reads the seats from `repo`."""
+    snap = seat_snapshot(ic, _doc(), repo, key=key)
+    snapshot_with(ic, monkeypatch, snap, hint=seat, key=key)
+    clone = ic.this_clone(root, "me")
+    assert clone is not None
+    return clone
+
+
+def test_a_seat_taken_again_by_its_clone_revives_none_of_its_claims(ic, root, monkeypatch) -> None:
+    """The same clone takes its seat again after a release by force, and the
+    claim it made before the release stays void, so another seat may take its
+    Task (DEC-059 point 5)."""
+    _snap, repo = _seated(ic)
+    gh = FakeGitHub()
+    gh.add(7)
+    gh.post(7, _seat_stamp(ic, "worker-1", 2, "k1"))
+    _release_by_force(ic, repo)
+    _take_again(ic, repo)
+    clone = _clone_in(ic, root, monkeypatch, repo)
+    assert _guard(ic, gh, clone).outcome == ic.PASSED
+    owner = ic.read_owner(7, clone, {}, run=gh)
+    assert owner is not None and owner.owners == frozenset()
+    judged = owner.judgement(2)
+    assert judged is not None and judged.verdict == ic.ownership.VOID
+    assert judged.reason == "its seat was released after it was made"
+
+
+def test_a_task_taken_over_while_its_seat_was_free_stays_the_takers(ic, root, monkeypatch) -> None:
+    """Another seat takes the Task over while the seat is free, and keeps it
+    once the first clone takes its seat again: the guard passes the taker and
+    refuses the first clone."""
+    _snap, repo = _seated(ic)
+    gh = FakeGitHub()
+    gh.add(7)
+    gh.post(7, _seat_stamp(ic, "worker-1", 2, "k1"))
+    _release_by_force(ic, repo)
+    taker = _clone_in(ic, root, monkeypatch, repo)
+    assert ic.claim(7, taker, {}, run=gh).outcome == ic.CLAIMED
+    _take_again(ic, repo)
+    taker = _clone_in(ic, root, monkeypatch, repo)
+    assert _guard(ic, gh, taker).outcome == ic.PASSED
+    owner = ic.read_owner(7, taker, {}, run=gh)
+    assert owner is not None and owner.owners == frozenset({3})
+    first = _clone_in(ic, root, monkeypatch, repo, seat="worker-1", key="k1")
+    refused = _guard(ic, gh, first)
+    assert refused.refused
+    assert "#7 is owned by seat worker-2, instance 3" in refused.line
+
+
+def test_a_claim_made_after_the_seat_was_taken_again_counts(ic, root, monkeypatch) -> None:
+    """The clone that took its seat again owns what it claims from then on."""
+    _snap, repo = _seated(ic)
+    gh = FakeGitHub()
+    gh.add(7)
+    _release_by_force(ic, repo)
+    _take_again(ic, repo)
+    gh.post(7, _seat_stamp(ic, "worker-1", 2, "k1"))
+    clone = _clone_in(ic, root, monkeypatch, repo)
+    refused = _guard(ic, gh, clone)
+    assert refused.refused
+    assert "#7 is owned by seat worker-1, instance 2" in refused.line
 
 
 @pytest.mark.parametrize(
