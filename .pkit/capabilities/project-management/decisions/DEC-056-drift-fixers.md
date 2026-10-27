@@ -1,19 +1,19 @@
 ---
 id: DEC-056
-title: Only granted fixers start on stale artefacts, and they only propose
+title: Only granted fixers start on stale artefacts, and what they propose waits for a decision
 status: accepted
 date: 2026-10-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** when the default branch leaves an artefact out of date, the agent that fixes artefacts of its type starts and proposes an answer, and the person, or the delegate they named, decides it. A capability declares which of its agents fixes which of its types. A fixer starts on its own only where the project granted it, and only the person grants. A command of this capability, the drift command, starts the granted fixers, each bounded and confined as far as the harness allows. The person is asked a plain question about each fixer nobody was asked about: by the drift command, and by install and upgrade once the core lifecycle can ask. Commands list, grant and revoke. A fixer only proposes. It takes one brief and ends with one line for each artefact, by one contract that this capability sets for every fixer. Its proposals wait as files, the landing command says how many wait, and the person, or their delegate, accepts, rewords or refuses each before anything is written.
+**In plain terms:** when the default branch leaves an artefact out of date, the agent that fixes artefacts of its type can propose an answer, and the person, or the delegate they named, decides it. A capability declares which of its agents fixes which of its types. A fixer starts only where the project granted it, and only the person grants. A command of this capability, the drift command, starts the granted fixers, each bounded, where a person runs it at a terminal and watches. With nobody at a terminal it starts none, and lists what went stale with the command to run. The person is asked a plain question about each fixer nobody was asked about: by the drift command, and by install and upgrade once the core lifecycle can ask. Commands list, grant and revoke. A fixer is told to propose only, and the person's settings hold what else its run may do. It takes one brief and ends with one line for each artefact, by one contract that this capability sets for every fixer. Its proposals wait as files, the landing command says how many wait, and the person, or their delegate, accepts, rewords or refuses each before any is applied.
 
 ## Context
 
 The whole-repository check finds the artefacts that merges left out of date on the default branch. That debt is derived from git (COR-050 point 9), and the checks are read-only (COR-050 point 12). A capability that owns artefacts may ship an agent that proposes their answers. Nothing starts such an agent. The debt waits until a person reads the check and starts the right agent by hand. Nothing gathers what they propose either, and each such answer is the person's decision, or the decision of a delegate the person named (COR-050 point 3).
 
-Starting them on their own raises who may start which agent.
-- **A fixer is an agent with a shell** that runs with nobody watching. A reviewer a capability contributes applies on install ([project-management:DEC-032-conditional-reviewer-requirements]), but a reviewer gates a change a person is making.
+Starting them from a command raises who may start which agent.
+- **A fixer is an agent with a shell,** which a command could start with nobody watching. A reviewer a capability contributes applies on install ([project-management:DEC-032-conditional-reviewer-requirements]), but a reviewer gates a change a person is making.
 - **Its input is not trusted.** Commit messages and pull requests reach it, so a contributor's words could steer it.
 - **The harness confines a run only in part.** It can deny tools and commands, and an operating-system sandbox can bound what a shell writes. Network egress has no boundary there, a gap the harness reports rather than closes (COR-028 point 3).
 
@@ -21,7 +21,7 @@ What one agent may start through the harness's own dispatch tool is a separate q
 
 ## Decision
 
-**A capability declares its fixers in a data point this capability accepts. The person grants each fixer, by answering a question or by command, and nothing is granted by default. A command of this capability starts the granted fixers on the default branch's stale artefacts, each bounded, confined and limited to proposing. The proposals wait as files until the person, or the delegate they named, decides each one, and this capability applies what is accepted through an ordinary change.**
+**A capability declares its fixers in a data point this capability accepts. The person grants each fixer, by answering a question or by command, and nothing is granted by default. A command of this capability starts the granted fixers on the default branch's stale artefacts, in a run a person starts and watches. The proposals wait as files until the person, or the delegate they named, decides each one, and this capability applies what is accepted through an ordinary change.**
 
 ### 1. A capability declares its fixers
 
@@ -42,21 +42,22 @@ As the provider of the work-tracking role, this capability accepts `<methodology
   - A capability's entry may name a type not its own, or an agent it does not ship or has not deployed. Such an entry is reported and fails nothing, since the project cannot mend it (COR-055 point 1). No agent starts for it.
   - A capability's contribution through a command filler is a bad entry. This capability's validator reports it from the backbone's wiring, and the drift command starts no agent for its entries.
   - A project's entry that names an agent not deployed fails validation.
-  - An agent whose own declaration claims paths, or grants a tool for changing existing files or starting agents, is reported, and the drift command does not start it. A tool that writes new files stays, for its workspace. This is a sanity check, not a limit: an agent with a shell is limited only by the confinement of point 5.
+  - An agent whose own declaration claims paths, or grants a tool for changing existing files or starting agents, is reported, and the drift command does not start it. A tool that writes new files stays, for its workspace. This is a sanity check, not a limit: an agent with a shell is limited only by what holds its run (point 5).
 
 ### 2. The person grants each fixer
 
-A fixer starts on its own only where the project granted it.
+A fixer starts only where the project granted it.
 - **The grant list** sits in this capability's project configuration. It holds each agent the person was asked about, the types the question named, and the answer. It is empty by default, so a project that never answers starts no fixer.
 - **A grant is the person's act.** It is written only on the person's own answer, to the question or by running the grant command. An agent may record an answer only after it showed the person the question word for word and the person answered. It never answers for them.
-- **The question.** One question for each agent, about the types nobody was asked about. Its words are this capability's, built from the declaration: the capability's name and the descriptions of the agent's entries. It says what the agent will do on its own after each merge, and that nothing is applied until the person approves it.
+- **The question.** One question for each agent, about the types nobody was asked about. Its words are this capability's, built from the declaration: the capability's name and the descriptions of the agent's entries. It says what the agent does when a person runs the drift command at a terminal, and under whose settings. It says too that nothing the agent proposes is applied until the person approves it.
 - **When it is asked.** Wherever a person can answer, before any fixer of those types starts, about each declared fixer type that has no recorded answer. The drift command asks it at a terminal. In a session with the person, the project manager relays it word for word and records only the person's answer. Install and upgrade ask it once a core record lets them ask for a point's definer (below).
-- **Each answer is recorded,** a yes as a grant and a no as a refusal. It is written to the grant list in the checkout where it was given, as a change of the project's. The question asks only about a type with no answer there, so nothing asks again about those types. A yes starts a fixer from the first run after its change merges.
+- **Each answer is recorded,** a yes as a grant and a no as a refusal. It is written to the grant list in the checkout where it was given, as a change of the project's. The question asks only about a type with no answer there, so nothing asks again about those types. A yes lets a fixer start from the first run after its change merges.
 - **With nobody to ask,** nothing is granted or recorded, and the one command line that grants the fixer is printed. Running install, upgrade or the drift command is never the consent. Only the person's answer is, or the person running the grant command.
 - **Commands for advanced use** list the declared fixers with their answers, grant one and revoke one. A revoke is recorded as a refusal. Every change to the list shows in the project's diff, as the activation of the default agent does ([project-management:DEC-030-capability-contributed-adapter-overlays]).
 - **A grant counts once it is on the default branch.** The drift command reads the list at the commit its run is pinned to (point 3). So a grant counts only once its change merges, under the person's authorisation.
 - **Shown at the merge.** The landing command lists a change to the grant list before it stops ready, asks or merges, as it lists a change to the friction settings ([project-management:DEC-055-pr-lists-answers] point 1). An authorisation given up front covers such a change only where the run found it when it started, as for a finding a person judges (DEC-055 point 3).
 - **A grant names an agent and its types.** A type the point later gives a granted agent, by a capability's release or a project's entry, starts nothing until the person is asked about it.
+- **A grant counts for a watched run** (point 5), whatever words its question used. A grant given by command saw no question either, and before each such run the command says what the fixers run under. A grant counts toward no run nobody watches, whose consent a decision of its own sets (point 3).
 - **A grant whose agent or type no entry names** starts nothing. Validation reports it with the command that revokes it.
 
 **What this capability needs from the core lifecycle.** The question belongs at install and upgrade too. Installing a capability that declares a fixer should ask, and so should the upgrade that first brings one, where a person can answer. Install and upgrade are the backbone's operations, and no capability acts inside another's install. A migration of the capability that declares a fixer could run this capability's command only by naming this capability, which connection points exist to avoid (COR-053). So asking there needs a core record, which decides whether and how. This capability asks of it the trigger above: a declared fixer type with no recorded answer. That trigger also covers installing this capability after a capability that declares a fixer, and an upgrade after an install that had nobody to answer. The record sits with three accepted ones:
@@ -69,9 +70,10 @@ Merge delivery's prompt-once tier (COR-002) is a precedent only in its rule: it 
 ### 3. A command starts the granted fixers
 
 A command of this capability, the drift command, starts the fixers. The harness's dispatch tool does not.
-- **Who runs it.** The person, or the project manager in the session that landed a merge into the default branch. Whoever runs it, it starts only granted fixers. A person may still start any agent by hand, in a session of their own.
+- **Who runs it.** The person, or the project manager in the session that landed a merge into the default branch. Whoever runs it, it starts only granted fixers, and only where a person started it at a terminal and watches the run (point 5). A person may still start any agent by hand, in a session of their own.
+- **With nobody at a terminal,** as in the project manager's run after a merge, it starts no fixer, and says so. It lists each stale artefact a granted fixer would take, with its fixer, and the command a person runs at a terminal to start them. A decision of its own says when the command starts a run nobody watches, which point 5 confines. That decision also says how the person consents to such a run, since a grant counts for watched runs alone (point 2).
 - **What it reads, and where.** It pins one commit of the default branch, as the backbone resolves it (COR-054 point 2). It reads at that commit the whole-repository check's machine-readable findings, the backbone's one answer for each artefact's type (COR-056 point 6), the point and the grant list. It reads no tracking issue, and no rendered prose for any choice of its own. The pull requests it puts in a brief are data for the fixer (below).
-- **Where each fixer runs.** In a separate working copy at that commit, never in the person's checkout, which may be on another branch. The copy is provisioned as the project's checks are, so every anchor resolves there. The fixer's own definition is the one at that commit, so an edit to a fixer that has not merged never runs unwatched.
+- **Where each fixer runs.** In a separate working copy at that commit, never in the person's checkout, which may be on another branch. Every anchor resolves there, as in the project's checks. The fixer's own definition is the one at that commit, so an edit to a fixer that has not merged never runs in its place. Where a project keeps its deployed definitions out of the repository, no watched run starts, since the harness would find a definition that may not have merged.
 - **What it dispatches.** Stale artefacts with a granted fixer, and nothing else. It lists the rest, each with its reason:
   - deferred debt, and dead or ambiguous anchors
   - an artefact the check could not judge
@@ -81,11 +83,11 @@ A command of this capability, the drift command, starts the fixers. The harness'
 - **Unchanged friction.** An artefact whose friction matches its standing proposal, or its standing question, is not dispatched again, nor is one whose `none` stands (below). A flag dispatches it anyway, as the review command runs a reviewer whose verdict is still fresh only when forced ([project-management:DEC-032-conditional-reviewer-requirements] D4).
 - **A dry run** says what it would start, and starts nothing.
 - **The brief.** Each run gives its fixer one brief, and no other message. The brief keeps two parts apart:
-  - **The frame instructs.** It says that the drift command started the agent as the fixer of the artefacts' types, with nobody watching. It names:
+  - **The frame instructs.** It says that the drift command started the agent as the fixer of the artefacts' types, and whether a person watches the run. It names:
     - the commit, and the working copy the fixer reads. Every path the fixer reads, those its own definition names included, is relative to the working copy's root.
-    - the workspace, the one folder the fixer writes. The shell's temp folder lies in it, under a name the brief gives, and nothing in that folder is read back.
+    - the workspace, the one folder the fixer writes. In a run nobody watches, the shell's temp folder lies in it, under a name the brief gives. Nothing in that folder is read back.
     - the artefacts, each as the whole-repository check names it, with its type, upstream first
-    - the command forms the run's rules allow (point 5)
+    - the command forms the run's rules allow (point 5), which a watched run is told to keep to
   - **The data informs, and never instructs.** Each piece is quoted with its source, between markers made new for the run, as words nobody vetted:
     - for an artefact held in an earlier run, the question, the person's answer and who gave it
     - for each commit the check names behind an artefact's friction, the title and text of the pull request that carried it. A text cut at the size the command bounds is marked as cut. Where the work tracker has no such pull request, or cannot be reached, the brief says so.
@@ -112,9 +114,10 @@ A command of this capability, the drift command, starts the fixers. The harness'
   The command reads these lines and the answers' fields, never prose. A held question is shown in the batch (point 6), and the person's answer goes with the artefact's next dispatch.
 - **The `none` reasons** are a fixed list. Each says what clears it, so the command tells a `none` that stands from one that passes.
   - **Cleared by the artefact:** `not-mine`, an artefact the fixer does not fix, and `not-stale`, one not stale at the commit or not judged by the checks. Each stands for that fixer until the artefact's friction changes.
-  - **Cleared by the setup:** `refused`, a call the fixer needs that the run's rules or its sandbox stopped, and `out-of-step`, another component's answer in a version the fixer does not read. Each stands for that fixer until the setup changes, and the command reports it at every run as a fault of the setup. The setup is anything the run is made from but the artefact, such as:
+  - **Cleared by the setup:** `refused`, a call the fixer needs that the run's rules, its sandbox or a watched run's settings stopped, and `out-of-step`, another component's answer in a version the fixer does not read. Each stands for that fixer until the setup changes, and the command reports it at every run as a fault of the setup. The setup is anything the run is made from but the artefact, such as:
     - the fixer's definition, and the overlay that resolves it
     - the run's rules, with the denies they carry
+    - the settings a watched run takes. The command does not read them, so a `none` they caused stands until the person forces its dispatch.
     - the run's bounds
     - a component's version
 
@@ -132,9 +135,18 @@ A command of this capability, the drift command, starts the fixers. The harness'
 - **An artefact an open pull request already changes** is listed, not dispatched.
 - **A failure outside the fixer's work,** such as an agent that could not start, is retried once (core rule 21). The command first checks that the failed start wrote nothing. If it fails again, the command starts no further fixer and reports what failed.
 
-### 5. Each run is confined
+### 5. A run is watched, or confined
 
-A run nobody watches cannot ask, so a tool call no rule allows is refused, and the rules are the whole grant. A project's allow rules may let through far more than a fixer needs: pushing, merging, changing a record's status, or running a writer. So each run is given what proposing needs, as far as the harness can hold it.
+A run a person started at a terminal is watched. The person starts it by their own act, sees which fixers start and how each ends, and can stop the run. The fixer cannot ask the person during its run.
+- **It takes the form the review command's runs take,** in a working copy of its own (point 3), under the person's and the project's settings. The command passes it no flag that bypasses the permission rules. It starts no fixer whose definition grants a tool that starts agents (point 1), and it refuses to start inside a fixer's run.
+- **Its mode is the one those settings or the harness choose,** which may approve calls no rule allows. A call that would ask the person is refused, since nobody can answer it.
+- **Before the first fixer starts,** the command says that the fixers run under those settings, and how to stop the run.
+- **Its brief tells it to propose only,** keeping to the command forms the run's rules allow, writing nothing outside its workspace and running no writer. Those settings, not the run's rules, hold what it may do.
+- **Its files reach the queue through a guarded copy,** and an entry the copy refuses sets the fixer's proposals aside, as a breach does.
+- **What it leaves open:** whatever those settings let a session do, such as writing outside its workspace, reaching the network, pushing, merging, changing a record's status, running a writer, or starting the harness from its shell. Nothing checks what it changed outside its workspace, and the person sees which fixers start and how each ends, not each call. A proposal's words and a pull request's text stay open as for a run nobody watches (below).
+- **What a terminal tells.** It tells that a terminal is attached, not that a person watches. A harness whose shell gives a command a terminal, or an agent that fakes one, can start fixers nobody watches. Only the permission layer can stop such a call, in a mode that asks about a call no rule allows, and no rule this capability ships names one.
+
+The rest of this point holds for a run nobody watches. Such a run cannot ask, so a tool call no rule allows is refused, and the rules are the whole grant. A project's allow rules may let through far more than a fixer needs: pushing, merging, changing a record's status, or running a writer. So each run is given what proposing needs, as far as the harness can hold it.
 - **Allowed for each run,** and nothing else: reading files, writing its own workspace, reading version control, the backbone's reading commands, and each command another component declares a query. A writer added later is refused without anyone listing it.
 - **The brief names the forms the rules allow.** Reading version control covers git's reading commands, pointed at the working copy. Making a diff between a file there and one in the workspace, and checking that a diff applies, are forms allowed in their own right, since a fixer proposes a diff. The brief's list of forms is built from the run's rules, so it names no form they refuse. What a form's options could add, such as writing a file or running a program, the sandbox holds, not the rule.
 - **Denied for each run,** above any allow rule, as the floor where the harness can only take away:
@@ -159,7 +171,7 @@ A run nobody watches cannot ask, so a tool call no rule allows is refused, and t
 
 ### 6. The proposals wait for a decision
 
-- **Files, not pull requests.** A fixer writes its proposal into its workspace, in a folder named for the artefact as the brief names it. The folder holds `evidence.md`, which the person reads before deciding, the diff where the fixer proposes an edit, and `answer.json`. A held artefact's folder holds its evidence and no answer. A pull request would need a branch, a commit, a push and an issue, each made under the person's account by a run nobody watched.
+- **Files, not pull requests.** A fixer writes its proposal into its workspace, in a folder named for the artefact as the brief names it. The folder holds `evidence.md`, which the person reads before deciding, the diff where the fixer proposes an edit, and `answer.json`. A held artefact's folder holds its evidence and no answer. A pull request would need a branch, a commit, a push and an issue, each made under the person's account by a fixer's run.
 - **A proposal is data.** It is a diff and its answer. The diff is confined to the file of the artefact it was dispatched for, or to its entry in a collection file. A proposal whose diff reaches anything else is set aside, as a breach is (point 5).
 - **An answer is fields,** which a schema of this capability holds:
   - the artefact, as the brief names it, and the outcome, `unchanged` or `updated`
@@ -180,17 +192,17 @@ A run nobody watches cannot ask, so a tool call no rule allows is refused, and t
 - **Or the delegate decides.** Where the default branch names a delegate (COR-064), the delegate decides each proposal in the person's place, as that record sets out. It judges from the files, and a proposal's evidence is a lead to it, never a ground. The person is told what it decided and what it refused. A question a fixer held stays the person's. So does a proposal on an artefact whose type's owner keeps its answers for a person by its own record (COR-064 point 1).
 - **A refusal is remembered** in the queue, against the artefact's friction, so the artefact is not dispatched again until its friction changes. It goes with the queue. Its lasting form is a deferral, which the person may give instead as their own answer.
 - **After yes.** Whoever accepted an answer first does what it lists, such as reporting a defect and writing its reference into the reason. The project manager files an issue, branches, applies the accepted diffs in upstream order and runs the writers the person accepted. A diff that no longer applies is set aside and dispatched again. The project manager runs a writer only under the conditions the agents README sets for an agent whose task is the answer itself ("Friction writers"). The change then passes the ordinary gate, and the person authorises its merge.
-- **A fixer runs no writer.** It has no way to ask the person, and point 5 denies it every writer.
+- **A fixer runs no writer.** It has no way to ask the person during its run. A run nobody watches is denied every writer, and a watched run's brief forbids them (point 5).
 
 ## Rationale
 
-**Why the person grants each fixer.** A capability's reviewer gates a change a person is making, so installing the capability is the opt-in (DEC-032). A fixer is different. It widens what runs in the project: an agent with a shell, unwatched, on input a contributor wrote. So the person grants it, once for each agent and its types, and the default grants nothing.
+**Why the person grants each fixer.** A capability's reviewer gates a change a person is making, so installing the capability is the opt-in (DEC-032). A fixer is different. It widens what runs in the project: an agent with a shell, on input a contributor wrote. So the person grants it, once for each agent and its types, and the default grants nothing.
 
-**Why the grant list is no second permission model.** The grant is the person's consent to this capability's automation, as the toggle for the default agent is (DEC-030). What a run may do is the permission model's (point 5). The list says which agents the drift command may start, and never what they may do.
+**Why the grant list is no second permission model.** The grant is the person's consent to this capability's automation, as the toggle for the default agent is (DEC-030). What a run nobody watches may do is the permission model's, and the person's settings hold a watched run (point 5). The list says which agents the drift command may start, and never what they may do.
 
 **Why install should ask.** Install is the moment a project takes up a capability's discipline. A separate step is one the project must first learn of, which is COR-017's reason for creating a declared project rule set at install. COR-017 rejects asking there, because a run with nobody to answer would take the choice silently. Here a run with nobody to answer takes nothing, so asking takes nothing silently. Running install is not the consent, since a fixer widens what runs. The answer to a plain question is.
 
-**Why a consent, where events need none.** COR-053 point 9 asks no third consent for a capability's event subscribers, for two reasons. The project installed the capability and the user ran the writing command, and a subscriber needs no network and acts the same on the same inputs. Neither holds for a fixer. After a merge the project manager runs the drift command, not the person. A fixer's network egress has no hard boundary, and an agent does not act the same on the same inputs.
+**Why a consent, where events need none.** COR-053 point 9 asks no third consent for a capability's event subscribers, for two reasons. The project installed the capability and the user ran the writing command, and a subscriber needs no network and acts the same on the same inputs. The second does not hold for a fixer. Its network egress has no hard boundary, and an agent does not act the same on the same inputs.
 
 **Why the trigger is state, not a release.** Asking only on "the upgrade that first brings a fixer" misses three cases:
 - this capability installed after the capability that declares the fixer
@@ -209,7 +221,13 @@ Asking wherever a type has no recorded answer covers them all, and still asks on
 
 **Why `fail`.** A project filler that breaks answers nothing. Under `fallback`, the rest would still resolve, and a capability's agent would start again for a type the project gave to another agent. Starting nothing, and saying why, is the safe reading.
 
-**Why the command confines each run.** Which agent may start which through the harness's dispatch tool is not decided. A fixer started now would otherwise run under whatever allow rules the project has. So each run is given what proposing needs, through the permission model, and what the harness cannot hold is stated.
+**Why a person starts the fixers and watches them.** A person who runs the command at a terminal starts each run by their own act, and can stop it. The review command's reviewers run in that form, under the person's settings. A fixer still widens what runs, so the person grants it first (point 2), and its proposals stay data (point 6). What a watched run may do is what those settings let a session do, and point 5 states it.
+
+**Why nothing starts with nobody watching.** A run nobody watches needs the confinement of point 5, which the harness must hold. With its removal of credentials from a run's environment on, one harness release forced such a run out of the mode that refuses without asking, and loaded plugins the run's settings did not name ([project-kit#2225](https://github.com/aleskalfas/project-kit/issues/2225)). So with nobody at a terminal the command starts no fixer, and lists the debt and the command instead. The cost is the loop after a merge: the debt waits until a person runs the command at a terminal.
+
+**Why a terminal tells that a person started the run.** The fixers question tells that a person is there by a terminal (point 2). A flag would tell less, since an agent passes a flag as easily as a person does. An agent can fake a terminal too, and only the permission layer can keep one from starting the command so (point 5).
+
+**Why the command confines a run nobody watches.** Which agent may start which through the harness's dispatch tool is not decided. Such a run would otherwise run under whatever allow rules the project has, with nobody to see what it does. So each such run is given what proposing needs, through the permission model, and what the harness cannot hold is stated.
 - **An allow list, with denies as its floor.** A list of denies only takes away. Every other allow rule of the project would still reach the run, and a writer added later would too. An allow list refuses what nobody listed.
 - **Fail closed.** A permission layer that fails open lets a call through when it breaks. A harness that cannot hold a run's rules starts no fixer, since a run that is unconfined while it appears confined is worse than none.
 
@@ -219,7 +237,7 @@ Asking wherever a type has no recorded answer covers them all, and still asks on
 
 **Why the brief keeps its frame apart from its data.** Commit messages, pull requests and the person's answers are words a fixer must read and must not obey. Quoting each with its source, apart from the frame, tells the fixer which words instruct it. That is no boundary. A steered fixer can still propose a steered answer, which is why the person reads every word (point 5).
 
-**Why the brief carries the pull request.** Where an artefact and what it rests on disagree, a fixer judges whether the change was meant, and the pull request is the main evidence of that. The run reaches no network, so the command reads it outside the run and passes it in. Its words are a contributor's, as a commit message's are, so it is quoted as data.
+**Why the brief carries the pull request.** Where an artefact and what it rests on disagree, a fixer judges whether the change was meant, and the pull request is the main evidence of that. A run nobody watches reaches no network, so the command reads it outside the run and passes it in, to every run. Its words are a contributor's, as a commit message's are, so it is quoted as data.
 
 **Why exact names, and none that could break a line.** A line names its artefact between backticks, and the name is a folder too. A name holding a backtick or a line break could end the name early or open a forged line. Compared exactly against the brief, a line can answer only for an artefact the fixer was given.
 
@@ -233,15 +251,18 @@ Asking wherever a type has no recorded answer covers them all, and still asks on
 
 ### Alternatives considered
 
-- **Only the person starts a fixer, by hand.** Rejected. The debt waits until someone remembers to read the check.
-- **The person runs the command each time, and it starts every declared fixer.** Rejected. Nothing would run after a merge on its own, which is what the loop is for.
+- **Only the person starts a fixer, by hand, in a session of their own.** Rejected. The debt waits until someone remembers to read the check, and nothing gathers what the fixer proposes. The drift command lists the debt at every run, and a person starts the fixers with one command.
+- **The person runs the command each time, and it starts every declared fixer.** Rejected. Running the command is no consent to a fixer, an agent with a shell on input a contributor wrote, so the person grants each one and its types, once. That the person runs the command each time is taken, for now (below).
+- **Fixers start after each merge with nobody watching, confined.** Not taken for now. It is what the loop after a merge is for, but a harness release could not hold the confined run ([project-kit#2225](https://github.com/aleskalfas/project-kit/issues/2225)). A decision of its own says when a run nobody watches starts.
+- **A flag that says a person started the run.** Not taken. An agent passes a flag as easily as a person does. A rule could deny the flag to agents, as none can deny every way of faking a terminal, so the decision on runs nobody watches may weigh it.
+- **A confirmation at the terminal before the fixers start.** Not taken. Running the command at a terminal is the request, and the command says what the fixers run under before the first starts (point 5).
 - **Installing the capability is the grant.** Rejected. A fixer widens what runs, so the grant stays explicit.
 - **A grant by command only, with no question.** Rejected. A step the project must first learn of is one it rarely takes, as COR-017 reasons for the declared project rule set.
 - **A grant of an agent for every type.** Rejected. It widens with no question.
 - **A privilege the permission layer enforces on the dispatch tool.** Not taken. It is the question this record leaves to its own decision, and that layer would not see a command that starts agents.
-- **A draft pull request for each proposal.** Rejected. A run nobody watched would act under the person's account.
+- **A draft pull request for each proposal.** Rejected. A fixer's run would act under the person's account.
 - **Each capability states its fixer's side of the run.** Rejected. The sides drift, and the command reads one contract.
-- **The run reads the pull request itself.** Rejected. The run reaches no network (point 5).
+- **The run reads the pull request itself.** Rejected. A run nobody watches reaches no network (point 5).
 - **A `none` reason in words alone.** Rejected. The command reads no prose.
 - **A contract version on each entry, or each fixer's own.** Not taken. The command would read several contracts at once, or refuse entry by entry. The point's version keeps one contract, at the cost that a break stops every fixer until each contribution catches up (point 1).
 - **Lines that name an artefact by its place in the brief.** Not taken. A person reads the line, and a name says which artefact it answers for. A name a fixer cannot repeat exactly costs only that artefact's result, and the command reports it.
@@ -258,13 +279,13 @@ Asking wherever a type has no recorded answer covers them all, and still asks on
 - **A break of the contract** raises the point's version, so it reaches each project's own filler file too, which names the version it targets (COR-052 point 2). The migration COR-010 asks of such a change rewrites no project's filler file, since it cannot vouch for an agent the project names. The file then fails validation, naming the version, until the project re-targets it. The release says what a project's own fixer must change.
 - **The command reads the contract from data.** The `none` reasons, their classes and the line's grammar are what the drift command reads. The change that ships the command holds them as data of this capability, and tests this record and the README against it (COR-018).
 - **A core record** decides whether and how install and upgrade ask the question (point 2). Until it ships, the drift command and the project manager ask.
-- **A harness requirement** (COR-047): an agent can be started from a command, confined for one run, and its files read after it ends.
+- **A harness requirement** (COR-047): an agent can be started from a command, confined for one run, and its files read after it ends. A run nobody watches needs it, and a watched run does not.
 - **Architecture decisions of the methodology** settle how this is realised:
   - where the runner lives
   - how the adapter realises each part of point 5, and the shape the permission model gives a rule scoped to a run
   - what the permission layer sees, and the check after each run
 - **A record on which agent may start which** is expected to cover this route too, once one is accepted. It would adopt or absorb the grant list, so that a project keeps one such list.
 - **[project-management:DEC-029-project-manager-agent-shape]**, "Invocation pattern", covers the agents the project manager dispatches through the harness's tool. An agent the drift command starts is no such dispatch. DEC-029 is refined to say so in the change that ships the drift command.
-- **"Friction writers" in the agents README** needs no change. Its condition that an agent can ask the person already lets a fixer run no writer, and point 5 denies it every writer.
+- **"Friction writers" in the agents README** needs no change. Its condition that an agent can ask the person already lets a fixer run no writer. Point 5 also denies a run nobody watches every writer, and tells a watched run to run none.
 - **The agent workspace** is described as holding intermediate files, by core rule 16 and by the README of the backbone's permission code. This capability's queue is a further use. Those accounts are asked to name such a use, so that an agent removing what it no longer needs leaves a queue alone.
 - **No migration.** Every change adds.

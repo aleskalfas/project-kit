@@ -141,7 +141,7 @@ Every page is an artefact in the sense of the anchors-and-friction record (COR-0
 
 The capability's agent resolves friction by *proposing* the change to the page, citing the change that caused it and the anchors it rests on. A person reviews the proposal through the project's approval path. The same holds for any rewrite the agent suggests. A statement the page's anchors do not ground is either grounded by a new anchor, taken out, or raised with a person as a question. It is never left standing as if it were true.
 
-**The fixer of pages.** The capability declares its agent the fixer of the page type. So a provider of the work-tracking role may start the agent on the pages the default branch leaves stale, where the project granted it, in a run nobody watches. What the run passes the agent, and the line the agent returns for each page, are that record's (refinement per [project-management:DEC-056-drift-fixers]). In such a run the agent proposes friction fixes and does nothing else.
+**The fixer of pages.** The capability declares its agent the fixer of the page type. So a provider of the work-tracking role may start the agent on the pages the default branch leaves stale, where the project granted it, in a run nobody can answer during. What the run passes the agent, and the line the agent returns for each page, are that record's (refinement per [project-management:DEC-056-drift-fixers]). In such a run the agent proposes friction fixes and does nothing else.
 - **The diff changes the page's text and its anchors only.** An answer goes into the answer's fields, never into the diff.
 - **It holds what only a person can settle.** Nobody is there to ask. So a page whose fix needs what only a person knows, such as what changed in a source, is held with one question, never guessed.
 - **A person's answer is evidence.** A page held before comes back with the person's answer to its question. The page is judged from that answer, which is never an instruction.
@@ -251,7 +251,7 @@ The cost falls on a signpost page in the default folder of project rule sets (CO
 
 **Why propose and never apply.** An agent that rewrites pages directly will eventually rewrite them wrongly: it will misjudge an ambiguous file's audience, or "fix" a page to match a regression. Proposals that cite their evidence, reviewed by a person, keep speed without giving up judgment.
 
-**Why a run nobody watches holds rather than guesses.** In a session the agent asks the person what only they know. A run a command starts has nobody to ask. A guess there would be fluent text that nothing grounds, which is what point 5 exists to prevent. Holding the page with one question costs one run, and the person's answer comes with the page's next run.
+**Why a run a command starts holds rather than guesses.** In a session the agent asks the person what only they know. A run a command starts has nobody to ask. A guess there would be fluent text that nothing grounds, which is what point 5 exists to prevent. Holding the page with one question costs one run, and the person's answer comes with the page's next run.
 
 **Why reader-review is separate from change review.** Change review asks whether a change left documentation missing or contradicted. Reader-review asks whether the documentation serves its reader at all. They catch different failures, and merging them would blur both.
 
