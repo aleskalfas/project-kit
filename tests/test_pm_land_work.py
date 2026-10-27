@@ -29,6 +29,7 @@ import pytest
 from tests import pm_issue_branch_support as issue_branch_support
 from tests import pull_request_backbone
 from tests.adopter_repo import sign_nothing
+from tests.friction_documents import SOURCE, document, friction_config
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -358,6 +359,32 @@ class _Run:
     #: The list at a given head, where it is not `altered`; None for one that cannot
     #: be read there.
     altered_at: dict[str, list[Any] | None] = field(default_factory=dict)
+    #: The change check on the merge of the head with the base's tip
+    #: (`friction_answers.merged`): the findings it fails on, the files a merge
+    #: conflicts in, or why it could not be read — and each (head, base, the head's own
+    #: check) it was asked about. The merge is the head itself unless the base moved on.
+    merge_refused: list[dict[str, Any]] = field(default_factory=list)
+    #: Findings the check reports at the merge in warning mode, failing nothing.
+    merge_reported: list[dict[str, Any]] = field(default_factory=list)
+    merge_conflicts: tuple[str, ...] = ()
+    merge_problem: str | None = None
+    merged_for: list[tuple[str, str, Any]] = field(default_factory=list)
+    #: The real `friction_answers.merged`, for a test that runs the change check.
+    real_merged: Callable[..., Any] | None = None
+
+    def merged(self, head: str, base: str, *, checked: Any = None) -> Any:
+        """`friction_answers.merged`, answered from this world."""
+        self.merged_for.append((head, base, checked))
+        fa = self.land.friction_answers
+        tip = self.tip or self.merge_base
+        if self.merge_problem is not None:
+            return fa.Merged(head, problem=self.merge_problem)
+        if self.merge_conflicts:
+            return fa.Merged(head, tip=tip, conflicts=self.merge_conflicts)
+        findings = self.merge_refused or self.merge_reported
+        document = {"failed": bool(self.merge_refused), "findings": findings}
+        merge = "d" * 40 if self.outdated else head
+        return fa.Merged(head, tip=tip, merge=merge, document=document)
 
     def accepted(self, head: str, base: str) -> Any:
         """`accepted_records.derive`, answered from this world."""
@@ -529,6 +556,8 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         github = _FakeGitHub(mq=land.merge_queue, head=clone.head, base=clone.base)
         run = _Run(land=land, work=work, github=github, merge_base=clone.base)
         github.checks[github.head] = checks if checks is not None else [_GREEN]
+        run.real_merged = land.friction_answers.merged
+        monkeypatch.setattr(land.friction_answers, "merged", run.merged)
         monkeypatch.setattr(land.friction_answers, "derive", run.derive)
         monkeypatch.setattr(land.friction_answers, "covers", run.covers)
         monkeypatch.setattr(land.accepted_records, "derive", run.accepted)
@@ -3422,3 +3451,220 @@ def test_a_covered_later_head_that_left_its_base_elsewhere_holds_its_grant_list_
         f"{_short(authorised)};"
     ) in out.splitlines()[-1]
     assert run.github.merges == []
+
+
+# ---- the merge as it would land (DEC-055 point 6, #2228) -------------------------
+# Just before it stops ready, asks or merges, land-work runs the change check on the
+# merge of the pinned head with the base as it stands, fetched, and refuses where the
+# check fails there, naming each document.
+
+#: How the line of the step that checks the merge begins (land-work's `MERGE_CHECK`).
+_MERGE_CHECK = "merge check"
+
+_FRICTION = {
+    "location": "docs/core.md",
+    "kind": "friction",
+    "message": "path src/core/** changed in this diff; revalidate the artefact",
+}
+_DEAD = {"location": "docs/old.md", "kind": "dead-anchor", "message": "src/gone.py matches no file"}
+
+
+def _merge_check_line(out: str) -> str:
+    (line,) = [line for line in out.splitlines() if line.startswith(f"{_MERGE_CHECK}:")]
+    return line
+
+
+def test_a_merge_the_check_passes_on_goes_on_and_says_what_was_checked(world, capsys) -> None:
+    run = world()
+    head = run.github.head
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert _merge_check_line(out) == (
+        f"{_MERGE_CHECK}: the change check passes on {_short(head)}, which holds main at "
+        f"{_short(run.merge_base)}"
+    )
+    # Asked after the answers, for the pinned head against the PR's base, handed the
+    # head's own check so a base the head holds is not checked twice.
+    ((asked, base, checked),) = run.merged_for
+    assert (asked, base, checked["base"]["commit"]) == (head, "main", run.merge_base)
+    lines = out.splitlines()
+    assert lines.index(_merge_check_line(out)) > lines.index(f"{_STEP}: none")
+
+
+def test_a_merge_with_a_base_that_moved_on_is_named_as_merged(world, capsys) -> None:
+    run = world()
+    run.outdated, run.tip = True, "e" * 40
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == 8, out + err
+    assert _merge_check_line(out) == (
+        f"{_MERGE_CHECK}: the change check passes on {_short(run.github.head)} merged with main "
+        f"at {'e' * 7}"
+    )
+
+
+@pytest.mark.parametrize("authorised", [True, False], ids=["--yes", "ready"])
+def test_a_merge_the_check_fails_on_is_refused_naming_each_document(
+    world, capsys, authorised
+) -> None:
+    run = world()
+    run.outdated, run.tip = True, "e" * 40
+    run.merge_refused = [_FRICTION, _DEAD]
+    if authorised:
+        rc, out, err = run.authorised(capsys=capsys)
+    else:
+        rc, out, err = run.run(capsys=capsys)
+    assert rc == 1, out + err
+    lines = out.splitlines()
+    assert f"  docs/core.md: friction — {_FRICTION['message']}" in lines
+    assert f"  docs/old.md: dead-anchor — {_DEAD['message']}" in lines
+    assert lines[-1] == (
+        f"{_MERGE_CHECK}: refused — the change check fails on {_short(run.github.head)} merged "
+        f"with main at {'e' * 7}, on 2 documents (docs/core.md, docs/old.md), above. Merge main "
+        f"into {BRANCH} (`git merge origin/main`), settle each finding there, push, and run "
+        f"`land-work {ISSUE}` again. Nothing was merged"
+    )
+    assert not any(line.startswith("ready:") for line in lines)
+    assert (run.github.merges, run.after_merge) == ([], [])
+
+
+def test_in_warning_mode_what_the_merge_check_finds_is_shown_and_stops_nothing(
+    world, capsys
+) -> None:
+    run = world()
+    run.outdated, run.tip = True, "e" * 40
+    run.merge_reported = [_FRICTION]
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert f"  docs/core.md: friction — {_FRICTION['message']}" in out.splitlines()
+    assert _merge_check_line(out) == (
+        f"{_MERGE_CHECK}: the change check passes on {_short(run.github.head)} merged with main "
+        f"at {'e' * 7}, and reports 1 document above, which the project's friction mode fails "
+        "nothing on: for information"
+    )
+    assert len(run.github.merges) == 1
+
+
+def test_a_head_that_holds_the_base_and_fails_is_refused_without_a_merge_to_make(
+    world, capsys
+) -> None:
+    run = world()
+    run.merge_refused = [_FRICTION]
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 1, out + err
+    assert out.splitlines()[-1] == (
+        f"{_MERGE_CHECK}: refused — the change check fails on {_short(run.github.head)}, which "
+        f"holds main at {_short(run.merge_base)}, on 1 document (docs/core.md), above. Settle "
+        f"each finding in {BRANCH}, push, and run `land-work {ISSUE}` again. Nothing was merged"
+    )
+    assert run.github.merges == []
+
+
+def test_a_merge_that_conflicts_with_the_base_as_fetched_is_refused(world, capsys) -> None:
+    run = world()
+    run.tip = "e" * 40
+    run.merge_conflicts = ("src/cli/main.py",)
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 1, out + err
+    assert out.splitlines()[-1] == (
+        f"{_MERGE_CHECK}: refused — {_short(run.github.head)} conflicts with main as it stands, "
+        f"at {'e' * 7}, in 1 file (src/cli/main.py). Merge main into {BRANCH} (`git merge "
+        f"origin/main`), resolve the conflicts, push, and run `land-work {ISSUE}` again. "
+        "Nothing was merged"
+    )
+    assert run.github.merges == []
+
+
+def test_a_merge_check_that_cannot_be_read_merges_nothing(world, capsys) -> None:
+    run = world()
+    run.merge_problem = "the base origin/main could not be fetched: no network"
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 2, out + err
+    assert out.splitlines()[-1] == (
+        f"{_MERGE_CHECK}: the change check on {_short(run.github.head)} merged with main could "
+        "not be read — the base origin/main could not be fetched: no network. Nothing was "
+        f"merged; run `land-work {ISSUE}` again"
+    )
+    assert run.github.merges == []
+
+
+def test_a_dry_run_checks_the_merge_and_merges_nothing(world, capsys) -> None:
+    run = world()
+    assert run.run(capsys=capsys)[0] == 8  # reviewed: a dry run now has nothing to wait for
+    run.merge_refused = [_FRICTION]
+    rc, out, err = run.run("--dry-run", capsys=capsys)
+    assert rc == 1, out + err
+    assert out.splitlines()[-1].startswith(f"{_MERGE_CHECK}: refused — ")
+    assert run.github.merges == []
+
+
+def _commit_files(work: Path, message: str, files: dict[str, str]) -> str:
+    for path, text in files.items():
+        (work / path).parent.mkdir(parents=True, exist_ok=True)
+        (work / path).write_text(text, encoding="utf-8")
+    # The friction settings sit under `.pkit/`, which the clone ignores.
+    _git(work, "add", "-f", *files)
+    _git(work, "commit", "-q", "-m", message)
+    return _git(work, "rev-parse", "HEAD")
+
+
+def test_landing_the_second_of_two_changes_that_pass_alone_is_refused(
+    world, capsys, monkeypatch, pkit_on_path
+) -> None:
+    """The race of #2228, through the real change check: another change adds a page
+    anchored to the engine, and the PR changes the engine. Each passes alone, so the
+    PR stops ready. Once the other lands on the origin, landing the PR is refused,
+    naming the page, and nothing merges."""
+    run = world()
+    work = run.work
+    monkeypatch.setattr(run.land.friction_answers, "merged", run.real_merged)
+    _git(work, "switch", "-q", "main")
+    config = {".pkit/project/config.yaml": friction_config(mode="enforcing"), **SOURCE}
+    base = _commit_files(work, "friction", config)
+    _git(work, "push", "-q", "origin", "main")
+    _git(work, "switch", "-q", "-c", "anchor")
+    _commit_files(
+        work,
+        "a page on the engine",
+        {"docs/core.md": document("core", anchors={"path": ["src/core/**"]})},
+    )
+    _git(work, "switch", "-q", "-C", BRANCH, base)
+    head = _commit_files(work, "change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
+    _git(work, "push", "-q", "-f", "origin", BRANCH)
+    run.github.head = head
+    run.github.checks[head] = [_GREEN]
+    # The backbone's reading of the base: the origin's main, a remote's, so it is fetched.
+    settled = run.land.friction_answers.default_branch
+    monkeypatch.setattr(settled, "_read", {})
+
+    def ask(explicit: str | None, _run: Any) -> Any:
+        tip = _git(work, "rev-parse", "origin/main")
+        branch = settled.Branch("main", False, "origin/main", tip, None)
+        return settled.Reading(branch, settled.Base("origin/main", tip, None, None, "remote"))
+
+    monkeypatch.setattr(settled, "_ask", ask)
+
+    rc, out, err = run.run(capsys=capsys)
+    assert rc == 8, out + err
+    assert _merge_check_line(out).startswith(
+        f"{_MERGE_CHECK}: the change check passes on {_short(head)}"
+    )
+
+    # The other change lands on the origin; this clone's origin/main is left behind,
+    # so only the fetch the step makes shows it.
+    _git(work, "switch", "-q", "main")
+    _git(work, "merge", "--squash", "-q", "anchor")
+    _git(work, "commit", "-q", "-m", "a page on the engine (#7)")
+    landed = _git(work, "rev-parse", "HEAD")
+    _git(work, "push", "-q", "origin", "main")
+    _git(work, "update-ref", "refs/remotes/origin/main", base)
+    _git(work, "switch", "-q", BRANCH)
+
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 1, out + err
+    last = out.splitlines()[-1]
+    assert last.startswith(
+        f"{_MERGE_CHECK}: refused — the change check fails on {_short(head)} merged with main at "
+        f"{_short(landed)}, on 1 document (docs/core.md), above."
+    ), last
+    assert any(line.startswith("  docs/core.md: friction — ") for line in out.splitlines())
+    assert (run.github.merges, run.after_merge) == ([], [])

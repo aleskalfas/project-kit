@@ -5,14 +5,11 @@ name: release-pr
 # open the PR). NEVER auto-merges: a human reviews the version bumps + the
 # generated changelog and merges. Post-merge tagging is release-tag.yml.
 #
-# Trigger it manually (workflow_dispatch) or let the weekly schedule sweep
-# pending changesets; both no-op cleanly when nothing moves a version.
+# Started by hand only (workflow_dispatch): a release is cut when the
+# maintainer starts it. A no-op when nothing moves a version.
 
 on:
   workflow_dispatch: {}
-  schedule:
-    # Weekly, Monday 09:00 UTC. A no-op when no changeset moves a version.
-    - cron: "0 9 * * 1"
 
 # Minimal scope: push the release branch (contents) and open the PR
 # (pull-requests). No merge permission — a human merges the PR.

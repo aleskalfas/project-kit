@@ -75,7 +75,7 @@ pkit:
 - Each [changeset](../../../glossary.md#term-changeset--changeset)'s segment is a person's judgement of the [change](../../../glossary.md#term-change--change)'s surface, and the [release step](../../../glossary.md#term-release-step--release-step) takes the segment as written ([PRJ-002 D2](../../../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d2--the-bump-segment-is-a-human-surface-judgment-not-a-function-of-the-commit-type)).
 - Where the [release](../../../glossary.md#term-release--release) ships a [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration) that adds a missing default, the changelog entry names that default, from a pending changeset. No command checks for that sentence, so the maintainer looks for it at step 8 ([COR-010](../../../../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)).
 
-**Trigger:** The weekly schedule of `release-pr.yml` comes round, or the maintainer starts that workflow by hand.
+**Trigger:** The maintainer starts `release-pr.yml` by hand.
 
 **Main path:**
 
