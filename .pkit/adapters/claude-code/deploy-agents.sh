@@ -39,6 +39,9 @@
 #   (`storyboard.md`, COR-016) is rewritten to its project-root-relative source
 #   path in the resolved file — in `storyboards:` and where the body cites it —
 #   so the deployed copy, which lives in `.claude/agents/`, still resolves it.
+# - Every resolved body ends with the adapter's workspace sentence (#2026):
+#   the session scratch directory the harness's environment note names is
+#   replaced by `.agent-workspace/`. The resolver adds it.
 # - A listed agent whose canonical source doesn't resolve (e.g. a folder
 #   mid-build with no <name>/<name>.md per COR-015) is likewise skipped
 #   loudly rather than aborting the run (#537).

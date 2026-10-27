@@ -1125,6 +1125,24 @@ def test_hook_asks_on_a_foreign_edit_or_write_in_every_mode(tmp_path):
             assert "outside this session's repo" in _reason(parsed)
 
 
+def test_hook_asks_on_a_write_into_the_harness_scratch_directory_in_every_mode(tmp_path):
+    """The adapter tells agents the workspace replaces the harness's session scratch
+    directory (#2026, option B), and the hook's ask there stays as it is: a write the
+    sentence did not stop meets a person, never a silent allow."""
+    root = _tree(tmp_path)
+    scratchpad = tmp_path / "tmp" / "claude-501" / "-proj" / "session-id" / "scratchpad"
+    target = str(scratchpad / "count.py")
+    for mode in (*_UNATTENDED_MODES, *_ASKING_MODES, *_UNKNOWN_MODES):
+        for tool, tool_input in (
+            ("Edit", {"file_path": target, "old_string": "a", "new_string": "b"}),
+            ("Write", {"file_path": target, "content": "x"}),
+        ):
+            payload = {"tool_name": tool, "tool_input": tool_input, "cwd": str(root)}
+            _, parsed = _invoke(root, _in_mode(payload, mode))
+            assert _decision(parsed) == "ask", (mode, tool, parsed)
+            assert "outside this session's repo" in _reason(parsed)
+
+
 # ---- the read-only text filters and `uv run`, end to end (#2000) -------------
 #
 # The live hook, in a tree whose active profile is a shipped one and whose own

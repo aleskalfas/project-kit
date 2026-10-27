@@ -538,6 +538,45 @@ def test_deploy_emits_kit_marker_in_resolved_file(mock_kit: Path) -> None:
     assert "managed-by: project-kit" in second_line
 
 
+# The adapter's workspace sentence (#2026): every body the deploy writes ends
+# with it, once. `tests/test_claude_code_start_hook.py` holds it equal to the
+# start hook's.
+WORKSPACE_NOTE = (
+    "The session scratch directory your environment names is replaced by "
+    "`.agent-workspace/` at the repository root: keep every intermediate file there, "
+    "never in that directory."
+)
+
+
+def test_deploy_ends_every_body_with_the_workspace_sentence(mock_kit: Path) -> None:
+    _write_agent(
+        mock_kit,
+        "core",
+        "noted",
+        "---\nname: noted\ndescription: Test.\n---\n\n# Noted\n\nThe last paragraph.\n\n\n",
+    )
+    _run_deploy(mock_kit)
+    deployed = (mock_kit / ".claude" / "agents" / "noted.md").read_text()
+    assert deployed.endswith(f"\n\nThe last paragraph.\n\n{WORKSPACE_NOTE}\n")
+    assert deployed.count(WORKSPACE_NOTE) == 1
+    second = _run_deploy(mock_kit)
+    assert "exists" in second.stdout and "updated" not in second.stdout
+
+
+def test_deploy_adds_the_workspace_sentence_once_to_a_body_that_holds_it(
+    mock_kit: Path,
+) -> None:
+    _write_agent(
+        mock_kit,
+        "core",
+        "already",
+        f"---\nname: already\ndescription: Test.\n---\n\n# Already\n\n{WORKSPACE_NOTE}\n",
+    )
+    _run_deploy(mock_kit)
+    deployed = (mock_kit / ".claude" / "agents" / "already.md").read_text()
+    assert deployed.count(WORKSPACE_NOTE) == 1
+
+
 def test_deploy_skips_existing_user_content_without_marker(mock_kit: Path) -> None:
     """An adopter-authored agent at the same name is NOT overwritten — `skipped` status, kit's
     version is dropped.

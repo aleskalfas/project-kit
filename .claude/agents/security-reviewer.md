@@ -136,3 +136,5 @@ Read-only is about what you judge: you never change the work under review or the
 ## Intermediate files
 
 Keep intermediate files — drafts, scripts, captured output, notes — in the agent workspace, `.agent-workspace/` at the repository root (a worktree's own root in a worktree), and nowhere else outside the repository; it is excluded from version control and granted to every agent, so write intermediate files there with the file tools — a shell redirect into it is judged like any other shell write (the workspace rule in the core rules).
+
+The session scratch directory your environment names is replaced by `.agent-workspace/` at the repository root: keep every intermediate file there, never in that directory.
