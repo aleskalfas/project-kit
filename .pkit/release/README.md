@@ -861,20 +861,20 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   unrelated branch here. No `Closes #N` requirement — a release PR has none.
 - **Leaves a clone with work in progress where it is** (#2189). After the
   merge, the local cleanup depends on where the clone is:
-  - **On the head branch with a clean working tree**, the clone is switched
-    to the base and the base fast-forwarded. The local head is deleted on
-    the terms above. Where the switch fails, as when another worktree holds
-    the base, the run warns and keeps the clone on the head branch
+  - **On the head branch with a clean working tree**, the run switches the
+    clone to the base and fast-forwards the base. The run deletes the local
+    head on the terms above. Where the switch fails, as when another
+    worktree holds the base, the run warns and keeps the clone on the head
+    branch
   - **On the base with a clean working tree**, where a release is usually
-    merged from, the base is fast-forwarded and the clone not switched. Any
-    local head is kept, and a fast-forward that fails warns and changes
-    nothing
-  - **Anywhere else**, the clone is left where it is, nothing pulled and any
-    local head kept, said in one line. That is a clone on another branch or
-    a detached HEAD, or one with uncommitted changes, untracked files
-    included. A checkout would move such a clone, with any changes, onto
-    the base, where its next commit could land. A working tree git cannot
-    read is left the same way
+    merged from, the run only fast-forwards the base. Any local head is
+    kept, and a fast-forward that fails warns and changes nothing
+  - **Anywhere else**, the run leaves the clone where it is, pulls nothing
+    and keeps any local head, saying so in one line. That is a clone on
+    another branch or a detached HEAD, one with uncommitted changes,
+    untracked files included, or one whose working tree git cannot read. A
+    checkout would move such a clone, with any changes, onto the base,
+    where its next commit could land
 - **Lands through the merge queue** where the base has one, rather than
   around it. The queue makes the squash commit itself, by its own merge
   method and from the repository's squash-commit defaults, ignoring what a
