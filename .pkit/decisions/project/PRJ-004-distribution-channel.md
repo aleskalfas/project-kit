@@ -18,7 +18,7 @@ Which ref the install names decides whether the version a project records names 
 
 ## Decision
 
-**Distribute via direct git URL on `github.com`, with no registry layer.** The canonical install path names the tag `latest`, which points at the commit of the highest release:
+**Distribute via direct git URL on `github.com`, with no registry layer.** The canonical install path names the tag `latest`, which points at the commit of the latest release, the highest final release (PRJ-002 D5):
 
 ```
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
@@ -30,8 +30,8 @@ uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
 
 **The ref** after `@` is a tag, a branch, or a commit SHA:
 
-- `@latest` — the highest release, the canonical form. Only the release-tag workflow is meant to write it, and only onto the commit of the highest release tag. Nothing on the host enforces that. No branch is named `latest`, since uv can take a branch before a tag of the same name, and the workflow fails while one exists.
-- `@v<version>` — a given release. The release step (PRJ-002) cuts an annotated git tag matching `.pkit/VERSION` on each release that moves it. Tag form: `v<major>.<minor>.<patch>` (e.g., `v0.5.0`). These tags are the versions. The version a project records is one of them, or a candidate tag's (below), and every reader of release tags, such as `pkit upgrade`'s lookup of the highest release, reads them alone and skips `latest`.
+- `@latest` — the latest release, the canonical form. Only the release-tag workflow is meant to write it, and only onto the commit of the highest release tag. Nothing on the host enforces that. No branch is named `latest`, since uv can take a branch before a tag of the same name, and the workflow fails while one exists.
+- `@v<version>` — a given final release. The release step (PRJ-002) cuts an annotated git tag matching `.pkit/VERSION` on each final release that moves it. Tag form: `v<major>.<minor>.<patch>` (e.g., `v0.5.0`). These tags are the versions. The version a project records is one of them, or the version a candidate tag (below) names, and every reader of release tags, such as `pkit upgrade`'s lookup of the latest release, reads them alone and skips `latest`.
 - `@v<major>.<minor>.<patch>rc<N>` — a release candidate (PRJ-002 D5), such as `v2.0.0rc1`, for whoever chooses to test the next final release before it ships. Its *candidate tag* matches `.pkit/VERSION` as a release tag does, sits on a commit no branch holds, and is never moved or deleted, so it names one content. A candidate tag is no release tag: `latest` never points at one, and no reader of release tags picks one. Of the readers that pick a version to install, only one a person asks for candidates, such as `pkit upgrade --pre` ([ADR-072](../../../tech-docs/architecture/decisions/ADR-072-release-candidates.md)), picks a candidate tag too.
 - `@<branch>` — install a specific branch (useful for adopters trying a kit feature before it lands).
 - `@<sha>` — install a specific commit (longest-term-stable form; immune to tag edits).

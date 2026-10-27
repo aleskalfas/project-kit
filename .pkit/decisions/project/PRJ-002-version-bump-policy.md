@@ -16,7 +16,9 @@ A release may also need testing before it ships, by whoever chooses to take it e
 
 ## Decision
 
-**Mode: declared per-PR, applied release-driven, written main-only.** A **surface change** is what moves the version. It is *declared* on the PR that lands it and *applied* later by a release step. Feature branches never write a version cell. A version the release step writes reaches `main` only through the release PR, which is what *written main-only* means. A *release candidate* previews the next final release from the same declarations, consumes none of them, and holds its versions only in its tag (D5).
+**Mode: declared per-PR, applied release-driven, written main-only.** A **surface change** is what moves the version. It is *declared* on the PR that lands it and *applied* later by a release step. Feature branches never write a version cell. A version the release step writes reaches `main` only through the release PR, which is what *written main-only* means.
+
+A *release candidate* previews the next final release from the same declarations, consumes none of them, and holds its versions only in its tag (D5).
 
 A **surface change** is anything an adopter could observe, depend on, or break against:
 
@@ -46,7 +48,7 @@ Which segment a change warrants — and which *tier* (backbone vs a specific com
 
 A *release PR* is the sole writer of version state on `main`. It writes the version numbers and the changelog the release step generates, and consumes the changesets that release includes. No other PR writes a version.
 
-The release step computes each tier's new version from one commit of `main` and the changesets pending there, and cuts the release's tag via the existing `pkit version tag --push` (per PRJ-004, which already mandates annotated tags matching `.pkit/VERSION`; this reuses that mechanism and is not a new distribution decision). The tagged commit is the coherent state the version-locked official install is built from (ADR-033). A release that ends no candidate line is computed from the current state on `main`, and its tag is cut on the commit its release PR leaves there.
+The release step computes each tier's new version from one commit of `main` and the changesets pending there, and cuts the release's tag via the existing `pkit version tag --push` (per PRJ-004, which already mandates annotated tags matching `.pkit/VERSION`; this reuses that mechanism and is not a new distribution decision). The tagged commit is the coherent state the version-locked official install is built from (ADR-033). A final release that ends no candidate line is computed from the current state on `main`, and its tag is cut on the commit its release PR leaves there.
 
 The final release that ends a candidate line is computed from the last candidate's source commit (D5). Its versions are written on a commit on top of that one, which its tag takes. Its release PR then brings them into `main`, consuming the changesets that release includes and leaving later ones pending.
 
@@ -83,13 +85,13 @@ A *release candidate* is a release that previews the next final release, so that
 - **One version, one content.** No `N` is reused. A person *withdraws* a candidate found unfit by marking its Release so, and its tag and number stay. The next candidate takes the next `N`, and PRJ-004 says how a candidate's tag keeps one content.
 - **`main` holds release versions alone** (D3). A change that would put a pre-release version there is refused ([ADR-072](../../../tech-docs/architecture/decisions/ADR-072-release-candidates.md) point 3).
 - **The final release is cut from the last candidate's source commit.** It ships what that candidate held, under its own versions, ranges and changelog, and its release PR brings those into `main` (D3). A change merged to `main` since then waits, pending, for the next release, so `main` is never frozen while candidates are tested. A last candidate that was withdrawn needs another candidate first.
-- **What cannot wait.** A change merged since the source commit that the final release would lose or break cannot wait for the next release. Such are a migration in a folder the final release ships, an edit to a changeset it consumes, and a range that excludes a version it writes. Before the final release's tag, such a change needs another candidate first. After it, the change is reverted on `main`, or a migration moved to a later folder, and lands again once the release PR has merged ([ADR-072](../../../tech-docs/architecture/decisions/ADR-072-release-candidates.md) point 3).
-- **A line ends with its final release.** No other release ships while a line runs, so a line ends only with its final release.
+- **What cannot wait.** A change merged since the source commit that the final release would lose or break cannot wait for the next release, such as a migration in a folder the final release ships. [ADR-072](../../../tech-docs/architecture/decisions/ADR-072-release-candidates.md) point 3 names each such change. Before the final release's tag, such a change needs another candidate first. After it, the change is reverted on `main`, or a migration moved to a later folder, and lands again once the release PR has merged.
+- **No other release ships while a line runs.** So a line ends only with its final release.
 - **Floors wait for the final release** (D4).
 
 ### Policy, not mechanics
 
-The changeset-file **format** and the release-step **mechanics** (changeset naming, directory, the release command's exact behaviour) are **not** fixed here — they live in the release-flow spec shipped with the implementation (#464). This record carries the *policy*; the spec carries the *mechanics*. [ADR-072](../../../tech-docs/architecture/decisions/ADR-072-release-candidates.md) decides how the code cuts and reads a candidate, how it counts `N`, and which states refuse a cut. It also decides how the final release that ends a line is cut from the source commit, what its cut and its merge refuse, and what the merge of its release PR checks. The release-flow spec holds the commands and their messages.
+The changeset-file **format** and the release-step **mechanics** (changeset naming, directory, the release command's exact behaviour) are **not** fixed here — they live in the release-flow spec shipped with the implementation (#464). This record carries the *policy*; the spec carries the *mechanics*. [ADR-072](../../../tech-docs/architecture/decisions/ADR-072-release-candidates.md) decides how the code cuts and reads a candidate, how it counts `N` and which states refuse a cut, and how the final release that ends a line is cut from the source commit and what its cut and its merge refuse. The release-flow spec holds the commands and their messages.
 
 ## Rationale
 
@@ -115,7 +117,7 @@ The changeset-file **format** and the release-step **mechanics** (changeset nami
 
 **Why the release refuses a range that excludes its dependency.** The tagged commit a release produces is the coherent state the version-locked install is built from (D3). A capability whose range excludes the version of a capability the same tag carries breaks that state. An upgrade's dependency gates take the capabilities one release ships to agree with each other (ADR-065 point 6), and an adopter's upgrade refuses a tag in which one excludes another. So the release refuses to leave such a range, however it arose. The cost is that a pending major of a capability holds every release until each dependent in the tree declares it runs on that major, or the major waits. The hold falls where the break is cheapest to answer, before any adopter meets it.
 
-**Why a candidate's versions live only in its tag.** A candidate consumes no changeset, as the maintainer decided for #2211 on 27 October 2026. So a commit of `main` and the changesets pending there already make the next final release. Each candidate is computed from `main`'s head that way, and the final release from the last candidate's source commit. `main` never records a candidate, so no reader of `main`'s versions meets a pre-release, and no release is computed from one. The cost is a commit that no branch holds, kept by its tag alone.
+**Why a candidate's versions live only in its tag.** A candidate consumes no changeset, as the maintainer decided for #2211 on 27 October 2026. So a commit of `main` and the changesets pending there already make the next final release, `main`'s head for each candidate and the last candidate's source commit for the final release. `main` never records a candidate, so no reader of `main`'s versions meets a pre-release, and no release is computed from one. The cost is a commit that no branch holds, kept by its tag alone.
 
 **Why each moved component carries the suffix.** A transition tells a component's move, and which of its migrations to run, by comparing its versions. Every candidate of a line is computed from the same base, so at a release version two candidates would carry one version of a capability with different content. A project moving between them would see no move, and would run none of the migrations added in between. With the suffix, each move between candidates is a move.
 
