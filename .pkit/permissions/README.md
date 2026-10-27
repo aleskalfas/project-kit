@@ -175,7 +175,7 @@ Two catalog privileges cover the programs a compound most often pipes into or ru
 - **`text-filter`** recognizes programs whose only effect is their standard output. They write no file, reach no network, run no other program and change no shell state. Every shipped profile grants it to `all`, and it carries no path scope.
   - **The programs:** `cat`, `head`, `tail`, `wc`, `cut`, `tr`, `grep`, `egrep`, `fgrep`, `ls`, `cmp`, `comm` and `paste`. The list goes on with `basename`, `dirname`, `realpath`, `pwd`, `true`, `false`, `seq`, `sleep`, `stat`, `du` and `which`.
   - **`sort`, `uniq` and `diff`,** each in a form that writes no file and runs no other program. The form holds no pathname pattern that could expand to such a form. The catalog's comments list the forms.
-- **`uv-run`** recognizes `uv run`, which runs any program it is given in the project's environment and confines nothing. A grant allows whatever that program does. A deny reads the command as the wrapper `uv`, never as the program behind it, so no guardrail reaches `uv run rm -rf ~`. No shipped profile grants it, so a project that wants it grants it in its own `grants.yaml`.
+- **`uv-run`** recognizes `uv run`, which runs any program it is given in the project's environment and confines nothing. A grant allows whatever that program does, where the core can read which program it is. A deny reads that program too, so `uv run rm -rf ~` is denied ("A deny holds against the forms of its command" below). No shipped profile grants it, so a project that wants it grants it in its own `grants.yaml`.
 
 Each recognizer of the two is a `pattern` or names a subcommand. So a grant of either writes no native allow rule, and only the hook realizes the grant.
 
@@ -219,7 +219,7 @@ Three things in a Bash command keep every grant from allowing it, each described
   - the variables that name the startup files a shell reads first, such as `BASH_ENV`, `ENV` and `ZDOTDIR`
   - the options of Python, Perl, Ruby, Node and Java, which load code ahead of the program's own
   - zsh's `NULLCMD` and `READNULLCMD`, since they name the program a command of redirections alone runs
-- **A program's own setting,** such as `GIT_PAGER=cat`, is stripped and allowed: what a granted program is told to run is the grant's breadth. A `git` grant already lets `git -c core.fsmonitor=…` run any program. A setting that changes which configuration the program reads may still keep a deny from telling (below).
+- **A program's own setting,** such as `GIT_PAGER=cat`, is stripped and allowed: what a granted program is told to run is the grant's breadth. So is a pager set in git's configuration file. A setting that changes which configuration the program reads may still keep a deny from telling (below).
 - **An assignment written with a quote or a backslash** is never allowed by a grant. The core never matches an assignment's value, so removing its quotes would make no match more accurate. Only a quoted argument is matched as the shell passes it on.
 
 A segment led by `export` runs no program. `export` takes each word after it as a name or an assignment, so `export git PATH=/tmp/x` sets `PATH` and runs no `git`. The segment's assignments are judged as above, and no grant on a program covers the segment. A segment led by `builtin export` or `command export` stays a program no grant covers.
@@ -229,6 +229,8 @@ Each word after `export` must be a plain name or assignment, since the shell exp
 So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's native rules decide each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is.
 
 For a grant, outside an `export`, a glob is read as written. A glob changes only arguments, from the names of files, never the program a grant names.
+
+A grant that names a subcommand or flags is the exception. A pattern that may expand to a word opening with `-`, before the subcommand or first flag the grant names, keeps the grant from allowing. That word may be an option that takes the next word as its value. So a grant naming `docker ps` does not allow `docker -* ps`, while a `git` grant, which names the program alone, allows `git add -*`.
 
 ### A redirection that writes no file
 
@@ -280,7 +282,15 @@ A recognizer's regex `pattern` is matched with a program's path cut to its name,
 
 The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates every ref the remote holds. It names a refspec opening with `+`, as in `git push origin +main`, through the recognizer field `word_prefix_any`.
 
-**Where a deny may bind on what the core cannot see, no grant allows the command.** The core then abstains, naming the deny, and a strict posture denies. Two things keep the core from seeing:
+**A deny reads the command a runner runs.** A deny matches the command a listed runner runs, in every form above, as well as the runner itself. A grant still matches the runner as written (ADR-025 point 5). The runners:
+
+- `env`, `command`, `exec`, `nice`, `nohup`, `timeout`, `time`, `xargs` and `uv run`
+- find's `-exec`, `-execdir`, `-ok` and `-okdir`
+- `sh`, `bash`, `zsh` or `dash` given `-c`, whose script the core splits and reads again as a command, one level deep
+
+The core skips each runner's own options it knows, and `timeout`'s duration, and reads a runner behind a runner. So `find . -exec rm -rf {} +`, `xargs -0 rm -rf`, `env rm -rf ~`, `sh -c 'rm -rf ~'` and `uv run --directory x rm -rf ~` are denied. An assignment that `env` makes counts as a leading assignment does, and a file `uv run --env-file` loads as one that changes the configuration. For a deny alone, find's terminator `\;` is read as the word `;` that find receives, not as a separator.
+
+**Where a deny may bind on what the core cannot see, no grant allows the command.** The core then abstains, naming the deny, and a strict posture denies. Four things keep the core from seeing:
 
 - **A pathname pattern,** such as `--forc[e]` or `*`, which the shell expands to the names of files. A glob character counts outside quotes alone, so `git push origin '[+]main'` is read as written.
   - **For a structured recognizer,** the core cannot tell where such a pattern stands for the program or subcommand, or may open with `-` or `+`.
@@ -292,14 +302,34 @@ The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates e
     - any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`
     - git's repository directories
   - **Where such an assignment counts:** in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it.
+- **Git configuration the command sets or writes,** which may hold an alias or a forced refspec. That is any `-c` or `--config-env` before git's subcommand, or `git config` of an `alias.*`, `remote.*.push`, `remote.*.mirror` or `include*` key, in any case. A pathname pattern or a brace expansion where such an option or key may stand counts too.
+  - **So these abstain:** `git -c alias.p='push --force' p`, `git config alias.pf 'push --force'`, `git -* status` and every other `git -c`, such as `git -c core.quotepath=off status`.
+  - **One verdict for one injection:** `GIT_CONFIG_PARAMETERS=… git push` abstains as an assignment that changes the configuration, as `git -c` does.
+- **A runner whose command the core cannot read.** Any program may then run, so every guardrail among the subject's denies may bind. A deny the core reads for certain still wins. The core cannot read the command in these cases:
+  - the runner has an option the core does not know, such as `env -S`
+  - a word the shell expands stands where the runner's options or program stand, or anywhere among find's own words
+  - a `-c` script holds a construct the core cannot read, such as `$1`, or runs a shell given `-c` in turn
+  - the core cannot read the words of a runner's segment, as where the splitter cuts a quote
+  - more runners stand one behind another than the core reads
 
-**Where Claude Code may allow what the core abstains on for a guardrail, the operator is asked, outside auto and bypass mode.** A harness's native rules may allow a command the core abstains on, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on such a command in a form the core cannot see. An adapter may use those names to ask the operator rather than abstain.
+  So `find . -exec sh -c 'rm "$1"' _ {} \;` abstains, naming every guardrail.
+
+A harmless `git -c`, or a runner's option the core does not know, is thus a false prompt. So is a `find` whose words hold an expansion or a brace, quoted or not, such as `find . -name '*.{ts,tsx}'`. Each stays one until the diagnostic log shows which recur and earns a list of safe keys or options ([ADR-025](../../tech-docs/architecture/decisions/ADR-025-segment-conservative-bash-allow.md) point 5).
+
+**Where Claude Code may allow what the core abstains on for a guardrail, the operator is asked, outside auto and bypass mode.** A harness's native rules may allow a command the core abstains on, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on such a command in a form the core cannot see. An adapter whose harness's rules may allow the command asks the operator rather than abstain, except in auto and bypass mode ([ADR-025](../../tech-docs/architecture/decisions/ADR-025-segment-conservative-bash-allow.md) point 7).
 
 [The Claude Code hook](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy) asks the operator on such a command, except in auto and bypass mode, where the operator chose not to be asked. A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it. Where the core cannot tell such a deny, it abstains. The deny side stays a speed bump all the same, not a security boundary.
 
-What the forms leave out stays unseen, and nothing asks about it. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth. A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core abstains, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
+What the forms and the runners leave out stays unseen, and nothing asks about it:
 
-An abstain for a construct the core cannot read, such as `git push origin $F`, names no guardrail either, so the harness's native rules decide the command. So does a wrapper the harness allows, as Claude Code's baseline allows `find`, and with it `find . -exec rm -rf {} +`, which no native deny's prefix matches.
+- configuration git reads from its files, such as an alias in `~/.gitconfig`, which is the grant's breadth
+- configuration written into git's files other than by `git config`, such as through the file tools, a shell write or `git remote add --mirror=push`
+- a code runner, such as `python3 -c`, `perl -e`, `awk`'s `system()` or a script the agent writes
+- a program that runs a command but is no listed runner, such as `ssh`, `git rebase --exec`, `git submodule foreach` or `git bisect run`
+- arguments a runner reads from its input, as `xargs` does
+- deletion by a program's own option, which no deny names, such as `find -delete`
+
+An abstain for a construct the core cannot read, such as `git push origin $F`, names no guardrail either, so the harness's native rules decide the command. With the hook off, the core reads nothing, so Claude Code's baseline `Bash(find:*)` runs `find . -exec rm -rf {} +` unasked. No native deny's prefix matches it.
 
 ## Scope enforcement
 

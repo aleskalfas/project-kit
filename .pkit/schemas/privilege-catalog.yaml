@@ -142,11 +142,10 @@ privileges:
     description: >-
       Run a program in the project's Python environment through `uv run`, such
       as `uv run pytest`. `uv run` runs any program it is given and confines
-      nothing, so a grant allows whatever that program does. A deny reads the
-      command as the wrapper, `uv`, never as the program behind it (ADR-025
-      point 5), so no guardrail reaches `uv run rm -rf ~` (#1990). No shipped
-      profile grants it (ADR-005 point 5): a project may grant it in its
-      `grants.yaml`.
+      nothing, so a grant allows whatever that program does, where the core
+      can read which program it is. A deny reads that program too (ADR-025
+      point 5), so `uv run rm -rf ~` is denied. No shipped profile grants it
+      (ADR-005 point 5): a project may grant it in its `grants.yaml`.
     recognize:
       bash:
         - cmd: uv

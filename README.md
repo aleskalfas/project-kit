@@ -138,7 +138,7 @@ $ pkit permissions probe | grep -e "^\[" -e "ED —" | head -n 8
 ```
 
 > [!WARNING]
-> A deny is a speed bump, not a boundary. Until the hook is on, Claude Code's own deny matches only a command's start, so `git push origin main --force` runs. With the hook on, a command behind an allowed wrapper, such as `find . -exec rm -rf {} +`, still runs ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
+> A deny is a speed bump, not a boundary. Until the hook is on, Claude Code's own deny matches only a command's start, so `git push origin main --force` runs. With the hook on, a command given to an allowed `ssh` still runs ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
 
 ### No change leaves a document stale without saying so
 
