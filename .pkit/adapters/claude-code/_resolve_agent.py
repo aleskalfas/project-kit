@@ -37,6 +37,11 @@ naming a file beside the source is rewritten — in the list and wherever the
 body cites it — to that file's project-root-relative path, the path the runtime
 reads it from. An entry already written as a source path is left as written.
 
+It ends the body with the adapter's workspace sentence (#2026): the session
+scratch directory the harness's environment note names is replaced by the agent
+workspace. The start hook (`session-start-hook.py`) gives every session and
+subagent the same sentence, and a test holds the two equal.
+
 The sync-managed check above is one this script *applies* but does not
 *define*. The sync-managed predicate and the write-carrying category registry live
 once, in the lifecycle layer's propagated `.pkit/lifecycle/ownership.py`,
@@ -108,6 +113,16 @@ MODEL_ALIASES = (
 )
 FULL_MODEL_NAME_PATTERN = r"^(?:[A-Za-z0-9-]+\.)*claude-\S+$"
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+
+# The sentence every resolved body ends with (#2026), worded against the
+# harness's environment note, which names a session scratch directory outside
+# the repository. `session-start-hook.py` holds the same constant under the same
+# name, and a test pins the two equal.
+WORKSPACE_NOTE = (
+    "The session scratch directory your environment names is replaced by "
+    "`.agent-workspace/` at the repository root: keep every intermediate file there, "
+    "never in that directory."
+)
 
 # Prefix of a stderr line that reports a problem without failing the resolve.
 # `deploy-agents.sh` prints these lines for an agent that still deploys; any
@@ -205,6 +220,13 @@ def rebase_sibling_storyboards(fm_data: dict, body: str, source_file: Path) -> s
             body,
         )
     return body
+
+
+def end_with_workspace_note(body: str) -> str:
+    """*body* ending with the workspace sentence as its last paragraph, added once."""
+    if WORKSPACE_NOTE in body:
+        return body
+    return f"{body.rstrip()}\n\n{WORKSPACE_NOTE}\n"
 
 
 def main(argv: list[str]) -> int:
@@ -372,6 +394,7 @@ def main(argv: list[str]) -> int:
 
     carry_policy(fm_data, policy_overrides, f"overrides.{agent_name}", warn)
     body = rebase_sibling_storyboards(fm_data, body, Path(source_file))
+    body = end_with_workspace_note(body)
 
     out = io.StringIO()
     yaml.dump(fm_data, out)

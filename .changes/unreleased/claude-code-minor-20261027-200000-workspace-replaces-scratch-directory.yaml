@@ -1,0 +1,15 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  Every session and every subagent is told that the agent workspace replaces
+  the harness's session scratch directory. A new start hook,
+  `session-start-hook.py`, gives one sentence as context at each session's
+  start and each subagent's start: "The session scratch directory your
+  environment names is replaced by `.agent-workspace/` at the repository root:
+  keep every intermediate file there, never in that directory." The baseline
+  settings register it under `SessionStart` and `SubagentStart`, so the next
+  merge writes both into `.claude/settings.json`. Every agent the deploy
+  writes ends with the same sentence. The permission hook's ask on a write
+  outside the repository is unchanged.

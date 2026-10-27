@@ -44,5 +44,29 @@
       "Bash(rm -rf $HOME:*)",
       "Bash(sudo:*)"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/.pkit/adapters/claude-code/session-start-hook.py"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR}\"/.pkit/adapters/claude-code/session-start-hook.py"
+          }
+        ]
+      }
+    ]
   }
 }
