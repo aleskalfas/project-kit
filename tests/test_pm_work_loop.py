@@ -15,6 +15,7 @@ yet (DEC-060). Held here:
 - **every command the loop gives is one the capability ships,** with flags that
   command takes, so the procedure cannot drift from the commands unnoticed
 - **no role merges:** the loop gives no merge, and leaves the merge to the person
+- **a released seat's Tasks in Review:** the loop says that `seats` names each
 - **batch planning names the shared choices before it slices,** and a first plan
   files the foundation only (DEC-060)
 - **the storyboard walks one round of each role** the loop serves
@@ -239,6 +240,15 @@ def test_the_worker_starts_its_task_with_yes_and_no_person_s_move_is_its_own() -
     planner = _flat(_section(_text(LOOP), "## 2. The planner's loop"))
     assert "`pkit pm promote-issue <N> --reason" in planner
     assert "approval" in planner
+
+
+def test_the_loop_says_seats_names_the_tasks_in_review_a_release_left() -> None:
+    """A release leaves the clone's Tasks in Review with no owner, and no worker's
+    loop takes them up: the loop says that `seats` names each, with its pull
+    request, for the person (#2196)."""
+    end = _flat(_section(_text(LOOP), "## 4. When the seat's work ends"))
+    assert "`pkit pm seats` then names each such Task in Review, with its pull request" in end
+    assert "for the person to land or to hand over" in end
 
 
 # --- batch planning plans a foundation first --------------------------------------------

@@ -768,9 +768,23 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 **Releasing a seat.** A seat stays taken until it is released: the tolerant mode is the only one built, so no seat is freed for its clone's silence. `pkit pm release-seat` releases the seat this clone holds, and the clone then forgets it. `pkit pm release-seat <name> --force --reason "<why>"` releases a seat whoever holds it, and the seat's state issue logs the reason.
 
 - **Who may release by force:** the clone of the organizer seat, or a person in any clone. A person authorises it at a terminal, or with `--yes`, as a held move. An agent never passes `--yes` for itself, and off a terminal with no `--yes` the command refuses
-- **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks are then free for another clone to take. A clone that takes the seat again, the same clone included, revives none of those claims
+- **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks in Backlog and In Progress are then free for another clone to take. A clone that takes the seat again, the same clone included, revives none of those claims
+- **What a release leaves in Review:** a Task in Review waits on its reviewers and a person, so no worker takes it up ([project-management:DEC-059-topology-of-seats] point 9). `seats` names each such Task with its pull request, and the person lands it or hands it over to a worker
 
 **Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition and its scope. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub.
+
+**The Tasks in Review a released seat left.** Last, `seats` names each Task in Review whose claim stopped counting because its seat was released, by its clone or by force. It lists them under the seat and the clone that made the claim, each with the open pull request from the Task's branch, `<type>/<N>-<slug>`:
+
+```
+Tasks in Review that a released seat left, each for a person to land or to hand over to a worker (DEC-059 points 5 and 9):
+  seat worker-1, clone 9f3c2a7d41be6c08e5d1f2a3b4c5d6e7 of @agent-bot:
+    #2201 Add the dispatcher: pull request #2210
+```
+
+- **How the clone is told:** a Task's claim names the seat and the clone's key. That clone builds the Task and opens its pull request. `review-work` refuses another seat's clone, unless a bypass posts its reason on the Task
+- **Not listed:** a Task in Review that a claim still holds, or whose claim cannot be judged since its seat's state issue could not be read. A Task In Progress whose seat was released is not listed either, since `next-task` offers it
+- **What it reads:** the comments of each Task in Review, once some seat's state issue logs a release, and the open pull requests in one listing, once a Task is found. It writes nothing to them
+- **Exit 3** where a Task's comments or the open pull requests could not be read, as where a seat's state issue or the open issues could not be. The listing says which
 
 **The commit read.** Each command that reads the topology names the commit of the default branch that the command read. A clone that has not fetched the default branch thus shows which commit the clone last fetched.
 

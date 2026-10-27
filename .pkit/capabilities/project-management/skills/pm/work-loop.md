@@ -13,7 +13,7 @@ A session that holds no seat leaves this procedure after step 1. It infers its d
 
 1. **List the seats:** `pkit pm seats`. It reads the topology from the default branch, names the commit it read, and marks the seat this clone holds with `← this clone`. A clone that has not fetched the default branch reads the commit it last fetched (DEC-059 point 1).
    - **The default branch declares no topology:** you hold no seat. Leave this procedure.
-   - **Exit 3:** a state issue, or the listing of stray state issues, could not be read. The seats it listed above the error still stand: go on with them.
+   - **Exit 3:** a state issue, the listing of open issues, a Task's comments or the open pull requests could not be read. The seats it listed above the error still stand: go on with them.
    - **Exit 1 or 2:** the default branch cannot be resolved, membership was refused, or the capability is not ready. Say what it printed, and take no seat (DEC-059 point 1). Where the session was started for a seat, stop there.
 2. **Decide whether to take a seat.** Take one only where the session was started for one: this clone holds a seat, whoever started the session named a seat or a role, or the session's `PKIT_AGENT` names your agent definition. Otherwise take none. Say which seats are free, offer one where a person directs the session, and leave this procedure.
 3. **Take the seat:** `pkit pm take-seat [<name>] [--role <role>] --agent <definition>`. The definition is the name of the agent definition you follow, such as `project-manager`. Leave `--agent` out where `PKIT_AGENT` names it already.
@@ -75,7 +75,7 @@ A worker takes ready work and builds it up to its merge (DEC-059 point 2). Each 
 
 ## 4. When the seat's work ends
 
-Keep the seat between rounds and between sessions, since a new session in this clone takes it up. Release it with `pkit pm release-seat` only when the person ends the seat's work. A release frees every claim this clone made, so a Task of yours still In Progress or in Review is left with no owner (DEC-059 point 5).
+Keep the seat between rounds and between sessions, since a new session in this clone takes it up. Release it with `pkit pm release-seat` only when the person ends the seat's work. A release frees every claim this clone made, so a Task of yours still In Progress or in Review is left with no owner (DEC-059 point 5). `pkit pm seats` then names each such Task in Review, with its pull request, for the person to land or to hand over.
 
 ## Not in the loop yet
 
