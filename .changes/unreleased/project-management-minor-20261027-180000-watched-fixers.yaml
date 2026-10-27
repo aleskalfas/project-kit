@@ -1,0 +1,23 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  A fixer starts only when you run `pkit pm fix-drift` at a terminal, and
+  you watch it (DEC-056 points 3 and 5). The command tells you started it
+  when its standard input and standard output are both terminals. Each
+  granted fixer then runs through `pkit agents run` in the runner's
+  unconfined form, as `review-pr` runs its reviewers: in a clone of the
+  default branch's commit made for that fixer, with a git folder of its own
+  and no remote, under your settings and the project's, and Ctrl-C stops the
+  run. The fixer that runs is the one the commit deploys, so where your
+  project keeps its deployed agents out of git, its run is refused. The
+  command copies each fixer's workspace
+  into the queue with the guards of the backbone's copy, and sets its files
+  aside where they hold a link or a special file, or where the fixer wrote
+  into the queue itself. With nobody at a terminal, as in the project manager's
+  run after a merge, it starts no fixer and writes nothing: it lists each
+  stale artefact a granted fixer would take, and the command to run. The
+  fixers question says the same, "When you run `pkit pm fix-drift` at a
+  terminal", and the pm skill's `fix-drift` sub-procedure and the project
+  manager show you what went stale instead of starting a fixer.

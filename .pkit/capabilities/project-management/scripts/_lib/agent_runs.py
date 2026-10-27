@@ -1,12 +1,14 @@
-"""How project-management starts an agent with nobody watching (ADR-066 point 1).
+"""How project-management starts an agent through the backbone (ADR-066 point 1).
 
 A capability never calls a harness, and never looks for an adapter. It asks the
 backbone's run command, `pkit agents run`, which starts the runner the
 project's adapter registers, and the runner starts the harness. This module is
-the one place project-management asks: `review-pr` starts its reviewers
-through it (`run_agent`, the unconfined form), and `fix-drift` starts the
-granted fixers through it (`run_confined`, the confined form: a clone at a
-pinned commit, under the rules `permissions/runs.yaml` declares).
+the one place project-management asks. `review-pr` starts its reviewers
+through it (`run_agent`, the unconfined form), and so does `fix-drift` each
+fixer a person watches, in a working copy of its own (DEC-056 point 5).
+`run_confined` is the confined form a run nobody watches takes: a clone at a
+pinned commit, under the rules `permissions/runs.yaml` declares. The drift
+command starts no such run until a decision says when (DEC-056 point 3).
 
 The command reads the brief on standard input and writes one JSON document, a
 version this module reads (`VERSION`): how the run ended, the harness's exit,

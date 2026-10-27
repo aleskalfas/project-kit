@@ -1,23 +1,25 @@
-# pm fix-drift — run the fixers after a merge, and bring their proposals in one batch
+# pm fix-drift — show what a merge left stale, and bring the fixers' proposals in one batch
 
 Sub-procedure of the pm composite skill (`pm.md` in this folder). It follows [project-management:DEC-056-drift-fixers] points 2, 3 and 6. A fixer only proposes. The person, or the delegate they named, decides each proposal, and what is accepted reaches the default branch through an ordinary pull request. The commands are the [capability README](../../README.md)'s, under "Starting the fixers" and "Deciding the proposals".
+
+A fixer starts only when a person runs the drift command at a terminal and watches it. So this procedure starts none: it shows the person what went stale, and brings what the fixers they ran proposed.
 
 ## When to use this operation
 
 - **After each merge into the default branch,** in the session that landed it: `land-work` or `done-work` ended with the pull request merged. A merge into an integration branch does not count, since the fixers read the default branch.
 - **When the person asks** what the fixers proposed, or `land-work`'s line says that proposals wait for them.
 
-## 1. Run the fixers
+## 1. Show what went stale
 
 ```
 pkit project-management fix-drift
 ```
 
-Run it with no flags. It starts only the fixers the project granted, confined, on what the default branch left out of date, and gathers what they propose.
+Run it with no flags. It reads what the default branch left out of date, and starts the fixers the project granted only where a person ran it at a terminal and watches it. Your session has no terminal, so it starts no fixer and writes nothing ([project-management:DEC-056-drift-fixers] point 3).
 
+- **What went stale.** It prints each stale artefact a granted fixer would take, on a `stale:` line, then `no fixer started: nobody is at a terminal` and the command to run. Show the person those lines whole, and tell them to run `pkit pm fix-drift` at a terminal, where they watch the fixers and can stop them. Never start a fixer through the dispatch tool in its place, and never pass a flag that bypasses the permission rules.
 - **The fixers question.** Where it prints the question with nobody at a terminal, relay each question to the person word for word. Record only the answer they give: a yes by the grant command printed beside it, a no by `revoke-fixer` for the same types. Never answer for them. A grant counts once its change merges.
-- **A run the harness cannot confine is refused.** The command then starts no fixer and says why. The claude-code runner refuses a harness outside its tested range, which stays empty until the adapter's probe passed on a harness, so today every run is refused there. Tell the person what the command printed. Never start a fixer through the dispatch tool in its place, and never pass a flag that bypasses the permission rules.
-- **A fault of the setup is reported at every run.** It is a `none` the run's rules, the sandbox or a component's version caused, or an artefact that failed at two runs in a row. Tell the person, since only a change to the setup clears it.
+- **A fault of the setup is reported at every run.** It is a `none` the person's settings, the run's rules or a component's version caused, or an artefact that failed at two runs in a row. Tell the person, since only a change to the setup clears it.
 - **Exit 1** means the run could not start, and its line says why. Tell the person, and go on with what already waits.
 
 ## 2. Bring the batch

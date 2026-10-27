@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The README and the runner's own description say that a drift
+  command's run a person watches takes the unconfined form, and only one
+  nobody watches the confined form. The runner runs as before.

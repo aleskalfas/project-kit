@@ -76,7 +76,7 @@ The scripts:
 
 ## The agent runner
 
-Some commands start an agent with nobody watching: project-management's `review-pr` starts its reviewers that way, and its `fix-drift` starts the fixers a project granted, confined. No such command calls a harness. It asks the backbone's run command, `pkit agents run`, and the backbone starts the runner the project's adapter registers. The runner starts the harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). So the tie to a harness's command line lives in its adapter, as every other tie does.
+Some commands start an agent that nobody can answer during its run: project-management's `review-pr` starts its reviewers that way, and its `fix-drift` the fixers a project granted, where a person started it at a terminal. No such command calls a harness. It asks the backbone's run command, `pkit agents run`, and the backbone starts the runner the project's adapter registers. The runner starts the harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). So the tie to a harness's command line lives in its adapter, as every other tie does.
 
 **What makes a runner.** Unlike the primitives above, the lifecycle never runs it, and the backbone never finds it by file name:
 
@@ -86,8 +86,8 @@ Some commands start an agent with nobody watching: project-management's `review-
 
 **The request**, one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `limit_seconds` and `effort` (a level, or `null`). A runner refuses a request with any other key, rather than run it without that key, so a runner that does not know the confined form refuses it. Then one of two forms:
 
-- **Unconfined,** the form the review command's runs take (ADR-066 point 10): `folder`, an absolute path, where the run runs under the person's and the project's settings.
-- **Confined,** the form the drift command's runs take (ADR-066 points 3 to 8): no `folder`, and `confined`, an object the backbone fills in once it has made the run's clone:
+- **Unconfined,** the form the review command's runs take, and a drift command's run a person watches (ADR-066 point 10): `folder`, an absolute path, where the run runs under the person's and the project's settings.
+- **Confined,** the form a drift command's run nobody watches takes (ADR-066 points 3 to 8): no `folder`, and `confined`, an object the backbone fills in once it has made the run's clone:
   - `working_copy`, the clone at the pinned commit, which the run reads; `workspace`, below it, the one folder the run writes, where the harness starts; `temp`, the shell's temp folder inside the workspace
   - `pkit_folder`, the folder holding the run's `pkit`, to put first on the run's path; `project_root`, the person's checkout, whose settings files the run leaves out
   - `rules`, the run's rules projected through the shared decision core: `allow`, the whole allow list, and `deny`, the denies to hold as native rules. Each rule takes one of three forms: `{"tool": T}`, the whole tool; `{"tool": T, "folder": F}`, the tool on `F` and everything below it; `{"command": [...]}`, a shell command whose words start with these. The backbone has already refused a run whose rules no native rule could hold.
@@ -154,7 +154,7 @@ The layer **detects**; it does not alter the harness's configuration or duplicat
 
 **The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
-**Status.** The requirement set holds two entries: `delegated-result-complete`, and `unattended-confined-run`, which the drift command depends on (ADR-066 point 13). The Claude Code adapter answers both ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
+**Status.** The requirement set holds two entries: `delegated-result-complete`, and `unattended-confined-run`, which a drift command's run nobody watches depends on (ADR-066 point 13). The Claude Code adapter answers both ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
 
 ## Adding a new harness
 

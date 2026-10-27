@@ -3319,7 +3319,7 @@ def test_a_queue_that_cannot_be_read_warns_and_changes_nothing(world, capsys) ->
 _CONFIG = ".pkit/capabilities/project-management/project/config.yaml"
 _GRANT = "fixers:\n  living-docs:\n    granted:\n      - living-docs:page\n"
 _GRANT_AND_REFUSE = _GRANT + "    refused:\n      - living-docs:guide\n"
-_GRANTED = "Fixer grant added: living-docs may start on its own on living-docs:page"
+_GRANTED = "Fixer grant added: living-docs may start on living-docs:page"
 _REFUSED = "Fixer refusal added: living-docs is refused living-docs:guide"
 _GRANTS = "a change to which fixers may start"
 

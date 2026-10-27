@@ -59,8 +59,8 @@ def run_answer_verb(*, verb: str, answer: str, argv: Sequence[str] | None = None
         prog=f"{fixers.COMMAND} {verb}",
         description=(
             (
-                "Grant a fixer: let the agent start on its own on the stale artefacts of "
-                "its types (DEC-056 point 2). Running it is your answer yes."
+                "Grant a fixer: let the drift command start the agent on the stale "
+                "artefacts of its types (DEC-056 point 2). Running it is your answer yes."
             )
             if granting
             else (
@@ -365,9 +365,9 @@ def run_ask_verb(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog=f"{fixers.COMMAND} {fixers.ASK_VERB}",
         description=(
-            "Ask whether each declared fixer nobody was asked about may start on its own "
-            "(DEC-056 point 2), and record each answer. With nobody at a terminal, print each "
-            "question and the command that grants its fixer, and record nothing."
+            "Ask whether the drift command may start each declared fixer nobody was asked "
+            "about (DEC-056 point 2), and record each answer. With nobody at a terminal, print "
+            "each question and the command that grants its fixer, and record nothing."
         ),
     )
     parser.add_argument(

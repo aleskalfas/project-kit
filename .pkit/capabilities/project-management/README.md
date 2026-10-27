@@ -1432,13 +1432,15 @@ pm collects a declaration purely on its presence in a **manifest-registered** co
 
 ### 8. (Optional) Grant the fixers your capabilities declare
 
-A *fixer* is the agent that keeps one type of artefact true. When the default branch leaves such an artefact out of date, the fixer proposes its answer, and you decide it ([project-management:DEC-056-drift-fixers]). A capability declares its fixers in the `pkit::work-tracking:fixers` point (see "Connections" below). A fixer starts on its own only where you granted it. Nothing is granted by default.
+A *fixer* is the agent that keeps one type of artefact true. When the default branch leaves such an artefact out of date, the fixer proposes its answer, and you decide it ([project-management:DEC-056-drift-fixers]). A capability declares its fixers in the `pkit::work-tracking:fixers` point (see "Connections" below). A fixer starts only where you granted it, and only when you run the drift command at a terminal ("Starting the fixers" below). Nothing is granted by default.
 
 **The question.** `pkit pm ask-fixers` asks one question for each fixer nobody asked you about. Its words come from the declaration, for example:
 
 ```
-living-docs can keep your pages true on its own. After each merge, its agent living-docs proposes a fix for each one that went out of date, and nothing is applied until you approve it. Turn this on? [Y/n]
+living-docs can keep your pages true. When you run `pkit pm fix-drift` at a terminal, its agent living-docs proposes a fix for each one that went out of date, under your settings and the project's. Nothing it proposes is applied until you approve it. Turn this on? [Y/n]
 ```
+
+A grant counts for every run you start at a terminal, whatever words its question used.
 
 - **At a terminal,** each answer is recorded as you give it. A yes is a grant, and a no is a refusal, so nothing asks about those types again.
 - **With nobody at a terminal,** such as in CI, nothing is granted or recorded. Each question is printed with the one command that grants its fixer.
@@ -1482,11 +1484,17 @@ A tool that writes new files is allowed, for its workspace.
 
 #### Starting the fixers — `fix-drift`
 
-`pkit pm fix-drift` starts each fixer you granted on what the default branch left out of date, and gathers what it proposes for you ([project-management:DEC-056-drift-fixers] points 3 to 6). You run it, or the project manager runs it after each merge into the default branch, in the session that landed the merge (the pm skill's `fix-drift` sub-procedure). Nothing it gathers is applied until you accept it. Unlike the five commands above, it passes the bootstrap gate, since it reads the work tracker.
+`pkit pm fix-drift` starts each fixer you granted on what the default branch left out of date, and gathers what it proposes for you ([project-management:DEC-056-drift-fixers] points 3 to 6). Nothing it gathers is applied until you accept it. Unlike the five commands above, it passes the bootstrap gate, since it reads the work tracker.
 
 ```
 pkit pm fix-drift [--dry-run] [--force] [--cap N] [--parallel N] [--timeout SECONDS] [--effort LEVEL]
 ```
+
+**You start the fixers, and watch them.** A fixer starts only where you ran the command at a terminal: its standard input and standard output are both terminals, the test the fixers question uses. No flag stands in for that, since an agent passes a flag as easily as you do. An agent can fake a terminal too, and only your permission settings can keep an agent from starting the command so: no rule this capability ships names such a call.
+
+- **At a terminal,** each granted fixer runs watched. Before the first starts, the command says that the fixers run under your settings, and that Ctrl-C stops the run. You see which fixers start and how each ends.
+- **With nobody at a terminal,** it starts no fixer and writes nothing. The project manager runs it so after each merge into the default branch, in the session that landed the merge (the pm skill's `fix-drift` sub-procedure). It prints each stale artefact a granted fixer would take, as `stale: <fixer> would take N artefact(s): …`, then `no fixer started: nobody is at a terminal`, and the command to run.
+- **A fixer never starts with nobody watching.** A run nobody watches would be confined ("How a fixer runs" below), and when the command starts one is left to a decision of its own.
 
 **What it reads.** It pins the default branch's commit, as `pkit repository base` resolves it, and reads everything that decides a dispatch at that commit, in a detached copy of it, never in your checkout:
 
@@ -1517,19 +1525,22 @@ pkit pm fix-drift [--dry-run] [--force] [--cap N] [--parallel N] [--timeout SECO
 | each fixer's wall-clock limit, in seconds | `--timeout` | `PKIT_DRIFT_AGENT_TIMEOUT` | 1800 |
 | the effort each fixer reasons at | `--effort` | `PKIT_DRIFT_AGENT_EFFORT` | its own |
 
-One run at a time works on the queue, held by a lock. A fixer that reaches its limit is marked failed, with each of its artefacts. A start that failed for a cause outside the fixer's work, and wrote nothing, is retried once; when it fails again, no further fixer starts.
+One run at a time works on the queue, held by a lock, which a run with nobody at a terminal does not take. A fixer that reaches its limit is marked failed, with each of its artefacts. A start that failed for a cause outside the fixer's work, and wrote nothing, is retried once; when it fails again, no further fixer starts.
 
-**How a fixer runs.** Each starts through the backbone's run command, `pkit agents run`, confined ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md)). It runs in a clone at the commit, under the rules this capability declares for its runs (Permissions, below), with one brief and no other message:
+**How a fixer runs.** Each starts through the backbone's run command, `pkit agents run`, in the runner's unconfined form, as a reviewer does ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 10). It runs with one brief and no other message:
 
-- **The frame** names the commit, the working copy, the workspace and its temp folder, the artefacts with their types, the command forms the rules allow, and the result lines the run's contract asks for.
+- **Where.** In a clone of the commit made for that fixer alone, outside your checkout, with its workspace at `.agent-workspace/fix-drift/` inside it. The clone has a git folder of its own and no remote, and borrows your repository's objects read only, so its git commands reach none of your branches, hooks or configuration. A commit that holds anything at `.agent-workspace` refuses the run. So does one that deploys no definition of the fixer at `.claude/agents/`, as where your project keeps its deployed agents out of git, since the harness would then find one that may not have merged.
+- **Under what.** Your settings and the project's in that clone, in the mode they or the harness choose, which may approve calls no rule allows. Your checkout's local settings file does not reach the clone. A call that would ask you is refused, since nobody can answer during the run. Nothing else holds the fixer: it may write, push or reach the network wherever those settings let it.
+- **The frame** says that you started the run and watch it, and names the commit, the working copy and the workspace by their paths, and the artefacts with their types. It tells the fixer to propose only, keeping to the command forms the run's rules allow, and gives the result lines the run's contract asks for.
 - **The data** is quoted with its source between markers made new for each run, and never instructs: for each commit behind an artefact's friction, the title and text of the pull request that carried it, cut at 4,000 characters and marked so, or that the work tracker holds none or could not be reached; and for an artefact held in an earlier run, its question, your answer and who gave it.
+- **After the run,** the workspace's folders and regular files are copied into the queue, within 64 MiB, 10,000 entries and 32 folders deep, each opened without following a link. A symbolic link, a special file, a file with more than one link or a part named like `.git` sets that fixer's files aside. So does anything the fixer wrote into the queue's folder for its run itself. Then the clone is removed, and nothing checks what the fixer changed outside its workspace.
 
-The command refuses to start inside an agent run, since a fixer starts no other agent. Where the harness cannot confine a run, the run is refused, the fixer starts nothing, and the command says why.
+The command refuses to start inside an agent run, since a fixer starts no other agent. The rules this capability declares for a fixer's run (Permissions, below) hold a confined run, which a run nobody watches would take: a clone at the commit, under those rules, checked after it ends.
 
 **What it gathers.** It reads each fixer's result lines and answers by the run's contract ("Connections" below), never prose:
 
 - A proposed artefact's answer must pass `schemas/fixer-answer.schema.json`, name the same artefact, and keep its diff in the artefact's folder and on the artefact's own file.
-- A breach that the check after the run finds, or a diff that reaches another file, sets that fixer's files aside, under `set-aside/`. None of its proposals is kept, and its artefacts are dispatched again at the next run.
+- An entry the copy of its files refuses, or a diff that reaches another file, sets that fixer's files aside, under `set-aside/`. None of its proposals is kept, and its artefacts are dispatched again at the next run.
 - A `none` the artefact clears (`not-mine`, `not-stale`) stands until the artefact's friction changes. One the setup clears (`refused`, `out-of-step`) stands until the setup changes, and is reported at every run as a fault of the setup. The setup is the fixer's definition and the overlay, the run's rules and every component's version. One the next run clears (`upstream`, `failed`) is dispatched again. An artefact failing at two runs in a row stands as a fault of the setup.
 
 **The queue.** The command gathers every run into the agent workspace of the repository's main working tree, so removing a worktree removes no proposal. A repository with no main working tree gathers nothing, and the command says why.
@@ -1714,7 +1725,7 @@ To deliberately override the deny (not recommended — it removes the methodolog
 
 ### The rules of a fixer's run
 
-`permissions/runs.yaml` declares the rules of the runs `fix-drift` starts, and the privileges they name ([project-management:DEC-056-drift-fixers] point 5, ADR-066 point 5). No session's model composes it: the backbone reads it at the commit a run is pinned to, and the adapter realises it in that run's own settings alone. Its rules are denies for every agent, since the command starts agents other capabilities ship:
+`permissions/runs.yaml` declares the rules of a confined run of `fix-drift`, the form a run nobody watches takes, and the privileges they name ([project-management:DEC-056-drift-fixers] point 5, ADR-066 point 5). A watched run is told to keep to the command forms they allow, and its settings, not these rules, hold it. No session's model composes it: the backbone reads it at the commit a run is pinned to, and the adapter realises it in that run's own settings alone. Its rules are denies for every agent, since the command starts agents other capabilities ship:
 
 - **One deny of everything proposing does not need.** What it leaves open: reading the working copy with the file tools, writing new files in the run's workspace, git's reading commands pointed at the working copy (`git -C <working copy> log`, `show`, `diff` and the rest), making a diff with `git diff --no-index` and checking one with `git -C <working copy> apply --check`, the backbone's reading commands, and each command another component declares a query. The adapter holds it as an allow list, and refuses every other call without asking. A writer added later is refused without anyone listing it. A form is allowed with any arguments, so none is listed whose options can run another program: `git grep` is left out, since `--open-files-in-pager` runs one, and the Grep tool searches instead. An option that writes a file is held by the sandbox.
 - **A floor of denies:** writing with the file tools anywhere but the workspace, version control beyond reading, the work tracker, the toolchain that installs or runs packages, every writer of the methodology, and every command of this capability. Each is written as a native deny where a native rule can name it, and the allow list holds the rest.

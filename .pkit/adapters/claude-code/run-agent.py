@@ -9,8 +9,9 @@ and nowhere in a capability.
 
 **The request**, one JSON document on standard input: `schema_version` (1),
 `agent`, `brief`, `limit_seconds`, `effort` (a level or null), and either
-`folder` (the unconfined form, the review command's runs, ADR-066 point 10) or
-`confined` (the confined form, the drift command's runs). A request that
+`folder` (the unconfined form, the review command's runs and a drift command's
+run a person watches, ADR-066 point 10) or `confined` (the confined form, a
+drift command's run nobody watches). A request that
 carries any other key is refused, never run without it.
 
 **The marker** (ADR-066 point 8). The runner refuses whenever `PKIT_AGENT_RUN`
