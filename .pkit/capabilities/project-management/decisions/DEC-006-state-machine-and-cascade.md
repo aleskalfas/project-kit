@@ -29,7 +29,7 @@ The schema's `transitions` list fixes who authorises each transition and what th
 
 | Transition | Authorisation | Severity (on violation) |
 |---|---|---|
-| Todo → Backlog | User (assigns Milestone) | bypassable-with-audit |
+| Todo → Backlog | User (assigns a Milestone, or gives an audited reason) | bypassable-with-audit |
 | Backlog → In Progress | Agent autonomous | warning |
 | In Progress → Review | Agent autonomous (Task only) | warning |
 | Review → Done | User (per-PR approval) | hard-reject |
@@ -38,9 +38,9 @@ The schema's `transitions` list fixes who authorises each transition and what th
 
 User holds both ends of the gate (start and end of work); the agent owns the middle. Authorisations govern a move asked for directly, and are per-issue and in-session — no standing "go ahead with everything" applies in a later turn. The agent records the bypass with an audit-trail comment per [project-management:DEC-014-validation-severity-model] when a bypassable transition is overridden.
 
-> **Amendment (#61/#62, under EPIC #59) — the Todo → Backlog authorisation has two substrates; the milestone is one of them, not the gate's meaning.** The table's "User (assigns Milestone)" names the *typical* authorisation gesture, not a hard precondition. The gate's meaning is the **user-held scheduling commitment** ("this is real work we intend to do"); a project that runs no Milestone *instances* (e.g. a feature-driven project that has declared a Milestone category but created no Milestones yet) still needs to make that commitment. The authorisation is therefore satisfied by **either** a Milestone assignment **or** an audited verbal `--reason` — the latter is exactly the bypassable-with-audit verbal-authorisation path [project-management:DEC-014-validation-severity-model] already enumerates. The wrapper that carries this is `promote-issue`, whose `--milestone` is optional per the amendment to [project-management:DEC-026-work-ownership-lifecycle].
->
-> **The severity is unchanged (decline of #62).** The Todo → Backlog severity stays **bypassable-with-audit** in every project, milestone-bearing or not. Lowering it to `warning` for milestone-less projects was rejected: (1) it would hand the agent one of the two ends the user holds — Todo → Backlog is the *start* commitment, not the agent-owned middle; (2) bypassable-with-audit *is* the verbal-authorisation path, so the milestone-less case is already served at the right severity (the fix is the command's optional `--milestone`, not the severity); (3) a severity that varies with project config would break [project-management:DEC-014-validation-severity-model]'s invariant that the agent dispatches on the severity token without per-rule logic. The substrate broadens; the gate and its audit trail do not.
+The Todo → Backlog gate means the **user-held scheduling commitment** ("this is real work we intend to do"). A Milestone assignment is one way to give it, not a precondition: a project that runs no Milestone *instances*, such as one that declares a Milestone category but has created none, still makes that commitment. So the gate is satisfied by **either** a Milestone assignment **or** an audited verbal reason, the bypassable-with-audit verbal-authorisation path [project-management:DEC-014-validation-severity-model] enumerates.
+
+The wrapper that carries it is `promote-issue`, whose `--milestone` is optional ([project-management:DEC-026-work-ownership-lifecycle], "The seven commands"). The gate's severity is **bypassable-with-audit** in every project, whether it runs Milestones or not.
 
 ### Cascade rule
 
@@ -50,9 +50,7 @@ Three behaviours, encoded in the schema's `cascade` block:
 - **Closure cascade (→ Done).** Direction `upward`. Semi-automatic. When the *last open* child of a parent closes, the parent becomes **eligible to close** but never auto-closes. The agent validates the parent's close criteria (Feature acceptance criteria ticked, EPIC success criteria met, Umbrella purpose served) and prompts the user to authorise closure at each level.
 - **Downward cascade.** Direction `none`. Disallowed. Parent state changes do not change children. The wrong direction of causation.
 
-> **Amendment (#38, under EPIC #6) — Review is a leaf/Task state; containers do not forward-cascade into Review.** The forward cascade above is scoped to **Todo → Backlog → In Progress** (Review is deliberately excluded). A child entering **Review** therefore does **not** promote its container — a container's forward-cascade target tops out at **In Progress** while any child is unfinished. A container reaches Done only via the **closure cascade** (In Progress → Done, cascade-eligibility per the authorisation table) once all children are done and its close criteria are met.
->
-> Rationale: Review models "a PR is open for this leaf"; a container has no PR of its own, so a container sitting in Review is meaningless — and it produced a **stuck state**, because Review's only forward exit is Done, leaving a container with more children still to build unable to return to In Progress (finding 4.2 of the done-work handoff note). This is a **clarification** of the forward cascade's existing scope, not a new rule: the implementation was over-cascading containers to *match* a child's Review state, beyond what this section specifies. No `Review → In Progress` back-edge is needed once containers never enter Review.
+**Review is a Task's state alone.** A child entering Review moves no container past In Progress. A container reaches Done only through the closure cascade (In Progress → Done, cascade-eligibility per the authorisation table), once every child is done and its close criteria are met.
 
 ### Closure triggers
 
@@ -69,6 +67,8 @@ Gated state machines work well for agent-mediated workflows because the gates �
 
 Upward-only cascade matches the natural direction of causation in planning: a parent's progress is a function of its children's progress, not the other way around. Allowing downward cascade would force the agent to override individual children's states based on parent moves, the wrong direction. For the same reason a forward-cascaded move is not a move asked for directly and claims no authorisation: a container's progress follows the work under it, so a container behind its descendants is brought level, not moved on anyone's say-so.
 
+Review models a PR open for a leaf, and a container has no PR of its own. A container in Review would be stuck: Review's only forward exit is Done, while children remain to build. So no `Review → In Progress` back-edge is needed, since a container never enters Review.
+
 The "eligible to close but never auto-close" asymmetry makes the cascade safe. Closing a Feature is a commitment ("this capability shipped"); closing an EPIC is a bigger one. Auto-closing on the last child closing would produce a chain reaction with no human pause point. Stopping at each parent for explicit authorisation preserves the deliberate quality of those commitments.
 
 ### Alternatives considered
@@ -79,6 +79,7 @@ The "eligible to close but never auto-close" asymmetry makes the cascade safe. C
 - **No cascade.** Rejected — parents drift out of sync with their children's reality.
 - **Declare Todo → In Progress for containers, so the forward cascade moves one in a single step.** Rejected — the container's history would lose the scheduling step: it would read as started without ever having been scheduled, while the work under it was scheduled first.
 - **Refuse to start a child whose ancestor is unscheduled, or leave the ancestor behind and report it.** Rejected — a container behind a started child states something false.
+- **Lower the Todo → Backlog severity to `warning` in a project that runs no Milestone.** Rejected — it would hand the agent the start commitment, one of the two ends the user holds. The audited reason already serves such a project at bypassable-with-audit. A severity that varies with a project's configuration would also break [project-management:DEC-014-validation-severity-model]'s dispatch on the severity token without per-rule logic.
 
 ## Implications
 

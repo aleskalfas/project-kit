@@ -56,10 +56,10 @@ mechanism is kept as one option; this adds the label-free option and the selecto
 
 ### 1. Refine DEC-035 to substrate-*where-available*
 
-DEC-035's marker is no longer
+DEC-035's marker is not
 unconditionally a label. It resolves through a selector; the label is one binding among two.
-This refines DEC-035 in place (reciprocal note, same change-set), it does not supersede it —
-the label mechanism and the clash-guard semantics stand.
+This refines DEC-035 without superseding it: DEC-035 point 2 points here, and the label
+mechanism and the clash-guard semantics stand.
 
 ### 2. A selector in instance-ownership's own schema home
 
@@ -105,8 +105,7 @@ here the *comments* are authoritative and the *body* is the view.
 The comment-log write and
 the description-mirror render join the substrate seam family (label read-path, field/milestone
 write-path, containment resolution) as a fourth sibling: one read seam, one construction point,
-a grep/AST guard, failure-posture-neutral. The ADR is authored by the architect once this
-record settles.
+a grep/AST guard, failure-posture-neutral. The architect authors that ADR, [pkit:ADR-041].
 
 ### 6. Realm-blindness is preserved
 
@@ -158,10 +157,8 @@ substrate and making `label` the opt-in fails safe.
 
 ## Implications
 
-- **DEC-035 gains a reciprocal refinement note** (marker substrate is selectable; label is one
-  binding). Both stay `accepted`/live. **This record refines an accepted foundational decision,
-  so promotion `proposed → accepted` requires explicit maintainer sign-off**, same class as
-  DEC-035's own handoff-contract sign-off and DEC-039's DEC-005 refinement.
+- **DEC-035 point 2 points here** (the marker's substrate is selectable; the label is one
+  binding). Both records stay accepted and live.
 - **A new schema home** for the ownership marker declares the selector (`label` | `comment`,
   default `comment`) and the comment-stamp + description-region formats, referencing the
   [project-management:DEC-014-validation-severity-model] tokens for the guard. It is *not* a slot
@@ -169,10 +166,10 @@ substrate and making `label` the opt-in fails safe.
 - **A fourth sibling ADR** (architect-owned per [pkit:COR-025]) pins the comment-log read seam,
   the description-mirror sole-constructor, the grep/AST guard, and mixed-mode precedence (a repo
   holding both a lingering `instance:N` label and a comment-log marker resolves at the seam).
-- **DEC-009 reciprocal note** — the derived description-mirror region is a capability-owned,
-  do-not-edit class of body content that [project-management:DEC-009-living-documents] does not
-  yet model; it needs an explicit refinement note (authored in the same change-set). The region
-  is *derived*, which is a lighter interaction than authoritative body state.
+- **DEC-009 models the region** — the derived description-mirror region is a capability-owned,
+  do-not-edit class of body content, which [project-management:DEC-009-living-documents]
+  states as its third class and which points here. The region is *derived*, which is a lighter
+  interaction than authoritative body state.
 - **The shared audit-log facility** ([project-management:DEC-044-audit-log-facility]) carries the comment-stamp + render spec; the
   ownership event log is that facility specialised with ownership event types, and the existing
   promote / bypass / handoff audit strings migrate onto it rather than running parallel.
@@ -182,7 +179,7 @@ substrate and making `label` the opt-in fails safe.
   shared pool fold the comment log of each Task In Progress, the only claims that lapse. The
   ownership seam pages a long log, so a fold never reads one cut short (refinement per
   [project-management:DEC-059-topology-of-seats]).
-- **Implementation is gated** — this is a surface change (new selector, new substrate, new schema
-  home, schema formats) and bumps the capability version on landing per [pkit:PRJ-002]; a
+- **A surface change** — a new selector, a new substrate, a new schema home and schema formats
+  bump the capability version per [pkit:PRJ-002]; a
   migration is unnecessary because greenfield (label) behaviour is byte-unchanged and the new
   default applies only to repos newly opting into instance ownership.

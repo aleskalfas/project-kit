@@ -13,7 +13,9 @@ pkit:
         - src/project_kit/process_health.py
         - src/project_kit/process_journal.py
         - .pkit/schemas/_defs/process.schema.json
-      record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051, ADR-062]
+      record: [COR-006, COR-030, COR-032, COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, "ADR-009#7", ADR-020, "ADR-023#1", ADR-036, ADR-048, ADR-051, "ADR-057#5", ADR-062]
+      artefact:
+        - .pkit/lifecycle/README.md#the-connection-documentation-and-friction-blocks
 ---
 
 # Process

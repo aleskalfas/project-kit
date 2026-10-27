@@ -8,7 +8,8 @@ pkit:
       path:
         - .pkit/skills/core/**
         - .pkit/adapters/claude-code/deploy-skills.sh
-      record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
+      record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-016, COR-017, COR-020]
+      artefact: [.pkit/agents/README.md#why-copies-not-symlinks, .pkit/cli/README.md#status]
 ---
 
 # Skills

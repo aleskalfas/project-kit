@@ -131,3 +131,21 @@ review:
 # `pkit pm history <N> [--check-drift]` reads the journal + governance boundary.
 audit:
   projection: audit
+
+# Fixers: each agent you were asked about, and the types you granted or refused it
+# (project-management DEC-056 point 2). Written by `pkit pm ask-fixers`,
+# `pkit pm grant-fixer` and `pkit pm revoke-fixer`.
+fixers:
+  living-docs:
+    granted:
+      - living-docs:page
+  analysis-resolver:
+    granted:
+      - software-analysis:actor
+      - software-analysis:constraint
+      - software-analysis:domain-model-view
+      - software-analysis:functional-requirement
+      - software-analysis:journey
+      - software-analysis:quality-requirement
+      - software-analysis:term
+      - software-analysis:use-case

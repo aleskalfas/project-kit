@@ -1,0 +1,1059 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-0fe260ad4d42.yaml
+    revalidated:
+      at: 2026-10-26T16:29:13Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the decisions README's new Writing a record section, its test for an edit made in place to an accepted record, refs rot's listing and the lookup's top line. This change adds a paragraph under Citing on the report-only point-citation warning. Judged together, work still builds only on accepted records and rules, as the term defines the gate.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-015-package-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-bca813b8718e.yaml
+    revalidated:
+      at: 2026-10-26T16:29:22Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup's top line, pkit decisions check-diff gaining --head and --json, and capability-author pointing to the project's own version-bump policy. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, the stamp and the package metadata at version 0.1.0 are as they were, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-c023390f2be9.yaml
+    revalidated:
+      at: 2026-10-26T16:29:29Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, re-pinning an inherited rule set uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+    revalidated:
+      at: 2026-10-26T16:29:37Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged the pm skill's landing text, which now counts an accepted record the change alters among the findings to judge. This change has the records moving an issue anchors state their amendments as plain fact, DEC-033 gains the line DEC-034 calls for, and workflow.yaml, move-issue and promote-issue change in comments only. Judged together, how an issue moves between states is as it was, so moving an issue holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-018-check-shareable.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-14cab8fa596f.yaml
+    revalidated:
+      at: 2026-10-26T16:29:44Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, checking that a capability is ready to share uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-017-connect-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-e74c084a6ef5.yaml
+    revalidated:
+      at: 2026-10-26T16:29:50Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, giving a capability roles, data points and processes uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-b3d2acfd0824.yaml
+    revalidated:
+      at: 2026-10-26T16:29:57Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, declaring a changeset uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-e4c6c09d69df.yaml
+    revalidated:
+      at: 2026-10-26T16:30:06Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the decisions README's test for an edit made in place to an accepted record, its Writing a record section, refs rot's listing and the lookup's top line. This change adds a report-only point-citation warning to pkit decisions validate and pkit refs validate, described under Citing. Judged together, a drafted record or rule still binds only once the merge authoriser accepts it, through the review and checks the use case names, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-042-challenge-and-check.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-677ab7326b1b.yaml
+    revalidated:
+      at: 2026-10-26T16:30:14Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit decisions check-diff gaining --head and --json, the lookup's top line, and the critic and the architect finding their disciplines in the decisions README, Writing a record. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, having a draft challenged and a diff checked relies on no exit code that changed, and the critic and the architect read, judge and edit as the use case says.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T003859Z-68bd4305.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+    revalidated:
+      at: 2026-10-26T16:30:21Z
+      outcome: unchanged
+      unchanged-because: Main updated step 8 to print, beside the person findings, each accepted decision record the change alters. This change has DEC-026 fold its amendments as plain fact, DEC-028 name its own heading, and DEC-050 point 1 state its deprecated alias as plain fact. Judged together, every step and variant holds, step 8 as main now words it included.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+    revalidated:
+      at: 2026-10-26T16:30:28Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged land-work printing the accepted records a change alters among the findings to judge, and stopping a covered later head on another such list. This change has DEC-026 fold its amendments as plain fact and DEC-028 change only a cross-reference to its own heading. Judged together, the cover step 5 names is as it was, so landing alongside others holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-016-keep-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-82a9f92cf8a6.yaml
+    revalidated:
+      at: 2026-10-26T16:30:35Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, keeping a capability in its author's own repository relies on no exit code that changed, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-26T16:30:42Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, adapting the system to another harness uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-26T16:30:48Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the lookup's top line, pkit decisions check-diff gaining --head and --json, the skills README's line on decision-author and refs rot's listing. This change adds a report-only point-citation warning that pkit refs validate prints without failing. Judged together, how a project writes, checks and deploys its own skill or agent is as it was, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-828a24ebf347.yaml
+    revalidated:
+      at: 2026-10-26T16:30:55Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, seeing what a capability would connect to before installing it uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-038-author-rule-sets.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-da785d36ef16.yaml
+    revalidated:
+      at: 2026-10-26T16:31:02Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, a rule's lookup answering as before, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, authoring rule sets uses none of these, so every step and variant holds.
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-26T16:31:09Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged cli.py printing the lookup's top line and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, the adapters README describes harness translation and the run-agent command, never these outputs, so it holds.
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-300b8204a467.yaml
+    revalidated:
+      at: 2026-10-26T16:31:15Z
+      outcome: updated
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - 20261025T231020Z-07c6b2c3.yaml
+      - 20261025T231337Z-53180504.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072505Z-09cf4beb.yaml
+      - 20261026T082834Z-c7589ca5.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T085843Z-ddba703a.yaml
+      - 20261026T094058Z-3fc2f464.yaml
+      - 20261026T095314Z-f64018af.yaml
+      - 20261026T095828Z-f467a572.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T114729Z-f148365c.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T125321Z-c79100d7.yaml
+      - 20261026T135447Z-827d6480.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T141439Z-0ec32467.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T155116Z-437c4f24.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-26T16:31:22Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T051019Z-da72435c.yaml
+      - 20261026T051427Z-db09293e.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T053814Z-1774e924.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T071913Z-056e87c1.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-26T16:31:28Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-7bd9bf62ec3a.yaml
+      - moved-a08ed9a38659.yaml
+    revalidated:
+      at: 2026-10-26T16:31:36Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the CLI reference's rows for refs lookup, refs rot and decisions check-diff, and capability-author changing only its pointers, reads and version passage. This change adds the report-only point-citation warning to two read-only rows of that reference. Judged together, no grant, profile or step this reference describes changes, step 6b's pairing with pkit permissions scaffold included.
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T174422Z-ea676633.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T202350Z-6a1bd668.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T221052Z-9302b480.yaml
+      - 20261025T234102Z-0231f155.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-69dea4023970.yaml
+    revalidated:
+      at: 2026-10-26T16:31:42Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the decisions README's lookup section, its new Writing a record section and refs rot's listing, and the numbering check listing the edits to accepted records. This change adds a paragraph under Citing there on the report-only point-citation warning. Judged together, CONTRIBUTING.md's guidance on authoring records, its steps and its check gate hold.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-067
+          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-053
+          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
+  - artefact: .pkit/capabilities/living-docs/README.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T012015Z-9d5dca86.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T013953Z-63c51796.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - moved-96e1f9e9c108.yaml
+    revalidated:
+      at: 2026-10-26T16:31:51Z
+      outcome: unchanged
+      unchanged-because: Main's answer judged the storyboard naming the changelog for CHANGELOG.md in one scenario, while the README describes the agent and its storyboard by what they do. This change adds the report-only point-citation warning to the decisions and refs rows of the CLI reference's validate section. Judged together, nothing the living-docs README takes from either changed.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says two branches revalidating one page conflict in its block and friction resolve takes the base side's answer, which COR-062 replaces. #1779 builds it and rewrites the passage."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README keeps in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passage #1779 rewrites, since a revalidation would claim the whole README holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-26T16:32:01Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, developing the methodology in its source repository runs the same commands with the same exit codes, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-50d19a823f20.yaml
+    revalidated:
+      at: 2026-10-26T16:32:10Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, declaring and validating the backbone configuration relies on no exit code that changed, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-26T16:32:17Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, adding the project's own rules, settings, grants and agent paths relies on no exit code that changed, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-66d5b1529575.yaml
+    revalidated:
+      at: 2026-10-26T16:32:25Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, adding or removing a capability and being told of a collision uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-c6041f71d67c.yaml
+    revalidated:
+      at: 2026-10-26T16:32:32Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, choosing which capability provides a role uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-26T16:32:41Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change gives the agents README a body convention, and pkit refs validate warns, without failing, of a citation naming a point its record does not hold. Judged together, finding an agent definition deployed with its paths and grants uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-718f3fc69ca5.yaml
+    revalidated:
+      at: 2026-10-26T16:32:50Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged two read-only commands, pkit refs lookup printing a partly superseded record's top line and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate, both read-only, warn of a citation naming a point its record does not hold. Judged together, being asked before an agent changes another repository concerns mutations only, so every step and variant holds.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T204758Z-da0e1865.yaml
+      - 20261025T214334Z-3176bb1a.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T160419Z-97ae119d.yaml
+    revalidated:
+      at: 2026-10-26T16:32:59Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the CLI reference's rows for refs lookup, refs rot and decisions check-diff, and capability-author changing only its pointers, reads and version passage. This change adds the report-only point-citation warning to two read-only rows of that reference. Judged together, no profile or grant this guide sets up changes, and steps 6b and 8, which it names, are as they were.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-c95d6fad77f9.yaml
+    revalidated:
+      at: 2026-10-26T16:33:07Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, making merges wait on the system's checks relies on no exit code that changed, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-63b1bb583d90.yaml
+    revalidated:
+      at: 2026-10-26T16:33:14Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup's top line and pkit decisions check-diff gaining --head and --json, additions that break no installed project. This change adds a report-only point-citation warning to pkit decisions validate and pkit refs validate, which breaks none either. Judged together, shipping a backbone change with its migration is untouched, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T010345Z-2d7f553b.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-ae9063e8a9c0.yaml
+    revalidated:
+      at: 2026-10-26T16:33:22Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, carrying projects across a breaking change of a component uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-59a2bc69643a.yaml
+    revalidated:
+      at: 2026-10-26T16:33:29Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, landing a change on the default branch relies on no exit code that changed, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-6a06cb9b0a21.yaml
+    revalidated:
+      at: 2026-10-26T16:33:35Z
+      outcome: unchanged
+      unchanged-because: Main updated step 8 to say the numbering check lists each point a change adds, alters or retires in an accepted record, failing nothing on it. This change adds a report-only point-citation warning to pkit decisions validate, described under Citing. Judged together, the stamp, its checks and the agent's part are as they were, step 8 as main now words it included.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-525e5f95da00.yaml
+    revalidated:
+      at: 2026-10-26T16:33:43Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, thinking a question through in a scratchpad note and retiring it uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T140722Z-b2a1e987.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T151901Z-ed69232c.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-244f393a77cc.yaml
+    revalidated:
+      at: 2026-10-26T16:33:51Z
+      outcome: unchanged
+      unchanged-because: Main updated step 2 to find the disciplines in the decisions README, Writing a record, and judged pkit decisions check-diff gaining --head and --json. This change adds a report-only point-citation warning to pkit decisions validate. Judged together, the reviewer judges the same disciplines and step 5's checks run as described, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-26T16:33:59Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup's top line and pkit decisions check-diff gaining --head and --json, each declared by a changeset the release consumes as any other. This change's point-citation warning in pkit decisions validate and pkit refs validate is declared the same way. Judged together, releasing the backbone is untouched, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-26T16:34:07Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, releasing a component on its own version uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-012-report-problem.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-16225f01f42e.yaml
+    revalidated:
+      at: 2026-10-26T16:34:15Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the lookup's top line, pkit decisions check-diff gaining --head and --json, and report-author pointing to the CLI reference, Report commands, instead of PRJ-008 and ADR-047. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, the agent composes and files the report with the adopter as before, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-013-link-reports.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-441b89549614.yaml
+    revalidated:
+      at: 2026-10-26T16:34:23Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, receiving adopters' reports and linking each to its fix uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-26T16:34:36Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, putting the CLI on a machine at a release, and its check for a newer tool, use none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-26T16:34:44Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, installing the system into a project with one command relies on no exit code that changed, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T043534Z-1a8c1873.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-26T16:34:53Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged refs.py giving the lookup's top line, and UC-037 step 8 saying the numbering check also lists each point of an accepted record the change edits. This change adds to refs.py a report-only warning of a citation naming a point its record does not hold, beside the pkit refs rot report the journey names. Judged together, what the journey needs from UC-037 is as it was, and delivering a change still checks and lands as it says.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-26T16:35:00Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, getting a fresh clone ready with one sync relies on no exit code that changed, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-26T16:35:07Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup's top line and pkit decisions check-diff gaining --head and --json, additions needing no migration. This change's report-only point-citation warning in pkit decisions validate and pkit refs validate needs none either. Judged together, upgrading the system like a dependency relies on no exit code that changed, so every step and variant holds.
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T155116Z-437c4f24.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-26T16:35:17Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit decisions check-diff gaining --head and --json, the lookup's top line, create-issue claiming what it files, refs rot's listing, and the critic and the methodology-reviewer finding their disciplines elsewhere with remit and tools as before. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold, and DEC-028 names its own heading in one cross-reference. Judged together, the README introduces the commands in outline and never says what either prints, and its checks, its account of reviews and create-issue's refusal before bootstrap hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-26T16:35:24Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, running each project at the version it pins uses none of these, so every step and variant holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - moved-4859ed958bd4.yaml
+    revalidated:
+      at: 2026-10-26T16:35:31Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged pkit refs lookup printing a partly superseded record's top line, and pkit decisions check-diff gaining --head and --json. This change has pkit decisions validate and pkit refs validate warn, without failing, of a citation naming a point its record does not hold. Judged together, upgrading one capability on its own relies on no exit code that changed, so every step and variant holds.

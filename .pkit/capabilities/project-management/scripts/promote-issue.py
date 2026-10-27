@@ -8,7 +8,7 @@
 """Project-management capability — promote-issue (DEC-026 workflow wrapper).
 
 Promotes an issue from Todo → Backlog, recording the authorisation source.
-Per DEC-026 (as amended for issue #61):
+Per DEC-026, "The seven commands":
 
     promote-issue <N> [--milestone "<M>"] --reason "<R>" [--bypass-owner "<reason>"]
 
@@ -188,7 +188,7 @@ def main() -> int:
     # The title is what downstream `gh issue edit --milestone` wants, so
     # normalise to the title form regardless of input shape.
     # When --milestone is omitted, skip resolution entirely — promoting on
-    # --reason alone is a valid path per the DEC-026 #61 amendment.
+    # --reason alone is a valid path (DEC-026, "The seven commands").
     milestone_title: str | None = None
     if args.milestone is not None:
         resolved = resolve_milestone(str(args.milestone), config)

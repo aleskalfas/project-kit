@@ -1387,7 +1387,7 @@ def _cascade_forward_target(child_target: str) -> str:
     """Return the container-safe forward-cascade target for a given child state.
 
     The forward cascade is scoped to todo → backlog → in-progress (DEC-006,
-    amendment #38). Containers do not enter Review — Review models an open PR
+    "Cascade rule"). Containers do not enter Review — Review models an open PR
     for a leaf Task; a container has no PR of its own. When a child reaches
     review or done, ancestors are brought to at most in-progress.
     """
