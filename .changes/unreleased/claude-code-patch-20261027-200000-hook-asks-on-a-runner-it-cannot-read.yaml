@@ -1,0 +1,14 @@
+component: claude-code
+kind: patch
+custom:
+  category: Security
+body: >
+  The permission hook asks, outside auto and bypass mode, on a Bash command
+  whose guardrail the decision core cannot rule out behind a runner it cannot
+  read, or in git configuration the command sets or writes, as it asks on a
+  hidden form of a guardrail (ADR-025 point 7). So `env -S '…'`,
+  `find . -exec sh -c 'rm "$1"' _ {} \;` and `git -c alias.p='push --force' p`
+  prompt the person, where the baseline's `Bash(find:*)` or `Bash(git:*)`
+  would run them unasked. The kinds come from a backbone that names them, and
+  the hook's code changes only the record its reason cites. A guardrail behind
+  a runner the core reads is denied in every mode.

@@ -1210,3 +1210,115 @@ def test_hook_allows_text_filters_and_uv_run_as_the_cli_decides(tmp_path, profil
                 model, catalog, payload, project_root=str(root), as_subject=f"agent:{agent}"
             )
             assert cli == (expected or "abstain"), (profile, command, agent, cli)
+
+
+# ---- a runner's command and git's configuration, end to end (#1990) ----------
+#
+# The live hook, where git and gh are granted, on the architect's table on
+# #1990 (ADR-025 points 5 and 7). A guardrail behind a listed runner is denied
+# in every mode. A runner the core cannot read, and git configuration a command
+# sets or writes, make the hook ask, except in auto and bypass mode, where it
+# defers, and a strict posture denies them. A command no deny binds behind is
+# decided as before in every mode. The system `python3` decides them as the
+# interpreter of the tests does.
+
+_RUNNER_HOOK_DENIES = (
+    "find . -exec rm -rf {} +",
+    "xargs rm -rf",
+    "env rm -rf ~",
+    "sh -c 'rm -rf ~'",
+    "uv run rm -rf ~",
+)
+_RUNNER_HOOK_ASKS = (
+    "find . -exec sh -c 'rm \"$1\"' _ {} \\;",
+    "env -S 'rm -rf ~'",
+    "git -c alias.p='push --force' p",
+    "git -c remote.origin.push=+main push",
+    "git config alias.pf 'push --force'",
+)
+# (command, the hook's verdict in every mode): a deny binds behind no runner
+# here, and an alias in a file git reads is the grant's breadth.
+_RUNNER_HOOK_UNCHANGED = (
+    ("find . -name x -exec grep -l y {} +", None),
+    ("git pf", "allow"),
+)
+
+
+def test_hook_denies_a_guardrail_behind_a_runner_in_every_mode(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for mode in (*_UNATTENDED_MODES, *_ASKING_MODES, None):
+        for command in _RUNNER_HOOK_DENIES:
+            _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+            assert _decision(parsed) == "deny", (mode, command, parsed)
+
+
+def test_hook_asks_on_a_runner_or_configuration_it_cannot_read(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for mode in (*_ASKING_MODES, None):
+        for command in _RUNNER_HOOK_ASKS:
+            _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+            assert _decision(parsed) == "ask", (mode, command, parsed)
+            reason = _reason(parsed)
+            assert "vcs-history-rewrite" in reason, reason
+            # The reason names the guardrails and the kinds, never the command.
+            for text in ("--force", "alias.", "$1", "+main", "-S"):
+                assert text not in reason, reason
+    # Where the core cannot read what a runner runs, every guardrail is named.
+    _, parsed = _invoke(root, _bash_payload(root, "env -S 'rm -rf ~'"))
+    reason = _reason(parsed)
+    for guardrail in ("destructive-fs", "privilege-escalation", "vcs-history-rewrite"):
+        assert guardrail in reason, reason
+    assert "a command a runner runs that the core cannot read" in reason, reason
+    _, parsed = _invoke(root, _bash_payload(root, "git -c alias.p='push --force' p"))
+    assert "configuration the command sets or writes" in _reason(parsed)
+
+
+def test_hook_defers_on_a_runner_or_configuration_in_auto_and_bypass_mode(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for mode in _UNATTENDED_MODES:
+        for command in _RUNNER_HOOK_ASKS:
+            _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+            assert parsed is None, (mode, command, parsed)
+
+
+def test_hook_denies_a_runner_or_configuration_it_cannot_read_under_strict(tmp_path):
+    strict = _tree(tmp_path, grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n")
+    for mode in (*_UNATTENDED_MODES, *_ASKING_MODES, None):
+        for command in _RUNNER_HOOK_ASKS:
+            _, parsed = _invoke(strict, _in_mode(_bash_payload(strict, command), mode))
+            assert _decision(parsed) == "deny", (mode, command, parsed)
+
+
+def test_hook_decides_a_command_no_deny_binds_behind_as_before(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for mode in (*_UNATTENDED_MODES, *_ASKING_MODES, None):
+        for command, expected in _RUNNER_HOOK_UNCHANGED:
+            _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+            assert _decision(parsed) == expected, (mode, command, parsed)
+
+
+def test_hook_reads_runners_under_the_system_python3(tmp_path):
+    system = Path("/usr/bin/python3")
+    if not system.is_file():
+        pytest.skip("no system python3 at /usr/bin/python3")
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    # Python 3.9's matcher refuses a bracket range written backwards, which
+    # must neither fault the decision nor hide a deny on another segment.
+    for command, expected in (
+        *((command, "deny") for command in _RUNNER_HOOK_DENIES),
+        *((command, "ask") for command in _RUNNER_HOOK_ASKS),
+        *_RUNNER_HOOK_UNCHANGED,
+        ("git push origin +main; find . -name [z-a]", "deny"),
+        ("find . -name [z-a] -exec rm -rf ~ +", "ask"),
+        ("find . -exec zsh -oerrexit -c 'rm -rf ~' \\;", "deny"),
+    ):
+        proc = subprocess.run(
+            [str(system), str(HOOK)],
+            input=json.dumps(_bash_payload(root, command)),
+            capture_output=True,
+            text=True,
+            env={"CLAUDE_PROJECT_DIR": str(root), "PATH": "/usr/bin:/bin"},
+        )
+        assert proc.returncode == 0, proc.stderr
+        out = proc.stdout.strip()
+        assert _decision(json.loads(out) if out else None) == expected, (command, out)

@@ -1,0 +1,27 @@
+component: backbone
+kind: minor
+custom:
+  category: Security
+body: >
+  A deny of the permission decision core, a guardrail's included, now also
+  matches the command a listed runner runs (ADR-025 point 5): `env`,
+  `command`, `exec`, `nice`, `nohup`, `timeout`, `time`, `xargs`, `uv run`,
+  find's `-exec`, `-execdir`, `-ok` and `-okdir`, and `sh`, `bash`, `zsh` or
+  `dash` given `-c`, whose script is read again one level deep. So
+  `find . -exec rm -rf {} +`, `xargs rm -rf`, `env rm -rf ~`,
+  `sh -c 'rm -rf ~'` and `uv run rm -rf ~` are denied in every mode. Where the
+  core cannot read what a runner runs, such as behind `env -S` or in
+  `find . -exec sh -c 'rm "$1"' _ {} \;`, no grant allows the command and
+  every guardrail is named as one the core cannot rule out. Git configuration
+  a command sets or writes counts as part of the command: any `git -c` or
+  `--config-env` before the subcommand, and `git config` of an `alias.*`,
+  `remote.*.push`, `remote.*.mirror` or `include*` key, or of a section
+  renamed into such a key's section. Each keeps the deny on
+  git from telling, so the core defers, and a strict posture denies, as for
+  `GIT_CONFIG_PARAMETERS=…`. Every `git -c`, such as
+  `git -c core.quotepath=off status`, is now a prompt where `git` is granted.
+  Configuration git reads from its files stays the grant's breadth. A grant
+  that names a subcommand or flags no longer allows a segment where an
+  unquoted pathname pattern that may expand to an option stands before what
+  it names, such as `uv -* run x` under `uv-run` (ADR-025 point 2). Grants
+  otherwise match a command as written.

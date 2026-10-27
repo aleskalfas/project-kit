@@ -50,7 +50,8 @@ point existed.
 ADR-019 framing: this script is the capability-owned *mechanism* — a read-only
 check that exits non-zero on an unsatisfied mapping. The real *boundary* is the
 adopter wiring it as a required CI status check behind branch protection
-(`gh api` / `bash -c` evade any tool-layer check, per ADR-004). At the merge-pr
+(`gh api` / a code runner such as `python3 -c` evade any tool-layer check, per
+ADR-004). At the merge-pr
 layer it is only a warning (a speed-bump). The capability ships the mechanism;
 the adopter wires the boundary; the residual gap is declared, not hidden.
 

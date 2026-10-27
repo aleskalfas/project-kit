@@ -141,7 +141,7 @@ The model is meant for agents that work with nobody watching each call. You do n
 - **Your harness has no adapter yet.** Without an adapter, no hook brings the model's verdicts to the harness.
 
 > [!WARNING]
-> A deny is a speed bump, not a security boundary ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)). It refuses only the forms of a command the model can tell, and a command behind a wrapper, such as `uv run`, can slip past it. In auto and bypass mode, the hook does not ask about a form the model cannot tell ("When the hook asks" below). To confine a shell, use the OS sandbox, which `pkit permissions setup autonomy` sets up except on macOS ("Turning it on" below).
+> A deny is a speed bump, not a security boundary ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)). It refuses only the forms of a command the model can tell, so a command given to `ssh` or `python3 -c` can slip past it. In auto and bypass mode, the hook does not ask about what the model cannot tell ("When the hook asks" below). To confine a shell, use the OS sandbox, which `pkit permissions setup autonomy` sets up except on macOS ("Turning it on" below).
 
 ## How a tool call is decided
 
@@ -169,7 +169,7 @@ flowchart TD
 - **What else decides.** Where no grant covers a call, the posture decides: the default, `lenient`, abstains, and `strict` denies. A fault in the hook gives an abstain. The harness's native denies still refuse the forms of the guardrails' commands they name ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)).
 - **The CLI reads the same model** as the hook, so `explain` shows what the hook decides on ([the same section](../../.pkit/permissions/README.md#grants-and-verdicts)).
 - **When the hook asks.** Claude Code's hook asks you rather than abstain in two cases:
-  - a call that may hide a guardrail's form, outside auto and bypass mode ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command))
+  - a call that may hide a guardrail, outside auto and bypass mode ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command))
   - an `Edit` or `Write` to an absolute path outside the session's repository, in every mode ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy))
 
 ## Turning it on
