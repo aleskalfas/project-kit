@@ -512,7 +512,7 @@ def test_a_reading_command_is_never_a_writer(words: tuple[str, ...]) -> None:
         ("friction", "defer"),
         ("friction", "revisit"),
         ("friction", "record-status"),
-        ("friction", "resolve"),
+        ("friction", "prune"),
         ("refs", "rename"),
         ("version",),
         ("sync",),

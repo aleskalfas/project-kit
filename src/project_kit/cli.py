@@ -32,9 +32,9 @@ from project_kit import (
     default_branch,
     friction_check,
     friction_move,
+    friction_prune,
     friction_report,
     friction_repository,
-    friction_resolve,
     friction_since,
     friction_write,
     pull_request_landing,
@@ -1772,8 +1772,8 @@ def friction() -> None:
     files the change adds, the plan of the move of the
     answers into answer files — which never write, the writers — revalidate,
     defer, revisit, record-status — which write one answer or status, only with
-    consent, and resolve, which resolves a merge's conflicting revalidations and
-    revisit entries as text and writes no answer.
+    consent, and prune, which removes, only with consent, the answer files in
+    which no answer is live and writes no answer.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -2017,77 +2017,76 @@ def friction_move_plan_command(as_json: bool) -> None:
         click.echo(friction_move.render_human(plan), nl=False)
 
 
-@friction.command("resolve")
-@click.argument("paths", metavar="[PATH]...", nargs=-1)
+@friction.command("prune")
 @click.option(
     "--dry-run",
     is_flag=True,
     default=False,
-    help="Show the resolution, with each file's diff, and write nothing.",
+    help="List what would be removed, and remove nothing.",
 )
 @click.option(
     "--yes",
     is_flag=True,
     default=False,
-    help="Stage the resolved files without a prompt. Without it a terminal is asked, after "
-    "the diffs; a run that cannot ask leaves them unstaged and prints the `git add` to run.",
+    help="Consent to the removal without a prompt. Without it a terminal is asked, after "
+    "the list; a non-interactive run refuses.",
 )
 @click.option(
-    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit the stable JSON document. It asks nothing, so it needs --yes or --dry-run.",
 )
-def friction_resolve_command(
-    paths: tuple[str, ...], dry_run: bool, yes: bool, as_json: bool
-) -> None:
-    """Resolve a merge's conflicting revalidations and revisit entries as text (COR-050
-    points 3 and 16): each file in conflict — every one, or each PATH — whose conflicts all
-    lie inside `revalidated` blocks or `revisited` lists.
+def friction_prune_command(dry_run: bool, yes: bool, as_json: bool) -> None:
+    """Remove each answer file in which no answer is live at HEAD (COR-062 point 8).
 
-    Only git's own conflict, untouched by hand, is resolved: the file's three
-    versions are read from the index and merged again, and the result must be
-    the working file. Only the blocks and lists git conflicted on are decided:
-    the answer from the side that changed it, the deferrals merged by anchor,
-    and where both sides revalidated, the base side's answer — only when
-    MERGE_HEAD, the branch merged in, is the change check's base. A list's
-    entries merge by target, and where both sides wrote one target's entry,
-    the base side's is taken, under the same rule. Any other conflict leaves
-    the file as git left it, and says where. The file is written; it is staged
-    only with --yes or at the prompt. It writes no answer: for each artefact
-    both sides revalidated it names the revalidation owed once the merge is
-    committed, `updated` or `unchanged` as its content bears out against the
-    base side's, and for each target both sides wrote an entry for, the
-    `revisit` that writes it again. PATH is relative to the project root.
-    Outside a merge there is nothing to resolve. Exit 1 when it leaves an
-    artefact's file in conflict.
+    Liveness is judged from HEAD and its full history, as the whole-repository
+    check judges it. A file holding one live answer stays whole. A file with no
+    live answer is kept where removing it would change one that is live: where
+    it cannot be read, where its removal brings back an answer it replaced, or
+    where a live deferral keeps its point from it. Each is named with why. It
+    removes files from the working tree and adds none, and stages and commits
+    nothing: the removal lands as a change of its own (COR-062 point 3).
+    Refused while the answer folder holds an uncommitted change, and in a
+    shallow clone.
     """
     if yes and dry_run:
         raise click.UsageError(
-            "--yes and --dry-run exclude each other: one stages, the other writes nothing."
+            "--yes and --dry-run exclude each other: one removes, the other never does."
+        )
+    if as_json and not (yes or dry_run):
+        raise click.UsageError(
+            "--json asks nothing: give --yes to remove the files, or --dry-run to list them."
         )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    resolution = friction_resolve.plan_resolve(target_root, paths)
-    written = () if dry_run else friction_resolve.write(target_root, resolution)
-    staged: tuple[str, ...] = ()
+    plan = friction_prune.plan_prune(target_root)
     if as_json:
-        if yes and written:
-            staged = friction_resolve.stage(target_root, written)
-        click.echo(
-            friction_resolve.render_json(resolution, dry_run=dry_run, staged=staged), nl=False
-        )
-    else:
-        click.echo(friction_resolve.render_human(resolution, dry_run=dry_run), nl=False)
-        if written:
-            if not yes and friction_write.interactive():
-                click.echo("")
-                click.echo(friction_resolve.render_diffs(resolution), nl=False)
-                yes = click.confirm("Stage the resolved files (`git add`)?", default=True)
-            if yes:
-                staged = friction_resolve.stage(target_root, written)
-            click.echo("")
-            click.echo(friction_resolve.render_staging(written, staged), nl=False)
-    if resolution.exit_code:
-        raise SystemExit(resolution.exit_code)
+        removed = () if dry_run else friction_prune.remove(target_root, plan)
+        click.echo(friction_prune.render_json(plan, dry_run=dry_run, removed=removed), nl=False)
+        return
+    click.echo(friction_prune.render_plan(plan), nl=False)
+    if not plan.remove:
+        return
+    if dry_run:
+        click.echo("")
+        click.echo(cli_render.style("strong", "Dry run: nothing removed."))
+        return
+    if not yes:
+        if not friction_write.interactive():
+            raise friction_write.ConsentRefused(
+                "refusing to remove answer files without consent: stdin is not a terminal and "
+                "--yes was not given (COR-050 point 13). Nothing was removed.\n"
+                "To see the list only, run:\n  pkit friction prune --dry-run\n"
+                "To consent non-interactively, run:\n  pkit friction prune --yes"
+            )
+        click.echo("")
+        click.confirm(f"Remove these {len(plan.remove)} answer files?", default=True, abort=True)
+    removed = friction_prune.remove(target_root, plan)
+    click.echo("")
+    click.echo(friction_prune.render_done(removed), nl=False)
 
 
 @friction.command("check")

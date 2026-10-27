@@ -3219,7 +3219,7 @@ class _ChangeAnswers:
     def prunable_at_base(self) -> frozenset[str]:
         """The answer files of the base in which no answer is live there (COR-062 point 8)."""
         if self._prunable is None:
-            self._prunable = frozenset(self.base.prunable(self.base_side.discovery))
+            self._prunable = frozenset(self.base.not_live(self.base_side.discovery))
         return self._prunable
 
     def head_answers(self, artefact: Artefact) -> Answers:

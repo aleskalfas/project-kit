@@ -20,8 +20,7 @@ makes real commits before running a check. They cover:
 - **the whole-repository check** — the same, measured from a revalidation point, and
   the cost the record states: a declaration withdrawn sets nothing aside;
 - **what is not friction's** — `pkit rule-sets altered` still lists an artefact
-  changed only in such links, and `pkit friction resolve` advises the outcome the
-  change check bears out;
+  changed only in such links;
 - **software-analysis** — the forms its places declare are the link command's own, a
   term's link and a citation's (#2064), and what `pkit analysis link` writes, in the
   glossary, the views, the actors, the use cases, the journeys and the requirements,
@@ -41,7 +40,6 @@ import pytest
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
 from project_kit import friction_repository as fr
-from project_kit import friction_resolve as fres
 from project_kit import package_validate as pv
 from project_kit.document_parts import links_set_aside
 from project_kit.manifest import (
@@ -498,20 +496,6 @@ def test_a_links_only_edit_still_alters_the_artefact_for_its_rules(repo: Adopter
     )
     altered = {a.after.location for a in pairing.altered if a.after is not None}
     assert {NOTE, RECORD} <= altered
-
-
-def test_the_resolver_advises_unchanged_where_only_links_differ(repo: AdopterRepo) -> None:
-    """`pkit friction resolve` names the outcome the change check bears out (COR-050 point
-    5): links moved alone change no content, so it advises `unchanged`."""
-    repo.write({CONFIG: friction_config(places=("docs",)), NOTE: note()})
-    (found,) = [f for f in fd.discover_artefacts(repo.root).files if f.path == NOTE]
-    parse = fres._parsed  # pyright: ignore[reportPrivateUsage] -- the reading under test
-    owe = fres._owed  # pyright: ignore[reportPrivateUsage] -- the advice under test
-    (base,), _ = parse(NOTE, found, note())
-    (resolved,), _ = parse(NOTE, found, LINKS_MOVED[NOTE])
-    assert owe(resolved, base).outcome == fres.UNCHANGED
-    (reworded,), _ = parse(NOTE, found, note(body=note_body(lead="An order awaits.")))
-    assert owe(reworded, base).outcome == fres.UPDATED
 
 
 # --- software-analysis --------------------------------------------------------------------

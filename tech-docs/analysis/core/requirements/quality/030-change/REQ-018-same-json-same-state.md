@@ -4,7 +4,7 @@ title: A reading command of the friction group prints the same document for the 
 status: active
 statement: A reading command of the friction group, run with `--json` twice over the same state of the repository, prints the same bytes.
 measure: Each such command, run twice over one state, prints byte-identical documents, their keys sorted. A document holds no age and nothing else the time of the run gives.
-applies-to: "The JSON document of each reading command of the friction group: `pkit friction check`, `check --all`, `debt`, `explain`, `artefacts` and `since`. A command that writes, such as `friction resolve`, is outside it."
+applies-to: "The JSON document of each reading command of the friction group: `pkit friction check`, `check --all`, `debt`, `explain`, `artefacts` and `since`. A command that writes, such as `friction prune`, is outside it."
 actors:
   - ACT-ci-pipeline
 refines: []

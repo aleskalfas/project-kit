@@ -528,7 +528,7 @@ The pass is **dormant** — it prints its counts and nothing else about artefact
 
 A rule-set file is claimed by the rule-set rule before the container rule (ADR-056 point 2), so its unparsable front matter and the malformed container of one of its rules are the `rule-sets` pass's findings, reported once there; the friction pass still takes its rules into the beside-anchors, deferral and cycle checks.
 
-**Not here.** Friction itself is the `friction` command group's: the change check — the three answers, bumps with nothing behind them, dead anchors of a change, an outdated base, the modes and the `--json` document — is `pkit friction check`, and the whole-repository check — stale and deferred debt derived from git with their origins, every dead anchor, over-broad anchors and the two measures — is `pkit friction check --all`, whose debt `pkit friction debt` lists oldest first and whose findings on one artefact `pkit friction explain` explains; the writers — `revalidate`, `defer` and `revisit`, which write answer files, and `record-status`, which writes the block's `last-check`, each only with consent, and never what this pass would refuse — are its commands too (all in the CLI reference, "Friction checks"). This pass never touches git.
+**Not here.** Friction itself is the `friction` command group's: the change check — the three answers, bumps with nothing behind them, dead anchors of a change, an outdated base, the modes and the `--json` document — is `pkit friction check`, and the whole-repository check — stale and deferred debt derived from git with their origins, every dead anchor, over-broad anchors and the two measures — is `pkit friction check --all`, whose debt `pkit friction debt` lists oldest first and whose findings on one artefact `pkit friction explain` explains; the writers — `revalidate`, `defer` and `revisit`, which write answer files, and `record-status`, which writes the block's `last-check`, each only with consent, and never what this pass would refuse — are its commands too, and so is `prune`, which removes, only with consent, the answer files in which no answer is live (all in the CLI reference, "Friction checks"). This pass never touches git.
 
 ### Answer files
 
@@ -562,6 +562,8 @@ answers:
 An entry holds a `revalidated` mapping, a `revisited` list, or both. Unknown keys are refused at every level. The shape carries no version, and is migrated when it changes, preserving the parsed value of `at` (ADR-056 point 3).
 
 **A change adds answer files, and rewrites none its base holds** (COR-062 point 3). It removes one only to prune or to revert. The move took each project's answers out of the artefacts' blocks into answer files of their own, once (COR-062 point 11). What each writer and the move write is the CLI reference's, "Friction checks".
+
+**A prune is a change of its own** (COR-062 point 8). `pkit friction prune` removes each answer file in which no answer is live at HEAD, and adds none. It keeps a file whose removal would change a live answer, such as one whose removal brings back an answer it replaced. Committed alone, the removal owes no answer.
 
 **Validation findings** (COR-062 point 10), checked whenever an answer file exists, dormant or not, by `pkit validate`'s `friction` member. Each of these fails it, in either mode:
 
