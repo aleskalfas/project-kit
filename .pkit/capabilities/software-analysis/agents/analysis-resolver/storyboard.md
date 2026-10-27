@@ -193,7 +193,7 @@ pkit analysis propose UC-007 --unintended "Not meant — that's a bug." --uninte
 
 - The project granted the agent the types of the artefacts the brief names, and the grant is on the default branch.
 - The command made a working copy at the commit it pinned, and a workspace for the run, and the brief names both.
-- A person started the command at a terminal and watches the run, but nobody can answer the agent during it.
+- Nobody can answer the agent during the run, even where a person watches it.
 
 ### Walkthrough
 

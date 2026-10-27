@@ -366,7 +366,8 @@ def read_at(
     repository tracks its deployed agents, and in the person's `checkout`
     otherwise, since a project that keeps them out of git has none at the
     commit. The runner checks the definition at the commit again, as the
-    deploy resolves it, before the run starts (ADR-066 point 3)."""
+    deploy resolves it, before a confined run starts (ADR-066 point 3). A
+    watched run is refused where the commit deploys none (`deployed_at_commit`)."""
 
     def at_copy(argv: Sequence[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         return run(list(argv), **{**kwargs, "cwd": str(copy)})
