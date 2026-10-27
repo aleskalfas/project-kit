@@ -33,6 +33,8 @@ The foundation is one Feature whose body lists the choices it settles, so that a
 
 Where one agent builds all the work in order, the person may fold the skeleton into the first slice, whose merged code then settles the choices of convention. The records still come first.
 
+Where software-engineering is installed, and its conventions corpus offers a location the project owns for them, the choices of convention that the skeleton, or the first slice it is folded into, settles are also drafted into that corpus. A person accepts them before code builds on them (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus], whose point 4 says when the corpus offers such a location).
+
 ### 3. The first plan files the foundation, and the second plans the slices
 
 The first plan files an EPIC for the work ([project-management:DEC-004-six-level-hierarchy]), with the intent and an outline of the slices in its body. It files the foundation's Feature under that EPIC, and no slice. For each shared choice, the plan says whether it is settled and where, or whether the foundation settles it by a record or by the skeleton. So the person sees each judgement at the plan's single approval gate, and can overrule one. Closing the foundation's Feature, which the person authorises ([project-management:DEC-006-state-machine-and-cascade]), hands the work to the second plan. The second plan reads the EPIC's body, and slices the work against the accepted records and the skeleton's code.
@@ -46,7 +48,7 @@ The pool holds these Tasks back in a project with a topology. In a project with 
 
 ### 5. A foundation that proves wrong is changed, never worked around
 
-A Task that finds a choice of the foundation does not hold makes no other choice in its place, and says so on its Task. The change goes through a Task of its own: a record's change through a record the person accepts, as point 2 says, and a convention's change through the skeleton's code, reviewed as code.
+A Task that finds a choice of the foundation does not hold makes no other choice in its place, and says so on its Task. The change goes through a Task of its own: a record's change through a record the person accepts, as point 2 says, and a convention's change through the skeleton's code, reviewed as code. Where software-engineering is installed and the convention has an entry in its conventions corpus, that Task also changes the entry, and a person accepts the changed entry before code builds on it (refinement per [software-engineering:DEC-004-skeleton-conventions-in-corpus]).
 
 ## Rationale
 
