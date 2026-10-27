@@ -214,7 +214,7 @@ The default branch is the line of history where a [project](../glossary.md#term-
 **Relations:**
 
 - It is the [base](../glossary.md#term-base--base) of every check that names no other ([COR-054 point 3](../../../../.pkit/decisions/core/COR-054-default-branch.md#3-the-override-is-a-base-not-a-declaration)).
-- The [release step](../glossary.md#term-release-step--release-step)'s writes land only on it ([PRJ-002 D3](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- The [release step](../glossary.md#term-release-step--release-step)'s writes land only on it ([PRJ-002 D3](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 
 **States:** None.
 
@@ -314,7 +314,7 @@ A surface change is an alteration of the [system](../glossary.md#term-system--sy
 **Relations:**
 
 - A [change](../glossary.md#term-change--change) that makes one declares it in a changeset ([PRJ-002 D1](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d1--surface-changes-are-declared-not-applied-per-pr)).
-- It moves the version of the [backbone](../glossary.md#term-backbone--backbone) or of a [component](../glossary.md#term-component--component), when the [release step](../glossary.md#term-release-step--release-step) runs ([PRJ-002 D3](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- It moves the version of the [backbone](../glossary.md#term-backbone--backbone) or of a [component](../glossary.md#term-component--component), when the [release step](../glossary.md#term-release-step--release-step) runs ([PRJ-002 D3](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 
 **States:** None.
 
@@ -340,7 +340,7 @@ A changeset is a file naming the [backbone](../glossary.md#term-backbone--backbo
 **Relations:**
 
 - A change carries it, instead of editing a version number (PRJ-002 D1).
-- The [release step](../glossary.md#term-release-step--release-step) consumes it ([PRJ-002 D3](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- The [release step](../glossary.md#term-release-step--release-step) consumes it ([PRJ-002 D3](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 
 **States:** It is pending from the change that adds it until a release step consumes it (PRJ-002 D3).
 
@@ -361,7 +361,7 @@ The release step is the procedure that consumes every pending [changeset](../glo
 
 **Relations:**
 
-- It consumes every pending changeset ([PRJ-002 D3](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--version-numbers-are-written-only-on-main-by-a-release-authority)).
+- It consumes every pending changeset ([PRJ-002 D3](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d3--every-version-that-reaches-main-is-written-there-by-the-release-pr)).
 - Its writes land only on the default branch, through a [pull request](../glossary.md#term-pull-request--pull-request) from a `release/` branch (PRJ-002 D3).
 - It makes a [release](../glossary.md#term-release--release) when it moves the [backbone](../glossary.md#term-backbone--backbone). One that moves only [components](../glossary.md#term-component--component) makes no release of its own ([PRJ-004](../../../../.pkit/decisions/project/PRJ-004-distribution-channel.md)).
 
@@ -370,7 +370,7 @@ The release step is the procedure that consumes every pending [changeset](../glo
 **Always true:**
 
 - It is the only writer of version numbers (PRJ-002 D3).
-- A floor rises only where a changeset declares it, and the backbone's upper bound only ever widens ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- A floor rises only where a changeset declares it, and the backbone's upper bound only ever widens ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-on-main)).
 - It refuses to leave a [range](../glossary.md#term-range--range) that excludes the version it writes for a dependency (PRJ-002 D4).
 
 ## What is built on these concepts
