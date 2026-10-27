@@ -34,6 +34,8 @@ Steps:
     state issues out. The ready Tasks are ranked from it. A ready Task the
     seat's scope leaves out is skipped: a line names those Tasks for each
     reason, such as a Task in no milestone the scope names (DEC-059 point 2).
+    A milestone is shown by its number, with the title the listing gives it
+    beside the number where the listing returned an issue in it.
   - Where the clone takes part in instance ownership, the owner of each Task in
     Backlog assigned to its account is read first and folded
     (`_lib/instance_claims.read_owner`). The Tasks this clone owns come first,
@@ -60,7 +62,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -75,6 +77,7 @@ from _lib import (
     issue_list,
     session_guard,
     task_pool,
+    topology,
 )
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
@@ -178,7 +181,7 @@ def main() -> int:
         readers=readers,
     )
     ready = found.ready
-    print(f"next-task: {_pool_line(len(ready), taker)}")
+    print(f"next-task: {_pool_line(len(ready), taker, found.titles)}")
     for line in _outside_lines(found.outside):
         print(line)
 
@@ -291,8 +294,10 @@ def _numbers(listing: issue_list.IssueListing) -> set[int]:
     return {r["number"] for r in rows if isinstance(r, dict) and isinstance(r.get("number"), int)}
 
 
-def _pool_line(count: int, taker: task_pool.Taker) -> str:
-    """The line that says how many Tasks are ready, and for whom."""
+def _pool_line(count: int, taker: task_pool.Taker, titles: Mapping[int, str]) -> str:
+    """The line that says how many Tasks are ready, and for whom. Each milestone
+    the scope names is shown by its number, with its title from ``titles``
+    beside it where the listing gave one."""
     who = "this clone" if taker.clone is None else taker.clone.named()
     scope = taker.scope
     if scope is None:
@@ -304,7 +309,8 @@ def _pool_line(count: int, taker: task_pool.Taker) -> str:
         if scope.types:
             parts.append("types " + ", ".join(scope.types))
         if scope.milestones:
-            parts.append("milestones " + ", ".join(f'"{t}"' for t in scope.milestones))
+            shown = (topology.milestone_shown(n, titles.get(n)) for n in scope.milestones)
+            parts.append("milestones " + ", ".join(shown))
         within = "within the scope of " + " and ".join(parts)
     noun = "Task is" if count == 1 else "Tasks are"
     order = (

@@ -20,6 +20,10 @@ open milestone, the resolver returns None (the script reports the
 error and exits). Closed milestones are out of scope — pm operations
 attach to open milestones only.
 
+:func:`read_titles` reads every milestone, open and closed, for its title
+alone: `seats` shows each milestone a seat's scope names by its number, with
+its title beside it ([project-management:DEC-059-topology-of-seats] point 2).
+
 The module also holds the reads that decide whether a Milestone may close,
 so `close-milestone` (which closes it) and `close-issue`'s closure cascade
 (which says when it became closeable, #414) read a Milestone the same way:
@@ -36,6 +40,7 @@ import datetime as dt
 import json
 import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -112,6 +117,31 @@ def list_open_milestones(config: dict[str, Any]) -> list[dict] | None:
         return _parse_concatenated_arrays(text)
     except (ValueError, KeyError, TypeError):
         return None
+
+
+#: The read of every milestone of the repository, open and closed, a page at a time.
+ALL_MILESTONES = "repos/{owner}/{repo}/milestones?state=all&per_page=100"
+
+
+def read_titles(gh: Callable[[list[str]], Any]) -> dict[int, str] | None:
+    """The title of each milestone of the repository, open or closed, by its
+    number, in one paginated read through ``gh``, a runner that takes the
+    arguments of a `gh` call. None where the read fails, so a caller shows each
+    milestone by its number alone."""
+    try:
+        proc = gh(["gh", "api", ALL_MILESTONES, "--paginate"])
+    except FileNotFoundError:
+        return None
+    if getattr(proc, "returncode", 1) != 0:
+        return None
+    rows = _parse_concatenated_arrays(str(getattr(proc, "stdout", "") or ""))
+    return {
+        row["number"]: row["title"]
+        for row in rows
+        if isinstance(row, dict)
+        and isinstance(row.get("number"), int)
+        and isinstance(row.get("title"), str)
+    }
 
 
 def resolve_milestone(arg: str, config: dict[str, Any]) -> Milestone | None:

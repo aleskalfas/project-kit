@@ -14,6 +14,9 @@ it names, its scope, whether it is the organizer seat or retired, its state
 issue and its holder. The holder is read from the seat's state issue through
 the state-issue seam (`_lib/state_issues`, ADR-071): an account and a clone's
 key, with where the clone lies, or free. The seat this clone holds is marked.
+A scope names each milestone by its number (point 2). Where one does, the
+repository's milestones are read once, and each is shown with its title beside
+its number, or by its number alone where that read fails.
 
 It then names each open state issue of a seat that no seat of the topology
 names, such as one a change closed unmerged left, for a person to close on
@@ -76,6 +79,7 @@ from _lib import (
     issue_branch,
     issue_list,
     issue_position,
+    milestone,
     session_guard,
     state_issues,
     topology,
@@ -180,9 +184,10 @@ def list_seats(
     )
     for problem in tree.problems:
         print(f"warn: {topology.TOPOLOGY_RELATIVE}: {problem.message}", file=sys.stderr)
+    titles = scope_milestone_titles(tree, snap.run.gh)
     code = 0
     for state in snap.states():
-        print(seat_line(state, mine=state.held_by(snap.clone)))
+        print(seat_line(state, mine=state.held_by(snap.clone), titles=titles))
         if state.state == topology.UNREAD and state.seat.state_issue is not None:
             code = 3
     listing, cause = list_open(snap.run.gh)
@@ -209,6 +214,24 @@ def list_seats(
     )
     show_left(left)
     return 3 if left.unread else code
+
+
+def scope_milestone_titles(tree: topology.Topology, gh: state_issues.Gh) -> dict[int, str]:
+    """The title of each milestone, by its number, where a seat's scope names a
+    milestone: one read of the repository's milestones (DEC-059 point 2). None is
+    read where no scope names one. Where the read fails, each milestone is shown
+    by its number alone, and a warning says why."""
+    if not any(seat.scope is not None and seat.scope.milestones for seat in tree.seats):
+        return {}
+    titles = milestone.read_titles(gh)
+    if titles is None:
+        print(
+            f"warn: {VERB}: the repository's milestones could not be read, so each milestone "
+            "a scope names is shown by its number alone.",
+            file=sys.stderr,
+        )
+        return {}
+    return titles
 
 
 # ---- the Tasks in Review a released seat left (DEC-059 points 5 and 9) ---------------
@@ -424,8 +447,11 @@ def _assignees(row: Mapping[str, Any]) -> list[str]:
     ]
 
 
-def seat_line(state: topology.SeatState, *, mine: bool) -> str:
-    """One seat as the listing shows it."""
+def seat_line(
+    state: topology.SeatState, *, mine: bool, titles: Mapping[int, str] | None = None
+) -> str:
+    """One seat as the listing shows it. Each milestone its scope names is shown
+    by its number, with its title from ``titles`` beside it where it is there."""
     seat = state.seat
     marks = [seat.role, f"agent {seat.agent}"]
     if seat.organizer:
@@ -433,12 +459,14 @@ def seat_line(state: topology.SeatState, *, mine: bool) -> str:
     if seat.retired:
         marks.append("retired")
     if seat.scope is not None:
+        known = titles or {}
+        milestones = tuple(topology.milestone_shown(n, known.get(n)) for n in seat.scope.milestones)
         parts = [
             f"{label} {' and '.join(names)}"
             for label, names in (
                 ("workstreams", seat.scope.workstreams),
                 ("types", seat.scope.types),
-                ("milestones", tuple(f'"{t}"' for t in seat.scope.milestones)),
+                ("milestones", milestones),
             )
             if names
         ]

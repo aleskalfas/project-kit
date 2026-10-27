@@ -44,13 +44,14 @@ The check
 :func:`parse` reports what the file says wrong of itself: a shape the schema
 (``schemas/topology.schema.json``) refuses, a seat name used twice, more than one
 organizer seat, a seat that names no state issue, and two seats that name one. A
-scope's milestone part that is no list of titles is such a shape (point 2).
-:func:`check` adds what needs more than the file: a scope that names a workstream
-or a type the project does not declare, a topology under the ``label`` ownership
-substrate (point 9), and each seat of the base deleted or moved rather than
-retired. Milestones live on GitHub, so it never checks that a milestone a scope
-names exists. :func:`check_change` reads all of it for one run, the base as the
-backbone resolves it, with COR-054's override, and says which commit it read.
+scope's milestone part that is no list of positive milestone numbers is such a
+shape (point 2). :func:`check` adds what needs more than the file: a scope that
+names a workstream or a type the project does not declare, a topology under the
+``label`` ownership substrate (point 9), and each seat of the base deleted or
+moved rather than retired. Milestones live on GitHub, so it never checks that a
+milestone a scope names exists. :func:`check_change` reads all of it for one
+run, the base as the backbone resolves it, with COR-054's override, and says
+which commit it read.
 
 The file's readings and the check read no GitHub, and write nothing. Every git
 call stays in this clone, asking no remote for what it lacks. A snapshot reads
@@ -156,12 +157,12 @@ class Problem:
 @dataclass(frozen=True)
 class Scope:
     """What narrows a seat's own pool: workstreams, types of the type axis,
-    milestones by their titles, or several of these (DEC-059 points 2 and 7). A
+    milestones by their numbers, or several of these (DEC-059 points 2 and 7). A
     Task falls in it where it matches each part named."""
 
     workstreams: tuple[str, ...] = ()
     types: tuple[str, ...] = ()
-    milestones: tuple[str, ...] = ()
+    milestones: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -356,18 +357,26 @@ def _scope(raw: object, where: str, problems: list[Problem]) -> Scope | None:
             )
             value = []
         parts[key] = tuple(value)
-    # A milestone is named by its title, which holds more than blanks.
-    titles = raw.get("milestones", [])
-    if not isinstance(titles, list) or not all(isinstance(t, str) and t.strip() for t in titles):
+    # A milestone is named by its number, which a rename leaves unchanged (point 2).
+    numbers = raw.get("milestones", [])
+    if not isinstance(numbers, list) or not all(_is_number(n) for n in numbers):
         problems.append(
-            Problem(SHAPE, f"{where} has a scope whose `milestones` is no list of titles.")
+            Problem(
+                SHAPE, f"{where} has a scope whose `milestones` is no list of milestone numbers."
+            )
         )
-        titles = []
-    parts["milestones"] = tuple(titles)
-    if not any(parts.values()):
+        numbers = []
+    milestones = tuple(numbers)
+    if not any(parts.values()) and not milestones:
         problems.append(Problem(SHAPE, f"{where} has a scope that names nothing."))
         return None
-    return Scope(parts["workstreams"], parts["types"], parts["milestones"])
+    return Scope(parts["workstreams"], parts["types"], milestones)
+
+
+def _is_number(value: object) -> bool:
+    """Whether ``value`` is a positive whole number, as GitHub numbers a
+    milestone: a boolean or a number written as text is none."""
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
 
 
 def _across(seats: list[Seat]) -> list[Problem]:
@@ -653,6 +662,14 @@ def shown(value: str) -> str:
     would act on, such as a newline or an escape, written as its escape. A
     value read from GitHub never starts a line of its own, or moves the cursor."""
     return "".join(c if c.isprintable() else repr(c)[1:-1] for c in value)
+
+
+def milestone_shown(number: int, title: str | None = None) -> str:
+    """A milestone as a line shows it: its number, with its title beside it
+    where the run holds the title, such as ``8 "Release 2.0"``. A scope names a
+    milestone by its number (DEC-059 point 2), and the title, read from GitHub,
+    is shown on one line."""
+    return f'{number} "{shown(title)}"' if title else str(number)
 
 
 class Snapshot:

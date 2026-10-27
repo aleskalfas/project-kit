@@ -44,7 +44,7 @@ TESTER = {"name": "tester", "role": "worker", "scope": {"types": ["test"]}, "sta
 SPRINTER = {
     "name": "sprinter",
     "role": "worker",
-    "scope": {"workstreams": ["cli"], "milestones": ["Sprint 1", "Phase 2: ship it"]},
+    "scope": {"workstreams": ["cli"], "milestones": [8, 12]},
     "state_issue": 14,
 }
 
@@ -77,32 +77,38 @@ def test_a_sound_topology_parses_with_no_problem() -> None:
     assert topology.release_mode == tp.TOLERANT
 
 
-def test_a_scope_may_name_milestones_by_their_titles() -> None:
-    """DEC-059 point 2: a scope names milestones by title, beside workstreams and types."""
+def test_a_scope_may_name_milestones_by_their_numbers() -> None:
+    """DEC-059 point 2: a scope names milestones by number, which a rename
+    leaves unchanged, beside workstreams and types."""
     topology = tp.parse(_doc(PLANNER, SPRINTER))
     assert topology.problems == ()
     sprinter = topology.seat("sprinter")
     assert sprinter is not None
-    assert sprinter.scope == tp.Scope(("cli",), (), ("Sprint 1", "Phase 2: ship it"))
-    alone = tp.parse(_doc({**WORKER, "scope": {"milestones": ["Sprint 1"]}})).seat("worker-1")
-    assert alone is not None and alone.scope == tp.Scope(milestones=("Sprint 1",))
+    assert sprinter.scope == tp.Scope(("cli",), (), (8, 12))
+    alone = tp.parse(_doc({**WORKER, "scope": {"milestones": [8]}})).seat("worker-1")
+    assert alone is not None and alone.scope == tp.Scope(milestones=(8,))
 
 
 @pytest.mark.parametrize(
     "milestones",
     [
-        pytest.param("Sprint 1", id="a-title-not-a-list"),
-        pytest.param([""], id="an-empty-title"),
-        pytest.param(["  "], id="a-blank-title"),
-        pytest.param(["Sprint 1", 3], id="a-number"),
+        pytest.param(8, id="a-number-not-a-list"),
+        pytest.param(["Sprint 1"], id="a-title"),
+        pytest.param(["8"], id="a-number-as-text"),
+        pytest.param([0], id="zero"),
+        pytest.param([-3], id="a-negative-number"),
+        pytest.param([8, 1.5], id="a-fraction"),
+        pytest.param([True], id="a-boolean"),
         pytest.param([None], id="nothing"),
     ],
 )
-def test_a_milestone_part_that_is_no_list_of_titles_is_a_problem(milestones: object) -> None:
+def test_a_milestone_part_that_is_no_list_of_milestone_numbers_is_a_problem(
+    milestones: object,
+) -> None:
     seat = {**WORKER, "scope": {"milestones": milestones}}
     problems = tp.parse(_doc(seat)).problems
     assert _codes(problems) == [tp.SHAPE, tp.SHAPE]
-    assert "a scope whose `milestones` is no list of titles" in problems[0].message
+    assert "a scope whose `milestones` is no list of milestone numbers" in problems[0].message
     assert "a scope that names nothing" in problems[1].message
     assert _schema_errors(_doc(seat)), seat
 
@@ -252,8 +258,8 @@ def test_a_scope_naming_an_unknown_type_is_a_problem() -> None:
 
 def test_the_check_reads_no_github_for_the_milestones_a_scope_names() -> None:
     """The check is offline: it judges the milestone part's shape, and never
-    whether the project holds a milestone of that title."""
-    assert _check(tp.parse(_doc({**SPRINTER, "scope": {"milestones": ["No such one"]}}))) == []
+    whether the project holds a milestone of that number."""
+    assert _check(tp.parse(_doc({**SPRINTER, "scope": {"milestones": [999999]}}))) == []
 
 
 def test_a_topology_under_the_label_substrate_is_a_problem() -> None:

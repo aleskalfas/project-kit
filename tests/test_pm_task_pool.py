@@ -55,8 +55,11 @@ def _row(
     assignees: tuple[str, ...] = (),
     body: str = "Feature: #1\n\n## What\n\nx\n",
     state: str = "OPEN",
-    milestone: str | None = None,
+    milestone: int | None = None,
+    milestone_title: str | None = None,
 ) -> dict[str, Any]:
+    """An open issue as the listing returns it. ``milestone`` is the number of
+    its milestone, titled ``milestone_title`` or as :data:`MILESTONES` names it."""
     labels = [state_label, f"type:{kind}", f"workstream:{workstream}"]
     if priority is not None:
         labels.append(f"priority:{priority}")
@@ -66,10 +69,18 @@ def _row(
         "labels": [{"name": n} for n in labels],
         "assignees": [{"login": a} for a in assignees],
         # As `gh issue list --json milestone` returns it: an object, or null.
-        "milestone": None if milestone is None else {"number": 7, "title": milestone},
+        "milestone": (
+            None
+            if milestone is None
+            else {"number": milestone, "title": milestone_title or MILESTONES[milestone]}
+        ),
         "state": state,
         "body": body,
     }
+
+
+#: The titles of the milestones the rows are in, by their numbers.
+MILESTONES = {7: "Sprint 1", 8: "Sprint 2", 9: "Later"}
 
 
 def _ready(tp, readers, rows, *, open_numbers=(), scope=None, takes_over=False) -> list[int]:
@@ -87,13 +98,13 @@ def _ready(tp, readers, rows, *, open_numbers=(), scope=None, takes_over=False) 
 def _scope(
     workstreams: tuple[str, ...] = (),
     types: tuple[str, ...] = (),
-    milestones: tuple[str, ...] = (),
+    milestones: tuple[int, ...] = (),
 ) -> Any:
     return importlib.import_module("_lib.topology").Scope(workstreams, types, milestones)
 
 
-def _outside(tp, readers, rows, scope) -> list[tuple[int, str]]:
-    found = tp.pool(
+def _pool(tp, readers, rows, scope) -> Any:
+    return tp.pool(
         rows,
         open_numbers=[r["number"] for r in rows],
         login="me",
@@ -101,7 +112,10 @@ def _outside(tp, readers, rows, scope) -> list[tuple[int, str]]:
         takes_over=False,
         readers=readers,
     )
-    return [(o.candidate.number, o.reason) for o in found.outside]
+
+
+def _outside(tp, readers, rows, scope) -> list[tuple[int, str]]:
+    return [(o.candidate.number, o.reason) for o in _pool(tp, readers, rows, scope).outside]
 
 
 # ---- dependencies (DEC-005) ------------------------------------------------------
@@ -267,52 +281,97 @@ def test_a_scope_with_milestones_takes_only_the_tasks_in_one_of_them(tp, readers
     """DEC-059 point 2: a milestone part narrows the pool to the Tasks in one of
     the milestones it names."""
     rows = [
-        _row(1, milestone="Sprint 1"),
-        _row(2, milestone="Sprint 2"),
-        _row(3, milestone="Later"),
+        _row(1, milestone=7),
+        _row(2, milestone=8),
+        _row(3, milestone=9),
         _row(4),
     ]
-    scope = _scope(milestones=("Sprint 1", "Sprint 2"))
+    scope = _scope(milestones=(7, 8))
     assert _ready(tp, readers, rows, scope=scope) == [1, 2]
     assert _ready(tp, readers, rows) == [1, 2, 3, 4]
 
 
+def test_a_scope_matches_a_milestone_by_its_number_whatever_its_title(tp, readers) -> None:
+    """A rename leaves a milestone's number unchanged, so the scope still takes
+    its Tasks. A milestone whose title reads as a number named is not that one."""
+    rows = [
+        _row(1, milestone=7, milestone_title="Sprint 1, renamed"),
+        _row(2, milestone=9, milestone_title="7"),
+    ]
+    assert _ready(tp, readers, rows, scope=_scope(milestones=(7,))) == [1]
+
+
 def test_a_task_in_no_milestone_falls_outside_a_scope_that_names_milestones(tp, readers) -> None:
     rows = [_row(4)]
-    assert _ready(tp, readers, rows, scope=_scope(milestones=("Sprint 1",))) == []
+    assert _ready(tp, readers, rows, scope=_scope(milestones=(7,))) == []
     assert _ready(tp, readers, rows, scope=_scope(workstreams=("cli",))) == [4]
-    assert not tp.in_scope("feature", "cli", _scope(milestones=("Sprint 1",)))
-    assert tp.in_scope("feature", "cli", _scope(milestones=("Sprint 1",)), "Sprint 1")
+    assert not tp.in_scope("feature", "cli", _scope(milestones=(7,)))
+    assert tp.in_scope("feature", "cli", _scope(milestones=(7,)), 7)
+
+
+@pytest.mark.parametrize(
+    "milestone",
+    [
+        pytest.param({"title": "Sprint 1"}, id="no-number"),
+        pytest.param({"number": "7", "title": "Sprint 1"}, id="a-number-as-text"),
+        pytest.param({"number": True, "title": "Sprint 1"}, id="a-boolean"),
+        pytest.param("Sprint 1", id="a-title-alone"),
+    ],
+)
+def test_a_milestone_the_listing_gives_no_number_for_is_no_milestone_of_a_scope(
+    tp, readers, milestone: object
+) -> None:
+    row = {**_row(1), "milestone": milestone}
+    assert _outside(tp, readers, [row], _scope(milestones=(7,))) == [(1, "in no milestone")]
 
 
 def test_a_scope_with_milestones_and_workstreams_takes_what_matches_both(tp, readers) -> None:
     rows = [
-        _row(1, workstream="cli", milestone="Sprint 1"),
-        _row(2, workstream="docs", milestone="Sprint 1"),
-        _row(3, workstream="cli", milestone="Later"),
+        _row(1, workstream="cli", milestone=7),
+        _row(2, workstream="docs", milestone=7),
+        _row(3, workstream="cli", milestone=9),
         _row(4, workstream="cli"),
     ]
-    scope = _scope(workstreams=("cli",), milestones=("Sprint 1",))
+    scope = _scope(workstreams=("cli",), milestones=(7,))
     assert _ready(tp, readers, rows, scope=scope) == [1]
 
 
 def test_a_ready_task_the_scope_leaves_out_carries_its_reason(tp, readers) -> None:
-    """`next-task` says why it skips each ready Task its seat's scope leaves out."""
+    """`next-task` says why it skips each ready Task its seat's scope leaves
+    out, a milestone by its number with the title the listing gives it."""
     rows = [
-        _row(1, workstream="cli", milestone="Sprint 1"),
-        _row(2, workstream="docs", milestone="Sprint 1"),
-        _row(3, workstream="cli", milestone="Later"),
+        _row(1, workstream="cli", milestone=7),
+        _row(2, workstream="docs", milestone=7),
+        _row(3, workstream="cli", milestone=9),
         _row(4, workstream="cli"),
-        _row(5, kind="docs", workstream="cli", milestone="Sprint 1"),
+        _row(5, kind="docs", workstream="cli", milestone=7),
     ]
-    scope = _scope(workstreams=("cli",), types=("feature",), milestones=("Sprint 1",))
+    scope = _scope(workstreams=("cli",), types=("feature",), milestones=(7,))
     assert _outside(tp, readers, rows, scope) == [
         (2, "in the workstream docs"),
-        (3, 'in the milestone "Later"'),
+        (3, 'in the milestone 9 "Later"'),
         (4, "in no milestone"),
         (5, "of the type docs"),
     ]
     assert _outside(tp, readers, rows, None) == []
+
+
+def test_a_milestone_with_no_title_is_shown_by_its_number(tp, readers) -> None:
+    row = {**_row(1), "milestone": {"number": 9, "title": ""}}
+    assert _outside(tp, readers, [row], _scope(milestones=(7,))) == [(1, "in the milestone 9")]
+
+
+def test_the_pool_holds_the_title_of_each_milestone_the_listing_returns(tp, readers) -> None:
+    """The titles come from every row, a Task held back or no Task among them,
+    so a line can show a milestone the scope names beside its title."""
+    rows = [
+        _row(1, milestone=7),
+        _row(2, milestone=9, body="Feature: #1\n\n## Dependencies\n\n- #3\n"),
+        _row(3, title="[Feature] the foundation", milestone=8),
+        _row(4),
+    ]
+    found = _pool(tp, readers, rows, _scope(milestones=(7,)))
+    assert found.titles == {7: "Sprint 1", 8: "Sprint 2", 9: "Later"}
 
 
 def test_a_task_that_is_not_ready_is_not_said_to_be_left_out(tp, readers) -> None:
@@ -323,13 +382,13 @@ def test_a_task_that_is_not_ready_is_not_said_to_be_left_out(tp, readers) -> Non
         _row(2, state_label="state:todo"),
         _row(9, title="[Feature] the foundation"),
     ]
-    assert _outside(tp, readers, rows, _scope(milestones=("Sprint 1",))) == []
+    assert _outside(tp, readers, rows, _scope(milestones=(7,))) == []
 
 
 def test_a_milestone_title_read_from_github_is_shown_on_one_line(tp, readers) -> None:
-    rows = [_row(1, milestone="Later\n\x1b[2Jnow")]
-    ((_, reason),) = _outside(tp, readers, rows, _scope(milestones=("Sprint 1",)))
-    assert reason == 'in the milestone "Later\\n\\x1b[2Jnow"'
+    rows = [_row(1, milestone=9, milestone_title="Later\n\x1b[2Jnow")]
+    ((_, reason),) = _outside(tp, readers, rows, _scope(milestones=(7,)))
+    assert reason == 'in the milestone 9 "Later\\n\\x1b[2Jnow"'
 
 
 # ---- the owner (DEC-035 point 6, DEC-059 point 9) -----------------------------------

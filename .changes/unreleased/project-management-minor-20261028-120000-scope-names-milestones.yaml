@@ -4,9 +4,11 @@ custom:
   category: Added
 body: >
   A seat's scope in `project/topology.yaml` may name milestones by their
-  titles, beside workstreams and types (DEC-059 point 2, #2256). Such a seat
-  takes only ready Tasks in one of the milestones it names, so a Task in no
-  milestone falls outside it. `pkit pm next-task` names the ready Tasks the
+  numbers, beside workstreams and types (DEC-059 point 2, #2256). A rename
+  leaves a milestone's number unchanged, so the scope keeps matching. Such a
+  seat takes only ready Tasks in one of the milestones it names, so a Task in
+  no milestone falls outside it. `pkit pm next-task` names the ready Tasks the
   seat's scope leaves out, one line for each reason, and `pkit pm seats` shows
-  the milestones in each scope. `pkit pm check-topology` refuses a milestone
-  part that is no list of titles, and reads no GitHub to find the milestones.
+  the milestones in each scope, each by its number with its title beside it.
+  `pkit pm check-topology` refuses a milestone part that is no list of
+  positive milestone numbers, and reads no GitHub to find the milestones.
