@@ -1,13 +1,12 @@
 component: backbone
 kind: none
 body: >
-  Three new core records, proposed, for the maintainer to accept. COR-065:
-  where an accepted record decides, the rest of the system is its
-  projection, and a choice later work builds on starts with its record.
-  COR-066: a decision record or a rule reaches the default branch only
-  accepted, by a person, within the change that proposes it. COR-067: each
-  accepted point is marked where the system carries it out, and one command
-  lists the decision debt. COR-006 and COR-025 carry partial-supersession
-  lines, and the decision-record specification says a person accepts a
-  record in its change. Nothing is built yet: #2191 and #2192 realize
-  COR-066 and COR-067.
+  Three new core records. COR-065: where an accepted record decides, the
+  rest of the system is its projection, and a choice later work builds on
+  starts with its record, accepted before work rests on it. COR-066: a
+  decision record or a rule reaches the default branch only accepted, by a
+  person, within the change that proposes it. COR-067: each accepted point
+  is marked where the system carries it out, and one command lists the
+  decision debt. COR-006 and COR-025 carry partial-supersession lines, and
+  the decision-record specification says a person accepts a record in its
+  change. The checks and the command these records decide are not built yet.

@@ -169,7 +169,7 @@ The **`author`** field captures responsibility for the record — git-style `Nam
 
 ## Statuses
 
-- **`proposed`** — under discussion, within the change that proposes it. Not binding. **Implementation must not depend on the record's content** — see "The acceptance gate" below. A proposed record never reaches the default branch ([COR-066](core/COR-066-accepted-before-landing.md) point 1).
+- **`proposed`** — under discussion, within the change that proposes it. Not binding. **Implementation must not depend on the record's content** — see "The acceptance gate" below. A proposed record no longer reaches the default branch ([COR-066](core/COR-066-accepted-before-landing.md) point 1); one already there stays until a person accepts it or it is deleted (point 4).
 - **`accepted`** — in effect. Implementation must comply.
 - **`superseded`** — replaced by a newer record. The successor sets `supersedes: PRJ-NNN` (or `COR-NNN`) in its frontmatter; the superseded record adds a *Superseded by …* line at the top of its body. The superseded record is preserved as historical material — never deleted.
 
