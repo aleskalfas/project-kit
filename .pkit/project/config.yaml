@@ -138,3 +138,4 @@ friction:
     - .claude/
     - CHANGELOG.md
     - uv.lock
+  delegate: project-manager
