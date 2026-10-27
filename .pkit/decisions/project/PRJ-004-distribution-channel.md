@@ -10,7 +10,7 @@ author: Ales Kalfas <kalfas.ales@gmail.com>
 
 PRJ-003 settled the language (Python 3.11+, distributed as a `uv tool install` target). What remained was *where* the package gets installed *from* — registry choice or a direct-from-source path. Candidates considered: PyPI public, a private artifact registry, Homebrew tap, GitHub releases tarball, `curl … | bash` installer, and direct git URL.
 
-project-kit is open-source (MIT) and lives publicly at `github.com/aleskalfas/project-kit`. Its adopter set is small and grows manually; the near-term adopters are a handful of projects authored by the same person. The question this record settles is whether to layer a package registry on top of the public source, or install directly from the git URL. It also settles which ref that install names.
+project-kit is open-source (MIT) and lives publicly at `github.com/aleskalfas/project-kit`. Its adopter set is small and grows manually; the near-term adopters are a handful of projects authored by the same person. The question this record settles is whether to layer a package registry on top of the public source, or install directly from the git URL. It also settles which ref that install names, and which ref names a release candidate, which nobody receives unless they ask for it.
 
 Both `pip` and `uv` install Python tools from git URLs natively. For a Python tool whose source is already on public GitHub, the question is whether to layer a registry on top, or rely on the git URL as the install path.
 
@@ -18,26 +18,27 @@ Which ref the install names decides whether the version a project records names 
 
 ## Decision
 
-**Distribute via direct git URL on `github.com`, with no registry layer.** The canonical install path names the tag `latest`, which points at the commit of the highest release:
+**Distribute via direct git URL on `github.com`, with no registry layer.** The canonical install path names the tag `latest`, which points at the commit of the latest release, the highest final release (PRJ-002 D5):
 
 ```
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
 ```
 
-`latest` names no version of its own: the release tags `v<version>` are the versions, and `latest` follows the highest of them. An install of a commit a release tag names, through `latest` or its own `v` tag, ties pkit's version to one content, what its wheel bundles from that tree (ADR-033). So the version a project records names the content it holds ([ADR-065](../../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 12).
+`latest` names no version of its own: the release tags `v<version>` are the versions, and `latest` follows the highest of them. An install of a commit a release tag or a candidate tag (below) names, through `latest` or its own `v` tag, ties pkit's version to one content, what its wheel bundles from that tree (ADR-033). So the version a project records names the content it holds ([ADR-065](../../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 12).
 
 `uv tool install` is the **sole sanctioned frontend** (per PRJ-003) — `uv` is a hard requirement, not merely recommended. The former `pip install git+...` fallback is **dropped**: the router hard-assumes `uvx` for pinned re-execution ([ADR-039](../../../tech-docs/architecture/decisions/ADR-039-pkit-entry-point-router.md)), so a `pip`-installed pkit is a latent inconsistency, and self-service tool-update ([ADR-063](../../../tech-docs/architecture/decisions/ADR-063-upgrade-updates-the-tool.md)) runs or prints a `uv` command; supporting a second frontend buys nothing at this project's single-digit-adopter, uv-native scale and only adds a "which pkit am I running" ambiguity. This narrows the *frontend* set, not the channel (still a direct git URL, no registry — so this is an in-place amendment, not a supersession). The HTTPS form (`git+https://github.com/...`) remains supported for users who authenticate to GitHub via PAT instead of SSH. Its canonical form names the same tag.
 
 **The ref** after `@` is a tag, a branch, or a commit SHA:
 
-- `@latest` — the highest release, the canonical form. Only the release-tag workflow is meant to write it, and only onto the commit of the highest release tag. Nothing on the host enforces that. No branch is named `latest`, since uv can take a branch before a tag of the same name, and the workflow fails while one exists.
-- `@v<version>` — a given release. The release step (PRJ-002) cuts an annotated git tag matching `.pkit/VERSION` on each release that moves it. Tag form: `v<major>.<minor>.<patch>` (e.g., `v0.5.0`). These tags are the versions. The version a project records is one of them, and every reader of release tags, such as `pkit upgrade`'s lookup of the highest release, reads them alone and skips `latest`.
+- `@latest` — the latest release, the canonical form. Only the release-tag workflow is meant to write it, and only onto the commit of the highest release tag. Nothing on the host enforces that. No branch is named `latest`, since uv can take a branch before a tag of the same name, and the workflow fails while one exists.
+- `@v<version>` — a given final release. The release step (PRJ-002) cuts an annotated git tag matching `.pkit/VERSION` on each final release that moves it. Tag form: `v<major>.<minor>.<patch>` (e.g., `v0.5.0`). These tags are the versions. The version a project records is one of them, or the version a candidate tag (below) names, and every reader of release tags, such as `pkit upgrade`'s lookup of the latest release, reads them alone and skips `latest`.
+- `@v<major>.<minor>.<patch>rc<N>` — a release candidate (PRJ-002 D5), such as `v2.0.0rc1`, for whoever chooses to test the next final release before it ships. Its *candidate tag* matches `.pkit/VERSION` as a release tag does, sits on a commit no branch holds, and is never moved or deleted, so it names one content. A candidate tag is no release tag: `latest` never points at one, and no reader of release tags picks one. Of the readers that pick a version to install, only one a person asks for candidates, such as `pkit upgrade --pre` ([ADR-072](../../../tech-docs/architecture/decisions/ADR-072-release-candidates.md)), picks a candidate tag too.
 - `@<branch>` — install a specific branch (useful for adopters trying a kit feature before it lands).
 - `@<sha>` — install a specific commit (longest-term-stable form; immune to tag edits).
 
 **An install from main is the development install.** The same URL with no tag installs main's head. Its version names the last release, while its files may be newer. So no version vouches for its content.
 
-An install of any commit no release tags, such as a branch's, is untagged too. Untagged installs are possible. Sync's guard compares their version like any other, and nothing checks whether an install is tagged (ADR-065 points 7 and 12).
+An install of any commit that no release tag and no candidate tag names, such as a branch's, is untagged too. Untagged installs are possible. Sync's guard compares their version like any other, and nothing checks whether an install is tagged (ADR-065 points 7 and 12).
 
 **No registry today.** No PyPI, no private artifact registry, no Homebrew tap, no `curl | bash` installer. Direct git URL is the *only* sanctioned install path until the audience grows past what URL-sharing can handle.
 
@@ -68,13 +69,15 @@ Main's head can carry the next release's backbone migrations beside the last rel
 - an untagged install is possible, and nothing checks it
 - a release that moves only a component cuts no tag, so it reaches a project on a tagged install only with the next backbone release
 
-**Why the canonical tag moves.** `latest` gives one command that installs the highest release whenever it runs, and every printed copy of it stays current. It is an install of a release's commit all the same, since the release-tag workflow puts `latest` only on the commit of the highest release tag. The release tags are the versions, so a project records the exact version it runs. Its costs:
+**Why the canonical tag moves.** `latest` gives one command that installs the latest release whenever it runs, and every printed copy of it stays current. It is an install of a release's commit all the same, since the release-tag workflow puts `latest` only on the commit of the highest release tag. The release tags are the versions, so a project records the exact version it runs. Its costs:
 
 - a fetch without force moves no tag a clone already holds, so a clone must force-fetch a moved `latest`, and a fetch of tags without force reports it rejected
 - `latest` lags a release until a run of the release-tag workflow moves it
 - a withdrawn highest release tag leaves `latest` on its commit until the next push to main
 
 An install by `uv tool install` fetches the ref afresh, so the clone's cost does not reach it.
+
+**Why a candidate is a tag, and no branch.** A project records a candidate's version as it records a release's, so that version must name one content too (ADR-065 point 12). A tag that never moves gives that, where a branch can move under one version.
 
 **Why we set a revisit threshold rather than picking a registry now.** Pre-1.0, the kit's surface and adopter set are both small enough that the simpler distribution wins. The cost of swapping channels later is real but bounded — adopters re-run a one-line install command; tags carry the same versions; `uv tool` handles the swap cleanly. Locking in a registry today commits us to its conventions before we've seen what's painful.
 
@@ -88,6 +91,8 @@ An install by `uv tool install` fetches the ref afresh, so the clone's cost does
 - **The URL with no tag as the canonical install.** Rejected: it installs main's head, which no version vouches for, so the version a project records would not name the content it holds.
 - **A release tag, `@v<version>`, as the canonical install,** printed by `pkit init` with its own version. Rejected: the command ages with each release, and so does every printed copy of it. It is the install of a given release.
 - **A moving branch in place of the tag `latest`,** such as the `stable` branch several projects keep. Rejected, as the maintainer decided for #2052 on 25 October 2026. A branch moves with any push that adds a commit to it, where a tag moves only by force. A branch would spare a clone the forced fetch, but `uv tool install` fetches the ref afresh, so the forced fetch costs a clone alone.
+- **Semver's spelling of a candidate,** such as `v2.0.0-rc.1`. Not taken: the tag matches `.pkit/VERSION`, and the wheel's version is PEP 440's, so only PEP 440's `2.0.0rc1` spells the tag, the file and the wheel alike.
+- **A branch for each candidate,** such as `release/v2.0.0rc1`. Rejected: a branch can move under one version (above).
 - **A development version stamped on untagged builds,** such as `1.149.0+g<sha>`, so an install from main never equals a project's recorded version. Rejected, as the maintainer decided for #1429 on 11 October 2026. Every untagged install would meet sync's stop in every project. The router reads such a version as unordered.
 - **Wait until 1.0 to settle distribution.** Rejected — there's no install path documented today; adopters are reaching for ad-hoc `git clone + ./.pkit/cli/pkit` symlinks (which is the bootstrap, not the long-term path). Locking in git-URL distribution now gives adopters a sanctioned install command without committing to a registry.
 
@@ -97,6 +102,6 @@ An install by `uv tool install` fetches the ref afresh, so the clone's cost does
 - **Tagging on release:** the release step's sequence, through `pkit version tag --push` (per #44), and the move of `latest`, are in the release README.
 - **Authentication is the user's existing GitHub auth.** SSH key via `~/.ssh/config` for `github.com`, or PAT via `git config credential.helper`. The kit doesn't introduce a new credential surface.
 - **CI / automation use** (e.g., adopter projects that install `pkit` in their CI) needs an SSH deploy key or a PAT in the runner's credential store. This is a per-adopter operational concern; the kit documents the pattern in `CONTRIBUTING.md` once it surfaces.
-- **Release notes ship as a notes-only GitHub Releases overlay.** `pkit release publish-notes` publishes each version's `CHANGELOG.md` section as the Release body, wired into the tag workflow. It is **notes only — never an attached artifact**: a wheel/tarball would reintroduce the release-artifact channel this record rejects, so attaching one is forbidden and the install path is a git tag (`uv tool install …@latest`, or `…@vX` for a given release).
+- **Release notes ship as a notes-only GitHub Releases overlay.** `pkit release publish-notes` publishes each version's `CHANGELOG.md` section as the Release body, wired into the tag workflow, and, for a candidate and for the final release that ends a line, into the run of the release workflow that cuts its tag ([ADR-072](../../../tech-docs/architecture/decisions/ADR-072-release-candidates.md) point 9). It is **notes only — never an attached artifact**: a wheel/tarball would reintroduce the release-artifact channel this record rejects, so attaching one is forbidden and the install path is a git tag (`uv tool install …@latest`, or `…@vX` for a given release). A candidate's Release is marked a pre-release, so the host never shows it as the latest release. A section longer than a Release's body can hold is linked from a summary, as ADR-072 point 9 sets.
 - **Channel-change path.** If the channel changes (e.g. adding PyPI as adoption grows), the decision is re-opened in a successor PRJ; this record is superseded, not amended (per the spec — supersession is for changes that overturn the original).
 - **Adopter doc** (the CLI reference's section on installing pkit, in `.pkit/cli/README.md`) recommends the install of `@latest`, gives `@v<version>` for a given release, and names the install from main as the development install. Where `pkit init` names the install of pkit, it prints the same `@latest` command, and a test holds the two equal (#1376). The repository's top-level README names a tag in its install line too. With the uv-only narrowing above, `uv` is a prerequisite — there is no "machine without `uv`" supported path.

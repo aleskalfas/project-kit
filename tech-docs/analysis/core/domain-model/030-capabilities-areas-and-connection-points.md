@@ -151,7 +151,7 @@ A range is the set of [versions](../glossary.md#term-version--version) a compone
 **Always true:**
 
 - A capability installs only where what it depends on falls within its ranges. Install never proceeds silently past one, and never installs a dependency by itself (COR-030).
-- A floor rises only where a declaration asks for it, never by itself ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- A floor rises only where a declaration asks for it, never by itself ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-and-a-floor-rises-only-in-a-final-release)).
 
 ## Area
 

@@ -1,0 +1,56 @@
+answers:
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T220735Z-8e67b306.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261025T233736Z-b867ef8a.yaml
+      - 20261026T001215Z-15d364d7.yaml
+      - 20261026T001331Z-3f7c37ec.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013203Z-c72d3c51.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T020505Z-a36377c9.yaml
+      - 20261026T021632Z-9c312872.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T023422Z-1926903c.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T040712Z-31bfc9a3.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T052303Z-ff205dd7.yaml
+      - 20261026T060225Z-725adb09.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T095838Z-504e0b96.yaml
+      - 20261026T124426Z-37c8828e.yaml
+      - 20261026T141301Z-fb990c1a.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T145332Z-136a7129.yaml
+      - 20261026T150143Z-05808264.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T155116Z-437c4f24.yaml
+      - 20261026T160419Z-97ae119d.yaml
+      - 20261026T161217Z-677bd19b.yaml
+      - 20261026T162052Z-c165917d.yaml
+      - 20261026T162757Z-3a4706c7.yaml
+      - 20261026T162913Z-4cacd9c5.yaml
+      - 20261026T222342Z-a7e2267c.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T014157Z-47cc41f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T190256Z-43f1ae13.yaml
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-27T19:18:03Z
+      outcome: unchanged
+      unchanged-because: Main's answers judged the acceptance gate, core rules 7, 12 and 22, create-issue's seat check, check-diff's flags, refs records-for, the citation warnings, the rollback by reverting each upgrade's commit, and the start hook and workspace sentence each deployed agent gains. This change adds release candidates a person asks for, with pkit upgrade --pre or a pin, which latest never names and a move to which always pins. Judged together, the README's commands, rules line, agents, install from latest or a release's tag, and upgrade to a release hold.

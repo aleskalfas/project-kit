@@ -1,0 +1,79 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-range
+    read:
+      - moved-842e3e53d137.yaml
+    revalidated:
+      at: 2026-10-27T19:13:37Z
+      outcome: unchanged
+      unchanged-because: PRJ-002 D4 adds that a release candidate raises no floor and writes its bounds as the final release would. The term's floor and upper bound still move only as a release step writes them, so it holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-release
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-d4155623fb63.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "PRJ-004 adds the candidate tag of a release candidate, which no code cuts yet. The term gains a candidate's distinction when the build for #2211 cuts one."
+  - artefact: tech-docs/analysis/core/domain-model/030-capabilities-areas-and-connection-points.md
+    read:
+      - 20261025T204050Z-38bb7249.yaml
+      - 20261025T205437Z-a3b903e8.yaml
+      - 20261026T005207Z-e1657ce0.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - moved-517cd38da793.yaml
+    revalidated:
+      at: 2026-10-27T19:13:53Z
+      outcome: unchanged
+      unchanged-because: PRJ-002 D4 adds that a release candidate raises no floor and writes its bounds as the final release would. The view's floor still rises only where a declaration asks for it, so it holds.
+  - artefact: tech-docs/analysis/core/requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md
+    read:
+      - 20261025T143937Z-48590796.yaml
+      - 20261025T221340Z-215a759f.yaml
+    revalidated:
+      at: 2026-10-27T19:14:01Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 adds the candidate tag, which latest never names. The constraint's install with uv from the distribution's URL at latest, and the pin's run through uvx at its tag, hold.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-distribution
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - moved-18d7526b948a.yaml
+    revalidated:
+      at: 2026-10-27T19:14:06Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 adds the candidate tag of a release candidate beside the release tags. The term says what a distribution is and that it ships many releases, which holds.
+  - artefact: tech-docs/analysis/core/domain-model/040-versions-and-copies.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - moved-e4acc05dec63.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: record
+            value: PRJ-004
+          reason: "PRJ-004 adds the candidate tag, which a release candidate carries in place of a release tag, and no code cuts one yet. The view's release gains it with the build for #2211."
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - moved-70ec17efc0cd.yaml
+    revalidated:
+      at: 2026-10-27T19:14:20Z
+      outcome: unchanged
+      unchanged-because: ADR-065 point 4 reads the backbone's lower bound in PEP 440 order, and has an init run by a release candidate pin the project. A transition still records its target first and its completion last, and the next one finishes it, so the requirement holds.
+  - artefact: tech-docs/rule-sets/analysis.md#RS-ANA-006
+    read:
+      - 20261026T012010Z-c6210192.yaml
+      - 20261026T044648Z-60ed0d65.yaml
+      - moved-2df4b0ac7338.yaml
+    revalidated:
+      at: 2026-10-27T19:14:28Z
+      outcome: unchanged
+      unchanged-because: PRJ-002 D4 adds that a release candidate raises no floor, which the final release raises. The rule's floor still rises only at a release, so it holds.
