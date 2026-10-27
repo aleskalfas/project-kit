@@ -68,7 +68,7 @@ TERM-anchor:
 TERM-answer:
   name: answer
   status: active
-  definition: "statement in a change's own file that settles an edit to what an artefact rests on, or a revisit its links ask for"
+  definition: "statement in a change's own answer file that settles an edit to what an artefact rests on, or a revisit its links ask for"
   pkit:
     friction:
       anchors:
@@ -281,7 +281,7 @@ TERM-data-point:
 TERM-debt:
   name: debt
   status: active
-  definition: "stale, deferred or answered-apart finding of the whole-repository check, dated from its origin: a change nobody answered, a deferral, or two revalidations answered apart"
+  definition: "stale, deferred or answered-apart finding of the whole-repository check, dated from the commit it originates in: a change nobody answered, a deferral, or two revalidations answered apart"
   pkit:
     friction:
       anchors:
