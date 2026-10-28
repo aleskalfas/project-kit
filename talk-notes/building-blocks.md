@@ -434,3 +434,26 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
 - **Storyboards** (COR-016, `storyboard-author`): an agent's behaviour written as scripted scenarios before the agent itself (the project manager's batch planning is one). In the agents block, as how an agent's behaviour is designed.
 - **Landing a change as a whole** (a record accepted before it lands, COR-066, and the landing guard; the merge gate's reviewer verdicts; `pkit pull-request`, `land-work`): inside project-management in the capabilities block.
 - Folded in: `status`, `visibility`, `config` → Install; `pin`, `version` → Stay current; `data` → schemas; the hook registry (COR-013) → skills and agents; documentation roots (COR-049) → living-docs.
+
+## 19. Capabilities
+
+### 19a. project-management (draft, 29 October)
+
+*Facts checked against the repository on 29 October.*
+
+- **What:** the way work is tracked and run, on GitHub issues and pull requests. It ships 62 records, 20 schemas, 88 commands (`pkit pm …`), the `pm` skill (filing, checking a body, moving an issue, batch planning, the work loop, the fixers) and two agents: the **project manager** (files, plans, moves, lands) and the **pm reviewer** (checks a pull request against the conventions).
+- **What it gives an adopter, in the order the audience meets it:**
+  - **a structure for the work:** EPIC → Feature or Umbrella → Task, native sub-issues, milestones; each issue's body checked for its parts (what, criteria, doc impact)
+  - **a lifecycle with gates:** Todo → Backlog → In Progress → Review → Done, every move checked, the person holding the scheduling, the end and the move back, parents following their children; it runs on the process substrate, with a journal per issue
+  - **landing a change:** a pull request named and described by convention; the reviewers' verdicts required by the merge gate (pm, code, security, docs, rule-set, as installed); a record accepted before it lands; `land-work` does review, checks and merge in one command
+  - **planning:** a fuzzy intent becomes one plan of Features and Tasks, reviewed by the critic, approved once (batch planning)
+  - **parallel agents:** seats for a planner and workers in their own clones, pools that say which milestones each worker takes from, claims so two never take the same Task
+  - **after a merge:** fixers propose fixes for what the merge left out of date
+  - **a board:** a Projects v2 board kept as a view of each issue's state, and, by a project's choice, the home of state, priority and workstream
+- **Evidence (this week):** every issue and pull request of this session; two workers and a planner ran through seats and pool `alpha`; the move back, the completed close and the board's Status were added to it today, each through its own records and reviews.
+- **Weak spot:**
+  - it is large: 62 records, 88 commands, a README of some 50 000 words; an adopter meets it through the agent, not the manual
+  - GitHub only, today
+  - it checks an issue's shape, not its sense: a bare dependency, a Task hung on the wrong parent, pass validation (found on 28 October; the cleanup and a typed `Blocked by:` follow)
+  - project-kit itself was not using it well until this week's cleanup
+- **Maintainer's notes:**
