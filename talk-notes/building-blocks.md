@@ -36,25 +36,27 @@ Working notes for the Friday talk (goal reconsidered 26 October: present project
 18. Connections: how components hand each other data
 19. Capabilities: opt-in disciplines (project-management, software-engineering, software-analysis, living-docs; and evidence, doc-examples, demo-recording)
 
-## The talk's order (agreed 28 October)
+## The talk's order (agreed 28 October, completed 29 October)
 
-The flow follows an adopter: install it, learn it, keep it current.
+The flow follows an adopter: install it, learn it, keep it current, see what comes next.
 
-1. **Install pkit** — `pkit init`, what lands in your project, and the one-owner rule: the methodology's files and your files are never shared (was 13's install part and 14). One line on adapters: install wires pkit into your AI tool, today Claude Code (6).
-2. **Decision records** (1)
-3. **Checked every time** — validation: files point at each other, pointers break quietly, one command walks them all (1b, was 11)
-3b. **Rules as data** — schemas: decisions say why, schemas say what, validation checks both hold (16, placed here on 28 October, "for now")
-3c. **Processes as data** — the process substrate: staged work as data, with a check of every move and a memory of every subject; shown through the capabilities that use it, project-management's issue lifecycle first (17, its own block, decided 28 October)
-4. **Rules** (2)
-5. **Scratchpad notes** (3)
-6. **Skills and the commands they pair with** — the judgement and the mechanics together (4, with the CLI, 12)
-7. **Agents: roles with limits** (5)
-8. **Your rules, not the tool's guesses** — permissions, and where agents write (7, with 8)
-9. **Docs that know when they're wrong** — anchors and answers (9)
-10. **Rule sets** — skipped for now while the rules are reworked (10)
-11. **Capabilities** (19), still to walk
-11b. **Connections** — how capabilities hand each other data without knowing each other; right after capabilities, since the audience must know what a capability is first (18, decided 28 October)
-12. **Stay current** — sync, upgrade, migrations, versioning and release (13's upgrade part, with 15), the closing block
+1. **Install pkit** — `pkit init`, what lands in your project, and the one-owner rule: the methodology's files and your files are never shared. One line on adapters (install wires pkit into your AI tool, today Claude Code); `status`, `visibility`, `config`.
+2. **Decision records**
+3. **Checked every time** — validation: files point at each other, pointers break quietly, one command walks them all
+4. **Rules as data** — schemas: decisions say why, schemas say what, validation checks both hold (and `data`)
+5. **Processes as data** — the process substrate: staged work with a check of every move and a memory of every subject, shown through project-management's issue lifecycle
+6. **Rules**
+7. **Scratchpad notes**
+8. **Skills and the commands they pair with** — the judgement and the mechanics together (and the hook registry)
+9. **Agents: roles with limits** (and storyboards: how an agent's behaviour is designed)
+10. **Your rules, not the tool's guesses** — permissions, and where agents write
+11. **Docs that know when they're wrong** — anchors and answers
+12. **Rule sets** — skipped for now while the rules are reworked
+13. **Capabilities:**
+    - **project-management: "One project manager, many builders"** (landing a change lives here)
+    - **software-engineering, with connections:** the builders follow your conventions, three reviewers check the result, and the reviewers plug into project-management's merge gate through a connection point, with nothing to wire
+14. **Stay current** — sync, upgrade, migrations, versioning and release, `pin`; and the report channel: updates come down, reports go up
+15. **What's next (experimental)** — software-analysis, living-docs, and real multi-clone parallel work (seats and pools): all three run today, all three still being shaped
 
 
 ## 1. Decision records
