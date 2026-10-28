@@ -162,7 +162,7 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
 - **Evidence:**
   - 57 notes since 22 May: 25 retired as done, 32 active, none dropped
   - the 25 done notes produced between 1 and 14 artefacts each; most retired within a few days of starting (the multi-clone coordination arc: 5 days, 14 artefacts; the autonomous feature flow: 1 day, 14)
-  - the first, the walk through a brownfield project (`done/2026-05-04-inventory.md`), produced the first core records
+  - the walk through a brownfield project that produced the first core records (`done/2026-05-04-inventory.md`) is named in `CLAUDE.md` but is not in the repository: it predates the repository's first commit
   - this week: release candidates (the note became the records of PR #2224), what answers are and should be called (on its own branch), which rules reach which session (on its own branch, written today after two critics took the slicing apart)
 - **Weak spot:**
   - "active" holds stale notes: 16 of the 32 started before July, and nothing reminds anyone to retire them
