@@ -879,6 +879,7 @@ At the start of each session, the project-manager agent lists the seats with `se
 - **A worker** first goes on with what its clone has in flight: a Task In Progress, a pull request of its own that conflicts with the default branch, or a fix round on one whose verdict asks for changes. It mends a conflict by merging the default branch in, and never rebases or force-pushes. Then it takes the next ready Task with `next-task --yes`, builds it in its own clone, and opens its pull request with `open-pr --draft` and `review-work`. Each round starts by reading its pull requests in Review again, with `show-pr <branch>`
 - **A pull request that a released seat left in Review** is the person's to land, or to hand over to a worker, since its Task waits on its reviewers and a person ([project-management:DEC-059-topology-of-seats] point 9). `next-task` never offers its Task. The worker the person hands it to fetches its branch, and mends it from then on
 - **No role authorises a merge,** or anything else a person authorises. The person lands each pull request through the merge gate
+- **A comment that reports the person's decision** names the seat or the session the person gave it in. The comment verbs name only the seat that posts, and the person may have given the decision in another session ("Freeform comments" below)
 - **A lead's loop,** with helpers of its own, is not in the sub-procedure yet
 
 Where the Tasks of new work would share a choice that nothing settles yet, batch planning plans in two stages ([project-management:DEC-060-foundation-before-slices]). The first plan files the EPIC, with the intent and an outline of the slices, and only the Feature of the work's foundation: a Task for the records of the shared choices, then a walking skeleton built on them. The slices are planned in a second plan, once the person closes that Feature. The agent's storyboard walks one round of each role's loop, and a worker's later round that meets each of these situations.
@@ -1313,6 +1314,14 @@ The `project-manager` agent is denied direct `gh` writes, so it posts a **freefo
 | `comment-pr <n> --body "…"` | Post a freeform comment on a PR. |
 
 Both run the membership gate (DEC-021) and the foreign-repo session interlock (COR-039), print the context header, and honour `--dry-run` / `--yes` — the same guards as every mutating verb. A comment **mutates no lifecycle state**, so it carries **no** validation-severity gate; the only failure is an empty body. The verb refuses a body that would be mistaken for a **structured** comment — a first line matching the DEC-028 reviewer-verdict grammar or the DEC-014 audit-comment template — so a freeform note can never be mis-parsed by `done-work`'s gate-checker (see DEC-047).
+
+**Each comment names the clone that posts it.** Every clone posts under the same account, so GitHub's author line does not tell a planner's comment from a worker's or the person's own. Both verbs end the comment with a line that names the seat and instance of the clone that runs them, such as `🪑 Posted by seat planner, instance 1`. The person's words stay as they are, above the line.
+
+- **A clone that holds no seat** says so: `🪑 Posted by a clone that holds no seat`. In a project with no topology, a clone with a typed instance id names it: `instance 2, which holds no seat`
+- **A hidden stamp** carries the same for tooling, and the clone's key: `<!-- pkit:posted-by v=1 instance=1 seat=planner seat_number=1 clone=<key> -->`. Its fields are named as a claim's are (DEC-059 point 9), and a stamp of a clone with no seat names no seat
+- **The seat is confirmed first.** A clone that took a seat confirms it on the seat's state issue before it posts (DEC-059 point 6). Every command that acts as an instance does the same. Where the seat cannot be confirmed, the verb refuses with exit 1 and posts nothing
+
+`scripts/_lib/comment.py` builds the line and the stamp, and reads the stamp back.
 
 #### The checkbox close-gate on the merge path (per [project-management:DEC-007-checkbox-validation]; #734)
 
