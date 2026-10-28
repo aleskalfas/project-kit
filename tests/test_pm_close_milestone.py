@@ -476,6 +476,8 @@ def _pass_gates(
     # capability root is the kit repo root, which carries no adopter tree to
     # stamp, so neutralise the gate here — as the line above does for the guard.
     monkeypatch.setattr(cm.bootstrap_gate, "enforce", lambda *a, **kw: True)
+    # The topology declares no pools of workers unless a test says it does.
+    monkeypatch.setattr(cm.pools, "declared_pools", lambda _root: (None, None))
 
 
 def _args(**over):
@@ -790,6 +792,7 @@ class FakeRepo:
             "state": issue["state"],
             "body": issue["body"],
             "milestone": self._native(issue),
+            "labels": [{"name": name} for name in issue["labels"]],
         }
 
 
@@ -1262,3 +1265,81 @@ def test_a_re_run_with_no_stdin_at_all_finishes_the_rollforward(cm, monkeypatch)
     monkeypatch.setattr(sys, "argv", ["close-milestone", "6"])
     assert cm.main() == 0
     assert attempts == [11, 12]
+
+
+# --- rollforward within the pool (DEC-061 point 7) ---------------------------------
+
+
+def _pooled(monkeypatch, cm, closing_pool: str | None, *, next_pool: str, later_pool: str):
+    """Milestone #6, in ``closing_pool``, with Sprint 7 in ``next_pool`` and
+    Sprint 9 in ``later_pool`` (an empty name: no pool), in a topology that
+    declares the pools alpha and bravo."""
+
+    def described(base: dict, pool: str | None) -> dict:
+        line = f"\nPool: {pool}" if pool else ""
+        return {**base, "description": f"{base['description']}{line}"}
+
+    closing = described({**_CLOSING}, closing_pool)
+    repo = FakeRepo(
+        [closing, described(_NEXT, next_pool), described(_LATER, later_pool), _OTHER],
+        _mixed_issues(),
+    )
+    moves = _wire(monkeypatch, cm, repo)
+    monkeypatch.setattr(cm.pools, "declared_pools", lambda _root: (("alpha", "bravo"), None))
+    return repo, moves
+
+
+def test_a_close_rolls_forward_to_the_next_open_milestone_of_its_pool(cm, monkeypatch) -> None:
+    repo, moves = _pooled(monkeypatch, cm, "alpha", next_pool="bravo", later_pool="alpha")
+    assert _close(monkeypatch, cm) == 0
+    assert {target for _, target, _ in moves} == {9}
+    assert "rolled forward to #9 Sprint 9: Later" in _audit(repo)
+
+
+def test_a_milestone_in_no_pool_rolls_only_into_one_in_no_pool(cm, monkeypatch) -> None:
+    _, moves = _pooled(monkeypatch, cm, None, next_pool="alpha", later_pool="")
+    assert _close(monkeypatch, cm) == 0
+    assert {target for _, target, _ in moves} == {9}
+
+
+def test_with_no_open_milestone_of_its_pool_next_the_person_names_it(
+    cm, monkeypatch, capsys
+) -> None:
+    repo, moves = _pooled(monkeypatch, cm, "alpha", next_pool="bravo", later_pool="bravo")
+    assert _close(monkeypatch, cm) == 1
+    assert repo.writes() == [] and moves == []
+    assert "no open milestone of its category in the pool alpha" in capsys.readouterr().err
+
+
+def test_a_target_in_another_pool_is_named_in_the_close_s_consent_prompt(
+    cm, monkeypatch, capsys
+) -> None:
+    _, moves = _pooled(monkeypatch, cm, "alpha", next_pool="bravo", later_pool="alpha")
+    monkeypatch.setattr(sys, "stdin", _Terminal())
+    asked: list[str] = []
+    monkeypatch.setattr("builtins.input", lambda q: asked.append(q) or "y")
+    monkeypatch.setattr(sys, "argv", ["close-milestone", "6", "--target", "7"])
+    assert cm.main() == 0
+    assert asked == [
+        "Close this milestone and roll 2 open child issue(s) forward to #7 Sprint 7: Polish, "
+        "in the pool bravo, another pool than this milestone's? [y/N] "
+    ]
+    assert {target for _, target, _ in moves} == {7}
+    assert "the target is in the pool bravo, another pool" in capsys.readouterr().out
+
+
+def test_a_forced_close_reports_each_task_it_leaves_in_no_pool(cm, monkeypatch, capsys) -> None:
+    repo, moves = _pooled(monkeypatch, cm, "alpha", next_pool="alpha", later_pool="alpha")
+    repo.milestones[6]["description"] = "Close trigger: content-based\nPool: alpha"
+    assert _close(monkeypatch, cm, "--force") == 0
+    assert moves == []
+    err = capsys.readouterr().err
+    assert "these Tasks it leaves are in no pool" in err
+    assert "#11 [task] [Task] in flight" in err
+
+
+def test_without_pools_a_forced_close_reports_no_pool(cm, monkeypatch, capsys) -> None:
+    repo = _repo({**_CLOSING, "description": "Close trigger: content-based"})
+    _wire(monkeypatch, cm, repo)
+    assert _close(monkeypatch, cm, "--force") == 0
+    assert "in no pool" not in capsys.readouterr().err

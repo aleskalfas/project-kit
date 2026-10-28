@@ -102,6 +102,18 @@ def map_pools(rows: Iterable[Any], declared: Iterable[str]) -> PoolMap:
     return PoolMap(names, tuple(sorted(found, key=lambda m: m.number)))
 
 
+def of_pool(rows: Iterable[Any], pool: str | None, declared: Iterable[str]) -> list[dict]:
+    """The open Milestones among ``rows`` in ``pool``, or in no pool where it is
+    None: those a close rolls its open Tasks forward to (DEC-061 point 7)."""
+    names = tuple(declared)
+    return [
+        row
+        for row in rows
+        if isinstance(row, dict)
+        and milestone.milestone_pool(str(row.get("description") or ""), names).name == pool
+    ]
+
+
 def read_map(
     declared: Iterable[str], *, config: dict[str, Any] | None = None, gh: Gh | None = None
 ) -> PoolMap | None:

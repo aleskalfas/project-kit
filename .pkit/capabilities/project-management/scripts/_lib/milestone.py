@@ -83,8 +83,9 @@ _MILESTONE_NUMBER_REF = re.compile(
     r"^(?:\[#(?P<link>\d+)\]\(\.\./milestone/(?P=link)\)|#?(?P<plain>\d+))$"
 )
 
-# The fields a milestone-children read needs from the issue corpus.
-_CHILDREN_FIELDS = "number,title,state,body,milestone"
+# The fields a milestone-children read needs from the issue corpus: the labels
+# tell where in the lifecycle a child a forced close leaves stands.
+_CHILDREN_FIELDS = "number,title,state,body,milestone,labels"
 
 
 @dataclass(frozen=True)
@@ -386,10 +387,10 @@ def list_milestone_children(
     is refused rather than answered from: a child past the ceiling may be
     open, and a list short of it would call the Milestone closeable.
 
-    Returns a list of `{number, title, state, type, milestone}` dicts (state
-    lower-cased, type inferred from the title prefix, milestone the native
-    Milestone payload or None, sorted by number), or None — with the reason on
-    stderr — on a gh failure or a truncated corpus.
+    Returns a list of `{number, title, state, type, milestone, labels}` dicts
+    (state lower-cased, type inferred from the title prefix, milestone the
+    native Milestone payload or None, labels by name, sorted by number), or
+    None — with the reason on stderr — on a gh failure or a truncated corpus.
     """
     corpus = containment.fetch_issue_corpus(config, fields=_CHILDREN_FIELDS)
     if corpus is None:
@@ -426,6 +427,10 @@ def list_milestone_children(
                     row_title, issue_types, classification=classification
                 ),
                 "milestone": native if isinstance(native, dict) else None,
+                "labels": [
+                    str(label.get("name", "")) if isinstance(label, dict) else str(label)
+                    for label in row.get("labels") or []
+                ],
             }
         )
     children.sort(key=lambda c: c["number"])
