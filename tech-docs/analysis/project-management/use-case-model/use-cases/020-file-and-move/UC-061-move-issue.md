@@ -33,6 +33,8 @@ pkit:
         - .pkit/capabilities/project-management/scripts/start-work.py
         - .pkit/capabilities/project-management/scripts/review-work.py
         - .pkit/capabilities/project-management/scripts/move-issue.py
+        - .pkit/capabilities/project-management/scripts/sync-board.py
+        - .pkit/capabilities/project-management/scripts/_lib/board_status.py
         - .pkit/capabilities/project-management/scripts/close-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/composed_move.py
         - .pkit/capabilities/project-management/scripts/_lib/checkbox_gate.py
@@ -117,6 +119,7 @@ pkit:
 - **2a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, the developer is no member, or the operator declines a move in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
 - **3a.** The [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares no such move for the issue's type, such as Review for an [EPIC](../../../glossary.md#term-epic--epic). The system refuses, naming the moves the issue lifecycle declares, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). The use case ends.
 - **3b.** The issue's body still holds a placeholder of its template. The system refuses the move until the body is written ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)). The use case ends.
+- **4a.** The project keeps a Projects v2 board that does not carry the state. With each move, the system sets the card's Status to the issue's new state, and the cascade sets the Status of each issue above ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). A Status the system cannot write is one line, and the move stands. `pkit pm sync-board` sets the cards again from the issues' states.
 - **5a.** A move of the cascade fails part-way. The system warns, and names the issues it did not move. Running the same move again finishes the cascade, since a move already made is not made twice ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 - **6a.** The issue is assigned to someone else. `start-work` refuses, and changes nothing (`start-work.py`).
 - **6b.** The issue is still in Todo. `start-work` refuses, names the move to make first, and changes nothing (`composed_move.py`).

@@ -29,8 +29,9 @@ where it binds it, and `has_projects_v2_board` governs only where the map is
 silent (per [project-management:DEC-051-axis-carriage-activation]):
 
   * `board` — the Projects v2 single-select `Status` field carries the state.
-    State changes go through `gh project item-edit` (deferred at v1 —
-    surfaces as a dry-run guidance message until kit issue #122 lands).
+    DEC-006 has the agent maintain the Status, but the write on this path is
+    not built yet: it follows the read of a board-carried state (#2271), and
+    until then the move surfaces as a guidance message.
   * `kit-label` / `adopter-label` — the state lives as a label: the kit's
     `state:*` in greenfield, or the adopter's own label under a `label:`
     binding. State changes happen via `gh issue edit --add-label <new>
@@ -38,6 +39,12 @@ silent (per [project-management:DEC-051-axis-carriage-activation]):
   * `derived` / `degrade` — no label is written or removed (a derived state is
     carried by open/closed, and a degraded one by nothing); the wrapper's other
     domain side-effects still fire.
+
+Where a board is configured and does not carry the state, its Status is a
+projection of the state the agent maintains (DEC-006). The move writes the
+card's Status to the issue's new state, through `_lib/board_status`, and so does
+a move that finds the issue already there; the forward cascade writes each
+ancestor's. A write that fails is one line, and the move stands.
 
 The forward cascade per DEC-006 fires upward on a forward move: the
 script walks from the issue to the top of its hierarchy, one parent at a
@@ -106,6 +113,7 @@ from _lib import audit as _audit
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_status,
     body_parent_ref,
     bootstrap_gate,
     composed_move,
@@ -421,6 +429,16 @@ def main() -> int:
     # a `derive` binding the label planner already writes nothing.
     state_on_board = axis_carriage.is_board_carried("state", config, substrate_map)
 
+    # The board's Status, where it is a projection this project keeps (DEC-006):
+    # a board is configured and the state is not carried on it. None otherwise,
+    # and then no board call is made. Where the board carries the state, its
+    # Status is the state's source, which this script does not write.
+    status = (
+        board_status.Projector(config, workflow)
+        if board_status.maintained(config, substrate_map)
+        else None
+    )
+
     # Audit-comment projection (DEC-049): where the project keeps a journal it
     # records every move regardless; `audit.projection` controls the GitHub
     # comment projection — `off` posts nothing, `audit` (default) posts only
@@ -438,6 +456,7 @@ def main() -> int:
         invoker=invoker,
         projection=projection,
         levels=_cascade_levels(workflow),
+        status=status,
     )
 
     def moved_issue(origin: str | None) -> _MovedIssue:
@@ -523,6 +542,14 @@ def main() -> int:
                         actor=invoker.github_login,
                         reason=merge_reason,
                     )
+        # The card may still show where the issue was: a merge's close moves the
+        # issue to done without a move of ours. The write converges, so it is made
+        # whether or not the card already says it.
+        if status is not None:
+            if args.dry_run:
+                _print_status_plan(status, workflow, args.to)
+            else:
+                board_status.report(status.write(args.issue_number, args.to))
         # The forward cascade is idempotent, so the issue already being in place
         # does not end the walk: re-running a move whose cascade left an ancestor
         # behind brings that ancestor level. An issue already at done came there
@@ -640,9 +667,10 @@ def main() -> int:
         print(
             f"\n[note] board substrate detected (projects_v2_board_id="
             f"{config.get('projects_v2_board_id')}). State lives on the "
-            "Projects v2 Status field; bulk gh-project field-set is deferred "
-            "(per DEC-019). This invocation will surface the planned move "
-            "but not mutate the board field at v1."
+            "Projects v2 Status field, and the agent maintains the Status (DEC-006), "
+            "but the write where the board carries the state is not built yet: it "
+            "follows the read of #2271. This invocation will surface the planned move "
+            "but not mutate the board field."
         )
 
     plan = _compute_plan(
@@ -654,6 +682,8 @@ def main() -> int:
         substrate_map=substrate_map,
     )
     _print_plan(plan)
+    if status is not None:
+        _print_status_plan(status, workflow, args.to)
 
     # Cascade preview: each ancestor's steps, read before anything is written.
     cascade = None
@@ -746,6 +776,11 @@ def main() -> int:
             _render_provenance_comment(invoker, current_state, args.to),
             config,
         )
+
+    # The board's Status follows the label written above (DEC-006). A write that
+    # fails is one line, and the move stands: the label is the source.
+    if status is not None:
+        board_status.report(status.write(args.issue_number, args.to))
 
     # Forward cascade. Each ancestor step it writes is journaled, where a journal is
     # kept, the way this move was, by the same actor, with this move named as the
@@ -845,6 +880,12 @@ def _print_plan(plan: Plan) -> None:
         print(f"  - remove label {plan.remove_label!r}")
     if not plan.add_label and not plan.remove_label:
         print("  · (substrate: board) — no label mutations.")
+
+
+def _print_status_plan(status: board_status.Projector, workflow: dict, target: str) -> None:
+    """The plan's line for the board's Status, which reads nothing to say it."""
+    name = board_status.option_name(workflow, target)
+    print(f"  ~ set the card's Status on {status.board} to {name!r}")
 
 
 # ---- workflow-schema helpers ----------------------------------------
@@ -1297,7 +1338,9 @@ class _CascadeContext:
     ``invoker`` is who runs the move, and the cascade's moves are theirs;
     ``projection`` is the audit projection (DEC-049), at `full` of which each
     ancestor moved gets a provenance comment. ``levels`` are the issue types it
-    moves (`_cascade_levels`), empty when workflow.yaml declares none."""
+    moves (`_cascade_levels`), empty when workflow.yaml declares none.
+    ``status`` writes each ancestor's board Status where the project keeps it as
+    a projection (DEC-006), None where it does not."""
 
     workflow: dict
     issue_types: dict
@@ -1307,6 +1350,7 @@ class _CascadeContext:
     invoker: object
     projection: str
     levels: tuple[str, ...]
+    status: board_status.Projector | None = None
 
     @property
     def actor(self) -> str | None:
@@ -1893,7 +1937,7 @@ def _step_ancestor(
 ) -> _AncestorOutcome:
     """Write each step as its own label edit, computed from the labels as the
     step before left them, and journal it; then project the steps that landed
-    (`_project_cascaded_move`).
+    (`_project_cascaded_move`, `_project_cascaded_status`).
 
     A step whose label landed is followed by the next whether or not the engine
     took it, so the ancestor never rests between the two writes of one step; a
@@ -1916,6 +1960,7 @@ def _step_ancestor(
         if not _gh_apply_state_label(number, edit, context.config):
             said.append(f"{current} → {step} not written (the label write failed)")
             _project_cascaded_move(number, reached, reason, context)
+            _project_cascaded_status(number, reached, context)
             return _AncestorOutcome(
                 number,
                 "; ".join(said) if len(said) > 1 else f"not moved: {said[0]}",
@@ -1931,6 +1976,7 @@ def _step_ancestor(
         reached.append(step)
         current = step
     _project_cascaded_move(number, reached, reason, context)
+    _project_cascaded_status(number, reached, context)
     if not all_journaled:
         return _AncestorOutcome(number, "; ".join(said), complete=False)
     return _AncestorOutcome(number, " → ".join(reached))
@@ -1959,6 +2005,16 @@ def _project_cascaded_move(
             "the move stands.",
             file=sys.stderr,
         )
+
+
+def _project_cascaded_status(number: int, reached: list[str], context: _CascadeContext) -> None:
+    """Where the project keeps the board's Status as a projection (DEC-006), set
+    ancestor ``number``'s to the state its steps reached: one write, however many
+    steps landed, and none when none did. A write that fails is one line, and the
+    ancestor's move stands."""
+    if context.status is None or len(reached) < 2:
+        return
+    board_status.report(context.status.write(number, reached[-1]))
 
 
 def _print_cascade_report(

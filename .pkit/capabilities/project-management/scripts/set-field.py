@@ -799,7 +799,8 @@ def _read_board_state(
     through the board READ seam (`_lib/board_fields`) and mutate nothing — so this
     runs unchanged under `--dry-run`, which is what lets a dry-run report the
     concrete write (and refuse a knowably-impossible one) without touching the
-    board.
+    board. The board is read under its owner (`board_fields.board_owner`):
+    `gh.default_owner`, else the repository's, which the issue's url names.
 
     Any failure is captured in `BoardState.error` with gh's stderr VERBATIM: the
     likely cause is a token without the `project` scope, and the remedy is in that
@@ -809,8 +810,8 @@ def _read_board_state(
     """
     number = board_fields.board_number(config)
     board_ref = f"Projects-v2 board #{number}" if number else "the Projects-v2 board"
-    owner = board_fields.default_owner(config)
     issue_url = issue.get("url") if isinstance(issue.get("url"), str) else None
+    owner = board_fields.board_owner(config, repository_owner=board_fields.url_owner(issue_url))
     remediation = (
         f"gh project item-add {number or '<board-number>'} "
         f"--owner {owner or '<board-owner>'} "
