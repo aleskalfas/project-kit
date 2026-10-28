@@ -73,7 +73,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 - **It never guesses** a decision that is not its own, and never works around a refused call.
 - **A result** says whether the Task is built, and names its commits, the checks it ran and how each ended, the criteria it meets, a sentence on each document it revalidated as updated, any follow-up to file, and what it left undone.
 - **A question** names its kind (point 6), asks one question, and says what the builder found, the options with what each means, the option it recommends, and its work so far.
-- **The command says what the builder did not.** It reads each run's ending mechanically. A call the run's rules refused, a run past its limit, and a clone that does not bear the result out each become a question or a failure of their own, with no word of the builder's needed.
+- **The command says what the builder did not.** It reads each run's ending mechanically, with no word of the builder's needed. A call one of the build's own denies refused (point 4) becomes a decision question, even on a run that says built, so the person sees every attempt at the seat's work before the seat pushes. A call the project's rules refused becomes a permission question on a run that did not end built, and is shown with a built one. A run past its limit, and a clone that does not bear the result out, become a question or a failure of their own.
 
 ### 6. A question goes to whoever may answer it, and the build resumes
 
@@ -81,7 +81,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 |---|---|---|
 | decision | the Task's scope, documented behaviour, a record, a shared choice | the person only ([project-management:DEC-006-state-machine-and-cascade]) |
 | permission | a call the project's rules refused that the build needs | the person only: once for that build, recorded, or by a lasting grant through a reviewed change. A call one of the build's own denies (point 4) refused is never granted, since it is the seat's work: it becomes a decision, about the Task's scope |
-| advice | which of two ways to build fits | an advising agent the project names, which the command starts confined, on the brief and the question alone, whose answer the person accepts; else the person |
+| advice | which of two ways to build fits | an advising agent the project names, which the command starts confined where the runner offers a confined form, on the brief and the question alone, whose answer the person accepts; else the person |
 | environment | a missing tool, a broken checkout, a time limit | the person, or whoever runs the platform |
 
 - **Never the seat from its own context.** That would carry the seat's context into the build, which this record keeps out.
