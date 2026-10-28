@@ -44,6 +44,7 @@ The flow follows an adopter: install it, learn it, keep it current.
 2. **Decision records** (1)
 3. **Checked every time** — validation: files point at each other, pointers break quietly, one command walks them all (1b, was 11)
 3b. **Rules as data** — schemas: decisions say why, schemas say what, validation checks both hold (16, placed here on 28 October, "for now")
+3c. **Processes as data** — the process substrate: staged work as data, with a check of every move and a memory of every subject; shown through the capabilities that use it, project-management's issue lifecycle first (17, its own block, decided 28 October)
 4. **Rules** (2)
 5. **Scratchpad notes** (3)
 6. **Skills and the commands they pair with** — the judgement and the mechanics together (4, with the CLI, 12)
@@ -51,7 +52,7 @@ The flow follows an adopter: install it, learn it, keep it current.
 8. **Your rules, not the tool's guesses** — permissions, and where agents write (7, with 8)
 9. **Docs that know when they're wrong** — anchors and answers (9)
 10. **Rule sets** — skipped for now while the rules are reworked (10)
-11. Still to walk: the process substrate (17), connections (18), capabilities (19)
+11. Still to walk: connections (18), capabilities (19)
 12. **Stay current** — sync, upgrade, migrations, versioning and release (13's upgrade part, with 15), the closing block
 
 
@@ -406,3 +407,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - abstract: hard to show without a capability on top of it
   - two bindings so far; whether it fits a third discipline is untested
 - **Maintainer's notes:**
+  - Decided 28 October: a block of its own (the maintainer: not folded into capabilities), placed after schemas, shown through the capabilities that use it: project-management's issue lifecycle (states, moves, who authorises each, each issue's journal, today's move back and completed close added as definition changes) and the second binding, which shows the engine is shared.
