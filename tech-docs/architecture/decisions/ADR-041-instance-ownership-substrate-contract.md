@@ -344,7 +344,8 @@ When a claim counts:
   in any state other than In Progress does not lapse. Nor does the claim on a Task
   whose build waits, on a question or on its hand-back, which the caller passes as
   it passes the Task's state, read from the build command's events on the Task:
-  its ending, its resume and its hand-back (refinement per
+  its ending, its resume and its hand-back. The wait counts only for the claim
+  whose seat posted the build's start (refinement per
   [ADR-073](ADR-073-builder-runs.md) points 5, 8 and 9).
 - **A Task moved back to In Progress** by a command of the capability gets a
   renewal from that command (DEC-059 point 9), so the limit runs from the move. A
