@@ -392,7 +392,7 @@ def _pre_existing_clause(agent: str) -> str:
 
 
 def test_pre_existing_clause_is_identical_across_the_panel():
-    """The block threshold is per-agent but shared (DEC-002 D3): the three copies must not drift."""
+    """The block threshold is per-agent but shared (DEC-002 point 3): the copies must not drift."""
     clauses = {agent: _pre_existing_clause(agent) for agent in _PANEL_AGENTS}
     assert len(set(clauses.values())) == 1, (
         "pre-existing-defect clause differs between panel agents"
@@ -400,8 +400,8 @@ def test_pre_existing_clause_is_identical_across_the_panel():
 
 
 @pytest.mark.parametrize("agent", _PANEL_AGENTS)
-def test_pre_existing_clause_cites_d3(agent):
-    assert "[software-engineering:DEC-002-code-review-panel] D3" in _pre_existing_clause(agent)
+def test_pre_existing_clause_cites_point_3(agent):
+    assert "[software-engineering:DEC-002-code-review-panel] point 3" in _pre_existing_clause(agent)
 
 
 # ---------------------------------------------------------------------------

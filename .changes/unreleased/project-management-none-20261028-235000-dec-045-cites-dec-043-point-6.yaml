@@ -1,0 +1,6 @@
+component: project-management
+kind: none
+body: >
+  DEC-045 cites DEC-043's realm-blindness point as point 6, the id its heading
+  carries, and the README's answer is written. No decision changes, and the
+  capability's behaviour is unchanged.
