@@ -175,7 +175,7 @@ The cascade is what one issue's move does to the issues above it. Moving forward
 - It moves an issue above only forward, and never past In Progress (DEC-006).
 - It never moves a child because its parent moved (DEC-006).
 - A move back from In Progress moves no other issue. A parent issue moves back only while no child of it is In Progress or in Review, so it never stands behind its children (DEC-006).
-- A won't-do close from Todo or Backlog moves no issue above. A completed close brings each one behind up to In Progress, since completed work is progress (DEC-006).
+- A won't-do close from Todo or Backlog moves no issue above. A completed close brings each issue above that is behind up to In Progress, since completed work is progress (DEC-006).
 - A parent issue closes only once its [checkboxes](../glossary.md#term-checkbox--checkbox) are ticked and its children are done ([DEC-034](../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)).
 
 ## Audit comment
