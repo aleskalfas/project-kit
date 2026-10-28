@@ -73,7 +73,19 @@ def _errors(validator: Draft202012Validator, doc: Any) -> list[str]:
 
 def _minimal() -> dict[str, Any]:
     """The smallest config the capability accepts — pre-check's required set."""
-    return {"schema_version": 1, "workstreams": []}
+    return {"schema_version": 2, "workstreams": []}
+
+
+# --- the version (DEC-062 point 6) -----------------------------------------
+
+
+def test_version_1_is_refused_until_the_migration_writes_2(
+    validator: Draft202012Validator,
+) -> None:
+    """The configuration's schema version marks the migration that ends the board
+    flag's carriage as run: a version 1 config is one it has not carried over."""
+    assert _errors(validator, {"schema_version": 1, "workstreams": []})
+    assert _errors(validator, _minimal()) == []
 
 
 # --- accept ---------------------------------------------------------------

@@ -12,7 +12,8 @@
   "properties": {
     "schema_version": {
       "type": "integer",
-      "const": 1
+      "const": 2,
+      "description": "Version 2 since `has_projects_v2_board` came to say only that a board exists (project-management:DEC-062 point 6). A configuration at version 1 is one the capability's migration has not yet carried over: it keeps priority and workstream on the board through the substrate map where the flag is set, and writes version 2."
     },
     "source": {
       "$ref": "refs.schema.json#/$defs/source"
@@ -76,7 +77,7 @@
     },
     "has_projects_v2_board": {
       "type": "boolean",
-      "description": "True when classification axes live as Projects v2 board fields; false (or absent) selects label-fallback mode per DEC-012, where bootstrap creates `priority:*` / `workstream:*` / `state:*` labels instead. Set `projects_v2_board_id` alongside a true value."
+      "description": "True when the project has a Projects v2 board: it names which board (with `projects_v2_board_id`) and that every issue belongs on it (DEC-019). It carries no axis: an axis lives on the board only where `project/substrate-map.yaml` binds it there with `board: true` (project-management:DEC-062 point 1). Set `projects_v2_board_id` alongside a true value."
     },
     "projects_v2_board_id": {
       "type": "integer",

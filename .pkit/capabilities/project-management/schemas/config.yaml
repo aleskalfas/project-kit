@@ -21,7 +21,7 @@
 # left the adopter in label-fallback mode with no signal until classification
 # landed in the wrong substrate. Validation now names the offending key.
 
-schema_version: 1
+schema_version: 2
 
 # Adopter-data binding (per COR-023): a project's config.yaml matches this
 # schema. Adopter files MAY also carry the self-describing top-level field
@@ -59,8 +59,11 @@ pkit_schema: project-management:config
 # taxonomy-and-lifecycle]), but `pre-check.py` still requires this key.
 workstreams: []
 
-# Classification substrate (per [project-management:DEC-012-classification-axes]).
-# false / absent = label-fallback mode; true requires projects_v2_board_id.
+# Whether the project has a Projects v2 board (per
+# [project-management:DEC-062-axes-chosen-in-the-map] point 1): true names which
+# board, with projects_v2_board_id, and puts every issue on it (DEC-019). It
+# carries no axis — an axis lives on the board only where
+# project/substrate-map.yaml binds it there with `board: true`.
 has_projects_v2_board: false
 
 # Optional — uncomment what applies:

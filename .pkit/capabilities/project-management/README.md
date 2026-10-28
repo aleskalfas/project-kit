@@ -87,8 +87,8 @@ Create `.pkit/capabilities/project-management/project/config.yaml` declaring the
 
 ```yaml
 # project/config.yaml
-schema_version: 1
-has_projects_v2_board: false          # set true + projects_v2_board_id when a board is configured
+schema_version: 2
+has_projects_v2_board: false          # set true + projects_v2_board_id when the project has a board
 workstreams: []                       # the key stays, and the workstreams live in their own file
 # Optional:
 # projects_v2_board_id: 12
