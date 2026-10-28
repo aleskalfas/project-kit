@@ -168,3 +168,26 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - nothing checks a note's state: one note sits in both `active/` and `done/` (#2263)
   - non-normative by design, so nothing stops someone building on a note's idea before it is a record; the acceptance gate speaks of records only
 - **Maintainer's notes (28 October):** a scratchpad is the desk of a home office: papers where ideas are caught before they become real assignments, issues or records. Like papers on a desk, some stay a long time while it is not decided whether they are wanted, and that is fine: 16 notes older than July are undecided ideas, not neglect, and none dropped means none was decided against. Branches are parallel universes of the same office: a note on a branch lives in that universe; some universes join the original, some wait for their moment, and some notes never need to outlive theirs. The scratchpad is not rigid: it is a place for ideas, and when the person picks one up, the machinery is there to track it into issues and records. Talk line: question, then a note, then a record, then the rules.
+
+## 4. Skills (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** a skill is a procedure an agent runs when a kind of task comes up: write a decision record, file an issue, author a migration, plan a batch of work. project-kit deploys 14: eleven from core (nine authoring skills, such as `decision-author`, `migration-author`, `scratchpad-author`, and two composite ones, `schema` and `process`) and three from capabilities (`pm`, `analysis-author`, `docs-author`). Each lives once in `.pkit/` and the adapter links it into `.claude/skills/`. A skill is paired with a command (COR-005): the command does the deterministic part (the next number, the file's layout), the skill carries the judgement (which kind of record, the disciplines, the wording). A composite skill (COR-020) dispatches to sub-procedures: `pm` holds create-issue, validate-body, transition-state, batch-plan, fix-drift and work-loop.
+- **Problem:** asked to "add a decision", an agent improvises: it picks a number, a layout and a level of care, differently each time. The rule "invoke the skill, never hand-stamp" (core rule 3) came from a record filed by hand with the wrong number (PR #16).
+- **Gain:**
+  - the procedure is written once and runs the same way every time, for any agent
+  - judgement in the skill, determinism in the command: neither has to do the other's job
+  - each skill names the records it rests on (`gates:`) and stops if one is not accepted, so a procedure never runs on a draft decision
+- **Weight:** only each skill's description sits in a session's context (31 to 169 words; 14 of them); a skill's body loads when it is invoked. Bodies run from about 900 words (`scratchpad-author`) to about 2 600 (`capability-author`); the composites are larger (`schema` and `process` about 5 800 each, `pm` and `analysis-author` about 15 000) but load one sub-procedure at a time.
+- **Relation to blocks 1 to 3:** records decide, rules state what every session must do, and a skill is the projection of decisions into one kind of task: the how.
+- **Evidence:**
+  - PR #16 and core rule 3
+  - this session's issue work all ran through the `pm` skill's commands (filing, moving, ticking criteria, landing), and today's scratchpad note through `pkit new scratchpad`
+  - the `pm` skill's batch planning is what plans the shared choices as records before the slices (project-management DEC-060)
+- **Weak spot:**
+  - a skill helps only when it is invoked; rule 3 requires it for authoring, but nothing checks it was: the command stamps either way
+  - every session carries every description, and they grow (`analysis-author`'s is 169 words)
+  - no skill is anchored to the records it follows, so when a record changes nothing asks the skill to recheck; `gates:` checks only that the record is accepted, not that the skill still says what it decides
+  - composites grow large (`pm` about 15 000 words with its sub-procedures)
+- **Maintainer's notes:**
