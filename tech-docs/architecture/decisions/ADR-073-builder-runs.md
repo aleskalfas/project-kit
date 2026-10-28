@@ -1,7 +1,7 @@
 ---
 id: ADR-073
 title: The backbone's working run builds a Task in a sandboxed clone of its own
-status: proposed
+status: accepted
 date: 2026-10-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
