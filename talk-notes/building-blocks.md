@@ -330,3 +330,20 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - inheritance with version pins is a lot of machinery for a handful of sets
 - **Maintainer's notes:**
   - Decided 28 October: skipped for now; the rules are being reworked (operational rules becoming rule sets, #2270). Revisit for the talk once that lands, probably together with block 2.
+
+## 11. Validation: one check of everything (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** `pkit validate` runs every registered check of the project's state in one command, grouped: manifests, schemas, configuration, packages, connections, versions, decisions, friction, rule sets, references, processes, data, and each installed capability's own checks (16 validators here today). Only errors fail; warnings and reports print. Checks that judge a change rather than the state (`friction check`, `migrations check-diff`, `release lint`) run per change, in CI and before landing.
+- **Problem:** a methodology made of files breaks quietly: a citation to a record that no longer exists, a schema a file no longer matches, a number used twice, a capability that needs a newer backbone. Nobody notices until something reads it wrong.
+- **Gain:**
+  - one command says whether the project's own structure holds, before a person or an agent relies on it
+  - a capability brings its checks with it, so installing one adds its rules to the same command
+  - CI runs it on every change, so a break is caught where it is made
+- **Weight:** one command; seconds to run; nothing in a session's context.
+- **Evidence (this session):** every builder ran it before opening a pull request; `pkit decisions check-diff` caught the DEC-062 number taken twice; it reported 61 warnings today (for example, citations to a point a record does not hold), none failing.
+- **Weak spot:**
+  - warnings pile up (61 today) and are easy to ignore
+  - it checks structure, not meaning: a record can be valid and wrong
+- **Maintainer's notes:**
