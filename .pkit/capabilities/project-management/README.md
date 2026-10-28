@@ -828,7 +828,7 @@ A worker takes only from its pools (`next-task`, below), and a close rolls its o
 
 #### Taking the next ready Task — `next-task` (per [project-management:DEC-059-topology-of-seats] point 7)
 
-`pkit pm next-task` takes this clone's own Task, else the next ready Task from one pool that every seat shares. It starts the Task, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It ranks this clone's own Tasks, and then the pool's, by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
+`pkit pm next-task` takes this clone's own Task, else the next ready Task: from the one pool every seat shares where no pools are declared, otherwise only from the pools its seat serves. It starts the Task, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It ranks this clone's own Tasks, and then the pool's, by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
 
 A ready Task is one of two kinds:
 
