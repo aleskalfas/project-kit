@@ -77,7 +77,7 @@ The points:
 - **What the backbone's run command does:**
   - it refuses inside a run (point 8)
   - it makes, checks and removes a confined run's clone (point 7), and makes, checks and keeps a working run's for its caller (refinement per [ADR-073](ADR-073-builder-runs.md) point 1)
-  - it reads the run's rules from the clone, and projects them through the shared decision core (ADR-003)
+  - it reads the run's rules from the clone, and projects them through the shared decision core (ADR-003). For a working run it reads them, the hook, the model, the definition and the runner itself from the default branch's head the caller names, never from the clone (refinement per [ADR-073](ADR-073-builder-runs.md) point 2)
   - it judges which allowed commands the platform requires outside the sandbox, by ADR-027's test (point 6)
 - **What the runner does,** in its harness's terms:
   - it checks the platform and the harness's version
@@ -126,7 +126,7 @@ Each refusal names its cause. A start report that does not match the run's setti
   - the candidate exclusions
   - the runner itself, and the deploy's resolution of an agent, which the runner applies
 
-  So no unmerged change shapes a run nobody watches, as DEC-056 point 3 keeps for the agent.
+  A working run reads them from the default branch's head instead (refinement per [ADR-073](ADR-073-builder-runs.md) point 2). So no unmerged change shapes a run nobody watches, as DEC-056 point 3 keeps for the agent.
 - **A checked agent definition.** The runner always passes the definition itself, with `--agents`. It makes it from the agent's file at the pinned commit.
   - **As the deploy resolves it.** The file is the one the adapter's deploy picks among agents of one name. The overlay is applied. Each storyboard is named by its path from the clone's root, where the run reads it.
   - **Refused where the deploy would not carry it.** The run is refused where the deploy would not resolve the file, such as over an overlay category its checks refuse ([ADR-051](ADR-051-process-author-edit-authority.md) and [ADR-052](ADR-052-optional-read-category-empty-tolerance.md)). It is refused too where the deploy would drop a value the run passes, such as a model it does not accept. Nobody watches the run to read the deploy's warning.

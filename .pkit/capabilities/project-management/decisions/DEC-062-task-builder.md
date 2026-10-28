@@ -106,7 +106,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 
 - **DEC-059, refined in place:** point 2, a worker builds each Task through the build command; point 6, a builder acts as no instance, and no command of this capability acts as one inside an agent run; point 9, a Task whose build waits on a question or on its hand-back keeps its claim; its Implications, which name the worker's loop. The rest of DEC-059 stands.
 - **DEC-029, refined in place:** the worker's loop in the pm skill builds through the build command and acts on its endings. The project-manager agent stays a thin dispatcher.
-- **Stands:** the merge gate and the person's authorisation of each merge; a lead's helpers, which act as the lead's instance (DEC-059 point 6); DEC-056's fixers and their confinement.
+- **Stands:** the merge gate's check of the reviews, to which the merge adds the provenance check (point 8), and the person's authorisation of each merge; a lead's helpers, which act as the lead's instance (DEC-059 point 6); DEC-056's fixers and their confinement.
 
 ## Rationale
 
@@ -145,10 +145,10 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 
 ## Implications
 
-- **An architecture record** decides how the build command realises points 1 to 7: the builder's clone, its sandbox and its hand-back, the run's settings and its mode, the endings and their exits, the detached run the seat waits on, the resume, the records of builds and the provenance check. It refines ADR-066.
+- **An architecture record** decides how the build command realises points 1 to 8: the builder's clone, its sandbox and its hand-back, the run's settings and its mode, the endings and their exits, the detached run the seat waits on, the resume, the records of builds and the provenance check. It refines ADR-066.
 - **A seat's working tree stays on the default branch:** in a project with a topology, the commands that start a worker's Task cut its branch without checking it out.
 - **Renewal ships no later than lapse,** so no build's claim lapses while it runs (DEC-059 point 9).
-- **This capability gains** the build command; the checks a project names for a build, in its configuration; the point and its companion schema; the run's rules; the provenance check in the commands that open a pull request and move a Task to Review; the refusal to act as an instance inside an agent run; the worker's loop in the pm skill; its README's sections on seats and their loops.
+- **This capability gains** the build command; the checks a project names for a build, in its configuration; the point and its companion schema; the run's rules; the provenance check in the commands that open a pull request, move a Task to Review, ask for the reviews and merge; the refusal to act as an instance inside an agent run; the worker's loop in the pm skill; its README's sections on seats and their loops.
 - **software-engineering** contributes its producer agent to the point.
 - **The backbone's run command and the adapter's runner** gain what the architecture record needs, each declared by its own changeset (PRJ-002).
 - **A harness requirement** joins the requirement set for the run the architecture record decides ([pkit:COR-047]).

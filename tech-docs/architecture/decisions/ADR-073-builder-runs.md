@@ -14,7 +14,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - The operating system's sandbox holds everything the run runs. Writes go only to the clone, reads of the caller's clone are denied, and only the network hosts the project lets a build reach are open.
 - Nothing asks: a call no rule allows is refused.
 
-The build command starts the run detached and keeps its state in a file the seat polls. Each ending has an exit of its own, and a question is one of them. Only checked commits come back, as a fast-forward of the Task's branch, and each build is recorded on the Task, which lets the commands that open a pull request refuse a commit no build produced.
+The build command starts the run detached and keeps its state in a file the seat polls. Each ending has an exit of its own, and a question is one of them. The project's checks run in the same sandbox, with no agent. Only checked commits come back, as the Task's branch, and each build is recorded on the Task, which lets the commands that open a pull request, move its Task to Review, ask for the reviews and merge refuse a commit no build produced.
 
 ## Context
 
@@ -34,6 +34,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 - **The sandbox.** With it on (bubblewrap), a Python program the builder ran could not write outside the clone, a decoy repository's hooks folder among them. A `Read` deny on the seat's clone made the seat's files unreadable to such a program. A host on the run's list was reached through the platform's proxy, and `uv run pytest` ran once uv's cache sat inside the clone. Without the sandbox, the same program wrote outside the clone.
 - **The question.** On a Task it could not build as written, the builder stopped with a question and committed nothing. Resumed in its own session with an answer, it built the Task with its own context of it.
 - **The compound commands.** Shell commands outside the project's allows were refused, compound ones among them, and the builder went on with commands the rules allow.
+- **The checks with no agent.** Claude Code's sandbox runtime ran the project's tests in the clone under the same rules, with no harness: a write outside the clone failed, the seat's clone and the signing key read as absent, a listed host was reached and another was not. Without bubblewrap it refused to run the command, and still exited 0.
 
 ## Decision
 
@@ -55,6 +56,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
   - the project's native permission rules for the harness, the allows and the denies its settings file holds
   - the permission model that pkit's hook judges against, and the hook's own code, so the code that judges is never the clone's
   - the builder's agent definition, as the deploy resolves it (ADR-066 point 3)
+  - the runner itself and the deploy's resolution of an agent, as a confined run reads them (ADR-066 point 3)
 - **What the runner adds:**
   - the build's denies (DEC-062 point 4), as native denies, which fail closed
   - every deny of the settings files the run leaves out, and every deny the model holds for the builder or for every agent (ADR-066 point 3)
@@ -92,7 +94,8 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 - **Detached.** A build outlasts the seat's own shell call. So the build command starts a process of its own that asks the backbone for the run, and returns at once with the state `running`.
 - **The state file** sits in the capability's git-ignored runtime folder of the seat's clone, and only that process writes it. It names the build's state, its start, the time of the builder's last event, the calls refused so far, the clone, and, once the run ends, the result or the question.
 - **Progress.** The run command reports each event of the harness's stream, with its time, to a file the caller names. Where none comes for the run's idle limit, the runner ends the harness, as at its wall-clock limit (ADR-066 point 2).
-- **The checks.** Once the run ends, that process runs the checks the project names for a build, in its project-management configuration read from the default branch, as a second run in the same clone and sandbox, under the same settings, network hosts and rules read from the default branch, with no agent. Their endings go into the state, and a check that fails where the builder said built is not borne out (exit 5).
+- **The checks.** Once the run ends, that process runs the checks the project names for a build, in its project-management configuration read from the default branch, in the same clone, with no agent. The adapter's runner runs each inside the same operating-system sandbox with no harness, under the same write, read and network rules (point 3), through the sandbox the harness uses for its own shell (Claude Code's sandbox runtime). Their endings go into the state, and a check that fails where the builder said built is not borne out (exit 5).
+- **The checks fail closed.** The runner confirms the sandbox's prerequisites before the first check, and a missing one refuses the build (exit 7). A check's ending is read from a result file that a command inside the sandbox writes in the run's folder, never from the sandbox's own exit, so a sandbox that refuses to start reads as a check that did not run, which fails.
 - **The hand-back** is that process's, once the run and the checks end (point 8), or `--hand-back`'s where it could not sign. Each ending writes its event on the Task (point 9), then the final state.
 - **Waiting.** `--wait <seconds>` reads the state, waits at most that long, and exits with the state's code. The seat waits in slices shorter than its own shell call's limit.
 - **Recovery.** A session that starts in a clone with a build in its state file goes on from it: waits on a running one, or acts on a finished one. The state file names the process's id. A build whose process is gone while its state is not final is lost: not borne out (exit 5), its clone kept, and its ending event posted, so its claim no longer waits. A question once answered no longer counts as waiting: its resumed build is a running build, renewed while it runs and lost if its process dies.
@@ -104,7 +107,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 | Exit | State | When |
 |---|---|---|
 | 0 | built | the builder's result says built, and the clone's check bears it out |
-| 1 | refused | the seat; the Task not In Progress, or, for a fix round or a merge, not In Progress or in Review; its owner, its branch, a seat's working tree not on the default branch or not clean, an agent run's marker, a build already running |
+| 1 | refused | the seat; the Task not In Progress, or, for a fix round (`--fix`, with the verdicts' blocking findings) or a merge (`--merge`), not In Progress or in Review; its owner, its branch, a seat's working tree not on the default branch or not clean, an agent run's marker, a build already running |
 | 2 | usage | a usage error |
 | 3 | tracker failed | the Task or its records could not be read or written |
 | 4 | unfinished | the builder's result says unfinished, and no call was refused |
@@ -174,6 +177,7 @@ Before the working form is built, a probe of the harness confirms, on the adapte
 - A detached run outlives the shell call that started it, and the limits still end it.
 - A resumed session takes the settings built again, and keeps the run's denies.
 - A sandbox that cannot start stops the harness at start.
+- The checks' sandbox, with no harness, holds the same rules as the run's on each platform, and a check whose sandbox refused to start reads as failed.
 
 A fact the probe disproves refines or supersedes this record.
 
@@ -207,8 +211,8 @@ A fact the probe disproves refines or supersedes this record.
 ## Implications
 
 - **The backbone's run command** gains the working form: the clone it keeps for the caller, its check, the run's settings read from the default branch, and the progress file. Its answer document gains the session's id and the refused calls. The CLI reference documents it.
-- **The adapters' runner contract** gains the working form. The Claude Code adapter's runner realises it: no settings sources, the run's settings and definition, the hook from outside the clone, `dontAsk`, the sandbox, memory off, the stream of events and the idle limit, the resume. Its README lists the flags, and its enforcement declaration names what holds a working run and what stays open.
-- **A harness requirement** joins the set ([COR-047](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)): a process can start an agent unattended in a folder it names, under only the settings it passes, inside a sandbox that bounds writes to that folder, in a mode that refuses what no rule allows. Each event of the run reaches the process with its time, and so do the calls it refused. Evidence: DEC-062, a design dependency (COR-047 point 9). Each adapter answers it.
+- **The adapters' runner contract** gains the working form. The Claude Code adapter's runner realises it: no settings sources, the run's settings and definition, the hook from outside the clone, `dontAsk`, the sandbox, memory off, the stream of events and the idle limit, the resume, and the checks' run in the same sandbox with no harness. Its README lists the flags, and its enforcement declaration names what holds a working run and what stays open.
+- **A harness requirement** joins the set ([COR-047](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)): a process can start an agent unattended in a folder it names, under only the settings it passes, inside a sandbox that bounds writes to that folder, in a mode that refuses what no rule allows. Each event of the run reaches the process with its time, and so do the calls it refused. The process can run a command with no agent inside the same sandbox. Evidence: DEC-062, a design dependency (COR-047 point 9). Each adapter answers it.
 - **ADR-066, refined in place,** with a pointer to this record: the Decision's line on its points, point 1's list of what the run command does, point 2's of what a caller passes and gets back, point 9's for the hook in a working run, and point 11's open items.
 - **ADR-041, refined in place:** the ownership fold takes from its caller whether a Task's build waits, on a question or on its hand-back, which the build command's events on the Task give, so such a claim does not lapse (DEC-062 point 6).
 - **project-management** builds the build command, the point's companion schema with the result and question grammar, the run's rules for the build command, the list of a build's network hosts, its checks, its advising agent and the limit on questions in its project configuration, the state file, the build's events, the provenance check and its override. The commands that start a worker's Task cut its branch without checking it out, and the commands that ask for the reviews and merge gain the provenance check.
