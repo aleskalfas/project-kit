@@ -344,7 +344,7 @@ When a claim counts:
   in any state other than In Progress does not lapse. Nor does the claim on a Task
   whose build waits, on a question or on its hand-back, which the caller passes as
   it passes the Task's state, read from the build command's events on the Task:
-  its ending, its resume and its hand-back. The wait counts only for the claim
+  its ending, its resume and its hand-back, one marked given up among them. The wait counts only for the claim
   that started the build, by the seat and key its start event names (refinement per
   [ADR-073](ADR-073-builder-runs.md) points 5, 8 and 9).
 - **A Task moved back to In Progress** by a command of the capability gets a
