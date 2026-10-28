@@ -720,7 +720,8 @@ def test_a_parent_whose_children_the_engine_could_not_fold_is_not_said_eligible(
 # terminal, so with no terminal and no --yes it closed in both modes and nobody
 # was asked. It now refuses there, as move-issue refuses a user-held move, and
 # writes nothing. A leaf's close through a merged PR named with --pr closed with
-# no terminal and no --yes too, and is held the same way since #1968.
+# no terminal and no --yes too, and is held the same way since #1968. A Task's
+# close as completed without a pull request (#2282) is held the same way.
 
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
@@ -753,6 +754,12 @@ HELD_CLOSES = [
         {"title": "[Task] landed", "labels": [{"name": "state:review"}]},
         ["gh", "issue", "close", "42", "--reason", "completed"],
         id="pr-merge-through-a-pr",
+    ),
+    pytest.param(
+        ["--mode", "completed", "--result", "the findings are filed as #908"],
+        {"title": "[Chore] audited", "labels": [{"name": "state:in-progress"}]},
+        ["gh", "issue", "close", "42", "--reason", "completed"],
+        id="completed-without-a-pr",
     ),
 ]
 

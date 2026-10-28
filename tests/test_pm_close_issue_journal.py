@@ -38,6 +38,7 @@ from tests.process_journal_support import set_journal_logging
 
 ENGINE_WARNING = "the process engine refused this move"
 WONT_DO_REASON = "superseded by #99"
+RESULT = "the findings are filed as #908"
 PR = 500
 
 UNTICKED_BODY = AUTHORED_BODY.replace("- [x]", "- [ ]")
@@ -121,6 +122,12 @@ def _container_in_progress(world: World) -> int:
     return parent
 
 
+def _task_in_progress(world: World) -> int:
+    number = _backlog_task(world)
+    assert world.move(number, "in-progress") == 0
+    return number
+
+
 def _merged_task_in_review(world: World) -> int:
     """What done-work's pr-merge close finds: GitHub closed the issue as the
     pull request merged and left its Review label in place."""
@@ -155,6 +162,14 @@ CLOSES = [
         "done-work",
         f"pr-merge close: closed by merged PR #{PR}",
         id="pr-merge",
+    ),
+    pytest.param(
+        _task_in_progress,
+        ["--mode", "completed", "--result", RESULT],
+        ("in-progress", "done"),
+        "close-issue",
+        f"completed close: {RESULT}",
+        id="completed",
     ),
 ]
 CLOSE_FIELDS = ("set_up", "options", "move", "trigger", "reason")
@@ -274,6 +289,23 @@ def test_a_close_through_a_pr_that_does_not_relate_to_the_issue_records_nothing(
     assert world.journal(elsewhere) == before
 
 
+def test_a_wont_do_close_of_a_task_in_progress_is_journaled(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """In Progress → Done is declared for a Task since a Task closes from there
+    as completed without a pull request (#2282), so a won't-do close from In
+    Progress is recorded too."""
+    number = _task_in_progress(world)
+    capsys.readouterr()
+
+    assert world.close(number, "--reason", WONT_DO_REASON) == 0
+
+    assert "this move was not recorded" not in capsys.readouterr().err
+    assert world.moves(number)[-1] == ("in-progress", "done", "close-issue")
+    assert world.journal(number)[-1]["reason"] == f"wont-do close: {WONT_DO_REASON}"
+    assert world.history(number) == 0
+
+
 # --- a close that is not recorded ---------------------------------------------
 
 
@@ -309,29 +341,30 @@ def test_a_close_the_engine_refuses_is_reported_like_a_direct_moves_refusal(
 def test_a_close_the_workflow_does_not_declare_for_the_type_is_not_recorded(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # The workflow declares In Progress → Done for containers only. The engine
-    # does not read a transition's `applies_to`, so it would record the move
-    # for a Task; close-issue does not hand it over, and says so.
-    number = _backlog_task(world)
-    assert world.move(number, "in-progress") == 0
+    # The workflow declares Review → Done for a Task alone: no container enters
+    # Review. The engine does not read a transition's `applies_to`, so it would
+    # record the move for a container whose label was set to Review by hand;
+    # close-issue does not hand it over, and says so.
+    number = _container_in_progress(world)
+    labels = world.tracker.issues[number]["labels"]
+    labels[labels.index("state:in-progress")] = "state:review"
     capsys.readouterr()
 
-    rc, calls = _engine_calls_during(world, lambda: world.close(number, "--reason", WONT_DO_REASON))
+    rc, calls = _engine_calls_during(
+        world, lambda: world.close(number, "--mode", "cascade-eligibility-close")
+    )
 
     closed = capsys.readouterr()
     assert rc == 0
     assert calls == []
     assert (
-        "[warn] this move was not recorded: no transition 'in-progress' → 'done' "
-        "declared in workflow.yaml for 'task'. "
+        "[warn] this move was not recorded: no transition 'review' → 'done' "
+        "declared in workflow.yaml for 'feature'. "
     ) in closed.err
     assert f"`pkit pm history {number} --check-drift` will show the gap" in closed.err
-    assert f"[ok] closed #{number} (wont-do)." in closed.out
+    assert f"[ok] closed #{number} (cascade-eligibility, completed)." in closed.out
     assert world.views(number) == ("done", "done")
-    assert world.moves(number) == [
-        ("todo", "backlog", "promote-issue"),
-        ("backlog", "in-progress", "start-work"),
-    ]
+    assert world.moves(number) == _LEVEL
     assert world.history(number) == 3
 
 
