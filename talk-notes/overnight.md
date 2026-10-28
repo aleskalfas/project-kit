@@ -23,7 +23,7 @@ Updated through the night. Each item says what it needs.
 
 ## Milestone 6: Release 2.0.0 (the workers' pool)
 
-#2255 reviewers start from the project root · #2248 flaky timing test · #2258 the rule on when a record starts (after #2261) · #2259 a clean context per Task · #2260 rules keep their numbers · #2261 the rules trimmed (after #2260) · #2262 a size budget for the rules (after #2261) · #2263 a scratchpad note in one state · #2265 a close over an unreadable topology stays in its pool · #2266 `start-work`'s help on pools.
+#2255 reviewers start from the project root · #2248 flaky timing test · #2258 the rule on when a record starts (after #2261) · #2259 a clean context per Task · #2260 rules keep their numbers · #2261 the rules trimmed (after #2260) · #2262 a size budget for the rules (after #2261) · #2263 a scratchpad note in one state · #2265 a close over an unreadable topology stays in its pool · #2266 `start-work`'s help on pools · #2269 a capability's own rules reach every session (after #2260; #2261 now waits for it).
 
 ## Observing the workers (28 October)
 
