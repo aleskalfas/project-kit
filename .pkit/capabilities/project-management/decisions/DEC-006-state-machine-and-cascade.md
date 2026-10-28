@@ -21,7 +21,11 @@ Every issue moves through some sequence of states from filing to closure. The ca
 
 Five states in linear order: **Todo → Backlog → In Progress → Review → Done**. Encoded in [`schemas/workflow.yaml`](../schemas/workflow.yaml). Each state carries a display name, prose meaning, the issue types it `applies_to` (Review is task-only; the other four apply to every type), and the native primitives the canonical state is inferred from (issue open/closed, Milestone assignment, branch existence, PR state).
 
-When a Projects v2 board exists, its Status field is a projection the agent maintains. When the board and native primitives disagree, **native wins**.
+Where an issue's state lives is a per-project choice, made in the project's substrate map ([project-management:DEC-036-substrate-pluggable-adoption], [project-management:DEC-051-axis-carriage-activation] point 2). A brownfield project makes it at adoption ([project-management:DEC-037-adoption-ceremony] point 1).
+
+- **By default** the native primitives are the source. Where a Projects v2 board exists, its Status field is a projection the agent maintains, and where the two disagree, **native wins**.
+- **Where the map carries state on the board,** the board's Status is the source of an open issue's position: Todo, Backlog, In Progress or Review. DEC-051 point 6 says how it is read, and what a read that fails yields.
+- **In every project, closed stays native and wins.** A closed issue is Done whatever its card says, so the closure cascade never needs the board.
 
 ### Authorisation gates
 
@@ -67,6 +71,8 @@ Four paths reach Done, encoded as schema entries:
 
 Gated state machines work well for agent-mediated workflows because the gates — the places where humans must explicitly authorise — can be enforced as tool refusals encoded in schema severities. Asked directly for a user-gated transition, the agent literally cannot make it without an authorisation signal. This converts the methodology's authority discipline into mechanical enforcement.
 
+**Where the state lives.** A project whose people move cards on its board does its work there, so its board holds where open work stands. A project with no board, or one that keeps its board as a view, keeps the native source. Closed stays native in every project: a merge closes its Task with no board in the loop, and the closure cascade counts closed children. So no board read stands between a merge and the cascade, and no card left in another column holds a closed issue open.
+
 Upward-only cascade matches the natural direction of causation in planning: a parent's progress is a function of its children's progress, not the other way around. Allowing downward cascade would force the agent to override individual children's states based on parent moves, the wrong direction. For the same reason a forward-cascaded move is not a move asked for directly and claims no authorisation: a container's progress follows the work under it, so a container behind its descendants is brought level, not moved on anyone's say-so.
 
 Review models a PR open for a leaf, and a container has no PR of its own. A container in Review would be stuck: Review's only forward exit is Done, while children remain to build. So no `Review → In Progress` back-edge is needed, since a container never enters Review.
@@ -89,5 +95,7 @@ The "eligible to close but never auto-close" asymmetry makes the cascade safe. C
 - The project-manager runs the cascade check after every state-changing operation: forward cascade walks ancestors and bumps any behind; closure cascade surfaces a parent-close prompt when eligibility is reached.
 - PR-merge of a Task requires the checkbox-completeness check from [project-management:DEC-007-checkbox-validation] to pass before the agent authorises the merge — GitHub's auto-close on PR merge would otherwise bypass the close-gate.
 - Won't-do closures trigger the same closure cascade as PR-merge closures.
+- Where state is carried on the board, a move writes the board's Status, and so does the forward cascade. These writes land after the read of DEC-051 point 6, since a writer with no reader would put the state where nothing reads it ([#2243](https://github.com/aleskalfas/project-kit/issues/2243)).
+- Open, and decided together later: what a card a person drags by hand means, whether a cascade reconciles such a move on its own, and a move back from In Progress.
 - Date-based Milestone close interacts with this cascade via the rollforward rule in [project-management:DEC-016-time-bound-containers]; open children roll forward rather than closing, and the closure cascade only counts actually-closed children for eligibility.
 - Integration-scope closures run the same closure cascade — the change is only the PR base branch (integration vs `main`) plus the final integration → main PR closing the owning root. See [project-management:DEC-013-branch-and-pr-conventions].

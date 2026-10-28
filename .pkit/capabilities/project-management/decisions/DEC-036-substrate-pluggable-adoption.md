@@ -20,7 +20,7 @@ The need: the capability should **adapt to an existing, immutable substrate** �
 
 ### 1. A dedicated `substrate-map.yaml` schema
 
-**A dedicated `substrate-map.yaml` schema** (per the architect steer — not per-schema `binds_to` fields). Each methodology axis binds to one of: `label: <existing-set>` with a value→value remap (e.g. `priority: {High: P0, Medium: P1, Low: P2}`); `title-prefix`; `derive` (e.g. state from open/closed + a `Blocked` label); `board` (the value lives on a field of the configured Projects-v2 board — parameterless, `priority` / `workstream` only, per [project-management:DEC-051-axis-carriage-activation]); or `unsupported` (the feature needing it degrades — note this names *no* substrate, so it is not a carriage binding). Consumers resolve **through** the map; the existing schemas (`classification.yaml`, `issue-types.yaml`, `git-conventions.yaml`) keep their shape, read via this indirection.
+**A dedicated `substrate-map.yaml` schema** (per the architect steer — not per-schema `binds_to` fields). Each methodology axis binds to one of: `label: <existing-set>` with a value→value remap (e.g. `priority: {High: P0, Medium: P1, Low: P2}`); `title-prefix`; `derive` (e.g. state from open/closed + a `Blocked` label); `board` (the value lives on a field of the configured Projects-v2 board — parameterless, `priority` / `workstream` / `state` only, per [project-management:DEC-051-axis-carriage-activation]); `kit-label` (the kit's own labels, read and written as with no map, per [project-management:DEC-062-axes-chosen-in-the-map] point 3); or `unsupported` (the feature needing it degrades — note this names *no* substrate, so it is not a carriage binding). Consumers resolve **through** the map; the existing schemas (`classification.yaml`, `issue-types.yaml`, `git-conventions.yaml`) keep their shape, read via this indirection.
 
 ### 2. Activation is emergent, not a global `mode` flag
 
@@ -46,7 +46,7 @@ The real consequence the binding must own: a derive-from-open/closed predicate r
 
 ### 5. Never write an unmanaged label
 
-**Never write an unmanaged label** (EPIC #217 constraint 1). In brownfield mode the capability never creates / renames / deletes any label or field the adopter owns; it only reads and maps. `bootstrap`'s additive label-creation is suppressed per-axis wherever a binding exists. The adopter's native conventions are **authoritative and read-only** (constraint 3) — methodology validation degrades to advisory where the substrate can't express a rule, while [project-management:DEC-003-github-bound-substrate]'s GitHub-as-the-bound-tracker binding stays intact.
+**Never write an unmanaged label** (EPIC #217 constraint 1). In brownfield mode the capability never creates / renames / deletes any label or field the adopter owns; it only reads and maps. `bootstrap`'s additive label-creation is suppressed per-axis wherever a binding names a substrate other than the kit's own labels. The adopter's native conventions are **authoritative and read-only** (constraint 3) — methodology validation degrades to advisory where the substrate can't express a rule, while [project-management:DEC-003-github-bound-substrate]'s GitHub-as-the-bound-tracker binding stays intact.
 
 ### Relationship to DEC-003 (partial supersession)
 
