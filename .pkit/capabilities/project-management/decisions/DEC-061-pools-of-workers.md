@@ -1,12 +1,12 @@
 ---
 id: DEC-061
-title: Pools of workers — seats that build take only from the pools they serve
+title: Pools of workers — seats that build choose their work only from the pools they serve
 status: proposed
 date: 2026-10-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-**In plain terms:** a project's topology may declare **pools of workers**. Each seat that builds names the pools it serves. A person puts a line of work into a pool by marking its Milestone with the pool's name, and a worker takes only ready Tasks whose Milestone is in one of its pools. So several planners can each run a line of work, and a person decides how many workers each line gets. Starting or finishing a line changes no committed configuration. Where the topology declares no pool, every seat takes from the one shared pool of [project-management:DEC-059-topology-of-seats].
+**In plain terms:** a project's topology may declare **pools of workers**. Each seat that builds names the pools it serves. A person puts a line of work into a pool by marking its Milestone with the pool's name, and a worker chooses its next Task only from ready Tasks whose Milestone is in one of its pools. So several planners can each run a line of work, and a person decides how many workers each line gets. Starting or finishing a line changes no committed configuration. Where the topology declares no pool, every seat takes from the one shared pool of [project-management:DEC-059-topology-of-seats].
 
 ## Context
 
@@ -19,70 +19,84 @@ On 28 October the maintainer set four needs for running agents in parallel (#225
 3. Finishing a line of work, or starting one, changes no committed configuration.
 4. A person controls capacity: more workers on what matters most, one on housekeeping.
 
-A seat's scope that named Milestones met the first need, but each new line of work would then be a reviewed change to the topology, against the third. The maintainer decided pools in its place, after a critic's and an architect's review. This record holds that decision.
+A seat's scope that named Milestones would meet the first need, but each new line of work would then be a reviewed change to the topology, against the third ("Alternatives considered"). The maintainer decided pools, after a critic's and an architect's review. This record holds that decision.
 
 ## Decision
 
-**A project's topology may declare pools of workers, and each seat that builds names the pools it serves. A person puts a Milestone into a pool by a line in its description, and each Task in the Milestone goes with it. A seat that builds takes only ready Tasks in an open Milestone of a pool it serves. Where no pool is declared, DEC-059's one shared pool stands.**
+**A project's topology may declare pools of workers, and each seat that builds names the pools it serves. A person puts a Milestone into a pool by a line in its description, and each Task in the Milestone goes with it. A seat that builds chooses its work only from ready Tasks in an open Milestone of a pool it serves. Where no pool is declared, DEC-059's one shared pool stands.**
 
 ### 1. The topology declares pools, and each seat that builds names those it serves
 
-- **The pools.** The topology may declare a list of pools, each by a neutral name. A pool's name never changes, as a seat's never does ([project-management:DEC-059-topology-of-seats] point 2).
+- **The pools.** The topology may declare a list of pools, each by a neutral name, such as `alpha`. The name says nothing of the work, since what a pool holds changes as its lines of work start and finish. A pool's name never changes, as a seat's never does ([project-management:DEC-059-topology-of-seats] point 2). A pool is retired by removing it from each seat's pools, and then its name from the list.
 - **A seat that builds,** a worker or a lead, names the pools it serves. Point 8 says what a seat that names none takes.
-- **A planner names no pool.** It files into the Milestones the person gives its line of work. So several planners can each run a line at once, each in a seat of its own (DEC-059 point 4).
+- **A planner names no pool,** and the topology's check refuses a planner's seat that names one (point 10). It files into the Milestones the person gives it. So several planners can each run a line of work at once, each in a seat of its own (DEC-059 point 4). Only what the person gives each planner keeps them apart, and no part of the topology does.
 - **A pool is no part of a scope.** A pool reserves its work for the seats that serve it, and a scope narrows its own seat's work and reserves nothing (DEC-059 point 7). A seat's scope narrows what its pools hold.
 - **Capacity moves through review.** Moving workers from one pool to another is an edit of the seats' pools, a reviewed change to the topology like any other (DEC-059 point 1).
 
 ### 2. A Milestone joins a pool by a line in its description
 
-A Milestone's description puts the Milestone into a pool with a line `Pool: <name>`, beside its `Close trigger:` and `Rollforward target:` lines ([project-management:DEC-016-time-bound-containers]). The line is read as a whole line wherever it stands, and is never required first. A description with two such lines, or one naming a pool the topology does not declare, puts the Milestone in no pool, with a warning. A Milestone with no such line is in no pool.
+A Milestone's description puts the Milestone into a pool with a line `Pool: <name>`, beside its `Close trigger:` and `Rollforward target:` lines ([project-management:DEC-016-time-bound-containers]). The line is read as a whole line wherever it stands, and is never required first. A Milestone with no such line is in no pool.
+
+- **Each `Pool:` line counts.** Every line that opens with `Pool:` counts, well formed or not. Two such lines, a malformed one, or one naming a pool the topology does not declare, put the Milestone in no pool, with a warning.
+- **A change replaces the line.** A change of the Milestone's pool replaces its line, and never adds a second. The change's log (point 6) never takes the `Pool:` form.
 
 ### 3. A Milestone's pool lives on the Milestone
 
-- **Where it lives.** A Milestone's pool is neither committed configuration nor a state issue ([project-management:DEC-058-state-issues] point 1). It is an attribute of a container of work, written by a person's act of scheduling, as an issue's owner lives on the issue. A reader finds it in the repository's open Milestones.
+- **Where it lives.** A Milestone's pool is an attribute of the Milestone, the top item of the hierarchy of work ([project-management:DEC-004-six-level-hierarchy]), and a reader finds it in the repository's open Milestones. [project-management:DEC-058-state-issues] point 1 keeps in a state issue "shared data that changes while agents work, with no review of each change, and that belongs to no issue of work". The pool changes only by a person's act of scheduling, and belongs to an item of work as an issue's owner belongs to its issue. So it is neither a state issue's nor committed configuration.
+- **Written whole.** A Milestone's description is written whole: its writer reads it, changes it and writes it back. So two writes at once can lose one change. That is rare, since a person paces these writes, and the writer reads the description again right before it writes.
 - **Outside review on purpose.** The topology says which seats serve each pool, and the Milestones say what each pool holds. So a line of work starts and finishes with no change to the topology (need 3).
 - **A guard, no boundary.** Like the guard on a claim of a state issue (DEC-058 point 5), the pools catch the mistakes of clones that follow the procedure. They are no security boundary.
 
 ### 4. A Task is in the pool of its Milestone
 
-A Task's Milestone is its native Milestone field ([project-management:DEC-005-linking-and-containment]), never the `Milestone:` line of its body, which links a parent. An issue is in at most one Milestone ([project-management:DEC-016-time-bound-containers]), so a Task is in at most one pool. A pool's lines of work are its open Milestones: a line finishes when its Milestone closes, and a new line is a new Milestone marked with the pool. A Task in no Milestone, in a closed one, or in one of no pool, is in no pool.
+A Task's Milestone is its native Milestone field ([project-management:DEC-005-linking-and-containment]), never the `Milestone:` line of its body, which links a parent. An issue is in at most one Milestone ([project-management:DEC-016-time-bound-containers]), so a Task is in at most one pool. A pool holds the lines of work of its open Milestones: a line finishes when its Milestone closes, and a new line starts with a new Milestone marked with the pool. A Task in no Milestone, in a closed one, or in one of no pool, is in no pool.
 
-### 5. A seat that builds takes only from its pools
+### 5. A seat that builds chooses its work only from its pools
 
-Where the topology declares pools, a seat that builds takes a ready Task only where the Task's Milestone is an open Milestone of a pool it serves. A ready Task is what DEC-059 point 7 says, and the Tasks rank as there. The seat's scope then narrows what its pools hold. The pools hold back the seat's own Tasks too, such as one it owns whose Milestone moved to another pool.
+Where the topology declares pools, a seat that builds chooses a ready Task only where the Task's Milestone is an open Milestone of a pool it serves. A ready Task is what DEC-059 point 7 says, and the Tasks rank as there. The seat's scope then narrows what its pools hold.
+
+- **What the pools bound.** They bound what a seat takes of its own choosing, its next ready Task. A person who directs a seat to a particular Task makes that choice, and the seat takes it. A take outside the seat's pools is warned of and never refused, as the expected owner feeds a warning and never a gate ([project-management:DEC-045-named-per-user-instances] point 5).
+- **The seat's own Tasks.** The pools hold back a Task in Backlog that the seat owns, such as one whose Milestone moved to another pool. A Task In Progress whose Milestone moved to another pool stays its holder's to finish.
 
 The expected owner of a Task is the seat that alone may take it, by its pools and then its scope (DEC-059 point 7, refined in place).
 
 ### 6. Putting work into a pool is the person's act
 
-- **What asks.** Marking a Milestone with a pool, or changing or clearing its pool, asks the person. So does each write that puts a Task into a Milestone in a pool, or moves a Task from one pool to another.
-- **How it asks.** The person answers at a terminal, or the command runs with its confirmation flag, given only on the person's word. An agent never gives that word for itself, as it never authorises a gate the person holds ([project-management:DEC-006-state-machine-and-cascade]).
-- **The log.** A change of a Milestone's pool is logged in the Milestone's description, since a Milestone holds no comments.
-- **What needs nothing new.** A move between two Milestones of one pool asks nothing new, and nor does the rollforward of a close the person authorised (point 7). A planner that files the Tasks of a plan the person approved has the person's word for their Milestones.
+- **What asks.** Marking a Milestone with a pool, or changing or clearing its pool, asks the person. So does each write that brings a Task into a pool, or moves a Task from one pool to another.
+- **What asks nothing.** A write that takes a Task out of a pool, to no Milestone or to a Milestone in no pool, narrows what workers may take, so it asks nothing. Neither does a move between two Milestones of one pool, nor the rollforward of a close the person authorised (point 7).
+- **How it asks.** The person answers at a terminal, or the command runs with its consent flag, given only on the person's word. Off a terminal without that flag, the write is refused. It is a held act, like the moves the user authorises at hard-reject severity ([project-management:DEC-006-state-machine-and-cascade]), and never bypassed with an audit. An agent never gives the person's word for itself.
+- **Where the consent is logged.** A write that sets a Task's Milestone records the consent in the Task's own audit comment. A change of a Milestone's pool records it in the Milestone's description, since a Milestone holds no comments.
+- **A plan's approval.** A planner that files the Tasks of an approved plan has the person's word for their pools only where the plan shown at the approval gate of [project-management:DEC-029-project-manager-agent-shape] names each Task's Milestone and that Milestone's pool.
 
 ### 7. Closing a Milestone rolls its open Tasks forward within its pool
 
-Where a closing Milestone is in a pool and its description names no rollforward target, its open Tasks roll forward to the next-numbered open Milestone of its category in the same pool ([project-management:DEC-016-time-bound-containers], refined in place). The person is asked where there is none, or more than one. A forced close that leaves Tasks in Backlog in no pool reports each of them.
+Where the topology declares pools, and neither a closing Milestone's description nor its close names a rollforward target, its open Tasks roll forward within its pool ([project-management:DEC-016-time-bound-containers], refined in place). A Milestone in a pool rolls them to the next open Milestone of its category in the same pool, and a Milestone in no pool to the next open one of its category in no pool. The next is counted by the number in the Milestone's title, which each category numbers apart (DEC-016), never by the number GitHub gives the Milestone. The person is asked where there is none, or more than one.
+
+- **A target in another pool.** The description's `Rollforward target:` line, or the close's `--target`, may name a Milestone in another pool. The close's consent prompt then names that target and its pool, so the person's consent to the close covers the move.
+- **A forced close.** `close-milestone --force` closes a Milestone whose open children would otherwise hold its close, and leaves them on it. In a closed Milestone, they are in no pool (point 4). The close reports each Task it so leaves in no pool, in Backlog or In Progress.
 
 ### 8. Without pools the shared pool stands, and with them a failure takes nothing
 
 - **No pools declared:** DEC-059's one shared pool, with the move to Backlog as the gate ([project-management:DEC-006-state-machine-and-cascade]).
-- **Pools declared:** a seat that builds and names no pool takes nothing.
+- **Pools declared:** a seat that builds and names no pool takes nothing of its own choosing.
 - **Milestones that cannot be read:** the seat takes nothing, and never falls back to the whole Backlog.
 - **Saying why:** where nothing is ready, the seat says why in terms of its pools, such as a pool with no open Milestone.
 
 ### 9. Code that cannot read the topology in full uses none of the authority it grants
 
-- **What it cannot read:** an unknown key at the top level or in a seat, an unknown value of a field with fixed choices, such as a seat's role, or an unknown version of the topology's schema.
+- **What it cannot read:**
+  - a key it does not know, at any depth: at the top level, or in a seat, its scope, the settings or a pool
+  - a value of a known key that it cannot read, such as a list written as a string, an unknown role or release mode, or an unknown version of the topology's schema
 - **What refuses:** each command that would use authority the topology grants, such as taking work, taking a seat or a release by force. A listing, such as that of the seats, warns. Work already in flight goes on, such as renewing a claim, or reviewing and finishing a change.
-- **Why it fails closed:** an ignored key could widen what an agent may take, as an ignored pool would. So the topology fails closed, unlike the backbone configuration's forgiving read ([pkit:COR-048] point 4).
-- **A standing rule.** The guard protects only clones that run it. So each addition to the topology's shape, pools the first, enters a project's topology only once every held seat's clone runs code that reads it.
+- **Why it fails closed:** an ignored key could widen what an agent takes of its own choosing, as an ignored pool would. So the topology fails closed, unlike the backbone configuration's forgiving read ([pkit:COR-048] point 4).
+- **A standing rule, kept by the operator.** The guard protects only clones that run it. So each addition to the topology's shape, pools the first, enters a project's topology only once every clone that may take a seat runs code that reads it. No check enforces this yet: it is the operator's discipline. A version of the code stamped in each claim is one possible check, named here and not decided.
 
 ### 10. The check refuses an undeclared pool, and the listings warn of stranded work
 
-- **The topology's check** refuses a seat that names a pool the topology does not declare, and a seat that names pools where the topology declares none.
-- **The listing of seats, and taking a seat,** show each pool's open Milestones, each by its number and title.
-- **They warn of work left stranded:** a pool no seat serves, a pool with no open Milestone, a seat that builds and names no pool, a Milestone that names an undeclared pool, and Tasks in Backlog that a forced close left in no pool.
+- **The topology's check** refuses a seat that names a pool the topology does not declare, a seat that names pools where the topology declares none, and a planner's seat that names any pool.
+- **The listing of seats, and taking a seat,** show each pool's open Milestones, each by the number GitHub gives it and its title.
+- **They warn of work left stranded:** a pool no seat serves, a pool with no open Milestone, a seat that builds and names no pool, and a Milestone that names an undeclared pool.
+- **The listing of seats counts the Tasks in no pool.** It reports how many Tasks in Backlog are in no pool, such as those a forced close left (point 7), as a count rather than each Task.
 
 ### What this overturns, and what stands
 
@@ -97,7 +111,7 @@ This record partially supersedes DEC-059, for a project whose topology declares 
   - the seats, their roles, state issues and names, taking and releasing a seat, a clone's identity and a Task's claim (points 2 to 6, 8 and 9)
   - in point 7: what makes a Task ready, the vertical slices, the planner that files with no owner, and a scope that narrows its own seat's work and reserves nothing
   - the Rationale's case for vertical slices
-- **Refined in place:** DEC-059 points 1 and 7, DEC-016's Milestone description and rollforward, DEC-006's scheduling gate, and DEC-025's open question 7. DEC-045 and DEC-004 stand as they are.
+- **Refined in place:** DEC-059 points 1, 2 and 7, DEC-016's Milestone description and rollforward, DEC-006's scheduling gate, and DEC-025's open question 7. DEC-045 and DEC-004 stand as they are.
 
 ## Rationale
 
@@ -109,13 +123,13 @@ This record partially supersedes DEC-059, for a project whose topology declares 
 
 **Why a pool stands apart from a scope.** A scope narrows its own seat, so the other seats keep all the work (DEC-059 point 7). A pool reserves work for the seats that serve it. Kept apart, each stays one thing: a seat's pools say what it may take, and its scope narrows that.
 
-**Why the person puts work into a pool.** Scheduling work is the person's commitment ([project-management:DEC-006-state-machine-and-cascade]), and a pool decides which workers build it. The gate lies outside reviewed configuration so that lines of work come and go with no review. So the person's consent at each write takes the place of review, and the Milestone's log shows each change of its pool.
+**Why the person puts work into a pool.** Scheduling work is the person's commitment ([project-management:DEC-006-state-machine-and-cascade]), and a pool decides which workers build it. The gate lies outside reviewed configuration so that lines of work come and go with no review, and the person's consent at each write takes the place of review. Taking a Task out of a pool only narrows what workers may take, so it needs no consent.
 
 **Why a failure takes nothing.** A seat that fell back to the whole Backlog, where the Milestones could not be read, would take work no person put into its pool. Taking nothing costs a pause, and a later read takes the work up.
 
-**Why the guard fails closed.** The backbone's configuration is forgiving when read, since a typo there blocks no ordinary work ([pkit:COR-048] point 4). The topology grants authority instead. Code that ignored a seat's pools would let that seat take from the whole Backlog, the very work the pools hold back.
+**Why the guard fails closed.** The backbone's configuration is forgiving when read, since a typo there blocks no ordinary work ([pkit:COR-048] point 4). The topology grants authority instead. Code that ignored a seat's pools would let that seat choose from the whole Backlog, the very work the pools hold back from it.
 
-**Why rollforward stays in the pool.** Rolling a line of work into another pool's Milestone would hand its Tasks to other workers, with no act of the person. The next Milestone of its category in its own pool keeps the line with its workers.
+**Why rollforward stays in the pool.** Rolling a closing Milestone's open Tasks into another pool's Milestone would hand them to other workers, with no act of the person. Rolling them to the next Milestone of its category in its own pool keeps them with their workers. A target in another pool is the person's to approve, so the close's consent prompt names it.
 
 **Why pools are optional.** Pools need Milestones, and a feature-driven flat project runs none ([project-management:DEC-016-time-bound-containers]). So pools apply only where a project declares them, and a project with none keeps the shared pool ([pkit:COR-014]).
 
@@ -124,7 +138,7 @@ This record partially supersedes DEC-059, for a project whose topology declares 
 - **A seat's scope that names Milestones.** Rejected: each new line of work is a reviewed change to the topology (need 3). A scope also reserves nothing, so seats with no scope still take the line's work.
 - **A pool named on each Task.** Rejected: a person would mark every Task rather than one Milestone, and a Task's pool could drift from its Milestone's.
 - **The topology maps Milestones to pools.** Rejected: a change to the topology each time a line of work starts or finishes (need 3).
-- **A state issue that lists each pool's Milestones.** Rejected: the pool belongs to a container of work, and a state issue holds only state that belongs to none (DEC-058 point 1).
+- **A state issue that lists each pool's Milestones.** Rejected: the pool is an attribute of the Milestone, an item of the hierarchy of work, and a state issue sits outside that hierarchy ([project-management:DEC-058-state-issues] point 3).
 - **Fall back to the whole Backlog where the Milestones cannot be read.** Rejected, as "Why a failure takes nothing" says.
 - **Warn only, on a topology the code cannot read in full.** Rejected, as "Why the guard fails closed" says.
 
@@ -132,8 +146,8 @@ This record partially supersedes DEC-059, for a project whose topology declares 
 
 - **The topology's schema** gains the pools and each seat's pools, under its present schema version. It is a pure addition, so no migration ships ([pkit:COR-010]).
 - **A Milestone's description** gains the `Pool:` line, declared with the close trigger's grammar in the capability's schema for time containers. One reader parses it, beside the close trigger's.
-- **Commands.** Creating a Milestone may name its pool, and a command of its own sets or clears a Milestone's pool. The writes that set a Task's Milestone ask the person where point 6 says. Taking the next Task, the listing of seats, taking a seat and the topology's check do what points 5, 9 and 10 say.
-- **The pm skill's** work loop and batch plan say which Milestones a planner files into, and that a worker takes only from its pools.
+- **Commands.** Creating a Milestone may name its pool, and a command of its own sets or clears a Milestone's pool. The writes that set a Task's Milestone ask the person where point 6 says. Closing a Milestone rolls within its pool, names a target in another pool in its consent prompt, and reports the Tasks a forced close leaves in no pool (point 7). Taking the next Task, the listing of seats, taking a seat and the topology's check do what points 5, 9 and 10 say.
+- **The pm skill's** work loop and batch plan say which Milestones a planner files into, and that a worker chooses its work only from its pools.
 - **An architecture record** follows this record's acceptance. The architect authors it on the pool lookup's boundaries, the guard's placement and the failure behaviour, and rewords "the shared pool" in [pkit:ADR-041].
-- **A project adds pools to its topology** only once every held seat's clone runs code that reads them (point 9).
+- **A project adds pools to its topology** only once every clone that may take a seat runs code that reads them, a discipline no check enforces yet (point 9).
 - **Acceptance:** this record partially supersedes the accepted DEC-059, and refines it, DEC-016, DEC-006 and DEC-025 in place, so accepting it needs the maintainer's sign-off. The refinements land only with this record accepted.

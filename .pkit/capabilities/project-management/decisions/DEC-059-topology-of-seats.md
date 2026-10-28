@@ -6,7 +6,7 @@ date: 2026-10-26
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-> **Partially superseded by [DEC-061](DEC-061-pools-of-workers.md).** Where the topology declares pools of workers, a seat that builds takes only ready Tasks in an open Milestone of a pool it serves. Overturned for such a project: the one pool that every seat shares, in the title, the summary, the Decision's headline and point 7, with the Rationale's case for it and the rejection of work reserved for some seats. Among what stands: all of this record in a project with no pools, what makes a Task ready, the vertical slices, and a scope that reserves nothing. DEC-061's "What this overturns, and what stands" lists each passage.
+> **Partially superseded by [DEC-061](DEC-061-pools-of-workers.md).** Where the topology declares pools of workers, a seat that builds chooses its work only from ready Tasks in an open Milestone of a pool it serves. Overturned for such a project: the one pool that every seat shares, in the title, the summary, the Decision's headline and point 7, with the Rationale's case for it and the rejection of work reserved for some seats. Among what stands: all of this record in a project with no pools, what makes a Task ready, the vertical slices, and a scope that reserves nothing. DEC-061's "What this overturns, and what stands" lists each passage.
 
 **In plain terms:** a project that runs several AI agents at once, each in a clone of its own, declares a **topology** in its committed configuration: a list of **seats**. Each seat has a name, a role (planner, worker or lead), the agent definition its agent follows and an optional scope. Every clone reads the topology from the default branch. A clone takes a free seat through the seat's state issue ([project-management:DEC-058-state-issues]), and then works as that seat's agent, under the seat's name. Workers take the next ready Task from one pool that every seat shares. The work renews a Task's claim, and a claim lapses when the work stops, so a dead session's Task returns to the pool. A seat stays taken until it is released, by its clone, by the organizer seat's clone or by a person. This replaces the topology that [project-management:DEC-045-named-per-user-instances] keeps per user, and changes parts of [project-management:DEC-035-instance-ownership] for a project with a topology.
 
@@ -26,7 +26,7 @@ The maintainer decided on 25 October that the topology is the project's committe
 
 The topology is a file of the project's own configuration for this capability, committed and reviewed like any other change. Every clone reads it from the default branch, the project's settled state, through the backbone's one resolution of that branch ([pkit:COR-054] point 5). It never reads the topology from its own branch or working tree. So a change to the topology binds once it merges, and every clone that has read the default branch reads the same seats. A clone that has not fetched the default branch reads what it last fetched, and says which commit it read. Where the default branch cannot be resolved, no clone takes a seat (COR-054 point 4). Whoever may merge to the default branch may change the topology.
 
-The topology may also declare pools of workers, and each seat that builds names the pools it serves (refinement per [project-management:DEC-061-pools-of-workers] point 1). Code that cannot read the topology in full, such as a key or a value it does not know, uses none of the authority the topology grants. So each addition to the topology's shape enters a project's topology only once every held seat's clone runs code that reads it (DEC-061 point 9).
+The topology may also declare pools of workers, and each seat that builds names the pools it serves (refinement per [project-management:DEC-061-pools-of-workers] point 1). Code that cannot read the topology in full, since it meets a key it does not know at any depth or a value it cannot read, uses none of the authority the topology grants. So each addition to the topology's shape enters a project's topology only once every clone that may take a seat runs code that reads it, an operator's discipline that no check enforces yet (DEC-061 point 9).
 
 ### 2. A seat has a name, a role, an agent and an optional scope
 
@@ -39,6 +39,7 @@ Each seat declares:
   - a lead plans and builds within its scope, and may start helper agents of its own
 - **its agent definition,** the project-manager agent's by default (point 8)
 - **its scope,** which is optional and narrows the work its agent takes (point 7)
+- **its pools,** where the topology declares pools of workers: the pools a seat that builds serves (refinement per [project-management:DEC-061-pools-of-workers] point 1)
 - **its state issue,** by number (point 3)
 - **whether it is the organizer seat.** At most one seat is, typically the planner's. Its clone may release other seats by force (point 5), a privilege the reviewed change to the topology grants.
 
@@ -88,7 +89,7 @@ A seat's scope is an optional filter on that seat's own pool, and reserves nothi
 - **What a scope names:** workstreams ([project-management:DEC-045-named-per-user-instances] point 3), Task types from the type axis such as `test` or `docs` ([project-management:DEC-012-classification-axes]), or both. A Task falls in the scope where it matches each part the scope names. A type, like a workstream, is referenced and never rebound.
 - **What waits:** a discipline the type axis does not carry, such as design, waits for a record that decides how a Task carries it.
 - **Who may take a Task:** every seat that builds and has no scope, and every seat whose scope the Task falls in. Where the topology declares pools, these are only the seats that serve the Task's pool (refinement per [project-management:DEC-061-pools-of-workers] point 5). A workstream that no seat may take is warned of and never blocked ([project-management:DEC-045-named-per-user-instances] point 4). Several seats that may take one workstream are the shared pool, and draw no warning.
-- **The expected owner** of a Task is the seat that alone may take it, by its pools and then its scope. The guard warns when another instance takes it ([project-management:DEC-045-named-per-user-instances] point 5).
+- **The expected owner** of a Task is the seat that alone may take it, by its pools and then its scope (refinement per [project-management:DEC-061-pools-of-workers] point 5). The guard warns when another instance takes it ([project-management:DEC-045-named-per-user-instances] point 5).
 
 ### 8. The agent a seat names runs the seat's role through the pm skill
 
