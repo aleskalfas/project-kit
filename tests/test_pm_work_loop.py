@@ -24,6 +24,11 @@ yet (DEC-060). Held here:
   the next Task. A released seat's pull request in Review is the person's to
   hand over, and the storyboard and the README show each situation
 - **the README's exit table of `next-task`** names a declined prompt
+- **a worker builds each Task through a fresh helper** (#2259): unnamed, so its
+  whole result comes back (DEC-029), in the clone itself, with a brief that
+  carries the Task, its branch and the conventions, writing nothing to GitHub.
+  The session checks the result, pushes and opens the pull request, and builds
+  in its own session where the harness cannot start a helper
 - the checks flag a verb or a flag the capability does not ship, and pass one it does
 """
 
@@ -252,6 +257,106 @@ def test_the_worker_mends_its_own_pull_requests_before_the_next_task() -> None:
     assert "go back to 1" in _flat(worker.split("6. **Take the next Task.**", 1)[1])
 
 
+def _build_step() -> str:
+    worker = _section(_text(LOOP), "## 3. The worker's loop")
+    return worker.split("4. **Have a fresh helper build it.**", 1)[1].split("\n5. **", 1)[0]
+
+
+def test_the_worker_builds_each_task_through_a_fresh_unnamed_helper() -> None:
+    """Each Task starts in a clean context: a fresh helper builds it, passed no name
+    so its whole result comes back (DEC-029's dispatch discipline), in the clone
+    itself, since a linked worktree's identity is not decided (DEC-059 point 6)
+    (#2259)."""
+    worker = _section(_text(LOOP), "## 3. The worker's loop")
+    assert "4. **Have a fresh helper build it.**" in worker
+    assert worker.index("`pkit pm next-task --yes`") < worker.index("**Have a fresh helper")
+    assert worker.index("**Have a fresh helper") < worker.index("`pkit pm open-pr <N>")
+    step = _flat(_build_step())
+    assert "It starts with none of this session's context" in step
+    assert "no Task inherits the context of the one before it" in step
+    assert "Pass the helper no name, so its whole result comes back to you" in step
+    assert "[project-management:DEC-029-project-manager-agent-shape]" in step
+    assert "never as the agent this seat names, so it takes no seat" in step
+    assert "not in a linked worktree" in step
+    assert "(DEC-059 point 6)" in step
+
+
+def test_the_helper_s_brief_carries_the_task_its_branch_and_the_conventions() -> None:
+    """The helper sees only its brief. It commits, and writes nothing to GitHub,
+    since the session writes as the seat (#2259)."""
+    step = _flat(_build_step())
+    brief = step.split("**The brief**", 1)[1].split("**A foundation's choice", 1)[0]
+    for part in ("number, title and branch", "acceptance criteria", "`## Doc impact` boxes"):
+        assert part in brief, part
+    assert "the project's conventions, its rules for commits among them" in brief
+    assert "the tests and checks to run" in brief
+    assert "the answers the project's change check asks" in brief
+    assert "push nothing and write nothing to GitHub" in brief
+    assert "runs none of the capability's commands that write" in brief
+    assert "a sentence on what changed in it" in brief
+    assert "makes no other choice in its place" in brief
+    assert "what is left undone" in brief
+
+
+def test_the_session_checks_the_result_then_ticks_pushes_and_opens_the_pr() -> None:
+    """The seat's session acts on the result only once the clone bears it out, and
+    makes every write as the seat: the ticks, the push and the pull request. It
+    checks the seat before the helper starts and again before the push (DEC-059
+    point 9)."""
+    step = _flat(_build_step())
+    assert step.index("Before you start it, check that `pkit pm seats`") < step.index(
+        "**The brief**"
+    )
+    check = step.split("**Check the result against the clone**", 1)[1]
+    check = check.split("**A result that leaves", 1)[0]
+    assert "the working tree is clean" in check
+    assert "Take no criterion on the helper's word alone" in check
+    assert "`pkit pm check-criterion <N> <index>`" in check
+    assert check.index("check-criterion") < check.index("Check the seat again")
+    assert check.index("Check the seat again") < check.index("push the branch")
+    assert "start one more fresh helper" in step
+    assert "end the loop, and tell the person" in step
+
+
+def test_a_foundation_that_does_not_hold_comes_before_a_second_helper() -> None:
+    step = _build_step()
+    foundation = step.index("**A foundation's choice that does not hold,** in the result")
+    assert foundation < step.index("**A result that leaves the Task unfinished:**")
+    assert "start no other helper" in _flat(step)
+
+
+def test_a_result_the_clone_does_not_bear_out_discards_nothing() -> None:
+    step = _flat(_build_step())
+    lead = "**A result the clone does not bear out,**"
+    assert lead in step
+    assert "discard nothing" in step.split(lead, 1)[1].split("- **", 1)[0]
+
+
+def test_dec_059_lets_a_worker_build_through_a_helper_that_acts_as_no_instance() -> None:
+    """The procedure rests on DEC-059 points 2 and 6, refined in place (#2259)."""
+    dec = _flat(_text(CAPABILITY / "decisions" / "DEC-059-topology-of-seats.md"))
+    assert "a fresh helper builds each Task, so that each Task starts in a clean context" in dec
+    assert "A helper that a worker starts to build a Task acts as no instance" in dec
+    assert "**Why a worker builds each Task through a fresh helper.**" in dec
+
+
+def test_the_worker_builds_in_its_session_where_the_harness_cannot_start_a_helper() -> None:
+    step = _flat(_build_step())
+    lead = "**Where the harness offers no way to start a helper,**"
+    assert lead in step
+    fallback = step.split(lead, 1)[1].split("- **", 1)[0]
+    assert "say so, and build the Task in this session, as before" in fallback
+    # A start that fails is retried once, then the loop ends (core rule 21).
+    assert "run it once more, then end the loop and report what failed" in fallback
+
+
+def test_the_storyboard_s_worker_builds_through_a_fresh_helper() -> None:
+    worker = _flat(_section(_text(STORYBOARD), "## Scenario 13: A worker's round"))
+    assert "*Starting a fresh helper to build it…*" in worker
+    assert "with no name, so its whole result comes back" in worker
+    assert "writes nothing to GitHub" in worker
+
+
 def test_a_released_seat_s_pull_request_in_review_is_the_person_s_to_hand_over() -> None:
     """`next-task` never offers a Task in Review (DEC-059 point 7). It waits on its
     reviewers and the person, who lands it or hands it over (point 9, DEC-035
@@ -369,6 +474,20 @@ def test_the_readme_says_what_the_worker_does_in_each_situation() -> None:
     assert "a pull request of its own that conflicts with the default branch" in section
     assert "a fix round on one whose verdict asks for changes" in section
     assert "**A pull request that a released seat left in Review**" in section
+
+
+def test_the_readme_says_each_task_starts_in_a_clean_context() -> None:
+    section = _flat(
+        _text(README).split("#### A seat's agent and its loop", 1)[1].split("\n#### ", 1)[0]
+    )
+    assert "has a fresh helper agent build it in its own clone" in section
+    lead = "**Each Task starts in a clean context**"
+    assert lead in section
+    bullet = section.split(lead, 1)[1].split("- **", 1)[0]
+    assert "passes the helper no name" in bullet
+    assert "[project-management:DEC-029-project-manager-agent-shape]" in bullet
+    assert "writes nothing to GitHub" in bullet
+    assert "Where the harness cannot start a helper" in bullet
 
 
 def test_the_readme_lists_show_pr_s_mergeable_field_and_its_branch_form() -> None:
