@@ -222,6 +222,7 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - Discoverability: installed skills are discoverable already (the harness shows each one's name and description to every session). What the agent cannot see is pkit's offering beyond what is installed. Agreed design (28 October), the same pattern skills use: each capability's short description, written as when to reach for it ("use when …"), sits in every session, uninstalled capabilities included, generated at sync from `package.yaml`; one sentence tells the agent that where a capability may already solve the problem, it reads the full description (the capability's README, which `pkit capabilities show` would need to print for one not installed) before building its own. Covers every place work is shaped: conversation, scratchpad notes, batch planning.
   - Kept in these notes, not filed yet: it and the COR-007 refinement are one change, "pkit leads with its own patterns", filed after the walk through blocks 5 to 19.
 
+  - Decided 28 October: the CLI is folded in here — block 4 becomes "skills and the commands they pair with": the skill carries the judgement, the command the part that must come out the same every time (stamping, checks, gated moves). Its lifecycle commands (init, sync, upgrade) go with block 13.
 ## 5. Agents (draft, 28 October)
 
 *Facts checked against the repository on 28 October.*
@@ -351,4 +352,3 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - inheritance with version pins is a lot of machinery for a handful of sets
 - **Maintainer's notes:**
   - Decided 28 October: skipped for now; the rules are being reworked (operational rules becoming rule sets, #2270). Revisit for the talk once that lands, probably together with block 2.
-  - Decided 28 October: the CLI is folded in here — block 4 becomes "skills and the commands they pair with": the skill carries the judgement, the command the part that must come out the same every time (stamping, checks, gated moves). Its lifecycle commands (init, sync, upgrade) go with block 13.
