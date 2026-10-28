@@ -19,10 +19,13 @@ is unchanged; and a genuine failure still reports `fail`.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.pm_board_world import BOARD_CONFIG, LABEL_STATE, BoardTracker
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS_DIR = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts"
@@ -167,3 +170,62 @@ def test_check_board_no_owner_no_cache_uses_ownerless_view(pc, monkeypatch) -> N
     result = pc._check_board(3, config={}, owner=None)
     assert result.status == "ok"
     assert "--owner" not in captured["cmd"]
+
+
+# --- the board's Status names the five states (#2276) ------------------------
+# Where the board's Status is a projection the project keeps (DEC-006), each of
+# the five states needs its option, or a move to it leaves the card as it was.
+
+
+@pytest.fixture
+def board(monkeypatch) -> BoardTracker:
+    tracker = BoardTracker()
+
+    def run(argv, *args, **kwargs):
+        return tracker.gh([str(arg) for arg in argv])
+
+    monkeypatch.setattr(subprocess, "run", run)
+    return tracker
+
+
+def _status_check(pc, axes):
+    substrate_map = None if axes is None else pc.axis_labels.SubstrateMap(axes=axes)
+    return pc._check_board_status(SCRIPTS_DIR.parent, BOARD_CONFIG, substrate_map, owner="acme")
+
+
+def test_a_status_with_the_five_states_passes(pc, board) -> None:
+    result = _status_check(pc, LABEL_STATE)
+
+    assert result.status == "ok"
+    assert result.detail == (
+        "the board's Status offers the five states: Todo, Backlog, In Progress, Review, Done"
+    )
+
+
+def test_a_missing_state_is_named_with_its_remedy(pc, board) -> None:
+    del board.options["Backlog"]
+    del board.options["Review"]
+
+    result = _status_check(pc, LABEL_STATE)
+
+    assert result.status == "warn"
+    assert result.detail == "the board's Status field has no option for Backlog, Review"
+    assert result.remediation is not None
+    assert "Add each to the board's Status field" in result.remediation
+    assert "`pkit pm sync-board`" in result.remediation
+
+
+def test_a_status_that_cannot_be_read_warns_with_what_gh_said(pc, board) -> None:
+    board.fail_reads.add("fields")
+
+    result = _status_check(pc, LABEL_STATE)
+
+    assert result.status == "warn"
+    assert "missing required scopes [read:project]" in result.detail
+
+
+def test_where_the_board_carries_the_state_the_status_check_is_skipped(pc, board) -> None:
+    result = _status_check(pc, None)
+
+    assert result.status == "skip"
+    assert board.calls == []

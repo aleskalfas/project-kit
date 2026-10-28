@@ -103,6 +103,7 @@ sys.path.insert(0, str(_HERE))
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_status,
     body_parent_ref,
     body_rules,
     bootstrap_gate,
@@ -117,6 +118,7 @@ from _lib import (
     use_case_citations,
     workstreams,
 )
+from _lib import lifecycle_inference as infer
 from _lib.comment import post_comment
 from _lib.containment import LinkOutcome, link_sub_issue
 from _lib.gh import gh_project_run, gh_run, load_adopter_config
@@ -786,6 +788,8 @@ def main() -> int:
     board_id = args.board if args.board is not None else config.get("projects_v2_board_id")
     if has_board:
         print(f"  board:      v2/{board_id}  (auto-add per DEC-019)")
+        if board_status.maintained(dict(config, projects_v2_board_id=board_id), substrate_map):
+            print("  status:     the card's Status set to the issue's state (DEC-006)")
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
@@ -935,6 +939,17 @@ def main() -> int:
         else:
             owner = _owner_from_issue_url(issue_url)
             project_node_id = _resolve_project_node_id(board_id, owner, config)
+            if new_issue_number is not None:
+                _set_first_status(
+                    new_issue_number,
+                    board_item_id,
+                    owner=owner,
+                    board_config=dict(config, projects_v2_board_id=board_id),
+                    substrate_map=substrate_map,
+                    workflow=_read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader),
+                    milestone_title=milestone_title,
+                    labels=labels,
+                )
 
     # Fire lifecycle hooks per DEC-024. Report-and-continue contract:
     # hook failures don't propagate to this script's exit code. The board-item
@@ -1606,6 +1621,36 @@ def _gh_add_to_board(board_id: int, issue_url: str, config: dict) -> str | None:
         return None
     item_id = payload.get("id") if isinstance(payload, dict) else None
     return item_id if isinstance(item_id, str) and item_id else None
+
+
+def _set_first_status(
+    number: int,
+    item_id: str,
+    *,
+    owner: str | None,
+    board_config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    workflow: dict,
+    milestone_title: str | None,
+    labels: list[str],
+) -> None:
+    """Set the new card's Status to the state the issue was filed in (DEC-006).
+
+    Only where the board's Status is a projection this project keeps: a board,
+    and the state not carried on it (`_lib/board_status`). The state is read as
+    `_lib/lifecycle_inference` reads an open issue's: Todo, or Backlog with a
+    milestone. ``board_config`` names the board the card was added to, `--board`
+    included, and ``owner`` is the repository's owner, read from the issue's url,
+    by which the board is found where `gh.default_owner` is unset. A write that
+    fails is one line, and the issue stays filed."""
+    if not board_status.maintained(board_config, substrate_map):
+        return
+    milestone = {"title": milestone_title} if milestone_title else None
+    state = infer.infer_current_state(
+        state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
+    )
+    status = board_status.Projector(board_config, workflow, repository_owner=owner)
+    board_status.report(status.write(number, state, item_id=item_id), stands="the issue is filed")
 
 
 def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> str | None:

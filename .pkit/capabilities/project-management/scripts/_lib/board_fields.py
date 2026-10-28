@@ -51,11 +51,14 @@ Exports:
     FieldOptionsRead / ItemsRead / BoardItem — the workstream mutators' reads
     board_number(config)            — the configured board NUMBER, or None
     default_owner(config)           — `gh.default_owner`, or None
+    board_owner(config, ...)        — the board's owner: `gh.default_owner`, else the repo's
+    url_owner(url)                  — the owner a GitHub url names, or None
     read_project_node_id(...)       — board number → project node id (rich)
     resolve_project_node_id(...)    — the same, as a bare `str | None`
     read_fields(...)                — the board's live fields + their options
     resolve_item_id(...)            — the issue's card (item) id on that board
     read_field_options(...)         — a single-select's options, with colour + description
+    read_items(...)                 — every card, with the option it holds in one field
     read_items_with_option(...)     — the cards whose value is one option
     find_field / field_names / field_type / is_single_select
     option_id / option_names        — name → id matching over a read field
@@ -64,6 +67,7 @@ Exports:
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -163,6 +167,45 @@ def default_owner(config: dict[str, Any]) -> str | None:
         if isinstance(owner, str) and owner:
             return owner
     return None
+
+
+def board_owner(
+    config: dict[str, Any],
+    *,
+    repository_owner: str | None = None,
+    gh_call: GhCall | None = None,
+) -> str | None:
+    """The board's owner, which a `gh project` read names: `gh.default_owner`,
+    else the repository's owner.
+
+    A single-owner adopter whose board lives in the repository's owner omits
+    `gh.default_owner`, a person or an organisation alike. A `gh project` read
+    with no `--owner` looks among the boards of whoever runs `gh`, so it misses an
+    organisation's board, and may find a same-numbered board of that person's.
+
+    ``repository_owner`` is the repository's owner where the caller holds it, such
+    as from an issue's url. Where it holds none, `gh repo view` reads it, and only
+    then. None where neither resolves: the read then names no owner."""
+    owner = default_owner(config)
+    if owner:
+        return owner
+    if repository_owner:
+        return repository_owner
+    proc, _error = _invoke(
+        ["gh", "repo", "view", "--json", "nameWithOwner"], config, owner=None, gh_call=gh_call
+    )
+    payload = _parse_json(proc.stdout) if proc is not None else None
+    name = payload.get("nameWithOwner") if isinstance(payload, dict) else None
+    if isinstance(name, str) and "/" in name:
+        return name.split("/", 1)[0] or None
+    return None
+
+
+def url_owner(url: str | None) -> str | None:
+    """The owner a GitHub url names, as `https://<host>/<owner>/<repo>/…` does,
+    such as an issue's; None for a url that names none."""
+    match = re.match(r"https?://[^/]+/([^/]+)/", url or "")
+    return match.group(1) if match else None
 
 
 # ----- the three reads ---------------------------------------------------
@@ -355,12 +398,22 @@ class FieldOptionsRead:
 class BoardItem:
     """One card on the board: its item id and the issue or pull request it holds.
 
-    `number` is None for a draft card, which holds no issue.
+    `number` is None for a draft card, which holds no issue. `kind` is what the
+    card holds, as GitHub names it: `Issue`, `PullRequest` or `DraftIssue`.
+    `repository` is an issue's `owner/name`, empty for anything else, and
+    `closed` whether that issue is closed. `option_id` and `option_name` are
+    the single-select option the card holds in the field read, None where it
+    holds none.
     """
 
     item_id: str
     number: int | None = None
     title: str = ""
+    kind: str = ""
+    repository: str = ""
+    closed: bool = False
+    option_id: str | None = None
+    option_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -435,20 +488,45 @@ def read_items_with_option(
 ) -> ItemsRead:
     """Every card on the board whose `field_name` value is the option `option_id`.
 
-    Reads the board's cards a page at a time through GraphQL, and keeps those
-    whose single-select value is that option. Cards from every repository on
-    the board count, since the field and its options are the board's. A card
-    that holds a state issue is left out, by its marker, since a state issue
-    holds no work ([project-management:DEC-058-state-issues] point 3).
+    The cards :func:`read_items` reads, kept where their single-select value is
+    that option. Cards from every repository on the board count, since the field
+    and its options are the board's.
     """
-    query = (
-        "query($project: ID!, $field: String!, $after: String) { node(id: $project) "
-        "{ ... on ProjectV2 { items(first: 100, after: $after) { pageInfo "
-        "{ hasNextPage endCursor } nodes { id content { ... on Issue { number title body } "
-        "... on PullRequest { number title } ... on DraftIssue { title } } "
-        "fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
-        "{ optionId } } } } } } }"
+    read = read_items(
+        config, project_node_id=project_node_id, field_name=field_name, gh_call=gh_call
     )
+    if not read.ok:
+        return read
+    return ItemsRead(ok=True, items=tuple(i for i in read.items if i.option_id == option_id))
+
+
+# The page query of :func:`read_items`: each card, what it holds, and the
+# single-select option it holds in one field.
+_ITEMS_QUERY = (
+    "query($project: ID!, $field: String!, $after: String) { node(id: $project) "
+    "{ ... on ProjectV2 { items(first: 100, after: $after) { pageInfo "
+    "{ hasNextPage endCursor } nodes { id content { __typename "
+    "... on Issue { number title body state repository { nameWithOwner } } "
+    "... on PullRequest { number title } ... on DraftIssue { title } } "
+    "fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
+    "{ optionId name } } } } } } }"
+)
+
+
+def read_items(
+    config: dict[str, Any],
+    *,
+    project_node_id: str,
+    field_name: str,
+    gh_call: GhCall | None = None,
+) -> ItemsRead:
+    """Every card on the board, with the single-select option it holds in `field_name`.
+
+    Reads the board's cards a page at a time through GraphQL, the whole board or
+    an error: a board read in part is never returned as the whole. A card that
+    holds a state issue is left out, by its marker, since a state issue holds no
+    work ([project-management:DEC-058-state-issues] point 3).
+    """
     found: list[BoardItem] = []
     after: str | None = None
     for _page in range(_MAX_ITEM_PAGES):
@@ -457,7 +535,7 @@ def read_items_with_option(
             "api",
             "graphql",
             "-f",
-            f"query={query}",
+            f"query={_ITEMS_QUERY}",
             "-f",
             f"project={project_node_id}",
             "-f",
@@ -475,25 +553,9 @@ def read_items_with_option(
         if not isinstance(items, dict):
             return ItemsRead(ok=False, error="`gh api graphql` returned no board items.")
         for item in items.get("nodes") or []:
-            if not isinstance(item, dict):
-                continue
-            value = item.get("fieldValueByName")
-            if not (isinstance(value, dict) and value.get("optionId") == option_id):
-                continue
-            item_id = item.get("id")
-            if not isinstance(item_id, str) or not item_id:
-                continue
-            content = item.get("content") if isinstance(item.get("content"), dict) else {}
-            if is_state_issue(str(content.get("body") or "")):
-                continue
-            number = content.get("number")
-            found.append(
-                BoardItem(
-                    item_id=item_id,
-                    number=number if isinstance(number, int) else None,
-                    title=str(content.get("title") or ""),
-                )
-            )
+            card = _board_item(item)
+            if card is not None:
+                found.append(card)
         page_info = items.get("pageInfo") if isinstance(items.get("pageInfo"), dict) else {}
         if not page_info.get("hasNextPage"):
             return ItemsRead(ok=True, items=tuple(found))
@@ -503,6 +565,36 @@ def read_items_with_option(
     return ItemsRead(
         ok=False,
         error=f"the board holds more than {_MAX_ITEM_PAGES * 100} cards; not read in part.",
+    )
+
+
+def _board_item(item: Any) -> BoardItem | None:
+    """One card of a page as :func:`read_items` returns it, or None for a node that
+    is no card, or a card that holds a state issue."""
+    if not isinstance(item, dict):
+        return None
+    item_id = item.get("id")
+    if not isinstance(item_id, str) or not item_id:
+        return None
+    content = item.get("content") if isinstance(item.get("content"), dict) else {}
+    if is_state_issue(str(content.get("body") or "")):
+        return None
+    number = content.get("number")
+    repository = content.get("repository")
+    name = repository.get("nameWithOwner") if isinstance(repository, dict) else None
+    value = item.get("fieldValueByName")
+    value = value if isinstance(value, dict) else {}
+    option = value.get("optionId")
+    option_name = value.get("name")
+    return BoardItem(
+        item_id=item_id,
+        number=number if isinstance(number, int) else None,
+        title=str(content.get("title") or ""),
+        kind=str(content.get("__typename") or ""),
+        repository=name if isinstance(name, str) else "",
+        closed=str(content.get("state") or "").upper() == "CLOSED",
+        option_id=option if isinstance(option, str) and option else None,
+        option_name=option_name if isinstance(option_name, str) else None,
     )
 
 

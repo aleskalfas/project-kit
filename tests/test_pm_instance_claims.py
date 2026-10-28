@@ -415,6 +415,98 @@ def test_a_failed_release_is_a_warning(ic, root: Path) -> None:
     result = ic.release(7, _clone(ic, root), {}, run=gh)
     assert result.outcome == ic.FAILED
     assert result.warning
+    assert "#7 closed, but its owner could not all be released" in result.line
+
+
+def test_a_failed_release_says_what_happened_to_the_issue(ic, root: Path) -> None:
+    """The move back releases through the same path a close does (DEC-006), and
+    its warning says the issue moved back, not that it closed."""
+    gh = FakeGitHub()
+    gh.add(7)
+    gh.post(7, _stamp(ic, "claim", 2))
+    gh.failing.add("comment")
+    result = ic.release(7, _clone(ic, root), {}, run=gh, happened="moved back to backlog")
+    assert result.outcome == ic.FAILED
+    assert "#7 moved back to backlog, but its owner could not all be released" in result.line
+
+
+# ---- an owner this clone cannot release (DEC-006, DEC-035 point 4) ---------------
+#
+# A command that must leave an issue with no owner, the move back from In
+# Progress, asks before it writes. It writes nothing itself.
+
+
+def _cannot(ic, gh: FakeGitHub, clone, root: Path):
+    return ic.cannot_release(7, clone, {}, capability_root=root, login="me", run=gh)
+
+
+def test_a_clone_can_release_every_owner_its_own_account_made(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7, labels=("instance:4",))
+    gh.post(7, _stamp(ic, "claim", 3))
+    assert _cannot(ic, gh, _clone(ic, root), root) is None
+    assert gh.writes() == []
+
+
+def test_a_claim_another_account_made_is_beyond_this_clone(ic, root: Path) -> None:
+    """The fold trusts a claim on the comment log only from its account (DEC-043
+    point 3), so only a clone of that account can release it."""
+    gh = FakeGitHub()
+    gh.add(7, assignees=("someone-else",))
+    gh.post(7, _stamp(ic, "claim", 1), author="someone-else")
+    kept = _cannot(ic, gh, _clone(ic, root), root)
+    assert kept == ic.Unreleasable(
+        "#7 is owned by instance 1 of @someone-else, a claim on the comment log that only a "
+        "clone of @someone-else can release (DEC-043 point 3)",
+        "run this from a clone of @someone-else, or once that account's clone released it",
+    )
+    assert gh.writes() == []
+
+
+@pytest.mark.parametrize(
+    ("claim", "labels", "owner"),
+    [
+        pytest.param(2, (), "instance 2", id="a-claim-on-the-comment-log"),
+        pytest.param(None, ("instance:3",), "instance 3", id="an-instance-label"),
+    ],
+)
+def test_a_clone_with_no_instance_releases_no_owner(
+    ic, root: Path, no_topology, claim, labels, owner
+) -> None:
+    """DEC-035 point 1: a clone with no instance id touches no marker."""
+    gh = FakeGitHub()
+    gh.add(7, labels=labels)
+    if claim is not None:
+        gh.post(7, _stamp(ic, "claim", claim))
+    kept = _cannot(ic, gh, None, root)
+    assert kept is not None
+    assert kept.why == (
+        f"#7 is owned by {owner} of @me, and this clone takes no part in instance ownership, "
+        "so it releases no claim (DEC-035 point 1)"
+    )
+    assert kept.remedy == "run this from the owner's clone, or once the owner released it"
+    assert gh.writes() == []
+
+
+def test_an_issue_no_instance_owns_needs_no_release_and_reads_no_topology(
+    ic, root: Path, monkeypatch
+) -> None:
+    def no_read(*_args):
+        raise AssertionError("an issue with no owner has no claim to judge")
+
+    monkeypatch.setattr(ic, "_snapshot", no_read)
+    gh = FakeGitHub()
+    gh.add(7)
+    assert _cannot(ic, gh, None, root) is None
+
+
+def test_whose_an_issue_is_cannot_be_told_when_it_cannot_be_read(ic, root: Path) -> None:
+    gh = FakeGitHub()
+    gh.add(7)
+    gh.failing.add("view")
+    kept = _cannot(ic, gh, _clone(ic, root), root)
+    assert kept is not None
+    assert kept.why == "#7 could not be read, so whose it is cannot be told"
 
 
 # ---- the lines a caller prints -----------------------------------------------
@@ -433,6 +525,8 @@ def test_plans_name_the_instance_and_the_substrate(ic, root: Path) -> None:
     assert ic.claim_plan(clone) == "claimed for instance 2 (comment substrate)"
     assert ic.claim_plan(clone, "someone-else").startswith("not claimed: assigned to @someone-else")
     assert "instance 2" in ic.release_plan(clone)
+    assert ic.release_plan(clone).startswith("released on close (")
+    assert ic.release_plan(clone, when="on the move back").startswith("released on the move back (")
 
 
 # ---- the clash guard (DEC-035 point 6) ------------------------------------------
@@ -873,6 +967,26 @@ def test_the_guard_judges_claims_against_the_holders_it_reads(ic, root, monkeypa
     gone.add(7)
     gone.post(7, _seat_stamp(ic, "worker-1", 2, "k0"))
     assert _guard(ic, gone, clone).outcome == ic.PASSED
+
+
+def test_a_clone_with_no_seat_judges_claims_against_the_seats_it_reads(
+    ic, root, monkeypatch
+) -> None:
+    """A clone that holds no seat releases no claim, so a claim that counts
+    refuses the release. A void claim is no owner, and neither is a label,
+    which names no seat (ADR-041 point 7)."""
+    snap, _repo = _seated(ic)
+    snapshot_with(ic, monkeypatch, snap, hint=None)
+    held = FakeGitHub()
+    held.add(7)
+    held.post(7, _seat_stamp(ic, "worker-1", 2, "k1"))
+    kept = _cannot(ic, held, None, root)
+    assert kept is not None
+    assert "#7 is owned by seat worker-1, instance 2 of @me" in kept.why
+    gone = FakeGitHub()
+    gone.add(7, labels=("instance:4",))
+    gone.post(7, _seat_stamp(ic, "worker-1", 2, "k0"))
+    assert _cannot(ic, gone, None, root) is None
 
 
 # ---- a seat taken again after its release (#2182) --------------------------------

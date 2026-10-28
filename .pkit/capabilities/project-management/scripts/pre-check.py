@@ -45,11 +45,19 @@ from ruamel.yaml.error import YAMLError
 # pre-check and the DEC-032 contribution collector, per COR-007) and the
 # DEC-032 contribution collector itself (reused, not re-implemented).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, default_branch, issue_list
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    board_status,
+    bootstrap_gate,
+    default_branch,
+    issue_list,
+)
 from _lib.agents import agent_deploy_path, agent_is_deployed
 from _lib.classification_rules import title_prefix_by_value
 from _lib.gh import gh_project_run
 from _lib.label_contributions import collect_label_contributions
+from _lib.lifecycle_inference import STATE_ORDER
 from _lib.review_contributions import (
     SUPPORTED_FLOORS,
     ContributionCollection,
@@ -268,7 +276,14 @@ def _run_all_checks(capability_root: Path) -> list[CheckResult]:
         # cache (if present) or an ownerless view.
         name_with_owner = _resolve_repo_name_with_owner()
         board_owner = name_with_owner.split("/", 1)[0] if "/" in name_with_owner else None
-        results.append(_check_board(board_id, config=config, owner=board_owner))
+        board_result = _check_board(board_id, config=config, owner=board_owner)
+        results.append(board_result)
+        # 5b. The board's Status names the five states, where it is a projection
+        #     this project keeps (DEC-006). Only on a board that resolves.
+        if board_result.status == "ok" and config is not None:
+            results.append(
+                _check_board_status(capability_root, config, substrate_map, owner=board_owner)
+            )
     else:
         results.append(
             CheckResult(
@@ -660,6 +675,72 @@ def _check_board(
             ),
         )
     return CheckResult("Projects v2 board", "ok", f"board #{board_id} resolves")
+
+
+_BOARD_STATUS_CHECK = "board's Status names the five states"
+
+
+def _check_board_status(
+    capability_root: Path,
+    config: dict[str, Any],
+    substrate_map: axis_labels.SubstrateMap | None,
+    *,
+    owner: str | None = None,
+) -> CheckResult:
+    """WARN when the board's Status offers no option for one of the five states.
+
+    Where the Status is a projection the project keeps (DEC-006, `_lib/board_status`),
+    each move writes the card's Status to the option its state takes, the state's
+    display name in workflow.yaml. A missing option leaves the card as it was, and
+    the move stands, so this warns rather than fails. Where the board carries the
+    state, its Status is the state's source, not a projection, and the check skips
+    with no board read."""
+    if not board_status.maintained(config, substrate_map):
+        return CheckResult(
+            _BOARD_STATUS_CHECK,
+            "skip",
+            "the board carries the state here: its Status is the state's source, "
+            "not a projection this check covers",
+        )
+    workflow = _read_yaml_file(capability_root / "schemas" / "workflow.yaml")
+    read = board_status.read_status_field(config, repository_owner=owner)
+    if read.field is None:
+        return CheckResult(
+            _BOARD_STATUS_CHECK,
+            "warn",
+            f"the board's Status could not be read: {read.error}",
+            remediation=(
+                "Until it can be, a move leaves each card's Status as it was. Give the "
+                "board a single-select `Status` field, or fix what `gh` said above."
+            ),
+        )
+    missing = board_status.missing_options(read.field, workflow)
+    if missing:
+        return CheckResult(
+            _BOARD_STATUS_CHECK,
+            "warn",
+            f"the board's Status field has no option for {', '.join(missing)}",
+            remediation=(
+                "Add each to the board's Status field, in the board's settings. Until "
+                "then a move to that state leaves the card's Status as it was; then run "
+                "`pkit pm sync-board` to set the cards it left."
+            ),
+        )
+    names = [board_status.option_name(workflow, state) or state for state in STATE_ORDER]
+    return CheckResult(
+        _BOARD_STATUS_CHECK,
+        "ok",
+        f"the board's Status offers the five states: {', '.join(names)}",
+    )
+
+
+def _read_yaml_file(path: Path) -> dict[str, Any]:
+    """``path`` as a mapping, or an empty one where it cannot be read."""
+    try:
+        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+    except (OSError, YAMLError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _axis_label_check_skipped(
