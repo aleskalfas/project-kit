@@ -26,9 +26,9 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 
 ### 1. The build command is the only way a worker's Task is built
 
-- **Every build of a worker's Task goes through it:** the first build, each fix round on a reviewer's verdict, and each merge that resolves a conflict with the default branch.
+- **Every build of a worker's Task goes through it:** the first build, with the Task In Progress, and each fix round on a reviewer's verdict and each merge that resolves a conflict with the default branch, with the Task In Progress or in Review. A build moves the Task to no other state.
 - **Each build is recorded on the Task:** its start and end commits, the builder, its brief (point 3) and how the build ended.
-- **Provenance is checked.** The commands that open a worker's pull request and move its Task to Review refuse a Task branch that carries a commit, since it left the default branch, that no recorded build produced. The seat writes the records under the account every clone shares, so like the guard of [project-management:DEC-035-instance-ownership], the check catches a skipped command and is no security boundary.
+- **Provenance is checked** at each step a worker's work moves on: the commands that open its pull request, move its Task to Review, ask for the reviews and merge refuse a Task branch that carries a commit, outside the default branch's own, that no recorded build produced. So a fix round built around the command is caught before its verdicts and its merge, as the first build is. The seat writes the records under the account every clone shares, so like the guard of [project-management:DEC-035-instance-ownership], the check catches a skipped command and is no security boundary.
 - **Where no builder can start,** because no builder is named (point 2), no runner is registered (ADR-066 point 1), or the platform cannot host the sandbox (point 4), the command says why, and the loop ends. A person may direct that one Task be built in the seat's session. The provenance check then takes the person's audited override, with its reason ([project-management:DEC-046-override-flag-convention]). No build in the session happens silently.
 - **Leads, and projects with no topology,** build as before. A project with no topology may run the build command by hand, and its provenance is not checked. A lead's builds through the command are named, not built.
 
@@ -79,12 +79,12 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 |---|---|---|
 | decision | the Task's scope, documented behaviour, a record, a shared choice | the person only ([project-management:DEC-006-state-machine-and-cascade]) |
 | permission | a call the project's rules refused that the build needs | the person only: once for that build, recorded, or by a lasting grant through a reviewed change. A call one of the build's own denies refused is never granted, since it is the seat's work: it becomes a decision, about the Task's scope |
-| advice | which of two ways to build fits | an advising agent the command starts, confined, on the brief and the question alone, whose answer the person accepts; else the person |
+| advice | which of two ways to build fits | an advising agent the project names, which the command starts confined, on the brief and the question alone, whose answer the person accepts; else the person |
 | environment | a missing tool, a broken checkout, a time limit | the person, or whoever runs the platform |
 
 - **Never the seat from its own context.** That would carry the seat's context into the build, which this record keeps out.
 - **The question waits on the Task.** The command posts it on the Task, so the seat never writes the builder's question. The seat tells the person, and ends the loop. A later session's first step finds the open question before it takes any other work.
-- **A waiting build holds the claim.** While a build waits on a question, or on its hand-back (point 7), the Task stays In Progress and claimed. Like a Task in Review, it waits on others, not on its owner, so its claim does not lapse while it waits (refinement of DEC-059 point 9). A release of the seat, by its clone or by force, still frees it (DEC-059 point 5).
+- **A waiting build holds the claim.** While a build waits on a question, or on its hand-back (point 7), the Task stays in its state, In Progress or, for a fix round, Review, and claimed. Like a Task in Review, it waits on others, not on its owner, so its claim does not lapse while it waits (refinement of DEC-059 point 9). A release of the seat, by its clone or by force, still frees it (DEC-059 point 5).
 - **The build resumes** in the builder's own session where the harness keeps it, so the builder goes on with its own context of the Task. Where it does not, a fresh builder starts with the brief, the question and the answer. The question and its answer stay recorded together.
 - **Bounds.** A run that reached its limit is never started again on its own. A Task stops for the person once it has asked as many questions as the command allows.
 - **Only the person's answer counts.** Where every clone works under one account, an answer's author on the Task does not prove who wrote it. Like the guard of DEC-035, this catches mistakes and is no security boundary.
@@ -100,7 +100,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 
 - **The builder starts no reviewer** (point 4).
 - **The seat asks for the verdicts** once the checks on its pushed head pass. A verdict that asks for changes starts a fix round through the build command (point 1).
-- **The merge gate is unchanged.** It refuses the merge until every required reviewer has a verdict that stands for the head, or the person overrides that reviewer with an audited reason ([project-management:DEC-028-agent-as-approver-paths], [project-management:DEC-050-per-reviewer-override]). The person authorises the merge.
+- **The merge gate** keeps its check of the reviews, and gains the provenance check (point 1). It refuses the merge until every required reviewer has a verdict that stands for the head, or the person overrides that reviewer with an audited reason ([project-management:DEC-028-agent-as-approver-paths], [project-management:DEC-050-per-reviewer-override]). The person authorises the merge.
 
 ### What this changes, and what stands
 
