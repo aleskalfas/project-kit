@@ -11,7 +11,7 @@ source:
   captured_at: 2026-05-21
 ---
 
-> **Partially superseded by [DEC-062](DEC-062-axes-chosen-in-the-map.md).** An axis lives on the board only where the substrate map binds it there, and a board's existence carries none. Overturned: the carriage of priority and workstream by whether a Projects v2 board exists, wherever this record states it, with the scope notes that leave that carriage in force where the map is silent. Its other rulings stand, type always a label among them. DEC-062's "What this overturns, and what stands" lists each passage.
+> **Partially superseded by [DEC-062](DEC-062-axes-chosen-in-the-map.md).** An axis lives on the board only where the substrate map binds it there, and a board's existence carries none. Overturned: the carriage of priority and workstream by whether a Projects v2 board exists, wherever this record states it, with the scope notes that leave the board's carriage of those axes, and of state, in force where the map is silent. Its other rulings stand, type always a label among them. DEC-062's "What this overturns, and what stands" lists each passage.
 
 ## Context
 
