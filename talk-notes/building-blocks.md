@@ -427,3 +427,10 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - each role has exactly one provider so far, so swapping is designed, not yet shown
 - **Maintainer's notes:**
   - Decided 28 October: placed right after the capabilities block, not before it: connections between capabilities only make sense once capabilities are introduced. The example: fixers started after a merge, through `pkit::work-tracking:fixers`.
+
+## Areas found uncovered on 29 October, and where each goes
+
+- **The report channel** (`pkit report`, `report-author`): an adopter sends a bug, change request or feedback upstream; it is linked to the issue that fixes it. In the closing block, "Stay current": updates come down, reports go up.
+- **Storyboards** (COR-016, `storyboard-author`): an agent's behaviour written as scripted scenarios before the agent itself (the project manager's batch planning is one). In the agents block, as how an agent's behaviour is designed.
+- **Landing a change as a whole** (a record accepted before it lands, COR-066, and the landing guard; the merge gate's reviewer verdicts; `pkit pull-request`, `land-work`): inside project-management in the capabilities block.
+- Folded in: `status`, `visibility`, `config` → Install; `pin`, `version` → Stay current; `data` → schemas; the hook registry (COR-013) → skills and agents; documentation roots (COR-049) → living-docs.
