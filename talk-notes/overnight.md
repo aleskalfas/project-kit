@@ -25,6 +25,11 @@ Updated through the night. Each item says what it needs.
 
 #2255 reviewers start from the project root · #2248 flaky timing test · #2258 the rule on when a record starts (after #2261) · #2259 a clean context per Task · #2260 rules keep their numbers · #2261 the rules trimmed (after #2260) · #2262 a size budget for the rules (after #2261) · #2263 a scratchpad note in one state · #2265 a close over an unreadable topology stays in its pool · #2266 `start-work`'s help on pools.
 
+## Observing the workers (28 October)
+
+- Both took a seat and one Task each from milestone #8 (worker-1 #2260, worker-2 #2259); no overlap.
+- worker-1 listed the Tasks on request, recommended #2260, and took it on "go", skipping `next-task`. Inside its pool, so the code's check had nothing to warn of. Open question: should a seated worker choose work at all, or only take what `next-task` hands it? Watching before deciding.
+
 ## The talk
 
 - [Building blocks](building-blocks.md): block 1 decisions, block 2 rules and block 3 scratchpad notes have your notes; block 4 skills is drafted, waiting for your reaction.
