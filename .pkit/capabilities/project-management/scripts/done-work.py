@@ -3471,6 +3471,9 @@ def _check_pr_placeholder(
 # The state the merge moves the issue done-work runs for into.
 DONE_STATE = "done"
 
+# The command whose declared transition is the merge's move to done.
+MERGE_COMMAND = "done-work"
+
 
 @dataclass(frozen=True)
 class _LeadIn:
@@ -3482,8 +3485,9 @@ class _LeadIn:
     def describe(self) -> str:
         return (
             f"{self.from_state} → {self.to_state} before the merge, "
-            f"{self.to_state} → {DONE_STATE} after it (workflow.yaml declares "
-            f"no {self.from_state} → {DONE_STATE} for this issue's type)"
+            f"{self.to_state} → {DONE_STATE} after it (workflow.yaml declares the "
+            f"merge's move to {DONE_STATE} from {self.to_state}, not from "
+            f"{self.from_state}, for this issue's type)"
         )
 
 
@@ -3495,21 +3499,23 @@ def _lead_in_to_done(
     """The move the issue must make before the merge's move to done, or None.
 
     After the merge done-work runs `move-issue --to done`, and workflow.yaml
-    says which states may make that move. For a Task, In Progress is not one
-    of them: the merge's move is Review → Done. A Task whose PR was opened
+    says which states may make that move: the merge's move is the transition
+    to done that done-work makes (:func:`_merge_moves_to_done`). For a Task it
+    is Review → Done; its In Progress → Done is close-issue's, the close of a
+    Task completed without a pull request (DEC-006). A Task whose PR was opened
     without `review-work` (from a worktree, say) is still In Progress when
     done-work runs. So done-work first makes the declared move that leads to
-    done, In Progress → Review, and the merge then makes the declared Review →
-    Done. The PR is open and ready by then (a draft is refused earlier), which
-    is what Review means, so the move holds even if the merge that follows
-    fails.
+    the merge's move, In Progress → Review, and the merge then makes the
+    declared Review → Done. The PR is open and ready by then (a draft is refused
+    earlier), which is what Review means, so the move holds even if the merge
+    that follows fails.
 
     Where the issue is, what type it is and what it may move to are read with
     the readers move-issue and start-work use, so this cannot disagree with the
     move it precedes. None when the issue needs no lead-in (it is done already,
-    or done is a declared move from where it is), when no single declared move
-    leads to done, or when the issue or its type cannot be read. The move to
-    done then runs as it always has and reports what it finds.
+    or the merge's move is declared from where it is), when no single declared
+    move leads to the merge's move, or when the issue or its type cannot be
+    read. The move to done then runs as it always has and reports what it finds.
     """
     if issue is None:
         return None
@@ -3535,17 +3541,29 @@ def _lead_in_to_done(
     if current == DONE_STATE:
         return None
     workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
-    targets = infer.legal_targets(workflow, current, structural_type)
-    if DONE_STATE in targets:
+    if _merge_moves_to_done(workflow, current, structural_type):
         return None
-    for target in targets:
-        if target != current and DONE_STATE in infer.legal_targets(
-            workflow,
-            target,
-            structural_type,
-        ):
+    for target in infer.legal_targets(workflow, current, structural_type):
+        if target != current and _merge_moves_to_done(workflow, target, structural_type):
             return _LeadIn(from_state=current, to_state=target)
     return None
+
+
+def _merge_moves_to_done(workflow: dict, state: str, structural_type: str) -> bool:
+    """Whether workflow.yaml declares the merge's move to done — a transition
+    done-work makes — from ``state`` for ``structural_type``.
+
+    Another move to done from the same state, such as close-issue's close of a
+    Task completed without a pull request, is not the merge's (DEC-006)."""
+    type_token = f"[issue-types:{structural_type}]"
+    return any(
+        isinstance(t, dict)
+        and t.get("from") == state
+        and t.get("to") == DONE_STATE
+        and t.get("command") == MERGE_COMMAND
+        and type_token in (t.get("applies_to") or [])
+        for t in infer.workflow_process(workflow).get("transitions") or []
+    )
 
 
 # ---- helpers -----------------------------------------------------------
