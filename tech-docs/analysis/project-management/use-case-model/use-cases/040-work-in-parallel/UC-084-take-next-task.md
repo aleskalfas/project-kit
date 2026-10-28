@@ -46,6 +46,7 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/next-task.py
         - .pkit/capabilities/project-management/scripts/_lib/task_pool.py
+        - .pkit/capabilities/project-management/scripts/_lib/pools.py
         - .pkit/capabilities/project-management/scripts/start-work.py
         - .pkit/capabilities/project-management/scripts/review-work.py
         - .pkit/capabilities/project-management/scripts/handoff-issue.py
@@ -65,6 +66,9 @@ pkit:
         - project-management:DEC-059#7
         - project-management:DEC-059#8
         - project-management:DEC-059#9
+        - project-management:DEC-061#5
+        - project-management:DEC-061#8
+        - project-management:DEC-061#9
         - COR-013
         - COR-017
         - COR-021
@@ -102,7 +106,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no command lists issues signed by their owner. DEC-035 point 7 decides the signed listing, and #521 tracks it.
 
-2. The worker asks for the next Task to build: `pkit pm next-task`. Of the Tasks in Backlog with no owner, the system keeps those whose `## Dependencies` section names no [issue](../../../glossary.md#term-issue--issue) still open. These Tasks are ready, as are the Tasks In Progress of variant 2b, and every [seat](../../../glossary.md#term-seat--seat) shares the ready Tasks ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
+2. The worker asks for the next Task to build: `pkit pm next-task`. Of the Tasks in Backlog with no owner, the system keeps those whose `## Dependencies` section names no [issue](../../../glossary.md#term-issue--issue) still open. These Tasks are ready, as are the Tasks In Progress of variant 2b. Where the [topology](../../../glossary.md#term-topology--topology) declares no [pools](../../../glossary.md#term-pool--pool), every [seat](../../../glossary.md#term-seat--seat) shares the ready Tasks ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 3. Where the worker's seat gives the worker a [scope](../../../glossary.md#term-scope--scope), the system keeps the Tasks that fall in the scope. The system chooses the highest in priority among the Tasks in Backlog that the worker's instance owns and whose dependencies name no open issue. Where there is none, the system chooses the highest in priority among the ready Tasks (DEC-059 point 7 and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 4. The system starts the chosen Task through `pkit pm start-work <N>`. That command checks the move, cuts the Task's branch, assigns the worker's account and moves the Task to In Progress ([DEC-026](../../../../../../.pkit/capabilities/project-management/decisions/DEC-026-work-ownership-lifecycle.md)).
 5. The system makes the worker's instance the Task's owner ([DEC-035 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The ownership names the worker's seat, the seat's number and the clone's key ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
@@ -118,7 +122,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `start-work` reads nothing back. DEC-035 point 6 decides that the command that takes an issue reads the issue again to catch a clash, and #519 tracks it.
 
-9. As the worker builds, the worker's work renews the ownership, each renewal by a separate ownership event. The worker renews the ownership before each push, and at least once within a part of the limit the [topology](../../../glossary.md#term-topology--topology) sets (DEC-059 point 9). Before each push, the worker also checks that the worker's clone still holds the seat, and that the ownership still counts.
+9. As the worker builds, the worker's work renews the ownership, each renewal by a separate ownership event. The worker renews the ownership before each push, and at least once within a part of the limit the topology sets (DEC-059 point 9). Before each push, the worker also checks that the worker's clone still holds the seat, and that the ownership still counts.
 
 > [!WARNING]
 > **Not built yet:** nothing renews an ownership, or checks an ownership before a push. DEC-059 point 9 decides both, and #2136 tracks it.
@@ -139,10 +143,15 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no ownership lapses. DEC-059 point 9 decides when an ownership lapses, and #2136 tracks it.
 
-- **3a.** The worker chooses a Task that only another seat may take. The system warns that the other seat is expected to take the Task, and goes on ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-045 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#5-ownership-derivation-feeds-the-pm-layer-guard-only-and-degrades-gracefully)).
+- **2c.** Where the [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool) of workers, the system reads the open [Milestones](../../../glossary.md#term-milestone--milestone) once. It keeps only the ready Tasks whose native Milestone is an open Milestone of a pool the worker's seat serves. The worker's own Tasks are kept only where its pools hold them ([DEC-061 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)). The seat's [scope](../../../glossary.md#term-scope--scope) then narrows what its pools hold, as step 3 describes.
+- **2d.** The Milestones cannot be read, where the topology declares pools. The system starts nothing, never falls back to the whole Backlog, and the use case ends ([DEC-061 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#8-without-pools-the-shared-pool-stands-and-with-them-a-failure-takes-nothing)).
+- **2e.** The worker's seat names no pool, or no ready Task is in its pools. The system starts nothing, and says why in terms of the seat's pools, such as a pool with no open Milestone ([DEC-061 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#8-without-pools-the-shared-pool-stands-and-with-them-a-failure-takes-nothing)). The use case ends.
+- **2f.** The worker's code cannot read the topology in full. The system takes nothing, says what it did not understand, and the use case ends ([DEC-061 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
+
+- **3a.** The worker chooses a Task that only another seat may take. The system warns that the other seat is expected to take the Task, and goes on ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-045 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#5-ownership-derivation-feeds-the-pm-layer-guard-only-and-degrades-gracefully)). Where the topology declares pools, `start-work` warns of a Task outside the pools of the worker's seat ([DEC-061 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 
 > [!WARNING]
-> **Not built yet:** nothing reads which seat alone may take a Task, so nothing warns. DEC-045 point 5 decides the warning, and #2136 tracks it.
+> **Not built yet:** nothing reads which seat alone may take a Task by its scope, so nothing warns of such a Task. DEC-045 point 5 decides the warning, and #2136 tracks it.
 
 - **4a.** The Task is assigned to another person's account. `start-work` refuses, points to `handoff-issue`, and changes nothing (`start-work.py`).
 - **5a.** Another instance owns the Task already, or takes the Task at the same instant. The path goes on as `UC-085` describes.

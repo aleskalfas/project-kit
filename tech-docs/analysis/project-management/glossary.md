@@ -89,6 +89,7 @@ TERM-batch-plan:
         record:
           - project-management:DEC-029
           - project-management:DEC-054#3
+          - project-management:DEC-061#6
 TERM-bypass:
   name: bypass
   status: active
@@ -285,6 +286,18 @@ TERM-parent-reference:
           - .pkit/capabilities/project-management/scripts/_lib/body_parent_ref.py
         record:
           - project-management:DEC-005
+TERM-pool:
+  name: pool
+  noun-forms: [pools]
+  status: active
+  definition: "set of open Milestones a person marks with one name, whose work only the seats serving that name take of their own choosing"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/pools.py
+        record:
+          - project-management:DEC-061
 TERM-required-reviewer:
   name: required reviewer
   noun-forms: [required reviewers]
@@ -311,6 +324,8 @@ TERM-scope:
           - project-management:DEC-045#3
           - project-management:DEC-059#7
           - project-management:DEC-018
+          - project-management:DEC-061#1
+          - project-management:DEC-061#5
 TERM-seat:
   name: seat
   noun-forms: [seats]
@@ -482,7 +497,7 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 Explained in [VIEW-batch-planning](domain-model/050-batch-planning.md#batch-plan).
 
-**Example:** for the intent "let a [project](../core/glossary.md#term-project--project) rename a [workstream](#term-workstream--workstream)", the batch plan holds a [Feature](#term-feature--feature) under an [EPIC](#term-epic--epic) and three Tasks under the Feature. Each row gives its type, title, parent, workstream, [Milestone](#term-milestone--milestone), priority and [use-case entries](#term-use-case-entry--use-case-entry).
+**Example:** for the intent "let a [project](../core/glossary.md#term-project--project) rename a [workstream](#term-workstream--workstream)", the batch plan holds a [Feature](#term-feature--feature) under an [EPIC](#term-epic--epic) and three Tasks under the Feature. Each row gives its type, title, parent, workstream, [Milestone](#term-milestone--milestone), priority and [use-case entries](#term-use-case-entry--use-case-entry). Where the [topology](#term-topology--topology) declares [pools](#term-pool--pool), each row gives its Milestone's pool too, so the person's approval covers each [Task](#term-task--task)'s pool ([DEC-061 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)).
 
 **Distinctions:**
 
@@ -665,6 +680,19 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **Sub-issue link:** GitHub's own field that holds an [issue](#term-issue--issue)'s parent. Where the two disagree, the sub-issue link wins, and the first line is rewritten to match it ([DEC-005](../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)).
 - **A reference in a section of the body,** such as "blocked by #12". It relates two issues in text, and makes neither the parent of the other (DEC-005).
 
+## TERM-pool — pool
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#pool).
+
+**Example:** the [topology](#term-topology--topology) declares the pools `alpha` and `bravo`. The [Milestone](#term-milestone--milestone) `Sprint 7: auth` carries the line `Pool: alpha`, so only the [seats](#term-seat--seat) that serve `alpha` take its Tasks of their own choosing ([DEC-061 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#2-a-milestone-joins-a-pool-by-a-line-in-its-description)).
+
+**Distinctions:**
+
+- **Scope:** what narrows one seat's own work, and reserves nothing for that seat. A pool reserves its work for the seats that serve the pool, and a seat's [scope](#term-scope--scope) narrows what its pools hold ([DEC-061 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
+- **The shared pool:** the ready Tasks that every seat shares where the topology declares no pool ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the topology declares pools, each seat that builds takes from its own pools instead.
+- **Milestone:** the container that holds one line of work. A Milestone joins a pool by its `Pool:` line, and a pool holds the lines of work of its open Milestones (DEC-061 point 2).
+- **Workstream:** a long-lived area that classifies issues. A pool says which seats take a line of work, and changes as a person marks new Milestones.
+
 ## TERM-required-reviewer — required reviewer
 
 Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge.md#required-reviewer).
@@ -680,14 +708,15 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
 
-**Example:** a worker agent whose [seat](#term-seat--seat)'s scope is the [workstream](#term-workstream--workstream) `api` takes Tasks from `api`. A worker agent whose seat has no scope takes from all the [project](../core/glossary.md#term-project--project)'s ready Tasks. A testing seat's scope names the kind of work `test` ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+**Example:** a worker agent whose [seat](#term-seat--seat)'s scope is the [workstream](#term-workstream--workstream) `api` takes Tasks from `api`. A worker agent whose seat has no scope takes from all the [project](../core/glossary.md#term-project--project)'s ready Tasks. Where the [topology](#term-topology--topology) declares [pools](#term-pool--pool), such an agent takes from all the ready Tasks of its seat's pools. A testing seat's scope names the kind of work `test` ([DEC-059 point 7](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-061 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 
 **Distinctions:**
 
 - **Workstream:** a long-lived area that classifies issues. A scope may name workstreams, and never changes them ([DEC-045 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy)).
+- **Pool:** a set of open [Milestones](#term-milestone--milestone) whose work only the seats that serve the pool take. A pool reserves its work for those seats, and a scope narrows what its seat's pools hold ([DEC-061 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 - **Kind of work:** the value a [Task](#term-task--task) takes on the `type` [classification axis](#term-classification-axis--classification-axis), such as `test`. A scope may name kinds of work, and never changes them (DEC-059 point 7).
 - **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone the agent works in.
-- **The scope of a set of rules:** what selects the artefacts a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a [topology](#term-topology--topology).
+- **The scope of a set of rules:** what selects the artefacts a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a topology.
 - **The scope of a grant:** where an entry of the permission model allows or denies a privilege ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Such a scope is no part of a topology either.
 
 ## TERM-seat — seat

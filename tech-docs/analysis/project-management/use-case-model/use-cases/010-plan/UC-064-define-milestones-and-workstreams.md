@@ -25,6 +25,7 @@ pkit:
       path:
         - .pkit/capabilities/project-management/scripts/create-milestone.py
         - .pkit/capabilities/project-management/scripts/close-milestone.py
+        - .pkit/capabilities/project-management/scripts/set-pool.py
         - .pkit/capabilities/project-management/scripts/_lib/milestone.py
         - .pkit/capabilities/project-management/scripts/edit-issue.py
         - .pkit/capabilities/project-management/scripts/add-workstream.py
@@ -43,6 +44,9 @@ pkit:
         - project-management:DEC-018
         - project-management:DEC-046
         - project-management:DEC-051
+        - project-management:DEC-061#2
+        - project-management:DEC-061#6
+        - project-management:DEC-061#7
         - COR-017
         - COR-021
         - COR-039
@@ -91,15 +95,17 @@ pkit:
 
 10. Once the due date has passed, the planner closes the Milestone: `pkit pm close-milestone <M>`. The system runs the checks of step 3. It closes the Milestone only once the planner authorises the close, with a yes at the terminal or with `--yes` (`close-milestone.py`).
 11. The system reads the close trigger, and finds the Milestone's issues. A date-based Milestone closes whether issues are still open or not (DEC-016).
-12. The system finds where the open issues roll forward to. That is the Milestone the description names as `Rollforward target:`, or else the next open one of its category (DEC-016).
+12. The system finds where the open issues roll forward to. That is the Milestone the description names as `Rollforward target:`, or else the next open one of its category (DEC-016). Where the [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool) of workers, the next is sought within the closing Milestone's pool ([DEC-061 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#7-closing-a-milestone-rolls-its-open-tasks-forward-within-its-pool)). A Milestone in no pool then rolls into one in no pool.
 13. The system closes the Milestone, with a line that records its trigger and what rolled forward. It moves each open [issue](../../../glossary.md#term-issue--issue) to the target, each with an [audit comment](../../../glossary.md#term-audit-comment--audit-comment), and keeps each issue's state. It prints `[ok] rolled <n> open child issue(s) forward to <target>` (DEC-016).
 
 **Variants:**
 
 - **2a.** The planner passes `--dry-run` to any of these commands. The system makes its checks, prints what it would create, edit or move, and writes nothing. The use case ends.
+- **2b.** The planner puts the new [Milestone](../../../glossary.md#term-milestone--milestone) into a [pool](../../../glossary.md#term-pool--pool) of workers: `--pool <name>`. The system refuses a pool that the [topology](../../../glossary.md#term-topology--topology) does not declare. It writes the `Pool: <name>` line only with the planner's [consent](../../../../core/glossary.md#term-consent--consent), at the terminal or by `--yes`, logged in the description ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). With no terminal and no `--yes`, it refuses and creates nothing.
+- **2c.** The planner sets or clears an open Milestone's pool: `pkit pm set-pool <M> <pool>`, or `pkit pm set-pool <M> --clear`. The system asks for consent as in variant 2b, and reads the description again right before it writes. It replaces the `Pool:` line, never adds a second, and logs the [change](../../../../core/glossary.md#term-change--change) in the description ([DEC-061 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#2-a-milestone-joins-a-pool-by-a-line-in-its-description)).
 - **3a.** The [project](../../../../core/glossary.md#term-project--project) does not meet the prerequisites, the planner is no member, or the operator declines a write in another repository. The system refuses and writes nothing ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)). The use case ends.
 - **4a.** The category is not declared, or the project declares none. The system refuses, names the declared categories, and creates nothing ([DEC-016](../../../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)). The use case ends.
-- **4b.** A [Milestone](../../../glossary.md#term-milestone--milestone) of that title exists. The system refuses, and asks for `--number` (`create-milestone.py`). The use case ends.
+- **4b.** A Milestone of that title exists. The system refuses, and asks for `--number` (`create-milestone.py`). The use case ends.
 - **6a.** This command, or a command of 7b to 7e, runs with no terminal and no `--yes`, so nobody can authorise the write. The system refuses, names the command to run with `--yes`, and writes nothing (`add-workstream.py`). The use case ends.
 - **7a.** The slug is malformed, or a [workstream](../../../glossary.md#term-workstream--workstream) of that slug exists. The system refuses, and writes nothing ([DEC-018](../../../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md)). The use case ends.
 - **7b.** The planner renames a workstream: `pkit pm rename-workstream <old> <new>`. The system checks the new slug, and the old and the new label or board option, before it changes anything. Where both exist, it refuses and changes nothing. Otherwise it renames the label or board option first, then renames the entry, so the workstream's issues carry the new label or board option ([DEC-018](../../../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md)).
@@ -113,12 +119,13 @@ pkit:
 > **Not built yet:** `close-milestone` prints `(inferred)` beside the trigger, and neither warns nor offers to write it. DEC-016 decides that it warns and offers, and #1939 tracks it.
 
 - **11b.** A content-based Milestone, or one marked `either` before its due date, still holds open issues. The system refuses to close it, and closes nothing ([DEC-016](../../../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)). The use case ends.
-- **11c.** The planner passes `--force` on such a Milestone. The system warns, and closes it, with its open issues left in it ([DEC-046](../../../../../../.pkit/capabilities/project-management/decisions/DEC-046-override-flag-convention.md)).
+- **11c.** The planner passes `--force` on such a Milestone. The system warns, and closes it, with its open issues left in it ([DEC-046](../../../../../../.pkit/capabilities/project-management/decisions/DEC-046-override-flag-convention.md)). Where the topology declares pools, the system names each [Task](../../../glossary.md#term-task--task) in Backlog or In Progress that the close leaves in no pool ([DEC-061 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#7-closing-a-milestone-rolls-its-open-tasks-forward-within-its-pool)).
 - **11d.** No issue under the Milestone is open. The system closes it, and rolls nothing forward ([DEC-016](../../../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)). The use case ends.
 - **12a.** No Milestone of the category comes next, or more than one could. The system refuses, moves and closes nothing, and asks for `--target` (`close-milestone.py`). The planner runs the command again with it, and the path rejoins at step 10.
+- **12b.** The `Rollforward target:` line, or `--target`, names a Milestone in another pool than the closing one's. The system names that Milestone and its pool in the close's consent prompt, so the planner's consent covers the move ([DEC-061 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#7-closing-a-milestone-rolls-its-open-tasks-forward-within-its-pool)).
 - **13a.** A move of an issue fails. The system has closed the Milestone, names the issues it did not move, and exits `4`. Running the command again finishes the moves, to the target it recorded (`close-milestone.py`).
 
-**Postconditions:** The [Milestones](../../../glossary.md#term-milestone--milestone) and [workstreams](../../../glossary.md#term-workstream--workstream) the planner defined exist, and the [project](../../../../core/glossary.md#term-project--project)'s workstreams file holds each workstream. A closed date-based Milestone holds its closed issues, and its open ones are in the next.
+**Postconditions:** The [Milestones](../../../glossary.md#term-milestone--milestone) and [workstreams](../../../glossary.md#term-workstream--workstream) the planner defined exist, and the [project](../../../../core/glossary.md#term-project--project)'s workstreams file holds each workstream. A closed date-based Milestone holds its closed issues, and its open ones are in the next, of its [pool](../../../glossary.md#term-pool--pool) where the [topology](../../../glossary.md#term-topology--topology) declares pools.
 
 **Minimal guarantees:**
 

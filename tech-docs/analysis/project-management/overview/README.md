@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=5 fingerprint=sha256:4eab331fa3f5004a40beeb5bd5a03cc561ca883b3dd0ace61caa5feb5b1445cb -->
+<!-- pkit:overview reads=5 fingerprint=sha256:aacef388c4006853cef7e6c1e9906df52485d00dfbff6238bc2ec8a12d185289 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -20,6 +20,7 @@ Define the Milestones and workstreams a project's work falls into, and plan each
 - [020 — Classification of issues](../domain-model/020-classification-of-issues.md)
 - [030 — The issue lifecycle](../domain-model/030-the-issue-lifecycle.md)
 - [050 — Batch planning](../domain-model/050-batch-planning.md)
+- [060 — Parallel work](../domain-model/060-parallel-work.md)
 
 **Its requirements:** none.
 
@@ -40,6 +41,7 @@ File each Task under its parent, and move each issue through its lifecycle, each
 - [020 — Classification of issues](../domain-model/020-classification-of-issues.md)
 - [030 — The issue lifecycle](../domain-model/030-the-issue-lifecycle.md)
 - [050 — Batch planning](../domain-model/050-batch-planning.md)
+- [060 — Parallel work](../domain-model/060-parallel-work.md)
 
 **Its requirements:** none.
 

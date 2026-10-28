@@ -45,6 +45,9 @@ pkit:
         - project-management:DEC-059#6
         - project-management:DEC-059#7
         - project-management:DEC-059#9
+        - project-management:DEC-061#1
+        - project-management:DEC-061#9
+        - project-management:DEC-061#10
         - project-management:DEC-043#2
         - project-management:DEC-018
         - COR-017
@@ -79,7 +82,7 @@ pkit:
 
 **Main path:**
 
-1. The adopter chooses the [seats](../../../glossary.md#term-seat--seat) of the [topology](../../../glossary.md#term-topology--topology), and writes the seats into the [project](../../../../core/glossary.md#term-project--project)'s configuration for project-management, `project/topology.yaml`, on a branch. Each seat says whether the seat is the organizer seat, and may give the seat's agent a [scope](../../../glossary.md#term-scope--scope) (DEC-059 points [1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) and [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)). Each seat also holds these:
+1. The adopter chooses the [seats](../../../glossary.md#term-seat--seat) of the [topology](../../../glossary.md#term-topology--topology), and writes the seats into the [project](../../../../core/glossary.md#term-project--project)'s configuration for project-management, `project/topology.yaml`, on a branch. Each seat says whether the seat is the organizer seat, and may give the seat's agent a [scope](../../../glossary.md#term-scope--scope) (DEC-059 points [1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch) and [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)). Where the adopter wants [pools](../../../glossary.md#term-pool--pool) of workers, the topology declares them, as variant 1b describes. Each seat also holds these:
    - the seat's name
    - whether the seat's agent plans, builds or does both
    - the [agent definition](../../../../core/glossary.md#term-agent-definition--agent-definition) that agent follows
@@ -105,6 +108,8 @@ pkit:
    - more than one organizer seat
    - a seat whose state issue is not named
    - a scope that names an unknown workstream or kind of work
+   - a seat that names a pool the topology does not declare
+   - a seat that names pools where none are declared, or a planner's seat that names a pool ([DEC-061 point 10](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#10-the-check-refuses-an-undeclared-pool-and-the-listings-warn-of-stranded-work))
    - a seat deleted or moved against the default branch, rather than retired
 
 8. A person reviews the change, and the change merges like any other. The topology binds once the topology is on the default branch. Every clone reads the topology from there, never from the clone's own branch or working tree (DEC-059 point 1).
@@ -112,12 +117,13 @@ pkit:
 **Variants:**
 
 - **1a.** The adopter alters a [topology](../../../glossary.md#term-topology--topology) already in place. A new [seat](../../../glossary.md#term-seat--seat) goes at the end of the list, and a seat that leaves stays in the list, marked retired. Renaming a seat retires the seat and adds a new seat, so no seat's number moves (DEC-059 points [2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope) and [6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)). The topology's check of step 7 reports a seat deleted or moved against the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), rather than retired.
+- **1b.** The adopter declares [pools](../../../glossary.md#term-pool--pool) of workers, each by a neutral name such as `alpha`. Each seat that builds names the pools it serves, and a planner's seat names none ([DEC-061 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)). Moving workers from one pool to another is an edit of the seats' pools, a reviewed [change](../../../../core/glossary.md#term-change--change) like any other. The adopter adds pools only once every clone that may take a seat runs code that reads them (variant 8b).
 
 - **2a.** A clone holds no seat. The clone marks no [issue](../../../glossary.md#term-issue--issue) and is guarded by nothing, as a clone with no number ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 - **2b.** The adopter asks a clone for the clone's number: `pkit pm set-instance --show` prints the number, or `unset` (`set-instance.py`).
 - **2c.** The operator types a number into a clone: `pkit pm set-instance <N>`. In a [project](../../../../core/glossary.md#term-project--project) with a topology, the system refuses the number, since a typed number could take a seat's number ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology)).
 
-- **4a.** The adopter runs the assignment again after the [workstreams](../../../glossary.md#term-workstream--workstream) changed. The system names each workstream that no seat may take, and each [scope](../../../glossary.md#term-scope--scope) naming a removed workstream. The system walks the adopter through those workstreams and scopes. The system then writes the scopes into the topology, for a reviewed [change](../../../../core/glossary.md#term-change--change) ([DEC-045 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#6-a-guided-assignment-script--local-idempotent-drift-reconciling) and [DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
+- **4a.** The adopter runs the assignment again after the [workstreams](../../../glossary.md#term-workstream--workstream) changed. The system names each workstream that no seat may take, and each [scope](../../../glossary.md#term-scope--scope) naming a removed workstream. The system walks the adopter through those workstreams and scopes. The system then writes the scopes into the topology, for a reviewed change ([DEC-045 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#6-a-guided-assignment-script--local-idempotent-drift-reconciling) and [DEC-059](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md)).
 
 > [!WARNING]
 > **Not built yet:** nothing walks the adopter through the workstreams. DEC-045 point 6 decides that the assignment runs again and reconciles the changes, and #512 tracks it.
@@ -127,8 +133,9 @@ pkit:
 - **7a.** The project writes the [owner](../../../glossary.md#term-owner--owner) of each issue as a label. The topology's check refuses the topology, since a label cannot carry what an ownership names ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again) and [DEC-043 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-043-ownership-substrate-selection.md#2-a-selector-in-instance-ownerships-own-schema-home)).
 
 - **8a.** A clone has not fetched the default branch since the change merged. The clone reads the topology the clone last fetched. Each command that reads the topology names the commit that the clone read, once in a run ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)). A command that another command runs, such as the `move-issue` that `start-work` runs, repeats no commit the run named already.
+- **8b.** A clone's code cannot read the topology in full, such as a key it does not know. That code takes no work, no seat and no release by force, and says what it did not understand. Its listing of the seats warns, and its work in flight goes on ([DEC-061 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)). Code that predates this refusal ignores the pools, so the operator keeps the order of variant 1b, which no check enforces.
 
-**Postconditions:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares each [seat](../../../glossary.md#term-seat--seat), with the seat's number, [state issue](../../../glossary.md#term-state-issue--state-issue) and [scope](../../../glossary.md#term-scope--scope), where the seat has a scope. Each scope names the [workstreams](../../../glossary.md#term-workstream--workstream) or the kinds of work that the agent of the scope's seat takes work from.
+**Postconditions:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares each [seat](../../../glossary.md#term-seat--seat), with the seat's number, [state issue](../../../glossary.md#term-state-issue--state-issue) and [scope](../../../glossary.md#term-scope--scope), where the seat has a scope. Each scope names the [workstreams](../../../glossary.md#term-workstream--workstream) or the kinds of work that the agent of the scope's seat takes work from. Where the topology declares [pools](../../../glossary.md#term-pool--pool), each seat that builds names the pools it serves.
 
 **Minimal guarantees:**
 

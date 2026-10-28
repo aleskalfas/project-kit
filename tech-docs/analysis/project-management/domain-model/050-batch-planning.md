@@ -12,6 +12,7 @@ pkit:
         - project-management:DEC-029
         - project-management:DEC-054
         - project-management:DEC-060
+        - project-management:DEC-061#6
       artefact:
         - TERM-use-case-entry
         - TERM-batch-plan
@@ -95,6 +96,7 @@ A batch plan is the outline the project-manager agent drafts for an intent. It h
 **Attributes:**
 
 - one row for each issue: its type, title, parent, [workstream](../glossary.md#term-workstream--workstream), [Milestone](../glossary.md#term-milestone--milestone), priority and use-case entries (DEC-029 and [DEC-054 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md#5-the-planning-step))
+- the [pool](../glossary.md#term-pool--pool) of each issue's Milestone, where the [topology](../glossary.md#term-topology--topology) declares pools, so the person's approval covers each [Task](../glossary.md#term-task--task)'s pool ([DEC-061 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act))
 - the active entries the intent touches that no issue names, and the work that no entry describes (DEC-054 point 5)
 - each choice the slices would share, judged settled, in hand by an open foundation, or open ([DEC-060 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-060-foundation-before-slices.md#3-the-first-plan-files-the-foundation-and-the-second-plans-the-slices))
 - the [findings](../../core/glossary.md#term-finding--finding) of the [reviewers](../../core/glossary.md#term-reviewer--reviewer) run on it (DEC-029)
