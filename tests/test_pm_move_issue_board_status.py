@@ -231,3 +231,6 @@ def test_where_the_board_carries_the_state_nothing_changes(
     assert board.board_calls() == [] and board.status(task) == "Todo"
     out = capsys.readouterr().out
     assert "[ok] (board adopter) plan recorded; manual board edit may be required." in out
+    # The note cites what decides the Status, not DEC-019, which is about membership.
+    assert "the agent maintains the Status (DEC-006)" in out
+    assert "DEC-019" not in out

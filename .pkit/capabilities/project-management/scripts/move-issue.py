@@ -29,8 +29,9 @@ where it binds it, and `has_projects_v2_board` governs only where the map is
 silent (per [project-management:DEC-051-axis-carriage-activation]):
 
   * `board` — the Projects v2 single-select `Status` field carries the state.
-    State changes go through `gh project item-edit` (deferred at v1 —
-    surfaces as a dry-run guidance message until kit issue #122 lands).
+    DEC-006 has the agent maintain the Status, but the write on this path is
+    not built yet: it follows the read of a board-carried state (#2271), and
+    until then the move surfaces as a guidance message.
   * `kit-label` / `adopter-label` — the state lives as a label: the kit's
     `state:*` in greenfield, or the adopter's own label under a `label:`
     binding. State changes happen via `gh issue edit --add-label <new>
@@ -666,9 +667,10 @@ def main() -> int:
         print(
             f"\n[note] board substrate detected (projects_v2_board_id="
             f"{config.get('projects_v2_board_id')}). State lives on the "
-            "Projects v2 Status field; bulk gh-project field-set is deferred "
-            "(per DEC-019). This invocation will surface the planned move "
-            "but not mutate the board field at v1."
+            "Projects v2 Status field, and the agent maintains the Status (DEC-006), "
+            "but the write where the board carries the state is not built yet: it "
+            "follows the read of #2271. This invocation will surface the planned move "
+            "but not mutate the board field."
         )
 
     plan = _compute_plan(
