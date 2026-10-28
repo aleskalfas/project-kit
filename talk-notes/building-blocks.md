@@ -291,3 +291,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - the guard is an interlock against accidents, not a security boundary: a raw command can still reach another repository
   - a shell redirect into the workspace still prompts; only the file tools are free there
 - **Maintainer's notes:**
+  - Decided 28 October: folded into block 7 as "and where agents write"; the workspace is the concrete example of a rule that removes prompts safely.
