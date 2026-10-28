@@ -46,7 +46,7 @@ The real consequence the binding must own: a derive-from-open/closed predicate r
 
 ### 5. Never write an unmanaged label
 
-**Never write an unmanaged label** (EPIC #217 constraint 1). In brownfield mode the capability never creates / renames / deletes any label or field the adopter owns; it only reads and maps. `bootstrap`'s additive label-creation is suppressed per-axis wherever a binding names a substrate other than the kit's own labels. The adopter's native conventions are **authoritative and read-only** (constraint 3) — methodology validation degrades to advisory where the substrate can't express a rule, while [project-management:DEC-003-github-bound-substrate]'s GitHub-as-the-bound-tracker binding stays intact.
+**Never write an unmanaged label** (EPIC #217 constraint 1). The capability never creates / renames / deletes any label or field the adopter owns; it only reads and maps. `bootstrap`'s additive label-creation is suppressed per-axis wherever a binding names a substrate other than the kit's own labels, and a map's presence alone suppresses nothing ([project-management:DEC-062-axes-chosen-in-the-map] point 4). The adopter's native conventions are **authoritative and read-only** (constraint 3) — methodology validation degrades to advisory where the substrate can't express a rule, while [project-management:DEC-003-github-bound-substrate]'s GitHub-as-the-bound-tracker binding stays intact.
 
 ### Relationship to DEC-003 (partial supersession)
 
