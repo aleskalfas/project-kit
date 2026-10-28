@@ -376,6 +376,82 @@ def test_a_clone_that_holds_no_seat_of_a_topology_takes_nothing(tp, tmp_path, mo
     assert refusal is not None and refusal.startswith("this clone holds no seat")
 
 
+def test_a_seat_gives_the_pools_it_serves_and_the_topology_those_it_declares(
+    tp, tmp_path, monkeypatch
+) -> None:
+    ic = _claims(tp)
+    seat = ic.Seat("tester", 2, ic.WORKER, None, ("alpha",))
+    reading = ic.Topology(seat, {}, pools=("alpha", "bravo"))
+    topology_with(ic, monkeypatch, reading, key="k2")
+    taker = tp.taker(tmp_path, "me", {})
+    assert (taker.refusal, taker.declared, taker.pools) == (None, ("alpha", "bravo"), ("alpha",))
+
+
+def test_a_topology_this_code_cannot_read_in_full_takes_nothing(tp, tmp_path, monkeypatch) -> None:
+    ic = _claims(tp)
+    seat = ic.Seat("tester", 2, ic.WORKER)
+    reading = ic.Topology(seat, {}, refusal="this code cannot read the topology in full.")
+    topology_with(ic, monkeypatch, reading, key="k2")
+    taker = tp.taker(tmp_path, "me", {})
+    assert taker.refusal == "this code cannot read the topology in full."
+    assert taker.clone is None
+
+
+# ---- the seat's set of Milestones (DEC-061 point 5, ADR-072 point 2) -----------------
+
+
+def _in(row: dict[str, Any], milestone: int | None) -> dict[str, Any]:
+    row["milestone"] = None if milestone is None else {"number": milestone, "title": "M"}
+    return row
+
+
+def _ready_in(tp, readers, rows, milestones) -> list[int]:
+    found = tp.candidates(
+        rows,
+        open_numbers=[r["number"] for r in rows],
+        login="me",
+        scope=None,
+        takes_over=False,
+        readers=readers,
+        milestones=milestones,
+    )
+    return [c.number for c in found]
+
+
+def test_a_set_keeps_only_tasks_whose_native_milestone_is_in_it(tp, readers) -> None:
+    rows = [_in(_row(10), 3), _in(_row(11), 4), _in(_row(12), None)]
+    rows.append(_in(_row(13, body="Milestone: [#3](../milestone/3)\n\n## What\n\nx\n"), None))
+    rows.append(_in(_row(14, assignees=("me",)), 4))
+    assert _ready_in(tp, readers, rows, frozenset({3})) == [10]
+
+
+def test_nothing_filters_by_no_milestone_and_the_empty_set_keeps_no_task(tp, readers) -> None:
+    rows = [_in(_row(10), 3), _in(_row(11), None)]
+    assert _ready_in(tp, readers, rows, None) == [10, 11]
+    assert _ready_in(tp, readers, rows, frozenset()) == []
+
+
+def test_the_scope_narrows_what_the_set_kept(tp, readers) -> None:
+    rows = [_in(_row(10, kind="test"), 3), _in(_row(11, kind="docs"), 3), _in(_row(12), 4)]
+    found = tp.candidates(
+        rows,
+        open_numbers=[10, 11, 12],
+        login="me",
+        scope=_scope(types=("test",)),
+        takes_over=False,
+        readers=readers,
+        milestones=frozenset({3}),
+    )
+    assert [c.number for c in found] == [10]
+
+
+def test_a_tasks_state_is_read_only_for_a_task(tp, readers) -> None:
+    assert tp.task_state(_row(10), readers) == tp.BACKLOG
+    assert tp.task_state(_row(11, title="[Feature] f"), readers) is None
+    assert tp.native_milestone(_in(_row(12), 7)) == 7
+    assert tp.native_milestone(_row(13)) is None
+
+
 def test_the_pool_reads_its_owners_through_the_one_fold(tp, tmp_path) -> None:
     """`read_owner` folds as the guard does, so the pool and the guard agree."""
     ic = _claims(tp)

@@ -13,11 +13,12 @@ assignees the test names. No test reaches GitHub.
 `access` maps a login to the level GitHub would answer; a login it lacks
 answers 404. `failing` holds the verbs whose next call fails once (`"comment"`,
 `"edit"`, `"create"`, `"view"`, `"list"`, `"page"`, `"access"`, `"issue"`,
-`"lock"`, `"reopen"`, `"pr-list"`), `"page:<N>"` for a page of issue N's
-comments, and `"comment-landed"` for a comment that lands though its call
-fails. `before_post` runs before each comment lands, with the issue's number,
-so a test can post another clone's comment there to stand for one made in the
-same instant.
+`"lock"`, `"reopen"`, `"pr-list"`, `"milestones"`), `"page:<N>"` for a page of
+issue N's comments, and `"comment-landed"` for a comment that lands though its
+call fails. `before_post` runs before each comment lands, with the issue's
+number, so a test can post another clone's comment there to stand for one made
+in the same instant. `milestones` are the open milestones it lists, and an
+issue a test adds may sit in one of them by its number.
 
 GitHub numbers the comments of every issue from one sequence, so a comment made
 later has the higher id, whichever issue it is on. `COMMENT_IDS` stands for it:
@@ -59,6 +60,7 @@ class FakeIssue:
     locked: bool = False
     labels: list[str] = field(default_factory=list)
     assignees: list[str] = field(default_factory=list)
+    milestone: int | None = None
 
     def record(self, number: int) -> dict[str, Any]:
         """The issue as `gh` gives it, in every field a read or a listing asks for."""
@@ -69,7 +71,9 @@ class FakeIssue:
             "body": self.body,
             "labels": [{"name": name} for name in self.labels],
             "assignees": [{"login": login} for login in self.assignees],
-            "milestone": None,
+            "milestone": None
+            if self.milestone is None
+            else {"number": self.milestone, "title": f"M{self.milestone}"},
         }
 
 
@@ -83,6 +87,8 @@ class FakeRepo:
     before_post: Callable[[int], None] | None = None
     next_issue: int = 100
     prs: dict[int, str] = field(default_factory=dict)
+    #: The open milestones, as `gh api …/milestones?state=open` lists them.
+    milestones: list[dict[str, Any]] = field(default_factory=list)
 
     def add(
         self,
@@ -94,6 +100,7 @@ class FakeRepo:
         opener: str | None = None,
         labels: tuple[str, ...] = (),
         assignees: tuple[str, ...] = (),
+        milestone: int | None = None,
     ):
         self.issues[number] = FakeIssue(
             title,
@@ -102,6 +109,7 @@ class FakeRepo:
             opener=self.author if opener is None else opener,
             labels=list(labels),
             assignees=list(assignees),
+            milestone=milestone,
         )
         return self.issues[number]
 
@@ -218,6 +226,10 @@ class FakeRepo:
 
     def _api(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         path = argv[2]
+        if path == "--paginate" and argv[3] == "repos/{owner}/{repo}/milestones?state=open":
+            if self._fails("milestones"):
+                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+            return _done(argv, stdout=json.dumps(self.milestones))
         page = _PAGE.fullmatch(path)
         if page:
             number, size, index = (int(g) for g in page.groups())
