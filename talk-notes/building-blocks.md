@@ -370,3 +370,21 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - inheritance with version pins is a lot of machinery for a handful of sets
 - **Maintainer's notes:**
   - Decided 28 October: skipped for now; the rules are being reworked (operational rules becoming rule sets, #2270). Revisit for the talk once that lands, probably together with block 2.
+
+## 16. Schemas: rules as data (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** a rule precise enough for a program to apply is written as data, a YAML file with a JSON Schema companion that says what the file must look like (COR-018). Code, skills and agents read the YAML at run time instead of carrying the rule in their own text. project-management alone has 20 (`workflow.yaml`: the five states, every allowed move and who authorises it; `titles.yaml`: the title formats; `git-conventions.yaml`: branch names and pull-request bodies; `topology.yaml`: seats and pools; …); 29 across capabilities, 8 in core. A schema names another's entry with a typed token, such as `[validation-severity:hard-reject]` (COR-019), so the references between them can be checked. A project's own data files (its `config.yaml`, its topology) say which schema they follow (`pkit_schema:`, COR-023), so `pkit validate` checks them against it.
+- **The division of labour:** a decision says *why* (the principle, the alternatives); a schema says *what*, exactly (the states, the regex, the transition graph); the code only applies it. Change the rule, and you change one YAML line, not three scripts and a prompt.
+- **Problem:** a rule written only in prose is applied differently by each script and each agent that reads it; a rule written only in code is invisible and duplicated.
+- **Gain:**
+  - one place for each concrete rule, read the same way by every script and agent
+  - a project can see the rules its tools apply, and the checks hold them to their shape
+  - the rule and the code that applies it can change apart: a new state or title format is a data change
+- **Weight:** nothing in a session's context; an agent reads a schema when its task needs it (the project manager reads the eight it uses).
+- **Evidence (this session):** the move back added two lines to `workflow.yaml` and the commands picked them up; the critic of the Icebox found that a sixth state would touch every place that hard-codes five, which is exactly where a rule was not yet data.
+- **Weak spot:**
+  - not everything is data yet: some code still hard-codes what a schema declares (the order of states)
+  - a YAML rule with no prose beside it can be applied without anyone knowing why; the decision must stay linked
+- **Maintainer's notes:**
