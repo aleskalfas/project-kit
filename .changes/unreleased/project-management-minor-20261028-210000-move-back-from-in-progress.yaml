@@ -10,8 +10,15 @@ body: >
   a container, where a child of it is in Backlog, and in Todo otherwise. The
   other target is refused, naming the right one. The reason is required, posted
   as the move's audit comment before the label changes, and journaled with the
-  move. The owner's claim is released after the move, as a close releases it. A
-  container is refused while a child of it is In Progress or in Review, each
-  such child named, or while its children cannot all be read. `workflow.yaml`
-  declares the two moves, and the issue lifecycle's definition version rises to
-  6. Where a board carries state, the move writes no card, as for every move.
+  move. Every owner of the issue is released after the move, as a close
+  releases one (DEC-035 point 4). Where this clone cannot release an owner,
+  such as any owner where it takes no part in instance ownership, or a claim
+  another account made, the move is refused before anything is written, naming
+  the owner. A container is refused while a child of it is In Progress or in
+  Review, each such child named, or while its children cannot all be told: an
+  open child in another repository holds it until that child closes. A Task's
+  branch and draft pull request stay as they are. `workflow.yaml` declares the
+  two moves, and the issue lifecycle's definition version rises to 6. Where a
+  board is configured and the state is native, the card's Status follows the
+  move. Where the board carries the state, the move back is refused until
+  #2271.

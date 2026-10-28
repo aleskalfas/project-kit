@@ -262,7 +262,9 @@ process:
       to: backlog
       trigger: move-issue
       command: move-issue
-      pr_state_effect: "none → none"
+      # A Task's branch and draft pull request stay as they are, for the next
+      # taker to continue or to replace (DEC-006).
+      pr_state_effect: "none → none | draft → draft"
       authorisation: user
       executor: agent
       applies_to:
@@ -279,14 +281,17 @@ process:
         `--to backlog` otherwise and names `--to todo`. The reason is
         required: it is posted as the move's audit comment before the label
         changes, and journaled with the move. The owner's claim is released
-        through the ownership seam's one release path. A container with a
-        child In Progress or in Review is refused, the child named.
+        through the ownership seam's one release path, and the move is
+        refused, the owner named, where this clone cannot release it. A
+        container with a child In Progress or in Review is refused, the
+        child named, and so is one whose children cannot all be told. Where
+        the board carries the state, the move is refused (#2271).
 
     - from: in-progress
       to: todo
       trigger: move-issue
       command: move-issue
-      pr_state_effect: "none → none"
+      pr_state_effect: "none → none | draft → draft"
       authorisation: user
       executor: agent
       applies_to:
