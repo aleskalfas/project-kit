@@ -93,7 +93,11 @@ it: each stamp, strip, transfer and re-read below acts on that marker.
 `create-issue` stamps the
 creating clone's instance label; the clone owns the entire filed arc
 (containers + leaves) from birth. `start-work` claims an issue that has no
-owner yet (legacy / human-filed / pre-feature — the *commons*).
+owner yet (legacy / human-filed / pre-feature — the *commons*). An issue moved
+back from In Progress loses its owner (point 4), so in a project with no
+topology it is unowned while the rest of its tree stays owned from creation,
+and a clone with no instance id, which touches no marker (point 1), moves back
+only an issue no instance owns.
 
 ### 4. Ownership releases on terminal transitions and transfers on reclaim
 
@@ -109,7 +113,18 @@ the label, not the assignee. In a project with a topology, an owner also release
 a Task once it stops work on it, and its work renews the claim as it goes on. A
 claim on a Task In Progress that its work has not renewed within a generous limit
 lapses, and a claim counts only while its clone holds the claim's seat (refinement
-per [project-management:DEC-059-topology-of-seats]).
+per [project-management:DEC-059-topology-of-seats]). A Task its owner releases
+without moving it back is left In Progress with no owner, which the move back
+below mends.
+
+The owner is also released when a person moves the issue back from In Progress,
+for every issue type and in every project. The move back is refused, naming the
+owner, where the clone making it cannot release that owner. That is any owner
+where the clone takes no part in instance ownership, and a claim another account
+made on the comment log, which only that account's clone can release
+([project-management:DEC-043-ownership-substrate-selection] point 3). The owner's
+clone then moves the issue back, or the owner releases the claim first
+(refinement per [project-management:DEC-006-state-machine-and-cascade]).
 
 ### 5. Changing the assignee strips the label
 
@@ -232,6 +247,10 @@ principle — noted so a future maintainer does not re-derive it as a COR.
   `move-issue` gain ownership side-effects** (stamp / claim-commons / strip /
   guard) as wrapper-level behaviour — additive, the same class as branch-
   creation; the engine is untouched.
+- **`move-issue` gains a release:** a move back from In Progress releases the
+  owner through the release a close uses, and is refused where that release
+  cannot clear an owner (point 4,
+  [project-management:DEC-006-state-machine-and-cascade]).
 - **`handoff-issue` gains `--to-instance <N>`, `--to-instance self`,
   `--recursive`** and a same-assignee, marker-only transfer mode — a contract
   extension on [project-management:DEC-026-work-ownership-lifecycle], which
