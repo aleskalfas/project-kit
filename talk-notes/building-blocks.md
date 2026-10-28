@@ -458,3 +458,23 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - project-kit itself was not using it well until this week's cleanup
 - **Maintainer's notes:**
   - Decided 29 October: the headline is **"One project manager, many builders"**: you talk to one agent; it files and plans; it dispatches software-engineering builders in parallel, each in its own worktree; it runs the reviewers, brings the decisions to you, and lands what you approve (evidence: six builders in one evening, four pull requests merged). Seats and pools are one honest line: multi-clone parallel work exists and runs, but is experimental, the promise for what comes next.
+
+### 19b. software-engineering (draft, 29 October)
+
+*Facts checked against the repository on 29 October.*
+
+- **What:** code that agents write follows the project's own conventions, and code is reviewed before it merges (DEC-003). Small: 4 records, a README of some 3 000 words, and four agents:
+  - the **software-engineer**, the builder: it carries no coding opinions of its own and reads the project's conventions corpus first (the overlay names where it lives), then conforms to it (DEC-001); building a walking skeleton, it writes the conventions the skeleton settles into that corpus, for a person to accept (DEC-004)
+  - the **code-review panel** (DEC-002): a **code reviewer** (correctness, quality, interface design), a **security reviewer** (auth, secrets on the command line, shell injection, crypto, dependencies) and a **docs reviewer** (missing docs for new surface, docs that contradict the code, and the answers a change owes its documents). Each blocks only on an objective failure in its own remit, and posts the rest as comments.
+  - the panel plugs into project-management's merge gate through a connection point: every pull request that touches code requires the code, security and docs reviewers; every classified one requires the docs reviewer
+- **Problem:** an AI writes code in its own default style, not the project's; and code it writes is merged on a glance, or reviewed by the same agent that wrote it.
+- **Gain:**
+  - the builder follows your conventions, written down once, not its habits
+  - three independent reviewers on every code change, each blocking only on what it can prove, so a block means something
+  - nothing to wire: installing it adds its reviewers to the merge gate
+- **Evidence (this session):** every builder tonight was the software-engineer; the code reviewer blocked a board writer that could not find an org-owned board (fixed before merge); the docs reviewer blocked answers that were no longer true (UC-063, REQ-042); the security reviewer passed every change.
+- **Weak spot:**
+  - the conventions corpus is only as good as what the project wrote; an empty corpus leaves the builder with generic habits
+  - no rule set for code yet (the Python set decided on 28 October is still to be written)
+  - every review round costs three to five agent runs
+- **Maintainer's notes:**
