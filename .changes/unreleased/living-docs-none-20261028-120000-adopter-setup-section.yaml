@@ -1,0 +1,8 @@
+component: living-docs
+kind: none
+body: >
+  Internal. The README gains an "Adopter setup" section, as every other
+  capability's README has: the install command, what the install brings, the
+  configuration to fill in after it, in order, and what the capability needs.
+  The Dependencies section names uv, which runs its commands. Nothing you run
+  changes.

@@ -12,7 +12,7 @@ pkit:
         - .pkit/capabilities/living-docs/skills/**
         - .pkit/capabilities/living-docs/review-contributions.yaml
       record: ["living-docs:DEC-001", "living-docs:DEC-002", "doc-examples:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "COR-062#1", "COR-062#7", COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-053", "project-management:DEC-056", "software-analysis:DEC-001#10"]
-      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare", ".pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift", ".pkit/lifecycle/README.md#the-methodologys-literals", ".pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping", ".pkit/cli/README.md#configuration-file", ".pkit/cli/README.md#config-set-key-value---yes", ".pkit/cli/README.md#docs-record-location-capability-name---dry-run", ".pkit/cli/README.md#repository-base---base-ref---json", ".pkit/cli/README.md#sync", ".pkit/cli/README.md#status", ".pkit/cli/README.md#validate", ".pkit/cli/README.md#friction-check---base-ref---head-rev---json", ".pkit/cli/README.md#friction-debt---json", ".pkit/cli/README.md#friction-explain-artefact---json", ".pkit/cli/README.md#friction-artefacts---at-rev---json", ".pkit/cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run", ".pkit/cli/README.md#rule-sets-reach---at-rev---preview---json", ".pkit/cli/README.md#connections-resolve-address---json"]
+      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare", ".pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift", ".pkit/lifecycle/README.md#the-methodologys-literals", ".pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping", ".pkit/cli/README.md#capabilities--two-ways-in", ".pkit/cli/README.md#configuration-file", ".pkit/cli/README.md#config-set-key-value---yes", ".pkit/cli/README.md#docs-record-location-capability-name---dry-run", ".pkit/cli/README.md#repository-base---base-ref---json", ".pkit/cli/README.md#sync", ".pkit/cli/README.md#status", ".pkit/cli/README.md#validate", ".pkit/cli/README.md#friction-check---base-ref---head-rev---json", ".pkit/cli/README.md#friction-debt---json", ".pkit/cli/README.md#friction-explain-artefact---json", ".pkit/cli/README.md#friction-artefacts---at-rev---json", ".pkit/cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run", ".pkit/cli/README.md#rule-sets-reach---at-rev---preview---json", ".pkit/cli/README.md#connections-resolve-address---json"]
 ---
 
 # living-docs capability
@@ -30,6 +30,31 @@ Keep your documentation **true for the people who read it**, even when an agent 
 - **Anchors and friction.** Each page's anchors (code, decisions, [sources](#sources), analysis artefacts, the home of each fact it summarises) must ground everything it says. The core friction check (COR-050) flags a page when any of those changed and nobody revalidated it. A change writes its answers in answer files of its own, never in the page, so two branches that revalidate the same page never conflict over their answers (COR-062 point 1). Once both land, neither reading the other, the two revalidations were answered apart: the whole-repository check reports the page as debt, never stale, until the next revalidation that reads both judges the merged page (COR-062 point 7).
 - **Proposals, never blind edits.** The agent, `living-docs` ("The agent" below), proposes each fix with its evidence, and a person reviews it.
 - **Reader-review.** The agent reads a page as its declared reader and reports what that reader would miss or wouldn't need.
+
+## Adopter setup
+
+**What it needs.** uv on your `PATH`, which runs the capability's commands, and no other capability: project-management is optional ([Dependencies](#dependencies)).
+
+Install:
+
+```
+pkit capabilities install living-docs
+```
+
+The install copies the capability into `.pkit/capabilities/living-docs/`, deploys its `docs-author` skill and its `living-docs` agent, and provisions its query commands ([the CLI reference, "Capabilities — two ways in"](../../cli/README.md#capabilities--two-ways-in)). It writes none of your configuration, and never sets the two roots apart. On a fresh project, `pkit living-docs validate` then reports that neither space has a definition and that the two roots are one folder, and fails nothing.
+
+After install:
+
+1. **Declare the places outside both roots that hold pages,** such as your top-level `README.md`, if you have any. List each in `friction.places` with the page type, and assign it to a space under `places` in the capability's project configuration ([Declaring your spaces](#declaring-your-spaces)). Do it before you create that space, so that the space's definition takes the place into its scope. A place you assign later needs adding to that scope by hand.
+2. **Create the two spaces:** `pkit living-docs new space user`, then `pkit living-docs new space technical`. Where both roots are still `docs/`, the first command offers to move the internal root to `tech-docs/`, and needs `--yes` for that off a terminal ([A fresh project](#a-fresh-project-the-first-stamp-sets-the-roots-apart)). Each writes its space's definition and names it in the capability's project configuration, creating that file if it is absent. Create the spaces before you install a capability that places documents under the internal root, such as software-analysis.
+3. **Write your pages.** Stamp a new page with `pkit living-docs new page`, or give an existing document its `reader` and `kind` ([Pages](#pages)). Name the page each space's readers start from as the space's `entry-point`, in the capability's project configuration. On a project that has documentation already, the agent plans that work with you ([Onboarding an existing project](#onboarding-an-existing-project)).
+4. **Name your other readers.** A `user` and a `maintainer` are built in. A page written for anyone else names a reader you add in the readers point's project file ([Connections](#connections)).
+5. **Check your spaces** with `pkit living-docs validate`, until it reports no error ([Validation](#validation)). `pkit validate` runs the same check.
+
+Two steps are optional:
+
+- **Enforce friction.** Set `friction.mode` to `enforcing` with `pkit config set`, and make `pkit friction check` a required check of your continuous integration. A change that leaves an anchored page stale then fails there.
+- **With project-management installed,** grant the `living-docs` agent as the fixer of your pages ([project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)). The documentation check of project-management treats stale pages as advisory until you set `doc_check.sources.friction: enforcing` in its configuration ([Connections](#connections)).
 
 ## Pages
 
@@ -430,6 +455,8 @@ Shipped: the decision, the project configuration's schema, the declaration of th
 
 ## Dependencies
 
-None required. It works without analysis, work-tracking or testing capabilities, and each can enrich it.
+No other capability is required. It works without analysis, work-tracking or testing capabilities, and each can enrich it.
+
+Its commands are Python scripts that uv runs, each with the packages it declares, so uv must be on your `PATH`.
 
 project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 9). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.
