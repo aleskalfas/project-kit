@@ -48,6 +48,7 @@ their own, keeping their existing invocation path and patch point unchanged.
 Exports:
 
     ProjectLookup / BoardFieldsRead / ItemLookup — the three read results
+    ItemValueRead                   — one issue's card, and the option it holds
     FieldOptionsRead / ItemsRead / BoardItem — the workstream mutators' reads
     board_number(config)            — the configured board NUMBER, or None
     default_owner(config)           — `gh.default_owner`, or None
@@ -57,6 +58,7 @@ Exports:
     resolve_project_node_id(...)    — the same, as a bare `str | None`
     read_fields(...)                — the board's live fields + their options
     resolve_item_id(...)            — the issue's card (item) id on that board
+    read_item_value(...)            — the issue's card and the option it holds in one field
     read_field_options(...)         — a single-select's options, with colour + description
     read_items(...)                 — every card, with the option it holds in one field
     read_items_with_option(...)     — the cards whose value is one option
@@ -381,6 +383,93 @@ def resolve_item_id(
 
 
 @dataclass(frozen=True)
+class ItemValueRead:
+    """Outcome of reading one issue's card on a board, and the single-select
+    option it holds in one field.
+
+    Three answers, kept apart ([pkit:ADR-053] point 5): ``ok=False`` is a read
+    that failed, with `gh`'s words in ``error``; ``ok=True, item_id=None`` is a
+    board that answered and holds no card for the issue; ``ok=True`` with a card
+    and ``option_name=None`` is a card whose field is unset. The caller decides
+    what each means."""
+
+    ok: bool
+    item_id: str | None = None
+    option_id: str | None = None
+    option_name: str | None = None
+    error: str | None = None
+
+
+# The query of :func:`read_item_value`: the issue's cards, each with its board
+# and the single-select option it holds in one field.
+_ITEM_VALUE_QUERY = (
+    "query($issue: ID!, $field: String!) { node(id: $issue) { ... on Issue { "
+    f"projectItems(first: {_MAX_PROJECT_ITEMS}, includeArchived: true) "
+    "{ nodes { id project { id } fieldValueByName(name: $field) "
+    "{ ... on ProjectV2ItemFieldSingleSelectValue { optionId name } } } } } } }"
+)
+
+
+def read_item_value(
+    config: dict[str, Any],
+    *,
+    issue_node_id: str,
+    project_node_id: str,
+    field_name: str,
+    gh_call: GhCall | None = None,
+) -> ItemValueRead:
+    """The issue's card on `project_node_id`, and the option it holds in the
+    single-select `field_name`, through one GraphQL read.
+
+    The one-issue sibling of :func:`read_items`, keyed on the issue's own node id
+    as :func:`resolve_item_id` is. Neutral: it reports what the board said, and
+    takes no view on it."""
+    args = [
+        "gh",
+        "api",
+        "graphql",
+        "-f",
+        f"query={_ITEM_VALUE_QUERY}",
+        "-F",
+        f"issue={issue_node_id}",
+        "-f",
+        f"field={field_name}",
+    ]
+    proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
+    if proc is None:
+        return ItemValueRead(ok=False, error=error)
+    payload = _parse_json(proc.stdout)
+    data = payload.get("data") if isinstance(payload, dict) else None
+    node = data.get("node") if isinstance(data, dict) else None
+    items = node.get("projectItems") if isinstance(node, dict) else None
+    nodes = items.get("nodes") if isinstance(items, dict) else None
+    if not isinstance(nodes, list):
+        return ItemValueRead(
+            ok=False, error="`gh api graphql` returned no cards for the issue's Status read."
+        )
+    for item in nodes:
+        if not isinstance(item, dict):
+            continue
+        project = item.get("project")
+        item_id = item.get("id")
+        if not isinstance(project, dict) or project.get("id") != project_node_id:
+            continue
+        if not isinstance(item_id, str) or not item_id:
+            continue
+        value = item.get("fieldValueByName")
+        value = value if isinstance(value, dict) else {}
+        option = value.get("optionId")
+        name = value.get("name")
+        return ItemValueRead(
+            ok=True,
+            item_id=item_id,
+            option_id=option if isinstance(option, str) and option else None,
+            option_name=name if isinstance(name, str) and name else None,
+        )
+    return ItemValueRead(ok=True)
+
+
+@dataclass(frozen=True)
 class FieldOptionsRead:
     """Outcome of reading a single-select field's options in full.
 
@@ -401,13 +490,15 @@ class BoardItem:
     `number` is None for a draft card, which holds no issue. `kind` is what the
     card holds, as GitHub names it: `Issue`, `PullRequest` or `DraftIssue`.
     `repository` is an issue's `owner/name`, empty for anything else, and
-    `closed` whether that issue is closed. `option_id` and `option_name` are
-    the single-select option the card holds in the field read, None where it
-    holds none.
+    `closed` whether that issue is closed. `issue_id` is the issue's own node
+    id, by which a listing of issues is joined to its card, empty for anything
+    but an issue. `option_id` and `option_name` are the single-select option
+    the card holds in the field read, None where it holds none.
     """
 
     item_id: str
     number: int | None = None
+    issue_id: str = ""
     title: str = ""
     kind: str = ""
     repository: str = ""
@@ -506,7 +597,7 @@ _ITEMS_QUERY = (
     "query($project: ID!, $field: String!, $after: String) { node(id: $project) "
     "{ ... on ProjectV2 { items(first: 100, after: $after) { pageInfo "
     "{ hasNextPage endCursor } nodes { id content { __typename "
-    "... on Issue { number title body state repository { nameWithOwner } } "
+    "... on Issue { id number title body state repository { nameWithOwner } } "
     "... on PullRequest { number title } ... on DraftIssue { title } } "
     "fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
     "{ optionId name } } } } } } }"
@@ -586,11 +677,14 @@ def _board_item(item: Any) -> BoardItem | None:
     value = value if isinstance(value, dict) else {}
     option = value.get("optionId")
     option_name = value.get("name")
+    kind = str(content.get("__typename") or "")
+    issue_id = content.get("id") if kind == "Issue" else None
     return BoardItem(
         item_id=item_id,
         number=number if isinstance(number, int) else None,
+        issue_id=issue_id if isinstance(issue_id, str) else "",
         title=str(content.get("title") or ""),
-        kind=str(content.get("__typename") or ""),
+        kind=kind,
         repository=name if isinstance(name, str) else "",
         closed=str(content.get("state") or "").upper() == "CLOSED",
         option_id=option if isinstance(option, str) and option else None,

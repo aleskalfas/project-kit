@@ -177,11 +177,15 @@ class BoardTracker(Tracker):
             if "card" in self.fail_reads:
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             number = int(str(_field(argv, "issue")).removeprefix("I_"))
-            nodes = (
-                [{"id": self.cards[number]["id"], "project": {"id": PROJECT_ID}}]
-                if number in self.cards
-                else []
-            )
+            nodes = []
+            if number in self.cards:
+                node: dict[str, Any] = {
+                    "id": self.cards[number]["id"],
+                    "project": {"id": PROJECT_ID},
+                }
+                if "fieldValueByName" in query:
+                    node["fieldValueByName"] = self._value(number)
+                nodes.append(node)
             return _done(
                 argv, stdout=json.dumps({"data": {"node": {"projectItems": {"nodes": nodes}}}})
             )
@@ -193,15 +197,21 @@ class BoardTracker(Tracker):
             return _done(argv, stdout=json.dumps({"data": {"node": {"items": page}}}))
         raise AssertionError(f"unexpected gh api graphql call: {argv}")
 
+    def _value(self, number: int) -> dict[str, Any] | None:
+        """The Status the issue's card holds, as GraphQL gives a single-select's
+        value, or None for a card with none."""
+        status = self.cards[number]["status"]
+        return {"optionId": self.options[status], "name": status} if status else None
+
     def _card_node(self, number: int) -> dict[str, Any]:
         card = self.cards[number]
         issue = self.issues[number]
-        status = card["status"]
-        value = {"optionId": self.options[status], "name": status} if status else None
+        value = self._value(number)
         return {
             "id": card["id"],
             "content": {
                 "__typename": "Issue",
+                "id": f"I_{number}",
                 "number": number,
                 "title": issue["title"],
                 "body": issue["body"],
@@ -221,10 +231,12 @@ class BoardTracker(Tracker):
                 continue
             row = {
                 "number": number,
+                "id": f"I_{number}",
                 "title": issue["title"],
                 "body": issue["body"],
                 "state": issue["state"],
                 "labels": [{"name": name} for name in issue["labels"]],
+                "assignees": [{"login": login} for login in issue.get("assignees") or []],
                 "milestone": issue["milestone"],
                 "url": f"https://github.com/{self.repository}/issues/{number}",
             }

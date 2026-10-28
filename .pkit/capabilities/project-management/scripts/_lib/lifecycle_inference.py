@@ -31,6 +31,14 @@ exactly the four-step precedence above — the parity bar. The swap is a CHANGE 
 PREDICATE, not of the engine/position contract (DEC-033): first-matching-detection
 still wins; only WHICH reality the predicate reads changes.
 
+Where the map binds `state` to the board, an open issue's position is the one its
+card's Status names ([project-management:DEC-062-axes-chosen-in-the-map] point 5),
+taken here as an input, a :class:`StatusRead`, beside the labels and the
+milestone: this module reads no board, and stays pure. Closed is Done with no
+board read. A Status that places the issue in no open state, or a read that came
+to nothing, yields :data:`UNDETERMINED`, never a guess from the labels or the
+milestone ([project-management:DEC-051-axis-carriage-activation] point 6).
+
 The lifecycle's classifier built on top of this (`detect-state`, which every
 state names) answers the one state this returns, so at most one state's
 detection is true and the order of states in workflow.yaml decides nothing
@@ -55,13 +63,99 @@ it into `infer_current_state`.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
+from typing import Literal
 
-from _lib import axis_labels, default_branch, friction_answers
+from _lib import axis_carriage, axis_labels, default_branch, friction_answers
 from _lib.checkbox_gate import unticked_boxes  # noqa: F401 — re-export
 
 # Canonical state ordering — the one move-issue's forward checks and the forward
 # cascade read.
 STATE_ORDER = ["todo", "backlog", "in-progress", "review", "done"]
+
+#: The states a board's Status can place an open issue in: a closed issue is
+#: Done whatever its card says ([project-management:DEC-062-axes-chosen-in-the-map]
+#: point 5).
+OPEN_STATES = ("todo", "backlog", "in-progress", "review")
+
+#: The position of an open issue whose board-carried state its card's Status does
+#: not give ([project-management:DEC-051-axis-carriage-activation] point 6). It
+#: is no state of the lifecycle, so no command acts on it as one: each reads it
+#: as a position it cannot tell, never as a guess.
+UNDETERMINED = "undetermined"
+
+#: What the board's Status read of one open issue came to.
+StatusOutcome = Literal["placed", "unreadable", "no-card", "unset", "not-open"]
+
+
+@dataclass(frozen=True)
+class StatusRead:
+    """The board's Status of one open issue, as a read of it came out, where the
+    map binds state to the board (DEC-051 point 6). Pure data: a command reads
+    it through `_lib/board_status`, and :func:`infer_current_state` takes it
+    beside the labels and the milestone.
+
+    ``outcome`` is one of four, each its own: ``placed`` with ``state`` the open
+    state its Status names; ``unreadable``, the board could not be read, with
+    what was said in ``said``; ``no-card``; ``unset``; and ``not-open``, a
+    Status naming no open state, the option in ``said``. ``board`` names the
+    board, as `board #4`."""
+
+    outcome: StatusOutcome
+    state: str | None = None
+    said: str = ""
+    board: str = "the board"
+
+    def finding(self, number: int) -> str:
+        """Why issue ``number``'s position is not read from the board, in one
+        sentence a command prints; empty where its Status placed it."""
+        if self.outcome == "placed":
+            return ""
+        if self.outcome == "unreadable":
+            return f"the board's Status of #{number} could not be read: {self.said}"
+        if self.outcome == "no-card":
+            return (
+                f"#{number} has no card on {self.board}, so its position cannot be "
+                "read from the board's Status"
+            )
+        if self.outcome == "unset":
+            return (
+                f"#{number}'s card on {self.board} has no Status, so its position "
+                "cannot be read from it"
+            )
+        return (
+            f"#{number}'s card on {self.board} has the Status {self.said!r}, which "
+            "names no open state, so its position cannot be read from it"
+        )
+
+    def remedy(self, number: int) -> str:
+        """What lets the read place the issue, for the line under the finding."""
+        if self.outcome == "unreadable":
+            return "fix what `gh` said above, then run this again"
+        if self.outcome == "no-card":
+            return (
+                f"add #{number} to {self.board} and set its Status to where the issue "
+                "stands, then run this again"
+            )
+        return (
+            f"set the Status of #{number}'s card to where the issue stands: Todo, "
+            "Backlog, In Progress or Review, then run this again"
+        )
+
+
+def filing_state(milestone: dict | None) -> str:
+    """The state a new issue is filed into: Backlog with a milestone, which is
+    the scheduling DEC-006's Todo → Backlog gate takes, else Todo — where the
+    lifecycle reads a new open issue with no state label."""
+    return "backlog" if milestone else "todo"
+
+
+def state_is_board_carried(substrate_map: axis_labels.SubstrateMap | None) -> bool:
+    """Whether the map binds state to the board, asked of the carriage accessor:
+    the board's Status is then the source of an open issue's position
+    ([project-management:DEC-062-axes-chosen-in-the-map] point 5). No I/O; the
+    board flag carries no axis, so the configuration is not consulted."""
+    return axis_carriage.is_board_carried("state", None, substrate_map)
 
 
 def workflow_process(workflow: dict | None) -> dict:
@@ -124,10 +218,20 @@ def infer_current_state(
     milestone: dict | None,
     labels: list[str],
     substrate_map: axis_labels.SubstrateMap | None = None,
+    status: StatusRead | None = None,
 ) -> str:
     """Best-effort live position — reproduces move-issue `_infer_current_state`.
 
-    Two arms, selected by the adopter's substrate-map (ADR-026 §5, DEC-033):
+    **Board-carried `state` (the map binds `state: {board: true}`).** A closed
+    issue is Done, with no board read. An open issue stands where its card's
+    Status places it: ``status``, as the caller read it through
+    `_lib/board_status`. Where the Status does not place it — the board could
+    not be read, no card, no Status, a Status naming no open state, or no read
+    given — the position is :data:`UNDETERMINED`, and neither the labels nor
+    the milestone are read in its place, so nothing is guessed
+    ([project-management:DEC-051-axis-carriage-activation] point 6).
+
+    Otherwise two arms, selected by the adopter's substrate-map (ADR-026 §5, DEC-033):
 
     **Greenfield / non-derive `state` (``substrate_map is None``, OR present but
     `state` is not `derive`-bound).** The kit `state:*` precedence, UNCHANGED —
@@ -163,6 +267,12 @@ def infer_current_state(
     read agrees with how move-issue / close-issue WRITE under a derive map (they
     write/strip no kit `state:*` label; the open/closed substrate carries state).
     """
+    if state_is_board_carried(substrate_map):
+        if state == "closed":
+            return "done"
+        placed = status.state if status is not None and status.outcome == "placed" else None
+        return placed if placed is not None and placed in OPEN_STATES else UNDETERMINED
+
     derive = axis_labels.state_derive_binding(substrate_map)
     if derive is not None:
         # Derive-bound `state`: resolve from open/closed (+ blocked label),
@@ -189,6 +299,7 @@ def state_before_close(
     labels: list[str],
     closed: bool,
     substrate_map: axis_labels.SubstrateMap | None = None,
+    status: StatusRead | None = None,
 ) -> str | None:
     """Where an issue was in the lifecycle before it closed — the state the move
     to `done` a close makes starts from (#1231) — or None where nothing says.
@@ -213,7 +324,20 @@ def state_before_close(
 
     None, too, under a `derive`-bound `state`: open/closed is then the only state
     the issue carries, so nothing records where in the lifecycle it was.
+
+    Where the map binds state to the board, the card's Status, ``status``,
+    records it: a merge's close leaves the card where the work was, such as at
+    Review. None where the Status places the issue in no open state.
     """
+    if state_is_board_carried(substrate_map):
+        placed = infer_current_state(
+            state="open",
+            milestone=milestone,
+            labels=labels,
+            substrate_map=substrate_map,
+            status=status,
+        )
+        return None if placed == UNDETERMINED else placed
     if axis_labels.state_derive_binding(substrate_map) is not None:
         return None
     if (

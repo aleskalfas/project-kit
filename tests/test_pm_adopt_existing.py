@@ -676,8 +676,10 @@ def test_labels_win_over_a_board_field_but_the_overlap_is_reported(ae, monkeypat
 
 
 def test_board_declarable_axes_match_the_schema(ae) -> None:
-    """`type` and `state` refuse the arm in the schema, so the ceremony must never
-    draft it for them — a draft it emits has to validate."""
+    """`type` refuses the arm in the schema, so the ceremony must never draft it
+    for it — a draft it emits has to validate. `state` admits the arm, and the
+    ceremony leaves it to the project, which binds its state to its board only by
+    its own choice (DEC-062 point 5)."""
     schema = json.loads(SUBSTRATE_MAP_SCHEMA.read_text(encoding="utf-8"))
     axis_props = schema["properties"]["axes"]["properties"]
     admitted = {
@@ -685,7 +687,9 @@ def test_board_declarable_axes_match_the_schema(ae) -> None:
         for axis, spec in axis_props.items()
         if spec.get("not", {}).get("required") != ["board"]
     }
-    assert set(ae.BOARD_DECLARABLE_AXES) == admitted == {"priority", "workstream"}
+    assert admitted == {"priority", "workstream", "state"}
+    assert set(ae.BOARD_DRAFTED_AXES) == {"priority", "workstream"}
+    assert set(ae.BOARD_DRAFTED_AXES) <= admitted
 
 
 def test_detection_is_scoped_to_the_declarable_axes(ae, monkeypatch) -> None:

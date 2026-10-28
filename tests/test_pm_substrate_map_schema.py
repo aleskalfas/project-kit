@@ -108,6 +108,19 @@ def test_kit_label_binding_accepted_on_every_axis(
     assert _errors(validator, _doc({axis: {"kit-label": True}})) == []
 
 
+@pytest.mark.parametrize("axis", ["priority", "workstream", "state"])
+def test_board_binding_accepted(validator: Draft202012Validator, axis: str) -> None:
+    """`state` admits the arm now that its reader exists (project-management
+    DEC-051 point 2): the board's Status is then the source of an open issue's
+    position."""
+    assert _errors(validator, _doc({axis: {"board": True}})) == []
+
+
+def test_board_binding_on_type_rejected(validator: Draft202012Validator) -> None:
+    """PR-title alignment reads the type label: `type` never admits the arm."""
+    assert _errors(validator, _doc({"type": {"board": True}}))
+
+
 def test_kit_label_false_rejected(validator: Draft202012Validator) -> None:
     """Parameterless and `const: true`, as `unsupported` and `board` are."""
     assert _errors(validator, _doc({"priority": {"kit-label": False}}))

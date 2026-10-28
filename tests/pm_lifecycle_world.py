@@ -272,6 +272,7 @@ class Tracker:
         issue = self.issues[number]
         row = {
             "number": number,
+            "id": f"I_{number}",
             "title": issue["title"],
             "body": issue["body"],
             "state": issue["state"],
@@ -303,6 +304,7 @@ class Tracker:
             return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
         issue = self.issues[number]
         record = {
+            "id": f"I_{number}",
             "title": issue["title"],
             "body": issue["body"],
             "state": issue["state"],

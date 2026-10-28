@@ -89,9 +89,9 @@ def _write_hooks(cap_root: Path, body: str) -> Path:
 
 
 def test_board_declarable_axes_match_the_schema(pc) -> None:
-    """The arm is admissible on `priority` and `workstream` ONLY — `type` and
-    `state` carry a `not: {required: [board]}` in the schema. pre-check's tuple
-    has to agree with the schema, or it recommends a map `pkit schemas validate`
+    """The arm is admissible on `priority`, `workstream` and `state` — `type`
+    carries a `not: {required: [board]}` in the schema. pre-check's tuple has to
+    agree with the schema, or it recommends a map `pkit schemas validate`
     rejects."""
     schema = json.loads(
         (
@@ -110,7 +110,7 @@ def test_board_declarable_axes_match_the_schema(pc) -> None:
         if spec.get("not", {}).get("required") == ["board"]
     }
     admitted = set(axis_props) - refused
-    assert set(pc.BOARD_DECLARABLE_AXES) == admitted == {"priority", "workstream"}
+    assert set(pc.BOARD_DECLARABLE_AXES) == admitted == {"priority", "workstream", "state"}
 
 
 # =========================================================================
@@ -206,15 +206,14 @@ def test_unreadable_config_does_not_manufacture_a_failure(pc, axis_labels) -> No
     assert all(r.status != "fail" for r in results)
 
 
-def test_board_arm_on_state_is_not_read_as_declared(pc, axis_labels) -> None:
-    """`state` cannot carry the arm (the schema refuses it), so a hand-written
-    `state: {board: true}` is a map `pkit schemas validate` rejects. pre-check
-    must not treat it as a declaration and must not fail on it either — the
-    schema validator owns that refusal, and duplicating it here would double-
-    report one error."""
+def test_board_arm_on_state_without_a_board_fails(pc, axis_labels) -> None:
+    """`state` admits the arm (DEC-051 point 2, now that its reader exists), so
+    `state: {board: true}` with no configured board is unsatisfiable as on any
+    other axis: there is no board whose Status could say where an issue stands."""
     sm = _map(axis_labels, {"state": {"board": True}})
     results = pc._check_substrate_board_arm_satisfiable(NO_BOARD_CONFIG, sm)
-    assert all(r.status != "fail" for r in results)
+    fails = [r for r in results if r.status == "fail"]
+    assert len(fails) == 1 and "state" in fails[0].label
 
 
 # =========================================================================

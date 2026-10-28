@@ -98,7 +98,7 @@ def test_a_write_sets_the_cards_status_and_reads_the_board_once_per_run(
     board.card(7, "Todo")
     board.issues[8] = dict(board.issues[7])
     board.card(8)
-    status = board_status.Projector(BOARD_CONFIG, WORKFLOW)
+    status = board_status.StatusBoard(BOARD_CONFIG, WORKFLOW)
 
     first = status.write(7, "in-progress")
     second = status.write(8, "backlog")
@@ -112,7 +112,7 @@ def test_a_write_sets_the_cards_status_and_reads_the_board_once_per_run(
 
 def test_a_write_given_the_card_looks_up_no_card(board: BoardTracker) -> None:
     board.card(7)
-    status = board_status.Projector(BOARD_CONFIG, WORKFLOW)
+    status = board_status.StatusBoard(BOARD_CONFIG, WORKFLOW)
 
     assert status.write(7, "todo", item_id="PVTI_7").ok
 
@@ -143,7 +143,7 @@ def test_a_write_that_cannot_be_made_says_why_in_one_line(
     if setup == "no option":
         del board.options["Review"]
 
-    written = board_status.Projector(BOARD_CONFIG, WORKFLOW).write(7, state)
+    written = board_status.StatusBoard(BOARD_CONFIG, WORKFLOW).write(7, state)
 
     assert not written.ok
     assert written.failure is not None and says in written.failure
@@ -184,7 +184,7 @@ def test_the_board_is_found_under_its_owner(
         dict(BOARD_CONFIG, gh={"default_owner": default_owner}) if default_owner else BOARD_CONFIG
     )
 
-    written = board_status.Projector(config, WORKFLOW).write(7, "review")
+    written = board_status.StatusBoard(config, WORKFLOW).write(7, "review")
 
     assert written.ok, written.failure
     assert board.edits == [(7, "Review")]
@@ -200,7 +200,9 @@ def test_a_caller_that_holds_the_repositorys_owner_reads_no_repository(
     board.card(7)
 
     assert (
-        board_status.Projector(BOARD_CONFIG, WORKFLOW, repository_owner="acme").write(7, "todo").ok
+        board_status.StatusBoard(BOARD_CONFIG, WORKFLOW, repository_owner="acme")
+        .write(7, "todo")
+        .ok
     )
 
     assert _owners(board) == {"acme"}
@@ -233,3 +235,103 @@ def test_a_status_field_that_is_no_single_select_is_named(board: BoardTracker) -
 
     assert read.field is None
     assert read.error == "the board's `Status` field is a ProjectV2Field, not a single-select"
+
+
+# --- what the Status is to a project (DEC-062 point 5) -------------------------
+
+ON_BOARD = axis_labels.SubstrateMap(axes={"state": {"board": True}})
+
+
+@pytest.mark.parametrize(
+    ("config", "substrate_map", "role"),
+    [
+        (BOARD_CONFIG, ON_BOARD, "source"),
+        # The map binds state to the board; the board missing from the config is
+        # a read that fails, never a projection (ADR-053 point 2).
+        ({}, ON_BOARD, "source"),
+        (BOARD_CONFIG, None, "projection"),
+        (BOARD_CONFIG, LABEL_MAP, "projection"),
+        (BOARD_CONFIG, axis_labels.SubstrateMap(axes={}), None),
+        ({}, None, None),
+    ],
+)
+def test_the_status_is_the_source_the_projection_or_nothing(config, substrate_map, role) -> None:
+    assert board_status.role(config, substrate_map) == role
+
+
+# --- reading a board-carried state (DEC-051 point 6) ---------------------------
+
+
+def test_a_status_naming_an_open_state_places_the_issue(board: BoardTracker) -> None:
+    board.card(7, "In Progress")
+
+    read = board_status.StatusBoard(BOARD_CONFIG, WORKFLOW).read(7)
+
+    assert (read.outcome, read.state) == ("placed", "in-progress")
+    assert read.finding(7) == ""
+
+
+@pytest.mark.parametrize(
+    ("setup", "outcome", "says"),
+    [
+        ("fields", "unreadable", "the board's Status of #7 could not be read: missing required"),
+        ("card", "unreadable", "could not be read: HTTP 502: Bad Gateway"),
+        ("no card", "no-card", "#7 has no card on board #4"),
+        ("unset", "unset", "#7's card on board #4 has no Status"),
+        ("done", "not-open", "has the Status 'Done', which names no open state"),
+        ("blocked", "not-open", "has the Status 'Blocked', which names no open state"),
+    ],
+)
+def test_each_status_that_does_not_place_the_issue_is_its_own_outcome(
+    board: BoardTracker, setup: str, outcome: str, says: str
+) -> None:
+    """Four outcomes, each its own message, none placing the issue: the board
+    cannot be read, no card, no Status, a Status naming no open state."""
+    board.options["Blocked"] = "opt-blocked"
+    if setup != "no card":
+        status = {"unset": None, "done": "Done", "blocked": "Blocked"}.get(setup, "Todo")
+        board.card(7, status)
+    if setup in ("fields", "card"):
+        board.fail_reads.add(setup)
+
+    read = board_status.StatusBoard(BOARD_CONFIG, WORKFLOW).read(7)
+
+    assert read.outcome == outcome
+    assert read.state is None
+    assert says in read.finding(7)
+    assert board.edits == []
+
+
+def test_an_option_is_read_back_to_its_state_whatever_its_case() -> None:
+    assert board_status.state_of_option(WORKFLOW, "In Progress") == "in-progress"
+    assert board_status.state_of_option(WORKFLOW, "in progress") == "in-progress"
+    assert board_status.state_of_option(WORKFLOW, "Blocked") is None
+
+
+def test_the_snapshot_reads_every_cards_status_in_one_read(board: BoardTracker) -> None:
+    for number, status in ((7, "Backlog"), (8, None), (9, "Done")):
+        board.issues[number] = dict(board.issues[7])
+        board.card(number, status)
+    board.issues[10] = dict(board.issues[7])
+
+    snapshot, failure = board_status.read_snapshot(BOARD_CONFIG, WORKFLOW)
+
+    assert snapshot is not None and failure == ""
+    assert (snapshot.read("I_7").outcome, snapshot.read("I_7").state) == ("placed", "backlog")
+    assert snapshot.read("I_8").outcome == "unset"
+    assert snapshot.read("I_9").outcome == "not-open"
+    assert snapshot.read("I_10").outcome == "no-card"
+    assert snapshot.read(None).outcome == "no-card"
+    reads = [argv for argv in board.board_calls() if argv[1:3] == ["api", "graphql"]]
+    assert len(reads) == 1
+
+
+def test_a_snapshot_of_a_board_that_cannot_be_read_is_none_and_says_why(
+    board: BoardTracker,
+) -> None:
+    board.fail_reads.add("items")
+
+    snapshot, failure = board_status.read_snapshot(BOARD_CONFIG, WORKFLOW)
+
+    assert snapshot is None
+    assert "missing required scopes [read:project]" in failure

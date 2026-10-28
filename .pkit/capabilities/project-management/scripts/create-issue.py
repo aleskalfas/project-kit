@@ -788,8 +788,14 @@ def main() -> int:
     board_id = args.board if args.board is not None else config.get("projects_v2_board_id")
     if has_board:
         print(f"  board:      v2/{board_id}  (auto-add per DEC-019)")
-        if board_status.maintained(dict(config, projects_v2_board_id=board_id), substrate_map):
+        role = board_status.role(dict(config, projects_v2_board_id=board_id), substrate_map)
+        if role == "projection":
             print("  status:     the card's Status set to the issue's state (DEC-006)")
+        elif role == "source":
+            print(
+                "  status:     the card's Status set to the state the issue is filed into, "
+                "the state's source (DEC-062 point 5)"
+            )
 
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
@@ -936,6 +942,13 @@ def main() -> int:
                 f"[warn] issue created but failed to add to board v2/{board_id}.",
                 file=sys.stderr,
             )
+            if board_status.role(config, substrate_map) == "source":
+                print(
+                    "  The board carries the state, so the issue's position cannot be read "
+                    "until it has a card and a Status: add it to the board and set its "
+                    "Status (DEC-051 point 6).",
+                    file=sys.stderr,
+                )
         else:
             owner = _owner_from_issue_url(issue_url)
             project_node_id = _resolve_project_node_id(board_id, owner, config)
@@ -1637,21 +1650,38 @@ def _set_first_status(
 ) -> None:
     """Set the new card's Status to the state the issue was filed in (DEC-006).
 
-    Only where the board's Status is a projection this project keeps: a board,
-    and the state not carried on it (`_lib/board_status`). The state is read as
+    Where the board's Status is a projection this project keeps — a board, and
+    the state carried off it (`_lib/board_status`) — the state is read as
     `_lib/lifecycle_inference` reads an open issue's: Todo, or Backlog with a
-    milestone. ``board_config`` names the board the card was added to, `--board`
-    included, and ``owner`` is the repository's owner, read from the issue's url,
-    by which the board is found where `gh.default_owner` is unset. A write that
-    fails is one line, and the issue stays filed."""
-    if not board_status.maintained(board_config, substrate_map):
+    milestone. Where the map binds the state to the board, the Status is its
+    source (DEC-062 point 5), and the issue is filed into Backlog with a
+    milestone, Todo otherwise, as the lifecycle reads a new issue's state with no
+    label: the write puts it there. Where a present map leaves the state out,
+    nothing is written. ``board_config`` names the board the card was added to,
+    `--board` included, and ``owner`` is the repository's owner, read from the
+    issue's url, by which the board is found where `gh.default_owner` is unset. A
+    write that fails is one line, and the issue stays filed."""
+    role = board_status.role(board_config, substrate_map)
+    if role is None:
         return
     milestone = {"title": milestone_title} if milestone_title else None
-    state = infer.infer_current_state(
-        state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
+    if role == "source":
+        state = infer.filing_state(milestone)
+    else:
+        state = infer.infer_current_state(
+            state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
+        )
+    status = board_status.StatusBoard(board_config, workflow, repository_owner=owner)
+    written = status.write(number, state, item_id=item_id)
+    if role == "projection" or written.ok:
+        board_status.report(written, stands="the issue is filed")
+        return
+    print(
+        f"{written.line()}; the issue is filed, and the board carries its state, so its "
+        "position cannot be read until its card has a Status: set it on the board "
+        "(DEC-051 point 6)",
+        file=sys.stderr,
     )
-    status = board_status.Projector(board_config, workflow, repository_owner=owner)
-    board_status.report(status.write(number, state, item_id=item_id), stands="the issue is filed")
 
 
 def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> str | None:

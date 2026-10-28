@@ -919,9 +919,10 @@ def _check_substrate_capability_matrix(
 # admissibility set, per [project-management:DEC-051] decision point 2 and the
 # schema's per-axis `not: {required: [board]}` restrictions. `type` is never
 # among them: PR-title alignment reads it, and a board field is invisible from a
-# PR. The board flag claims no axis of its own (DEC-062 point 1), so an axis is
-# on the board only where the map declares it so.
-BOARD_DECLARABLE_AXES: tuple[str, ...] = ("priority", "workstream")
+# PR. On `state` the board's Status is the source of an open issue's position
+# (DEC-062 point 5). The board flag claims no axis of its own (DEC-062 point 1),
+# so an axis is on the board only where the map declares it so.
+BOARD_DECLARABLE_AXES: tuple[str, ...] = ("priority", "workstream", "state")
 
 
 def _axis_declares_board(axis: str, substrate_map: axis_labels.SubstrateMap) -> bool:
@@ -1013,9 +1014,7 @@ def _check_substrate_board_arm_satisfiable(
             remediation=(
                 f"Make the two files agree about `{axis}`. If you DO have a board: "
                 f"set `has_projects_v2_board: true` (and `projects_v2_board_id`) in "
-                f"project/config.yaml, and declare the field on an "
-                f"`after_create_issue` `set-board-field` hook — the map's arm is "
-                f"parameterless, so the hook is where the field's identity lives. "
+                f"project/config.yaml, {_board_field_where(axis)} "
                 f"If you do NOT have a board: replace `board: true` with the "
                 f"substrate that actually carries `{axis}` (a `label:` remap onto "
                 f"your own labels, or a `title-prefix:` remap), or "
@@ -1027,6 +1026,22 @@ def _check_substrate_board_arm_satisfiable(
         )
         for axis in declaring
     ]
+
+
+def _board_field_where(axis: str) -> str:
+    """Where the board field an axis bound `board: true` lives is declared: the
+    board's own Status for `state`, which the capability reads and writes by its
+    name (DEC-062 point 5), and an `after_create_issue` hook for the others."""
+    if axis == "state":
+        return (
+            "and give the board a single-select `Status` field offering the five "
+            "states: the capability reads and writes it by that name."
+        )
+    return (
+        "and declare the field on an `after_create_issue` `set-board-field` hook — "
+        "the map's arm is parameterless, so the hook is where the field's identity "
+        "lives."
+    )
 
 
 def _check_board_arm_default_has_hook(
@@ -1062,10 +1077,13 @@ def _check_board_arm_default_has_hook(
     the `default:` describes, it does not make the axis unsatisfiable — the value
     can still be set per-issue. Same posture as the DEC-042 contributed-label warn.
     """
+    # `state` is left out: its board field is the Status, which the capability
+    # writes on every move and at filing (DEC-062 point 5), so no hook seeds it.
     armed_with_default = [
         axis
         for axis in BOARD_DECLARABLE_AXES
-        if _axis_declares_board(axis, substrate_map)
+        if axis != "state"
+        and _axis_declares_board(axis, substrate_map)
         and isinstance(substrate_map.axes.get(axis, {}).get("default"), str)
     ]
     if not armed_with_default:

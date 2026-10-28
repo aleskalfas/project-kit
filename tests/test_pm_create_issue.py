@@ -1382,12 +1382,39 @@ def test_a_first_status_not_written_is_one_line_and_the_issue_stands(
     ) in capsys.readouterr().err
 
 
-def test_no_first_status_is_written_where_the_board_carries_the_state(
-    ci, tmp_path, monkeypatch
+def test_the_first_status_is_the_states_source_where_the_board_carries_it(
+    ci, tmp_path, monkeypatch, capsys
 ) -> None:
-    """The map binds state to the board: its Status is the state's source, which
-    create-issue leaves as it was (#2271)."""
+    """The map binds state to the board: its Status is the state's source
+    (DEC-062 point 5), and the new card's Status puts the issue where it is filed,
+    Todo with no milestone (#2271)."""
     board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == [(42, "Todo")]
+    out = capsys.readouterr().out
+    assert "the state the issue is filed into, the state's source (DEC-062 point 5)" in out
+    assert "[board] #42: Status set to 'Todo'" in out
+
+
+def test_a_first_status_not_written_where_the_board_carries_the_state_says_so(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES)
+    board.fail_edits.add(42)
+
+    assert ci.main() == 0
+
+    err = capsys.readouterr().err
+    assert "the board carries its state, so its position cannot be read until its card" in err
+    assert "sync-board" not in err
+
+
+def test_no_first_status_is_written_where_the_state_degrades(ci, tmp_path, monkeypatch) -> None:
+    """A present map leaving the state out writes no Status (DEC-062 point 5)."""
+    axes = {axis: binding for axis, binding in BOARD_AXES.items() if axis != "state"}
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=axes)
 
     assert ci.main() == 0
 

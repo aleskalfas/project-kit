@@ -531,3 +531,97 @@ def test_read_items_surfaces_stderr_verbatim(bf) -> None:
         gh_call=_runner(returncode=1, stderr="missing: 'read:project'"),
     )
     assert read.ok is False and read.error == "missing: 'read:project'"
+
+
+def test_read_items_names_the_issue_each_card_holds_by_its_node_id(bf) -> None:
+    """A listing of issues is joined to its cards by the issue's node id (#2271);
+    a card holding no issue names none."""
+    card = _issue_card("I1", 1)
+    card["content"]["id"] = "I_kwDO1"
+    pull = {"id": "I5", "content": {"__typename": "PullRequest", "id": "PR_x", "number": 5}}
+    read = bf.read_items(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(_page([card, pull])),
+    )
+    assert [i.issue_id for i in read.items] == ["I_kwDO1", ""]
+
+
+# --- one issue's card, and the option it holds (#2271) --------------------------
+
+
+def _item_value_payload(*cards: tuple[str, str, tuple[str, str] | None]) -> str:
+    nodes = [
+        {
+            "id": item_id,
+            "project": {"id": project_id},
+            "fieldValueByName": {"optionId": option[0], "name": option[1]} if option else None,
+        }
+        for item_id, project_id, option in cards
+    ]
+    return json.dumps({"data": {"node": {"projectItems": {"nodes": nodes}}}})
+
+
+def test_read_item_value_reads_the_option_the_issues_card_holds(bf) -> None:
+    calls: list = []
+    read = bf.read_item_value(
+        BOARD_CONFIG,
+        issue_node_id="I_1",
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(
+            _item_value_payload(
+                ("PVTI_other", "PVT_2", ("opt_x", "Done")),
+                ("PVTI_1", "PVT_1", ("opt_ip", "In Progress")),
+            ),
+            calls=calls,
+        ),
+    )
+    assert (read.ok, read.item_id, read.option_id, read.option_name) == (
+        True,
+        "PVTI_1",
+        "opt_ip",
+        "In Progress",
+    )
+    assert "field=Status" in calls[0]["args"] and "issue=I_1" in calls[0]["args"]
+
+
+def test_read_item_value_keeps_no_card_unset_and_unread_apart(bf) -> None:
+    """Three answers the caller tells apart (ADR-053 point 5): no card on this
+    board, a card whose field is unset, and a read that failed."""
+    no_card = bf.read_item_value(
+        BOARD_CONFIG,
+        issue_node_id="I_1",
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(_item_value_payload(("PVTI_other", "PVT_2", None))),
+    )
+    unset = bf.read_item_value(
+        BOARD_CONFIG,
+        issue_node_id="I_1",
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(_item_value_payload(("PVTI_1", "PVT_1", None))),
+    )
+    unread = bf.read_item_value(
+        BOARD_CONFIG,
+        issue_node_id="I_1",
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(returncode=1, stderr="missing: 'read:project'"),
+    )
+    assert (no_card.ok, no_card.item_id) == (True, None)
+    assert (unset.ok, unset.item_id, unset.option_name) == (True, "PVTI_1", None)
+    assert (unread.ok, unread.error) == (False, "missing: 'read:project'")
+
+
+def test_read_item_value_refuses_a_payload_with_no_cards(bf) -> None:
+    read = bf.read_item_value(
+        BOARD_CONFIG,
+        issue_node_id="I_1",
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner("{}"),
+    )
+    assert read.ok is False

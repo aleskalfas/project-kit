@@ -38,14 +38,18 @@ from __future__ import annotations
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent.parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from _lib import axis_labels, body_parent_ref, containment
+from _lib import axis_labels, board_fields, board_status, body_parent_ref, containment
 from _lib import lifecycle_inference as infer
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import resolve_capability_root
@@ -69,6 +73,11 @@ def _indeterminate(reason: str) -> dict[str, Any]:
 # set the query actually fetches: the issue-corpus ceiling now lives behind the
 # containment seam, which owns acquisition (ADR-035 §5).
 _MERGED_PRS_LIMIT = 100
+
+# The fields of the corpus the descendant walk reads, and with the issue's node
+# id, by which each row is joined to its card where the board carries the state.
+_CORPUS_FIELDS = "number,body,state,labels,milestone"
+_CORPUS_FIELDS_WITH_ID = f"{_CORPUS_FIELDS},id"
 
 
 # --- shared issue access --------------------------------------------------
@@ -129,7 +138,16 @@ def _say_unread(issue_number: int, cause: str, said: str = "") -> None:
 # --- position detection ---------------------------------------------------
 
 
-def _inferred_state(issue_number: int) -> str | dict[str, Any]:
+@dataclass(frozen=True)
+class _Position:
+    """Where one read of an issue places it: the inferred value, and, where the
+    board's Status leaves it undetermined, the finding that says why."""
+
+    state: str
+    finding: str = ""
+
+
+def _inferred_state(issue_number: int) -> _Position | dict[str, Any]:
     """The issue's live position by move-issue's exact precedence
     (`infer_current_state`), from ONE read of the issue — or, when it cannot be
     read, the indeterminate payload saying why. The one function the classifier
@@ -140,21 +158,59 @@ def _inferred_state(issue_number: int) -> str | dict[str, Any]:
     `derive` predicate the position resolves from open/closed (+ a blocked label)
     rather than a kit `state:*` label — `open` or `blocked`, values the lifecycle
     does not declare. No map ⇒ the kit `state:*` precedence, byte-unchanged.
+
+    Where the map binds `state` to the board, an open issue's position is read
+    from its card's Status, through `_lib/board_status`
+    ([project-management:DEC-051-axis-carriage-activation] point 6). A board
+    that cannot be read is no answer: the indeterminate payload, so the engine
+    holds every state indeterminate. No card, no Status, or a Status naming no
+    open state is an answer — the issue is in none of the lifecycle's states —
+    carried with its finding.
     """
     capability_root = _capability_root()
     if capability_root is None:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    issue = _fetch_issue(issue_number, config, "state,milestone,labels")
+    on_board = infer.state_is_board_carried(substrate_map)
+    fields = "state,milestone,labels,id,url" if on_board else "state,milestone,labels"
+    issue = _fetch_issue(issue_number, config, fields)
     if issue is None:
         return _indeterminate(f"could not read issue #{issue_number} (gh failure)")
-    return infer.infer_current_state(
+    status = None
+    if on_board and str(issue.get("state", "")).lower() != "closed":
+        board = board_status.StatusBoard(
+            config,
+            _workflow(capability_root),
+            repository_owner=board_fields.url_owner(str(issue.get("url") or "")),
+        )
+        node_id = issue.get("id")
+        status = board.read(
+            issue_number, issue_node_id=node_id if isinstance(node_id, str) else None
+        )
+        if status.outcome == "unreadable":
+            print(status.finding(issue_number), file=sys.stderr)
+            return _indeterminate(f"the board's Status of #{issue_number} could not be read")
+    state = infer.infer_current_state(
         state=str(issue.get("state", "")).lower(),
         milestone=issue.get("milestone") or {},
         labels=_issue_labels(issue),
         substrate_map=substrate_map,
+        status=status,
     )
+    finding = status.finding(issue_number) if status is not None else ""
+    return _Position(state, finding if state == infer.UNDETERMINED else "")
+
+
+def _workflow(capability_root: Path) -> dict[str, Any]:
+    """The lifecycle's workflow.yaml, by whose display names a Status option is
+    read back to a state; empty where it cannot be read."""
+    path = capability_root / "schemas" / "workflow.yaml"
+    try:
+        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+    except (OSError, YAMLError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def read_subject(subject: str) -> int | containment.ForeignIssue | None:
@@ -197,13 +253,20 @@ def classify_state(issue: int | containment.ForeignIssue) -> dict[str, Any]:
     if isinstance(issue, containment.ForeignIssue):
         return _classify_foreign(issue)
     issue_number = issue
-    inferred = _inferred_state(issue_number)
-    if isinstance(inferred, dict):
-        return inferred
+    position = _inferred_state(issue_number)
+    if isinstance(position, dict):
+        return position
+    inferred = position.state
     if inferred in infer.STATE_ORDER:
         return {
             "state": inferred,
             "reason": f"#{issue_number} inferred state is {inferred!r}",
+            "detail": {"inferred_state": inferred},
+        }
+    if position.finding:
+        return {
+            "state": None,
+            "reason": position.finding,
             "detail": {"inferred_state": inferred},
         }
     return {
@@ -270,12 +333,13 @@ def detect_state(issue_number: int, target_state: str) -> dict[str, Any]:
     at most one matches — so the engine's first-true-state rule reproduces
     move-issue regardless of state order.
     """
-    resolved = _inferred_state(issue_number)
-    if isinstance(resolved, dict):
-        return resolved
+    position = _inferred_state(issue_number)
+    if isinstance(position, dict):
+        return position
+    resolved = position.state
     return {
         "result": resolved == target_state,
-        "reason": f"#{issue_number} inferred state is {resolved!r}",
+        "reason": position.finding or f"#{issue_number} inferred state is {resolved!r}",
         "detail": {"inferred_state": resolved, "target": target_state},
     }
 
@@ -295,13 +359,25 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
     substrate_map = axis_labels.load_substrate_map(capability_root)
+    # Where the map binds state to the board, each child's position is its
+    # card's Status, read for every card at once and joined to the corpus by the
+    # issue's node id (DEC-051 point 6). A board that cannot be read leaves the
+    # answer indeterminate, never a guess from the labels.
+    snapshot = None
+    if infer.state_is_board_carried(substrate_map):
+        snapshot, failure = board_status.read_snapshot(config, _workflow(capability_root))
+        if snapshot is None:
+            return _indeterminate(f"the board's Status could not be read: {failure}")
     # Corpus + completeness both come from the seam (ADR-035 §5). This walk still
     # filters by the TEXTUAL parent-ref itself, because it needs each row's state,
     # labels and milestone to infer position — which the child-set resolver does
     # not carry. A natively-linked child whose body has no parent-ref line is
     # therefore invisible here; that gap is older than this change and is not the
     # close gate (this predicate informs forward-cascade reasoning).
-    corpus = containment.fetch_issue_corpus(config)
+    corpus = containment.fetch_issue_corpus(
+        config,
+        fields=_CORPUS_FIELDS_WITH_ID if snapshot is not None else _CORPUS_FIELDS,
+    )
     if corpus is None:
         return _indeterminate("could not list issues (gh failure)")
     if not corpus.complete:
@@ -320,7 +396,13 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
             milestone=child.get("milestone") or {},
             labels=_issue_labels(child),
             substrate_map=substrate_map,
+            status=snapshot.read(child.get("id")) if snapshot is not None else None,
         )
+        if child_state == infer.UNDETERMINED:
+            return _indeterminate(
+                f"the position of #{child.get('number')}, a child of #{parent_number}, cannot "
+                "be read from the board's Status"
+            )
         if infer.state_is_active(child_state):
             active.append(int(child.get("number", 0)))
     return {

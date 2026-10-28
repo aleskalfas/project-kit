@@ -167,7 +167,9 @@ def main() -> int:
         print(f"error: this repository could not be read: {failure}", file=sys.stderr)
         return 3
     workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
-    status = board_status.Projector(config, workflow, repository_owner=repository.split("/", 1)[0])
+    status = board_status.StatusBoard(
+        config, workflow, repository_owner=repository.split("/", 1)[0]
+    )
     read = status.field()
     if read.field is None:
         print(f"error: the board's Status could not be read: {read.error}", file=sys.stderr)
@@ -336,7 +338,7 @@ def _state_of(row: dict, substrate_map: axis_labels.SubstrateMap | None) -> str:
 # ---- the run -----------------------------------------------------------
 
 
-def _apply(plan: Plan, status: board_status.Projector, config: dict) -> int:
+def _apply(plan: Plan, status: board_status.StatusBoard, config: dict) -> int:
     """Write the plan: the cards that differ, then the cards to add. Each failure
     is one line, and the rest are still written."""
     print()
