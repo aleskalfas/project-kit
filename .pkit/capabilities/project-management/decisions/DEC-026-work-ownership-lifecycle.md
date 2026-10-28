@@ -104,7 +104,7 @@ Reviewer assignment is governed by **review-mode resolution** per [project-manag
 
 ### Closure outside the standard flow
 
-`close-issue` (existing) closes abandoned work (won't-do, duplicate), and completed work that no pull request carried. It is not part of this DEC's palette, because both are the user's act on the end of the work, not a step of the work's flow. The seven commands here cover **forward progress and the draft↔ready round-trip**; a close that no merge makes is its own command.
+`close-issue` (existing) closes abandoned work (won't-do, duplicate), and completed work that no pull request carried. It is not part of this DEC's palette, because a close is not a step of the work's flow: the palette's commands walk the work through its states, and `close-issue` ends the work outside that walk, whether it was abandoned or completed without a pull request. The seven commands here cover **forward progress and the draft↔ready round-trip**; a close that no merge makes is its own command.
 
 ### Audit-trail comments
 
@@ -165,7 +165,7 @@ This binding makes the wrapper-to-transition relationship schema-checkable, prev
 - `create-draft` — PR creation before the work is ready for review (so CI can run during in-progress work).
 - `back-to-draft` — PR-state round-trip after a reviewer requests changes; the issue stays in Review (the work-flow phase hasn't changed, only the PR-readiness).
 
-Won't-do closure, and the close of completed work that no pull request carried, are `close-issue`'s — explicitly outside this palette because each is the user's act on the end of the work, not a step in the standard work-flow.
+Won't-do closure, and the close of completed work that no pull request carried, are `close-issue`'s — explicitly outside this palette because a close is not a step in the standard work-flow: the palette's commands walk the work through its states, and `close-issue` ends the work outside that walk.
 
 **Why model the PR sub-lifecycle in the palette.** Real-world development has draft↔ready round-trips driven by review feedback, and the methodology can't pretend they don't exist. Modelling them gives reviewers and authors named commands instead of ad-hoc `gh pr ready --undo` invocations, keeps the audit trail consistent (the issue-state side-effect is automatic), and gives the convention-compliance-reviewer something to enforce.
 
