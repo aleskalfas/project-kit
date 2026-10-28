@@ -6,7 +6,7 @@ date: 2026-05-27
 author: Ales Kalfas
 ---
 
-**In plain terms:** two issues cannot be worked on at once for one of two reasons. They touch the same code, or one needs the other's outcome. This record keeps the two conflicts apart, gives each a mechanism of its own, and never makes a workstream carry either. Which work is ready in sequence is read from each issue's dependencies, through the shared pool of [project-management:DEC-059-topology-of-seats] point 7 in a project with a topology. Lanes, each a lock on one area of the code, are named here, and so is a typed line for each dependency. Both are built once lived evidence answers the open questions below.
+**In plain terms:** two issues cannot be worked on at once for one of two reasons. They touch the same code, or one needs the other's outcome. This record keeps the two conflicts apart, gives each a mechanism of its own, and never makes a workstream carry either. Which work is ready in sequence is read from each issue's dependencies, through the shared pool of [project-management:DEC-059-topology-of-seats] point 7 in a project with a topology, or through each seat's pools where the topology declares pools of workers ([project-management:DEC-061-pools-of-workers]). Lanes, each a lock on one area of the code, are named here, and so is a typed line for each dependency. Both are built once lived evidence answers the open questions below.
 
 ## Context
 
@@ -42,7 +42,7 @@ These need lived experience to settle. This record fixes the split and the terms
 
 ## Decision
 
-**Parallel work meets two conflicts, of code surface and of sequence, and each has a mechanism of its own: lanes for code surface, and an issue's dependencies for sequence. Workstreams carry neither. Readiness in sequence is reckoned once, through the shared pool of [project-management:DEC-059-topology-of-seats] point 7 in a project with a topology. Lanes and the typed `Blocked by:` line are named here, and are built once lived evidence answers the open questions below ([COR-007]). The shapes this record gives them are the starting design, which the record that builds each settles.**
+**Parallel work meets two conflicts, of code surface and of sequence, and each has a mechanism of its own: lanes for code surface, and an issue's dependencies for sequence. Workstreams carry neither. Readiness in sequence is reckoned once, through the shared pool of [project-management:DEC-059-topology-of-seats] point 7 in a project with a topology, or through each seat's pools where the topology declares pools of workers ([project-management:DEC-061-pools-of-workers]). Lanes and the typed `Blocked by:` line are named here, and are built once lived evidence answers the open questions below ([COR-007]). The shapes this record gives them are the starting design, which the record that builds each settles.**
 
 ### Design at a glance
 
@@ -51,7 +51,7 @@ These need lived experience to settle. This record fixes the split and the terms
 | Code-surface conflict | `lane:<slug>` label series; one in-flight issue per lane | Named, not built |
 | Sequence conflict | The `## Dependencies` body section ([DEC-005]), with a typed `Blocked by: #<N>` line | The section is built, and the typed line named, not built |
 | Lane catalog | `project/lanes.yaml` — adopter-declared lane definitions | Named, not built |
-| Readiness in sequence | The shared pool of DEC-059 point 7, in a project with a topology | Decided there |
+| Readiness in sequence | The shared pool of DEC-059 point 7, in a project with a topology, or each seat's pools where the topology declares them (DEC-061) | Decided there |
 
 ### Lanes — additive to DEC-018, not a re-cut
 
@@ -98,7 +98,7 @@ Prose narrative may follow the typed lines. The validator extracts the typed lin
 
 ### Readiness is reckoned once
 
-In a project with a topology, which Tasks are ready in sequence is the shared pool's answer ([DEC-059] point 7), and the capability reckons readiness only through the pool. In a project with none, whoever hands out the work reads each issue's dependencies the same way, as the manual discipline does. Readiness on code surface waits for lanes.
+In a project with a topology, which Tasks are ready in sequence is the shared pool's answer ([DEC-059] point 7), and the capability reckons readiness only through the pool. Where the topology declares pools of workers, that answer routes through each seat's pools ([project-management:DEC-061-pools-of-workers]). In a project with no topology, whoever hands out the work reads each issue's dependencies the same way, as the manual discipline does. Readiness on code surface waits for lanes.
 
 ### Lane lifecycle — leaner than DEC-018
 
@@ -115,7 +115,7 @@ Workstreams ship eight lifecycle scripts (add / rename / merge / split / edit / 
 
 ## Open questions — evidence sought
 
-The record that builds lanes and the typed line answers these from lived experience. Field notes accumulate in the source scratchpad (`.pkit/scratchpad/active/2026-05-26-parallelization-primitive.md`). In a project with a topology, the shared pool settles question 6 and part of question 8, and pools of workers settle question 7 where the topology declares them.
+The record that builds lanes and the typed line answers these from lived experience. Field notes accumulate in the source scratchpad (`.pkit/scratchpad/active/2026-05-26-parallelization-primitive.md`). In a project with a topology, the shared pool settles question 6 and part of question 8. The topology settles question 7 too, whether it declares pools of workers or not: where it does, the open milestones of a seat's pools gate that seat's ready set, and where it does not, no milestone gates the ready set.
 
 1. **In-flight state mechanism.** Computed from what? Candidates:
    - Issue state machine (`in_progress` from [project-management:DEC-006-state-machine-and-cascade])
@@ -129,7 +129,7 @@ The record that builds lanes and the typed line answers these from lived experie
 4. **`Blocked by:` validation shape.** Patterns the validator accepts: `#N` only, `owner/repo#N` for cross-repo, both? How does it interact with native sub-issues?
 5. **Lane attribute model.** Stick with slug + description, or grow toward DEC-018's 5-attribute shape if lanes prove less ephemeral than expected?
 6. **Ready-frontier command name + output.** In a project with a topology, readiness in sequence is the shared pool's ([DEC-059] point 7), so no command of this record reckons it. In a project with none, it is read by hand.
-7. **Interaction with milestones / time-containers.** Does the active milestone gate the parallel frontier (issues outside the current milestone excluded from the ready set)? Where the topology declares pools of workers, every open milestone of the seat's pools gates it, for each seat that builds: the seat chooses its work only from ready Tasks in those milestones ([project-management:DEC-061-pools-of-workers] point 5). Without pools, no milestone gates the ready set.
+7. **Interaction with milestones / time-containers.** Does the active milestone gate the parallel frontier (issues outside the current milestone excluded from the ready set)? Where the topology declares pools of workers, every open milestone of the seat's pools gates it, for each seat that builds: the seat chooses its work only from ready Tasks in those milestones ([project-management:DEC-061-pools-of-workers] point 5). Where the topology declares no pool, no milestone gates the ready set.
 8. **Cross-repo dependencies (DEC-022 mesh).** The shared pool is the repository's own (DEC-059, Implications). Does the Blocked-by graph cross repo boundaries, and if so, how does readiness read another repository's state?
 9. **Lane lifecycle scope.** Do `rename-lane` / `merge-lane` / `split-lane` / `edit-lane` ship with the first build of lanes, or stay deferred per COR-007?
 10. **Build criterion.** How much lived parallel work counts as enough evidence to build lanes and the typed line? What signals close the question?

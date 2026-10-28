@@ -109,7 +109,7 @@ An optional `Rollforward target: <Milestone>` line on date-based Milestones, rea
 
 ### Pool — an optional line that puts the Milestone into a pool of workers
 
-Where the project's topology declares pools of workers, a Milestone's description may carry a `Pool: <name>` line, which puts the Milestone and each issue in it into that pool (refinement per [project-management:DEC-061-pools-of-workers] point 2). The line is read as a whole line wherever it stands, while `Close trigger:` stays first. Every line that opens with `Pool:` counts, well formed or not: two such lines, a malformed one, or one naming a pool the topology does not declare, put the Milestone in no pool, with a warning. A change of pool replaces the line and never adds a second, and its log never takes the `Pool:` form. The line is written only with the user's consent (DEC-061 point 6).
+Where the project's topology declares pools of workers, a Milestone's description may carry a `Pool: <name>` line, which puts the Milestone and each issue in it into that pool. The line may stand anywhere in the description, while `Close trigger:` stays first, and DEC-061 point 2 sets how it is read and changed (refinement per [project-management:DEC-061-pools-of-workers] point 2). It is written only with the user's consent, whose record DEC-061 point 6 keeps in the description, never in the `Pool:` form.
 
 ### Rollforward cascade for date-based Milestone close
 
