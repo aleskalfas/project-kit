@@ -2,6 +2,9 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-28
+retired: 2026-10-28
+produced:
+  - COR-068
 ---
 
 # Operational rules as a rule set
@@ -112,3 +115,7 @@ The loaded text should be the accepted statements only. Options:
 Not reviewed yet. Critic and architect reviewed the first design (B) on 28 October. Their findings that carry over to A:
 - **Shared with A:** a core record decides it; headings rather than paragraphs; retired rules kept out of the loaded file; a core rule never names a project successor; the check skips answer files, scratchpad notes, changesets and superseded records; citations read from prose are warnings.
 - **The architect's alias:** "core rule N" stays valid as an alias of the new id, so history is never rewritten.
+
+## Outcome
+
+Settled on #2260: first as point-form rules ([comment](https://github.com/aleskalfas/project-kit/issues/2260#issuecomment-6471530722)), then, after a second review, as candidate A with a loaded set and a generated loaded file ([comment](https://github.com/aleskalfas/project-kit/issues/2260#issuecomment-6472893236)), narrowed by [this comment](https://github.com/aleskalfas/project-kit/issues/2260#issuecomment-6473088133). COR-068 records it.
