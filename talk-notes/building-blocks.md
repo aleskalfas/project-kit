@@ -408,3 +408,20 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - two bindings so far; whether it fits a third discipline is untested
 - **Maintainer's notes:**
   - Decided 28 October: a block of its own (the maintainer: not folded into capabilities), placed after schemas, shown through the capabilities that use it: project-management's issue lifecycle (states, moves, who authorises each, each issue's journal, today's move back and completed close added as definition changes) and the second binding, which shows the engine is shared.
+
+## 18. Connections: how capabilities hand each other data (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** when one capability needs something from another, it never names the other. It declares a *connection point* under a **role**, and whichever installed capability provides that role answers it (COR-053). A role is written `pkit::documentation`, `pkit::work-tracking`, `pkit::analysis`; a point is a role plus a name, such as `pkit::work-tracking:fixers` (which agent fixes each kind of document) or `pkit::documentation:readers` (who reads each page). Every connection is optional unless it says, with a reason, that it is mandatory. Three kinds share one mechanism: data slots, process connections, and events. One wiring graph shows it all (`pkit status`, "Connections"; `pkit connections`), and validation checks it.
+- **Here today:** three roles, each provided by one capability (analysis → software-analysis, documentation → living-docs, work-tracking → project-management); six points, four filled. For example, software-analysis and living-docs each tell project-management which agent fixes their documents, and that is how `fix-drift` knows whom to start after a merge, without project-management knowing either capability exists.
+- **Problem:** capabilities that call each other by name are welded together: replace one and everything that names it breaks; install one without the other and its references dangle.
+- **Gain:**
+  - swap one capability for another that provides the same role, and nothing connected to it notices
+  - install only what you need: a missing provider leaves an optional point unfilled, not broken
+  - one picture of how the installed parts are wired, checked every time
+- **Weight:** nothing in a session; a capability declares its points in its package.
+- **Weak spot:**
+  - abstract, and only visible through what it enables (fixers after a merge, readers of a page)
+  - each role has exactly one provider so far, so swapping is designed, not yet shown
+- **Maintainer's notes:**
