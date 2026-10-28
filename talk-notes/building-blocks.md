@@ -329,3 +329,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - many findings are judgement calls a person must settle, which adds to the review queue
   - inheritance with version pins is a lot of machinery for a handful of sets
 - **Maintainer's notes:**
+  - Decided 28 October: skipped for now; the rules are being reworked (operational rules becoming rule sets, #2270). Revisit for the talk once that lands, probably together with block 2.
