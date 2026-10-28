@@ -664,7 +664,7 @@ The same runtime file keeps the clone's **key**. The clone generates it the firs
 
 #### What the lifecycle commands write for an instance (per [project-management:DEC-035-instance-ownership] and [project-management:DEC-043-ownership-substrate-selection])
 
-Outside a topology of seats, the instance id switches instance ownership on: with one set, four commands write the ownership marker and six are guarded, and with none they write and print exactly what they did before.
+Outside a topology of seats, the instance id switches instance ownership on: with one set, four commands write the ownership marker and six are guarded. With none, they write and print what they did before, but `move-issue` refuses to move back an issue that has an owner (see `set-instance` above).
 
 | Command | Ownership side effect |
 |---|---|
