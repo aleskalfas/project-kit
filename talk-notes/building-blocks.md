@@ -229,3 +229,25 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - Agents are not just generator versus reviewer: five reasons for many roles — separation, focus (each carries only its knowledge), least privilege (tools and writes per role), a place in the flow, growth with what is installed. Present agents as roles with limits.
   - The ideal (maintainer): each agent works only with the information and tools its role needs. Tools, writes and reads are limited per role today; skills reach an agent only by hand; every session loads every rule. Claude Code allows a helper's `skills:` (preloaded) and `omitClaudeMd`; main sessions always load `CLAUDE.md`.
   - Rules, decided 28 October after two critic rounds and the architect: rules about files stay in rule sets (grouping and specialisation there: a Python set inheriting software-engineering's, scoped to `**/*.py`, binds whoever writes Python). Rules about behaviour take a record's point form (COR-058): permanent numbers, one-line stubs, each citing its record or issue, one record deciding it (#2260). Capabilities ship their own rules file in that form, loaded by installation (Claude Code: deployed into `.claude/rules/`), with a check that each is loaded; a new Task builds it. Targeting rules by agent is set aside: an agent is not a role (planner, workers and the person's conversation all run as one agent).
+
+## 6. Adapters (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** the translation of pkit's content, written once and harness-neutral (COR-006), into what one AI harness reads. One adapter ships today, Claude Code's (`.pkit/adapters/claude-code/`). The lifecycle (init, sync, upgrade, a capability's install and removal) runs its scripts by name: merge the settings (COR-002's merge primitive, so a project's own settings survive), merge `CLAUDE.md`'s includes, deploy the skills (links) and the agents (copies with the project's paths filled in), and undeploy a capability. Beside those, the adapter carries the harness's hooks: the permission hook on every tool call, deciding through a harness-neutral core (COR-028), and the start hook on every session and helper; and the runner that starts an agent unattended in a confined run (ADR-066).
+- **Problem:** without it, the content is either written for one tool and stuck there, or wired into each project by hand, file by file, and drifts.
+- **Gain:**
+  - records, rules, skills and agents are written once, in plain Markdown and YAML, for any harness; a new harness is a new adapter, not a rewrite
+  - a project's own settings are merged, never overwritten
+  - the harness's own mechanisms (hooks, settings, sandbox) enforce the permission model
+  - what the methodology needs from a harness is declared as data (COR-047), and each adapter answers it: two requirements today (a delegated result arrives complete; an agent runs unattended and confined), both "at a cost" on Claude Code; an unanswered requirement reads as undetermined, never as met
+- **Weight:** none in a session's context; the scripts run at init and sync (about 20 000 words of them). The permission hook runs on every tool call.
+- **Relation to blocks 1 to 5:** they are the content; the adapter is how it reaches the harness, and the only place that knows Claude Code's file names.
+- **Evidence (this week):**
+  - the Claude Code facts checked today (an agent's `skills:` preloads, `omitClaudeMd`, `.claude/rules/` loading at start) are exactly what the adapter will use to deliver each role's slice and each capability's rules (#2269)
+  - the hazard of a named helper whose answer is cut at 4 064 characters is a harness property, declared as the requirement `delegated-result-complete`
+- **Weak spot:**
+  - harness-neutral is a claim with one test case: with a single adapter, nothing proves the content really is neutral
+  - the harness moves under us: each Claude Code change (agent teams, new frontmatter fields) lands in the adapter first, and some only as a discipline (the 4 064-character cut)
+  - it grows with every capability that needs delivery (rules by installation, #2269)
+- **Maintainer's notes:**
