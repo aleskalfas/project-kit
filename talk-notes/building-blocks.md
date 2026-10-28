@@ -200,3 +200,29 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - Needs a record refining COR-007 first; prerequisites: authoring skills (`pkit new skill`), and retiring a carrier.
   - Discoverability: installed skills are discoverable already (the harness shows each one's name and description to every session). What the agent cannot see is pkit's offering beyond what is installed. Agreed design (28 October), the same pattern skills use: each capability's short description, written as when to reach for it ("use when …"), sits in every session, uninstalled capabilities included, generated at sync from `package.yaml`; one sentence tells the agent that where a capability may already solve the problem, it reads the full description (the capability's README, which `pkit capabilities show` would need to print for one not installed) before building its own. Covers every place work is shaped: conversation, scratchpad notes, batch planning.
   - Kept in these notes, not filed yet: it and the COR-007 refinement are one change, "pkit leads with its own patterns", filed after the walk through blocks 5 to 19.
+
+## 5. Agents (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** an agent is a standing role: a point of view with limits — what it reads, what it may write, which tools it has, what it never does (COR-006: a skill is a procedure, an agent a role; COR-013 its shape). project-kit deploys 14: six from core (`critic`, `architect`, `methodology-reviewer`, `convention-compliance-reviewer`, `rule-set-reviewer`, `process-author`) and eight from capabilities (`project-manager`, `pm-reviewer`, `software-engineer`, `code-reviewer`, `docs-reviewer`, `security-reviewer`, `living-docs`, `analysis-resolver`). Two kinds: those that produce (the engineer, the project manager, the process author; living-docs and analysis-resolver propose, never apply) and those that review. A project fits them to itself without editing them: the overlay names its paths (where its ADRs live, its conventions), and the deploy writes a copy with those filled in.
+- **Problem:** one agent doing everything judges its own work, and an agent asked to check its own work agrees with itself. A single generalist also carries every concern at once, so each is held loosely.
+- **Gain:**
+  - a second opinion before the person sees a proposal (the critic), and a check of the big picture (the architect)
+  - each reviewer catches one kind of failure (conventions, the methodology's disciplines, the rules a document is held to, code, security, docs), and the merge gate requires their verdicts (project-management DEC-028)
+  - reviewers are read-only, so they report and never quietly fix
+  - one role definition serves every project, fitted by the overlay
+- **Weight:** only each agent's description sits in a session's context; its body (about 900 to 5 200 words) loads when it is started. The cost is in running them: a pull request's review starts five reviewers at once, each reading the change.
+- **Relation to blocks 1 to 4:** records decide, rules say what every session does, skills say how a kind of task is done; an agent says who looks at the work, from where, and with what limits. A skill can be run by any agent.
+- **Evidence (this week):**
+  - the pools change (#2257): the docs reviewer found a deferral naming the very issue the change closed, and the rule-set reviewer a glossary term used for a second thing; both fixed before landing
+  - the critic changed two designs in two days: the pools design, and today's idea of anticipating carriers (the three tiers)
+  - the two workers and this planner are the `project-manager` agent in different seats
+- **Weak spot:**
+  - cost and time: every review round runs every reviewer, and a fix round runs them again
+  - agents lean toward the framing they are given: a brief that carries the answer gets it back
+  - findings set aside pile up (#908 collects the code-review panel's set-aside defects)
+  - remits overlap at the edges (the docs reviewer, the rule-set reviewer and the methodology reviewer all read documents), so the boundaries need care
+  - the harness can quietly cut a named helper's answer at 4 064 characters (agent teams); the guard is a discipline in the dispatching agent, not a check
+  - a reviewer runs in an environment, and a wrong one gives false findings (the reviewers started outside the project root, #2255)
+- **Maintainer's notes:**
