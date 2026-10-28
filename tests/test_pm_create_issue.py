@@ -3261,3 +3261,65 @@ def test_the_children_view_is_rendered_from_issues_of_work_alone(ci, monkeypatch
     ci._refresh_parent_children_view({}, parent_number=5, containment_mode="textual")
     assert set(seen["corpus"]) == {7}
     assert set(seen["titles"]) == {7}
+
+
+# ---- pools of workers (DEC-061 point 6) ----------------------------------------------
+
+
+def _file_pooled(ci, tmp_path, monkeypatch, *, yes: bool, pool_line: str = "Pool: alpha"):
+    """File a Task into milestone #6, whose description carries ``pool_line``,
+    in a topology that declares alpha; return (rc, every argv run)."""
+    from types import SimpleNamespace
+
+    root = _stage_filing_tree(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, *args, **kwargs):
+        calls.append(list(cmd))
+        stdout = "https://github.com/acme/repo/issues/55\n" if "create" in cmd else ""
+        return SimpleNamespace(returncode=0, stdout=stdout, stderr="")
+
+    rows = [
+        {"number": 6, "title": "Sprint 6", "description": f"Close trigger: either\n{pool_line}"}
+    ]
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci.subprocess, "run", fake_run)
+    monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
+    milestone = SimpleNamespace(number=6, title="Sprint 6")
+    monkeypatch.setattr(ci, "resolve_milestone", lambda _a, _c: milestone)
+    monkeypatch.setattr(ci, "list_open_milestones", lambda _c, gh=None: rows)
+    monkeypatch.setattr(ci.pools, "declared_pools", lambda _r: (("alpha",), None))
+    monkeypatch.setattr(ci.pools.consent, "at_a_terminal", lambda: False)
+    argv = ["create-issue.py", "--type", "task", "--title", "File the authentication work now"]
+    argv += ["--milestone", "6", "--workstream", "spyre", "--capability-root", str(root)]
+    monkeypatch.setattr(ci.sys, "argv", [*argv, *(["--yes"] if yes else [])])
+    return ci.main(), calls
+
+
+def test_a_task_filed_into_a_pool_off_a_terminal_without_yes_is_refused(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=False)
+    assert rc == 1
+    assert not _issue_created(calls)
+    assert "Putting the new Task into the pool alpha is the person's to authorise" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_task_filed_into_a_pool_with_consent_logs_it_on_the_task(
+    ci, tmp_path, monkeypatch
+) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=True)
+    assert rc == 0
+    comments = [c for c in calls if c[:3] == ["gh", "issue", "comment"]]
+    consent = [c[c.index("--body") + 1] for c in comments if "pool-consent" in c[-1]]
+    assert len(consent) == 1
+    assert "into milestone #6, pool none → alpha, with the person's consent" in consent[0]
+
+
+def test_a_task_filed_into_a_milestone_of_no_pool_asks_nothing(ci, tmp_path, monkeypatch) -> None:
+    rc, calls = _file_pooled(ci, tmp_path, monkeypatch, yes=False, pool_line="")
+    assert rc == 0
+    assert _issue_created(calls)
+    assert not any("pool-consent" in c[-1] for c in calls if c)

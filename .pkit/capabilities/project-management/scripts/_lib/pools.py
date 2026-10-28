@@ -220,6 +220,17 @@ class Move:
         return f"{self.said()}, with the person's consent (DEC-061 point 6)"
 
 
+#: The kind marker of the audit comment that records a pool's consent on a Task.
+CONSENT_MARKER = "<!-- pkit-hook: pool-consent -->"
+
+
+def consent_comment(verb: str, found: Move, milestone_number: int | None) -> str:
+    """The audit comment a write that set a Task's Milestone posts on the Task,
+    where no audit comment of its own records the consent (DEC-061 point 6)."""
+    into = f"milestone #{milestone_number}" if milestone_number is not None else "no milestone"
+    return f"{CONSENT_MARKER}\n[audit] {verb}: into {into}, {found.logged()}."
+
+
 def declared_pools(capability_root: Path) -> tuple[tuple[str, ...] | None, str | None]:
     """The pools the default branch's topology declares, or None where it
     declares none; with a note where the topology cannot be read in full."""
@@ -232,6 +243,41 @@ def declared_pools(capability_root: Path) -> tuple[tuple[str, ...] | None, str |
     if tree.not_understood:
         return None, "this code cannot read the topology of the default branch in full"
     return tree.pools, None
+
+
+def write_refusal(name: str, capability_root: Path) -> str | None:
+    """Why ``name`` cannot be written as a Milestone's pool, or None: it is no
+    pool's name, the topology of the default branch declares no such pool, or
+    the topology cannot be read to tell. A writer refuses a name no reader
+    would take for a pool."""
+    try:
+        milestone.pool_line(name)
+    except ValueError:
+        return f"{name!r} is no pool's name: lowercase letters, digits and hyphens."
+    declared, note = declared_pools(capability_root)
+    if note is not None:
+        return f"{note}, so whether it declares the pool {name} cannot be told."
+    if declared is None:
+        return "the topology of the default branch declares no pools of workers."
+    if name not in declared:
+        return (
+            f"the topology of the default branch does not declare the pool {name} "
+            f"({', '.join(declared) or 'none'})."
+        )
+    return None
+
+
+def may_ask(after: int | None, rows: Rows | None) -> bool:
+    """Whether a write into the Milestone ``after`` may ask the person: it
+    carries a well-formed ``Pool:`` line, or the open Milestones could not be
+    read to tell. A caller reads nothing more where it may not."""
+    if after is None:
+        return False
+    if rows is None:
+        return True
+    row = next((r for r in rows if isinstance(r, dict) and r.get("number") == after), None)
+    description = str(row.get("description") or "") if row is not None else ""
+    return milestone.parse_pool_line(description).name is not None
 
 
 def move(

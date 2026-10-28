@@ -187,6 +187,7 @@ def fire_hooks(
     capability_root: Path | None = None,
     dry_run: bool = False,
     occurrence: Callable[[], str | None] | None = None,
+    yes: bool = False,
 ) -> list[HookResult]:
     """Fire every hook declared for `event` in `hooks.yaml`.
 
@@ -208,6 +209,13 @@ def fire_hooks(
     It is asked at most once, and only when a `post-comment` hook is about to
     post, so it may make a read of its own. None, or an empty answer, adds
     nothing to the stamp.
+
+    `yes` is the person's consent the caller was given on their word, its own
+    `--yes`. An `assign-milestone` hook that brings a Task into a pool of
+    workers, or moves it between pools, asks the person for it: at a terminal,
+    or by `yes`; off a terminal without it, the hook does not write and
+    reports a failure (DEC-061 point 6). Where it writes, it records the
+    consent in an audit comment on the Task.
 
     Report-and-continue: per-hook failures are caught and recorded as
     `status="failed"` HookResult entries; the function does not raise
@@ -281,6 +289,7 @@ def fire_hooks(
                 capability_root=capability_root,
                 dry_run=dry_run,
                 reads=reads,
+                yes=yes,
             )
         except HookFailure as exc:
             result = HookResult(
@@ -405,6 +414,7 @@ def _dispatch(
     capability_root: Path,
     dry_run: bool,
     reads: _FiringReads,
+    yes: bool = False,
 ) -> HookResult:
     """Route entry to its kind handler. Each handler returns a HookResult."""
     if kind == "set-board-field":
@@ -414,7 +424,7 @@ def _dispatch(
             event, index, entry, context, config, capability_root, dry_run, reads
         )
     if kind == "assign-milestone":
-        return _hook_assign_milestone(index, entry, context, config, dry_run)
+        return _hook_assign_milestone(index, entry, context, config, dry_run, capability_root, yes)
     if kind == "custom-script":
         return _hook_custom_script(
             event=event,
@@ -595,6 +605,8 @@ def _hook_assign_milestone(
     context: dict[str, Any],
     config: dict[str, Any],
     dry_run: bool,
+    capability_root: Path,
+    yes: bool = False,
 ) -> HookResult:
     title = entry.get("title")
     if not isinstance(title, str) or not title:
@@ -628,6 +640,12 @@ def _hook_assign_milestone(
             detail=f"milestone={title!r} already set; idempotent skip",
         )
 
+    # A Task brought into a pool, or moved between pools, is the person's act
+    # (DEC-061 point 6): asked here, and logged in the Task's audit comment.
+    consented = _pool_consent(issue_number, title, context, config, capability_root, yes)
+    if isinstance(consented, HookResult):
+        return replace_index(consented, index)
+
     # Construct + execute the milestone write through the sole constructor
     # (ADR-031); apply DEC-024's report-and-continue posture to its result.
     if substrate_writes is None:  # pragma: no cover - defensive import fallback
@@ -639,12 +657,115 @@ def _hook_assign_milestone(
     )
     if not result.ok:
         raise HookFailure(result.detail)
+    warning = None
+    if consented is not None:
+        posted = _gh_call(
+            ["gh", "issue", "comment", str(issue_number), "--body", consented],
+            config,
+        )
+        if posted.returncode != 0:
+            warning = "the audit comment recording the person's consent could not be posted"
     return HookResult(
         index=index,
         kind="assign-milestone",
         status="ok",
         detail=result.detail,
+        warning=warning,
     )
+
+
+def replace_index(result: HookResult, index: int) -> HookResult:
+    """``result`` as the hook at ``index`` reports it."""
+    return HookResult(index, result.kind, result.status, result.detail, result.error)
+
+
+def _pool_consent(
+    issue_number: int,
+    title: str,
+    context: dict[str, Any],
+    config: dict[str, Any],
+    capability_root: Path,
+    yes: bool,
+) -> str | HookResult | None:
+    """The person's consent to the pool the hook's milestone brings a Task into
+    (DEC-061 point 6): None where the write asks nothing, the audit comment to
+    post once it lands where the person consented, or the result that refuses
+    the write. A Task is told by its title, and an issue whose title cannot be
+    read is judged as one. The open milestones are read, and the Task's own
+    milestone where the caller did not pass it, only as the judgement needs."""
+    try:
+        from _lib import milestone as milestones  # type: ignore[import-not-found]
+        from _lib import pools  # type: ignore[import-not-found]
+        from _lib.structural_type import infer_structural_type  # type: ignore[import-not-found]
+    except ImportError:  # pragma: no cover - a test that puts `_lib` itself on the path
+        import milestone as milestones  # type: ignore[no-redef]
+        import pools  # type: ignore[no-redef]
+        from structural_type import infer_structural_type  # type: ignore[no-redef]
+
+    rows = milestones.list_open_milestones(config, gh=lambda argv: _gh_call(argv, config))
+    target = next(
+        (
+            row["number"]
+            for row in rows or ()
+            if isinstance(row, dict) and row.get("title") == title
+        ),
+        None,
+    )
+    if rows is not None and not pools.may_ask(target, rows):
+        return None
+    issue = context.get("issue") if isinstance(context.get("issue"), dict) else {}
+    issue_title = str(issue.get("title") or "")
+    if issue_title and _structural_type(issue_title, capability_root, infer_structural_type) != (
+        "task"
+    ):
+        return None
+    if "milestone" in issue:
+        before = pools.native_number(issue)
+    else:
+        before = pools.native_number(_read_issue(issue_number, config))
+    found = (
+        pools.move(before, target, rows=rows, capability_root=capability_root)
+        if rows is not None
+        else pools.Move(True, after=title, note="the open milestones could not be read")
+    )
+    if not found.asks:
+        return None
+    verb = Path(sys.argv[0]).stem or "the assign-milestone hook"
+    stop = pools.authorise(found, subject=f"#{issue_number}", yes=yes, verb=verb)
+    if stop is not None:
+        return HookResult(
+            index=0,
+            kind="assign-milestone",
+            status="failed",
+            detail=f"#{issue_number} was not put into {found.said()}: the person did not consent",
+            error="the person's consent was not given (DEC-061 point 6)",
+        )
+    return pools.consent_comment("assign-milestone hook", found, target)
+
+
+def _structural_type(title: str, capability_root: Path, infer: Callable[..., Any]) -> str | None:
+    """The structural type ``title`` names, read against the capability's schemas."""
+    schemas: dict[str, dict[str, Any]] = {}
+    for name in ("issue-types", "classification"):
+        path = capability_root / "schemas" / f"{name}.yaml"
+        try:
+            data = YAML(typ="safe").load(path.read_text(encoding="utf-8")) if YAML else None
+        except (OSError, YAMLError):
+            data = None
+        schemas[name] = data if isinstance(data, dict) else {}
+    return infer(title, schemas["issue-types"], classification=schemas["classification"])
+
+
+def _read_issue(issue_number: int, config: dict[str, Any]) -> dict[str, Any]:
+    """The issue's native milestone, or {} where it cannot be read."""
+    proc = _gh_call(["gh", "issue", "view", str(issue_number), "--json", "milestone"], config)
+    if proc.returncode != 0:
+        return {}
+    try:
+        data = json.loads(proc.stdout)
+    except (TypeError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _hook_custom_script(

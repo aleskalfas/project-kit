@@ -192,6 +192,80 @@ def test_assign_milestone_missing_title_yields_failure(hooks, capability_root) -
     assert "title" in results[0].error
 
 
+# --- assign-milestone into a pool of workers (DEC-061 point 6) ---------------
+
+
+@pytest.fixture
+def pooled(hooks, capability_root, monkeypatch):
+    """An `after_create_issue` hook that assigns `Sprint 7`, in the pool alpha.
+    Returns `fire(yes) -> (results, gh calls, milestone writes)`."""
+    import shutil
+
+    scripts = HOOKS_PY.parent.parent
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    from _lib import pools
+
+    (capability_root / "schemas").mkdir(exist_ok=True)
+    for name in ("issue-types.yaml", "classification.yaml"):
+        shutil.copy(scripts.parent / "schemas" / name, capability_root / "schemas" / name)
+    (capability_root / "project" / "hooks.yaml").write_text(
+        "schema_version: 1\nhooks:\n  after_create_issue:\n"
+        "    - kind: assign-milestone\n      title: Sprint 7\n",
+        encoding="utf-8",
+    )
+    rows = [{"number": 7, "title": "Sprint 7", "description": "Pool: alpha"}]
+    calls: list[list[str]] = []
+    writes: list[str] = []
+
+    def fake_gh(args, _config):
+        calls.append(args)
+        stdout = json.dumps(rows) if "milestones?state=open" in args[-1] else ""
+        return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
+
+    def fake_write(_config, *, issue_number, title):
+        writes.append(title)
+        from types import SimpleNamespace
+
+        return SimpleNamespace(ok=True, detail=f"set milestone={title!r}")
+
+    monkeypatch.setattr(hooks, "_gh_call", fake_gh)
+    monkeypatch.setattr(hooks.substrate_writes, "write_milestone", fake_write)
+    monkeypatch.setattr(pools, "declared_pools", lambda _r: (("alpha",), None))
+    monkeypatch.setattr(pools.consent, "at_a_terminal", lambda: False)
+
+    def fire(yes: bool):
+        results = hooks.fire_hooks(
+            "after_create_issue",
+            context={"issue": {"number": 42, "title": "[Task] the work", "milestone": None}},
+            config={},
+            capability_root=capability_root,
+            yes=yes,
+        )
+        return results, calls, writes
+
+    return fire
+
+
+def test_an_assign_milestone_hook_into_a_pool_is_refused_off_a_terminal(pooled, capsys) -> None:
+    results, calls, writes = pooled(False)
+    assert results[0].status == "failed"
+    assert "consent was not given" in results[0].error
+    assert writes == []
+    assert not any(c[:3] == ["gh", "issue", "comment"] for c in calls)
+    assert "Putting #42 into the pool alpha is the person's to authorise" in (
+        capsys.readouterr().err
+    )
+
+
+def test_an_assign_milestone_hook_with_consent_writes_and_logs_it(pooled) -> None:
+    results, calls, writes = pooled(True)
+    assert results[0].status == "ok"
+    assert writes == ["Sprint 7"]
+    (comment,) = [c for c in calls if c[:3] == ["gh", "issue", "comment"]]
+    assert "into milestone #7, pool none → alpha, with the person's consent" in comment[-1]
+
+
 # --- set-board-field handler (the non-label per-create field default) ----
 # DEC-037 §3: the `set-board-field` hook seeds a Projects-v2 field default
 # (the AUJ `workstream=Spyre` case) on a new issue. It needs the new item's
