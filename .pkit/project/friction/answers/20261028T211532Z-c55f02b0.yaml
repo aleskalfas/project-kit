@@ -210,12 +210,12 @@ answers:
     revalidated:
       at: 2026-10-28T21:16:27Z
       outcome: unchanged
-      unchanged-because: "The base adds the move back from In Progress, which releases the owner's claim (DEC-006, DEC-035 point 4). This change adds DEC-062, the build command, which is not built: the README describes the commands and the worker's loop as built today, and its seat sections are rewritten by #2287."
+      unchanged-because: "The base adds the move back from In Progress, which releases the owner's claim (DEC-006, DEC-035 point 4). This change adds DEC-063, the build command, which is not built: the README describes the commands and the worker's loop as built today, and its seat sections are rewritten by #2287."
       deferred:
         - anchor:
             kind: path
             value: .pkit/capabilities/project-management/decisions/**
-          reason: "DEC-062 now has a worker build each Task through the build command, and DEC-055 point 3 has the landing command read answer files. #2287 builds the first and rewrites the README's seat sections; #1779 builds the second and rewrites the README's landing."
+          reason: "DEC-063 now has a worker build each Task through the build command, and DEC-055 point 3 has the landing command read answer files. #2287 builds the first and rewrites the README's seat sections; #1779 builds the second and rewrites the README's landing."
         - anchor:
             kind: record
             value: COR-050#16

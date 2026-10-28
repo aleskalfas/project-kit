@@ -70,7 +70,7 @@ answers:
     revalidated:
       at: 2026-10-28T20:21:16Z
       outcome: unchanged
-      unchanged-because: DEC-029's refinement concerns a worker's procedure. A lead agent still delegates Tasks to helpers that act as its instance (DEC-059 point 6), and a lead's builds through the build command are named, not built (DEC-062 point 1).
+      unchanged-because: DEC-029's refinement concerns a worker's procedure. A lead agent still delegates Tasks to helpers that act as its instance (DEC-059 point 6), and a lead's builds through the build command are named, not built (DEC-063 point 1).
   - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-planner.md
     read:
       - 20261026T123904Z-0482f880.yaml
@@ -350,12 +350,12 @@ answers:
     revalidated:
       at: 2026-10-28T20:23:08Z
       outcome: unchanged
-      unchanged-because: ADR-066 gains a working form, and the capability's decisions gain DEC-062. The README describes the commands and the worker's loop as built today, and the review command's runs through the runner; the build command and the worker's builder are documented by the Tasks that build them (#2287).
+      unchanged-because: ADR-066 gains a working form, and the capability's decisions gain DEC-063. The README describes the commands and the worker's loop as built today, and the review command's runs through the runner; the build command and the worker's builder are documented by the Tasks that build them (#2287).
       deferred:
         - anchor:
             kind: path
             value: .pkit/capabilities/project-management/decisions/**
-          reason: "DEC-062 now has a worker build each Task through the build command, and DEC-055 point 3 has the landing command read answer files. #2287 builds the first and rewrites the README's seat sections; #1779 builds the second and rewrites the README's landing."
+          reason: "DEC-063 now has a worker build each Task through the build command, and DEC-055 point 3 has the landing command read answer files. #2287 builds the first and rewrites the README's seat sections; #1779 builds the second and rewrites the README's landing."
         - anchor:
             kind: record
             value: COR-050#16

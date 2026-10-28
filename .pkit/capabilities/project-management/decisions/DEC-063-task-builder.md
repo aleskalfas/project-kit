@@ -1,5 +1,5 @@
 ---
-id: DEC-062
+id: DEC-063
 title: A fresh builder agent builds each of a worker's Tasks, and the seat keeps every write
 status: accepted
 date: 2026-10-28
