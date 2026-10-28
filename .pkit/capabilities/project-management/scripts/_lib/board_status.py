@@ -76,10 +76,13 @@ class StatusField:
 
 @dataclass(frozen=True)
 class FieldRead:
-    """The Status field, or why it could not be read, on one line."""
+    """The Status field, or why it could not be read, on one line. ``answered``
+    tells a board that answered with no single-select Status field from one that
+    did not answer."""
 
     field: StatusField | None
     error: str | None = None
+    answered: bool = False
 
 
 def read_status_field(config: dict[str, Any]) -> FieldRead:
@@ -94,12 +97,15 @@ def read_status_field(config: dict[str, Any]) -> FieldRead:
     field = board_fields.find_field(fields.fields, STATUS_FIELD)
     if field is None:
         names = ", ".join(board_fields.field_names(fields.fields)) or "none"
-        return FieldRead(None, f"the board has no `{STATUS_FIELD}` field (its fields: {names})")
+        return FieldRead(
+            None, f"the board has no `{STATUS_FIELD}` field (its fields: {names})", answered=True
+        )
     if not board_fields.is_single_select(field):
         return FieldRead(
             None,
             f"the board's `{STATUS_FIELD}` field is a {board_fields.field_type(field)}, "
             "not a single-select",
+            answered=True,
         )
     return FieldRead(StatusField(project.node_id, field))
 
