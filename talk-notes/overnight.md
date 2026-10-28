@@ -14,8 +14,10 @@ Updated through the night. Each item says what it needs.
 ## Pools ([#2256](https://github.com/aleskalfas/project-kit/issues/2256), PR [#2257](https://github.com/aleskalfas/project-kit/pull/2257))
 
 - Records: DEC-061 "Pools of workers" (new, partially supersedes DEC-059), refinements to DEC-059, DEC-016, DEC-006, DEC-025. Two fix rounds closed the critic's, the architect's and the methodology reviewer's findings (no red flag, no blocker, no escalation left). **Accepted on your word** ("finish the pools on my behalf … we agreed on all important"), quoted in the acceptance commit c1c4de924. The architect writes ADR-072 (the pool lookup) and rewords ADR-041 in the same PR.
-- Then phase 2, the code; the PR's reviewers; landing.
-- Then a small PR: `pools: [alpha]` in our seats file, both workers serving alpha, and milestone #8 marked `Pool: alpha`.
+- Phase 2, the code: built (guard, `Pool:` line, consent, topology, `next-task`, rollforward, reports, docs; all gates green). Reviewers: pm, code and security approved; docs and rule-set reviewers asked for two doc fixes (UC-063 brought up to pools; a wrong glossary link), in a fix round now. Then landing.
+- Choices the builder made where the records were silent (say if any is wrong): a Task milestone write that cannot read the topology or the milestones asks your consent, as if the milestone were pooled; only `create-issue` hands its `--yes` to the milestone hook, so a scripted move into a pool is refused off a terminal; a writer refuses a pool the topology does not declare; every topology problem now stops taking work, an empty scope included; `back-fill`'s bulk milestone write is left as is.
+- Decided on your behalf: the rule-set reviewer's question whether "…, says what it did not understand, and the use case ends" needs a list. Kept as written: it is the form every use case uses.
+- Then a small PR, [#2264](https://github.com/aleskalfas/project-kit/issues/2264): `pools: [alpha]` in our seats file, both workers serving alpha, and milestone #8 marked `Pool: alpha`.
 - The design as decided: [design-pools.md](design-pools.md). The research behind it: [research-work-routing.md](research-work-routing.md).
 
 ## Milestone 6: Release 2.0.0 (the workers' pool)
