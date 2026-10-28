@@ -35,6 +35,7 @@ The schema's `transitions` list fixes who authorises each transition and what th
 | Review → Done | User (per-PR approval) | hard-reject |
 | Backlog/Todo → Done (won't-do) | User | hard-reject |
 | In Progress → Done (parent cascade-eligibility close) | User | hard-reject |
+| In Progress → Backlog or Todo (move back) | User (with the reason the work stopped) | hard-reject |
 
 User holds both ends of the gate (start and end of work); the agent owns the middle. Authorisations govern a move asked for directly, and are per-issue and in-session — no standing "go ahead with everything" applies in a later turn. The agent records the bypass with an audit-trail comment per [project-management:DEC-014-validation-severity-model] when a bypassable transition is overridden.
 
@@ -43,6 +44,10 @@ The Todo → Backlog gate means the **user-held scheduling commitment** ("this i
 The wrapper that carries it is `promote-issue`, whose `--milestone` is optional ([project-management:DEC-026-work-ownership-lifecycle], "The seven commands"). The gate's severity is **bypassable-with-audit** in every project, whether it runs Milestones or not.
 
 Where the project's topology declares pools of workers, a seat that builds, a worker or a lead, takes of its own choosing only a Task in an open Milestone of a pool it serves. So a Task scheduled with an audited reason and no Milestone is taken only where the user directs a seat to it (refinement per [project-management:DEC-061-pools-of-workers] point 5). Putting a Task into a Milestone in a pool, or moving it from one pool to another, is then the user's act, held like the transitions the user authorises at hard-reject severity and never bypassed with an audit (DEC-061 point 6). That hold sits on the write of the Task's Milestone, beside the scheduling gate, whose severity stays bypassable-with-audit.
+
+**Moving back from In Progress.** An issue In Progress that nobody is working on moves back, so In Progress means that work is moving. The move lands in Backlog where the issue is in a Milestone, and in Todo where it is in none, as the state inference reads a Milestone as Backlog. A container in no Milestone lands in Backlog where one of its children is in Backlog, since a container is never behind the work under it. The user authorises the move, as the other moves the user holds, and gives the reason the work stopped.
+
+The move posts that reason on the issue before the state changes, as the audit comment of a user-authorised move carrying a reason, which every audit setting but `off` posts ([project-management:DEC-049-audit-journal-model] point 2). It releases the owner's claim on the issue ([project-management:DEC-035-instance-ownership] point 4), so the work is free for whoever takes it next. A container takes the move only where none of its children is In Progress or in Review. The forward cascade is unchanged, and the move back moves no other issue: a container may stand ahead of the work under it, never behind it.
 
 ### Cascade rule
 
@@ -73,6 +78,10 @@ Review models a PR open for a leaf, and a container has no PR of its own. A cont
 
 The "eligible to close but never auto-close" asymmetry makes the cascade safe. Closing a Feature is a commitment ("this capability shipped"); closing an EPIC is a bigger one. Auto-closing on the last child closing would produce a chain reaction with no human pause point. Stopping at each parent for explicit authorisation preserves the deliberate quality of those commitments.
 
+**Why a move back, and why it is the user's.** People planning the work, and agents choosing what to take next, read In Progress as work that is moving. An issue left In Progress after its work stopped states something false, and without a move back the only way to make it true is to close live work. Stopping work withdraws a commitment the user made when it started, so the user holds it, as the user holds the start and the end. Releasing the claim frees the work for whoever takes it next, and the reason on the issue tells a later reader why the work stopped.
+
+A container moved back over a child In Progress or in Review would stand behind that child, which is the state the forward cascade exists to prevent. Refusing that move keeps the cascade's guarantee without making the cascade run in both directions.
+
 ### Alternatives considered
 
 - **Open/closed only (no intermediate states).** Rejected — loses planning visibility from Backlog/In Progress/Review.
@@ -82,6 +91,8 @@ The "eligible to close but never auto-close" asymmetry makes the cascade safe. C
 - **Declare Todo → In Progress for containers, so the forward cascade moves one in a single step.** Rejected — the container's history would lose the scheduling step: it would read as started without ever having been scheduled, while the work under it was scheduled first.
 - **Refuse to start a child whose ancestor is unscheduled, or leave the ancestor behind and report it.** Rejected — a container behind a started child states something false.
 - **Lower the Todo → Backlog severity to `warning` in a project that runs no Milestone.** Rejected — it would hand the agent the start commitment, one of the two ends the user holds. The audited reason already serves such a project at bypassable-with-audit. A severity that varies with a project's configuration would also break [project-management:DEC-014-validation-severity-model]'s dispatch on the severity token without per-rule logic.
+- **Let the agent move back an issue it finds idle.** Rejected — whether work has stopped is a judgement on a commitment the user made, and an agent reading inactivity alone could stop live work.
+- **Move a container back together with its children.** Rejected — a container's move would change its children's states, the downward cascade this record disallows.
 
 ## Implications
 
@@ -91,3 +102,4 @@ The "eligible to close but never auto-close" asymmetry makes the cascade safe. C
 - Won't-do closures trigger the same closure cascade as PR-merge closures.
 - Date-based Milestone close interacts with this cascade via the rollforward rule in [project-management:DEC-016-time-bound-containers]; open children roll forward rather than closing, and the closure cascade only counts actually-closed children for eligibility.
 - Integration-scope closures run the same closure cascade — the change is only the PR base branch (integration vs `main`) plus the final integration → main PR closing the owning root. See [project-management:DEC-013-branch-and-pr-conventions].
+- A move back from In Progress refuses without a reason, and refuses a container with a child In Progress or in Review, naming each such child. It releases the owner's claim through the one release path a close uses, so the two never disagree on what a release writes.
