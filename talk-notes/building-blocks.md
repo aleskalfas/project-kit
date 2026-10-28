@@ -311,3 +311,21 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - the machinery is heavy to learn (COR-050 alone has 16 points)
 - **Maintainer's notes:**
   - Headline (decided 28 October): **"Docs that know when they're wrong."**
+
+## 10. Rule sets: rules a reviewer judges (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** a project writes down how its files must be written, as numbered rules in a rule set, each with an id that never changes, a status (a person accepts each rule), and its origin (COR-051). A set applies to the files its scope selects (by path and type), and a set may inherit another, pinned to a version: project-kit's `ANA` (7 rules, for its analysis) inherits `WRITE` (17, its general writing rules) and software-analysis's `SAN` (16); living-docs ships `LDOC` (8). Today they bind 323 files. A reviewer, `rule-set-reviewer`, judges each change against the rules that bind on the files it touches (COR-057), citing the rule, the line and the passage; where a check can enforce part of a rule (the prose lint, the analysis validator), the reviewer leaves that part to it. `pkit rule-sets reach` says which rules bind on a file.
+- **Problem:** writing guidelines live in a wiki nobody reads, or in a reviewer's head; each review re-argues taste; an AI writer follows whatever it was last told.
+- **Gain:**
+  - the rules are files, versioned and accepted like decisions; a rule that changes is a visible change
+  - grouping and specialisation: a general set, a capability's set, a language's set inheriting them (decided today for Python under software-engineering)
+  - every change is judged against the rules that bind on what it touches, by a reviewer that cites the rule; what a rule leaves to judgement goes to a person, marked as such
+- **Weight:** nothing in a session's context; the reviewer runs per change; the writer reads the rules for the files it writes (a bridge rule for that is filed, #2274).
+- **Evidence (this session):** the rule-set reviewer caught a glossary term used for a second thing (pools), a fact stated twice in disagreement (living-docs setup), and kept marking judgement calls for a person instead of blocking on them.
+- **Weak spot:**
+  - today it covers documentation, not code: software-engineering ships no rule set yet
+  - many findings are judgement calls a person must settle, which adds to the review queue
+  - inheritance with version pins is a lot of machinery for a handful of sets
+- **Maintainer's notes:**
