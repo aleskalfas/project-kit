@@ -254,6 +254,7 @@ An instance is a clone of a [project](../../core/glossary.md#term-project--proje
 - An instance holds at most one seat (DEC-059 point 4).
 - An instance may be the [owner](../glossary.md#term-owner--owner) of issues ([DEC-035 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)).
 - A helper agent that a lead agent starts acts as the lead's instance (DEC-059 point 6).
+- A helper agent that a worker agent starts to build a [Task](../glossary.md#term-task--task) acts as no instance. The helper agent writes nothing to GitHub (DEC-059 point 6).
 
 **States:** A clone becomes an instance once the clone sets a number, or, in a project with a topology, once the clone takes a seat. The clone stops being an instance when the number is cleared, or when the clone's seat is released (DEC-035 point 1 and DEC-059 point 6).
 
