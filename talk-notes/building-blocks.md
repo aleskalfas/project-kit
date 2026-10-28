@@ -252,3 +252,23 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - it grows with every capability that needs delivery (rules by installation, #2269)
 - **Maintainer's notes:**
   - Decided 28 October: not a block of its own until a second adapter exists. The talk folds it into the lifecycle (block 13) as one line: "install wires pkit into your AI tool: today that's Claude Code". A spike on a second harness is parked (#2298).
+
+## 7. Permission model and sandbox (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** permissions as one model in the project's own terms, owned by the methodology, which the adapter enforces through the harness (COR-028): the model is the source, the harness's settings a generated projection of it. A catalog of 15 privileges, in three kinds: **guardrails**, always denied to every agent and impossible to grant around (recursive deletion, `sudo`, force-push); **enablers**, usable only where granted (docker, the issue tracker, the CLI, reading the repository, read-only text filters); and **surgical denies** for one agent (the project manager may not mutate issues with raw `gh`, so it goes through the validating commands). Named profiles (read-only, non-destructive, autonomous) set a posture. A hook checks every tool call against the model. An OS sandbox, where the platform allows it, lets scripting run without prompts inside the box. Commands to see and test it: `explain` (who may do what), `probe` (proves what the model allows and refuses), `diagnose` (finds where the prompts come from), `setup autonomy`.
+- **Problem:** in a raw harness, what an agent may do is scattered across tool-specific files in tool-specific words; when something is wrongly allowed or blocked nobody can tell why; and the operator drowns in confirmations (a single session produced dozens), approving them unread, which is worse than no gate.
+- **Gain:**
+  - one place, in your words, says what each agent may do, and `explain` shows it
+  - a floor of destructive acts no agent can do, whatever is granted
+  - fewer prompts where it is safe (the workspace, read-only filters, the validated commands), so the prompts that remain get read
+  - agents steered onto the validating paths: raw mutations denied, the command that checks is the easy way
+- **Weight:** nothing in a session's context beyond two rules (14 and 15) and the workspace rule (16); the hook runs on every tool call.
+- **Evidence (this session):** a builder's `rm -rf` of its scratch files was refused by the guardrail, and it asked the planner to delete them instead; the planner refused (permission laundering) and told the person. The reviewers' false blocks when started outside the project root (#2255) came from settings not loading.
+- **Weak spot:**
+  - a deny list is a speed bump, not a security boundary: a `bash -c` wrapper or a raw `gh api` call walks around a deny (the catalog says so itself); only the OS sandbox confines
+  - the sandbox is off on macOS today (ADR-014), so scripting still prompts there
+  - posture is lenient: anything the model does not know goes to the harness's own prompt
+  - it is the largest area to learn (its README is about 7 500 words)
+- **Maintainer's notes:**
