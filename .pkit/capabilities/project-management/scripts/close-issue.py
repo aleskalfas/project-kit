@@ -971,8 +971,8 @@ def _close_completed(
         )
         return 1
 
-    # The DEC-007 gate, not skippable: the ticked criteria are what say the work
-    # is done (DEC-006).
+    # The DEC-007 gate, not skippable: every checkbox ticked is what says the
+    # work is done (DEC-006).
     unticked = _unticked_boxes(body)
     if unticked:
         print(
