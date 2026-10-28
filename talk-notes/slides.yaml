@@ -1,0 +1,26 @@
+# The talk's slides as data (structure agreed 29 October; see building-blocks.md,
+# "The slides' structure"). One entry per slide, in the talk's order.
+
+talk:
+  title: "pkit: building with AI, the way your project decides"
+  length_minutes: 45
+
+slides:
+  - id: docs-that-know
+    block: 11
+    title: "Docs that know when they're wrong"
+    message: "When the code changes, the docs it makes wrong are named, not discovered."
+    problem: "Documentation rots silently, and you find out when someone acts on it."
+    does:
+      - "Each document declares what it rests on: code, decisions, other documents"
+      - "When one changes, the change must answer for each document it affects: updated, still accurate (why), or fixed later (when)"
+      - "A reviewer checks the answers; `pkit friction debt` shows what is out of date"
+    show: "This week: the docs reviewer caught a false 'still accurate' on REQ-042 after the move back"
+    visual:
+      kind: diagram
+      shows: "code changes → the document resting on it is flagged → the change answers → a reviewer checks"
+      source: mermaid
+    limit: "It only covers what is anchored; an honest answer depends on the reviewer."
+    minutes: 3.5
+    notes: >-
+      See block 9 in building-blocks.md (anchors and answers).

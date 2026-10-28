@@ -549,3 +549,23 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - a migration is only as good as its author: one that misses a case leaves a project partly moved
   - release cadence is in the maintainer's hands; candidates are new
 - **Maintainer's notes:**
+
+## The slides' structure (agreed 29 October)
+
+**The deck:** a title slide; the opening (the problem pkit solves); one slide per block in the agreed order, capabilities taking two (project-management; software-engineering with connections); what's next; questions.
+
+**Every block slide has the same fields**, kept as data, one entry per slide in `talk-notes/slides.yaml`, from which the slides are generated:
+
+| Field | Holds |
+|---|---|
+| **title** | the block's name |
+| **message** | the one sentence said |
+| **problem** | one line |
+| **does** | what pkit does, 2–4 short bullets |
+| **show** | one concrete thing on screen (a command, a file, a real case from the week) |
+| **visual** | its kind (diagram, screenshot or none), what it shows, and its source (a diagram is written as text, for example Mermaid, and rendered; a screenshot comes from real work) |
+| **limit** | the honest weak spot, one line, on the slide |
+| **minutes** | the time budget |
+| **notes** | the speaker notes, not on the slide |
+
+**Layout:** text left (title, message, problem, bullets, show), the visual right, the limit as one small line at the bottom; a slide with no visual uses the full width. Whether the mural-boards skill can place images is to be checked; if not, visuals are placed by hand.
