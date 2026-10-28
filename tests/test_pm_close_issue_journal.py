@@ -175,6 +175,13 @@ CLOSES = [
 CLOSE_FIELDS = ("set_up", "options", "move", "trigger", "reason")
 
 
+def _engine_calls_of(options: list[str]) -> list[str]:
+    """The engine calls a close makes: the one move that records it, then, for
+    a completed close, the read move-issue makes as it runs the forward cascade
+    (DEC-006), which finds no ancestor to move here."""
+    return ["move", *(["status"] if "completed" in options else [])]
+
+
 # --- each close is journaled once ---------------------------------------------
 
 
@@ -203,7 +210,7 @@ def test_each_close_journals_one_move_from_where_the_issue_was(
     assert entry["reason"] == reason
     assert entry["actor"] == INVOKER.github_login
     # One engine call records the close, and nothing reads the engine before it.
-    assert [call[2] for call in calls] == ["move"]
+    assert [call[2] for call in calls] == _engine_calls_of(options)
 
 
 @pytest.mark.parametrize(CLOSE_FIELDS, CLOSES)
@@ -392,8 +399,8 @@ def test_with_journal_logging_off_nothing_is_journaled(
     assert world.journal_files() == []
     # Whether a move is recorded is the engine's to say: the close asks it once,
     # as move-issue asks for each move, and it records nothing. Nothing else is
-    # asked of it.
-    assert [call[2] for call in calls] == ["move"]
+    # asked of it, but where the forward cascade runs after the close.
+    assert [call[2] for call in calls] == _engine_calls_of(options)
 
 
 # --- move-issue on an issue GitHub closed -------------------------------------
@@ -496,9 +503,9 @@ def test_a_done_work_landing_that_closes_two_issues_journals_each_once(
 # its milestone (Backlog, inferred), else Todo for an issue still open, and
 # nothing for one already closed with neither — by close-issue's entry, by
 # move-issue's entry for relabelling a closed issue, and by the forward cascade,
-# which tells a finished issue from a won't-do one by it. So a landing never
-# journals a won't-do close while the cascade brings ancestors level as for a
-# finished one.
+# which tells a finished issue from a won't-do one by it where the issue did not
+# close as completed. So a landing never journals a won't-do close while the
+# cascade brings ancestors level as for a finished one.
 
 _LEVEL = [("todo", "backlog", "promote-issue"), ("backlog", "in-progress", "start-work")]
 
@@ -543,8 +550,10 @@ def test_a_merge_closing_a_task_with_only_a_milestone_reads_backlog_for_both(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Only a milestone: Backlog, inferred — the journal records the close from
-    Backlog, and the cascade, reading the same Backlog, takes it as a won't-do
-    and moves no ancestor. The two agree, on an inference both name."""
+    Backlog, and the cascade reads the same Backlog. The merge closed the Task
+    as completed, which is progress from Backlog too (DEC-006), so the cascade
+    brings the ancestors level, naming that Backlog. The two agree, on an
+    inference both name."""
     epic, feature, task = _unlabelled_task_under_a_feature(world)
     world.tracker.issues[task]["milestone"] = {"number": 7, "title": "Sprint 1"}
     world.tracker.merge(PR, [task])
@@ -554,8 +563,11 @@ def test_a_merge_closing_a_task_with_only_a_milestone_reads_backlog_for_both(
     _land(world, task, "--no-cascade")
 
     assert world.moves(task) == [("backlog", "done", "close-issue")]
-    assert world.moves(feature) == world.moves(epic) == []
-    assert "a move to done from backlog is a won't-do close" in capsys.readouterr().out
+    for number in (feature, epic):
+        assert world.moves(number) == _LEVEL, number
+        assert world.journal(number)[0]["reason"] == (
+            f"forward cascade from #{task}: backlog → done"
+        )
 
 
 def test_a_wont_do_close_of_an_open_task_nothing_placed_is_journaled_from_todo(

@@ -5,11 +5,13 @@ a decision walked with the user, closes as completed once every checkbox is
 ticked, on the person's authorisation, naming where the work's result lives
 (DEC-006, the `manual-completed` closure trigger). The close comment carries the
 result, GitHub records the Task as completed, its labels are reconciled to done,
-and the move is journaled from where the Task was. A Task in Review, a
-container, an unticked box and a missing result are refused, writing nothing.
-Every `gh` call is faked; the person's authorisation is
-test_pm_close_issue's, and the journal entry against the real engine is
-test_pm_close_issue_journal's.
+and the move is journaled from where the Task was. Completed work is progress,
+so the forward cascade then runs, through move-issue, before the closure
+cascade. A Task in Review, a container, an unticked box and a missing result
+are refused, writing nothing. Every `gh` call and the move-issue run are faked.
+The person's authorisation is test_pm_close_issue's, the journal entry against
+the real engine is test_pm_close_issue_journal's, and the ancestors the real
+move-issue brings level are test_pm_move_issue_forward_cascade's.
 """
 
 from __future__ import annotations
@@ -30,6 +32,10 @@ SCRIPT_PATH = CAP_ROOT / "scripts" / "close-issue.py"
 
 RESULT = "the findings are filed as #908"
 COMPLETED = ["42", "--mode", "completed", "--result", RESULT, "--yes"]
+
+# The line the faked move-issue prints, so its place in the output can be read.
+MOVE_ISSUE_RAN = "[fake] move-issue ran"
+CLOSURE_CASCADE = "[cascade] parents to check for eligibility: #10"
 
 
 @pytest.fixture(scope="module")
@@ -67,9 +73,11 @@ def _run(
     issue: dict,
     comments: list | None = None,
     parents: dict | None = None,
+    move_issue_rc: int = 0,
 ) -> SimpleNamespace:
-    """Run main() with every gate passed; record each `gh` call and each move
-    handed to the engine."""
+    """Run main() with every gate passed; record each `gh` call, each move
+    handed to the engine, and each move-issue run, which exits `move_issue_rc`
+    and prints a line saying it ran."""
     monkeypatch.setattr(sys, "argv", ["close-issue", *argv])
     monkeypatch.setattr(ci, "resolve_capability_root", lambda _explicit: CAP_ROOT)
     monkeypatch.setattr(ci.bootstrap_gate, "enforce", lambda *a, **k: True)
@@ -110,8 +118,16 @@ def _run(
         return subprocess.CompletedProcess(cmd, 0, stdout=stdout, stderr="")
 
     monkeypatch.setattr(ci, "gh_run", fake_gh_run)
+    moved: list[tuple] = []
+
+    def fake_move_issue(issue_number, target, **kwargs):
+        moved.append((issue_number, target, kwargs))
+        print(MOVE_ISSUE_RAN)
+        return move_issue_rc
+
+    monkeypatch.setattr(ci.composed_move, "invoke_move_issue", fake_move_issue)
     rc = ci.main()
-    return SimpleNamespace(rc=rc, calls=calls, journaled=journaled)
+    return SimpleNamespace(rc=rc, calls=calls, journaled=journaled, moved=moved)
 
 
 def _writes(rec) -> list[list[str]]:
@@ -187,6 +203,8 @@ def test_closes_a_task_as_completed_naming_where_its_result_lives(
     out = capsys.readouterr().out
     assert f"result: {RESULT}" in out
     assert "[ok] closed #42 (completed, without a pull request)." in out
+    # Completed work is progress: the forward cascade runs from each origin.
+    assert [(n, target) for n, target, _ in rec.moved] == [(42, "done")]
 
 
 def test_a_task_recovered_from_its_kind_prefix_closes(ci, monkeypatch) -> None:
@@ -195,13 +213,54 @@ def test_a_task_recovered_from_its_kind_prefix_closes(ci, monkeypatch) -> None:
     assert rec.rc == 0
 
 
-def test_the_closure_cascade_runs_on_the_parent(ci, monkeypatch, capsys) -> None:
-    parent = {"title": "[EPIC] e", "state": "OPEN", "body": "## What\n", "labels": []}
-    rec = _run(ci, monkeypatch, COMPLETED, issue=_issue(), parents={10: parent})
+def _parent() -> dict:
+    return {"title": "[EPIC] e", "state": "OPEN", "body": "## What\n", "labels": []}
+
+
+def test_the_forward_cascade_runs_and_then_the_closure_cascade(ci, monkeypatch, capsys) -> None:
+    """move-issue, run on the closed Task, brings its ancestors level first, so
+    the closure cascade then reads them where the forward cascade left them."""
+    rec = _run(ci, monkeypatch, COMPLETED, issue=_issue(), parents={10: _parent()})
     assert rec.rc == 0
     out = capsys.readouterr().out
-    assert "[cascade] parents to check for eligibility: #10" in out
+    assert out.index("[ok] closed #42") < out.index(MOVE_ISSUE_RAN) < out.index(CLOSURE_CASCADE)
     assert "eligible to close: run `pkit pm close-issue 10 --mode=cascade-eligibility-close`" in out
+    assert rec.moved == [(42, "done", {"capability_root_arg": None, "allow_foreign_repo": False})]
+
+
+def test_move_issue_is_handed_the_capability_root_and_the_operator_s_confirmation(
+    ci, monkeypatch, tmp_path: Path
+) -> None:
+    argv = [*COMPLETED, "--capability-root", str(tmp_path), "--allow-foreign-repo"]
+    rec = _run(ci, monkeypatch, argv, issue=_issue())
+    assert rec.rc == 0
+    assert rec.moved == [
+        (42, "done", {"capability_root_arg": tmp_path, "allow_foreign_repo": True})
+    ]
+
+
+def test_no_cascade_runs_neither_cascade(ci, monkeypatch, capsys) -> None:
+    rec = _run(
+        ci, monkeypatch, [*COMPLETED, "--no-cascade"], issue=_issue(), parents={10: _parent()}
+    )
+    assert rec.rc == 0
+    assert rec.moved == []
+    assert CLOSURE_CASCADE not in capsys.readouterr().out
+
+
+def test_a_forward_cascade_move_issue_could_not_run_is_a_warning_and_the_close_stands(
+    ci, monkeypatch, capsys
+) -> None:
+    rec = _run(ci, monkeypatch, COMPLETED, issue=_issue(), parents={10: _parent()}, move_issue_rc=1)
+    assert rec.rc == 0
+    assert ["gh", "issue", "close", "42", "--reason", "completed"] in _writes(rec)
+    out, err = capsys.readouterr()
+    assert (
+        "[warn] the forward cascade from #42 did not run: move-issue exited 1, and the "
+        "close stands."
+    ) in err
+    assert "run `move-issue 42 --to done`: the cascade is idempotent" in err
+    assert CLOSURE_CASCADE in out
 
 
 def test_the_comment_is_posted_once_across_a_retry(ci, monkeypatch) -> None:
@@ -228,6 +287,7 @@ def test_dry_run_writes_nothing(ci, monkeypatch, capsys) -> None:
     assert rec.rc == 0
     assert _writes(rec) == []
     assert rec.journaled == []
+    assert rec.moved == []
     assert "[dry-run]" in capsys.readouterr().out
 
 
@@ -235,6 +295,7 @@ def test_an_issue_already_closed_is_left_as_it_is(ci, monkeypatch, capsys) -> No
     rec = _run(ci, monkeypatch, COMPLETED, issue=_issue(state="CLOSED"))
     assert rec.rc == 0
     assert _writes(rec) == []
+    assert rec.moved == []
     assert "[noop] issue already closed." in capsys.readouterr().out
 
 
@@ -250,6 +311,7 @@ def test_an_unticked_box_is_refused_and_the_gate_is_not_skippable(
     assert rec.rc == 1
     assert _writes(rec) == []
     assert rec.journaled == []
+    assert rec.moved == []
     err = capsys.readouterr().err
     assert "findings filed" in err
     assert "not skippable" in err
@@ -274,6 +336,7 @@ def test_a_task_in_review_is_refused(ci, monkeypatch, capsys) -> None:
     assert rec.rc == 1
     assert _writes(rec) == []
     assert rec.journaled == []
+    assert rec.moved == []
     err = capsys.readouterr().err
     assert "[refused] #42 is in Review" in err
     assert "done-work 42" in err
@@ -286,6 +349,7 @@ def test_anything_but_a_task_is_refused(ci, monkeypatch, capsys, title: str) -> 
     rec = _run(ci, monkeypatch, COMPLETED, issue=_issue(title=title))
     assert rec.rc == 2
     assert _writes(rec) == []
+    assert rec.moved == []
     assert "--mode=completed closes a Task" in capsys.readouterr().err
 
 

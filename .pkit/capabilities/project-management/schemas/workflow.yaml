@@ -462,10 +462,11 @@ cascade:
       ancestor moves only through transitions declared above: one in todo
       goes todo → backlog, then backlog → in-progress, each journaled, where
       a journal is kept, with the moved issue's move as its reason. No
-      todo → in-progress is declared for the cascade. A move to done from
-      todo or backlog — a won't-do close, or a Task's close as completed
-      without a pull request — moves no ancestor forward; the closure
-      cascade still runs. The forward cascade is scoped to
+      todo → in-progress is declared for the cascade. A won't-do close from
+      todo or backlog moves no ancestor forward; the closure cascade still
+      runs. A Task's completed close (`manual-completed`) is progress from
+      todo or backlog too, so it brings each ancestor behind up to
+      in-progress, before the closure cascade. The forward cascade is scoped to
       todo → backlog → in-progress only; containers do not forward-cascade
       into review or done. When an issue enters review, or done from
       in-progress or review, each ancestor behind is brought to at most
@@ -525,8 +526,9 @@ closure_triggers:
       skippable). Agent posts a close comment naming where the work's
       result lives (an issue, a record, a comment) and closes the Task as
       completed, from Todo, Backlog or In Progress; a Task in Review has
-      a PR open and closes through its merge. The closure cascade runs as
-      for a PR-merge closure.
+      a PR open and closes through its merge. Completed work is progress,
+      so the forward cascade then brings each ancestor behind up to
+      In Progress, and the closure cascade runs as for a PR-merge closure.
 
   - id: manual-wont-do
     target_state: done

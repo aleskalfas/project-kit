@@ -36,6 +36,8 @@ Closes a GitHub issue via a path declared in workflow.yaml's
     the close comment names where the work's result lives, posted once across a
     retry before the close. A Task in Todo, Backlog or In Progress closes; one
     in Review has a pull request open, and is refused, as is a container.
+    Completed work is progress, so the forward cascade then brings each
+    ancestor behind up to In Progress, before the closure cascade runs.
 
 A won't-do close, a container's close, a leaf's close through ``--pr`` and a
 Task's close as completed are moves the person authorises, a hard reject when
@@ -66,6 +68,13 @@ reported as eligible, with the ``close-milestone`` command that closes it
 (#414); a date-based one closes on its date, so its children closing makes
 nothing eligible.
 
+A completed close runs the forward cascade first (DEC-006), composing over
+``move-issue <N> --to done`` (``_lib.composed_move``) as ``done-work`` does after
+a merge: move-issue finds the Task at done, tells the completed close by the
+close reason the tracker reports, and brings each ancestor behind up to
+in-progress. A move-issue that exits non-zero is a warning naming the re-run,
+and the close stands. ``--no-cascade`` skips both cascades.
+
 Each close is a governed move to done, recorded with the process engine through
 the path ``move-issue`` records its moves through (``_lib.move_journal``,
 ``pkit process move --from``; #1231): after the close and its label reconcile,
@@ -82,10 +91,10 @@ the label — ``move-issue``, or an earlier run of this script — and is not
 recorded again, so a re-run adds nothing. Whether the move is recorded is the
 engine's: it appends to the journal where the project keeps one and records
 nothing where it does not. A move the workflow does not declare for the issue's
-type — a Task closed from In Progress, say — is not handed to the engine, which
-does not read a transition's ``applies_to``; it, and a move the engine refuses
-because its gate does not pass, are warned about as a direct move's refusal
-is, and the close stands.
+type — a container whose label was set to Review by hand, say — is not handed to
+the engine, which does not read a transition's ``applies_to``; it, and a move
+the engine refuses because its gate does not pass, are warned about as a direct
+move's refusal is, and the close stands.
 
 The ``state`` write is RESOLVED through the substrate-map seam (ADR-026
 sole-constructor + fail-closed), the same as ``move-issue``: greenfield (no
@@ -148,6 +157,7 @@ from _lib import audit as _audit
 from _lib import (
     axis_labels,
     bootstrap_gate,
+    composed_move,
     containment,
     engine_said,
     instance_claims,
@@ -280,7 +290,10 @@ def main() -> int:
     parser.add_argument(
         "--no-cascade",
         action="store_true",
-        help="Skip the closure-cascade walk on parent issues.",
+        help=(
+            "Skip the closure-cascade walk on parent issues, and the forward "
+            "cascade a completed close runs before it."
+        ),
     )
     parser.add_argument(
         "--capability-root",
@@ -670,6 +683,12 @@ def main() -> int:
     if clone is not None and not args.dry_run:
         instance_claims.say(instance_claims.release(args.issue_number, clone, config))
 
+    # Forward cascade (DEC-006), ahead of the closure cascade: a completed close
+    # is progress, so each ancestor behind the Task is brought level. A dry run
+    # of a completed close has returned before here.
+    if args.mode == "completed" and not args.no_cascade:
+        _bring_ancestors_level(args)
+
     # Closure cascade — semi-automatic per DEC-006: it reports eligibility and
     # closes nothing, over the parent issues and the Milestones alike.
     if not args.no_cascade:
@@ -927,7 +946,7 @@ def _close_completed(
     through its merge, and — not skippably — an unticked checkbox (DEC-007).
     Returns the exit code to stop with, or None once the issue is closed,
     labelled and ``close_move`` recorded, so the caller releases the owner and
-    runs the closure cascade and the after-close hooks.
+    runs the forward cascade, the closure cascade and the after-close hooks.
     """
     issue_number = args.issue_number
     if structural_type != "task":
@@ -975,8 +994,8 @@ def _close_completed(
     if args.dry_run:
         print(
             "\n[dry-run] would comment where the result lives, close "
-            f"#{issue_number} as completed and reconcile its labels; nothing "
-            "written."
+            f"#{issue_number} as completed, reconcile its labels and bring its "
+            "ancestors level; nothing written."
         )
         return 0
     held = _authorise(
@@ -1021,6 +1040,34 @@ def _completed_close_comment(result: str) -> tuple[str, str]:
         f"{key}"
     )
     return key, body
+
+
+def _bring_ancestors_level(args: argparse.Namespace) -> None:
+    """Run the forward cascade after a completed close, through move-issue.
+
+    Completed work is progress, so each ancestor behind the closed Task is
+    brought up to In Progress (DEC-006), from Todo or Backlog as from In
+    Progress. ``move-issue <N> --to done`` finds the Task at done and walks its
+    ancestors, telling a completed close by the close reason the tracker
+    reports, as it does after a merge. A cascade cut short is move-issue's own
+    warning. A move-issue that exits non-zero is a warning here, naming the
+    re-run, and the close stands.
+    """
+    rc = composed_move.invoke_move_issue(
+        args.issue_number,
+        DONE_STATE,
+        capability_root_arg=args.capability_root,
+        allow_foreign_repo=args.allow_foreign_repo,
+    )
+    if rc != 0:
+        print(
+            f"\n[warn] the forward cascade from #{args.issue_number} did not run: "
+            f"move-issue exited {rc}, and the close stands.\n"
+            f"          → Fix what move-issue reported, then run `move-issue "
+            f"{args.issue_number} --to done`: the cascade is idempotent, and brings "
+            "level what is still behind.",
+            file=sys.stderr,
+        )
 
 
 # ---- recording the close (#1231) ------------------------------------
