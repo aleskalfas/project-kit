@@ -191,3 +191,10 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - the core skills are anchored to none of the records they follow (only the `analysis-author` skill carries some), so when a record changes nothing asks a core skill to recheck; `gates:` checks only that the record is accepted, not that the skill still says what it decides
   - composites grow large (`pm` about 15 000 words with its sub-procedures)
 - **Maintainer's notes:**
+  - Skills and scripts belong together: both are the projection of decisions into a kind of task (the how).
+  - Lifecycle (who creates them, when, how, why): pkit answers when and why (COR-007: on recurrence) and which carrier (COR-006), barely how (no `pkit new skill`, no skill for authoring skills; no home for a project's own scripts), and not who notices, how they stay in step with their records, or how they retire.
+  - The main case should be anticipation, not recurrence: pkit's value is its opinion on how to build a project with AI, its own tooling included, so when work starts that will not be a one-off, the agent proposes the skills, agents, scripts and records around it on pkit's foundations. Agreed direction, after a critic's review (28 October), three tiers:
+    1. **Reuse** what pkit ships: always, through a lookup before anything is built.
+    2. **Apply a pkit shape** (an authored kind → command plus skill; a perspective → agent; a shared choice → record; a repeated procedure → skill) to the project's new work, where the plan shows two or more cases or the work recurs by its nature, and the shape itself came from recurrence. The planner proposes it at the first stage of batch planning (DEC-060); the person accepts at the plan's gate.
+    3. **Invent** a new carrier on recurrence (COR-007), with a noticing review someone owns.
+  - Needs a record refining COR-007 first; prerequisites: authoring skills (`pkit new skill`), and retiring a carrier.
