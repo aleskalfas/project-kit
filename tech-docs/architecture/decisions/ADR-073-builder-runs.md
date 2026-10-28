@@ -62,7 +62,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
   - a `Read` deny on the caller's clone, and on the person's signing key
   - the mode that refuses what no rule allows (`dontAsk` in Claude Code), always passed
   - the harness's own memory turned off
-  - an environment that holds no signing agent's socket, so nothing in the run signs (ADR-066 point 4)
+  - an environment that names no signing agent, and a sandbox deny on the signing agents' sockets where they lie, so nothing in the run signs (ADR-066 point 4)
 - **Outside the clone.** The runner writes the run's settings, and the hook and model it reads, to a folder of the backbone's that the run does not write.
 - **The project's instructions** to the harness are read from the clone, as a build needs them. They grant nothing (point 10).
 
@@ -71,7 +71,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 - **On, and failing closed.** The run's settings turn the sandbox on, and stop the harness at start where it cannot start (ADR-004 point 4). The runner checks the platform first, so a known gap is a refusal (exit 7).
 - **Writes:** the clone only.
 - **Reads:** the caller's clone and the person's signing key are denied. The rest is as the sandbox leaves it, which is most of the machine (ADR-066's harness observations).
-- **Network:** only the hosts the project lets a build reach, a list in project-management's project configuration, read from the default branch. The list is empty by default, so a project names the hosts its toolchain needs. A list entry that reaches where the credentials of the project's remote or of its work tracker reach refuses the build, since a program the builder runs could push or write there with the platform's credentials. The adapter declares that set of hosts for its platform and remote, such as a code host's own host, its API and upload hosts, and an enterprise host's, and an entry matches it where the entry, a wildcard included, covers any host in the set.
+- **Network:** only the hosts the project lets a build reach, a list in project-management's project configuration, read from the default branch. The list is empty by default, so a project names the hosts its toolchain needs. A list entry that reaches where the credentials of the project's remote or of its work tracker reach refuses the build, since a program the builder runs could push or write there with the platform's credentials. The adapter declares that set of hosts for its platform and remote, such as a code host's own host, its API and upload hosts, and an enterprise host's. An entry matches it where either one, a wildcard included, covers the other. Where the adapter declares no set for the project's remote or work tracker, any list that is not empty refuses the build (exit 7), so a host the adapter does not know fails closed.
 - **No auto-approval, and no retry outside the sandbox** (ADR-066 point 6, ADR-028).
 - **No excluded command.** A command the platform requires outside the sandbox (ADR-027) refuses the build instead, since outside the sandbox it would write the seat's clone. On macOS, where the installed uv cannot run inside the sandbox (ADR-014), a build that needs it is refused until a uv the sandbox hosts is installed.
 
@@ -92,11 +92,11 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 - **Detached.** A build outlasts the seat's own shell call. So the build command starts a process of its own that asks the backbone for the run, and returns at once with the state `running`.
 - **The state file** sits in the capability's git-ignored runtime folder of the seat's clone, and only that process writes it. It names the build's state, its start, the time of the builder's last event, the calls refused so far, the clone, and, once the run ends, the result or the question.
 - **Progress.** The run command reports each event of the harness's stream, with its time, to a file the caller names. Where none comes for the run's idle limit, the runner ends the harness, as at its wall-clock limit (ADR-066 point 11).
-- **The hand-back** is that process's, once the run ends (point 8). It writes the build's record (point 9), then the final state.
+- **The hand-back** is that process's, once the run ends (point 8), or `--hand-back`'s where it could not sign. The hand-back that moves the Task's branch writes the build's record (point 9), then the final state.
 - **Waiting.** `--wait <seconds>` reads the state, waits at most that long, and exits with the state's code. The seat waits in slices shorter than its own shell call's limit.
 - **Recovery.** A session that starts in a clone with a build in its state file goes on from it: waits on a running one, or acts on a finished one. The state file names the process's id. A build whose process is gone while its state is not final is lost: not borne out (exit 5), its clone kept.
 - **One build at a time** in a seat's clone. A build started while one runs is refused.
-- **The claim.** That process renews the Task's claim while the run runs, once renewal is built (DEC-059 point 9), and stops when the run ends, which the wall-clock limit bounds. So a dead session's Task still returns to the pool, and the claim of a Task whose question waits does not lapse (DEC-062 point 6).
+- **The claim.** That process renews the Task's claim while the run runs, once renewal is built (DEC-059 point 9), and stops when the run ends, which the wall-clock limit bounds. So a dead session's Task still returns to the pool, and the claim of a Task whose build waits, on a question or on its hand-back, does not lapse (DEC-062 point 6).
 
 ### 6. Each ending has an exit of its own
 
@@ -131,7 +131,8 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 
 - **After a run that ended built,** once the clone's check (point 1) bears it out and the seat's clone still holds the Task's claim (DEC-059 point 9), the build command fetches the clone's branch into a temporary reference of the seat's clone. Git's local transport runs no hook of the clone, and the check found the clone's configuration and hooks unchanged.
 - **Signed at the hand-back.** Where the seat's clone signs its commits, the build command writes each fetched commit again with the same tree, message and author, signed by the seat's clone. Each parent maps through what the hand-back already wrote, the start commit standing for itself, and every other parent, such as the default branch's head under a merge, is kept as it is. The builder never held the key, so a signature says the command brought the commit back.
-- **A signature that fails,** such as a key that is locked with nobody to unlock it, moves nothing: the build is built and not yet brought back, its clone kept (exit 9). `--hand-back` makes the hand-back again from the seat's session.
+- **A signature that fails,** such as a key that is locked with nobody to unlock it, moves nothing: the build is built and not yet brought back, its clone kept (exit 9). It posts an event on the Task that says so and names no commit, and the build waits on its hand-back. `--hand-back` makes the hand-back again from the seat's session, and writes the build's record once the branch moves.
+- **The claim while a build waits on its hand-back** does not lapse, as while it waits on a question (point 7, DEC-062 point 6). A release of the seat still frees it. `--hand-back` on a claim the clone no longer holds is refused (exit 1), and the clone is kept.
 - **A fast-forward only.** The Task's branch moves only to the commits the hand-back wrote, which descend from the build's start commit.
 - **The clone** is removed once its commits are back. On any other ending it is kept, and the state names it.
 - **Nothing is pushed.** The seat pushes, after its own checks (DEC-062 point 7).
@@ -159,8 +160,8 @@ Before the working form is built, a probe of the harness confirms, on the adapte
 - With no settings file loaded, the runner's settings and its definition, the builder starts, signs in and builds.
 - The hook's code and the model read from outside the clone are the ones that judge, not the clone's.
 - The `Read` deny on the caller's clone reaches a program the builder runs, on each platform.
-- No signing agent's socket is reachable from the run, and a program the builder runs cannot sign.
-- A host in the set the adapter declares (point 3) is unreachable from the run, wildcards included.
+- No signing agent's socket is reachable from the run, at its default path or one an environment names, and a program the builder runs cannot sign.
+- A host in the set the adapter declares (point 3) is unreachable from the run, wildcards on either side included. A project whose remote the adapter declares no set for, with a list that is not empty, is refused.
 - The harness's memory is off, and the run reads none of the person's earlier sessions' notes.
 - The stream of events gives the time of each event, and the idle limit ends a run that sends none.
 - A detached run outlives the shell call that started it, and the limits still end it.
@@ -202,7 +203,7 @@ A fact the probe disproves refines or supersedes this record.
 - **The adapters' runner contract** gains the working form. The Claude Code adapter's runner realises it: no settings sources, the run's settings and definition, the hook from outside the clone, `dontAsk`, the sandbox, memory off, the stream of events and the idle limit, the resume. Its README lists the flags, and its enforcement declaration names what holds a working run and what stays open.
 - **A harness requirement** joins the set ([COR-047](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)): a process can start an agent unattended in a folder it names, under only the settings it passes, inside a sandbox that bounds writes to that folder, in a mode that refuses what no rule allows. Each event of the run reaches the process with its time, and so do the calls it refused. Evidence: DEC-062, a design dependency (COR-047 point 9). Each adapter answers it.
 - **ADR-066, refined in place,** with a pointer to this record: the Decision's line on its points, point 1's list of what the run command does, point 2's of what a caller passes and gets back, point 9's for the hook in a working run, and point 11's open items.
-- **ADR-041, refined in place:** the ownership fold takes from its caller whether a Task's build waits on a question, which the build command's question event on the Task gives, so such a claim does not lapse (DEC-062 point 6).
+- **ADR-041, refined in place:** the ownership fold takes from its caller whether a Task's build waits, on a question or on its hand-back, which the build command's events on the Task give, so such a claim does not lapse (DEC-062 point 6).
 - **project-management** builds the build command, the point's companion schema with the result and question grammar, the run's rules for the build command, the list of a build's network hosts and the limit on questions in its project configuration, the state file, the build records, the provenance check and its override.
 - **Each changeset declares its component's change** (PRJ-002): the backbone, the Claude Code adapter, project-management, and software-engineering, which contributes its producer to the point.
 - **A platform without a sandbox** refuses builds. A Linux platform needs bubblewrap installed, as the harness's sandbox does.

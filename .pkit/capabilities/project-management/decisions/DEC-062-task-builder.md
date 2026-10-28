@@ -83,14 +83,14 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 
 - **Never the seat from its own context.** That would carry the seat's context into the build, which this record keeps out.
 - **The question waits on the Task.** The command posts it on the Task, so the seat never writes the builder's question. The seat tells the person, and ends the loop. A later session's first step finds the open question before it takes any other work.
-- **A waiting question holds the claim.** The Task stays In Progress and claimed. Like a Task in Review, it waits on others, not on its owner, so its claim does not lapse while the question waits (refinement of DEC-059 point 9). A release of the seat, by its clone or by force, still frees it (DEC-059 point 5).
+- **A waiting build holds the claim.** While a build waits on a question, or on its hand-back (point 7), the Task stays In Progress and claimed. Like a Task in Review, it waits on others, not on its owner, so its claim does not lapse while it waits (refinement of DEC-059 point 9). A release of the seat, by its clone or by force, still frees it (DEC-059 point 5).
 - **The build resumes** in the builder's own session where the harness keeps it, so the builder goes on with its own context of the Task. Where it does not, a fresh builder starts with the brief, the question and the answer. The question and its answer stay recorded together.
 - **Bounds.** A run that reached its limit is never started again on its own. A Task stops for the person once it has asked as many questions as the command allows.
 - **Only the person's answer counts.** Where every clone works under one account, an answer's author on the Task does not prove who wrote it. Like the guard of DEC-035, this catches mistakes and is no security boundary.
 
 ### 7. Only checked commits reach the Task's branch, and only the seat pushes them
 
-- **Brought back by the command,** once the run's clone bears out its result (point 5) and the seat still holds the Task's claim. Only commits come back, and the command signs them where the project signs, so the builder never holds the key. Nothing of the builder's clone runs in the seat's clone.
+- **Brought back by the command,** once the run's clone bears out its result (point 5) and the seat still holds the Task's claim. Only commits come back, and the command signs them where the project signs, so the builder never holds the key. A build whose commits cannot be signed yet waits on its hand-back, its work kept. Nothing of the builder's clone runs in the seat's clone.
 - **Then the seat.** The seat runs the project's checks itself, and takes no criterion on the builder's word alone. It ticks the criteria the work meets, files the follow-ups for the person to schedule, checks its seat before the push (DEC-059 point 9), and pushes. The seat's push is the only push to the project's remote. It then opens the pull request as before.
 - **The claim while a build runs.** The build command's work is the seat's work, so once a Task's claim is renewed by its work (DEC-059 point 9), the command renews it while the build runs, and stops when the run ends.
 
@@ -122,7 +122,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 
 **Why the person answers decisions and permissions.** A role never stands in for a person's authorisation (DEC-059 point 8), and a permission the run's rules refused is one. Advice changes no rule, so an advising agent may give it, on the brief and the question alone. The seat may not, since its answer would carry its context into the build.
 
-**Why a waiting question holds the claim.** The work so far sits in the builder's clone and session, which another clone cannot take over. A claim that lapsed would hand the Task to a worker that starts again, and lose both.
+**Why a waiting build holds the claim.** The work so far sits in the builder's clone and session, which another clone cannot take over. A claim that lapsed would hand the Task to a worker that starts again, and lose both.
 
 **Why a connection point.** The side that needs a builder declares the point ([pkit:COR-053]). Installing a capability that ships a producer agent then makes the build command work with no configuration, and the point's version keeps a builder on the contract it follows.
 

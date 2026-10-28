@@ -342,9 +342,9 @@ When a claim counts:
   since the owner's last claim, handoff or renewal, judged at the time of reading.
   Only a renewal that names the claim's seat and key renews it. A claim on an issue
   in any state other than In Progress does not lapse. Nor does the claim on a Task
-  whose build waits on a question, which the caller passes as it passes the Task's
-  state, read from the build command's question and answer events on the Task
-  (refinement per [ADR-073](ADR-073-builder-runs.md) point 7).
+  whose build waits, on a question or on its hand-back, which the caller passes as
+  it passes the Task's state, read from the build command's events on the Task
+  (refinement per [ADR-073](ADR-073-builder-runs.md) points 7 and 8).
 - **A Task moved back to In Progress** by a command of the capability gets a
   renewal from that command (DEC-059 point 9), so the limit runs from the move. A
   move made outside the capability, such as by a board's automation, renews
