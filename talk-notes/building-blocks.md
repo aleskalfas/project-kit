@@ -43,20 +43,45 @@ The flow follows an adopter: install it, learn it, keep it current, see what com
 1. **Install pkit** — `pkit init`, what lands in your project, and the one-owner rule: the methodology's files and your files are never shared. One line on adapters (install wires pkit into your AI tool, today Claude Code); `status`, `visibility`, `config`.
 2. **Decision records**
 3. **Checked every time** — validation: files point at each other, pointers break quietly, one command walks them all
-4. **Rules as data** — schemas: decisions say why, schemas say what, validation checks both hold (and `data`)
+4. **Schemas: what the tools read** — the exact rules in YAML: decisions say why, schemas say what, validation checks both hold (and `data`)
 5. **Processes as data** — the process substrate: staged work with a check of every move and a memory of every subject, shown through project-management's issue lifecycle
-6. **Rules**
+6. **What every session is told** — the operational rules loaded into every session
 7. **Scratchpad notes**
 8. **Skills and the commands they pair with** — the judgement and the mechanics together (and the hook registry)
 9. **Agents: roles with limits** (and storyboards: how an agent's behaviour is designed)
-10. **Your rules, not the tool's guesses** — permissions, and where agents write
+10. **Permissions you write down** — first line: "not the tool's guesses"; and where agents write
 11. **Docs that know when they're wrong** — anchors and answers
-12. **Rule sets** — skipped for now while the rules are reworked
+12. **Writing rules** (rule sets) — skipped for now while the rules are reworked
 13. **Capabilities:**
     - **project-management: "One project manager, many builders"** (landing a change lives here)
     - **software-engineering, with connections:** the builders follow your conventions, three reviewers check the result, and the reviewers plug into project-management's merge gate through a connection point, with nothing to wire
 14. **Stay current** — sync, upgrade, migrations, versioning and release, `pin`; and the report channel: updates come down, reports go up
 15. **What's next (experimental)** — software-analysis, living-docs, and real multi-clone parallel work (seats and pools): all three run today, all three still being shaped
+
+
+### Time (45 minutes, agreed 29 October)
+
+| # | Block | Minutes |
+|---|---|---|
+| | Opening: the problem pkit solves | 2 |
+| 1 | Install pkit | 3 |
+| 2 | Decision records | 3½ |
+| 3 | Checked every time | 2 |
+| 4 | Schemas: what the tools read | 1½ |
+| 5 | Processes as data | 1½ |
+| 6 | What every session is told | 2 |
+| 7 | Scratchpad notes | 1 |
+| 8 | Skills and the commands they pair with | 2½ |
+| 9 | Agents: roles with limits | 3 |
+| 10 | Permissions you write down | 2½ |
+| 11 | Docs that know when they're wrong | 3½ |
+| 13 | Capabilities: project-management 5, software-engineering with connections 3 | 8 |
+| 14 | Stay current | 2 |
+| 15 | What's next | 2 |
+| | Questions | 5 |
+| | Total | 45 |
+
+No title uses the word "rules" (decided 29 October): each block is named for what the audience sees.
 
 
 ## 1. Decision records
