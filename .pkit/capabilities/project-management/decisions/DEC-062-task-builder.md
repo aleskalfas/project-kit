@@ -64,6 +64,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
   - The builder reaches the network hosts its build is allowed. What it reads, it can send there, and the sandbox's list of hosts stops only a well-behaved request (ADR-066 point 11). Where the platform gives every process its credentials for such a host, a program the builder runs acts there as the account the clones share.
   - The project's instructions to the harness are read from the clone, earlier builds' changes among them. They shape the work, and grant no permission.
   - The person's own instructions to the harness reach the run, as they reach every run.
+  - The reviewers run unconfined in the seat's clone ([pkit:ADR-066] point 10). One that runs the change's code runs a build's commits outside a sandbox, until a record confines the reviewers' runs.
 
 ### 5. The builder ends its run with a result or a question
 
@@ -77,7 +78,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 | Kind | What it asks | Who answers |
 |---|---|---|
 | decision | the Task's scope, documented behaviour, a record, a shared choice | the person only ([project-management:DEC-006-state-machine-and-cascade]) |
-| permission | a call the run's rules refused that the build needs | the person only: once for that build, recorded, or by a lasting grant through a reviewed change |
+| permission | a call the project's rules refused that the build needs | the person only: once for that build, recorded, or by a lasting grant through a reviewed change. A call one of the build's own denies refused is never granted, since it is the seat's work: it becomes a decision, about the Task's scope |
 | advice | which of two ways to build fits | an advising agent the command starts, confined, on the brief and the question alone, whose answer the person accepts; else the person |
 | environment | a missing tool, a broken checkout, a time limit | the person, or whoever runs the platform |
 
@@ -88,10 +89,11 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 - **Bounds.** A run that reached its limit is never started again on its own. A Task stops for the person once it has asked as many questions as the command allows.
 - **Only the person's answer counts.** Where every clone works under one account, an answer's author on the Task does not prove who wrote it. Like the guard of DEC-035, this catches mistakes and is no security boundary.
 
-### 7. Only checked commits reach the Task's branch, and only the seat pushes them
+### 7. A build's commits run only in a sandbox until a person reviews them, and only the seat pushes them
 
-- **Brought back by the command,** once the run's clone bears out its result (point 5) and the seat still holds the Task's claim. Only commits come back, and the command signs them where the project signs, so the builder never holds the key. A build whose commits cannot be signed yet waits on its hand-back, its work kept. Nothing of the builder's clone runs in the seat's clone.
-- **Then the seat.** The seat runs the project's checks itself, and takes no criterion on the builder's word alone. It ticks the criteria the work meets, files the follow-ups for the person to schedule, checks its seat before the push (DEC-059 point 9), and pushes. The seat's push is the only push to the project's remote. It then opens the pull request as before.
+- **Checked in the sandbox.** Once the builder's run ends, the command runs the project's checks itself, in the builder's clone and its sandbox, and reads how each ended. So no criterion rests on the builder's word alone, and the checks run the build's code nowhere else.
+- **Brought back as the Task's branch, never into the seat's working tree.** Once the run's clone and the checks bear out its result (point 5), and the seat still holds the Task's claim, the command brings back only commits, signed by the command where the project signs, so the builder never holds the key. The seat's working tree stays on the default branch, so the seat's own tools, settings, hooks and instructions are always code a person reviewed. A build whose commits cannot be signed yet waits on its hand-back, its work kept.
+- **Then the seat.** It ticks the criteria the checks bear out, files the follow-ups for the person to schedule, checks its seat before the push (DEC-059 point 9), and pushes the Task's branch. Its push runs no hook that would run the build's commits, and the project's continuous integration runs the checks again. The seat's push is the only push to the project's remote. It then opens the pull request as before.
 - **The claim while a build runs.** The build command's work is the seat's work, so once a Task's claim is renewed by its work (DEC-059 point 9), the command renews it while the build runs, and stops when the run ends.
 
 ### 8. The seat asks for the reviews, and the merge gate checks them
@@ -102,7 +104,7 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 
 ### What this changes, and what stands
 
-- **DEC-059, refined in place:** point 2, a worker builds each Task through the build command; point 6, a builder acts as no instance, and no command of this capability acts as one inside an agent run; point 9, a Task whose build waits on a question keeps its claim; its Implications, which name the worker's loop. The rest of DEC-059 stands.
+- **DEC-059, refined in place:** point 2, a worker builds each Task through the build command; point 6, a builder acts as no instance, and no command of this capability acts as one inside an agent run; point 9, a Task whose build waits on a question or on its hand-back keeps its claim; its Implications, which name the worker's loop. The rest of DEC-059 stands.
 - **DEC-029, refined in place:** the worker's loop in the pm skill builds through the build command and acts on its endings. The project-manager agent stays a thin dispatcher.
 - **Stands:** the merge gate and the person's authorisation of each merge; a lead's helpers, which act as the lead's instance (DEC-059 point 6); DEC-056's fixers and their confinement.
 
@@ -113,6 +115,8 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 **Why through the runner.** The backbone already has one way for a command to start an agent, and its adapter holds the tie to the harness ([pkit:ADR-066] point 1). The build command takes the same way, so it works on every harness whose adapter registers a runner, and calls no harness itself.
 
 **Why a clone of its own, in the sandbox.** A builder in the seat's clone could read the seat's workspace, which holds the seat's notes. It could write a hook or a configuration that the seat's next push runs as the seat. A clone of its own keeps its own files apart, and the sandbox keeps it, and every program it runs, out of the seat's. Rules that see only commands cannot do that: a probe's program wrote outside the clone until the sandbox was on.
+
+**Why the seat never runs a build's commits.** A build's code that the seat ran, in a check, a push's hook, or its own tools from a working tree that holds the build, would run with the seat's access and credentials, outside the sandbox that holds the builder. In a project that builds its own tooling, the seat's next command would run the build. Kept in the sandbox and in continuous integration until a person reviews them, a build's commits reach nothing the sandbox keeps from the builder.
 
 **Why the default branch's rules.** Earlier builds' commits sit on the Task's branch, and nobody has reviewed them yet. Rules read from there would let one build widen the next one's. Read from the default branch, they are the rules a person reviewed and merged, as no unmerged change shapes a run nobody watches (ADR-066 point 3).
 
@@ -142,7 +146,9 @@ The maintainer asked for a mechanism instead. The backbone already starts an age
 ## Implications
 
 - **An architecture record** decides how the build command realises points 1 to 7: the builder's clone, its sandbox and its hand-back, the run's settings and its mode, the endings and their exits, the detached run the seat waits on, the resume, the records of builds and the provenance check. It refines ADR-066.
-- **This capability gains** the build command; the point and its companion schema; the run's rules; the provenance check in the commands that open a pull request and move a Task to Review; the refusal to act as an instance inside an agent run; the worker's loop in the pm skill; its README's sections on seats and their loops.
+- **A seat's working tree stays on the default branch:** in a project with a topology, the commands that start a worker's Task cut its branch without checking it out.
+- **Renewal ships no later than lapse,** so no build's claim lapses while it runs (DEC-059 point 9).
+- **This capability gains** the build command; the checks a project names for a build, in its configuration; the point and its companion schema; the run's rules; the provenance check in the commands that open a pull request and move a Task to Review; the refusal to act as an instance inside an agent run; the worker's loop in the pm skill; its README's sections on seats and their loops.
 - **software-engineering** contributes its producer agent to the point.
 - **The backbone's run command and the adapter's runner** gain what the architecture record needs, each declared by its own changeset (PRJ-002).
 - **A harness requirement** joins the requirement set for the run the architecture record decides ([pkit:COR-047]).

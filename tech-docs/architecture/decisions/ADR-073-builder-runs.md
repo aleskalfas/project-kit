@@ -41,7 +41,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 
 ### 1. A working run runs in a clone the backbone makes, and keeps it for the caller
 
-- **The clone** is made as the confined form's is (ADR-066 point 7): no object shared with the caller's repository, outside every working tree, in a folder of the backbone's that only the person's account writes. It is made from the caller's repository, on the branch and at the commit the caller names.
+- **The clone** is made as the confined form's is (ADR-066 point 7): no object shared with the caller's repository, outside every working tree, in a folder of the backbone's that only the person's account writes. It is made from the caller's repository, on the branch and at the commit the caller names, and holds the default branch's head too, so a build can merge it.
 - **Its only remote is the caller's repository.** It carries the caller's commit identity, and no signing settings: the builder commits unsigned, and the build command signs at the hand-back (point 8).
 - **The run's folder** is a folder of the clone that version control ignores. The toolchain's caches and the shell's temp folder go in it, since the sandbox writes nothing outside the clone (point 3).
 - **Recorded before the run:** its references, its git configuration, its hooks folder and its ignored files.
@@ -51,7 +51,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 ### 2. A working run loads only the settings the runner passes, from the default branch
 
 - **No settings file** of the person's, the project's or the clone's loads, as in a confined run (ADR-066 point 3). Nothing the builder writes in its clone, a settings file or a hook among them, shapes its own run or a later one.
-- **Read from the default branch,** as the backbone resolves it (COR-054), at its head when the build starts, which the build's record names (point 9), never from the Task's branch:
+- **Read from the default branch,** as the backbone resolves it (COR-054), at its head when the build starts, which the build's start event names (point 9), never from the Task's branch:
   - the project's native permission rules for the harness, the allows and the denies its settings file holds
   - the permission model that pkit's hook judges against, and the hook's own code, so the code that judges is never the clone's
   - the builder's agent definition, as the deploy resolves it (ADR-066 point 3)
@@ -92,7 +92,8 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 - **Detached.** A build outlasts the seat's own shell call. So the build command starts a process of its own that asks the backbone for the run, and returns at once with the state `running`.
 - **The state file** sits in the capability's git-ignored runtime folder of the seat's clone, and only that process writes it. It names the build's state, its start, the time of the builder's last event, the calls refused so far, the clone, and, once the run ends, the result or the question.
 - **Progress.** The run command reports each event of the harness's stream, with its time, to a file the caller names. Where none comes for the run's idle limit, the runner ends the harness, as at its wall-clock limit (ADR-066 point 11).
-- **The hand-back** is that process's, once the run ends (point 8), or `--hand-back`'s where it could not sign. The hand-back that moves the Task's branch writes the build's record (point 9), then the final state.
+- **The checks.** Once the run ends, that process runs the checks the project names for a build, in its project-management configuration read from the default branch, as a second run in the same clone and sandbox, with no agent. Their endings go into the state, and a check that fails where the builder said built is not borne out (exit 5).
+- **The hand-back** is that process's, once the run and the checks end (point 8), or `--hand-back`'s where it could not sign. Each ending writes its event on the Task (point 9), then the final state.
 - **Waiting.** `--wait <seconds>` reads the state, waits at most that long, and exits with the state's code. The seat waits in slices shorter than its own shell call's limit.
 - **Recovery.** A session that starts in a clone with a build in its state file goes on from it: waits on a running one, or acts on a finished one. The state file names the process's id. A build whose process is gone while its state is not final is lost: not borne out (exit 5), its clone kept.
 - **One build at a time** in a seat's clone. A build started while one runs is refused.
@@ -107,7 +108,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 | 2 | usage | a usage error |
 | 3 | tracker failed | the Task or its records could not be read or written |
 | 4 | unfinished | the builder's result says unfinished, and no call was refused |
-| 5 | not borne out | the clone's check found a breach, or the builder ended with no result and no question, or the harness exited non-zero |
+| 5 | not borne out | the clone's check found a breach, a check failed where the builder said built, the builder ended with no result and no question, or the harness exited non-zero |
 | 6 | needs an answer | the builder's question; or a call the run's rules refused, on a run that ended unfinished, as a permission question; or the wall-clock or idle limit, as an environment question |
 | 7 | cannot build here | no builder named, no runner, no sandbox, a required exclusion, the runner refused, or the backbone gave no answer, each with its reason |
 | 8 | running | `--wait` returned before the run ended |
@@ -121,26 +122,31 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 
 - **Posted.** On exit 6 the build command posts the question on the Task through the audit-log facility ([project-management:DEC-044](../../../.pkit/capabilities/project-management/decisions/DEC-044-audit-log-facility.md)), with its kind.
 - **The session's id.** The run command's answer document gains the harness session's id, and the state file keeps it.
-- **`--answer <file>`** resumes the build: the runner resumes that session with the answer as its next message, under settings built again as point 2 builds them, from the default branch's head the build's record names, so a resumed run runs under the rules its build began with. The answer is posted beside the question.
+- **`--answer <file>`** resumes the build: the runner resumes that session with the answer as its next message, under settings built again as point 2 builds them, from the default branch's head the build's start event names (point 9), so a resumed run runs under the rules its build began with. The answer is posted beside the question.
+- **A refused call that one of the build's denies refused** is asked as a decision, never as a permission, since no allow lifts a deny (COR-028 point 1) and the call is the seat's work (DEC-062 point 6).
 - **A permission given once** for that build is an allow the runner adds to the resumed run's settings, outside the clone. The record of the answer names it, and the overview of the build command's rules shows it while the build lasts.
-- **Advice.** The build command starts the advising agent through the runner in the confined form (ADR-066 points 3 to 7): a clone of its own at the build's start commit, read-only, no network, nothing that asks. Its brief is the build's brief and the question, which the command writes. Its answer is posted on the Task, and becomes the answer only once the person accepts it. Until the confined form is built, the person answers advice too.
+- **Advice.** The build command starts the advising agent through the runner in the confined form (ADR-066 points 3 to 7): a clone of its own at the default branch's head the build's start event names, never at the Task's branch, so no build's commit shapes its rules, its definition or its runner (ADR-066 point 3). It is read-only, with no network and nothing that asks. Its brief is the build's brief, the question and what the builder found, which the command writes, and it reads the build's work only as the question gives it. The agent is the one project-management's project configuration names for advice, the project's architect agent where it deploys one. Where none is named, the person answers advice. Its answer is posted on the Task, and becomes the answer only once the person accepts it. Until the confined form is built, the person answers advice too.
 - **The fallback.** Where the harness kept no such session, a fresh builder starts with the brief, the question and the answer.
 - **Bounds.** The build command never starts a run again on its own. The number of questions a Task's builds may ask is a setting of project-management's project configuration, three by default. A question that reaches the limit is posted, and `--answer` refuses to resume from it until the person's audited override.
 
-### 8. Only checked commits come back, as a fast-forward
+### 8. Only checked commits come back, as the Task's branch, never into the seat's working tree
 
-- **After a run that ended built,** once the clone's check (point 1) bears it out and the seat's clone still holds the Task's claim (DEC-059 point 9), the build command fetches the clone's branch into a temporary reference of the seat's clone. Git's local transport runs no hook of the clone, and the check found the clone's configuration and hooks unchanged.
+- **After a run that ended built,** once the clone's check (point 1) and the checks (point 5) bear it out, and the seat's clone still holds the Task's claim (DEC-059 point 9), the build command fetches the clone's branch into a temporary reference of the seat's clone. Git's local transport runs no hook of the clone, and the check found the clone's configuration and hooks unchanged.
 - **Signed at the hand-back.** Where the seat's clone signs its commits, the build command writes each fetched commit again with the same tree, message and author, signed by the seat's clone. Each parent maps through what the hand-back already wrote, the start commit standing for itself, and every other parent, such as the default branch's head under a merge, is kept as it is. The builder never held the key, so a signature says the command brought the commit back.
-- **A signature that fails,** such as a key that is locked with nobody to unlock it, moves nothing: the build is built and not yet brought back, its clone kept (exit 9). It posts an event on the Task that says so and names no commit, and the build waits on its hand-back. `--hand-back` makes the hand-back again from the seat's session, and writes the build's record once the branch moves.
+- **A signature that fails,** such as a key that is locked with nobody to unlock it, moves nothing: the build is built and not yet brought back, its clone kept (exit 9). Its ending event says so and names no commit, and the build waits on its hand-back. `--hand-back` makes the hand-back again from the seat's session, and posts the hand-back event once the branch moves.
 - **The claim while a build waits on its hand-back** does not lapse, as while it waits on a question (point 7, DEC-062 point 6). A release of the seat still frees it. `--hand-back` on a claim the clone no longer holds is refused (exit 1), and the clone is kept.
 - **A fast-forward only.** The Task's branch moves only to the commits the hand-back wrote, which descend from the build's start commit.
+- **A reference, not a checkout.** The hand-back moves the Task's branch as a reference. In a project with a topology, the seat's working tree stays on the default branch: the commands that start a worker's Task cut its branch without checking it out, and the build command refuses a seat's clone whose working tree is not on the default branch or is not clean. So no tool, setting, hook or instruction the seat runs is a build's.
 - **The clone** is removed once its commits are back. On any other ending it is kept, and the state names it.
-- **Nothing is pushed.** The seat pushes, after its own checks (DEC-062 point 7).
+- **Nothing is pushed here.** The seat pushes the Task's branch by its reference, with the remote's push hooks of the seat's clone skipped, since a hook that ran the pushed commits would run a build's code outside the sandbox. The project's continuous integration runs the checks again on the pushed head (DEC-062 point 7).
 
 ### 9. Each build is recorded on the Task, and provenance is checked
 
-- **A build record** is an audit-log event on the Task: the build's start and end commits, the default branch's head whose rules it ran under, the builder, the commits that came back as the Task's branch holds them, the builder's own ids beside them as a trace, and the ending. The brief is posted with it, folded, and the record names its fingerprint, the hash of its bytes.
-- **The check.** In a project with a topology, the commands that open a worker's pull request and move its Task to Review read the Task's build records. Every commit on the Task's branch since its merge base with the default branch must be one a build record names. A merge of the default branch into the Task's branch is built through the build command (DEC-062 point 1), so it is named too.
+- **A build's record** is its events on the Task, through the audit-log facility, each naming the build:
+  - **the start,** posted before the run starts: the start commit, the default branch's head whose rules the build runs under, the builder, and the brief, folded, with its fingerprint, the hash of its bytes;
+  - **each ending,** at every exit but 8: how the build ended, and its question where it asks one (point 7);
+  - **the hand-back,** once the Task's branch moves: the commits that came back as the Task's branch holds them, with the builder's own ids beside them as a trace.
+- **The check.** In a project with a topology, the commands that open a worker's pull request and move its Task to Review read the Task's build records. Every commit on the Task's branch since its merge base with the default branch must be one a hand-back event names. A merge of the default branch into the Task's branch is built through the build command (DEC-062 point 1), so it is named too.
 - **The override.** Where the person directs a build in the seat's session (DEC-062 point 1), `--bypass-provenance "<reason>"` passes the check, with an audit comment, in the override convention ([project-management:DEC-046](../../../.pkit/capabilities/project-management/decisions/DEC-046-override-flag-convention.md)).
 - **No security boundary.** The seat writes the records under the account its clone uses, so a seat set on it can write one for work no build made (DEC-062 point 1).
 
@@ -152,6 +158,7 @@ Each item says what holds the intent and what is left ([COR-028](../../../.pkit/
 - **A listed host's credentials.** Where the platform gives every process its credentials for a listed host, a program the builder runs acts there as the account the clones share. The list refuses the remote's and the tracker's hosts (point 3), and the project chooses the rest.
 - **The project's instructions** are read from the clone, earlier builds' changes among them. They shape the work, and grant nothing: the rules come from the default branch.
 - **The person's own instructions, and an organisation's managed settings,** reach the run, as they reach every run (ADR-066 point 11).
+- **The reviewers' runs** are unconfined, in the seat's clone (ADR-066 point 10). A reviewer that checks out the change and runs its code runs a build's commits outside a sandbox, with the seat's access, until a record confines the reviewers' runs.
 - **A process the run leaves behind** past its limit, as ADR-066 point 11 states for every run. Started inside the sandbox, it stays inside it.
 
 ### 11. The probe
@@ -204,8 +211,9 @@ A fact the probe disproves refines or supersedes this record.
 - **A harness requirement** joins the set ([COR-047](../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)): a process can start an agent unattended in a folder it names, under only the settings it passes, inside a sandbox that bounds writes to that folder, in a mode that refuses what no rule allows. Each event of the run reaches the process with its time, and so do the calls it refused. Evidence: DEC-062, a design dependency (COR-047 point 9). Each adapter answers it.
 - **ADR-066, refined in place,** with a pointer to this record: the Decision's line on its points, point 1's list of what the run command does, point 2's of what a caller passes and gets back, point 9's for the hook in a working run, and point 11's open items.
 - **ADR-041, refined in place:** the ownership fold takes from its caller whether a Task's build waits, on a question or on its hand-back, which the build command's events on the Task give, so such a claim does not lapse (DEC-062 point 6).
-- **project-management** builds the build command, the point's companion schema with the result and question grammar, the run's rules for the build command, the list of a build's network hosts and the limit on questions in its project configuration, the state file, the build records, the provenance check and its override.
+- **project-management** builds the build command, the point's companion schema with the result and question grammar, the run's rules for the build command, the list of a build's network hosts, its checks, its advising agent and the limit on questions in its project configuration, the state file, the build's events, the provenance check and its override. The commands that start a worker's Task cut its branch without checking it out.
 - **Each changeset declares its component's change** (PRJ-002): the backbone, the Claude Code adapter, project-management, and software-engineering, which contributes its producer to the point.
-- **A platform without a sandbox** refuses builds. A Linux platform needs bubblewrap installed, as the harness's sandbox does.
+- **A platform without a sandbox** refuses builds. A Linux platform needs bubblewrap installed, as the harness's sandbox does. On macOS, a build whose toolchain needs uv is refused until a uv the sandbox hosts is installed (point 3), and the deny on the signing agents' sockets rests on the probe (point 11) on each platform.
+- **The project's continuous integration** runs the checks on each pushed head, since the seat's push skips the push hooks (point 8).
 - **No migration.** Every change adds.
 - **Stands on:** ADR-066, ADR-004, ADR-008, ADR-014, ADR-027 and ADR-028; DEC-062, DEC-059, DEC-056, DEC-044 and DEC-046 of project-management; COR-028, COR-047, COR-053 and COR-054.
