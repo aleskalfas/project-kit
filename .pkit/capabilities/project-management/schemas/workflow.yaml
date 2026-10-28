@@ -45,7 +45,7 @@ source:
 
 process:
   id: issue-lifecycle
-  version: 5
+  version: 6
   # A subject id is an issue number — or, for a closure-fold member that is a
   # native sub-issue in another repository, `owner/repo#<n>` (`cascade-members`
   # gives it; `cascade-membership` and `detect-state` accept it).
@@ -254,6 +254,59 @@ process:
         authorises closure for this level. Owned by `close-issue` (not part
         of the seven-command palette per DEC-026; closure is its own
         concern).
+
+    # The move back (DEC-006, "Moving back from In Progress"): a person stops
+    # work nobody is doing. Not a forward move, so no ancestor moves with it.
+
+    - from: in-progress
+      to: backlog
+      trigger: move-issue
+      command: move-issue
+      # A Task's branch and draft pull request stay as they are, for the next
+      # taker to continue or to replace (DEC-006).
+      pr_state_effect: "none → none | draft → draft"
+      authorisation: user
+      executor: agent
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      severity: "[validation-severity:hard-reject]"
+      why: The user moves back an issue in a Milestone that nobody is working on, giving the reason the work stopped.
+      hint: pkit project-management move-issue <issue-number> --to backlog --reason "<why the work stopped>"
+      notes: |
+        Lands in Backlog where the issue is in a Milestone, or, for a
+        container, where a child of it is in Backlog; `move-issue` refuses
+        `--to backlog` otherwise and names `--to todo`. The reason is
+        required: it is posted as the move's audit comment before the label
+        changes, and journaled with the move. The owner's claim is released
+        through the ownership seam's one release path, and the move is
+        refused, the owner named, where this clone cannot release it. A
+        container with a child In Progress or in Review is refused, the
+        child named, and so is one whose children cannot all be told. Where
+        the board carries the state, the move is refused (#2271).
+
+    - from: in-progress
+      to: todo
+      trigger: move-issue
+      command: move-issue
+      pr_state_effect: "none → none | draft → draft"
+      authorisation: user
+      executor: agent
+      applies_to:
+        - "[issue-types:epic]"
+        - "[issue-types:feature]"
+        - "[issue-types:umbrella]"
+        - "[issue-types:task]"
+      severity: "[validation-severity:hard-reject]"
+      why: The user moves back an issue in no Milestone that nobody is working on, giving the reason the work stopped.
+      hint: pkit project-management move-issue <issue-number> --to todo --reason "<why the work stopped>"
+      notes: |
+        Lands in Todo where the issue is in no Milestone and, for a
+        container, no child of it is in Backlog; `move-issue` refuses
+        `--to todo` otherwise and names `--to backlog`. Otherwise as the
+        move back to Backlog above.
 
     - from: backlog
       to: done

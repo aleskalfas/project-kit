@@ -1,0 +1,49 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      at: 2026-10-28T18:48:58Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T18:49:00Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/030-review-and-land/UC-062-review-and-land.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-28T18:49:03Z
+      outcome: unchanged
+      unchanged-because: "UC-062 relies on REQ-042 for the merge's authorisation: nothing merges through land-work without the person's authorisation for that head. REQ-042's statement and measure are as they were, and so is its rationale's sentence on the merge. Only the rationale's account of the other moves a person holds changed, so nothing UC-062 states changes."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-089-land-alongside-others.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T18:49:06Z
+      outcome: unchanged
+      unchanged-because: UC-089 relies on REQ-042 for the merge authoriser's authorisation of each head. REQ-042 changed only in its rationale's account of the scheduling, the end and the move back, and still keeps the merge's authorisation the person's, so nothing UC-089 states changes.
