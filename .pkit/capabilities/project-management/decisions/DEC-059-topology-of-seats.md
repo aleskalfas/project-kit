@@ -35,7 +35,7 @@ Each seat declares:
 - **its name,** unique in the topology, which becomes the identity of the clone that holds the seat (point 6). A seat's name never changes: renaming a seat retires it and adds a new one.
 - **its role,** one of three:
   - a planner slices the work and files it, and builds none of it
-  - a worker takes ready work and builds it up to its merge
+  - a worker takes ready work and builds it up to its merge. Where its harness can start a helper agent, a fresh helper builds each Task, so that each Task starts in a clean context
   - a lead plans and builds within its scope, and may start helper agents of its own
 - **its agent definition,** the project-manager agent's by default (point 8)
 - **its scope,** which is optional and narrows the work its agent takes (point 7)
@@ -70,7 +70,7 @@ Taking a seat is a claim on the seat's state issue, and the first claim on a fre
 - **What the number serves:** what DEC-035 uses it for, the tie-break between two claims on one Task and the `instance:N` label. The topology's seats are the pool of numbers, whatever their count ([project-management:DEC-035-instance-ownership] point 2).
 - **No typed number.** In a project with a topology, a number is never typed into a clone, since it could take a seat's number. A clone that holds no seat marks no issue and is guarded by nothing, as a clone with no number.
 - **Confirmed before each write.** Every command that acts as an instance confirms the clone's seat on the seat's state issue, by the clone's key, before it writes. The clone may keep its seat's name as a hint of where to look, and never acts on the hint without that read.
-- **Helpers.** A helper agent that a lead starts acts as the lead's instance. How a linked worktree of the clone reads that identity is not decided here.
+- **Helpers.** A helper agent that a lead starts acts as the lead's instance. A helper that a worker starts to build a Task acts as no instance: it writes nothing to GitHub, and the worker makes each write as its seat. How a linked worktree of the clone reads an instance's identity is not decided here.
 
 ### 7. Work reaches agents through one shared pool
 
@@ -173,6 +173,8 @@ DEC-029's mode surface and its procedure carrier, and DEC-043's selector and its
 
 **Why a topology takes the comment log.** A claim names the seat, the clone's key and a time, and a label has room for none of them. Reading the time a label was added from the issue's timeline would add a read for each Task that no seam covers. The comment log is the selector's default, and works in every repository (DEC-043 point 2). Renewal and lapse rest on that log and on the topology's limit. So a project with no topology keeps DEC-035 as it stands, where a person hands a dead clone's work over.
 
+**Why a worker builds each Task through a fresh helper.** A session that builds one Task after another carries each Task's context into the next. Seats with a scope keep their domain, but the maintainer decided on 28 October that the answer to a context mixed across Tasks is that each Task starts clean (#2259). A fresh helper gives each Task that start, and the seat's session keeps only each Task's brief and the helper's result. The helper writes nothing as an instance, so the seat's checks before each write stand, and a helper's identity stays a question for a lead's helpers alone.
+
 **Why one agent that reads its role.** One entry point keeps the project-manager agent a thin dispatcher, with the role's steps in the skill ([project-management:DEC-029-project-manager-agent-shape], [pkit:COR-006]). A specialist that takes the same steps keeps taking, claiming and landing the same in every seat.
 
 ### Alternatives considered
@@ -197,7 +199,7 @@ DEC-029's mode surface and its procedure carrier, and DEC-043's selector and its
   - one that releases a seat, by its clone or by force, with the claims of its clone
   - a listing of the seats and their holders
   - In a project with a topology, `set-instance` refuses a typed number. The commands' names are the build's.
-- **The pm skill gains a procedure for each role** that batch planning does not already serve, the worker's loop among them, with the renewal and the check before each push. The project-manager agent's first step reads its seat ([project-management:DEC-029-project-manager-agent-shape]).
+- **The pm skill gains a procedure for each role** that batch planning does not already serve, the worker's loop among them, with the renewal and the check before each push. The worker's loop builds each Task through a fresh helper, and in its own session where the harness cannot start one. The project-manager agent's first step reads its seat ([project-management:DEC-029-project-manager-agent-shape]).
 - **ADR-041 is refined in place** ([pkit:ADR-041]). Its fold takes from its caller the time of reading, the limit, the Task's state in the lifecycle and the seats' holders, so the ownership seam reads no other seam. Its consumers grow by the pool, the check before writing and the seat's release. The description mirror can no longer stand for the fold, since lapse depends on the time of reading. The fold reads the logs of Tasks In Progress, the only claims that lapse, and pages a long log, so it never reads one cut short. The maintainer's sign-off on this record covers that refinement, which the architect authors once this record is accepted.
 - **The ownership stamp gains a version,** carrying the seat and the clone's key ([project-management:DEC-044-audit-log-facility] point 2). Readers still accept the stamps written before it.
 - **No mesh interaction.** The topology is the project's own configuration, outside what the mesh compares across repositories ([project-management:DEC-022-methodology-mesh]), and the shared pool is the repository's own. In a project whose topology declares pools of workers, the work routes through each seat's pools instead, and they too are the repository's own, since they hold its own Milestones ([project-management:DEC-061-pools-of-workers]).
