@@ -96,7 +96,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How an issue's owner moves
-  accDescr: An issue has no owner until an instance starts the issue, or files the issue from a seat other than the planning agent's. Where two instances take the issue at the same instant, the lower number keeps the issue. A hand-over moves the issue to another instance. A close, or a new assignee, clears the owner. In a project with a topology, an ownership that lapses, or whose seat is released, stops counting.
+  accDescr: An issue has no owner until an instance starts the issue, or files the issue from a seat other than the planning agent's. Where two instances take the issue at the same instant, the lower number keeps the issue. A hand-over moves the issue to another instance. A close, a move back from In Progress, or a new assignee clears the owner. In a project with a topology, an ownership that lapses, or whose seat is released, stops counting.
   none[No owner] --> taken([Started by an instance, or filed by one])
   taken --> owned[Owned by that instance]
   owned --> clash([Taken by another instance at the same instant])
@@ -105,7 +105,7 @@ flowchart LR
   handed --> owned
   owned --> stopped([Lapsed, or its seat released])
   stopped --> none
-  owned --> cleared([Closed, or assigned to another person])
+  owned --> cleared([Closed, moved back from In Progress, or assigned to another person])
   cleared --> none
 ```
 
@@ -269,7 +269,7 @@ Defined in [TERM-owner](../glossary.md#term-owner--owner).
 
 **Why:** Each clone must see which work is another clone's, and be kept from acting on that work. GitHub offers no atomic claim, so the owner lets a clash be caught and resolved, though not prevented ([DEC-035](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md)).
 
-The owner of an [issue](../glossary.md#term-issue--issue) is the [instance](../glossary.md#term-instance--instance) the issue belongs to from filing or start until close, paired with the issue's assignee. The same person's other instances see the issue as another instance's, and leave the issue alone. Different people's instances never mix, since the owner pairs the number with the assignee ([DEC-035 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee)). In a [project](../../core/glossary.md#term-project--project) with a [topology](../glossary.md#term-topology--topology), an ownership counts only while the clone that made the ownership holds the named [seat](../glossary.md#term-seat--seat) ([DEC-059 point 9](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
+The owner of an [issue](../glossary.md#term-issue--issue) is the [instance](../glossary.md#term-instance--instance) the issue belongs to, paired with the issue's assignee. The same person's other instances see the issue as another instance's, and leave the issue alone. Different people's instances never mix, since the owner pairs the number with the assignee ([DEC-035 point 2](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#2-ownership-is-carried-by-a-marker-paired-with-the-assignee)). In a [project](../../core/glossary.md#term-project--project) with a [topology](../glossary.md#term-topology--topology), an ownership counts only while the clone that made the ownership holds the named [seat](../glossary.md#term-seat--seat) ([DEC-059 point 9](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
 
 **Attributes:**
 
@@ -282,7 +282,7 @@ The owner of an [issue](../glossary.md#term-issue--issue) is the [instance](../g
 - An issue has at most one owner once a clash is resolved ([DEC-035 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 - An instance that files work owns all of that work, the parents and the Tasks under the parents ([DEC-035 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The planning agent files with no owner, so the planning agent's work joins the ready Tasks that every seat shares ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the topology declares [pools](../glossary.md#term-pool--pool), that work joins the pool of each [Task](../glossary.md#term-task--task)'s [Milestone](../glossary.md#term-milestone--milestone) ([DEC-061 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#4-a-task-is-in-the-pool-of-its-milestone)).
 
-**States:** An issue has no owner until an instance files the issue or starts the issue. A hand-over moves the owner to another instance, and a close, or a new assignee, clears the owner (DEC-035 points 3 to 5). In a project with a topology, an ownership of a Task In Progress lapses once the work stops renewing the ownership. Any ownership stops counting once the ownership's seat is released (DEC-059 point 9).
+**States:** An issue has no owner until an instance files the issue or starts the issue, and a hand-over moves the owner to another instance. A close, a move back from In Progress, or a new assignee clears the owner (DEC-035 points 3 to 5). In a project with a topology, an ownership of a Task In Progress lapses once the work stops renewing the ownership. Any ownership stops counting once the ownership's seat is released (DEC-059 point 9).
 
 **Always true:**
 
