@@ -128,12 +128,14 @@ pkit:
 - **6d.** The parent issue still has an open child, or an unticked checkbox. The system refuses, naming what holds it, and closes nothing ([DEC-034](../../../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)).
 - **6e.** The developer's clone holds a [seat](../../../glossary.md#term-seat--seat), and its code cannot read the [topology](../../../glossary.md#term-topology--topology) in full. `start-work` makes no claim, says what it did not understand, and changes nothing ([DEC-061 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
 - **6f.** The topology declares pools, and the Task is in none of the pools the developer's seat serves. `start-work` warns, and starts the Task as directed, since the warning is never a gate ([DEC-061 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
+- **6g.** The work stops, and nobody works on the issue any more. The developer moves it back with the reason: `pkit pm move-issue <N> --to backlog --reason "<R>"`, or `--to todo` where it is in no Milestone. The system asks the developer at the terminal, or takes `--yes` as that authorisation, and posts the reason before the move. Where the developer's clone is an [instance](../../../glossary.md#term-instance--instance), the system then releases the issue's [owner](../../../glossary.md#term-owner--owner), and the use case ends ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+- **6h.** The issue moved back is a parent issue with a child In Progress or in Review. The system refuses, naming each such child, and writes nothing ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)). The use case ends.
 - **7a.** The developer moves the Task to Done directly: `pkit pm move-issue <N> --to done`. The system checks that each checkbox is ticked before it writes ([DEC-007](../../../../../../.pkit/capabilities/project-management/decisions/DEC-007-checkbox-validation.md)).
 
 > [!WARNING]
 > **Not built yet:** `move-issue` writes the Done label without checking the checkboxes, and leaves the issue open. DEC-007 decides that an issue with an unticked checkbox cannot move to Done, and #1215 tracks it.
 
-**Postconditions:** The [Task](../../../glossary.md#term-task--task) is in Review, its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open, and each [issue](../../../glossary.md#term-issue--issue) above it is in In Progress or later. An issue closed as won't do is in Done.
+**Postconditions:** The [Task](../../../glossary.md#term-task--task) is in Review, its [pull request](../../../../core/glossary.md#term-pull-request--pull-request) is open, and each [issue](../../../glossary.md#term-issue--issue) above it is in In Progress or later. An issue closed as won't do is in Done. An issue moved back is in Backlog or Todo.
 
 **Minimal guarantees:**
 
@@ -141,3 +143,4 @@ pkit:
 - The [cascade](../../../glossary.md#term-cascade--cascade) never moves a child because its parent moved, and never closes a parent (DEC-006).
 - A move refused at its checks writes nothing (`move-issue.py`).
 - Unless the [project](../../../../core/glossary.md#term-project--project) turns [audit comments](../../../glossary.md#term-audit-comment--audit-comment) off, the reason for a [bypass](../../../glossary.md#term-bypass--bypass) is posted before the move it allows ([DEC-014](../../../../../../.pkit/capabilities/project-management/decisions/DEC-014-validation-severity-model.md) and [DEC-049](../../../../../../.pkit/capabilities/project-management/decisions/DEC-049-audit-journal-model.md)).
+- A move back from In Progress is never made without the reason the work stopped (DEC-006).
