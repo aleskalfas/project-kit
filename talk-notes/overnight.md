@@ -13,7 +13,7 @@ Updated through the night. Each item says what it needs.
 
 ## Pools ([#2256](https://github.com/aleskalfas/project-kit/issues/2256), PR [#2257](https://github.com/aleskalfas/project-kit/pull/2257))
 
-- Records: DEC-061 "Pools of workers" (new, partially supersedes DEC-059), refinements to DEC-059, DEC-016, DEC-006, DEC-025. Critic: faithful to the design; a fix round closes its findings. Then the architect and the methodology reviewer, then acceptance on your word ("finish the pools on my behalf … we agreed on all important"), quoted in the PR.
+- Records: DEC-061 "Pools of workers" (new, partially supersedes DEC-059), refinements to DEC-059, DEC-016, DEC-006, DEC-025. Two fix rounds closed the critic's, the architect's and the methodology reviewer's findings (no red flag, no blocker, no escalation left). **Accepted on your word** ("finish the pools on my behalf … we agreed on all important"), quoted in the acceptance commit c1c4de924. The architect writes ADR-072 (the pool lookup) and rewords ADR-041 in the same PR.
 - Then phase 2, the code; the PR's reviewers; landing.
 - Then a small PR: `pools: [alpha]` in our seats file, both workers serving alpha, and milestone #8 marked `Pool: alpha`.
 - The design as decided: [design-pools.md](design-pools.md). The research behind it: [research-work-routing.md](research-work-routing.md).
@@ -33,6 +33,6 @@ Updated through the night. Each item says what it needs.
 
 ## Parked
 
-- #2224 release-candidate records: waits for your acceptance (and the `CLAUDE.md` sentence in its "To accept"); then the rc1 build.
+- #2224 release-candidate records: waits for your acceptance (and the `CLAUDE.md` sentence in its "To accept"); then the rc1 build. Its new ADR-072 collides with the pools ADR-072 in #2257, which lands first: #2224 renumbers its ADR when taken up (the decisions check-diff flags it).
 - #2240 guardrails and #2242 watched fixers: a fix round each.
 - The cleanup triage #2243–#2247 waits for the project's structure; the board (#2247) after it.
