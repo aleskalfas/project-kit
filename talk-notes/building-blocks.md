@@ -292,3 +292,21 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - a shell redirect into the workspace still prompts; only the file tools are free there
 - **Maintainer's notes:**
   - Decided 28 October: folded into block 7 as "and where agents write"; the workspace is the concrete example of a rule that removes prompts safely.
+
+## 9. Anchors and answers (friction): documents know what they rest on (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** any document, use case, glossary entry or skill may declare its **anchors**: the code, records or other documents that make it true (COR-050). When an anchor changes, the document has **friction**, and the change that caused it must answer for it, in the document's own answer, never in a pull-request description: **updated** (it was rewritten), **still accurate** (with the reason), or **out of date, fixed later** (a deferral naming its follow-up). The change check (`pkit friction check`) lists what a change owes; answers are written by commands (`revalidate`, `defer`), kept in answer files of their own (COR-062); a reviewer checks them (the docs reviewer); the pull request lists them for the person, as information. `pkit friction debt` shows what is out of date or deferred across the project (50 entries today). A delegate agent may answer what no change owes (COR-064), and fixers propose the fixes after a merge (`fix-drift`).
+- **Problem:** documentation rots silently. Code and decisions change, and nothing tells you which pages, requirements or use cases now say something false; you find out when someone acts on them.
+- **Gain:**
+  - a change cannot land while a document it makes untrue goes unanswered: rewrite it, say why it still holds, or name when it will be fixed
+  - "out of date" is visible and counted, not discovered
+  - the reasoning is kept: each "still accurate" says why, and a reviewer can check it
+- **Weight:** a few lines of front matter per document; one check per change; the answers are files, not prose to read.
+- **Evidence (this session):** every pull request today had the check ask for answers (the pools build answered 20 analysis documents); the docs reviewer caught a deferral that named the very issue the change closed, and a "still accurate" that was false (REQ-042 after the move back); the merge-time fixers ran and found nothing out of date.
+- **Weak spot:**
+  - it only covers what is anchored; an unanchored document rots as before
+  - it adds work to every change, and answers can be written lazily ("still accurate") — the reviewer is the only check on their honesty
+  - the machinery is heavy to learn (COR-050 alone has 16 points)
+- **Maintainer's notes:**
