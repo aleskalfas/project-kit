@@ -272,3 +272,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - posture is lenient: anything the model does not know goes to the harness's own prompt
   - it is the largest area to learn (its README is about 7 500 words)
 - **Maintainer's notes:**
+  - Decided 28 October: flow is mostly the harness's job now (Claude Code's auto mode decides which actions are safe enough to run unasked), so the block does not lead with fewer prompts. Its argument is what auto mode does not give: fixed rules instead of a judgement per action; steering agents onto the validating commands (process, not only safety); different rules per role; and the rules written down in one place, in the project's words. Headline: **"Your rules, not the tool's guesses."** The honest limit stays said: the lists stop ordinary commands, not a determined workaround; only the sandbox is a wall, off on macOS today.
