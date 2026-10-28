@@ -14,7 +14,9 @@ assignee, so no clone can tell which in-flight work belongs to which clone, and
 the clones step on each other. This decision adds an **opt-in** mechanism so each
 clone marks the issues it owns, sees whose-is-whose at a glance, can hand work
 between clones, and is guarded (advisorily) against acting on another clone's
-work. A clone that does not opt in behaves as if the facility were not there.
+work. A clone that does not opt in behaves as if the facility were not there,
+except that it cannot move back from In Progress an issue an instance owns, since
+it cannot release that owner (point 4).
 
 The mechanism is deliberately small: a per-clone identity the clone sets for
 itself, a marker on the issue that records ownership, and ownership side-effects layered
@@ -55,7 +57,9 @@ A clone sets its own identity with a
 git-ignored runtime file (declared via the capability's `runtime_ignore:`
 key per [pkit:ADR-009] rule 7, so it is never committed). A clone with
 no instance id set behaves as if the facility were not there — no marking, no guard, no
-signing. The presence of the id is the sole activation gate. The same runtime file
+signing — with one exception: it cannot move back from In Progress an issue an
+instance owns, since it cannot release that owner (point 4). The presence of the
+id is the sole activation gate. The same runtime file
 keeps a key the clone generates the first time it claims on a state issue (refinement
 per [project-management:DEC-058-state-issues]).
 
@@ -93,13 +97,14 @@ it: each stamp, strip, transfer and re-read below acts on that marker.
 `create-issue` stamps the
 creating clone's instance label; the clone owns the entire filed arc
 (containers + leaves) from birth. `start-work` claims an issue that has no
-owner yet (legacy / human-filed / pre-feature — the *commons*). An issue moved
-back from In Progress loses its owner (point 4), so in a project with no
-topology it is unowned while the rest of its tree stays owned from creation,
-and a clone with no instance id, which touches no marker (point 1), moves back
-only an issue no instance owns.
+owner, the *commons*. An issue has none where it was filed with none, such as
+before this facility or by a person. It has none too where its owner was
+released or its claim stopped counting (point 4), and where it was assigned to
+another person (point 5). An issue moved back from In Progress loses its owner
+(point 4). In a project with no topology, it is then unowned while the rest of
+its tree stays owned from creation.
 
-### 4. Ownership releases on terminal transitions and transfers on reclaim
+### 4. Ownership releases when the work ends or stops, and transfers on reclaim
 
 The
 label is stripped when the issue closes (PR-merge or won't-do). For a
@@ -124,7 +129,7 @@ where the clone takes no part in instance ownership, and a claim another account
 made on the comment log, which only that account's clone can release
 ([project-management:DEC-043-ownership-substrate-selection] point 3). The owner's
 clone then moves the issue back, or the owner releases the claim first
-(refinement per [project-management:DEC-006-state-machine-and-cascade]).
+([project-management:DEC-006-state-machine-and-cascade]).
 
 ### 5. Changing the assignee strips the label
 
@@ -181,8 +186,10 @@ points here.
 
 **Why opt-in by clone-local id, no committed config.** The single-clone case is
 the overwhelming common one and must stay zero-ceremony; gating on the presence
-of a clone-local id means a non-participating clone is byte-for-byte unchanged.
-Clones coordinate through the ownership markers on GitHub (the shared substrate per
+of a clone-local id means a non-participating clone is byte-for-byte unchanged,
+but for one refusal: it cannot move back an issue an instance owns, since that
+would leave on the issue a claim it cannot release (point 4). Clones coordinate
+through the ownership markers on GitHub (the shared substrate per
 DEC-003), so no committed registry is needed — the feature's entire persistent state
 is the per-clone id plus the markers.
 
@@ -245,12 +252,9 @@ principle — noted so a future maintainer does not re-derive it as a COR.
   trips no migration).
 - **`create-issue`, `start-work`, `done-work`, `close-issue`, `edit-issue`,
   `move-issue` gain ownership side-effects** (stamp / claim-commons / strip /
-  guard) as wrapper-level behaviour — additive, the same class as branch-
-  creation; the engine is untouched.
-- **`move-issue` gains a release:** a move back from In Progress releases the
-  owner through the release a close uses, and is refused where that release
-  cannot clear an owner (point 4,
-  [project-management:DEC-006-state-machine-and-cascade]).
+  guard, and on a move back from In Progress a release through the release a
+  close uses, point 4) as wrapper-level behaviour — additive, the same class as
+  branch-creation; the engine is untouched.
 - **`handoff-issue` gains `--to-instance <N>`, `--to-instance self`,
   `--recursive`** and a same-assignee, marker-only transfer mode — a contract
   extension on [project-management:DEC-026-work-ownership-lifecycle], which
