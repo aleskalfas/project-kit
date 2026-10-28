@@ -333,7 +333,7 @@ process:
         kind: deterministic
         predicate:
           run: gate-checkboxes-ticked
-      why: Won't-do close from Backlog, or a Task completed without a pull request; all checkboxes must be ticked or removed first.
+      why: Won't-do close from Backlog, all checkboxes ticked or removed first; or a Task completed without a pull request, every checkbox ticked.
       hint: pkit project-management close-issue <issue-number>
       notes: |
         Won't-do close from Backlog. All checkboxes must be ticked or

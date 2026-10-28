@@ -33,7 +33,7 @@ The rule is encoded in [`schemas/body-format.yaml`](../schemas/body-format.yaml)
 - **Won't-do close.** Refuse; list the unticked boxes; ask the user to validate-and-tick or remove boxes that are no longer relevant, then retry.
 - **Cascade-eligible close (parent's last child closed).** The parent's checkboxes are part of the eligibility check; if any are unticked, the parent isn't eligible — the agent prompts the user to address them first.
 - **Task close via PR merge.** The agent verifies all checkboxes are ticked **before authorising the merge** — GitHub's auto-close on `Closes #N` would otherwise bypass the gate.
-- **Task close as completed without a pull request.** Refuse; list the unticked boxes; ask the user to validate-and-tick them, then retry. Every checkbox ticked is what says the work is done ([project-management:DEC-006-state-machine-and-cascade], `manual-completed`).
+- **Task close as completed without a pull request.** Refuse; list the unticked boxes; ask the user to validate-and-tick them, then retry. Every checkbox ticked is what says the work is done ([project-management:DEC-006-state-machine-and-cascade], `manual-completed`). A box is not removed in order to close as completed: removing one is a change of scope, made through [project-management:DEC-009-living-documents] as an edit of the issue, never as part of the close.
 
 ### Trust model
 
