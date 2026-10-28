@@ -310,3 +310,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - it adds work to every change, and answers can be written lazily ("still accurate") — the reviewer is the only check on their honesty
   - the machinery is heavy to learn (COR-050 alone has 16 points)
 - **Maintainer's notes:**
+  - Headline (decided 28 October): **"Docs that know when they're wrong."**
