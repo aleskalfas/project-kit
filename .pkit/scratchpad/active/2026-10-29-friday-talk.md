@@ -1,4 +1,14 @@
-# project-kit's building blocks: why each is there, and what an adopter gains
+---
+authors:
+  - Aleš Kalfas <kalfas.ales@gmail.com>
+started: 2026-10-29
+---
+
+# The Friday talk — project-kit's building blocks
+
+The talk's notes, its slides as data and its Mural board map live beside this note: `2026-10-29-friday-talk.slides.yaml` (the slides' content, one entry per slide), `2026-10-29-friday-talk.board.yaml` (the board map the mural-boards skill pushes, with its sync state) and `2026-10-29-friday-talk-icons/` (the pictograms the diagrams use). The scratchpad commands move only this note; the three siblings move with it by hand when it is retired.
+
+Started on 26 October in a branch folder (`talk-notes/`), moved here on 29 October.
 
 Working notes for the Friday talk (goal reconsidered 26 October: present project-kit, its building blocks and its motives; show how light it is and what it gives without capabilities). One block at a time, with the maintainer. For each: what it is, the problem it answers, the adopter's gain, its weight, evidence, and the honest weak spot.
 
@@ -554,7 +564,7 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
 
 **The deck:** a title slide; the opening (the problem pkit solves); one slide per block in the agreed order, capabilities taking two (project-management; software-engineering with connections); what's next; questions.
 
-**Every block slide has the same fields**, kept as data, one entry per slide in `talk-notes/slides.yaml`, from which the slides are generated:
+**Every block slide has the same fields**, kept as data, one entry per slide in `2026-10-29-friday-talk.slides.yaml`, from which the slides are generated:
 
 | Field | Holds |
 |---|---|
@@ -569,3 +579,375 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
 | **notes** | the speaker notes, not on the slide |
 
 **Layout:** text left (title, message, problem, bullets, show), the visual right, the limit as one small line at the bottom; a slide with no visual uses the full width. Whether the mural-boards skill can place images is to be checked; if not, visuals are placed by hand.
+
+
+---
+
+## Appendix A. Earlier working notes (27 October)
+
+
+Started 25 October. Talk on Friday 30 October. Side quest beside the build work.
+
+### The maintainer's ask
+
+- An honest discussion first: what project-kit is good for, and what it is not.
+- Find good use cases, and build the presentation on them.
+- Ideal demo: a user installs project-kit, sets up project-management, software-engineering, software-analysis and living-docs, and builds a project with work running in parallel.
+
+### Existing material
+
+- `.agent-workspace/living-docs/talk-outline.md`: 18 slides and 6 demos built on the README's problems (forgetting, prompts, stale docs, self-graded work, copies that rot, updates that overwrite). It covers the backbone only; the capabilities get one slide (12).
+- `README.md` on main: "Why project-kit", six highlights, the table against a hand-kept setup, "When not to use it".
+
+### Honest assessment (PM's first take, to discuss)
+
+**Where it earns its keep, from this week's work on project-kit itself**
+- **Agents deliver, a person decides.** One project-manager agent files issues, dispatches builders, gathers reviewer verdicts and merges behind a gate. Dozens of pull requests landed this week that way; the maintainer took only the decisions.
+- **Review that catches real errors.** Reviewers judge every pull request against accepted rules. Example: on #2062 the docs reviewer found three pages that still described the old behaviour, which the builder had marked as updated.
+- **Docs that cannot go stale silently.** A change to code a page rests on asks for an answer, and a reviewer checks the answer.
+- **Decisions that survive the session.** Records, the acceptance gate, rules loaded into every session.
+- **Parallel work without collisions.** Each task runs on its own branch in its own worktree; answers live in files of their own (COR-062), so pull requests touching the same document no longer conflict.
+
+**Where it costs, said plainly**
+- **Running cost.** Answers, reviews and fix rounds take time and tokens: one link pass owed 109 answers (#2064 now fixes that), and this session hit a weekly usage limit.
+- **Ceremony and learning curve.** Many concepts: records, places, anchors, answers, rule sets, gates.
+- **Claude Code only.** One adapter.
+- **Not finished.** Fixers not switched on; the analysis is hard to read on GitHub until #2065 lands; the adoption path is still open (#775).
+
+**Parallel workstreams, what exists**
+- project-management's *workstream* is a label that groups issues, not a way to run work in parallel.
+- Running in parallel is what the project-manager agent does with the harness: builders in their own git worktrees, one issue and branch each, reviewers run at once, a merge gate. project-kit supplies the rails (issue per task, branch names, answer files that do not conflict, the gate, integration branches for a chain, DEC-013). No single command fans the work out.
+
+### Audience (decided 25 October)
+
+Colleagues who develop an AI agentic platform: users create agents and interact with them, each agent running in its own sandbox. So they build agent runtimes themselves. What they care about: governing what an agent may do, sandboxes, agents delegating to agents, human-in-the-loop, memory across sessions, running many agents at once, cost.
+
+**Angle this suggests:** project-kit as a field report on running a team of AI agents on a real codebase, and the rails that made it safe. Their platform's problems (permissions, sandbox gaps, delegation, approvals, parallel agents) are project-kit's daily problems, solved at the repository layer.
+
+**Lessons from this week that speak to them directly:**
+- A named sub-agent's result arrived cut at 4,064 characters, and the prefix read as complete (the harness requirement `delegated-result-complete`, COR-047).
+- A message from a sub-agent is not the user's approval: the permission-laundering rule.
+- A builder wrote outside the sandbox's granted folder and put a prompt on the maintainer's phone at night (#2026); the fix was a binding rule and a workspace folder every agent is granted.
+- Prompt fatigue: the permission model exists so the person reads the prompts that matter (COR-028).
+- Reviews in rounds: each fix round found more stale text, until the builder was told to sweep the whole page.
+- Cost: a weekly usage limit stopped four agents mid-work; each resumed from its worktree.
+
+### Parallel work: what exists and what is in progress
+
+- **Works today, proven this week:** one project-manager session fans out builders, each in its own git worktree on its own issue branch; reviewers run at once; a merge gate lands each pull request; answers live in files of their own so parallel pull requests do not conflict (COR-062).
+- **Built:** instance ownership for several clones of one repository: an instance id, claims and handoff (DEC-035, DEC-043, DEC-045 accepted; `set-instance`, `handoff-issue`), on EPIC #508.
+- **Proposed:** the parallelization primitive (DEC-025, proposed; scratchpad `2026-05-26-parallelization-primitive.md`, from the interaction-gateway project): lanes, typed `Blocked by:`, the ready frontier; EPIC #564. The ladder of what can start now and what can run side by side (#1548).
+- **Postponed until software-analysis and living-docs existed, which they now do:** multi-clone coordination, recovering every clone's direction after all sessions die (EPIC #943).
+- **Agents do the work, the person decides in batches** (EPIC #1673): a chain merging into an integration branch (#1676), agents building only on merged work (#1680), decisions in one batch (#1675).
+
+### Angle (decided 25 October)
+
+**A field report:** "Running a team of AI agents on a real codebase", with project-kit as the rails and the install-and-build demo as the high point.
+
+**Numbers for the hook** (GitHub search, 25 October): 156 pull requests merged on project-kit in the last 7 days, 492 in the last month; 234 issues filed in the last 7 days. Mostly agent-built, merged behind the gate; the maintainer took the decisions.
+
+### Draft skeleton (about 25 minutes)
+
+1. **Hook** — 156 pull requests in a week; one person deciding. What made that safe?
+2. **The team** — a diagram: the person, the project-manager agent, builders in their own worktrees, the reviewer panel, the merge gate.
+3. **Lessons, each a failure paired with the rail that fixed it**
+   - Memory: Monday forgot Friday → records, the acceptance gate, rules in every session.
+   - Permissions: prompt fatigue and the sandbox edge → one permission model, a workspace every agent is granted.
+   - Delegation: a truncated hand-off read as complete; a sub-agent's "approval" → dispatch rules, no laundering.
+   - Self-graded work → reviewers that judge against accepted rules, a merge gate.
+   - Stale docs → a change to what a page rests on asks for an answer.
+   - Parallel collisions → one branch and worktree per issue, answers in files of their own.
+   - Cost → the honest bill: answers, review rounds, usage limits.
+4. **Demo** — install, four capabilities, a project sliced and built in parallel.
+5. **Limits and what is next** — Claude Code only; the parallelization EPICs.
+6. **What carries over to an agent platform** — the takeaways for people who build sandboxed agents.
+
+### Demo format (decided 25 October)
+
+**Recorded.** Real evidence from this week's work backs the lessons.
+
+### Trial install (25 October), in short
+
+Full log: `trial-run.md`. Setup took about 77 s of commands from `init` to a passing `pkit validate`; nothing crashed. software-analysis and living-docs work fully offline; project-management needs a GitHub repository set up first, and the review panel acts through its merge gate. The stale-docs moment works and makes a clear demo beat. Rough edges filed under the adoption EPIC #775: #2083 (init's next steps), #2084 (documentation roots collide), #2085 (status labels), #2086 (false "question not asked"), #2087 (pm says late that it needs GitHub), #2088 (analysis hints), #2089 (living-docs placeholders pass), #2090 (output noise). #2083 and #2087 are being built for the demo.
+
+**Demo prerequisites:** a fresh GitHub repository for the demo project, created by the maintainer; the internal docs root set before software-analysis installs (`pkit config set docs.internal tech-docs`), until #2084 lands; installs run at a real terminal so the fixer questions are asked.
+
+### Direction change (25 October, later)
+
+The maintainer reconsidered the field report: he wants a **feature demonstration on the agentic platform**. A repository with project-kit and the needed capabilities installed, set up for parallel work across workstreams: two or three agents, each with its own checkout of the same repository, each working on a different area. Possibilities to be discussed; he suggests **finishing the parallel work organization first**.
+
+**The platform's sandboxes run Claude Code** (other runtimes too, but the demo focuses on Claude Code). So project-kit works there in full: agents, skills, rules, the permission hook. An inventory of what project-kit offers for parallel clones today is being gathered.
+
+**Topologies to choose from:**
+- (a) **A planner and builders:** one project-manager session slices the work and files it per workstream; two or three platform agents, each a Claude Code session in its own clone, named and bound to a workstream, pull their workstream's issues, build, open pull requests, and land behind the gate. Recommended.
+- (b) **Peers:** each platform agent owns a workstream end to end, planning included.
+- (c) **One session fanning out:** builders in worktrees of one clone, as this week; it shows nothing of the platform.
+
+### What is built for parallel clones (inventory, 25 October)
+
+- **Built on main:** workstreams in full (DEC-018; `add-workstream`, `create-issue --workstream`, `context-workstream`); `set-instance` records a clone's id, and nothing reads it yet; the ownership seam library, which no command calls; the assignee gate in `start-work` (tells people apart, not clones); integration-branch bases (DEC-013); a decision-number clash warning (`pkit decisions check-diff`).
+- **Decided, not built:** claim at creation and release at close (#519), the clash guard (#520), signed listings and `handoff --to-instance` (#521), named instances routed by workstream (#512), `create-instance` (#513), the audit-log facility (#511); a worktree inheriting its clone's id (#1140).
+- **Proposed only:** lanes, typed `Blocked by:`, the ready frontier (DEC-025); the ladder (#1548).
+- **The project-management README's instance section overstates:** it says create-issue, start-work and handoff-issue write the ownership marker; none does.
+- **Gaps that would bite two clones under one login:** clone B can start clone A's issue; two clones starting one issue at once both succeed; nothing shows who owns what; routing by workstream rests on the prompt; dependencies are prose.
+- **Smallest set to close them:** #519, #520, #521; #512 for routing; #1140 if agents use worktrees. Order and file overlap need DEC-025.
+
+### (a) and (b) compared on an example
+
+Example project: a link shortener with three workstreams, `api` (a REST service), `web` (a page that calls it) and `docs`.
+
+| Moment | (a) A planner and builders | (b) Peers |
+|---|---|---|
+| Kickoff: "build a link shortener" | The planner writes the analysis (who uses it, what they do), slices it into issues per workstream, and files the API contract as the first `api` task. The person approves one plan. | Each peer plans its own workstream from the brief. Three plans, written at once, each with its own guess at the API's shape. |
+| `web` needs `POST /links` | The plan already orders it: the web form depends on the contract task; the web agent starts with the page layout meanwhile. | The web peer files a request in `api` or waits; the API peer has to notice it. Coordination by issue comments. |
+| Both want to edit the shared `README.md` | The planner sees it at slicing and gives it to `docs`. | Nobody sees it until the second pull request conflicts. |
+| A task turns out twice as big | The builder stops and reports; the planner re-slices; the person decides once. | The peer re-plans on its own; the person learns of it in its next pull request. |
+| The person's load | One conversation, one batch of decisions. | Three conversations, decisions from three directions. |
+| Ownership in project-kit | The planner creates every issue, so builders must take them over: needs handoff to an instance or a claim at start (#521). | Each peer creates its own issues, so it owns them at creation (DEC-035 point 3): needs only #519. |
+| On stage | A clear story: one plan, three lanes, one gate. Rests on a good plan up front. | Looks more autonomous; riskier live, and project-kit has no built coordination between peers. |
+
+**A middle way:** the planner files one Feature per workstream and the cross-workstream contracts; each workstream agent slices its own Feature into tasks, owning them at creation, and builds them.
+
+### Why not one agent with subagents? (honest comparison, 25 October)
+
+**One session with subagents, as this week:**
+- Gains: one mind holds the whole picture, so coordination is free; the planner gives each builder a different issue, so nothing collides and no claim machinery is needed; proven at 156 pull requests a week; the person talks to one agent.
+- Costs, lived this week:
+  - **One context holds all coordination.** The planner's context filled and was compacted several times; once it lost track of two open pull requests (#1997, #1869) until a later check found them.
+  - **One failure stops everything.** A usage limit stopped four builders at once.
+  - **Subagents are fire-once.** They cannot ask the person, cannot be continued, and report once; a subagent at the nesting limit cannot dispatch its own reviewers (the #1869 fixer had no Agent tool).
+  - **The planner is the bottleneck.** Every review settlement and every merge passes through it, one at a time.
+  - **One sandbox, one account, one set of permissions** for every builder.
+  - **No memory per area.** Each builder starts cold and re-reads its brief.
+
+**Separate agents, each in its own sandbox and clone:**
+- Gains: isolation per agent (permissions, secrets, quota, blast radius); one agent failing leaves the others running; each keeps its own context, and can stay with its area for days and learn it; a person, or several people, can talk to each agent directly; it scales past one machine and one account.
+- Costs: coordination must live outside any one mind, in the tracker: claims, a clash guard, visibility of who owns what, dependencies, contracts between workstreams; more tokens, since each agent reads the repository itself; more for the person to watch unless a planner gathers the decisions.
+
+**The key point:** in the one-session model, the coordination state lives in the planner's context, which is fragile. With separate agents it must live in the tracker, which is durable, inspectable and survives a crash. project-kit already puts it there (issues, branches, answers in files, the gate); the clone-ownership pieces (#519, #520, #521) finish it.
+
+**When each wins:** one person, one machine, work that fits in days: one agent with subagents. Isolation needed, several people, work that outlives a session, or one failure must not stop the rest: separate agents. Both compose: each separate agent may use subagents of its own.
+
+### Business value of separate agents, not buzzwords (25 October)
+
+The maintainer asked for real value: does it speed up or improve development significantly?
+
+**Where a pull request's time went last week** (the 100 most recent merged, `pr_stats.py`): median 1.3 hours from open to merge (middle half 0.6 to 2.9); a median 35 minutes between consecutive merges into `main`; at most 7 merges in one hour; CI's full suite takes about 30 minutes (18,724 tests). So for one person the limits are CI, the serial merge into `main` and the person's decisions, not how many agents type code.
+
+**Honest conclusion:** for one person, separate agents add little speed over one agent with subagents. The significant gains are elsewhere:
+1. **Development capacity scales with people, not with one session.** One planning session serves one person. A team of five, each directing an agent in their own area, decides five times as much in parallel; project-kit keeps their agents from colliding. This is the platform's business case: it serves teams.
+2. **No ceiling on one context.** The planner here was compacted several times in one day and lost track of two pull requests. Small, separate contexts lose less; measurable as dropped or redone work.
+3. **Specialised agents, if it holds:** an agent that stays with one area for days should need fewer review rounds than a builder starting cold (this week, #2062 took four rounds as each found more). A hypothesis to measure, not a claim.
+4. **Capacity:** one account's limit stopped four builders at once; separate sandboxes spread the load.
+
+**What would speed up both shapes:** a merge queue (#1867) and a faster CI, since they bound merges into `main` either way.
+
+**Proposal: measure instead of claim.** Run the demo project's backlog twice, one agent with subagents and then three separate agents, and report: hours to land the backlog, minutes of the person's time, review rounds per pull request, tokens, and work dropped or done twice.
+
+### Direction: configurable topologies (25 October)
+
+The maintainer agreed to measure, and asked first to finish parallelization in project-kit: project-kit provides the possibility and the adopter chooses the topology. Strategies to support: one planner and several workers; several separate agents, each running its own subagents, each in its own domain, by area (api, web, docs) or by discipline (design, development, testing).
+
+**Started:** #519 (claims written at creation and start, released at close) and #1140 (a worktree reads its clone's id, which subagent workers need) are being built. A design note on configurable topologies is being drafted (`design-topologies.md`), to go to the critic and the architect before the maintainer decides, one decision at a time.
+
+**Decided (25 October):** the topology setup is shared through the project's committed pkit configuration. This overturns project-management DEC-045 point 2 (per-user, machine-local, never committed) for shared platforms; recorded on #512.
+
+**The ownership issues are from 7 July** (#508, #510–#513, #519–#521, filed with DEC-045 the same day), three and a half months and many changes ago (answer files, the merge gate, a separate audit trail in DEC-049, workstreams in their own file). Likely outdated: #512 (per-user topology, now overturned), #511 (overlaps DEC-049's audit trail), #513 (provisioning clones is the platform's job), and #519's claim at creation (in planner-and-workers the planner creates everything, so workers must claim at start). Likely still valid: the clash guard (#520) and the signed listing (#521). After the design note, each is checked against today's code and the new direction, then rewritten or closed. #519's pull request is held until the claim rule is settled.
+
+### Where the analysis comes in (proposed, 25 October)
+
+The method says analysis first: the project manager reads the use cases before slicing, and each planned Feature and Task names the use case it serves (project-management DEC-054); a feature's analysis lands ahead of its code (#1680). So:
+1. **Analysis now**, in project-management's analysis (`tech-docs/analysis/project-management/`, which has UC-060 to UC-064 and ACT-planner today): the actors (the person, a planner agent, a worker agent, a domain agent) and the use cases of parallel work, such as configuring the setup, planning across domains, a worker taking its next task, two agents reaching for one task, handing work from design to development, an agent resuming after its session died, seeing who works on what, and measuring a setup. Starting material: the pilot's ten coordination use cases, removed with the pilot (#890), readable at commit f78ec818 (`tech-docs/analysis/use-case-model/use-cases/coordination/`), and the design note being drafted.
+2. **Walk the design note against the use cases**, then its decisions with the maintainer, one at a time.
+3. **Records:** the setup in the project configuration, DEC-045 point 2 overturned, DEC-025 promoted or replaced.
+4. **Rewrite or close the July issues,** each naming its use cases; then build. #519's pull request waits for this.
+
+The analysis can be part of the demo: use cases written first, agents building against them.
+
+### Review of #2103, decisions so far (26 October)
+
+- **ACT-director removed:** the maintainer asked why not the person who onboards a project. The core's ACT-adopter is that person: UC-082 (set up the topology), UC-091 (measure topologies) and JRN-004 become the adopter's; UC-090 (see who works on what) the planner's; the operator still starts each agent's session.
+- **An instance's identity, recommended:** a clone sets itself by name (`set-instance api-worker`), the name must be an entry of the committed topology; the number DEC-035 uses for the lowest-wins tie-break and the `instance:N` label is derived from the entry's position, never typed. Refines DEC-035 point 1 and DEC-045 point 1. Taken unless the maintainer objects.
+
+### The maintainer's model of parallel clones (26 October)
+
+1. The adopter defines the topology in a committed project config, shared through git: the seats, each with a role and its workstreams or domain (how they are targeted is open), and the agent a seat acts as, plus settings a seat may need.
+2. A clone claims a seat, then acts by that seat's role. Claims are not committed: they live on GitHub (option b).
+3. Workers sharing one pool lock an issue and release it when done or stopped (DEC-035's ownership, #519–#521); a dead agent's lock needs a release.
+4. **A new kind of issue for shared state** (his words: "living state issue"), as a general mechanism for various configs: one issue per piece of shared, changing state, outside the work hierarchy. Its comments are the event log and its description the current state derived from them (the comment-log substrate DEC-043 and ADR-041 already decide). A seat is the first such state; claiming a seat is the same lock as claiming a task. What is reviewed stays in committed config; what changes at run time lives in state issues.
+
+### UC-082 and the clone's side, decided so far (26 October)
+
+- Seat claims live on GitHub, one **state issue per seat** (option b, then 1): claiming a seat is the same lock as claiming a task.
+- **State issues** are a general mechanism for shared runtime state (the maintainer's "living state issue").
+- **A clone picks its seat (c):** by name when given (`take-seat api-worker`), else the first free seat, optionally of a role (`take-seat --role worker`).
+- Harness-agnostic wording throughout: "an agent session in its harness", never a named harness.
+- **Task locks vs seats differ:** a task lock follows the four layers (release on done or stop, renewal by the work, a generous limit, a returning clone re-checks before writing). A seat's idle sensitivity is configurable; **the first mode is the most tolerant: a seat stays claimed until the clone releases it, or the organizer clone releases it by force.** No silence-based expiry in that mode.
+- **A clone becomes its seat's agent (c):** the project-manager agent by default, reading the seat's role (planner, worker, lead) and running that role's procedure; a seat may name another agent, which drives the seat's work through the same take, lock and land procedure the project-manager agent's skill provides.
+- **How a seat targets its work:** by default no scope: workers take the next ready task from one shared pool, highest priority first, skipping tasks that wait on others; the planner slices work vertically, so one agent can finish a task or Feature end to end across layers; the issue lock keeps agents apart. Scope stays an optional filter: by discipline for specialist seats (design, testing), later by workstream for an owned area. Workstreams as software layers are not the partition (component teams cost cross-layer coordination).
+- **The organizer (c):** a seat marked as organizer in the topology (typically the planner's) may force-release other seats, and the adopter can always force-release from any clone; each force release is recorded on the seat's state issue.
+
+### Open questions (one at a time)
+
+1. ~~Audience~~, ~~angle~~, ~~demo format~~: decided above.
+2. The skeleton, item by item, starting with the hook.
+2. Live or recorded demo of the agent work.
+3. Which toy project to build in the demo.
+4. A GitHub repository for the demo project (needed by project-management).
+
+### Trial run
+
+A trial install into a scratch project in the workspace, to find the rough edges before we promise anything: see `trial-run.md` when it lands.
+
+### Goal reconsidered (decided 26 October, afternoon)
+
+The maintainer reconsidered Friday: the main goal is to present project-kit itself, its building blocks and the motives behind it. Show how lightweight it is and what it gives without any capability. Present the capabilities too, more briefly. The parallel-clones showcase moves to a later talk, once there are comparison data (one agent without pkit against clones with pkit, plus a day-two change). The seats build loses its Friday deadline. Candidate base: `.agent-workspace/living-docs/talk-outline.md` (18 slides, 6 live demos on the backbone, one slide on capabilities).
+
+
+## Appendix B. Trial run: installing project-kit and four capabilities as a newcomer (27 October)
+
+
+25 October, 22:44–22:54. Scratch project `trial/demo-app`: a 4-file Python CLI (`greet`), `git init`, one commit, **no remote**.
+
+### How it was run
+
+- **pkit:** built from this checkout (main at 1aa50092, backbone 1.149.0) into `presentation/venv`. That is the same wheel a `uv tool install …@latest` builds, without the global install. The global `~/.local/bin/pkit` was kept off PATH.
+- **Environment:** every command ran from `demo-app` in a clean environment: no `CLAUDE*` variables and the venv first on PATH. So pkit saw a plain shell, not an agent session.
+- **Prompts:** commands ran without a terminal first. Where one deferred a question to a terminal, I answered it under a pseudo-terminal (`expect`).
+- **Files:** raw output of each command is in `trial/raw/<label>.txt`. Timings are in `trial/raw/_index.tsv`, made by `trial/run.sh`.
+- **GitHub:** nothing touched. No repository, label, issue or push. Only `pre-check` ran `gh auth status` (a read).
+
+Times are wall-clock per command. Total pkit command time was about 134 s. About 77 s of that took the project from `init` to a green `pkit validate`. That excludes reading: the four capability READMEs are 3,700 lines.
+
+### Step log
+
+### 0. `pkit --help` (the README's "Verify"), 2.3 s, nothing asked
+Lists 33 commands. The help text cites record ids (`[COR-021]`, `ADR-011`) that mean nothing to a newcomer.
+
+### 1. `pkit init`, 8.7 s, nothing asked, exit 0
+- **First line:** says where it installs ("git repository root — your current directory"). Good.
+- **Output:** 110 lines, mostly `installed` / `created` file lines, and "Done." printed twice in the middle.
+- **Next steps it prints,** some confusing:
+  1. "Install pkit on PATH" with the `uv tool install` command, which you just used to run `init`.
+  2. "Fill in `.pkit/capabilities/<name>/project/config.yaml`", before any capability is installed.
+  3. "Backup at `.claude/settings.json.pre-pkit`": no backup exists, since there was no settings file before.
+  4. Asks you to hand-edit `.gitignore` with 4 lines, including `!.claude/skills/`, and doesn't say why init doesn't write them.
+- **Dangling include:** `CLAUDE.md` includes `@.pkit/rules/project.md`, which init does not create.
+- **Settings:** `.claude/settings.json` gains 40 allows, including `Bash(ssh:*)`, `Bash(mv:*)`, `Bash(find:*)` and `Bash(gh:*)`. The README warns about this.
+
+### 2a. project-management
+| Command | Time | Asked | Result |
+|---|---|---|---|
+| `pkit capabilities install project-management` | 7.5 s | deferred 1 | ok; deployed `pm` skill, `project-manager` and `pm-reviewer` agents |
+| `pkit project-management ask-fixers` (at a terminal) | 1.9 s | no | "No fixer waits for an answer." |
+| hand-write `project/config.yaml` (README example), then `pkit data validate …` | 0.9 s | no | ok |
+| `pkit project-management bootstrap --dry-run` | 1.3 s | no | plans 15 labels; exit 0 |
+| `pkit project-management pre-check` | 3.6 s | no | **FAILED**: 5 fail, 8 skip, 5 ok |
+| `pkit project-management self-test --dry-run` | 1.1 s | no | prints its 6-step plan |
+
+- **False alarm:** install ends with "1 question(s) … were not asked … Run each at a terminal: `pkit project-management ask-fixers`". Run at a terminal, that command has nothing to ask, because no installed capability declares a fixer yet.
+- **No early warning about the missing repository:** `bootstrap --dry-run` shows `target repo: <unresolved>` and still exits 0. You learn you need a GitHub repository only at `pre-check`.
+- **pre-check failures:** no bootstrap stamp, `gh repo view` failed, label list ×2, default branch. It also calls `workstreams:` in config.yaml, which the README's example uses, a "legacy config.yaml fallback". The config's reference comments mention "the 0.55.0 upgrade" while v0.54.0 is installed.
+- **uv line leaks:** capability scripts print uv's "Installed 1 package in 2ms" before their own output.
+- **Stopped here, needs GitHub:** `bootstrap` (labels; optional starter EPIC), a passing `pre-check`, `self-test` (creates and closes an issue and a milestone). Every pm verb except bootstrap, pre-check, migrate, adopt-existing and self-test refuses until bootstrap has run. That includes the `project-manager` agent ("Then use").
+
+### 2b. software-engineering
+| Command | Time | Asked | Result |
+|---|---|---|---|
+| `pkit capabilities install software-engineering` | 8.3 s | no | ok; 4 agents: software-engineer, code-, security-, docs-reviewer |
+| `pkit agents reconcile` / `--write` | 0.5 / 0.6 s | no | appends a commented `project-conventions` stub; clear "optional" message |
+
+Nothing to configure. "would add 1 optional categor(ies)" reads oddly. The review panel works only through pm's merge gate on pull requests, so it needs GitHub too.
+
+### 2c. software-analysis
+| Command | Time | Asked | Result |
+|---|---|---|---|
+| `pkit capabilities install software-analysis` | 11.9 s | deferred 1 | ok; created rule set `ANALYSIS` at `docs/rule-sets/analysis.md`; `analysis-author` skill, `analysis-resolver` agent |
+| `pkit project-management ask-fixers` (terminal) | 3.9 s | **yes** | "software-analysis can keep your actors … true on its own … Turn this on? [Y/n]". Answered y; recorded in pm's config.yaml |
+
+The question is plain and good. The rule set lands under `docs/` because both doc roots still default to `docs/` (see 2d). README adoption step 2, choosing each kind's parts with `validate --preview`, is a walkthrough for the skill in Claude. A CLI user has nothing to run for it.
+
+### 2d. living-docs
+| Command | Time | Asked | Result |
+|---|---|---|---|
+| `pkit capabilities install living-docs` | 11.2 s | deferred 1 | ok; `docs-author` skill, `living-docs` agent |
+| `pkit project-management ask-fixers` (terminal) | 2.0 s | **yes** | "living-docs can keep your pages true … Turn this on?". y |
+| `pkit living-docs validate` | 1.9 s | no | 0 errors, 3 reports; "both documentation roots are 'docs' … onboarding separates them" |
+| `pkit config set docs.internal tech-docs` | 1.2 s | **yes** (consent) | ok; also adds `docs/rule-sets` to `friction.places` so ANALYSIS stays found |
+| `pkit living-docs new space user` / `technical` | 3.6 / 2.6 s | no | definitions under `tech-docs/living-docs/rule-sets/`; clear next steps |
+
+- **Layout decision with no guidance:** on a fresh project both roots are `docs/`, and no space or page can be created until they differ. Neither the validator report nor the README says what to set. The only hint is a `tech-docs/` example in the CLI README's status section. Nested roots are refused, so `docs/internal` doesn't work.
+- **Install order matters, and nothing says so:** because software-analysis went first, its ANALYSIS rule set stays under the **user** root, and the overlay's default ADR folder (`docs/architecture/decisions`) is under it too. Nothing flags either.
+
+### 3. `pkit status` 5.9 s, `pkit validate` 8.9 s, nothing asked
+- **`validate`:** 15 validators, **all checks passed**.
+- **`status`:** 160 lines. Its terms (roles, points, fillers, "inert fail", "union · inert fallback") are heavy going for a newcomer.
+- **Mislabelled agents and skills:** `status` lists the capability-deployed skills and agents (`pm`, `analysis-author`, `project-manager`, `code-reviewer` …) as "**user-managed (untouched by pkit)**". That is wrong-sounding.
+- **Connections wired automatically:** 3 roles active, the fixers and doc-check points filled.
+
+### 4. Analysis and a docs page
+| Command | Time | Result |
+|---|---|---|
+| `pkit analysis new actor cli-user --name "Command-line user" --path src/greet/cli.py` | 3.4 s | recorded location `tech-docs/analysis`, wrote an overview page, stamped ACT-cli-user |
+| `pkit analysis new use-case greet-someone --actor ACT-cli-user --title … --path …` | 2.9 s | stamped UC-001 |
+| `pkit analysis validate` (unfilled) | 1.9 s | **exit 1, 16 errors**: every hint, reported twice ("still holds its hint" and "is empty") |
+| (filled both by hand) `pkit analysis validate` | 1.9 s | **exit 1, 3 errors** |
+| `pkit analysis overview`, then `validate` (and `--preview`) | 2.3 / 1.9 s | passes |
+| `pkit living-docs new page docs/usage.md --space user --kind reference --reader user --title "Using greet" --path src/greet/cli.py --artefact UC-001` | 3.7 s | stamped; lists 3 placeholder lines |
+| `pkit living-docs validate` (placeholders **still in**) | 3.1 s | **0 errors** |
+| (filled) `pkit living-docs validate`, `pkit validate`, `pkit friction check` | 3.1 / 9.9 / 1.0 s | all pass |
+
+- **The hint's own example fails:** the hints show `1. … 2. …` inline. Written that way, the Main path and Variants fail ("holds no numbered step"); they must be Markdown lists.
+- **Overview needs a manual refresh:** the auto-written overview page goes stale on any edit, and the fix is a manual `pkit analysis overview` run.
+- **Placeholders pass in living-docs:** a page full of template `<placeholders>` passes, because the `reference` kind requires only its H1. That is inconsistent with software-analysis, which fails every leftover hint.
+- **Cross-capability touch:** the analysis actor automatically became a docs reader (`act-cli-user`).
+- **The overview suggests a next step:** "No record states what the system is for yet. Write one with `pkit new decision` …".
+- **No-remote warning everywhere:** most commands print "warning: the default branch 'main' is read from the local branch … (COR-054 point 2)".
+
+### 5. Bonus: the stale-docs promise
+I committed the setup (689 files, about 160,000 lines, for a 4-file project) and changed the greeting text in `cli.py`.
+- **Flagged:** `pkit friction check` (1.3 s) flagged ACT-cli-user, UC-001 and `docs/usage.md`. The page's console example is now really wrong.
+- **Answered:** `pkit friction revalidate … --outcome unchanged --because … --yes` (0.8 s) wrote an answer file.
+- **Demo value:** this works and makes a clear demo moment.
+
+### What worked smoothly
+- **Install commands:** `init` and the four installs, 7–12 s each, with no errors and no surprises. Agents, skills and settings were deployed, and the capabilities wired to each other with no configuration.
+- **Validation:** `pkit validate` is green right after setup. Validator messages say what to write and why.
+- **Prompts:** the consent prompt of `config set` and the fixer questions are in plain language and explain their side effects.
+- **Stamp commands:** `new space`, `new page` and `analysis new` are fast and say exactly what they wrote and what comes next.
+- **Stale-doc detection:** a code change flags the documents resting on it, and `revalidate` answers them.
+
+### What broke
+- **pm cannot be set up without GitHub:** `pre-check` fails 5 checks, and every pm verb refuses until `bootstrap` has run against a GitHub repository.
+- **Validation fails on freshly stamped artefacts:** stamped analysis artefacts fail until filled (by design), and the hint's own example form fails too.
+- **Misleading output:**
+  - the "question not asked" note after the pm install points to a command with nothing to ask;
+  - `bootstrap --dry-run` gives no warning that there is no repository;
+  - init's next steps name a backup that doesn't exist and an install you already did;
+  - `CLAUDE.md` includes a `project.md` that doesn't exist.
+
+Nothing crashed. The only non-zero exits were pre-check (no GitHub) and the analysis validator (unfilled artefacts).
+
+### What needs GitHub
+- **project-management:**
+  - `bootstrap`: creates 15 labels and optionally a starter EPIC;
+  - a passing `pre-check`: repository, labels, default branch, bootstrap stamp;
+  - `self-test`: issue and milestone;
+  - every issue and pull-request verb, `land-work`, the merge gate;
+  - the `project-manager` agent ("File an EPIC for …");
+  - `fix-drift`, which starts the granted fixers after a merge.
+- **software-engineering:** its review panel and `docs-reviewer` act on pull requests through pm's merge gate.
+- **The rest:** `pkit upgrade` (`git ls-remote` of the release tag) and `pkit report`. Neither was run.
+- **Works fully offline:** software-analysis and living-docs: stamping, validating, the friction check and revalidating.
+
+### Five roughest edges a live demo would hit
+1. **project-management needs a real GitHub repository, prepared in advance.** Without one, `pre-check` prints 5 failures and nothing in pm runs, and `bootstrap --dry-run` doesn't warn first. A live bootstrap creates 15 labels on that repository.
+2. **The documentation roots collide on a fresh project.** You must choose a layout (`pkit config set docs.internal tech-docs`) before living-docs can make a space, with no recommended value. Do it **before** installing software-analysis. Otherwise its rule set, and the default ADR folder, sit under the user docs root.
+3. **Stamped analysis artefacts are red until hand-written.** Two files gave 16 errors, each reported twice. The hints' inline `1. … 2. …` example is rejected, and the overview needs `pkit analysis overview` after each edit. On stage, use the `analysis-author` skill in Claude or have the text ready to paste.
+4. **Questions appear only at a real terminal.** Run from a script or an agent, each install defers the fixer question with a "not asked" note. After the pm install, the command that note names has nothing to ask. Run the installs at a real terminal, or pre-answer with `ask-fixers`.
+5. **Output is long and dense.**
+   - **Long:** `init` prints 110 lines, `status` 160 and `validate` 73.
+   - **Repeated noise:** record ids like "(COR-054 point 2)" on almost every line, the no-remote warning on most commands, and uv's "Installed N packages" lines.
+   - **Misleading:** `status` labels capability agents "user-managed".
+   - **Scale of the commit:** the first commit is 689 files.
+   - **For the demo:** filter output with `grep` or `tail`, or show it pre-recorded.

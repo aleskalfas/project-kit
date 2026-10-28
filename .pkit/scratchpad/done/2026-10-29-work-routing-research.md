@@ -1,4 +1,15 @@
+---
+authors:
+  - Aleš Kalfas <kalfas.ales@gmail.com>
+started: 2026-10-29
+retired: 2026-10-29
+produced:
+  - project-management:DEC-061
+---
+
 # Routing work to a set of workers: established patterns
+
+Written on 28 October in a branch folder (`talk-notes/`), the research behind the pools design (DEC-061).
 
 How mature systems control (1) what any worker may take at all and (2) optional per-worker specialisation. Each claim links the system's own docs. Lines marked *inference* are mine.
 

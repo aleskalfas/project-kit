@@ -1,0 +1,4100 @@
+schema: mural-boards/1
+mural: ibmresearchdesign6459.1793230020758
+url: https://app.mural.co/t/ibmresearchdesign6459/m/ibmresearchdesign6459/1793230020758/311a5a3a4aeef1ac127c90b21b7e6ad6292360f8
+theme:
+  name: carbon-light
+  overrides:
+    role_code: '#6929C4FF'
+    role_code_bg: '#F6F2FFFF'
+    role_checks: '#9F1853FF'
+    role_checks_bg: '#FFF0F7FF'
+    role_agents: '#005D5DFF'
+    role_agents_bg: '#D9FBFBFF'
+    role_people: '#0043CEFF'
+    role_people_bg: '#EDF5FFFF'
+    text_success: '#198038FF'
+    text_error: '#DA1E28FF'
+    role_experimenter: '#8A3800FF'
+    role_experimenter_bg: '#FFF2E8FF'
+    role_admin: '#00539AFF'
+    role_admin_bg: '#E5F6FFFF'
+    role_neutral: '#525252FF'
+    role_neutral_bg: '#F4F4F4FF'
+    background_inverse: '#393939FF'
+    text_inverse: '#FFFFFFFF'
+    accent_inverse: '#78A9FFFF'
+zones:
+  boundary_y: -1959
+  left_x: -4246
+  margin: 500
+templates:
+  slide:
+    master: L01
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.width
+      height: 1800
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      outline: '{i}'
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.width
+        height: 1800
+        color: '@background'
+        border_color: '@border_subtle'
+        border_width: 2
+      title:
+        type: text
+        text: '{title}'
+        x: =@grid.margin
+        y: =@region.title_y
+        width: =@grid.span.16
+        height: 160
+        style: '@style.title'
+      lead:
+        type: text
+        text: '{lead}'
+        x: =@grid.margin
+        y: =@region.lead_y
+        width: =@grid.span.12
+        height: =@region.lead_h
+        style: '@style.lead'
+      rests:
+        type: text
+        text: 'Rests on: {rests}'
+        x: =@grid.margin
+        y: =@region.footer_y
+        width: =@grid.span.12
+        height: 48
+        style: '@style.caption'
+      num:
+        type: text
+        text: '{n} / {total}'
+        x: =@grid.offset.12
+        y: =@region.footer_y
+        width: =@grid.span.4
+        height: 48
+        style: '@style.caption'
+        align: right
+    note: 'Carbon 16:9 slide: an invisible area with a background shape; title, lead and footer on the 2x grid. Designed in master L01.'
+  tile:
+    master: L02
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.3
+      height: 560
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.3
+        height: 560
+        color: '@layer'
+        border_color: '@layer'
+        border_width: 1
+      idtag:
+        type: shape
+        shape: rectangle
+        text: '{ident}'
+        fit: true
+        x: =@space.05
+        y: =@space.05
+        height: 64
+        color: '@tag_id_bg'
+        border_color: '@tag_id_bg'
+        border_width: 1
+        ink: '@tag_id'
+      spacetag:
+        type: shape
+        shape: rectangle
+        text: '{space_label}'
+        fit: true
+        after: idtag
+        height: 64
+        color: '@tag_{space}_bg'
+        border_color: '@tag_{space}_bg'
+        border_width: 1
+        ink: '@tag_{space}'
+      heading:
+        type: text
+        text: '{heading}'
+        x: =@space.05
+        y: =2 * @space.05 + 64
+        width: =@grid.span.3 - 2 * @space.05
+        height: 72
+        style: '@style.tile_heading'
+      body:
+        type: text
+        text: '{body}'
+        x: =@space.05
+        y: =3 * @space.05 + 64 + 72
+        width: =@grid.span.3 - 2 * @space.05
+        height: 256
+        style: '@style.body'
+    note: 'Carbon tile: layer fill, no border or shadow, 32 padding; an identifier tag, a space tag (user or tech), heading and body. Designed in master L02.'
+  listhead:
+    master: L03
+    root:
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      show_title: false
+      type: area
+      title: '{id}'
+      width: =@grid.span.16
+      height: 96
+    parts:
+      key:
+        type: text
+        text: '{key}'
+        x: 0
+        y: 16
+        width: =@grid.span.4
+        height: 48
+        style: '@style.label'
+      value:
+        type: text
+        text: '{value}'
+        x: =@grid.span.4 + @grid.gutter
+        y: 16
+        width: =@grid.span.12
+        height: 48
+        style: '@style.label'
+      divider:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 94
+        width: =@grid.span.16
+        height: 2
+        color: '@border_subtle'
+        border_color: '@border_subtle'
+        border_width: 1
+    note: 'Carbon structured list header: two column names over a divider.'
+  listrow:
+    master: L04
+    root:
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      show_title: false
+      type: area
+      title: '{id}'
+      width: =@grid.span.16
+      height: 176
+    parts:
+      idtag:
+        type: shape
+        shape: rectangle
+        text: '{ident}'
+        fit: true
+        x: 0
+        y: 28
+        height: 64
+        color: '@tag_id_bg'
+        border_color: '@tag_id_bg'
+        border_width: 1
+        ink: '@tag_id'
+      key:
+        type: text
+        text: '{key}'
+        after: idtag
+        after_gap: 24
+        width: =@grid.span.4 - 112
+        height: 64
+        style: '@style.key'
+        ink: '@{key_ink}'
+      value:
+        type: text
+        text: '{value}'
+        x: =@grid.span.4 + @grid.gutter
+        y: 28
+        width: =@grid.span.12
+        height: 112
+        style: '@style.body'
+        ink: '@{value_ink}'
+      divider:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 174
+        width: =@grid.span.16
+        height: 2
+        color: '@border_subtle'
+        border_color: '@border_subtle'
+        border_width: 1
+    note: 'Carbon structured list row: identifier tag and key in the first four columns, the value in the other twelve. `key_ink` and `value_ink` (defaults text_primary, text_secondary) mute a row with
+      text_helper.'
+    defaults:
+      key_ink: text_primary
+      value_ink: text_secondary
+  compare:
+    master: L05
+    root:
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      show_title: false
+      type: area
+      title: '{id}'
+      width: =@grid.span.8
+      height: 576
+    parts:
+      spacetag:
+        type: shape
+        shape: rectangle
+        text: '{space_label}'
+        fit: true
+        x: 0
+        y: 0
+        height: 64
+        color: '@tag_{space}_bg'
+        border_color: '@tag_{space}_bg'
+        border_width: 1
+        ink: '@tag_{space}'
+      heading:
+        type: text
+        text: '{heading}'
+        x: 0
+        y: 96
+        width: =@grid.span.8
+        height: 96
+        style: '@style.heading'
+      k1:
+        type: text
+        text: '{k1}'
+        x: 0
+        y: 240
+        width: =@grid.span.3
+        height: 56
+        style: '@style.key'
+      v1:
+        type: text
+        text: '{v1}'
+        x: =@grid.span.3 + @grid.gutter
+        y: 240
+        width: =@grid.span.5
+        height: 112
+        style: '@style.body'
+      d1:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 398
+        width: =@grid.span.8
+        height: 2
+        color: '@border_subtle'
+        border_color: '@border_subtle'
+        border_width: 1
+      k2:
+        type: text
+        text: '{k2}'
+        x: 0
+        y: 432
+        width: =@grid.span.3
+        height: 56
+        style: '@style.key'
+      v2:
+        type: text
+        text: '{v2}'
+        x: =@grid.span.3 + @grid.gutter
+        y: 432
+        width: =@grid.span.5
+        height: 112
+        style: '@style.body'
+      d2:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 574
+        width: =@grid.span.8
+        height: 2
+        color: '@border_subtle'
+        border_color: '@border_subtle'
+        border_width: 1
+    note: 'A comparison column: space tag, heading, and two structured-list rows. Two side by side fill the grid.'
+  callout:
+    master: L06
+    root:
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      show_title: false
+      type: area
+      title: '{id}'
+      width: =@grid.span.16
+      height: 176
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.16
+        height: 176
+        color: '@info_bg'
+        border_color: '@info_bg'
+        border_width: 1
+      bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 6
+        height: 176
+        color: '@info'
+        border_color: '@info'
+        border_width: 1
+      title:
+        type: text
+        text: '{title}'
+        x: 40
+        y: 28
+        width: =@grid.span.16 - 80
+        height: 56
+        style: '@style.key'
+      body:
+        type: text
+        text: '{body}'
+        x: 40
+        y: 92
+        width: =@grid.span.16 - 80
+        height: 56
+        style: '@style.body'
+    note: 'Carbon inline notification, low contrast, info: tinted background with a thin bar on its left. One per slide at most.'
+  node:
+    master: L07
+    root:
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      show_title: false
+      type: area
+      title: '{id}'
+      width: =@grid.span.3
+      height: 128
+    parts:
+      box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.3
+        height: 128
+        color: '@background'
+        border_color: '@node_{space}'
+        border_width: 2
+      dot:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 32
+        y: 52
+        width: 24
+        height: 24
+        color: '@node_{space}'
+        border_color: '@node_{space}'
+        border_width: 1
+      label:
+        type: text
+        text: '{label}'
+        x: 80
+        y: 36
+        width: =@grid.span.3 - 112
+        height: 56
+        style: '@style.key'
+    note: 'IBM technical-diagram node: white fill, 2-wide outline and a marker in its space''s colour (user, tech or code).'
+  glyph:
+    master: L08
+    root:
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      show_title: false
+      type: area
+      title: '{id}'
+      width: 96
+      height: 128
+    parts:
+      mark:
+        type: text
+        text: '{mark}'
+        x: 0
+        y: 24
+        width: 96
+        height: 80
+        style: '@style.heading'
+        align: center
+    note: A large symbol between diagram nodes (+, →) until connectors are supported.
+  stat:
+    master: L09
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.5
+      height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption * 1.5
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.5
+        height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption * 1.5
+        color: '@layer'
+        border_color: '@layer'
+        border_width: 1
+      number:
+        type: text
+        text: '{number}'
+        x: =@space.05
+        y: =@space.05
+        width: =@grid.span.5 - 2 * @space.05
+        height: =@size.title * 1.25
+        style: '@style.title'
+      label:
+        type: text
+        text: '{label}'
+        x: =@space.05
+        y: =@space.05 + @size.title * 1.25 + @space.03
+        width: =@grid.span.5 - 2 * @space.05
+        height: =2 * @size.body * 1.25
+        style: '@style.body'
+      source:
+        type: text
+        text: '{source}'
+        x: =@space.05
+        y: =2 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25
+        width: =@grid.span.5 - 2 * @space.05
+        height: =@size.caption * 1.5
+        style: '@style.caption'
+        ink: '@text_helper'
+    note: 'Carbon stat tile: layer fill, no border or shadow, 32 padding; a big number, what it counts, and its source. Designed in master L09.'
+  card:
+    master: L10
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.5
+      height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25 + @space.05
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.5
+        height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25 + @space.05
+        color: '@layer'
+        border_color: '@layer'
+        border_width: 1
+      idtag:
+        type: shape
+        shape: rectangle
+        text: '{ident}'
+        fit: true
+        x: =@space.05
+        y: =@space.05
+        height: 64
+        color: '@tag_id_bg'
+        border_color: '@tag_id_bg'
+        border_width: 1
+        ink: '@tag_id'
+      spacetag:
+        type: shape
+        shape: rectangle
+        text: '{space_label}'
+        fit: true
+        after: idtag
+        height: 64
+        color: '@tag_{space}_bg'
+        border_color: '@tag_{space}_bg'
+        border_width: 1
+        ink: '@tag_{space}'
+      heading:
+        type: text
+        text: '{heading}'
+        x: =@space.05
+        y: =2 * @space.05 + 64
+        width: =@grid.span.5 - 2 * @space.05
+        height: =2 * @size.tile_heading * 1.25
+        style: '@style.tile_heading'
+        ink: '@{heading_ink}'
+      body:
+        type: text
+        text: '{body}'
+        x: =@space.05
+        y: =2 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03
+        width: =@grid.span.5 - 2 * @space.05
+        height: =5 * @size.body * 1.25
+        style: '@style.body'
+        ink: '@{body_ink}'
+    note: 'Carbon tile, five columns wide: layer fill, 32 padding; an identifier tag, a space tag, a heading of up to two lines and up to five lines of body. Three fill a row. `heading_ink` / `body_ink`
+      (defaults text_primary, text_secondary) mute it with text_helper. Designed in master L10.'
+    defaults:
+      heading_ink: text_primary
+      body_ink: text_secondary
+  step:
+    master: L11
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.4
+      height: =3 * @space.05 + 64 + 3 * @size.key * 1.25
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.4
+        height: =3 * @space.05 + 64 + 3 * @size.key * 1.25
+        color: '@{fill}'
+        border_color: '@{fill}'
+        border_width: 1
+      tag:
+        type: shape
+        shape: rectangle
+        text: '{ident}'
+        fit: true
+        x: =@space.05
+        y: =@space.05
+        height: 64
+        color: '@tag_id_bg'
+        border_color: '@tag_id_bg'
+        border_width: 1
+        ink: '@tag_id'
+      text:
+        type: text
+        text: '{text}'
+        x: =@space.05
+        y: =2 * @space.05 + 64
+        width: =@grid.span.4 - 2 * @space.05
+        height: =3 * @size.key * 1.25
+        style: '@style.key'
+    note: 'A statement in a chain or a process: layer fill, 32 padding, a small id or role tag and one sentence of up to three lines. Joined by glyph arrows. Designed in master L11. A `fill` parameter (default
+      layer) highlights a conclusion with info_bg.'
+    defaults:
+      fill: layer
+  role_badge:
+    master: L12
+    note: 'Diagram role badge (from sketch E): the role''s Carbon pictogram and its name in the role colour, a size step above step text. Parameters: role (code, checks, agents, people: icon file 2026-10-29-friday-talk-icons/<role>.png
+      and colour @role_<role>) and name. Designed in master L12.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 320
+      height: 96
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      icon:
+        type: image
+        file: 2026-10-29-friday-talk-icons/{role}.png
+        x: 0
+        y: 0
+        width: 96
+        height: 96
+      name:
+        type: text
+        text: '{name}'
+        style: '@style.tile_heading'
+        ink: '@role_{role}'
+        after: icon
+        after_gap: 16
+        y: 16
+        height: 64
+        fit: true
+        fit_pad: 16
+  role_node:
+    master: L13
+    note: 'Diagram step node (from sketch E): white, outlined in the role colour, a role-colour dot and one line of step text; the box is sized around its text. Parameters: role, text. Designed in master
+      L13.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.5
+      height: 112
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        height: 112
+        color: '@background'
+        border_color: '@role_{role}'
+        border_width: 2
+        ink: '@text_primary'
+        wrap: text
+        wrap_pad: 32
+      dot:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: 32
+        y: 44
+        width: 24
+        height: 24
+        color: '@role_{role}'
+        border_color: '@role_{role}'
+        border_width: 1
+        ink: '@text_primary'
+      text:
+        type: text
+        text: '{text}'
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 72
+        y: 32
+        height: 48
+        fit: true
+        fit_pad: 0
+  cycle_ring:
+    master: L14
+    note: 'Diagram cycle ring (sketch E): four steps on one true circle, clockwise from the top, each a role node with its role badge outside the ring, short arcs marking the direction, and what the loop
+      keeps in the centre. Slots n1-n4 use role_node, b1-b4 use role_badge (roles code, checks, agents, people). Parameters: step1-step4, centre. Designed in master L14.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 2944
+      height: 1104
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      circle:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: 1088
+        y: 168
+        width: 768
+        height: 768
+        color: '#FFFFFF00'
+        border_color: '@border_strong'
+        border_width: 2
+        ink: '@text_primary'
+      n1:
+        use: role_node
+        role: code
+        text: '{step1}'
+        x: 1472.0
+        anchor: center
+        y: 112
+      n2:
+        use: role_node
+        role: checks
+        text: '{step2}'
+        x: 1824
+        anchor: left
+        y: 496
+      n3:
+        use: role_node
+        role: agents
+        text: '{step3}'
+        x: 1472.0
+        anchor: center
+        y: 880
+      n4:
+        use: role_node
+        role: people
+        text: '{step4}'
+        x: 1120
+        anchor: right
+        y: 496
+      b1:
+        use: role_badge
+        role: code
+        name: Code
+        x: 1472.0
+        anchor: center
+        y: 0
+      b2:
+        use: role_badge
+        role: checks
+        name: Checks
+        align: n2
+        anchor: right
+        y: 384
+      b3:
+        use: role_badge
+        role: agents
+        name: Agents
+        x: 1472.0
+        anchor: center
+        y: 1008
+      b4:
+        use: role_badge
+        role: people
+        name: People
+        align: n4
+        anchor: left
+        y: 384
+      centre:
+        type: text
+        text: '{centre}'
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        align: center
+        x: 1136
+        y: 520
+        width: 672
+        height: 64
+      a1:
+        type: arrow
+        points:
+        - - 1741
+          - 278
+        - - 1792
+          - 340
+        - - 1829
+          - 411
+        arrow_type: curved
+        tip: end
+        color: '@text_secondary'
+        border_width: 4
+        border_style: solid
+      a2:
+        type: arrow
+        points:
+        - - 1829
+          - 693
+        - - 1792
+          - 764
+        - - 1741
+          - 826
+        arrow_type: curved
+        tip: end
+        color: '@text_secondary'
+        border_width: 4
+        border_style: solid
+      a3:
+        type: arrow
+        points:
+        - - 1203
+          - 826
+        - - 1152
+          - 764
+        - - 1115
+          - 693
+        arrow_type: curved
+        tip: end
+        color: '@text_secondary'
+        border_width: 4
+        border_style: solid
+      a4:
+        type: arrow
+        points:
+        - - 1115
+          - 411
+        - - 1152
+          - 340
+        - - 1203
+          - 278
+        arrow_type: curved
+        tip: end
+        color: '@text_secondary'
+        border_width: 4
+        border_style: solid
+  section:
+    master: L15
+    note: 'Section slide: opens each part of the deck. Carbon expressive: the inverse surface, an accent bar, the part number, the part''s title at display size and one line on what the part establishes.
+      No footer or number. Designed in master L15.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.width
+      height: =@region.slide_h
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      outline: '{i}'
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.width
+        height: =@region.slide_h
+        color: '@background_inverse'
+        border_color: '@background_inverse'
+        border_width: 2
+        ink: '@text_primary'
+      bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: =@grid.margin
+        y: 640
+        width: =@grid.span.1
+        height: 8
+        color: '@accent_inverse'
+        border_color: '@accent_inverse'
+        border_width: 1
+        ink: '@text_primary'
+      eyebrow:
+        type: text
+        text: Part {part}
+        style: '@style.heading'
+        x: =@grid.margin
+        y: 704
+        width: =@grid.span.12
+        height: 80
+        ink: '@text_inverse'
+      title:
+        type: text
+        text: '{title}'
+        style: '@style.title'
+        x: =@grid.margin
+        y: 800
+        width: =@grid.span.16
+        height: 160
+        ink: '@text_inverse'
+      summary:
+        type: text
+        text: '{summary}'
+        style: '@style.lead'
+        x: =@grid.margin
+        y: 992
+        width: =@grid.span.12
+        height: 160
+        ink: '@text_inverse'
+  stage:
+    master: L16
+    note: 'Diagram stage: a step of a process with a short head and a line or two of what happens; white, outlined in its role''s colour, a role dot. Sized to its text by script (overrides of width and
+      height); joined by links. Designed in master L16.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 640
+      height: 224
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 640
+        height: 224
+        color: '@background'
+        border_color: '@role_{role}'
+        border_width: 2
+        ink: '@text_primary'
+      dot:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: 32
+        y: 44
+        width: 24
+        height: 24
+        color: '@role_{role}'
+        border_color: '@role_{role}'
+        border_width: 1
+        ink: '@text_primary'
+      head:
+        type: text
+        text: '{head}'
+        style: '@style.key'
+        x: 72
+        y: 28
+        width: 536
+        height: 64
+        ink: '@text_primary'
+      text:
+        type: text
+        text: '{text}'
+        style: '@style.body'
+        x: 32
+        y: 100
+        width: 576
+        height: 96
+  link:
+    master: L17
+    note: 'Diagram link: one of Mural''s own arrows from a node to the next, in an invisible frame the size of the gap between them. Parameters: the arrow''s end points inside the frame, and its tone (a
+      colour role). Designed in master L17.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 128
+      height: 64
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      arrow:
+        type: arrow
+        points:
+        - - '{x1}'
+          - '{y1}'
+        - - '{x2}'
+          - '{y2}'
+        arrow_type: straight
+        tip: end
+        color: '@{tone}'
+        border_width: 4
+        border_style: solid
+    defaults:
+      x1: 16
+      y1: 32
+      x2: 112
+      y2: 32
+      tone: text_secondary
+  branch:
+    master: L18
+    note: 'Diagram branch: an outcome of a decision, a right-angled arrow in the outcome''s colour with its label (OK in text_success, NOK in text_error). Parameters: four points, the label and where it
+      sits, the tone. Designed in master L18.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 256
+      height: 224
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      arrow:
+        type: arrow
+        points:
+        - - '{px1}'
+          - '{py1}'
+        - - '{px2}'
+          - '{py2}'
+        - - '{px3}'
+          - '{py3}'
+        - - '{px4}'
+          - '{py4}'
+        arrow_type: orthogonal
+        tip: end
+        color: '@{tone}'
+        border_width: 4
+        border_style: solid
+      label:
+        type: text
+        text: '{label}'
+        style: '@style.key'
+        x: '{lx}'
+        y: '{ly}'
+        width: 128
+        height: 56
+        ink: '@{tone}'
+    defaults:
+      px1: 224
+      py1: 176
+      px2: 48
+      py2: 176
+      px3: 48
+      py3: 48
+      px4: 224
+      py4: 48
+      lx: 64
+      ly: 84
+      tone: text_error
+  label:
+    master: L19
+    note: 'A label over a diagram or a column: one line in a theme text style. Parameters: text, style (default key), ink. Designed in master L19.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.5
+      height: 64
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      text:
+        type: text
+        text: '{text}'
+        style: '@style.{style}'
+        ink: '@{ink}'
+        x: 0
+        y: 0
+        width: =@grid.span.5
+        height: 64
+    defaults:
+      style: key
+      ink: text_primary
+  notice:
+    master: L20
+    note: 'Carbon inline notification with one sentence: the slide''s takeaway, low contrast info (a callout without a body). Designed in master L20.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.16
+      height: 112
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.16
+        height: 112
+        color: '@info_bg'
+        border_color: '@info_bg'
+        border_width: 1
+        ink: '@text_primary'
+      bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 6
+        height: 112
+        color: '@info'
+        border_color: '@info'
+        border_width: 1
+        ink: '@text_primary'
+      text:
+        type: text
+        text: '{text}'
+        style: '@style.key'
+        x: 40
+        y: 28
+        width: =@grid.span.16 - 80
+        height: 56
+  reader:
+    master: L21
+    note: 'A reader of the docs: a rule in the reader''s colour, their role badge, the first question the docs must answer, and what they get. Five columns wide; three fill a row. Heights follow the texts
+      (overrides). Designed in master L21.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.5
+      height: 448
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      rule:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.5
+        height: 8
+        color: '@role_{role}'
+        border_color: '@role_{role}'
+        border_width: 1
+        ink: '@text_primary'
+      badge:
+        use: role_badge
+        role: '{role}'
+        name: '{name}'
+        x: 0
+        y: 40
+      question:
+        type: text
+        text: '{question}'
+        style: '@style.key'
+        x: 0
+        y: 168
+        width: =@grid.span.5
+        height: 112
+        ink: '@text_primary'
+      gets_label:
+        type: text
+        text: Gets
+        style: '@style.label'
+        x: 0
+        y: 304
+        width: =@grid.span.5
+        height: 40
+        ink: '@text_helper'
+      gets:
+        type: text
+        text: '{gets}'
+        style: '@style.body'
+        x: 0
+        y: 352
+        width: =@grid.span.5
+        height: 96
+  code:
+    master: L22
+    note: 'A code snippet (Carbon): layer fill, 32 padding, the text line by line. Mural has no monospace font, so it uses the body font. Height follows the lines (overrides). Designed in master L22.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.8
+      height: 304
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.span.8
+        height: 304
+        color: '@layer'
+        border_color: '@layer'
+        border_width: 1
+        ink: '@text_primary'
+      text:
+        type: text
+        text: '{code}'
+        style: '@style.body'
+        x: 32
+        y: 32
+        width: =@grid.span.8 - 64
+        height: 240
+        ink: '@text_primary'
+  timeline:
+    master: L23
+    note: 'A timeline of four milestones: one of Mural''s arrows as the time axis, a marker per milestone, when it happens above the axis, its name and what happens below. Designed in master L23.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.span.16
+      height: 352
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      axis:
+        type: arrow
+        points:
+        - - 0
+          - 72
+        - - =3 * (@grid.span.4 + @grid.gutter) + @grid.span.4
+          - 72
+        arrow_type: straight
+        tip: end
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      m1:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: 0
+        y: 56
+        width: 32
+        height: 32
+        color: '@interactive'
+        border_color: '@interactive'
+        border_width: 1
+        ink: '@text_primary'
+      m2:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: =@grid.span.4 + @grid.gutter
+        y: 56
+        width: 32
+        height: 32
+        color: '@interactive'
+        border_color: '@interactive'
+        border_width: 1
+        ink: '@text_primary'
+      m3:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: =2 * (@grid.span.4 + @grid.gutter)
+        y: 56
+        width: 32
+        height: 32
+        color: '@interactive'
+        border_color: '@interactive'
+        border_width: 1
+        ink: '@text_primary'
+      m4:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: =3 * (@grid.span.4 + @grid.gutter)
+        y: 56
+        width: 32
+        height: 32
+        color: '@interactive'
+        border_color: '@interactive'
+        border_width: 1
+        ink: '@text_primary'
+      when1:
+        type: text
+        text: '{when1}'
+        style: '@style.label'
+        x: 0
+        y: 0
+        width: =@grid.span.4
+        height: 40
+        ink: '@text_helper'
+      when2:
+        type: text
+        text: '{when2}'
+        style: '@style.label'
+        x: =@grid.span.4 + @grid.gutter
+        y: 0
+        width: =@grid.span.4
+        height: 40
+        ink: '@text_helper'
+      when3:
+        type: text
+        text: '{when3}'
+        style: '@style.label'
+        x: =2 * (@grid.span.4 + @grid.gutter)
+        y: 0
+        width: =@grid.span.4
+        height: 40
+        ink: '@text_helper'
+      when4:
+        type: text
+        text: '{when4}'
+        style: '@style.label'
+        x: =3 * (@grid.span.4 + @grid.gutter)
+        y: 0
+        width: =@grid.span.4
+        height: 40
+        ink: '@text_helper'
+      head1:
+        type: text
+        text: '{head1}'
+        style: '@style.tile_heading'
+        x: 0
+        y: 120
+        width: =@grid.span.4
+        height: 64
+      head2:
+        type: text
+        text: '{head2}'
+        style: '@style.tile_heading'
+        x: =@grid.span.4 + @grid.gutter
+        y: 120
+        width: =@grid.span.4
+        height: 64
+      head3:
+        type: text
+        text: '{head3}'
+        style: '@style.tile_heading'
+        x: =2 * (@grid.span.4 + @grid.gutter)
+        y: 120
+        width: =@grid.span.4
+        height: 64
+      head4:
+        type: text
+        text: '{head4}'
+        style: '@style.tile_heading'
+        x: =3 * (@grid.span.4 + @grid.gutter)
+        y: 120
+        width: =@grid.span.4
+        height: 64
+      text1:
+        type: text
+        text: '{text1}'
+        style: '@style.body'
+        x: 0
+        y: 200
+        width: =@grid.span.4
+        height: 144
+      text2:
+        type: text
+        text: '{text2}'
+        style: '@style.body'
+        x: =@grid.span.4 + @grid.gutter
+        y: 200
+        width: =@grid.span.4
+        height: 144
+      text3:
+        type: text
+        text: '{text3}'
+        style: '@style.body'
+        x: =2 * (@grid.span.4 + @grid.gutter)
+        y: 200
+        width: =@grid.span.4
+        height: 144
+      text4:
+        type: text
+        text: '{text4}'
+        style: '@style.body'
+        x: =3 * (@grid.span.4 + @grid.gutter)
+        y: 200
+        width: =@grid.span.4
+        height: 144
+  actor:
+    master: L24
+    note: 'Diagram actor (sketch B with pictograms): a circle tinted in its role''s colour with the role''s pictogram, and its name centred below in the role colour. Parameters: role (colour @role_<role>),
+      icon (2026-10-29-friday-talk-icons/<icon>.png), name. Designed in master L24.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 436
+      height: 248
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      ring:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: 130
+        y: 0
+        width: 176
+        height: 176
+        color: '@role_{role}_bg'
+        border_color: '@role_{role}'
+        border_width: 3
+        ink: '@text_primary'
+      icon:
+        type: image
+        file: 2026-10-29-friday-talk-icons/{icon}.png
+        x: 170
+        y: 40
+        width: 96
+        height: 96
+      name:
+        type: text
+        text: '{name}'
+        style: '@style.key'
+        ink: '@role_{role}'
+        align: center
+        x: 0
+        y: 192
+        width: 436
+        height: 56
+  artefact:
+    master: L25
+    note: 'Diagram artefact: what a step reads or produces (a report, the repo, the rules, the docs debt) or what starts it (a push, a schedule): a layer tile with its pictogram and a one-line label, sized
+      to the label by script. Parameters: icon (2026-10-29-friday-talk-icons/<icon>.png), text, ink (default text_primary; text_helper mutes it). Designed in master L25.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 320
+      height: 96
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 320
+        height: 96
+        color: '@layer'
+        border_color: '@layer'
+        border_width: 1
+        ink: '@text_primary'
+      icon:
+        type: image
+        file: 2026-10-29-friday-talk-icons/{icon}.png
+        x: 16
+        y: 16
+        width: 64
+        height: 64
+      text:
+        type: text
+        text: '{text}'
+        style: '@style.key'
+        ink: '@{ink}'
+        x: 96
+        y: 20
+        width: 208
+        height: 56
+    defaults:
+      ink: text_primary
+  cover:
+    master: L26
+    note: 'Cover: the deck''s first slide. Carbon expressive on the light surface: the project logo and name, an accent bar, the presentation title at display size, the author, and the version with its
+      date. No footer or number. Parameters: title, project, author, version, date; a new version is a parameter change. Designed in master L26.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: =@grid.width
+      height: =@region.slide_h
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      outline: '{i}'
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: =@grid.width
+        height: =@region.slide_h
+        color: '@background'
+        border_color: '@border_subtle'
+        border_width: 2
+        ink: '@text_primary'
+      logo:
+        type: image
+        file: 2026-10-29-friday-talk-icons/mockingbird-logo.png
+        x: =@grid.margin
+        y: =@grid.margin
+        width: 262
+        height: 128
+      project:
+        type: text
+        text: '{project}'
+        style: '@style.heading'
+        ink: '@text_primary'
+        after: logo
+        after_gap: =@space.07
+        y: =@grid.margin + 24
+        height: 80
+        width: =@grid.span.8
+      bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: =@grid.margin
+        y: 640
+        width: =@grid.span.1
+        height: 8
+        color: '@interactive'
+        border_color: '@interactive'
+        border_width: 1
+        ink: '@text_primary'
+      title:
+        type: text
+        text: '{title}'
+        style: '@style.title'
+        ink: '@text_primary'
+        x: =@grid.margin
+        y: 704
+        width: =@grid.span.16
+        height: 160
+      author:
+        type: text
+        text: '{author}'
+        style: '@style.lead'
+        ink: '@text_secondary'
+        x: =@grid.margin
+        y: 896
+        width: =@grid.span.12
+        height: 96
+      version:
+        type: text
+        text: Version {version} · {date}
+        style: '@style.caption'
+        ink: '@text_helper'
+        x: =@grid.margin
+        y: =@region.footer_y
+        width: =@grid.span.8
+        height: 48
+instances:
+  L01:
+    template: slide
+    library: true
+    title: '[Slide title]'
+    lead: '[One-sentence claim of the slide]'
+    rests: '[source]'
+    n: '[n]'
+    total: '[total]'
+    parent: LIB
+    x: 200
+    y: 5946
+  L02:
+    template: tile
+    library: true
+    ident: I0
+    space: user
+    space_label: User docs
+    heading: '[Tile heading]'
+    body: '[One sentence that says what the tile claims.]'
+    parent: LIB
+    x: 200
+    y: 11186
+  L03:
+    template: listhead
+    key: '[Column]'
+    value: '[Column]'
+    library: true
+    parent: LIB
+    x: 1100
+    y: 11186
+  L04:
+    template: listrow
+    ident: I0
+    key: '[Key]'
+    value: '[One or two lines of value text]'
+    library: true
+    parent: LIB
+    x: 4444
+    y: 11186
+  L05:
+    template: compare
+    space: user
+    space_label: User docs
+    heading: '[Heading]'
+    k1: '[Key]'
+    v1: '[Value]'
+    k2: '[Key]'
+    v2: '[Value]'
+    library: true
+    parent: LIB
+    x: 200
+    y: 12406
+  L06:
+    template: callout
+    title: '[Callout title]'
+    body: '[One or two lines of body text]'
+    library: true
+    parent: LIB
+    x: 2040
+    y: 12406
+  L07:
+    template: node
+    space: user
+    label: '[Node]'
+    library: true
+    parent: LIB
+    x: 5384
+    y: 12406
+  L08:
+    template: glyph
+    mark: →
+    library: true
+    parent: LIB
+    x: 6284
+    y: 12406
+  L09:
+    template: stat
+    library: true
+    parent: LIB
+    number: '[42 days]'
+    label: '[What the number counts]'
+    source: '[Source and date]'
+    x: 200
+    y: 13642
+  L10:
+    template: card
+    library: true
+    parent: LIB
+    ident: '[A]'
+    space: user
+    space_label: User docs
+    heading: '[Card heading, up to two lines]'
+    body: '[Up to five lines: what the card tells.]'
+    x: 1476
+    y: 13642
+  L11:
+    template: step
+    library: true
+    parent: LIB
+    ident: '[1]'
+    text: '[One statement of an argument or one step of a process.]'
+    x: 2752
+    y: 13642
+  L12:
+    template: role_badge
+    library: true
+    parent: LIB
+    role: code
+    name: '[Role]'
+    x: 200
+    y: 16139
+  L13:
+    template: role_node
+    library: true
+    parent: LIB
+    role: agents
+    text: '[Step]'
+    x: 920
+    y: 16139
+  L14:
+    template: cycle_ring
+    library: true
+    parent: LIB
+    step1: '[Step 1]'
+    step2: '[Step 2]'
+    step3: '[Step 3]'
+    step4: '[Step 4]'
+    centre: '[What it keeps]'
+    x: 2196
+    y: 16139
+  L15:
+    template: section
+    part: '[n]'
+    title: '[Part title]'
+    summary: '[One line: what this part establishes]'
+    library: true
+    parent: LIB
+    x: 3800
+    y: 5946
+  L16:
+    template: stage
+    role: agents
+    head: '[Step]'
+    text: '[One or two lines on what happens]'
+    library: true
+    parent: LIB
+    x: 5540
+    y: 16139
+  L17:
+    template: link
+    library: true
+    parent: LIB
+    x: 6580
+    y: 16139
+  L18:
+    template: branch
+    label: '[NOK]'
+    library: true
+    parent: LIB
+    x: 7108
+    y: 16139
+  L19:
+    template: label
+    text: '[Label]'
+    library: true
+    parent: LIB
+    x: 3840
+    y: 13642
+  L20:
+    template: notice
+    text: '[One sentence the slide wants remembered]'
+    library: true
+    parent: LIB
+    x: 200
+    y: 14855
+  L21:
+    template: reader
+    role: experimenter
+    name: '[Reader]'
+    question: '[The reader''s first question]'
+    gets: '[What the docs give them]'
+    library: true
+    parent: LIB
+    x: 200
+    y: 17903
+  L22:
+    template: code
+    code: '[key: value]
+
+      [- item]'
+    library: true
+    parent: LIB
+    x: 3544
+    y: 14855
+  L23:
+    template: timeline
+    when1: '[When]'
+    when2: '[When]'
+    when3: '[When]'
+    head1: '[Milestone]'
+    head2: '[Milestone]'
+    head3: '[Milestone]'
+    text1: '[What happens then]'
+    text2: '[What happens then]'
+    text3: '[What happens then]'
+    library: true
+    parent: LIB
+    x: 1476
+    y: 17903
+    when4: '[When]'
+    head4: '[Milestone]'
+    text4: '[What happens then]'
+  L24:
+    template: actor
+    library: true
+    parent: LIB
+    role: agents
+    icon: agents
+    name: '[Actor]'
+    x: 4820
+    y: 17903
+  L25:
+    template: artefact
+    library: true
+    parent: LIB
+    icon: report
+    text: '[Artefact]'
+    x: 5656
+    y: 17903
+  L26:
+    template: cover
+    library: true
+    parent: LIB
+    x: 200
+    y: 8406
+    title: '[Presentation title]'
+    project: '[Project]'
+    author: '[Author]'
+    version: '[0.0]'
+    date: '[Date]'
+library:
+  frame: LIB
+  groups:
+  - title: Theme
+    sheet: theme
+  - title: Slides
+    members:
+    - L01
+    - L15
+    - L26
+  - title: Components
+    members:
+    - L02
+    - L03
+    - L04
+    - L05
+    - L06
+    - L07
+    - L08
+    - L09
+    - L10
+    - L11
+    - L19
+    - L20
+    - L22
+  - title: Diagrams
+    members:
+    - L12
+    - L13
+    - L14
+    - L16
+    - L17
+    - L18
+    - L21
+    - L23
+    - L24
+    - L25
+layouts: []
+objects:
+  LIB:
+    note: 'the library zone: component masters with mock text in brackets; fills bottom-up, grows upward, never below y -2000'
+    type: area
+    library: true
+    title: LIBRARY · component masters · not presentation content
+    show_title: true
+    x: -4246
+    y: -21010
+    width: 7588
+    height: 18551
+    border_style: dotted
+    border_width: 3
+    color: '#F6F2FFFF'
+    border_color: '#8A3FFCFF'
+    font_size: 64
+  LIB.slides:
+    type: text
+    library: true
+    parent: LIB
+    text: Slides
+    x: 200
+    y: 5366
+    width: 6800
+    height: 120
+    font_size: 64
+    font: proxima-nova
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.swatch.library_surface:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2500
+    y: 1682
+    width: 360
+    height: 200
+    color: '#F6F2FFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.library_surface:
+    type: text
+    library: true
+    parent: LIB
+    text: 'library_surface
+
+      #F6F2FF'
+    x: 2500
+    y: 1898
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.library_border:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2960
+    y: 1682
+    width: 360
+    height: 200
+    color: '#8A3FFCFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.library_border:
+    type: text
+    library: true
+    parent: LIB
+    text: 'library_border
+
+      #8A3FFC'
+    x: 2960
+    y: 1898
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.checks:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Readability (minimum contrast 4.5):
+
+      text_primary on background: 18.1 ok
+
+      text_secondary on background: 7.8 ok
+
+      text_helper on background: 5.0 ok
+
+      text_primary on layer: 16.5 ok
+
+      text_secondary on layer: 7.1 ok
+
+      text_on_color on interactive: 5.0 ok
+
+      interactive on background: 5.0 ok
+
+      tag_user on tag_user_bg: 5.9 ok
+
+      tag_tech on tag_tech_bg: 5.9 ok
+
+      tag_id on tag_id_bg: 13.7 ok
+
+      info on info_bg: 7.1 ok
+
+      text_secondary on info_bg: 7.1 ok'
+    x: 200
+    y: 4498
+    width: 3580
+    height: 468
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme:
+    type: text
+    library: true
+    parent: LIB
+    text: Theme · carbon-light
+    x: 200
+    y: 400
+    width: 3580
+    height: 120
+    font_size: 64
+    font: proxima-nova
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.about:
+    type: text
+    library: true
+    parent: LIB
+    text: 'carbon-light: IBM Carbon White theme: gray text, blue 60 accent'
+    x: 200
+    y: 720
+    width: 3000
+    height: 50
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.style.title:
+    type: text
+    library: true
+    parent: LIB
+    x: 200
+    y: 3406
+    width: 3580
+    height: 180
+    text: 'Title (style.title): proxima-nova · 120 · text_primary #161616'
+    font: proxima-nova
+    font_size: 120
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.style.heading:
+    type: text
+    library: true
+    parent: LIB
+    x: 200
+    y: 3636
+    width: 3580
+    height: 96
+    text: 'Heading (style.heading): proxima-nova · 64 · text_primary #161616'
+    font: proxima-nova
+    font_size: 64
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.style.lead:
+    type: text
+    library: true
+    parent: LIB
+    x: 200
+    y: 3782
+    width: 3580
+    height: 96
+    text: 'Lead (style.lead): proxima-nova · 64 · text_secondary #525252'
+    font: proxima-nova
+    font_size: 64
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.style.body:
+    type: text
+    library: true
+    parent: LIB
+    x: 200
+    y: 4160
+    width: 3580
+    height: 54
+    text: 'Body (style.body): proxima-nova · 36 · text_secondary #525252'
+    font: proxima-nova
+    font_size: 36
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.style.caption:
+    type: text
+    library: true
+    parent: LIB
+    x: 200
+    y: 4264
+    width: 3580
+    height: 42
+    text: 'Caption (style.caption): proxima-nova · 28 · text_secondary #525252'
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.swatch.background:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 200
+    y: 870
+    width: 360
+    height: 200
+    color: '#FFFFFFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.background:
+    type: text
+    library: true
+    parent: LIB
+    text: 'background
+
+      #FFFFFF'
+    x: 200
+    y: 1086
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.layer:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 660
+    y: 870
+    width: 360
+    height: 200
+    color: '#F4F4F4FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.layer:
+    type: text
+    library: true
+    parent: LIB
+    text: 'layer
+
+      #F4F4F4'
+    x: 660
+    y: 1086
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.layer_accent:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1120
+    y: 870
+    width: 360
+    height: 200
+    color: '#E0E0E0FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.layer_accent:
+    type: text
+    library: true
+    parent: LIB
+    text: 'layer_accent
+
+      #E0E0E0'
+    x: 1120
+    y: 1086
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.border_subtle:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1580
+    y: 870
+    width: 360
+    height: 200
+    color: '#E0E0E0FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.border_subtle:
+    type: text
+    library: true
+    parent: LIB
+    text: 'border_subtle
+
+      #E0E0E0'
+    x: 1580
+    y: 1086
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.border_strong:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2040
+    y: 870
+    width: 360
+    height: 200
+    color: '#8D8D8DFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.border_strong:
+    type: text
+    library: true
+    parent: LIB
+    text: 'border_strong
+
+      #8D8D8D'
+    x: 2040
+    y: 1086
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.text_primary:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2500
+    y: 870
+    width: 360
+    height: 200
+    color: '#161616FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.text_primary:
+    type: text
+    library: true
+    parent: LIB
+    text: 'text_primary
+
+      #161616'
+    x: 2500
+    y: 1086
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.text_secondary:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2960
+    y: 870
+    width: 360
+    height: 200
+    color: '#525252FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.text_secondary:
+    type: text
+    library: true
+    parent: LIB
+    text: 'text_secondary
+
+      #525252'
+    x: 2960
+    y: 1086
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.text_helper:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 3420
+    y: 870
+    width: 360
+    height: 200
+    color: '#6F6F6FFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.text_helper:
+    type: text
+    library: true
+    parent: LIB
+    text: 'text_helper
+
+      #6F6F6F'
+    x: 3420
+    y: 1086
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.text_on_color:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 200
+    y: 1276
+    width: 360
+    height: 200
+    color: '#FFFFFFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.text_on_color:
+    type: text
+    library: true
+    parent: LIB
+    text: 'text_on_color
+
+      #FFFFFF'
+    x: 200
+    y: 1492
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.interactive:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 660
+    y: 1276
+    width: 360
+    height: 200
+    color: '#0F62FEFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.interactive:
+    type: text
+    library: true
+    parent: LIB
+    text: 'interactive
+
+      #0F62FE'
+    x: 660
+    y: 1492
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.info:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1120
+    y: 1276
+    width: 360
+    height: 200
+    color: '#0043CEFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.info:
+    type: text
+    library: true
+    parent: LIB
+    text: 'info
+
+      #0043CE'
+    x: 1120
+    y: 1492
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.info_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1580
+    y: 1276
+    width: 360
+    height: 200
+    color: '#EDF5FFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.info_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'info_bg
+
+      #EDF5FF'
+    x: 1580
+    y: 1492
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.tag_user:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2040
+    y: 1276
+    width: 360
+    height: 200
+    color: '#0043CEFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.tag_user:
+    type: text
+    library: true
+    parent: LIB
+    text: 'tag_user
+
+      #0043CE'
+    x: 2040
+    y: 1492
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.tag_user_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2500
+    y: 1276
+    width: 360
+    height: 200
+    color: '#D0E2FFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.tag_user_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'tag_user_bg
+
+      #D0E2FF'
+    x: 2500
+    y: 1492
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.tag_tech:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2960
+    y: 1276
+    width: 360
+    height: 200
+    color: '#005D5DFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.tag_tech:
+    type: text
+    library: true
+    parent: LIB
+    text: 'tag_tech
+
+      #005D5D'
+    x: 2960
+    y: 1492
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.tag_tech_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 3420
+    y: 1276
+    width: 360
+    height: 200
+    color: '#9EF0F0FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.tag_tech_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'tag_tech_bg
+
+      #9EF0F0'
+    x: 3420
+    y: 1492
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.tag_id:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 200
+    y: 1682
+    width: 360
+    height: 200
+    color: '#161616FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.tag_id:
+    type: text
+    library: true
+    parent: LIB
+    text: 'tag_id
+
+      #161616'
+    x: 200
+    y: 1898
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.tag_id_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 660
+    y: 1682
+    width: 360
+    height: 200
+    color: '#E0E0E0FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.tag_id_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'tag_id_bg
+
+      #E0E0E0'
+    x: 660
+    y: 1898
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.node_user:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1120
+    y: 1682
+    width: 360
+    height: 200
+    color: '#0F62FEFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.node_user:
+    type: text
+    library: true
+    parent: LIB
+    text: 'node_user
+
+      #0F62FE'
+    x: 1120
+    y: 1898
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.node_tech:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1580
+    y: 1682
+    width: 360
+    height: 200
+    color: '#007D79FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.node_tech:
+    type: text
+    library: true
+    parent: LIB
+    text: 'node_tech
+
+      #007D79'
+    x: 1580
+    y: 1898
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.node_code:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2040
+    y: 1682
+    width: 360
+    height: 200
+    color: '#6F6F6FFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.node_code:
+    type: text
+    library: true
+    parent: LIB
+    text: 'node_code
+
+      #6F6F6F'
+    x: 2040
+    y: 1898
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.style.tile_heading:
+    type: text
+    library: true
+    parent: LIB
+    x: 200
+    y: 3928
+    width: 3580
+    height: 72
+    text: 'Tile_heading (style.tile_heading): proxima-nova · 48 · text_primary #161616'
+    font: proxima-nova
+    font_size: 48
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.style.key:
+    type: text
+    library: true
+    parent: LIB
+    x: 200
+    y: 4050
+    width: 3580
+    height: 60
+    text: 'Key (style.key): proxima-nova · 40 · text_primary #161616'
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.components:
+    type: text
+    library: true
+    parent: LIB
+    text: Components
+    x: 200
+    y: 10606
+    width: 7188
+    height: 120
+    font: proxima-nova
+    font_size: 64
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L01:
+    type: text
+    library: true
+    parent: LIB
+    text: slide · L01
+    x: 200
+    y: 5686
+    width: 3200
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L01:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: title, lead, rests'
+    x: 200
+    y: 5750
+    width: 3200
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L02:
+    type: text
+    library: true
+    parent: LIB
+    text: tile · L02
+    x: 200
+    y: 10926
+    width: 500
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L02:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: ident, space_label, space, heading, body'
+    x: 200
+    y: 10990
+    width: 500
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.style.label:
+    type: text
+    library: true
+    parent: LIB
+    x: 200
+    y: 4356
+    width: 3580
+    height: 42
+    text: 'Label (style.label): proxima-nova · 28 · text_primary #161616'
+    font: proxima-nova
+    font_size: 28
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L03:
+    type: text
+    library: true
+    parent: LIB
+    text: listhead · L03
+    x: 1100
+    y: 10926
+    width: 2944
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L03:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: key, value'
+    x: 1100
+    y: 10990
+    width: 2944
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L04:
+    type: text
+    library: true
+    parent: LIB
+    text: listrow · L04
+    x: 4444
+    y: 10926
+    width: 2944
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L04:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: ident, key, key_ink, value, value_ink'
+    x: 4444
+    y: 10990
+    width: 2944
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L05:
+    type: text
+    library: true
+    parent: LIB
+    text: compare · L05
+    x: 200
+    y: 12146
+    width: 1440
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L05:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: space_label, space, heading, k1, v1, k2, v2'
+    x: 200
+    y: 12210
+    width: 1440
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L06:
+    type: text
+    library: true
+    parent: LIB
+    text: callout · L06
+    x: 2040
+    y: 12146
+    width: 2944
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L06:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: title, body'
+    x: 2040
+    y: 12210
+    width: 2944
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L07:
+    type: text
+    library: true
+    parent: LIB
+    text: node · L07
+    x: 5384
+    y: 12146
+    width: 500
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L07:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: space, label'
+    x: 5384
+    y: 12210
+    width: 500
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L08:
+    type: text
+    library: true
+    parent: LIB
+    text: glyph · L08
+    x: 6284
+    y: 12146
+    width: 96
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L08:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: mark'
+    x: 6284
+    y: 12210
+    width: 96
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L09:
+    type: text
+    library: true
+    parent: LIB
+    text: stat · L09
+    x: 200
+    y: 13382
+    width: 876
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L09:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: number, label, source'
+    x: 200
+    y: 13446
+    width: 876
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L10:
+    type: text
+    library: true
+    parent: LIB
+    text: card · L10
+    x: 1476
+    y: 13382
+    width: 876
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L10:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: ident, space_label, space, heading, heading_ink, body, body_ink'
+    x: 1476
+    y: 13446
+    width: 876
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L11:
+    type: text
+    library: true
+    parent: LIB
+    text: step · L11
+    x: 2752
+    y: 13382
+    width: 688
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L11:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: fill, ident, text'
+    x: 2752
+    y: 13446
+    width: 688
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.swatch.role_code:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 3420
+    y: 1682
+    width: 360
+    height: 200
+    color: '#6929C4FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_code:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_code
+
+      #6929C4'
+    x: 3420
+    y: 1898
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_code_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 200
+    y: 2088
+    width: 360
+    height: 200
+    color: '#F6F2FFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_code_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_code_bg
+
+      #F6F2FF'
+    x: 200
+    y: 2304
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_checks:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 660
+    y: 2088
+    width: 360
+    height: 200
+    color: '#9F1853FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_checks:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_checks
+
+      #9F1853'
+    x: 660
+    y: 2304
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_checks_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1120
+    y: 2088
+    width: 360
+    height: 200
+    color: '#FFF0F7FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_checks_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_checks_bg
+
+      #FFF0F7'
+    x: 1120
+    y: 2304
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_agents:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1580
+    y: 2088
+    width: 360
+    height: 200
+    color: '#005D5DFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_agents:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_agents
+
+      #005D5D'
+    x: 1580
+    y: 2304
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_agents_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2040
+    y: 2088
+    width: 360
+    height: 200
+    color: '#D9FBFBFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_agents_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_agents_bg
+
+      #D9FBFB'
+    x: 2040
+    y: 2304
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_people:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2500
+    y: 2088
+    width: 360
+    height: 200
+    color: '#0043CEFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_people:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_people
+
+      #0043CE'
+    x: 2500
+    y: 2304
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_people_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2960
+    y: 2088
+    width: 360
+    height: 200
+    color: '#EDF5FFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_people_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_people_bg
+
+      #EDF5FF'
+    x: 2960
+    y: 2304
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.text_success:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 3420
+    y: 2088
+    width: 360
+    height: 200
+    color: '#198038FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.text_success:
+    type: text
+    library: true
+    parent: LIB
+    text: 'text_success
+
+      #198038'
+    x: 3420
+    y: 2304
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.text_error:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 200
+    y: 2494
+    width: 360
+    height: 200
+    color: '#DA1E28FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.text_error:
+    type: text
+    library: true
+    parent: LIB
+    text: 'text_error
+
+      #DA1E28'
+    x: 200
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.label.L12:
+    type: text
+    library: true
+    parent: LIB
+    text: role_badge · L12
+    x: 200
+    y: 15879
+    width: 320
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L12:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: role, name'
+    x: 200
+    y: 15943
+    width: 320
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L13:
+    type: text
+    library: true
+    parent: LIB
+    text: role_node · L13
+    x: 920
+    y: 15879
+    width: 876
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L13:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: role, text'
+    x: 920
+    y: 15943
+    width: 876
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L14:
+    type: text
+    library: true
+    parent: LIB
+    text: cycle_ring · L14
+    x: 2196
+    y: 15879
+    width: 2944
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L14:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: step1, step2, step3, step4, centre'
+    x: 2196
+    y: 15943
+    width: 2944
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.diagrams:
+    type: text
+    library: true
+    parent: LIB
+    text: Diagrams
+    x: 200
+    y: 15559
+    width: 7164
+    height: 120
+    font: proxima-nova
+    font_size: 64
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.theme.swatch.role_experimenter:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 660
+    y: 2494
+    width: 360
+    height: 200
+    color: '#8A3800FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_experimenter:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_experimenter
+
+      #8A3800'
+    x: 660
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_experimenter_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1120
+    y: 2494
+    width: 360
+    height: 200
+    color: '#FFF2E8FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_experimenter_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_experimenter_bg
+
+      #FFF2E8'
+    x: 1120
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_admin:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 1580
+    y: 2494
+    width: 360
+    height: 200
+    color: '#00539AFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_admin:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_admin
+
+      #00539A'
+    x: 1580
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_admin_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2040
+    y: 2494
+    width: 360
+    height: 200
+    color: '#E5F6FFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_admin_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_admin_bg
+
+      #E5F6FF'
+    x: 2040
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_neutral:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2500
+    y: 2494
+    width: 360
+    height: 200
+    color: '#525252FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_neutral:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_neutral
+
+      #525252'
+    x: 2500
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_neutral_bg:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2960
+    y: 2494
+    width: 360
+    height: 200
+    color: '#F4F4F4FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_neutral_bg:
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_neutral_bg
+
+      #F4F4F4'
+    x: 2960
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.background_inverse:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 3420
+    y: 2494
+    width: 360
+    height: 200
+    color: '#393939FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.background_inverse:
+    type: text
+    library: true
+    parent: LIB
+    text: 'background_inverse
+
+      #393939'
+    x: 3420
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.text_inverse:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 200
+    y: 2900
+    width: 360
+    height: 200
+    color: '#FFFFFFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.text_inverse:
+    type: text
+    library: true
+    parent: LIB
+    text: 'text_inverse
+
+      #FFFFFF'
+    x: 200
+    y: 3116
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.accent_inverse:
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 660
+    y: 2900
+    width: 360
+    height: 200
+    color: '#78A9FFFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.accent_inverse:
+    type: text
+    library: true
+    parent: LIB
+    text: 'accent_inverse
+
+      #78A9FF'
+    x: 660
+    y: 3116
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.label.L15:
+    type: text
+    library: true
+    parent: LIB
+    text: section · L15
+    x: 3800
+    y: 5686
+    width: 3200
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L15:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: part, title, summary'
+    x: 3800
+    y: 5750
+    width: 3200
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L19:
+    type: text
+    library: true
+    parent: LIB
+    text: label · L19
+    x: 3840
+    y: 13382
+    width: 876
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L19:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: text, style, ink'
+    x: 3840
+    y: 13446
+    width: 876
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L20:
+    type: text
+    library: true
+    parent: LIB
+    text: notice · L20
+    x: 200
+    y: 14595
+    width: 2944
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L20:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: text'
+    x: 200
+    y: 14659
+    width: 2944
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L22:
+    type: text
+    library: true
+    parent: LIB
+    text: code · L22
+    x: 3544
+    y: 14595
+    width: 1440
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L22:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: code'
+    x: 3544
+    y: 14659
+    width: 1440
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L16:
+    type: text
+    library: true
+    parent: LIB
+    text: stage · L16
+    x: 5540
+    y: 15879
+    width: 640
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L16:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: role, head, text'
+    x: 5540
+    y: 15943
+    width: 640
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L17:
+    type: text
+    library: true
+    parent: LIB
+    text: link · L17
+    x: 6580
+    y: 15879
+    width: 128
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L17:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: tone'
+    x: 6580
+    y: 15943
+    width: 128
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L18:
+    type: text
+    library: true
+    parent: LIB
+    text: branch · L18
+    x: 7108
+    y: 15879
+    width: 256
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L18:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: tone, label, lx, ly'
+    x: 7108
+    y: 15943
+    width: 256
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L21:
+    type: text
+    library: true
+    parent: LIB
+    text: reader · L21
+    x: 200
+    y: 17643
+    width: 876
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L21:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: role, name, question, gets'
+    x: 200
+    y: 17707
+    width: 876
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L23:
+    type: text
+    library: true
+    parent: LIB
+    text: timeline · L23
+    x: 1476
+    y: 17643
+    width: 2944
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L23:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: when1, when2, when3, when4, head1, head2, head3, head4, text1, text2, text3, text4'
+    x: 1476
+    y: 17707
+    width: 2944
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L24:
+    type: text
+    library: true
+    parent: LIB
+    text: actor · L24
+    x: 4820
+    y: 17643
+    width: 436
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L24:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: role, icon, name'
+    x: 4820
+    y: 17707
+    width: 436
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L25:
+    type: text
+    library: true
+    parent: LIB
+    text: artefact · L25
+    x: 5656
+    y: 17643
+    width: 320
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L25:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: icon, text, ink'
+    x: 5656
+    y: 17707
+    width: 320
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.label.L26:
+    type: text
+    library: true
+    parent: LIB
+    text: cover · L26
+    x: 200
+    y: 8146
+    width: 3200
+    height: 64
+    font: proxima-nova
+    font_size: 40
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+  LIB.params.L26:
+    type: text
+    library: true
+    parent: LIB
+    text: 'Parameters: project, title, author, version, date'
+    x: 200
+    y: 8210
+    width: 3200
+    height: 96
+    font: proxima-nova
+    font_size: 28
+    ink: '#525252FF'
+    color: '#FFFFFF00'
+    align: left

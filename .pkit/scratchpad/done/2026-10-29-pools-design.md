@@ -1,4 +1,16 @@
+---
+authors:
+  - Aleš Kalfas <kalfas.ales@gmail.com>
+started: 2026-10-29
+retired: 2026-10-29
+produced:
+  - project-management:DEC-061
+  - ADR-072
+---
+
 # Pools of workers: the design as decided (28 October)
+
+Written on 28 October in a branch folder (`talk-notes/`) as the design the maintainer decided; it produced project-management DEC-061 and ADR-072 (PR #2257).
 
 Decided by the maintainer point by point, after a critic review and an architect review (the architect endorsed it with the conditions folded in below). This is the contract for the records and the build of #2256 (PR #2257).
 

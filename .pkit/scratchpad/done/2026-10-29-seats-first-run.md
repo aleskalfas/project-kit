@@ -1,4 +1,15 @@
+---
+authors:
+  - Aleš Kalfas <kalfas.ales@gmail.com>
+started: 2026-10-29
+retired: 2026-10-29
+produced:
+  - https://github.com/aleskalfas/project-kit/pull/2254
+---
+
 # Plan: the first end-to-end run of seats (issue #2144), v2
+
+Written on 27 October in a branch folder (`talk-notes/`) as the plan for the first end-to-end run of seats (#2144), which led to project-kit's own seats (#2254).
 
 Goal: one planner and two workers, each an agent session in its own clone of `aleskalfas/pkit-seats-demo`, drain a small backlog through project-kit's seats, shared pool and merge gate. Two runs: a **rehearsal** that tests the chain (expected to break; every break filed), then a **recorded run** from a release, the source of the runbook page and the first figures.
 
