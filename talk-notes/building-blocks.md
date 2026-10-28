@@ -104,7 +104,7 @@ Finding: pkit does not state this anywhere an adopter reads. COR-006 gives recor
 - **Evidence:** rules born from incidents: the agent workspace (#1043, prompts on the maintainer's phone at night), retry once then stop (#1648).
 - **Relation to records:** the rules are the operational digest of the records, each citing the record behind it.
 - **Weak spot:** a rule loaded is not a rule followed. Rules state; other blocks (permissions, validation, reviewers) enforce.
-- **Maintainer's notes:**
+- **Maintainer's notes:** see the draft below.
 
 ## 2. Rules (draft for discussion, written overnight by the project manager's helper)
 
@@ -129,7 +129,7 @@ Finding: pkit does not state this anywhere an adopter reads. COR-006 gives recor
   - The repository names the limit itself. ADR-028: "a teaching rule is advice, not a mechanism". So the sandbox escape that rule 14 forbids is also sealed by configuration when agents run unattended, and the rule stays.
   - Rules reach a session only when it starts. The helper that wrote this draft had core rules 1 to 21 in its context, not 22: its copy was loaded before rule 22 merged, though the file on disk holds it.
 - **Weak spot:** a rule loaded is not a rule followed, and nothing measures how often it is. The file grows, and the rules lengthen: the first thirteen rules average 60 words today, the nine added since 161. Rule 20 is 340 words in some fifteen sentences; the README's "terse" does not describe it. Rules have numbers, not ids, and the numbers move.
-- **Maintainer's notes:**
+- **Maintainer's notes (28 October):** rules are the projection of the decisions into every session (block 1's framing carried into run time). Not every session needs every rule, but slicing was examined and deferred: by permission it couples two unrelated things, by agent it misses the main session, and by the files a rule governs it arrives late or never where the breaking act is the first touch, and fails silently ([scratchpad](https://github.com/aleskalfas/project-kit/blob/docs/scratchpad-rules-sliced/.pkit/scratchpad/active/2026-10-28-rules-sliced-by-files.md)). Now: permanent rule numbers (#2260), the rules trimmed (#2261), a size budget `pkit validate` checks (#2262), and the missing rule on when a record starts (#2258).
 
 ### Grilling rules
 
