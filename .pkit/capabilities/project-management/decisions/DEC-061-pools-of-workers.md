@@ -1,7 +1,7 @@
 ---
 id: DEC-061
 title: Pools of workers — seats that build choose their work only from the pools they serve
-status: proposed
+status: accepted
 date: 2026-10-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
