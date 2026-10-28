@@ -158,6 +158,7 @@ pkit:
 > **Not built yet:** nothing reads which seat alone may take a Task by its scope, so nothing warns of such a Task. DEC-045 point 5 decides the warning, and #2136 tracks it.
 
 - **4a.** The Task is assigned to another person's account. `start-work` refuses, points to `handoff-issue`, and changes nothing (`start-work.py`).
+- **4b.** The map binds the state to the board, and the Task's card no longer places it, or the board cannot be read. `start-work` refuses, as `UC-061` variant 4c describes, and changes nothing ([DEC-051 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-051-axis-carriage-activation.md#6-a-board-carried-state-is-read-from-the-boards-status-and-never-guessed)).
 - **5a.** Another instance owns the Task already, or takes the Task at the same instant. The path goes on as `UC-085` describes.
 - **9a.** The check before a push finds that the ownership lapsed, or passed to another clone. The worker parks the work on a separate branch, and writes nothing to the Task's branch or [pull request](../../../../core/glossary.md#term-pull-request--pull-request). The worker says on the Task where the parked work lies ([DEC-059 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#9-a-tasks-claim-is-released-renewed-lapses-and-is-checked-again)).
 

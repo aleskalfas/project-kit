@@ -19,6 +19,7 @@ pkit:
         - project-management:DEC-046
         - project-management:DEC-049
         - project-management:DEC-055#3
+        - project-management:DEC-062#5
       artefact:
         - TERM-issue-lifecycle
         - TERM-authorisation
@@ -119,7 +120,7 @@ stateDiagram-v2
 
 **Always true:**
 
-- Where a board's Status column and the issue disagree, the state the issue carries wins (DEC-006).
+- Where the substrate map binds the state to the board, an open issue stands where its card's Status places it ([DEC-062 point 5](../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). A closed issue is Done whatever its card says. Elsewhere, where a board's Status column and the issue disagree, the state the issue carries wins (DEC-006).
 - A parent issue never enters Review. It reaches Done only by its own close, once its children are done (DEC-006).
 
 ## Authorisation
