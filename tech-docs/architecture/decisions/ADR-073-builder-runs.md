@@ -46,7 +46,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 - **Its only remote is the caller's repository,** which the run cannot read (point 2), so a fetch from it inside the run fails. It carries the caller's commit identity, and no signing settings: the builder commits unsigned, and the build command signs at the hand-back (point 8).
 - **The run's folder** is a folder of the clone that version control ignores. The toolchain's caches and the shell's temp folder go in it, since the sandbox writes nothing outside the clone (point 3).
 - **Recorded before the run:** its references, its git configuration, its hooks folder and its ignored files.
-- **Nothing of the run is left before the check.** The runner ends every process of the run's sandbox, and confirms none is left, before the clone is checked, and so before each check of point 5 and each hand-back. Where it cannot confirm it, the build is not borne out (exit 5), its clone kept.
+- **Nothing of the run, or of a check, is left before the check.** The runner ends every process of the run's sandbox, and of each check's (point 5), and confirms none is left, before the clone is checked, before each next check, and before each hand-back. Where it cannot confirm it, the build is not borne out (exit 5), its clone kept.
 - **Checked after the run:** HEAD is on the branch the caller named, which descends from the start commit; no other reference moved; the git configuration and the hooks folder are unchanged; the working tree is clean; no ignored file appeared outside the run's folder. Git is read with the clone's own configuration ignored, and an error of git's is a breach (ADR-066 point 7).
 - **Kept for the caller.** The clone outlives the run, unlike a confined run's, until the caller removes it.
 
@@ -100,7 +100,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 - **The checks' environment** is the run's: it names no signing agent, and the sandbox denies the signing agents' sockets (point 2).
 - **The hand-back** is that process's, once the run and the checks end (point 8), or `--hand-back`'s where it could not sign. Each ending writes its event on the Task (point 9), then the final state.
 - **Waiting.** `--wait <seconds>` reads the state, waits at most that long, and exits with the state's code. The seat waits in slices shorter than its own shell call's limit.
-- **Recovery.** A session that starts in a clone with a build in its state file goes on from it: waits on a running one, or acts on a finished one. The state file names the process's id. A build whose process is gone while its state is not final is lost: not borne out (exit 5), its clone kept. The first command in the clone that reads the state finds it lost, before any other work, and, where the clone still holds the claim, posts its ending event with a renewal that names the claim's seat and key, as a command's work renews it (DEC-059 point 9, ADR-041). So its claim no longer waits, and its lapse limit runs from that renewal. A question stops counting as waiting once `--answer` resumes its build, by the resume event it posts (point 9), not when an answer is posted: the resumed build is a running build, renewed while it runs and lost if its process dies.
+- **Recovery.** A session that starts in a clone with a build in its state file goes on from it: waits on a running one, or acts on a finished one. The state file names the process's id. A build whose process is gone while its state is not final is lost: not borne out (exit 5), its clone kept. The first command in the clone that reads the state finds it lost, before any other work, and posts its ending event: where the clone still holds the claim, with a renewal that names the claim's seat and key, as a command's work renews it (DEC-059 point 9, ADR-041), and otherwise with no renewal, so the build's record is complete. So its claim no longer waits, and its lapse limit runs from that renewal. A question stops counting as waiting once `--answer` resumes its build, by the resume event it posts (point 9), not when an answer is posted: the resumed build is a running build, renewed while it runs and lost if its process dies.
 - **One build at a time** in a seat's clone. A build started while one runs is refused.
 - **The claim.** That process renews the Task's claim while the run runs, renewal shipping no later than lapse (DEC-062's Implications), and stops when the run ends, which the wall-clock limit bounds. So a dead session's Task still returns to the pool, and the claim of a Task whose build waits, on a question or on its hand-back, does not lapse (DEC-062 point 6).
 
@@ -109,7 +109,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 | Exit | State | When |
 |---|---|---|
 | 0 | built | the builder's result says built, and the clone's check bears it out |
-| 1 | refused | the seat; the Task not In Progress, or, for a fix round (`--fix`, with the verdicts' blocking findings) or a merge (`--merge`), not In Progress or in Review; its owner, its branch, a seat's working tree not on the default branch or not clean, an agent run's marker, a build already running |
+| 1 | refused | the seat; the Task not In Progress, or, for a fix round (`--fix`, with the verdicts' blocking findings) or a merge (`--merge`), not In Progress or in Review; its owner, its branch, in a project with a topology a seat's working tree not on the default branch, a working tree that is not clean, an agent run's marker, a build already running |
 | 2 | usage | a usage error |
 | 3 | tracker failed | the Task or its records could not be read or written |
 | 4 | unfinished | the builder's result says unfinished, and no call was refused |
@@ -119,7 +119,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 | 8 | running | `--wait` returned before the run ended |
 | 9 | built, not brought back | the hand-back could not sign (point 8) |
 
-- **Precedence:** a breach (5) before anything else; then a question (6); then unfinished (4).
+- **Precedence:** a breach (5) before anything else; then a question (6); then unfinished (4). A build that is built and whose hand-back could not sign is exit 9, and once a hand-back moves the branch, exit 0.
 - **The grammar.** The builder ends its reply with one result block or one question block, whose fields DEC-062 point 5 names. The first block wins, as the review command's first verdict line does. The point's companion schema holds the grammar.
 - **The refused calls** come from the harness's own report. The runner asks for its machine-readable output, and the run command's answer document gains the list.
 
@@ -139,7 +139,7 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 - **After a run that ended built,** once the clone's check (point 1) and the checks (point 5) bear it out, and the seat's clone still holds the Task's claim (DEC-059 point 9), the build command fetches the clone's branch into a temporary reference of the seat's clone. Git's local transport runs no hook of the clone, and the check found the clone's configuration and hooks unchanged.
 - **Pinned to what the check saw.** The ending event names the commit the check saw at the branch's head. Each hand-back, `--hand-back`'s included, checks the clone again right before it fetches, with no process of the run left, and moves nothing where the branch's head is not that commit or the check finds a breach (exit 5).
 - **Signed at the hand-back.** Where the seat's clone signs its commits, the build command writes each fetched commit again with the same tree, message and author, signed by the seat's clone. Each parent maps through what the hand-back already wrote, the start commit standing for itself, and every other parent, such as the default branch's head under a merge, is kept as it is. The builder never held the key, so a signature says the command brought the commit back.
-- **A signature that fails,** such as a key that is locked with nobody to unlock it, moves nothing: the build is built and not yet brought back, its clone kept (exit 9). Its ending event says so and names no commit, and the build waits on its hand-back. `--hand-back` makes the hand-back again from the seat's session, and posts the hand-back event once the branch moves.
+- **A signature that fails,** such as a key that is locked with nobody to unlock it, moves nothing: the build is built and not yet brought back, its clone kept (exit 9). Its ending event says so, names the commit the clone's check saw at the branch's head, and names no commit as brought back. The build waits on its hand-back. `--hand-back` makes the hand-back again from the seat's session, and posts the hand-back event once the branch moves.
 - **The claim while a build waits on its hand-back** does not lapse, as while it waits on a question (point 7, DEC-062 point 6). A release of the seat still frees it. `--hand-back` on a claim the clone no longer holds is refused (exit 1), and the clone is kept.
 - **A fast-forward only.** The Task's branch moves only to the commits the hand-back wrote, which descend from the build's start commit.
 - **A reference, not a checkout.** The hand-back moves the Task's branch as a reference. In a project with a topology, the seat's working tree stays on the default branch: the commands that start a worker's Task cut its branch without checking it out, and the build command refuses a seat's clone whose working tree is not on the default branch or is not clean. So no tool, setting, hook or instruction the seat runs is a build's.
@@ -150,8 +150,8 @@ Neither fits a build. The unconfined form runs where the builder reads the seat'
 
 - **A build's record** is its events on the Task, through the audit-log facility, each naming the build:
   - **the start,** posted before the run starts: the start commit, the default branch's head whose rules the build runs under, the builder, and the brief, folded, with its fingerprint, the hash of its bytes;
-  - **each ending,** at every exit but 8: how the build ended, the commit the clone's check saw at the branch's head, and its question where it asks one (point 7). An exit-9 ending is followed by a hand-back event;
-  - **a resume,** which `--answer` posts before the resumed run starts: the question it answers, so the build no longer waits on it;
+  - **each ending,** at every exit but 8: how the build ended, the commit the clone's check saw at the branch's head where a check ran, and its question where it asks one (point 7). An exit-9 ending is followed by a hand-back event;
+  - **a resume,** which `--answer` posts before the resumed run starts: the question it answers, so the build no longer waits on it. Where the resumed run then cannot start, the ending that follows closes the build;
   - **the hand-back,** once the Task's branch moves: the commits that came back as the Task's branch holds them, with the builder's own ids beside them as a trace.
 - **The check.** In a project with a topology, the commands that open a worker's pull request, move its Task to Review, ask for the reviews and merge read the Task's build records. Every commit on the Task's branch that the default branch does not hold must be one a hand-back event names, so a merge build's default-branch commits are never asked for one. A merge of the default branch into the Task's branch is built through the build command (DEC-062 point 1), so it is named too.
 - **The override.** Where the person directs a build in the seat's session (DEC-062 point 1), `--bypass-provenance "<reason>"` passes the check at the command it is given to, with an audit comment, and is given again at each of the four, in the override convention ([project-management:DEC-046](../../../.pkit/capabilities/project-management/decisions/DEC-046-override-flag-convention.md)).
@@ -179,7 +179,7 @@ Before the working form is built, a probe of the harness confirms, on the adapte
 - The harness's memory is off, and the run reads none of the person's earlier sessions' notes.
 - The stream of events gives the time of each event, and the idle limit ends a run that sends none.
 - A detached run outlives the shell call that started it, and the limits still end it.
-- The runner ends every process of a run's sandbox, and can confirm none is left, on each platform.
+- The runner ends every process of a run's sandbox and of a check's, and can confirm none is left, on each platform.
 - A resumed session takes the settings built again, and keeps the run's denies.
 - A sandbox that cannot start stops the harness at start.
 - The checks' sandbox, with no harness, holds the same rules as the run's on each platform, and a check whose sandbox refused to start reads as failed.
