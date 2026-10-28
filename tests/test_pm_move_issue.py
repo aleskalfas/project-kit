@@ -1138,7 +1138,9 @@ def test_the_shipped_workflow_declares_the_move_back_for_every_type_in_progress(
     types = in_progress["applies_to"]
     assert types
     for target in ("backlog", "todo"):
-        (move,) = [t for t in process["transitions"] if (t["from"], t["to"]) == ("in-progress", target)]
+        (move,) = [
+            t for t in process["transitions"] if (t["from"], t["to"]) == ("in-progress", target)
+        ]
         assert move["applies_to"] == types
         assert move["authorisation"] == "user"
         assert move["severity"] == "[validation-severity:hard-reject]"
@@ -1155,3 +1157,353 @@ def test_the_move_back_is_found_and_held_by_the_user(mi) -> None:
         assert {"backlog", "todo"} <= set(mi._legal_targets(workflow, "in-progress", kind))
     # Only In Progress moves back: Backlog still has no way to Todo.
     assert mi._find_transition(workflow, "backlog", "todo", "task") is None
+
+
+def test_only_a_move_to_an_earlier_state_is_a_move_back(mi) -> None:
+    assert mi._is_move_back("in-progress", "backlog") is True
+    assert mi._is_move_back("in-progress", "todo") is True
+    assert mi._is_move_back("backlog", "in-progress") is False
+    assert mi._is_move_back("in-progress", "in-progress") is False
+    assert mi._is_move_back("open", "todo") is False
+
+
+# The move back run in process: move-issue's own `main()` against one issue, its
+# writes recorded in the order it makes them, and the ownership reads and writes
+# reaching an in-memory GitHub where #42 is claimed by this clone, instance 2.
+
+_TASK_BODY = (
+    "## What\nShip the frobnicator.\n\n"
+    "## Acceptance criteria\n- [ ] The frobnicator ships.\n\n"
+    "## Doc impact\nNo doc impact: internal only.\n"
+)
+_FEATURE_BODY = (
+    "## What\nA frobnication layer.\n\n## Acceptance criteria\n- [ ] Every Task under it ships.\n"
+)
+_MILESTONE = {"number": 3, "title": "Alpha"}
+
+
+def _child(mi, number: int, state: str):
+    return (mi.containment.ResolvedChild(number, mi.containment.ChildSubstrate.NATIVE), state)
+
+
+def _move_back(
+    monkeypatch,
+    *argv: str,
+    milestone: dict | None = _MILESTONE,
+    container: bool = False,
+    children=None,
+    projection: str = "audit",
+    failing: tuple[str, ...] = (),
+):
+    """Run `move-issue 42 <argv>` on #42 In Progress; the exit code, the writes
+    in order, and the in-memory GitHub, whose `failing` calls fail once."""
+    issue = {
+        "title": "[Feature] the frobnication layer" if container else "[Task] ship the frobnicator",
+        "labels": ["state:in-progress"] if container else ["type:bug", "state:in-progress"],
+        "assignees": [{"login": "me"}],
+        "state": "OPEN",
+        "body": _FEATURE_BODY if container else _TASK_BODY,
+        "milestone": milestone,
+    }
+    move = MoveIssueInProcess(monkeypatch, issue)
+    mi = move.module
+    writes: list[tuple] = []
+
+    def comment(n, body, key, _config):
+        writes.append(("comment", n, body))
+        return True
+
+    def label(n, plan, _config):
+        writes.append(("label", n, plan.add_label, plan.remove_label))
+        return True
+
+    def journal(n, origin, target, _actor, reason=None):
+        writes.append(("journal", n, origin, target, reason))
+        return True
+
+    monkeypatch.setattr(mi, "_post_transition_audit_once", comment)
+    monkeypatch.setattr(mi, "_gh_apply_state_label", label)
+    monkeypatch.setattr(mi, "_journal_move", journal)
+    monkeypatch.setattr(mi, "_landed_moves", lambda *_a: "3")
+    monkeypatch.setattr(mi, "_audit_projection", lambda _config: projection)
+    monkeypatch.setattr(
+        mi, "_read_children", lambda *_a: children if children is not None else mi._Children()
+    )
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    github.post(42, mi.instance_claims.ownership.format_event_comment(event="claim", instance=2))
+    github.failing.update(failing)
+    use(mi.instance_claims, monkeypatch, github)
+    clone_with(mi.instance_claims, monkeypatch, 2)
+    FakeEngine(status_at("in-progress")).install(monkeypatch)
+    rc = move.run([sys.executable, "move-issue.py", "42", *argv]).returncode
+    return rc, writes, github
+
+
+def _ownership_events(github: FakeGitHub) -> list[str]:
+    """The ownership events on #42, as `<event> <instance>`."""
+    out = []
+    for comment in github.issues[42].comments:
+        body = comment["body"]
+        if "event=" in body:
+            event = body.split("event=")[1].split()[0]
+            instance = body.split("instance=")[1].split()[0]
+            out.append(f"{event} {instance}")
+    return out
+
+
+def test_a_move_back_posts_its_reason_moves_journals_and_releases_the_owner(
+    monkeypatch, capsys
+) -> None:
+    rc, writes, github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled since September", "--yes"
+    )
+    assert rc == 0
+    assert [w[0] for w in writes] == ["comment", "label", "journal"]
+    body = writes[0][2]
+    assert body.startswith("<!-- pkit-audit -->")
+    assert "stalled since September" in body
+    assert "Moved back from in-progress to backlog" in body
+    assert writes[1] == ("label", 42, "state:backlog", "state:in-progress")
+    assert writes[2] == (
+        "journal",
+        42,
+        "in-progress",
+        "backlog",
+        "move back: stalled since September",
+    )
+    assert _ownership_events(github) == ["claim 2", "release 2"]
+    out = capsys.readouterr().out
+    assert "[ok] ownership: #42 released (instance 2)." in out
+    assert "[ok] transitioned #42: in-progress → backlog" in out
+
+
+def test_a_release_that_fails_leaves_the_move_back_standing(monkeypatch, capsys) -> None:
+    rc, writes, _github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", failing=("comment",)
+    )
+    assert rc == 0
+    assert [w[0] for w in writes] == ["comment", "label", "journal"]
+    err = capsys.readouterr().err
+    assert "#42 moved back to backlog, but its owner could not all be released" in err
+
+
+def test_a_move_back_without_a_reason_is_refused_and_writes_nothing(monkeypatch, capsys) -> None:
+    for argv in (("--yes",), ("--reason", "  ", "--yes")):
+        rc, writes, github = _move_back(monkeypatch, "--to", "backlog", *argv)
+        assert rc == 1
+        assert writes == [] and github.writes() == []
+        assert '--reason "<why the work stopped>"' in capsys.readouterr().err
+
+
+def test_a_move_back_needs_the_persons_authorisation(monkeypatch, capsys) -> None:
+    """Held by the user at hard-reject (DEC-006): with no terminal and no
+    `--yes`, it is refused and nothing is written."""
+    import io
+
+    monkeypatch.setattr(sys, "stdin", io.StringIO())
+    rc, writes, github = _move_back(monkeypatch, "--to", "backlog", "--reason", "stalled")
+    assert rc == 1
+    assert writes == [] and github.writes() == []
+    assert "user-authorised" in capsys.readouterr().err
+
+
+def test_a_move_back_lands_in_todo_where_the_issue_is_in_no_milestone(monkeypatch, capsys) -> None:
+    rc, writes, _github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", milestone=None
+    )
+    assert rc == 2
+    assert writes == []
+    err = capsys.readouterr().err
+    assert "#42 moves back to todo, not backlog: it is in no Milestone" in err
+    assert "--to todo" in err
+
+    rc, writes, _github = _move_back(
+        monkeypatch, "--to", "todo", "--reason", "stalled", "--yes", milestone=None
+    )
+    assert rc == 0
+    assert writes[1] == ("label", 42, "state:todo", "state:in-progress")
+
+
+def test_a_move_back_to_todo_of_an_issue_in_a_milestone_is_refused(monkeypatch, capsys) -> None:
+    rc, writes, _github = _move_back(monkeypatch, "--to", "todo", "--reason", "stalled", "--yes")
+    assert rc == 2
+    assert writes == []
+    err = capsys.readouterr().err
+    assert "#42 moves back to backlog, not todo: it is in the Milestone 'Alpha'" in err
+
+
+def test_a_container_with_a_child_in_progress_or_in_review_is_refused_naming_it(
+    monkeypatch, capsys
+) -> None:
+    from tests.pm_composed_move_support import load_move_issue
+
+    mi = load_move_issue()
+    children = mi._Children(
+        read=(_child(mi, 43, "in-progress"), _child(mi, 44, "review"), _child(mi, 45, "backlog"))
+    )
+    rc, writes, github = _move_back(
+        monkeypatch,
+        "--to",
+        "backlog",
+        "--reason",
+        "stalled",
+        "--yes",
+        container=True,
+        children=children,
+    )
+    assert rc == 1
+    assert writes == [] and github.writes() == []
+    err = capsys.readouterr().err
+    assert "#43 is in-progress" in err and "#44 is review" in err
+    assert "#45" not in err
+
+
+def test_a_container_whose_children_cannot_be_told_is_refused(monkeypatch, capsys) -> None:
+    from tests.pm_composed_move_support import load_move_issue
+
+    mi = load_move_issue()
+    for children, said in (
+        (mi._Children(incomplete="the issue list could not be read (gh failure)"), "gh failure"),
+        (
+            mi._Children(untold=((_child(mi, 46, "")[0], "it could not be read"),)),
+            "#46: it could not be read",
+        ),
+    ):
+        rc, writes, _github = _move_back(
+            monkeypatch,
+            "--to",
+            "backlog",
+            "--reason",
+            "stalled",
+            "--yes",
+            container=True,
+            children=children,
+        )
+        assert rc == 1
+        assert writes == []
+        assert said in capsys.readouterr().err
+
+
+def test_a_container_in_no_milestone_lands_in_backlog_over_a_child_in_backlog(
+    monkeypatch, capsys
+) -> None:
+    """A container is never behind the work under it (DEC-006)."""
+    from tests.pm_composed_move_support import load_move_issue
+
+    mi = load_move_issue()
+    children = mi._Children(read=(_child(mi, 45, "backlog"), _child(mi, 47, "done")))
+    common = ("--reason", "stalled", "--yes")
+    rc, writes, _github = _move_back(
+        monkeypatch, "--to", "todo", *common, milestone=None, container=True, children=children
+    )
+    assert rc == 2
+    assert writes == []
+    assert "#42 moves back to backlog, not todo: its child #45 is in backlog" in (
+        capsys.readouterr().err
+    )
+    rc, writes, _github = _move_back(
+        monkeypatch, "--to", "backlog", *common, milestone=None, container=True, children=children
+    )
+    assert rc == 0
+    assert writes[1] == ("label", 42, "state:backlog", "state:in-progress")
+
+
+def test_reason_on_any_other_move_is_a_usage_error(monkeypatch, capsys) -> None:
+    rc, writes, _github = _move_back(monkeypatch, "--to", "review", "--reason", "x", "--yes")
+    assert rc == 2
+    assert writes == []
+    assert "--reason applies to a move back from in-progress only" in capsys.readouterr().err
+
+
+def test_a_dry_run_of_a_move_back_writes_nothing_and_names_what_it_would(
+    monkeypatch, capsys
+) -> None:
+    rc, writes, github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--dry-run", "--yes"
+    )
+    assert rc == 0
+    assert writes == [] and github.writes() == []
+    out = capsys.readouterr().out
+    assert "reason:" in out and "stalled" in out
+    assert "released on the move back (this clone is instance 2" in out
+
+
+def test_at_projection_off_the_move_back_posts_no_comment_and_journals_its_reason(
+    monkeypatch,
+) -> None:
+    rc, writes, _github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", projection="off"
+    )
+    assert rc == 0
+    assert [w[0] for w in writes] == ["label", "journal"]
+    assert writes[1][4] == "move back: stalled"
+
+
+# The children a container's move back reads, through the containment seam.
+
+
+def _seam(mi, monkeypatch, *, rows, children, complete=True, records=None):
+    containment = mi.containment
+    corpus = containment.IssueCorpus(rows=tuple(rows), complete=True)
+    monkeypatch.setattr(containment, "fetch_issue_corpus", lambda _config: corpus)
+    resolution = containment.ChildResolution(
+        children=tuple(children),
+        native_supported=True,
+        complete=complete,
+        incomplete_reason=None if complete else "a native read failed",
+    )
+    monkeypatch.setattr(containment, "resolve_children", lambda _config, **_kw: resolution)
+    monkeypatch.setattr(
+        containment,
+        "read_issue_record",
+        lambda _config, *, issue_number, repository=None: (records or {})[issue_number],
+    )
+
+
+def test_read_children_reads_each_childs_state(mi, monkeypatch) -> None:
+    containment = mi.containment
+    here = containment.ChildSubstrate.NATIVE
+    rows = [
+        {
+            "number": 43,
+            "state": "OPEN",
+            "labels": [{"name": "state:in-progress"}],
+            "milestone": None,
+        },
+        {"number": 44, "state": "OPEN", "labels": [], "milestone": {"title": "Alpha"}},
+        {"number": 45, "state": "CLOSED", "labels": [], "milestone": None},
+        {"number": 46, "state": "OPEN", "labels": [{"name": "state:frozen"}], "milestone": None},
+    ]
+    abroad_open = containment.ResolvedChild(7, here, repository="o/other")
+    abroad_closed = containment.ResolvedChild(8, here, repository="o/other")
+    records = {
+        7: containment.IssueRecord(issue={"state": "OPEN"}, parent=None),
+        8: containment.IssueRecord(issue={"state": "CLOSED"}, parent=None),
+    }
+    children = [containment.ResolvedChild(n, here) for n in (43, 44, 45, 46, 48)]
+    _seam(
+        mi,
+        monkeypatch,
+        rows=rows,
+        children=[*children, abroad_open, abroad_closed],
+        records=records,
+    )
+    read = mi._read_children(10, {}, None)
+    assert [(c.number, s) for c, s in read.read] == [
+        (43, "in-progress"),
+        (44, "backlog"),
+        (45, "done"),
+    ]
+    untold = {c.ref: why for c, why in read.untold}
+    assert set(untold) == {"#46", "#48", "o/other#7"}
+    assert "not among the issues the issue list returned" in untold["#48"]
+    assert "o/other" in untold["o/other#7"]
+    assert read.incomplete is None
+
+
+def test_read_children_says_a_child_set_it_cannot_vouch_for(mi, monkeypatch) -> None:
+    _seam(mi, monkeypatch, rows=[], children=[], complete=False)
+    assert mi._read_children(10, {}, None).incomplete == "a native read failed"
+    monkeypatch.setattr(mi.containment, "fetch_issue_corpus", lambda _config: None)
+    assert "could not be read" in (mi._read_children(10, {}, None).incomplete or "")

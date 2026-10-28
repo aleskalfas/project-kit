@@ -415,6 +415,19 @@ def test_a_failed_release_is_a_warning(ic, root: Path) -> None:
     result = ic.release(7, _clone(ic, root), {}, run=gh)
     assert result.outcome == ic.FAILED
     assert result.warning
+    assert "#7 closed, but its owner could not all be released" in result.line
+
+
+def test_a_failed_release_says_what_happened_to_the_issue(ic, root: Path) -> None:
+    """The move back releases through the same path a close does (DEC-006), and
+    its warning says the issue moved back, not that it closed."""
+    gh = FakeGitHub()
+    gh.add(7)
+    gh.post(7, _stamp(ic, "claim", 2))
+    gh.failing.add("comment")
+    result = ic.release(7, _clone(ic, root), {}, run=gh, happened="moved back to backlog")
+    assert result.outcome == ic.FAILED
+    assert "#7 moved back to backlog, but its owner could not all be released" in result.line
 
 
 # ---- the lines a caller prints -----------------------------------------------
@@ -433,6 +446,8 @@ def test_plans_name_the_instance_and_the_substrate(ic, root: Path) -> None:
     assert ic.claim_plan(clone) == "claimed for instance 2 (comment substrate)"
     assert ic.claim_plan(clone, "someone-else").startswith("not claimed: assigned to @someone-else")
     assert "instance 2" in ic.release_plan(clone)
+    assert ic.release_plan(clone).startswith("released on close (")
+    assert ic.release_plan(clone, when="on the move back").startswith("released on the move back (")
 
 
 # ---- the clash guard (DEC-035 point 6) ------------------------------------------

@@ -6,7 +6,9 @@ A clone that set its instance id (``set-instance``) marks the issues it owns.
 from birth; ``start-work`` claims an issue no instance owns yet (the commons);
 ``close-issue`` releases the owner as the issue closes, in every mode, and
 ``done-work`` releases through the ``close-issue --mode pr-merge`` it runs for
-each issue its merge closed (DEC-035 points 3 and 4).
+each issue its merge closed (DEC-035 points 3 and 4). ``move-issue`` releases
+through the same :func:`release` as a person moves an issue back from In
+Progress, since nobody is working on it (DEC-006).
 
 **Activation.** Outside a topology of seats, :func:`this_clone` answers ``None``
 when no instance id is set, and every caller then writes and prints exactly
@@ -593,9 +595,10 @@ def claims_at_filing(clone: Clone, assignee: str | None) -> bool:
     return assignee == clone.login and not clone.files_unowned
 
 
-def release_plan(clone: Clone) -> str:
-    """What a release will do, for a pre-flight summary."""
-    return f"released on close (this clone is {clone.named()}, {clone.substrate} substrate)"
+def release_plan(clone: Clone, *, when: str = "on close") -> str:
+    """What a release will do, for a pre-flight summary. ``when`` says what
+    releases: the close, or the move back from In Progress (DEC-006)."""
+    return f"released {when} (this clone is {clone.named()}, {clone.substrate} substrate)"
 
 
 # ---- claim ------------------------------------------------------------------
@@ -857,8 +860,18 @@ def owner_named(resolution: ownership.OwnershipResolution, instance: int) -> str
 # ---- release ----------------------------------------------------------------
 
 
-def release(issue_number: int, clone: Clone, config: dict, *, run: Run | None = None) -> Result:
-    """Release every owner of ``issue_number`` as it closes (DEC-035 point 4).
+def release(
+    issue_number: int,
+    clone: Clone,
+    config: dict,
+    *,
+    run: Run | None = None,
+    happened: str = "closed",
+) -> Result:
+    """Release every owner of ``issue_number`` as it closes (DEC-035 point 4), or
+    as a person moves it back from In Progress (DEC-006). ``happened`` says which,
+    in the warning a failed release prints: ``closed``, or ``moved back to
+    backlog``.
 
     Posts a ``release`` event for each instance the comment log holds, where the
     log is this clone's account's, and removes each ``instance:N`` label. In a
@@ -909,7 +922,7 @@ def release(issue_number: int, clone: Clone, config: dict, *, run: Run | None = 
     if failures:
         return Result(
             FAILED,
-            f"[warn] ownership: #{n} closed, but its owner could not all be released: "
+            f"[warn] ownership: #{n} {happened}, but its owner could not all be released: "
             + "; ".join(failures),
             notes=tuple(notes),
         )

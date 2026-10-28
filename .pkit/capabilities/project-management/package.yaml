@@ -95,7 +95,7 @@ commands:
     help: Reassign a GitHub issue. Supports --me self-assignment, --assignee for single/multi assignment, --unassign for removal (per DEC-019).
   move-issue:
     script: scripts/move-issue.py
-    help: Transition an issue through the lifecycle state machine (per DEC-006). Reads workflow.yaml; cascades parents upward on forward moves.
+    help: Transition an issue through the lifecycle state machine (per DEC-006). Reads workflow.yaml; cascades parents upward on forward moves. Moves an issue nobody is working on back from In Progress, to backlog in a milestone or todo in none, on the person's authorisation and with --reason, posted before the move; it releases the owner's claim, and refuses a container with a child In Progress or in Review.
   close-issue:
     script: scripts/close-issue.py
     help: Close an issue per DEC-006's closure paths. Default mode is wont-do (reason + checkbox close-gate per DEC-007); pr-merge mode runs the post-close cascade on an issue GitHub closed and refuses an open one, and with --pr <M> closes an open leaf as completed through merged PR M (verified merged and related to the leaf by its body's closing reference or the leaf's branch, checkbox-gated, reference commented).
