@@ -480,3 +480,47 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - no rule set for code yet (the Python set decided on 28 October is still to be written)
   - every review round costs three to five agent runs
 - **Maintainer's notes:**
+
+## Block 1 of the talk: Install pkit (draft, 29 October)
+
+*Facts checked against the repository on 29 October.*
+
+- **What happens:** `pkit init` in a project's repository, in order:
+  1. the methodology's files are written into `.pkit/`: decision records, rules, skills, agents, schemas, the CLI's area specs
+  2. the project's own starting files are seeded once (its `project/` folders, its configuration)
+  3. the AI tool's settings are merged with what the project already has, never overwritten (`.claude/settings.json`; `CLAUDE.md` gains the includes of the rules)
+  4. the agent workspace is created and kept out of git
+  5. the adapter deploys the skills and agents where Claude Code reads them
+  Then `pkit capabilities install <name>` adds a discipline (project-management, software-engineering, …), each adding its own records, skills, agents and checks.
+- **The one rule to learn first: every file has one owner.** The methodology's files (`.pkit/decisions/core/`, `.pkit/skills/core/`, …) are pkit's: an upgrade replaces them, so you never edit them. Your files (`.pkit/decisions/project/`, every `project/` folder, your configuration) are yours: nothing pkit does ever writes them. To extend, you add your own file beside pkit's, never change pkit's (COR-001). This is what lets block "Stay current" promise that upgrades never touch your work.
+- **Seeing it:** `pkit status` shows how pkit is wired here: the version, the adapter, the capabilities, the skills and agents deployed, the connections. `pkit visibility` chooses pkit's git footprint: committed for the team, or private to your clone (ADR-009). `pkit config` holds the backbone's own settings.
+- **Problem:** a methodology adopted by copying documents is frozen the day it is copied, and the moment you edit the copy you can no longer take an improvement.
+- **Gain:** one command installs a working methodology the agent uses from the first session; you know from the start which files are yours.
+- **Weight:** a `.pkit/` folder in the repository, a few lines in `CLAUDE.md`, the tool's settings merged.
+- **Weak spot:**
+  - the `.pkit/` tree is large, and a newcomer opening it sees everything at once
+  - "never edit pkit's files" surprises people; the way to extend (a sibling file) must be shown, not just said
+- **Maintainer's notes:**
+
+## Block 14 of the talk: Stay current (draft, 29 October)
+
+*Facts checked against the repository on 29 October.*
+
+- **What:** pkit improves, and your project takes the improvements by command, without losing your work.
+  - **Versions:** the backbone (records, rules, CLI) has one version (1.149.0 today); each capability and adapter has its own, and declares which backbone versions it needs. Semantic versioning: a major version may break, a minor adds, a patch fixes.
+  - **`pkit sync`** refreshes the methodology's files at the installed version; **`pkit upgrade`** moves the project to a newer one. Both replace only pkit's files (the one-owner rule from block 1).
+  - **Migrations:** when a new version renames or restructures something, it ships a small script that brings each project's state across. A migration is safe to run twice, and a change that needs one cannot be released without it (a check in CI, COR-010). An upgrade checks compatibility first, and refuses rather than leave a project half-moved.
+  - **`pkit pin`** fixes a project to one version until it chooses to move (ADR-049).
+  - **The changelog** says what each release changed, written from the change notes each pull request declares.
+  - **The report channel:** `pkit report` sends a bug, a change request or feedback upstream to project-kit, composed with the `report-author` skill; it is linked to the issue that fixes it. Updates come down, reports go up.
+- **Problem:** a methodology you cannot update rots; one that updates by overwriting destroys your customisations; a breaking change with no repair leaves every project to fix it by hand.
+- **Gain:**
+  - improvements arrive by one command
+  - your files survive every upgrade, by design, not by care
+  - a breaking change brings its own repair
+  - you can talk back: what hurts you reaches the people who fix it
+- **Evidence:** the 2.0.0 release is being prepared now (release candidates, #2211); this week's pull requests each declared their change notes for it.
+- **Weak spot:**
+  - a migration is only as good as its author: one that misses a case leaves a project partly moved
+  - release cadence is in the maintainer's hands; candidates are new
+- **Maintainer's notes:**
