@@ -41,12 +41,6 @@ TIP = "c0ffee"
 PLANNER = {"name": "planner", "role": "planner", "organizer": True, "state_issue": 11}
 WORKER = {"name": "worker-1", "role": "worker", "state_issue": 12}
 TESTER = {"name": "tester", "role": "worker", "scope": {"types": ["test"]}, "state_issue": 13}
-SPRINTER = {
-    "name": "sprinter",
-    "role": "worker",
-    "scope": {"workstreams": ["cli"], "milestones": [8, 12]},
-    "state_issue": 14,
-}
 
 
 def _doc(*seats: dict[str, Any], **extra: Any) -> dict[str, Any]:
@@ -75,47 +69,6 @@ def test_a_sound_topology_parses_with_no_problem() -> None:
     tester = topology.seat("tester")
     assert tester is not None and tester.scope == tp.Scope((), ("test",))
     assert topology.release_mode == tp.TOLERANT
-
-
-def test_a_scope_may_name_milestones_by_their_numbers() -> None:
-    """DEC-059 point 2: a scope names milestones by number, which a rename
-    leaves unchanged, beside workstreams and types."""
-    topology = tp.parse(_doc(PLANNER, SPRINTER))
-    assert topology.problems == ()
-    sprinter = topology.seat("sprinter")
-    assert sprinter is not None
-    assert sprinter.scope == tp.Scope(("cli",), (), (8, 12))
-    alone = tp.parse(_doc({**WORKER, "scope": {"milestones": [8]}})).seat("worker-1")
-    assert alone is not None and alone.scope == tp.Scope(milestones=(8,))
-
-
-@pytest.mark.parametrize(
-    "milestones",
-    [
-        pytest.param(8, id="a-number-not-a-list"),
-        pytest.param(["Sprint 1"], id="a-title"),
-        pytest.param(["8"], id="a-number-as-text"),
-        pytest.param([0], id="zero"),
-        pytest.param([-3], id="a-negative-number"),
-        pytest.param([8, 1.5], id="a-fraction"),
-        pytest.param([True], id="a-boolean"),
-        pytest.param([None], id="nothing"),
-    ],
-)
-def test_a_milestone_part_that_is_no_list_of_milestone_numbers_is_a_problem(
-    milestones: object,
-) -> None:
-    seat = {**WORKER, "scope": {"milestones": milestones}}
-    problems = tp.parse(_doc(seat)).problems
-    assert _codes(problems) == [tp.SHAPE, tp.SHAPE]
-    assert "a scope whose `milestones` is no list of milestone numbers" in problems[0].message
-    assert "a scope that names nothing" in problems[1].message
-    assert _schema_errors(_doc(seat)), seat
-
-
-def test_a_scope_with_no_milestone_in_its_list_names_nothing() -> None:
-    problems = tp.parse(_doc({**WORKER, "scope": {"milestones": []}})).problems
-    assert _codes(problems) == [tp.SHAPE] and "names nothing" in problems[0].message
 
 
 def test_a_retired_seat_keeps_its_place_and_number() -> None:
@@ -210,7 +163,7 @@ def _schema_errors(data: Any) -> list[str]:
 
 
 def test_the_schema_and_the_parse_agree_on_a_sound_file_and_on_bad_shapes() -> None:
-    sound = _doc(PLANNER, WORKER, TESTER, SPRINTER, settings={"release_mode": "tolerant"})
+    sound = _doc(PLANNER, WORKER, TESTER, settings={"release_mode": "tolerant"})
     assert _schema_errors(sound) == [] and tp.parse(sound).problems == ()
     for bad in (
         _doc({**WORKER, "name": "Worker"}),
@@ -254,12 +207,6 @@ def test_a_scope_naming_an_unknown_type_is_a_problem() -> None:
     unknown = tp.parse(_doc({**TESTER, "scope": {"types": ["design"]}}))
     problems = _check(unknown)
     assert _codes(problems) == [tp.UNKNOWN_TYPE] and "'design'" in problems[0].message
-
-
-def test_the_check_reads_no_github_for_the_milestones_a_scope_names() -> None:
-    """The check is offline: it judges the milestone part's shape, and never
-    whether the project holds a milestone of that number."""
-    assert _check(tp.parse(_doc({**SPRINTER, "scope": {"milestones": [999999]}}))) == []
 
 
 def test_a_topology_under_the_label_substrate_is_a_problem() -> None:

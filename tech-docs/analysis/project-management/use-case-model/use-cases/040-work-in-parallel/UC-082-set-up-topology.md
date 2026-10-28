@@ -100,12 +100,11 @@ pkit:
 
 6. The adopter runs `pkit pm create-seats`, the command that creates the [state issue](../../../glossary.md#term-state-issue--state-issue) of each new seat, on the change that adds the seats. The system creates a state issue for each new seat, keyed by the seat's name ([DEC-058 point 2](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#2-a-state-issue-holds-one-piece-of-state-named-by-its-key)). The system writes each state issue's number into the topology ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). At the command's entry, the system checks the project's prerequisites, and that the repository is the session's own ([REQ-041](../../../requirements/functional/REQ-041-gates-before-writing.md) and [core:REQ-012](../../../../core/requirements/functional/REQ-012-ask-before-another-repository.md)).
 
-7. The adopter runs the topology's check, `pkit pm check-topology`, on the change. The check compares the change's topology with the topology of the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and says which commit the check read. The check reads no GitHub, so the check never looks for a [Milestone](../../../glossary.md#term-milestone--milestone) that a scope names. The check reports each of these (DEC-059):
+7. The adopter runs the topology's check, `pkit pm check-topology`, on the change. The check compares the change's topology with the topology of the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and says which commit the check read. The check reports each of these (DEC-059):
    - a seat's name held twice
    - more than one organizer seat
    - a seat whose state issue is not named
    - a scope that names an unknown workstream or kind of work
-   - a scope whose Milestones are no list of Milestone numbers
    - a seat deleted or moved against the default branch, rather than retired
 
 8. A person reviews the change, and the change merges like any other. The topology binds once the topology is on the default branch. Every clone reads the topology from there, never from the clone's own branch or working tree (DEC-059 point 1).
@@ -129,7 +128,7 @@ pkit:
 
 - **8a.** A clone has not fetched the default branch since the change merged. The clone reads the topology the clone last fetched. Each command that reads the topology names the commit that the clone read, once in a run ([DEC-059 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#1-the-topology-is-committed-configuration-read-from-the-default-branch)). A command that another command runs, such as the `move-issue` that `start-work` runs, repeats no commit the run named already.
 
-**Postconditions:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares each [seat](../../../glossary.md#term-seat--seat), with the seat's number, [state issue](../../../glossary.md#term-state-issue--state-issue) and [scope](../../../glossary.md#term-scope--scope), where the seat has a scope. Each scope names the [workstreams](../../../glossary.md#term-workstream--workstream), the kinds of work or the [Milestones](../../../glossary.md#term-milestone--milestone) that the agent of the scope's seat takes work from. A scope names each Milestone by the Milestone's number, which a rename leaves unchanged.
+**Postconditions:** The [topology](../../../glossary.md#term-topology--topology) on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch) declares each [seat](../../../glossary.md#term-seat--seat), with the seat's number, [state issue](../../../glossary.md#term-state-issue--state-issue) and [scope](../../../glossary.md#term-scope--scope), where the seat has a scope. Each scope names the [workstreams](../../../glossary.md#term-workstream--workstream) or the kinds of work that the agent of the scope's seat takes work from.
 
 **Minimal guarantees:**
 

@@ -31,11 +31,7 @@ Steps:
     A clone that holds no seat, holds a planner's seat or whose seat cannot be
     confirmed takes nothing. Outside a topology a clone takes with no scope.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
-    state issues out. The ready Tasks are ranked from it. A ready Task the
-    seat's scope leaves out is skipped: a line names those Tasks for each
-    reason, such as a Task in no milestone the scope names (DEC-059 point 2).
-    A milestone is shown by its number, with the title the listing gives it
-    beside the number where the listing returned an issue in it.
+    state issues out. The ready Tasks are ranked from it.
   - Where the clone takes part in instance ownership, the owner of each Task in
     Backlog assigned to its account is read first and folded
     (`_lib/instance_claims.read_owner`). The Tasks this clone owns come first,
@@ -62,7 +58,6 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from ruamel.yaml import YAML
@@ -77,7 +72,6 @@ from _lib import (
     issue_list,
     session_guard,
     task_pool,
-    topology,
 )
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
@@ -172,7 +166,7 @@ def main() -> int:
         classification=_read_schema(capability_root, "classification.yaml", yaml_loader),
         substrate_map=axis_labels.load_substrate_map(capability_root),
     )
-    found = task_pool.pool(
+    ready = task_pool.candidates(
         listing.rows or (),
         open_numbers=_numbers(listing),
         login=invoker.github_login,
@@ -180,10 +174,7 @@ def main() -> int:
         takes_over=taker.takes_over,
         readers=readers,
     )
-    ready = found.ready
-    print(f"next-task: {_pool_line(len(ready), taker, found.titles)}")
-    for line in _outside_lines(found.outside):
-        print(line)
+    print(f"next-task: {_pool_line(len(ready), taker)}")
 
     clone = taker.clone
     # This clone's own Tasks come before the pool: only a Task assigned to its
@@ -294,10 +285,8 @@ def _numbers(listing: issue_list.IssueListing) -> set[int]:
     return {r["number"] for r in rows if isinstance(r, dict) and isinstance(r.get("number"), int)}
 
 
-def _pool_line(count: int, taker: task_pool.Taker, titles: Mapping[int, str]) -> str:
-    """The line that says how many Tasks are ready, and for whom. Each milestone
-    the scope names is shown by its number, with its title from ``titles``
-    beside it where the listing gave one."""
+def _pool_line(count: int, taker: task_pool.Taker) -> str:
+    """The line that says how many Tasks are ready, and for whom."""
     who = "this clone" if taker.clone is None else taker.clone.named()
     scope = taker.scope
     if scope is None:
@@ -308,9 +297,6 @@ def _pool_line(count: int, taker: task_pool.Taker, titles: Mapping[int, str]) ->
             parts.append("workstreams " + ", ".join(scope.workstreams))
         if scope.types:
             parts.append("types " + ", ".join(scope.types))
-        if scope.milestones:
-            shown = (topology.milestone_shown(n, titles.get(n)) for n in scope.milestones)
-            parts.append("milestones " + ", ".join(shown))
         within = "within the scope of " + " and ".join(parts)
     noun = "Task is" if count == 1 else "Tasks are"
     order = (
@@ -319,19 +305,6 @@ def _pool_line(count: int, taker: task_pool.Taker, titles: Mapping[int, str]) ->
         else "its own first, then the highest in priority"
     )
     return f"{count} {noun} ready for {who}, {within}, {order}."
-
-
-def _outside_lines(outside: Iterable[task_pool.Outside]) -> list[str]:
-    """One line for each reason the seat's scope leaves ready Tasks out, naming
-    those Tasks by number, so a long backlog outside the scope costs a line for
-    each reason rather than one for each Task."""
-    numbers: dict[str, list[str]] = {}
-    for skipped in outside:
-        numbers.setdefault(skipped.reason, []).append(f"#{skipped.candidate.number}")
-    return [
-        f"  skipped {', '.join(named)}: outside the scope, {reason}"
-        for reason, named in numbers.items()
-    ]
 
 
 def _held(resolution: instance_ownership.OwnershipResolution) -> str:

@@ -59,7 +59,7 @@
             "type": "object",
             "additionalProperties": false,
             "minProperties": 1,
-            "description": "Optional. Narrows the work this seat's agent takes, and reserves nothing (DEC-059 points 2 and 7). A Task falls in the scope where it matches each part the scope names.",
+            "description": "Optional. Narrows the work this seat's agent takes, and reserves nothing (DEC-059 point 7). A Task falls in the scope where it matches each part the scope names.",
             "properties": {
               "workstreams": {
                 "type": "array",
@@ -70,11 +70,6 @@
                 "type": "array",
                 "items": { "type": "string", "minLength": 1 },
                 "description": "Values of the type axis, such as `test` or `docs`."
-              },
-              "milestones": {
-                "type": "array",
-                "items": { "type": "integer", "minimum": 1 },
-                "description": "Milestones by their numbers, which a rename leaves unchanged. A Task falls in this part where its milestone is one of them, and a Task in no milestone falls outside it. Nothing checks that a milestone of each number exists."
               }
             }
           },

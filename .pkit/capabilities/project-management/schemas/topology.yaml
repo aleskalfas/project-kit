@@ -22,7 +22,7 @@
 #       role: worker
 #       agent: project-manager      # the default
 #       scope:                      # optional; narrows this seat's own pool
-#         types: [test]             # also workstreams, and milestones by number
+#         types: [test]
 #       state_issue: 2211
 #     - name: old-worker
 #       role: worker

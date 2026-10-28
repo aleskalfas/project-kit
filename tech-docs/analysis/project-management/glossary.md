@@ -309,7 +309,6 @@ TERM-scope:
       anchors:
         record:
           - project-management:DEC-045#3
-          - project-management:DEC-059#2
           - project-management:DEC-059#7
           - project-management:DEC-018
 TERM-seat:
@@ -687,7 +686,6 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
 
 - **Workstream:** a long-lived area that classifies issues. A scope may name workstreams, and never changes them ([DEC-045 point 3](../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#3-instances-reference-workstreams-1many-they-never-rebind-the-taxonomy)).
 - **Kind of work:** the value a [Task](#term-task--task) takes on the `type` [classification axis](#term-classification-axis--classification-axis), such as `test`. A scope may name kinds of work, and never changes them (DEC-059 point 7).
-- **Milestone:** a container of issues. A scope may name [Milestones](#term-milestone--milestone) by their numbers, which a rename leaves unchanged ([DEC-059 point 2](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#2-a-seat-has-a-name-a-role-an-agent-and-an-optional-scope)). A Task in no Milestone falls outside such a scope.
 - **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone the agent works in.
 - **The scope of a set of rules:** what selects the artefacts a [rule](../core/glossary.md#term-rule--rule) set's rules bind on ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). Such a scope is no part of a [topology](#term-topology--topology).
 - **The scope of a grant:** where an entry of the permission model allows or denies a privilege ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). Such a scope is no part of a topology either.

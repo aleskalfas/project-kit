@@ -34,7 +34,7 @@ Each seat declares:
   - a worker takes ready work and builds it up to its merge
   - a lead plans and builds within its scope, and may start helper agents of its own
 - **its agent definition,** the project-manager agent's by default (point 8)
-- **its scope,** which is optional and narrows the work its agent takes (point 7). Besides workstreams and types, a scope may name milestones by their numbers ([project-management:DEC-016-time-bound-containers]). A milestone part narrows the seat's pool to the Tasks in one of the milestones it names, and a Task in no milestone falls outside it.
+- **its scope,** which is optional and narrows the work its agent takes (point 7)
 - **its state issue,** by number (point 3)
 - **whether it is the organizer seat.** At most one seat is, typically the planner's. Its clone may release other seats by force (point 5), a privilege the reviewed change to the topology grants.
 
@@ -81,7 +81,7 @@ How the pool is filled:
 
 A seat's scope is an optional filter on that seat's own pool, and reserves nothing for it:
 
-- **What a scope names:** workstreams ([project-management:DEC-045-named-per-user-instances] point 3), Task types from the type axis such as `test` or `docs` ([project-management:DEC-012-classification-axes]), milestones by their numbers (point 2), or several of these. A Task falls in the scope where it matches each part the scope names. A type or a milestone, like a workstream, is referenced and never rebound.
+- **What a scope names:** workstreams ([project-management:DEC-045-named-per-user-instances] point 3), Task types from the type axis such as `test` or `docs` ([project-management:DEC-012-classification-axes]), or both. A Task falls in the scope where it matches each part the scope names. A type, like a workstream, is referenced and never rebound.
 - **What waits:** a discipline the type axis does not carry, such as design, waits for a record that decides how a Task carries it.
 - **Who may take a Task:** every seat that builds and has no scope, and every seat whose scope the Task falls in. A workstream that no seat may take is warned of and never blocked ([project-management:DEC-045-named-per-user-instances] point 4). Several seats that may take one workstream are the shared pool, and draw no warning.
 - **The expected owner** of a Task is the seat that alone may take it. The guard warns when another instance takes it ([project-management:DEC-045-named-per-user-instances] point 5).
@@ -160,8 +160,6 @@ DEC-029's mode surface and its procedure carrier, and DEC-043's selector and its
 
 **Why a scope may name a Task's type.** The maintainer put a scope by discipline first, for a specialist's seat. The type axis already says of every Task whether it is a test or docs, so a testing seat can take test Tasks with no new marker. A discipline the axis does not carry, such as design, would need a new classification, which DEC-045 refused to add for instances. Referencing a type, as a scope references a workstream, changes neither.
 
-**Why a scope may name a milestone.** The maintainer decided that a worker may take only the work a person puts into its pool, while the rest of the backlog waits for its triage (#2256). A milestone already holds each issue a person puts into it, and an issue is in at most one milestone at a time ([project-management:DEC-016-time-bound-containers]). So a milestone serves as that pool with no new marker, and the listing of issues already returns it with each Task. A scope names it by its number, which a rename leaves unchanged, while a scope that named its title would stop matching with no error.
-
 **Why a planner files with no owner.** Under DEC-035 point 3, a planner with an instance would own all it files. Every worker would then have to take each Task over first (DEC-035 point 4). Owning what it files still serves a lead, which builds what it plans.
 
 **Why these safeguards for a Task's claim.** A dead session's claim holds a Task that any worker could take up from its branch. So the work renews the claim, a lapse returns the Task to the pool, and a session that comes back checks before it writes over another's work. The key in each claim keeps a new holder of a seat from passing as the clone that went away. A Task in Review has finished its work, and waits on others, so its claim stands.
@@ -187,7 +185,7 @@ DEC-029's mode surface and its procedure carrier, and DEC-043's selector and its
 
 ## Implications
 
-- **A schema for the topology,** in the project's configuration for this capability. Its check reports a duplicate seat name, more than one organizer seat, a seat with no state issue named, and a scope that names an unknown workstream or type. It reads no GitHub, so it never checks that a milestone a scope names exists. It also reports a seat deleted or moved rather than retired, against the default branch, with COR-054's override of the base.
+- **A schema for the topology,** in the project's configuration for this capability. Its check reports a duplicate seat name, more than one organizer seat, a seat with no state issue named, and a scope that names an unknown workstream or type. It also reports a seat deleted or moved rather than retired, against the default branch, with COR-054's override of the base.
 - **Commands:**
   - one that creates the new seats' state issues and writes their numbers into the topology
   - one that takes a seat, by its name or its role, and prints the seat's role and agent definition

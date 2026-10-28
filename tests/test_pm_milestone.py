@@ -118,33 +118,6 @@ def test_resolve_milestone_handles_concatenated_arrays(milestone_mod) -> None:
     assert m7 is not None and m7.title == "M2"
 
 
-def test_the_titles_of_every_milestone_are_read_by_number_in_one_read(milestone_mod) -> None:
-    """DEC-059 point 2: `seats` shows each milestone a scope names beside its
-    title, read from every milestone, open and closed, page by page."""
-    calls: list[list[str]] = []
-    pages = '[{"number": 6, "title": "M1"}, {"title": "no number"}]\n[{"number": 9, "title": "M9"}]'
-
-    def gh(argv: list[str]) -> subprocess.CompletedProcess[str]:
-        calls.append(argv)
-        return subprocess.CompletedProcess(argv, 0, pages, "")
-
-    assert milestone_mod.read_titles(gh) == {6: "M1", 9: "M9"}
-    assert calls == [
-        ["gh", "api", "repos/{owner}/{repo}/milestones?state=all&per_page=100", "--paginate"]
-    ]
-
-
-def test_a_failed_read_of_the_milestones_gives_no_titles(milestone_mod) -> None:
-    def failing(argv: list[str]) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(argv, 1, "", "HTTP 502: Bad Gateway")
-
-    def missing(_argv: list[str]) -> subprocess.CompletedProcess[str]:
-        raise FileNotFoundError("gh")
-
-    assert milestone_mod.read_titles(failing) is None
-    assert milestone_mod.read_titles(missing) is None
-
-
 def test_a_state_issue_is_never_a_milestone_child(milestone_mod, monkeypatch) -> None:
     """#2139: the children are read through the one read of issues, which leaves
     a state issue out (DEC-058 point 3), even one carrying the Milestone both ways."""
