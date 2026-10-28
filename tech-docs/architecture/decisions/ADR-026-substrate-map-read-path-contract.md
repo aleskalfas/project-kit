@@ -196,8 +196,8 @@ explicitly added (the Feature's in-scope schema work, point in Boundaries). This
 keeps the containment invariants hard as DEC-036 point 4 requires, by construction
 rather than by remembering. This refines *how* the seam signals degradation
 (read-path / resolution mechanics — this ADR's domain); it is fully consistent
-with DEC-036's *what* (point 4 keeps containment hard; point 3 names the missing-knob
-gap as schema work). **No DEC-036 amendment is needed** — the ADR pins the
+with DEC-036's *what* (DEC-036 point 4 keeps containment hard; DEC-036 point 3 names
+the missing-knob gap as schema work). **No DEC-036 amendment is needed** — the ADR pins the
 resolution behaviour DEC-036 left to implementation, it does not change DEC-036's
 decision.
 
@@ -638,8 +638,8 @@ fail-closed fold semantics for free over the derived state.
   unsafe direction is structurally unreachable" shape (with its constructor-guard
   half). The two refinements this ADR adds — the **value-unresolvable fourth arm**
   and the **no-knob-stays-hard fail-safe** — pin *how* the seam signals
-  degradation; they are consistent with DEC-036's *what* (point 4 keeps containment
-  hard; point 3 names the missing-knob gap as in-scope schema work) and require
+  degradation; they are consistent with DEC-036's *what* (DEC-036 point 4 keeps
+  containment hard; DEC-036 point 3 names the missing-knob gap as in-scope schema work) and require
   **no DEC-036 amendment**. Does not restate DEC-036; cites it as the decision.
 - **Acceptance gate.** Accepted by the maintainer before the trunk implementation
   built against it (per PRJ-005) — a forward design contract, not self-accepted.
