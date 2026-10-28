@@ -1119,3 +1119,39 @@ def test_a_move_from_the_seat_this_clone_holds_goes_on(monkeypatch, capsys) -> N
     assert _move_42(monkeypatch, github, seats=seats) == 0
     assert seats.writes() == []
     assert "[noop] already at target state" in capsys.readouterr().out
+
+
+# ---- the move back from In Progress (DEC-006, "Moving back from In Progress") ----
+
+
+def _shipped_workflow() -> dict:
+    from ruamel.yaml import YAML
+
+    return YAML(typ="safe").load((CAPABILITY_ROOT / "schemas" / "workflow.yaml").read_text())
+
+
+def test_the_shipped_workflow_declares_the_move_back_for_every_type_in_progress() -> None:
+    """Every type that has In Progress may move back to Backlog and to Todo, a
+    move the user holds at hard-reject, made by `move-issue`."""
+    process = _shipped_workflow()["process"]
+    (in_progress,) = [s for s in process["states"] if s["id"] == "in-progress"]
+    types = in_progress["applies_to"]
+    assert types
+    for target in ("backlog", "todo"):
+        (move,) = [t for t in process["transitions"] if (t["from"], t["to"]) == ("in-progress", target)]
+        assert move["applies_to"] == types
+        assert move["authorisation"] == "user"
+        assert move["severity"] == "[validation-severity:hard-reject]"
+        assert move["command"] == move["trigger"] == "move-issue"
+
+
+def test_the_move_back_is_found_and_held_by_the_user(mi) -> None:
+    workflow = _shipped_workflow()
+    for kind in ("task", "feature", "epic", "umbrella"):
+        for target in ("backlog", "todo"):
+            move = mi._find_transition(workflow, "in-progress", target, kind)
+            assert move is not None
+            assert (move.authorisation, move.severity) == ("user", "hard-reject")
+        assert {"backlog", "todo"} <= set(mi._legal_targets(workflow, "in-progress", kind))
+    # Only In Progress moves back: Backlog still has no way to Todo.
+    assert mi._find_transition(workflow, "backlog", "todo", "task") is None
