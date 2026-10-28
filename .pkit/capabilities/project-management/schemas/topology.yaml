@@ -13,15 +13,17 @@
 #   schema_version: 1
 #   settings:
 #     release_mode: tolerant        # the only mode built (DEC-059 point 5)
+#   pools: [alpha, bravo]           # optional pools of workers (DEC-061 point 1)
 #   seats:
 #     - name: planner               # unique, never renamed: retire it instead
-#       role: planner               # planner, worker or lead
+#       role: planner               # planner, worker or lead; a planner names no pool
 #       organizer: true             # at most one seat; may release others by force
 #       state_issue: 2210           # written by `pkit pm create-seats`
 #     - name: tester
 #       role: worker
 #       agent: project-manager      # the default
-#       scope:                      # optional; narrows this seat's own pool
+#       pools: [alpha]              # where pools are declared: the pools it serves
+#       scope:                      # optional; narrows what its pools hold
 #         types: [test]
 #       state_issue: 2211
 #     - name: old-worker
@@ -29,7 +31,11 @@
 #       retired: true               # stays in place, so no seat's number moves
 #       state_issue: 2190
 #
-# A seat's number is its place in the list, counted from one (point 6).
+# A seat's number is its place in the list, counted from one (point 6). A
+# Milestone joins a pool by a `Pool: <name>` line in its description, which
+# only a person's consent writes (DEC-061 points 2 and 6). Code that cannot
+# read this file in full takes no work, no seat and no release by force
+# (DEC-061 point 9).
 
 schema_version: 1
 

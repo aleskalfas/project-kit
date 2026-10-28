@@ -184,6 +184,109 @@ def test_the_shipped_carrier_validates_and_parses() -> None:
     assert tp.parse(data).problems == ()
 
 
+# ---- pools of workers (DEC-061 points 1 and 10) ------------------------------------
+
+
+ALPHA = {**WORKER, "pools": ["alpha"]}
+BRAVO = {"name": "worker-2", "role": "lead", "pools": ["alpha", "bravo"], "state_issue": 14}
+
+
+def test_the_topology_declares_pools_and_each_seat_that_builds_names_its_own() -> None:
+    topology = tp.parse(_doc(PLANNER, ALPHA, BRAVO, pools=["alpha", "bravo"]))
+    assert topology.problems == ()
+    assert topology.pools == ("alpha", "bravo")
+    assert [s.pools for s in topology.seats] == [None, ("alpha",), ("alpha", "bravo")]
+    assert [s.builds for s in topology.seats] == [False, True, True]
+    assert _schema_errors(_doc(PLANNER, ALPHA, BRAVO, pools=["alpha", "bravo"])) == []
+
+
+def test_a_topology_with_no_pools_key_declares_none_and_an_empty_list_declares_pools() -> None:
+    assert tp.parse(_doc(PLANNER, WORKER)).pools is None
+    assert tp.parse(_doc(PLANNER, WORKER, pools=[])).pools == ()
+
+
+def test_a_seat_naming_an_undeclared_pool_is_a_problem() -> None:
+    problems = tp.parse(_doc(PLANNER, {**WORKER, "pools": ["charlie"]}, pools=["alpha"])).problems
+    assert _codes(problems) == [tp.UNDECLARED_POOL]
+    assert "'charlie'" in problems[0].message
+
+
+def test_a_seat_naming_pools_where_none_are_declared_is_a_problem() -> None:
+    problems = tp.parse(_doc(PLANNER, ALPHA)).problems
+    assert _codes(problems) == [tp.NO_POOLS_DECLARED]
+
+
+def test_a_planner_naming_a_pool_is_a_problem() -> None:
+    problems = tp.parse(_doc({**PLANNER, "pools": ["alpha"]}, ALPHA, pools=["alpha"])).problems
+    assert _codes(problems) == [tp.PLANNER_POOLS]
+
+
+def test_the_check_refuses_each_pool_the_topology_does_not_allow() -> None:
+    assert _check(tp.parse(_doc(PLANNER, ALPHA, pools=["alpha"]))) == []
+    refused = _check(tp.parse(_doc(PLANNER, {**WORKER, "pools": ["charlie"]}, pools=["alpha"])))
+    assert _codes(refused) == [tp.UNDECLARED_POOL]
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        _doc(PLANNER, WORKER, pools="alpha"),
+        _doc(PLANNER, {**WORKER, "pools": "alpha"}, pools=["alpha"]),
+        _doc(PLANNER, {**WORKER, "pools": ["Alpha"]}, pools=["alpha"]),
+    ],
+)
+def test_pools_written_as_no_list_of_names_are_marked_and_read_as_none(data: Any) -> None:
+    topology = tp.parse(data)
+    assert tp.SHAPE in _codes(topology.problems)
+    assert topology.not_understood
+    assert _schema_errors(data)
+    assert all(seat.pools in (None, ()) for seat in topology.seats)
+
+
+def test_stranded_names_a_pool_no_seat_serves_and_a_builder_that_names_no_pool() -> None:
+    retired = {"name": "old", "role": "worker", "pools": ["bravo"], "retired": True}
+    tree = tp.parse(_doc(PLANNER, ALPHA, {**TESTER}, retired, pools=["alpha", "bravo"]))
+    found = tp.stranded(tree)
+    assert len(found) == 2
+    assert "the pool bravo is served by no seat" in found[0]
+    assert "the seat tester, a worker, names no pool" in found[1]
+    assert tp.stranded(tp.parse(_doc(PLANNER, WORKER))) == []
+
+
+# ---- what this code cannot read (DEC-061 point 9, ADR-072 point 5) ---------------------
+
+
+@pytest.mark.parametrize(
+    ("data", "said"),
+    [
+        (_doc(PLANNER, WORKER, lanes=["x"]), "keys no topology has: lanes"),
+        (_doc(PLANNER, {**WORKER, "holder": "me"}), "keys a seat has not: holder"),
+        (_doc(PLANNER, {**WORKER, "scope": {"layers": ["x"]}}), "a scope has not: layers"),
+        (_doc(PLANNER, WORKER, settings={"lapse": 3}), "`settings` holds keys it has not"),
+        (_doc(PLANNER, {**WORKER, "role": "boss"}), "has the role 'boss'"),
+        (_doc(PLANNER, WORKER, settings={"release_mode": "strict"}), "'strict'"),
+        ({"schema_version": 2, "seats": [PLANNER]}, "`schema_version` is 2"),
+        (_doc(PLANNER, {**WORKER, "scope": {"types": "test"}}), "no list of names"),
+    ],
+)
+def test_the_parse_marks_what_it_cannot_read_and_still_gives_what_it_could(
+    data: Any, said: str
+) -> None:
+    topology = tp.parse(data)
+    assert any(said in item for item in topology.not_understood), topology.not_understood
+    assert topology.seat("planner") is not None
+    refusal = tp.not_understood_refusal(topology)
+    assert refusal is not None and said in refusal and "DEC-061 point 9" in refusal
+
+
+def test_a_problem_the_parse_can_read_is_no_mark() -> None:
+    twin = {**WORKER, "state_issue": 14}
+    topology = tp.parse(_doc(PLANNER, WORKER, twin, {**PLANNER, "name": "p2", "state_issue": 15}))
+    assert tp.DUPLICATE_SEAT in _codes(topology.problems)
+    assert topology.not_understood == ()
+    assert tp.not_understood_refusal(topology) is None
+
+
 # ---- the check -------------------------------------------------------------------
 
 
