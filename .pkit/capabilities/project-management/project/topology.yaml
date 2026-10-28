@@ -4,12 +4,15 @@
 # its place in the list, counted from one: new seats go at the end, and a
 # seat that leaves stays in its place, marked `retired: true`.
 #
-# The planner files the work into one shared pool with no owner; the two
-# workers take the next ready Task from it, with no scope, since the work
-# comes from walks through the whole project (#2250).
+# The planner files the work with no owner; the two workers serve the pool
+# `alpha` and take the next ready Task only from an open milestone whose
+# description carries `Pool: alpha` (project-management DEC-061). A new
+# line of work is a new milestone marked into a pool; this file changes
+# only when a pool or a seat does (#2264).
 schema_version: 1
 settings:
   release_mode: tolerant
+pools: [alpha]
 seats:
   - name: planner
     role: planner
@@ -17,7 +20,9 @@ seats:
     state_issue: 2251
   - name: worker-1
     role: worker
+    pools: [alpha]
     state_issue: 2252
   - name: worker-2
     role: worker
+    pools: [alpha]
     state_issue: 2253
