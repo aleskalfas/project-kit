@@ -100,7 +100,7 @@ A container moved back over a child In Progress or in Review would stand behind 
 - **Auto-close parents when last child closes.** Rejected — removes the deliberate-act quality of closure.
 - **Bidirectional cascade.** Rejected — wrong direction of causation.
 - **No cascade.** Rejected — parents drift out of sync with their children's reality.
-- **Declare Todo → In Progress for containers, so the forward cascade moves one in a single step.** Rejected — the container's history would lose the scheduling step: it would read as started without ever having been scheduled, while the work under it was scheduled first.
+- **Declare Todo → In Progress for containers, so the forward cascade moves one in a single step.** Rejected — the container's history would lose the scheduling step: it would read as started without ever having been scheduled, while the work under it was scheduled first, or closed as completed on the user's authorisation.
 - **Refuse to start a child whose ancestor is unscheduled, or leave the ancestor behind and report it.** Rejected — a container behind a started child states something false.
 - **Lower the Todo → Backlog severity to `warning` in a project that runs no Milestone.** Rejected — it would hand the agent the scheduling commitment, which the user holds. The audited reason already serves such a project at bypassable-with-audit. A severity that varies with a project's configuration would also break [project-management:DEC-014-validation-severity-model]'s dispatch on the severity token without per-rule logic.
 - **Let the agent move back an issue it finds idle.** Rejected — whether work has stopped is a judgement on a commitment the user made, and an agent reading inactivity alone could stop live work.
