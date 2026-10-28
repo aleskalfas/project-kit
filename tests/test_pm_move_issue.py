@@ -1411,8 +1411,7 @@ def test_a_move_back_of_an_issue_that_cannot_be_read_is_refused(monkeypatch, cap
 
 def test_where_the_board_carries_the_state_the_move_back_is_refused(monkeypatch, capsys) -> None:
     """Where the board carries the state, the move back is refused and writes
-    nothing, so it releases no claim and journals no move (DEC-006): what a card
-    dragged back on the board means is not decided."""
+    nothing, so it releases no claim and journals no move (DEC-006)."""
     rc, writes, github = _move_back(
         monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", board_carried=True
     )
@@ -1420,7 +1419,7 @@ def test_where_the_board_carries_the_state_the_move_back_is_refused(monkeypatch,
     assert writes == [] and github.calls == []
     err = capsys.readouterr().err
     assert "[refused] #42 does not move back here: the board carries its state" in err
-    assert "what a card dragged back on the board means is not decided (DEC-006)" in err
+    assert "where it does, a move back is refused (DEC-006)" in err
     assert "no claim was released and no move journaled" in err
 
 

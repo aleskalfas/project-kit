@@ -41,6 +41,7 @@ CONFIG_COMPANION = CAPABILITY / "schemas" / "config.schema.json"
 CONFIG_CARRIER = CAPABILITY / "schemas" / "config.yaml"
 ADOPTER_CONFIG = CAPABILITY / "project" / "config.yaml"
 WORKSTREAMS_COMPANION = CAPABILITY / "schemas" / "workstreams.schema.json"
+SUBSTRATE_MAP_COMPANION = CAPABILITY / "schemas" / "substrate-map.schema.json"
 README = CAPABILITY / "README.md"
 PACKAGE = CAPABILITY / "package.yaml"
 SCRIPTS_DIR = CAPABILITY / "scripts"
@@ -136,7 +137,11 @@ def test_readme_setup_example_is_one_pre_check_takes_as_current(
     its `workstreams:` a legacy fallback. The example now declares the
     workstreams in their own file, and pre-check passes both without that word."""
     examples = _setup_examples()
-    assert set(examples) == {"project/config.yaml", "project/workstreams.yaml"}
+    assert set(examples) == {
+        "project/config.yaml",
+        "project/workstreams.yaml",
+        "project/substrate-map.yaml",
+    }
     cap = tmp_path / "project-management"
     (cap / "project").mkdir(parents=True)
     for name, body in examples.items():
@@ -147,6 +152,9 @@ def test_readme_setup_example_is_one_pre_check_takes_as_current(
     workstreams = YAML(typ="safe").load(examples["project/workstreams.yaml"])
     schema = json.loads(WORKSTREAMS_COMPANION.read_text(encoding="utf-8"))
     assert list(Draft202012Validator(schema).iter_errors(workstreams)) == []
+    substrate_map = YAML(typ="safe").load(examples["project/substrate-map.yaml"])
+    schema = json.loads(SUBSTRATE_MAP_COMPANION.read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(schema).iter_errors(substrate_map)) == []
 
     _, config_result = pre_check._check_adopter_config(cap / "project" / "config.yaml")
     workstreams_result = pre_check._check_workstreams_file(cap)

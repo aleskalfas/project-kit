@@ -295,7 +295,7 @@ def test_a_move_back_is_refused_where_the_board_carries_the_state(
     assert world.move(task, "backlog", "--reason", "the work stopped") == 1
 
     assert board.edits == [] and world.journal(task) == []
-    assert "where it does a move back is refused" in capsys.readouterr().err
+    assert "where it does, a move back is refused (DEC-006)" in capsys.readouterr().err
 
 
 def test_a_dry_run_names_the_status_write_and_writes_nothing(

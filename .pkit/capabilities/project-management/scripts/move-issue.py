@@ -1323,8 +1323,7 @@ def _check_move_back(
     """Refuse a move back that may not be made, saying why; the exit code, or
     None where it may (DEC-006).
 
-    Where the board carries the state, it is refused, as DEC-006 says: what a
-    card a person drags back means is not decided. It needs a reason. A
+    Where the board carries the state, it is refused, as DEC-006 says. It needs a reason. A
     container needs every child told, and none in-progress or in review. It
     lands where `_move_back_landing` says: the other target is a usage error,
     which names the right one. And this clone must be able to release every
@@ -1333,9 +1332,8 @@ def _check_move_back(
     if state_on_board:
         print(
             f"[refused] #{number} does not move back here: the board carries its state, and "
-            "where it does a move back is refused, as what a card dragged back on the board "
-            "means is not decided (DEC-006). Nothing was written: no claim was released and "
-            "no move journaled.",
+            "where it does, a move back is refused (DEC-006). Nothing was written: no claim "
+            "was released and no move journaled.",
             file=sys.stderr,
         )
         return 1

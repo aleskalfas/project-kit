@@ -69,6 +69,8 @@ pkit:
         - project-management:DEC-061#5
         - project-management:DEC-061#8
         - project-management:DEC-061#9
+        - project-management:DEC-062#5
+        - project-management:DEC-051#6
         - COR-013
         - COR-017
         - COR-021
@@ -147,6 +149,8 @@ pkit:
 - **2d.** The Milestones cannot be read, where the topology declares pools. The system starts nothing, never falls back to the whole Backlog, and the use case ends ([DEC-061 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#8-without-pools-the-shared-pool-stands-and-with-them-a-failure-takes-nothing)).
 - **2e.** The worker's seat names no pool, or no ready Task is in its pools. The system starts nothing, and says why in terms of the seat's pools, such as a pool with no open Milestone ([DEC-061 point 8](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#8-without-pools-the-shared-pool-stands-and-with-them-a-failure-takes-nothing)). The use case ends.
 - **2f.** The worker's code cannot read the topology in full. The system takes nothing, says what it did not understand, and the use case ends ([DEC-061 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
+- **2g.** The [project](../../../../core/glossary.md#term-project--project)'s substrate map binds the state to the board. The system reads where each Task stands from its card's Status, all cards at once ([DEC-062 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). It skips a Task whose card it cannot place, such as one with no Status, and warns of it ([DEC-051 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-051-axis-carriage-activation.md#6-a-board-carried-state-is-read-from-the-boards-status-and-never-guessed)).
+- **2h.** The board cannot be read, where the map binds the state to it. The system starts nothing, as where the Milestones cannot be read, and the use case ends ([DEC-051 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-051-axis-carriage-activation.md#6-a-board-carried-state-is-read-from-the-boards-status-and-never-guessed)).
 
 - **3a.** The worker chooses a Task that only another seat may take. The system warns that the other seat is expected to take the Task, and goes on ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-045 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-045-named-per-user-instances.md#5-ownership-derivation-feeds-the-pm-layer-guard-only-and-degrades-gracefully)). Where the topology declares pools, `start-work` warns of a Task outside the pools of the worker's seat ([DEC-061 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 

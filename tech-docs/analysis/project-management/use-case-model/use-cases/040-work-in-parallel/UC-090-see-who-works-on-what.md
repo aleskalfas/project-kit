@@ -33,6 +33,8 @@ pkit:
         - project-management:DEC-059#6
         - project-management:DEC-061#9
         - project-management:DEC-061#10
+        - project-management:DEC-062#5
+        - project-management:DEC-051#6
         - COR-017
         - COR-021
       artefact:
@@ -64,7 +66,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** no owner carries a seat's name. DEC-059 point 6 decides that an instance is named by its seat, and #521 tracks it.
 
-2. For each owned [Task](../../../glossary.md#term-task--task), the planner reads the Task's state in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), In Progress or Review. The Task itself carries that state ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+2. For each owned [Task](../../../glossary.md#term-task--task), the planner reads the Task's state in the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle), In Progress or Review. The Task itself carries that state ([DEC-006](../../../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)), or its card's Status where the substrate map binds the state to the board ([DEC-062 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)).
 3. The planner lists the seats of the [topology](../../../glossary.md#term-topology--topology): `pkit pm seats`. The listing shows each seat and the clone that holds the seat. The listing also shows whether the seat's agent plans, builds or does both ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)). Each holder is read from the seat's [state issue](../../../glossary.md#term-state-issue--state-issue) ([DEC-058 point 4](../../../../../../.pkit/capabilities/project-management/decisions/DEC-058-state-issues.md#4-the-comments-are-the-record-and-the-description-shows-the-current-state)).
 
 **Variants:**
@@ -78,6 +80,7 @@ pkit:
    - the count of the Tasks in Backlog in no pool, and of those each seat owns outside its pools
 - **3c.** The open Milestones cannot be read, where the topology declares pools. The listing shows the rest, says that the Milestones could not be read, and exits `3` (`seats.py`).
 - **3d.** The code the planner runs cannot read the topology in full. The listing shows what it read, and warns of what it did not understand ([DEC-061 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
+- **3e.** The substrate map binds the state to the board, and the board cannot be read. The listing names no [Task](../../../glossary.md#term-task--task) by its state, says why, and exits `3` ([DEC-051 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-051-axis-carriage-activation.md#6-a-board-carried-state-is-read-from-the-boards-status-and-never-guessed)).
 
 **Postconditions:** The planner knows which [instance](../../../glossary.md#term-instance--instance) works on each open [issue](../../../glossary.md#term-issue--issue), and how far each owned [Task](../../../glossary.md#term-task--task) has come, without visiting any agent. The planner knows too which clone holds each [seat](../../../glossary.md#term-seat--seat), and, where the [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool), what each pool holds.
 

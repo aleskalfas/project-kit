@@ -154,6 +154,43 @@ Adopters whose GitHub host is not `github.com` (Enterprise GHE deployments such 
 
 Both fields are optional and additive — an existing config without a `gh:` block continues to validate. **Config wins over ambient** per DEC-023: if both `GH_HOST` is set in the shell and `gh.host` is configured, the config value reaches `gh`. This makes the methodology reproducible from `config.yaml` alone.
 
+#### Where each axis lives — the board flag and the substrate map (per [project-management:DEC-062-axes-chosen-in-the-map])
+
+`has_projects_v2_board: true` says only that the project has a Projects v2 board. It names which board, with `projects_v2_board_id`, and puts every issue on it ([project-management:DEC-019-mandatory-issue-state]). It carries no axis (DEC-062 point 1).
+
+An axis lives where `project/substrate-map.yaml` binds it. With no map, every axis reads the kit's own labels, board or no board. In a present map, an axis it leaves out or marks `unsupported` degrades. `kit-label: true` binds an axis to the kit's own labels, so a project can move one axis to its board and keep the others.
+
+```yaml
+# project/substrate-map.yaml
+schema_version: 1
+axes:
+  type:
+    kit-label: true      # the kit's own `type:*` labels, as with no map
+  priority:
+    board: true          # a field of the configured board
+  workstream:
+    kit-label: true
+  state:
+    board: true          # the board's Status is where an open issue stands
+```
+
+`board: true` puts an axis on the board, and is admissible on `priority`, `workstream` and `state`, never on `type`. On `state`, the board's Status is the source of an open issue's position: Todo, Backlog, In Progress or Review (DEC-062 point 5). A closed issue is Done whatever its card says, so the closure cascade never needs the board.
+
+Before you bind state to your board, give its Status an option for each of the five states. Give every open issue a card and a Status too, since a position the Status does not give is never guessed.
+
+The Status is read as [project-management:DEC-051-axis-carriage-activation] point 6 says, and four outcomes are reported apart, each with its own message:
+
+- the board cannot be read
+- the issue has no card
+- its card has no Status
+- its Status names no open state, such as Done on an open issue
+
+None falls back to the labels or the milestone, so no command acts on a position it guessed. Each command says what such a read means to it, in its own section below.
+
+Where a present map leaves `state` out, or marks it `unsupported`, the state degrades. It is read from the issues themselves, and the capability writes no board Status for it. So the Status stays with the people who move it on the board.
+
+Upgrading to this version moves `schema_version` in `project/config.yaml` from 1 to 2 (DEC-062 point 6). Where the flag is set, it keeps priority and workstream on the board through the map, each `default:` kept, and leaves state out. With no map, it writes one, with `kit-label: true` on type. Its report names each binding it wrote, and each comment of the map that speaks of the board.
+
 ### 3. Bootstrap
 
 ```
@@ -173,7 +210,7 @@ bootstrap provisions the **kit's own** labels, so it creates a palette only for 
 - `workstream:*` — per declared workstream.
 - `state:*` — one label per lifecycle state in `workflow.yaml` (`state:todo`, `state:backlog`, `state:in-progress`, `state:review`, `state:done`). These are the substrate for `move-issue`'s state machine.
 
-Two things suppress a palette. A **configured board** (`has_projects_v2_board: true`) claims `priority`, `workstream` and `state` where your `substrate-map.yaml` says nothing about them — those live as Projects v2 fields instead. And a **present `substrate-map.yaml`** suppresses every axis palette, including `type`: under a map, no axis reads the kit's `<axis>:*` labels, so creating them would leave unmanaged labels no reader looks at. Adopting an existing repo's own labels is `adopt-existing`'s job, not bootstrap's. Each suppressed palette is reported in the plan with the substrate that carries the axis instead.
+An axis gets a palette where the kit's own labels carry it: with no map, or where `substrate-map.yaml` binds it with `kit-label: true` ([project-management:DEC-062-axes-chosen-in-the-map] point 4). An axis the map binds elsewhere gets none, and neither does one a present map leaves out. Each suppressed palette is reported in the plan with the substrate that carries the axis instead. Adopting an existing repo's own labels is `adopt-existing`'s job, not bootstrap's.
 
 Optionally, file a starter EPIC so subsequent Task filings have a default parent:
 
@@ -193,7 +230,7 @@ Read-only diagnostic. Walks every prerequisite the methodology depends on (gh au
 
 Pre-check is the **hard gate** on every pm operation per [project-management:DEC-017-prerequisites-bootstrap-migrate-discipline]. The project-manager invokes it as Step 0 of every action; CI workflows wire it in as a PR check.
 
-Each kit-label check runs only where the kit's own `<axis>:*` labels are that axis's substrate — asked per axis of the carriage accessor, which consults your `substrate-map.yaml` first and `has_projects_v2_board` only where the map is silent ([project-management:DEC-051-axis-carriage-activation]). Every other carriage skips with a line naming the substrate that does carry the axis, rather than demanding a label you may be unable to create.
+Each kit-label check runs only where the kit's own `<axis>:*` labels are that axis's substrate. That is asked per axis of the carriage accessor, which reads your `substrate-map.yaml` alone ([project-management:DEC-062-axes-chosen-in-the-map] point 1). Every other carriage skips with a line naming the substrate that does carry the axis, rather than demanding a label you may be unable to create.
 
 **What pre-check covers at v0.17.0+:**
 
@@ -204,7 +241,7 @@ Each kit-label check runs only where the kit's own `<axis>:*` labels are that ax
 | Adopter config present + parses | config |
 | `gh:` block valid; host-pinned auth works | config / DEC-023 |
 | Repo accessible | connectivity |
-| Projects v2 board resolves (board mode) | substrate |
+| Projects v2 board resolves (where a board is configured) | substrate |
 | The board's Status has an option for each of the five states, where it is a projection of the state (DEC-006) | substrate (advisory: warns, never fails) |
 | `type:*` labels present | labels |
 | `priority:*` / `workstream:*` labels present (where the kit's labels carry the axis) | labels |
@@ -850,7 +887,9 @@ What else holds a Task back:
 - **An assignee of another account,** since `start-work` refuses such a Task and points to `handoff-issue`
 - **Another instance's claim,** folded as the clash guard folds it, and an owner that cannot be read
 - **The scope of the seat,** in a project with a topology. A Task falls in the scope where it matches each part the scope names: its workstream and its type
-- **An axis that a board carries,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
+- **An axis the map binds to the board,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
+
+**Where the board carries the state.** Where the substrate map binds `state` to the board, each Task's state is its card's Status ([project-management:DEC-062-axes-chosen-in-the-map] point 5). `next-task` reads every card's Status once, joined to the listing by each issue's node id, and never reads the board in part. A Task with no card, a card with no Status, or a Status naming no open state is skipped with a warning naming which. A board that cannot be read takes nothing and exits 3, as milestones that cannot be read do ([project-management:DEC-051-axis-carriage-activation] point 6).
 
 **How dependencies are read.** Dependencies are prose ([project-management:DEC-005-linking-and-containment]), so `next-task` reads each `#N` that the `## Dependencies` section names. It skips what an HTML comment, a fenced code block or a code span holds. It skips a reference to another repository's issue (`owner/repo#N`), an issue named only by its address, and the Task itself. A number that is no open issue holds nothing back, whether it is closed, a pull request or not there.
 
@@ -865,7 +904,7 @@ What else holds a Task back:
 | 0 | A Task was started, a dry run said which it would start, or the person declined the `Start #N?` prompt, and the command printed `aborted.` |
 | 1 | Membership refused, or the foreign-repo guard did |
 | 2 | A clone that holds no seat, a planner's seat or a seat that cannot be confirmed, a listing that reached `--limit`, or code that cannot read the topology in full |
-| 3 | The open issues could not be read, or where pools are declared the open milestones, or a ready Task's owner could not be read and no other Task was free |
+| 3 | The open issues could not be read, or where pools are declared the open milestones, or where the board carries the state its Status, or a ready Task's owner could not be read and no other Task was free |
 | 5 | No Task is ready for this clone, so nothing was started. Where pools are declared, the line says why in terms of the seat's pools |
 | other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |
 
@@ -941,19 +980,26 @@ What holds a container open:
 - **The owner.** After the move, every owner of the issue is released the way `close-issue` releases one (see "What the lifecycle commands write for an instance" above), and a release that fails is a warning. Where this clone cannot release an owner, the move is refused (exit 1) before anything is written, naming the owner: any owner where the clone takes no part in instance ownership, and a claim another account made on the comment log. The owner's clone then moves the issue back, or the owner releases the claim first. The clash guard still runs, so another instance's issue of your own account needs `--bypass-owner`.
 - **A container.** It is refused (exit 1) while a child of it is In Progress or in Review, each such child named. It is refused too where its children cannot all be told: where its children cannot all be listed, where a child is not among the issues the issue list returned, or where a child cannot be read. A child in another repository is read there only as open or closed, so an open one holds the container until it closes, and running the move again does not help.
 
-No other issue moves with it: the forward cascade runs on forward moves only, and a container may stand ahead of the work under it. A Task's branch and draft pull request stay as they are, for the next taker to continue or to replace. Where a Projects v2 board is configured and the state is not carried on it, the card's Status follows the move, as for every move. Where the board carries the state, the move back is refused and writes nothing: the board's Status write for that case comes with #2271.
+No other issue moves with it: the forward cascade runs on forward moves only, and a container may stand ahead of the work under it. A Task's branch and draft pull request stay as they are, for the next taker to continue or to replace. Where a Projects v2 board is configured and the map carries the state off it, the card's Status follows the move, as for every move. Where the map binds the state to the board, the move back is refused and writes nothing, as DEC-006 says.
 
 **Each close is journaled.** A close is a governed move to Done ([project-management:DEC-049-audit-journal-model]), so every `close-issue` mode records it with the process engine the way `move-issue` records a move (`pkit process move --from`): after the close and its label reconcile, from the state the issue held before the close, with the close mode as the reason `history` shows (`wont-do close: <reason>`, `cascade-eligibility close: …`, `pr-merge close: closed by merged PR #<M>`). That state is the issue's state label, else its milestone, read as if the issue were open, so an issue GitHub closed when a PR merged reads where the merge found it; an issue still open with neither reads Todo. An issue GitHub already closed with neither a state label nor a milestone carries nothing of where it was, and its close is not recorded from a guessed Todo. An issue whose label already says Done is not recorded again — whoever wrote the label recorded the move — so a re-run adds nothing. `move-issue <N> --to done` on an issue GitHub closed, the move `done-work` makes on its own issue after a merge, finds the issue at Done and only rewrites its stale label; it records the close as it does. `done-work` names the merged PR to it (`--merged-pr <PR>`), so that entry carries the reason `close-issue` gives every other issue the PR closed — `pr-merge close: closed by merged PR #<PR>`, or `completed by merged PR #<PR>` where the move finds the issue still open and makes the move Review → Done itself, as on a base GitHub does not close issues on — and `history` reads the same for each. A move the workflow does not declare for the issue's type (a Task closed from In Progress) is not recorded, and neither is one the engine refuses (a gate that does not pass): each is a warning, worded as a refused move's is, naming the gap `history --check-drift` will show, and the close stands. Where the engine refused for a predicate it could not evaluate, the lines after the warning carry its causes and what the predicate said, as the engine laid them out. Whether a move is recorded at all is the engine's, by the project's journal setting (see "Lifecycle history" below), so a close asks the engine once whether or not a journal is kept.
 
 **A PR that closes several issues is closed issue by issue.** GitHub's `Closes #N` closes every issue the PR body names, so `done-work <N>` gates and closes each of them, not only `N`. It reads the closing references with the reader `open-pr` and `validate-pr` use. Before the merge, the checkbox close-gate runs on each, `N` first, and refuses at the first issue that fails, naming it and its unticked boxes. After the merge, each is run through `close-issue <M> --mode=pr-merge --pr <PR>`, `N` first: closed as completed if the merge left it open (a base branch other than the default one, where GitHub does not auto-close), its state label reconciled to done, and its closure cascade run. An issue that was already closed before the merge is skipped with a note, not an error: the merge does not close it, so it is neither gated nor closed again. A close that fails after the merge is a warning naming the `close-issue` re-run; the others still run.
 
-**Why a reopen removes the state label instead of transitioning out of done.** `done` is the workflow's terminal state (`schemas/workflow.yaml`), and the closure cascade folds children against it; a transition out of it would make it an end state that is not one. A reopened issue re-enters the lifecycle where any open issue without a state label sits — the detectors read `backlog` with a milestone and `todo` without — which is where a freshly filed or freshly scheduled issue sits too. No state label is *added*, so the reset does not show as an ungoverned state change (`history --check-drift` counts added state labels). Where the state is derived from open/closed, nothing is removed; where it lives on a Projects-v2 board, reset the board's Status by hand, as for `move-issue`. Where the board's Status is a projection of the state, see "A board's Status, kept as the projection of each issue's state" below.
+**Why a reopen removes the state label instead of transitioning out of done.** `done` is the workflow's terminal state (`schemas/workflow.yaml`), and the closure cascade folds children against it; a transition out of it would make it an end state that is not one. A reopened issue re-enters the lifecycle where any open issue without a state label sits — the detectors read `backlog` with a milestone and `todo` without — which is where a freshly filed or freshly scheduled issue sits too. No state label is *added*, so the reset does not show as an ungoverned state change (`history --check-drift` counts added state labels). Where the state is derived from open/closed, nothing is removed. Where the map binds it to the board, set the card's Status by hand: a reopened issue's card still says where it was when it closed. Where the board's Status is a projection of the state, see "A board's Status, kept as the projection of each issue's state" below.
 
 **A milestone edit is not a state change.** The native Milestone field is written through the substrate-write seam, and a first body line naming the old milestone as the parent (`Milestone: [#<N>](../milestone/<N>)`, or the older plain form) is rewritten to the new one, so the textual record and the native field keep agreeing — `close-milestone` counts a milestone's children by both. An issue with no state label has its position read from its milestone, so a milestone edit that would move it is refused: attaching one to a Todo issue is the Todo → Backlog transition (`promote-issue --milestone`), and the workflow has no way from Backlog back to Todo. Clearing the milestone an issue's first line names as its required parent is refused as well — re-parent it first with `set-field <N> --parent <P>`; on an EPIC, whose parent-ref is optional, the line is removed instead.
 
 #### A board's Status, kept as the projection of each issue's state — `sync-board` (per [project-management:DEC-006-state-machine-and-cascade])
 
-Where a Projects v2 board is configured and does not carry the state, its Status is a projection of each issue's state, which the agent maintains. The issue's own state stays the source: every reader reads it, and where the card and the issue disagree, the issue wins. Whether the board carries the state is asked of the carriage accessor, the map first and `has_projects_v2_board` where the map says nothing about `state` ([project-management:DEC-051-axis-carriage-activation]). Where the board carries the state, its Status is the source, and none of the commands below writes it (#2271).
+Where a Projects v2 board is configured and the map carries the state off it, its Status is a projection of each issue's state, which the agent maintains. That is with no map, or where the map binds `state` to another substrate. The issue's own state stays the source: every reader reads it, and where the card and the issue disagree, the issue wins. Where the map binds `state` to the board, its Status is the source instead, and where a present map leaves `state` out, no Status is written ([project-management:DEC-062-axes-chosen-in-the-map] point 5).
+
+**Where the Status is the source.** The same writers write it, and each write is the move. So a move whose write fails is not made, nothing is journaled, and it exits 3.
+
+- **`move-issue`** reads an open issue's position from its card, and refuses a move the Status does not place. It exits 3 where the board cannot be read, and 1 for no card, no Status, or a Status naming no open state
+- **The forward cascade** writes each ancestor's Status step by step, and stops at an ancestor its Status does not place
+- **`start-work` and `review-work`** refuse at their early check in the same cases
+- **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone
 
 - **A move writes the Status.** `move-issue`, and so `promote-issue`, `start-work`, `review-work` and `done-work`, set the card's Status to the issue's new state. A move that finds the issue already there writes it too, so the move to Done that `done-work` makes after a merge brings the card to Done. The forward cascade sets each ancestor's once, to the state the ancestor reached. `--dry-run` names the write and reads nothing.
 - **Filing writes the first one.** `create-issue` sets the Status of the card it adds: Todo, or Backlog for an issue filed with a milestone.
@@ -963,7 +1009,7 @@ Where a Projects v2 board is configured and does not carry the state, its Status
 
 **Bringing a whole board level.** A card dragged by hand, a write that failed or a board set up after its issues were filed leaves cards out of step. `pkit pm sync-board` reads every issue's state as the lifecycle does: closed is Done, and an open issue is read from its state label, its milestone or neither. It writes the Status only on the cards that differ, adds a card for each open issue that has none, and names each card whose Status disagreed. Cards of other repositories, pull requests and drafts are left alone, and so is a card whose state has no option.
 
-`--dry-run` prints the plan and writes nothing. Otherwise `sync-board` asks before its first write, and `--yes` runs it with nobody at a terminal. The membership gate and the foreign-repo guard run as in the other writers. Where no board is configured, or the board carries the state, it refuses and reads nothing.
+`--dry-run` prints the plan and writes nothing. Otherwise `sync-board` asks before its first write, and `--yes` runs it with nobody at a terminal. The membership gate and the foreign-repo guard run as in the other writers. Where no board is configured, the map binds the state to the board, or a present map leaves the state out, it refuses, saying which, and reads nothing.
 
 #### Opening and editing a PR — `open-pr` / `edit-pr`
 
