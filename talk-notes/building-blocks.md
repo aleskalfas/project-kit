@@ -457,3 +457,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - it checks an issue's shape, not its sense: a bare dependency, a Task hung on the wrong parent, pass validation (found on 28 October; the cleanup and a typed `Blocked by:` follow)
   - project-kit itself was not using it well until this week's cleanup
 - **Maintainer's notes:**
+  - Decided 29 October: the headline is **"One project manager, many builders"**: you talk to one agent; it files and plans; it dispatches software-engineering builders in parallel, each in its own worktree; it runs the reviewers, brings the decisions to you, and lands what you approve (evidence: six builders in one evening, four pull requests merged). Seats and pools are one honest line: multi-clone parallel work exists and runs, but is experimental, the promise for what comes next.
