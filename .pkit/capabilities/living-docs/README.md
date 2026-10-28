@@ -41,7 +41,7 @@ Install:
 pkit capabilities install living-docs
 ```
 
-The install copies the capability into `.pkit/capabilities/living-docs/`, deploys its `docs-author` skill and its `living-docs` agent, and provisions its query commands ([the CLI reference, "Capabilities — two ways in"](../../cli/README.md#capabilities--two-ways-in)). It writes none of your configuration, and never sets the two roots apart. On a fresh project, `pkit living-docs validate` then reports that neither space has a definition and that the two roots are one folder, and fails nothing.
+The install copies the capability into `.pkit/capabilities/living-docs/`, deploys its `docs-author` skill and its `living-docs` agent, and provisions its query commands ([the CLI reference, "Capabilities — two ways in"](../../cli/README.md#capabilities--two-ways-in)). Apart from the answers you give to the questions it asks, such as project-management's question about granting the `living-docs` agent where project-management is installed, it writes none of your configuration, and never sets the two roots apart. On a fresh project, `pkit living-docs validate` then reports that neither space has a definition and that the two roots are one folder, and fails nothing.
 
 After install:
 
@@ -54,7 +54,7 @@ After install:
 Two steps are optional:
 
 - **Enforce friction.** Set `friction.mode` to `enforcing` with `pkit config set`, and make `pkit friction check` a required check of your continuous integration. A change that leaves an anchored page stale then fails there.
-- **With project-management installed,** grant the `living-docs` agent as the fixer of your pages ([project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)). The documentation check of project-management treats stale pages as advisory until you set `doc_check.sources.friction: enforcing` in its configuration ([Connections](#connections)).
+- **With project-management installed,** grant the `living-docs` agent as the fixer of your pages, if the install's question has not already recorded your answer ([project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)). The documentation check of project-management treats stale pages as advisory until you set `doc_check.sources.friction: enforcing` in its configuration ([Connections](#connections)).
 
 ## Pages
 
