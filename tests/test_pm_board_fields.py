@@ -399,3 +399,89 @@ def test_read_items_with_option_fails_rather_than_counting_in_part(bf) -> None:
     )
     assert read.ok is False
     assert read.error == "boom"
+
+
+# --- every card, with its value (#2276) ---------------------------------------
+
+
+def _issue_card(
+    item_id: str,
+    number: int,
+    *,
+    option: tuple[str, str] | None = None,
+    repository: str = "acme/repo",
+    state: str = "OPEN",
+    body: str = "## What\n\nwork\n",
+) -> dict:
+    value = {"optionId": option[0], "name": option[1]} if option else None
+    content = {
+        "__typename": "Issue",
+        "number": number,
+        "title": f"Issue {number}",
+        "body": body,
+        "state": state,
+        "repository": {"nameWithOwner": repository},
+    }
+    return {"id": item_id, "content": content, "fieldValueByName": value}
+
+
+def test_read_items_returns_every_card_with_its_value_across_pages(bf) -> None:
+    """The board's whole Status, card by card: what `sync-board` compares with each
+    issue's state. Each card says what it holds — an issue, a pull request or a
+    draft — the issue's repository and whether it is closed, and the option it
+    holds, or none."""
+    pull = {
+        "id": "I5",
+        "content": {"__typename": "PullRequest", "number": 5, "title": "A PR"},
+        "fieldValueByName": None,
+    }
+    draft = {"id": "I6", "content": {"__typename": "DraftIssue", "title": "draft"}}
+    pages = [
+        _page(
+            [_issue_card("I1", 1, option=("opt_todo", "Todo")), _issue_card("I2", 2)],
+            next_cursor="c1",
+        ),
+        _page([_issue_card("I3", 3, repository="acme/other", state="CLOSED"), pull, draft]),
+    ]
+    calls: list = []
+
+    def run(args, config, *, fallback_owner=None, check=False):
+        calls.append(list(args))
+        return subprocess.CompletedProcess(args, 0, stdout=pages[len(calls) - 1], stderr="")
+
+    read = bf.read_items(BOARD_CONFIG, project_node_id="PVT_1", field_name="Status", gh_call=run)
+
+    assert read.ok is True
+    assert [(i.item_id, i.number, i.kind, i.repository, i.closed) for i in read.items] == [
+        ("I1", 1, "Issue", "acme/repo", False),
+        ("I2", 2, "Issue", "acme/repo", False),
+        ("I3", 3, "Issue", "acme/other", True),
+        ("I5", 5, "PullRequest", "", False),
+        ("I6", None, "DraftIssue", "", False),
+    ]
+    assert [(i.option_id, i.option_name) for i in read.items[:2]] == [
+        ("opt_todo", "Todo"),
+        (None, None),
+    ]
+    assert "field=Status" in calls[0] and "after=c1" in calls[1]
+
+
+def test_read_items_leaves_a_state_issues_card_out(bf) -> None:
+    state = _issue_card("I9", 9, body="<!-- pkit:state-issue v=1 kind=seat key=planner -->\n")
+    read = bf.read_items(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(_page([state, _issue_card("I1", 1)])),
+    )
+    assert [i.number for i in read.items] == [1]
+
+
+def test_read_items_surfaces_stderr_verbatim(bf) -> None:
+    read = bf.read_items(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(returncode=1, stderr="missing: 'read:project'"),
+    )
+    assert read.ok is False and read.error == "missing: 'read:project'"

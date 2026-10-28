@@ -1281,6 +1281,82 @@ def test_main_label_fallback_path_omits_board_keys_hook_skips(ci, tmp_path, monk
     assert captured_context["project_node_id"] is None
 
 
+# --- the card's first Status (DEC-006, #2276) --------------------------------
+# Where the board's Status is a projection the project keeps — a board, and the
+# state not carried on it — the card create-issue adds gets the Status of the
+# state the new issue is in: Todo, or Backlog where it was filed with a
+# milestone, as `_lib/lifecycle_inference` reads it.
+
+
+def _status_kept_filing(ci, tmp_path: Path, monkeypatch, *, axes: dict | None):
+    """Stage a board filing, and route the board's calls to a `BoardTracker`."""
+    import shutil
+
+    from tests.pm_board_world import BoardTracker
+
+    root = _stage_capability_tree(tmp_path, has_board=True)
+    shutil.copy(SCRIPT_PATH.parent.parent / "schemas" / "workflow.yaml", root / "schemas")
+    board = BoardTracker()
+    benign = _gh_command_dispatcher("https://github.com/acme/repo/issues/42")
+
+    def run(cmd, *args, **kwargs):
+        argv = [str(c) for c in cmd]
+        if argv[:2] == ["gh", "project"] or argv[1:3] == ["api", "graphql"]:
+            return board.gh(argv)
+        return benign(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", run)
+    substrate_map = None if axes is None else ci.axis_labels.SubstrateMap(axes=axes)
+    monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *a, **kw: substrate_map)
+    monkeypatch.setattr(ci, "fire_hooks", lambda *a, **kw: None)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    argv = ["create-issue.py", "--type", "task", "--title", "do a thing", "--parent", "1"]
+    monkeypatch.setattr(ci.sys, "argv", [*argv, "--capability-root", str(root), "--yes"])
+    return board
+
+
+def test_a_filed_issues_card_gets_its_first_status(ci, tmp_path, monkeypatch, capsys) -> None:
+    from tests.pm_board_world import LABEL_STATE
+
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42]
+    assert board.edits == [(42, "Todo")]
+    assert "[board] #42: Status set to 'Todo'" in capsys.readouterr().out
+
+
+def test_a_first_status_not_written_is_one_line_and_the_issue_stands(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    from tests.pm_board_world import LABEL_STATE
+
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE)
+    del board.options["Todo"]
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == []
+    assert (
+        "[warn] #42: the board's Status was not set to 'Todo': the board's Status field has "
+        "no 'Todo' option; the issue is filed, and `sync-board` sets it"
+    ) in capsys.readouterr().err
+
+
+def test_no_first_status_is_written_where_the_board_carries_the_state(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """With no map, the flag carries the state on the board (DEC-051): its Status
+    is the state's source, which create-issue leaves as it was (#2271)."""
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=None)
+
+    assert ci.main() == 0
+
+    assert board.adds == [42] and board.edits == []
+    assert not [argv for argv in board.calls if argv[2:3] == ["field-list"]]
+
+
 def _hooks_module(ci):
     """The hooks module object create-issue.py imported its `fire_hooks` from.
 
