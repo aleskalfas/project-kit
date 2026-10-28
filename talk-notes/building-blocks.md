@@ -273,3 +273,21 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - it is the largest area to learn (its README is about 7 500 words)
 - **Maintainer's notes:**
   - Decided 28 October: flow is mostly the harness's job now (Claude Code's auto mode decides which actions are safe enough to run unasked), so the block does not lead with fewer prompts. Its argument is what auto mode does not give: fixed rules instead of a judgement per action; steering agents onto the validating commands (process, not only safety); different rules per role; and the rules written down in one place, in the project's words. Headline: **"Your rules, not the tool's guesses."** The honest limit stays said: the lists stop ordinary commands, not a determined workaround; only the sandbox is a wall, off on macOS today.
+
+## 8. The agent workspace and the cross-repository guard (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** two small rules about *where* an agent writes.
+  - **The agent workspace:** every checkout has one folder, `.agent-workspace/`, where agents keep their scratch files (a pull-request body, a script, captured output). It is never committed, each worktree has its own, and every agent may write there without a prompt, through its file tools only (core rule 16).
+  - **The cross-repository guard:** a session changes only the repository it was started in (COR-039, core rule 19). A change aimed at another repository is stopped and put to the person, once per change; reading another repository is fine. pkit's own commands check it (`--allow-foreign-repo` is the person's confirmation); for a raw command it is a discipline.
+- **Problem:** agents scatter scratch files in `/tmp`, the home folder or the project, so the operator is asked about each one (dozens of harmless prompts, approved unread), and files leak into commits. And a session that wanders into a sibling repository changes it under the wrong project's rules, with nobody noticing.
+- **Gain:**
+  - one place for scratch, no prompts for it, nothing in a commit
+  - a repository is changed only by a session that carries its own rules
+- **Weight:** two rules in every session; no command to learn.
+- **Evidence (this session):** every brief, body and script of today's work lived in the workspace; reading mockingbird (another repository) for the comparison was fine, changing it would have been stopped; a builder's scratch projects stayed inside its worktree's workspace.
+- **Weak spot:**
+  - the guard is an interlock against accidents, not a security boundary: a raw command can still reach another repository
+  - a shell redirect into the workspace still prompts; only the file tools are free there
+- **Maintainer's notes:**
