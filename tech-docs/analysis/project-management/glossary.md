@@ -208,7 +208,7 @@ TERM-issue:
 TERM-issue-lifecycle:
   name: issue lifecycle
   status: active
-  definition: "process that takes an item of tracked work from Todo through Backlog, In Progress and Review to Done, a person holding its start and end"
+  definition: "process that takes an item of tracked work from Todo through Backlog, In Progress and Review to Done, a person holding its scheduling and end"
   pkit:
     friction:
       anchors:

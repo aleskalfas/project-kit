@@ -29,7 +29,7 @@ pkit:
 
 # VIEW-the-issue-lifecycle — The issue lifecycle
 
-An agent makes most of an [issue](../glossary.md#term-issue--issue)'s moves, but the start and the end of work are commitments a person must authorise. Without fixed states, and a way for the issues above to follow, what the agent does is not deterministic ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+An agent makes most of an [issue](../glossary.md#term-issue--issue)'s moves, but scheduling and ending the work are commitments a person must authorise. A person authorises a move back from In Progress too, since that move settles what becomes of the scheduling. Without fixed states, and a way for the issues above to follow, what the agent does is not deterministic ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 The [issue lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle) fixes the states and the moves between them. An [authorisation](../glossary.md#term-authorisation--authorisation) is a person's decision on a move they hold. The [cascade](../glossary.md#term-cascade--cascade) brings the issues above along with each move. A [bypass](../glossary.md#term-bypass--bypass) overrides a check with a person's reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records.
 
@@ -79,7 +79,7 @@ flowchart LR
 
 Defined in [TERM-issue-lifecycle](../glossary.md#term-issue-lifecycle--issue-lifecycle).
 
-**Why:** Every [issue](../glossary.md#term-issue--issue) moves from filing to closure, and an agent makes most of the moves. Fixed states, with fixed moves between them, make what the agent does deterministic. The moves that start and end work are the ones a person holds ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+**Why:** Every [issue](../glossary.md#term-issue--issue) moves from filing to closure, and an agent makes most of the moves. Fixed states, with fixed moves between them, make what the agent does deterministic. A person holds the moves that schedule and end the work, and the move back from In Progress ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 The issue lifecycle is the [process](../../core/glossary.md#term-process--process) every issue moves through: Todo, Backlog, In Progress, Review and Done. Who moves an issue:
 
@@ -126,7 +126,7 @@ stateDiagram-v2
 
 Defined in [TERM-authorisation](../glossary.md#term-authorisation--authorisation).
 
-**Why:** The start and the end of work are commitments an agent must not make on its own. Held as refusals the agent cannot pass, the gates turn the [methodology](../../core/glossary.md#term-methodology--methodology)'s authority into something enforced rather than trusted ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
+**Why:** Scheduling and ending the work are commitments an agent must not make on its own. A move back from In Progress settles what becomes of the scheduling, so a person holds that move too. Held as refusals the agent cannot pass, the gates turn the [methodology](../../core/glossary.md#term-methodology--methodology)'s authority into something enforced rather than trusted ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
 An authorisation is a person's decision on one move they hold. Scheduling an [issue](../glossary.md#term-issue--issue) needs one, and so does merging a [Task](../glossary.md#term-task--task)'s [pull request](../../core/glossary.md#term-pull-request--pull-request). Closing an issue as won't do, or a finished parent issue, needs one too, and so does moving back an issue whose work stopped. The person gives it in the session, for the issue at hand, and it never stands for a later move.
 
