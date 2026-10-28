@@ -251,3 +251,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - the harness moves under us: each Claude Code change (agent teams, new frontmatter fields) lands in the adapter first, and some only as a discipline (the 4 064-character cut)
   - it grows with every capability that needs delivery (rules by installation, #2269)
 - **Maintainer's notes:**
+  - Decided 28 October: not a block of its own until a second adapter exists. The talk folds it into the lifecycle (block 13) as one line: "install wires pkit into your AI tool: today that's Claude Code". A spike on a second harness is parked (#2298).
