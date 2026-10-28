@@ -156,7 +156,7 @@ degrade.*
   kit's own `workstream:*` labels they cannot create. One uniform consumer
   contract: once a map exists, the default for every unlisted axis is *degrade*,
   not greenfield. There is no second source of truth (no `mode` flag) that could
-  disagree with the map's presence (DEC-036 D2).
+  disagree with the map's presence (DEC-036 point 2).
 
 The ternary collapses to the greenfield binary only in the no-map case; the
 moment a map exists, "I didn't mention this axis" and "I marked this axis
@@ -175,10 +175,10 @@ seam must keep the two distinct, because collapsing the fourth case into
 axis-level "this axis degrades to advisory" would silently soften **every rule
 keyed on that axis** — including rules that depend on *other, resolvable* values
 of the same axis. Concretely, the **Feature-in-Feature containment invariant** is
-keyed on `type` (`issue-types.yaml`); DEC-036 D4 holds the containment invariants
+keyed on `type` (`issue-types.yaml`); DEC-036 point 4 holds the containment invariants
 **hard** even in brownfield. If an unresolvable `feature` value degraded the whole
 `type` axis to advisory, that hard invariant would soften — exactly the silent
-loosening D4 forbids. So the contract: **value-unresolvable triggers degradation
+loosening DEC-036 point 4 forbids. So the contract: **value-unresolvable triggers degradation
 only for rules that depend on *that value*, never axis-level degradation of rules
 that depend on other values or on the axis as a whole.** A rule that never
 references the missing value stays at its authored severity.
@@ -188,15 +188,15 @@ the seam signals "degrade" for a rule that **has no `*_severity` field to flip**
 the rule **stays at its authored severity** — it does **not** silently become
 advisory. The containment invariants are the live instance: they are authored in
 prose in `issue-types.yaml` with **no severity field** (DEC-036 point 3's "honest
-gap"), and DEC-036 D4 says they stay hard. If "no knob" defaulted to advisory, a
+gap"), and DEC-036 point 4 says they stay hard. If "no knob" defaulted to advisory, a
 hard containment invariant would soften the moment any input touching it became
 indeterminate — the unsafe direction. The fail-safe rule makes the missing-knob
 case fail **safe**: a rule with no severity field is held at *hard* until a knob is
 explicitly added (the Feature's in-scope schema work, point in Boundaries). This
-keeps the containment invariants hard as DEC-036 D4 requires, by construction
+keeps the containment invariants hard as DEC-036 point 4 requires, by construction
 rather than by remembering. This refines *how* the seam signals degradation
 (read-path / resolution mechanics — this ADR's domain); it is fully consistent
-with DEC-036's *what* (D4 keeps containment hard; point 3 names the missing-knob
+with DEC-036's *what* (point 4 keeps containment hard; point 3 names the missing-knob
 gap as schema work). **No DEC-036 amendment is needed** — the ADR pins the
 resolution behaviour DEC-036 left to implementation, it does not change DEC-036's
 decision.
@@ -417,7 +417,7 @@ unchanged, while the fold's membership *input* is a degraded read on a flat repo
   This ADR *does* pin the resolution mechanic for the no-knob case (point 2): a
   degrade-signalled rule **with no severity field stays at its authored severity
   (hard) until a knob is added** — never silently advisory. That keeps the
-  containment invariants hard (DEC-036 D4) by construction; the knob-adding itself
+  containment invariants hard (DEC-036 point 4) by construction; the knob-adding itself
   is the Feature's schema work.
 - **Not the cross-capability bootstrap shape.** Per DEC-036's carrier discipline
   (DEC-022's defer-until-second-instance), the generic "greenfield-default +
@@ -515,7 +515,7 @@ fail-closed fold semantics for free over the derived state.
   Rejected — an omitted axis silently re-enters wholesale refusal on labels the
   adopter cannot create, defeating the whole point of brownfield mode. The
   ternary's absent ≡ `unsupported` rule is the fix.
-- **A global `mode: brownfield` flag** the seam keys on. Rejected (DEC-036 D2) —
+- **A global `mode: brownfield` flag** the seam keys on. Rejected (DEC-036 point 2) —
   a second source of truth that can disagree with the actual presence of
   bindings; the map's presence is the one contract.
 - **Fail-closed enforced only at each mutating call site** (no seam-level
@@ -536,7 +536,7 @@ fail-closed fold semantics for free over the derived state.
   (one degradation path for both). Rejected — a missing *value* (AUJ's absent
   `[Feature]` / `[Umbrella]` title-prefix) would degrade the *whole* `type` axis to
   advisory, silently softening the type-keyed Feature-in-Feature containment
-  invariant that DEC-036 D4 holds **hard**. The fourth arm degrades only rules
+  invariant that DEC-036 point 4 holds **hard**. The fourth arm degrades only rules
   depending on the missing value, never the axis as a whole.
 - **Default a degrade-signalled rule with no severity knob to advisory.** Rejected
   — fails *open*: a hard containment invariant (prose, no `*_severity` field) would
@@ -638,7 +638,7 @@ fail-closed fold semantics for free over the derived state.
   unsafe direction is structurally unreachable" shape (with its constructor-guard
   half). The two refinements this ADR adds — the **value-unresolvable fourth arm**
   and the **no-knob-stays-hard fail-safe** — pin *how* the seam signals
-  degradation; they are consistent with DEC-036's *what* (D4 keeps containment
+  degradation; they are consistent with DEC-036's *what* (point 4 keeps containment
   hard; point 3 names the missing-knob gap as in-scope schema work) and require
   **no DEC-036 amendment**. Does not restate DEC-036; cites it as the decision.
 - **Acceptance gate.** Accepted by the maintainer before the trunk implementation

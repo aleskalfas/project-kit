@@ -226,7 +226,7 @@ the automatic version waits for lived use of the mechanical one.
   reference in the per-user topology file** and compares it against the *actual* owner
   resolved through the ADR-041 seam (singleton warns / shared allows / unassigned falls
   back to DEC-035 numeric commons). Consumed by the pm-layer guard and listings only; the
-  engine and cascade fold never read it (DEC-035 point 8 / DEC-043 D6).
+  engine and cascade fold never read it (DEC-035 point 8 / DEC-043 point 6).
 - **Two new scripts:** the **guided assignment** (local, idempotent, reconciles DEC-018
   workstream-lifecycle drift, surfaces shared/unassigned at `warning`) and
   **`create-instance`** (clone into a sibling folder + scaffold config; rule-8 confirm
