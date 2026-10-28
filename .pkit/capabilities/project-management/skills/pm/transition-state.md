@@ -5,6 +5,7 @@ Sub-procedure of the pm composite skill (`pm.md` in this folder). Per [project-m
 ## When to use this operation
 
 - The user wants to **move** an issue forward through the lifecycle (Todo → Backlog → In Progress → Review).
+- The user wants to **move back** an issue In Progress that nobody is working on, to Backlog or Todo ([project-management:DEC-006-state-machine-and-cascade], "Moving back from In Progress").
 - The user wants to **close** an issue (PR-merge-driven closure or explicit won't-do gesture per [project-management:DEC-006-state-machine-and-cascade]).
 - The user wants to **reopen** a closed issue (e.g., it regressed).
 - The PR of an issue in Review needs its **reviewer verdicts**, or landing — checks, verdicts, merge (the review step below).
@@ -20,7 +21,8 @@ Behaviour summary (the scripts are the source of truth — read them for the exa
 
 - **Membership gate** (DEC-021) — closed mode refuses non-members with the standard refusal template.
 - **Transition lookup** — `move-issue.py` looks up the requested transition in `workflow.yaml`'s `transitions:` list and refuses any move not in the schema, with a diagnostic listing the legal targets.
-- **Authorisation gate** — user-authorised transitions (Todo → Backlog; Review → Done; Backlog/Todo → Done; In-progress → Done parent close) require `--yes` from the caller as the explicit authorisation signal; bypassable-with-audit transitions accept `--bypass --bypass-reason "..."` to record an audit comment.
+- **Authorisation gate** — user-authorised transitions (Todo → Backlog; Review → Done; Backlog/Todo → Done; In-progress → Done parent close; In Progress → Backlog or Todo, the move back) require `--yes` from the caller as the explicit authorisation signal; bypassable-with-audit transitions accept `--bypass --bypass-reason "..."` to record an audit comment.
+- **Move back** (DEC-006) — `move-issue.py` takes an issue from In Progress back to Backlog where it is in a milestone, or to Todo where it is in none; a container in no milestone lands in Backlog where a child of it is in Backlog. The other target is refused, naming the right one. `--reason` is required: it is posted as the move's audit comment before the label changes and journaled with the move. The owner's claim is released after the move. A container is refused while a child of it is In Progress or in Review, each such child named, or while its children cannot all be read. No other issue moves with it.
 - **Forward cascade** (DEC-006) — `move-issue.py` walks every ancestor to the top, following the parent each issue's first line names, and brings any that is behind up to the moved issue's state, capped at In Progress, through declared transitions only: an ancestor in Todo goes to Backlog and then to In Progress, each step journaled, where a journal is kept, like the issue's own move, with that move as its reason. It is not an authorisation and needs none from the user: no override audit comment, no hook. At the `full` audit projection each ancestor it moves gets the provenance comment a governed move gets, naming the move that caused it; at the other projections a cascaded move posts nothing. A move to Done from Todo or Backlog (won't-do) moves no ancestor. The preview lists each ancestor's steps; a cascade that did not complete ends with a `[warn]` block naming each ancestor's outcome — run the same `move-issue` again to finish it (an issue already at its target still walks). Skip with `--no-cascade`.
 - **Closure cascade** (DEC-006) — `close-issue.py` surfaces parent-eligibility findings after the close, never auto-closes parents.
 - **Checkbox close-gate** (DEC-007) — `close-issue.py --mode=wont-do` refuses if any `- [ ]` box remains unticked in the body. Tick the satisfied criteria with `check-criterion <N> <index>...` (per DEC-038) before re-running the close; reach for `--skip-checkbox-gate` only when a criterion is genuinely won't-do (discouraged).
@@ -33,6 +35,11 @@ Dispatch to the script via the kit-level capability-command dispatcher (per [pki
 ```
 pkit project-management move-issue <N> --to <todo|backlog|in-progress|review|done> \
   [--bypass --bypass-reason "<text>"] [--no-cascade] [--dry-run] [--yes]
+```
+
+**Move back** an issue In Progress that nobody is working on — only on the user's authorisation for that issue, with the reason the work stopped in the user's words. Ask before running it: whether work has stopped is the user's judgement, never one to make from an issue's inactivity alone (DEC-006).
+```
+pkit project-management move-issue <N> --to <backlog|todo> --reason "<why the work stopped>" [--dry-run] [--yes]
 ```
 
 **Land the PR** of an issue in Review — wait for its checks, request the reviewer verdicts it still needs (agent review mode, per [project-management:DEC-028-agent-as-approver-paths]), merge — with one verb, run twice: once to check and review, once to merge on the user's authorisation.
@@ -113,8 +120,8 @@ Direct-path is equivalent for adopters whose kit predates the dispatcher:
 
 Three judgments belong to the LLM before invoking the script — these are interpretation, not deterministic:
 
-1. **Pick the operation.** Map the user's natural-language intent to `move`, `close`, or `reopen`. "Start work on #42" → move-issue --to in-progress; "won't fix this" → close-issue --mode wont-do; "this regressed" → reopen-issue.
-2. **Pick the target state for `move`.** Default to the next-forward state from the issue's current state unless the user names a specific target.
+1. **Pick the operation.** Map the user's natural-language intent to `move`, `close`, or `reopen`. "Start work on #42" → move-issue --to in-progress; "nobody is working on #42, put it back" → move-issue --to backlog (or todo) --reason; "won't fix this" → close-issue --mode wont-do; "this regressed" → reopen-issue.
+2. **Pick the target state for `move`.** Default to the next-forward state from the issue's current state unless the user names a specific target. For a move back, pick Backlog where the issue is in a milestone and Todo where it is in none; the script's refusal names the right one where that differs.
 3. **Resolve authorisation prompts.** When the script returns a refusal mentioning `--yes` or `--bypass`, surface the prompt to the user; re-invoke once the user has authorised.
 
 Everything else is the scripts' job — pass the inferred arguments through and surface the result.

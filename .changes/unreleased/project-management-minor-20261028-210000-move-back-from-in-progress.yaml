@@ -1,0 +1,17 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  An issue In Progress that nobody is working on can now move back (DEC-006,
+  #2281). `move-issue <N> --to backlog --reason "<why the work stopped>"`, or
+  `--to todo`, takes it there on the person's authorisation: `--yes`, or a yes
+  at a terminal. It lands in Backlog where the issue is in a milestone, or, for
+  a container, where a child of it is in Backlog, and in Todo otherwise. The
+  other target is refused, naming the right one. The reason is required, posted
+  as the move's audit comment before the label changes, and journaled with the
+  move. The owner's claim is released after the move, as a close releases it. A
+  container is refused while a child of it is In Progress or in Review, each
+  such child named, or while its children cannot all be read. `workflow.yaml`
+  declares the two moves, and the issue lifecycle's definition version rises to
+  6. Where a board carries state, the move writes no card, as for every move.
