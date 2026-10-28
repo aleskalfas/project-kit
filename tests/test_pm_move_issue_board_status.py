@@ -220,6 +220,21 @@ def test_a_move_finds_the_board_under_its_owner(
 
 
 @pytest.mark.usefixtures("kept")
+def test_a_move_back_writes_the_cards_status(world: World, board: BoardTracker) -> None:
+    """The card follows the move back from In Progress as it follows every move
+    (DEC-006)."""
+    task = _task(world, board)
+    assert world.promote(task, milestone=MILESTONE["title"]) == 0
+    assert world.move(task, "in-progress") == 0
+
+    assert world.move(task, "backlog", "--reason", "the work stopped") == 0
+
+    assert world.labels(task)[-1] == "state:backlog"
+    assert board.status(task) == "Backlog"
+    assert board.edits[-1] == (task, "Backlog")
+
+
+@pytest.mark.usefixtures("kept")
 def test_a_dry_run_names_the_write_and_writes_nothing(
     world: World, board: BoardTracker, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -268,3 +283,27 @@ def test_where_the_board_carries_the_state_nothing_changes(
     # The note cites what decides the Status, not DEC-019, which is about membership.
     assert "the agent maintains the Status (DEC-006)" in out
     assert "DEC-019" not in out
+
+
+def test_where_the_board_carries_the_state_a_move_back_is_refused(
+    world: World,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The board's Status write for a board-carried state comes with #2271, so
+    the move back writes nothing, and journals no move (DEC-006)."""
+    _with_config(world, monkeypatch, BOARD_CONFIG)
+    _with_substrate_map(world, monkeypatch, None)
+    task = _task(world, board, status="In Progress")
+    world.tracker.issues[task]["milestone"] = MILESTONE
+    world.tracker.issues[task]["labels"].append("state:in-progress")
+    labels = list(world.labels(task))
+
+    assert world.move(task, "backlog", "--reason", "the work stopped") == 1
+
+    assert world.labels(task) == labels and world.journal(task) == []
+    assert board.board_calls() == [] and board.status(task) == "In Progress"
+    assert "the board's Status write for a board-carried state comes with #2271" in (
+        capsys.readouterr().err
+    )

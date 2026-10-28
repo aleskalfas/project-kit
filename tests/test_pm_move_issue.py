@@ -1194,13 +1194,21 @@ def _move_back(
     children=None,
     projection: str = "audit",
     failing: tuple[str, ...] = (),
+    instance: int | None = 2,
+    assignee: str = "me",
+    claims: tuple[tuple[int, str], ...] = ((2, "me"),),
+    labels: tuple[str, ...] = (),
+    board_carried: bool = False,
 ):
-    """Run `move-issue 42 <argv>` on #42 In Progress; the exit code, the writes
-    in order, and the in-memory GitHub, whose `failing` calls fail once."""
+    """Run `move-issue 42 <argv>` on #42 In Progress, as the clone `instance`
+    (None: no instance id); the exit code, the writes in order, and the
+    in-memory GitHub, whose `failing` calls fail once. #42 is assigned to
+    `assignee`, and carries a claim on its comment log for each `claims` entry,
+    an instance and the account that made it, and the ownership `labels`."""
     issue = {
         "title": "[Feature] the frobnication layer" if container else "[Task] ship the frobnicator",
         "labels": ["state:in-progress"] if container else ["type:bug", "state:in-progress"],
-        "assignees": [{"login": "me"}],
+        "assignees": [{"login": assignee}],
         "state": "OPEN",
         "body": _FEATURE_BODY if container else _TASK_BODY,
         "milestone": milestone,
@@ -1230,11 +1238,15 @@ def _move_back(
         mi, "_read_children", lambda *_a: children if children is not None else mi._Children()
     )
     github = FakeGitHub()
-    github.add(42, assignees=("me",))
-    github.post(42, mi.instance_claims.ownership.format_event_comment(event="claim", instance=2))
+    github.add(42, assignees=(assignee,), labels=labels)
+    for number, author in claims:
+        claim = mi.instance_claims.ownership.format_event_comment(event="claim", instance=number)
+        github.post(42, claim, author=author)
     github.failing.update(failing)
     use(mi.instance_claims, monkeypatch, github)
-    clone_with(mi.instance_claims, monkeypatch, 2)
+    clone_with(mi.instance_claims, monkeypatch, instance)
+    if board_carried:
+        monkeypatch.setattr(mi.axis_carriage, "is_board_carried", lambda *_a, **_kw: True)
     FakeEngine(status_at("in-progress")).install(monkeypatch)
     rc = move.run([sys.executable, "move-issue.py", "42", *argv]).returncode
     return rc, writes, github
@@ -1286,6 +1298,129 @@ def test_a_release_that_fails_leaves_the_move_back_standing(monkeypatch, capsys)
     assert [w[0] for w in writes] == ["comment", "label", "journal"]
     err = capsys.readouterr().err
     assert "#42 moved back to backlog, but its owner could not all be released" in err
+
+
+# An owner this clone cannot release refuses the move back before anything is
+# written, so an issue never waits in Backlog or Todo still claimed (DEC-006,
+# DEC-035 point 4).
+
+
+def test_a_clone_with_no_instance_moves_back_an_issue_no_instance_owns(monkeypatch, capsys) -> None:
+    """DEC-035 point 1: a clone with no instance id touches no marker, and an
+    issue with no owner leaves it none to touch."""
+    rc, writes, github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", instance=None, claims=()
+    )
+    assert rc == 0
+    assert [w[0] for w in writes] == ["comment", "label", "journal"]
+    assert github.writes() == []
+    assert "ownership:" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("claims", "labels", "owner"),
+    [
+        pytest.param(((2, "me"),), (), "instance 2", id="a-claim-on-the-comment-log"),
+        pytest.param((), ("instance:3",), "instance 3", id="an-instance-label"),
+    ],
+)
+def test_a_clone_with_no_instance_refuses_an_owned_issue_naming_the_owner(
+    monkeypatch, capsys, claims, labels, owner
+) -> None:
+    rc, writes, github = _move_back(
+        monkeypatch,
+        "--to",
+        "backlog",
+        "--reason",
+        "stalled",
+        "--yes",
+        instance=None,
+        claims=claims,
+        labels=labels,
+    )
+    assert rc == 1
+    assert writes == [] and github.writes() == []
+    err = capsys.readouterr().err
+    assert (
+        f"[refused] #42 does not move back: #42 is owned by {owner} of @me, and this clone "
+        "takes no part in instance ownership, so it releases no claim (DEC-035 point 1)."
+    ) in err
+    assert "the issue never waits in backlog still claimed" in err
+    assert "→ run this from the owner's clone, or once the owner released it." in err
+
+
+def test_a_claim_another_account_made_refuses_before_the_guard_posts_anything(
+    monkeypatch, capsys
+) -> None:
+    """A claim on the comment log counts only from its account (DEC-043 point
+    3), so no clone of another account can release it: the move back refuses
+    before the clash guard, and a bypass of the guard posts nothing."""
+    rc, writes, github = _move_back(
+        monkeypatch,
+        "--to",
+        "backlog",
+        "--reason",
+        "stalled",
+        "--yes",
+        "--bypass-owner",
+        "her session is gone",
+        assignee="alice",
+        claims=((3, "alice"),),
+    )
+    assert rc == 1
+    assert writes == [] and github.writes() == []
+    err = capsys.readouterr().err
+    assert (
+        "#42 is owned by instance 3 of @alice, a claim on the comment log that only a clone "
+        "of @alice can release (DEC-043 point 3)"
+    ) in err
+    assert "→ run this from a clone of @alice, or once that account's clone released it." in err
+    assert "clash guard" not in err
+
+
+def test_another_instance_of_this_account_is_released_once_the_guard_is_bypassed(
+    monkeypatch, capsys
+) -> None:
+    """This clone can release a claim its own account made, so the clash guard
+    decides: refused, and with a bypass the move back releases that owner."""
+    common = ("--to", "backlog", "--reason", "stalled", "--yes")
+    rc, writes, github = _move_back(monkeypatch, *common, claims=((3, "me"),))
+    assert rc == 1
+    assert writes == [] and github.writes() == []
+    assert "#42 is owned by instance 3, and this clone is instance 2" in capsys.readouterr().err
+
+    rc, writes, github = _move_back(
+        monkeypatch, *common, "--bypass-owner", "its session is gone", claims=((3, "me"),)
+    )
+    assert rc == 0
+    assert [w[0] for w in writes] == ["comment", "label", "journal"]
+    assert _ownership_events(github) == ["claim 3", "release 3"]
+
+
+def test_a_move_back_of_an_issue_that_cannot_be_read_is_refused(monkeypatch, capsys) -> None:
+    rc, writes, _github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", failing=("view",)
+    )
+    assert rc == 1
+    assert writes == []
+    err = capsys.readouterr().err
+    assert "#42 could not be read, so whose it is cannot be told" in err
+    assert "→ run this again once the issue can be read." in err
+
+
+def test_where_the_board_carries_the_state_the_move_back_is_refused(monkeypatch, capsys) -> None:
+    """The board's Status write for a board-carried state comes with #2271:
+    until then the move back writes nothing, releases no claim and journals no
+    move (DEC-006)."""
+    rc, writes, github = _move_back(
+        monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", board_carried=True
+    )
+    assert rc == 1
+    assert writes == [] and github.calls == []
+    err = capsys.readouterr().err
+    assert "[refused] #42 does not move back here: the board carries its state" in err
+    assert "comes with #2271 (pull request #2275)" in err
+    assert "no claim was released and no move journaled" in err
 
 
 def test_a_move_back_without_a_reason_is_refused_and_writes_nothing(monkeypatch, capsys) -> None:
@@ -1363,11 +1498,25 @@ def test_a_container_whose_children_cannot_be_told_is_refused(monkeypatch, capsy
     from tests.pm_composed_move_support import load_move_issue
 
     mi = load_move_issue()
-    for children, said in (
-        (mi._Children(incomplete="the issue list could not be read (gh failure)"), "gh failure"),
+    abroad = mi.containment.ResolvedChild(
+        7, mi.containment.ChildSubstrate.NATIVE, repository="o/other"
+    )
+    for children, said, again in (
+        (
+            mi._Children(incomplete="the issue list could not be read (gh failure)"),
+            "its children could not be listed in full: the issue list could not be read",
+            True,
+        ),
         (
             mi._Children(untold=((_child(mi, 46, "")[0], "it could not be read"),)),
             "#46: it could not be read",
+            True,
+        ),
+        (
+            mi._Children(open_elsewhere=(abroad,)),
+            "o/other#7 is open in o/other, where only open or closed is read, so it holds "
+            "#42 until it closes.",
+            False,
         ),
     ):
         rc, writes, _github = _move_back(
@@ -1382,7 +1531,10 @@ def test_a_container_whose_children_cannot_be_told_is_refused(monkeypatch, capsy
         )
         assert rc == 1
         assert writes == []
-        assert said in capsys.readouterr().err
+        err = capsys.readouterr().err
+        assert said in err
+        # Reading again tells no more of an open child in another repository.
+        assert ("run this again once every child can be read" in err) is again
 
 
 def test_a_container_in_no_milestone_lands_in_backlog_over_a_child_in_backlog(
@@ -1477,16 +1629,18 @@ def test_read_children_reads_each_childs_state(mi, monkeypatch) -> None:
     ]
     abroad_open = containment.ResolvedChild(7, here, repository="o/other")
     abroad_closed = containment.ResolvedChild(8, here, repository="o/other")
+    abroad_unread = containment.ResolvedChild(9, here, repository="o/other")
     records = {
         7: containment.IssueRecord(issue={"state": "OPEN"}, parent=None),
         8: containment.IssueRecord(issue={"state": "CLOSED"}, parent=None),
+        9: containment.UnreadIssue("no access"),
     }
     children = [containment.ResolvedChild(n, here) for n in (43, 44, 45, 46, 48)]
     _seam(
         mi,
         monkeypatch,
         rows=rows,
-        children=[*children, abroad_open, abroad_closed],
+        children=[*children, abroad_open, abroad_closed, abroad_unread],
         records=records,
     )
     read = mi._read_children(10, {}, None)
@@ -1496,13 +1650,17 @@ def test_read_children_reads_each_childs_state(mi, monkeypatch) -> None:
         (45, "done"),
     ]
     untold = {c.ref: why for c, why in read.untold}
-    assert set(untold) == {"#46", "#48", "o/other#7"}
+    assert set(untold) == {"#46", "#48", "o/other#9"}
     assert "not among the issues the issue list returned" in untold["#48"]
-    assert "o/other" in untold["o/other#7"]
+    assert "no access" in untold["o/other#9"]
+    # Open in another repository: read only as open or closed, so it is no
+    # child that could not be read, and it holds the container until it closes.
+    assert [c.ref for c in read.open_elsewhere] == ["o/other#7"]
     assert read.incomplete is None
+    assert not read.told
 
 
-def test_read_children_says_a_child_set_it_cannot_vouch_for(mi, monkeypatch) -> None:
+def test_read_children_says_a_child_set_it_cannot_list_in_full(mi, monkeypatch) -> None:
     _seam(mi, monkeypatch, rows=[], children=[], complete=False)
     assert mi._read_children(10, {}, None).incomplete == "a native read failed"
     monkeypatch.setattr(mi.containment, "fetch_issue_corpus", lambda _config: None)

@@ -31,7 +31,8 @@ silent (per [project-management:DEC-051-axis-carriage-activation]):
   * `board` — the Projects v2 single-select `Status` field carries the state.
     DEC-006 has the agent maintain the Status, but the write on this path is
     not built yet: it follows the read of a board-carried state (#2271), and
-    until then the move surfaces as a guidance message.
+    until then the move surfaces as a guidance message, and a move back from
+    in-progress is refused.
   * `kit-label` / `adopter-label` — the state lives as a label: the kit's
     `state:*` in greenfield, or the adopter's own label under a `label:`
     binding. State changes happen via `gh issue edit --add-label <new>
@@ -72,15 +73,21 @@ reason the work stopped (`--reason`, required). It lands in backlog where the
 issue is in a milestone, or, for a container, where a child of it is in
 backlog, and in todo otherwise: the other target is refused, naming the right
 one. A container is refused where a child of it is in-progress or in review,
-each such child named, or where its children cannot all be told. The reason
+each such child named, or where its children cannot all be told. So is an
+issue with an owner this clone cannot release, the owner named: any owner,
+where this clone takes no part in instance ownership, and a claim another
+account made on the comment log (`_lib/instance_claims.cannot_release`). So is
+every move back where the board carries the state, until #2271. The reason
 is posted as the move's audit comment before the label changes, at every
 projection but `off`, and journaled with the move. The owner's claim is then
 released through `_lib/instance_claims.release`, the one release path
-close-issue takes. No ancestor moves with it.
+close-issue takes. No ancestor moves with it, and a Task's branch and draft
+pull request stay as they are.
 
 Membership gate per DEC-021 runs at startup.
 
-The clash guard (DEC-035 point 6) runs before anything is written, where this
+The clash guard (DEC-035 point 6) runs before anything is written, and after a
+move back's own checks, where this
 clone set an instance id or holds a seat of a topology: a move of an issue
 another instance owns is refused at bypassable-with-audit (DEC-014), through
 `_lib/instance_claims`. `--bypass-owner "<reason>"` posts the reason on the
@@ -104,7 +111,8 @@ Exit codes:
   1  membership refusal / authorisation refusal / the clash guard refused an
      issue another instance owns / this clone's seat could not be confirmed /
      a move back with no reason, or of a container with a child in-progress or
-     in review, or whose children cannot all be told
+     in review, or whose children cannot all be told, or of an issue with an
+     owner this clone cannot release, or where the board carries the state
   2  usage error (unknown state, illegal transition, issue not found, a move
      back to the state it does not land in, --reason on any other move)
   3  gh failure
@@ -508,6 +516,29 @@ def main() -> int:
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("move-issue", args.issue_number, exc)
+
+    # The move back (DEC-006) is settled before the guard, whose bypass posts its
+    # reason: whether the board carries the state, the move's reason, where it
+    # lands, whether a container may take it, and whether this clone can release
+    # the owner, which no bypass of the guard changes. A move the workflow does
+    # not declare is no move back, and is refused below.
+    transition = _find_transition(workflow, current_state, args.to, structural_type)
+    move_back = transition is not None and _is_move_back(current_state, args.to)
+    if move_back:
+        refused = _check_move_back(
+            args.issue_number,
+            args.to,
+            args.reason,
+            milestone=milestone,
+            structural_type=structural_type,
+            context=cascade_context,
+            state_on_board=state_on_board,
+            clone=clone,
+            capability_root=capability_root,
+        )
+        if refused is not None:
+            return refused
+
     if clone is not None:
         decision = instance_claims.guard(
             args.issue_number,
@@ -604,8 +635,7 @@ def main() -> int:
                 _run_forward_cascade(cascade, cascade_context)
         return 0
 
-    # Look up the transition.
-    transition = _find_transition(workflow, current_state, args.to, structural_type)
+    # The transition, looked up above.
     if transition is None:
         legal_targets = _legal_targets(workflow, current_state, structural_type)
         print(
@@ -619,7 +649,6 @@ def main() -> int:
 
     # `--reason` is the move back's alone (DEC-006); any other move gives its
     # reason another way, such as `--bypass-reason`.
-    move_back = _is_move_back(current_state, args.to)
     if args.reason is not None and not move_back:
         print(
             "error: --reason applies to a move back from in-progress only "
@@ -670,21 +699,8 @@ def main() -> int:
                 )
                 return 1
 
-    # The move back (DEC-006): its reason, where it lands, and whether a
-    # container may take it, settled before anything is written.
-    move_back_reason = ""
-    if move_back:
-        refused = _check_move_back(
-            args.issue_number,
-            args.to,
-            args.reason,
-            milestone=milestone,
-            structural_type=structural_type,
-            context=cascade_context,
-        )
-        if refused is not None:
-            return refused
-        move_back_reason = (args.reason or "").strip()
+    # Why the work stopped, on a move back, which its checks above required.
+    move_back_reason = (args.reason or "").strip() if move_back else ""
 
     # Residual-placeholder check per DEC-031 — hard-reject at transition.
     # Run before any mutation so an unauthored body blocks the transition.
@@ -841,6 +857,8 @@ def main() -> int:
 
     # The move back releases the owner's claim (DEC-006), through the one release
     # path close-issue takes. A release that fails is a warning: the move stands.
+    # An owner this clone cannot release refused the move before any write, so a
+    # clone that takes no part in instance ownership has no owner to release here.
     if move_back and clone is not None:
         instance_claims.say(
             instance_claims.release(
@@ -1090,8 +1108,9 @@ def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
 #
 # A person moves an issue nobody is working on back from in-progress, so
 # in-progress means work is moving. Every check here runs before anything is
-# written, and writes nothing. The writes are main()'s: the reason as the audit
-# comment, the label, the journal entry, and the release of the owner's claim.
+# written, the clash guard's bypass comment included, and writes nothing. The
+# writes are main()'s: the reason as the audit comment, the label, the journal
+# entry, and the release of the owner's claim.
 
 # The states a child of a container holds where the container may not move back
 # over it: the container would stand behind it.
@@ -1132,15 +1151,23 @@ class _Children:
     """A container's children as the move back reads them.
 
     ``read`` holds each child in this repository with the state it is in, a
-    closed one at done. ``untold`` holds each child whose state cannot be told
-    here, with why: one the issue list did not return, one whose state is no
-    state of the lifecycle, and one in another repository that is open or could
-    not be read. ``incomplete`` says why the child set itself could not be read
-    in full, when it could not, and then nothing else is read."""
+    closed one at done. ``untold`` holds each child that could not be read, with
+    why: one the issue list did not return, one whose state is no state of the
+    lifecycle, and one in another repository whose read failed. ``open_elsewhere``
+    holds each child in another repository that is open: only open or closed is
+    read there, so it holds the container until it closes, and reading it again
+    tells no more. ``incomplete`` says why the child set itself could not be
+    listed in full, when it could not, and then nothing else is read."""
 
     read: tuple[tuple[containment.ResolvedChild, str], ...] = ()
     untold: tuple[tuple[containment.ResolvedChild, str], ...] = ()
+    open_elsewhere: tuple[containment.ResolvedChild, ...] = ()
     incomplete: str | None = None
+
+    @property
+    def told(self) -> bool:
+        """Whether the state of every child is known."""
+        return self.incomplete is None and not self.untold and not self.open_elsewhere
 
 
 def _read_children(
@@ -1165,6 +1192,7 @@ def _read_children(
     rows = {row.get("number"): row for row in corpus.rows}
     read: list[tuple[containment.ResolvedChild, str]] = []
     untold: list[tuple[containment.ResolvedChild, str]] = []
+    open_elsewhere: list[containment.ResolvedChild] = []
     for child in resolution.children:
         if child.repository is not None:
             record = containment.read_issue_record(
@@ -1173,9 +1201,7 @@ def _read_children(
             if isinstance(record, containment.UnreadIssue):
                 untold.append((child, f"it could not be read: {record.detail}"))
             elif str(record.issue.get("state", "")).upper() != "CLOSED":
-                untold.append(
-                    (child, f"it is open in {child.repository}, where its state is not read")
-                )
+                open_elsewhere.append(child)
             continue
         row = rows.get(child.number)
         if row is None:
@@ -1191,15 +1217,15 @@ def _read_children(
             untold.append((child, f"its state reads {state!r}, which is no state of the lifecycle"))
             continue
         read.append((child, state))
-    return _Children(read=tuple(read), untold=tuple(untold))
+    return _Children(read=tuple(read), untold=tuple(untold), open_elsewhere=tuple(open_elsewhere))
 
 
 def _move_back_landing(milestone: dict | None, children: _Children | None) -> tuple[str, str]:
     """Where a move back lands, and why (DEC-006): backlog where the issue is in
-    a milestone, as the state inference reads a milestone, or, for a container,
-    where a child of it is in backlog, since a container is never behind the
-    work under it; todo otherwise. ``children`` is None for an issue that is no
-    container."""
+    a milestone, which keeps the scheduling, or, for a container, where a child
+    of it is in backlog, since a container is never behind the work under it;
+    todo otherwise, which withdraws the scheduling. ``children`` is None for an
+    issue that is no container."""
     if milestone:
         title = milestone.get("title") if isinstance(milestone, dict) else None
         return "backlog", f"it is in the Milestone {title!r}" if title else "it is in a Milestone"
@@ -1219,13 +1245,28 @@ def _check_move_back(
     milestone: dict | None,
     structural_type: str,
     context: _CascadeContext,
+    state_on_board: bool,
+    clone: instance_claims.Clone | None,
+    capability_root: Path,
 ) -> int | None:
     """Refuse a move back that may not be made, saying why; the exit code, or
     None where it may (DEC-006).
 
-    It needs a reason. A container needs every child told, and none in-progress
-    or in review. And it lands where `_move_back_landing` says: the other target
-    is a usage error, which names the right one."""
+    Where the board carries the state, it is not made yet. It needs a reason. A
+    container needs every child told, and none in-progress or in review. It
+    lands where `_move_back_landing` says: the other target is a usage error,
+    which names the right one. And this clone must be able to release every
+    owner of the issue, so the issue never waits moved back and still claimed
+    (`instance_claims.cannot_release`)."""
+    if state_on_board:
+        print(
+            f"[refused] #{number} does not move back here: the board carries its state, and "
+            "the board's Status write for a board-carried state comes with #2271 (pull "
+            "request #2275). Nothing was written: no claim was released and no move "
+            "journaled (DEC-006).",
+            file=sys.stderr,
+        )
+        return 1
     if not (reason or "").strip():
         print(
             f"[refused] #{number}: a move back from in-progress needs "
@@ -1237,20 +1278,8 @@ def _check_move_back(
     children = None
     if structural_type in context.levels:
         children = _read_children(number, context.config, context.substrate_map)
-        if children.incomplete is not None or children.untold:
-            print(
-                f"[refused] #{number}: whether a child of it is in-progress or in review "
-                "cannot be told, so it does not move back (DEC-006). Nothing was written.",
-                file=sys.stderr,
-            )
-            if children.incomplete is not None:
-                print(
-                    f"  → its children could not be read in full: {children.incomplete}",
-                    file=sys.stderr,
-                )
-            for child, why in children.untold:
-                print(f"  → {child.ref}: {why}", file=sys.stderr)
-            print("  → run this again once every child can be read.", file=sys.stderr)
+        if not children.told:
+            _say_children_untold(number, children)
             return 1
         started = [(child, state) for child, state in children.read if state in _STARTED]
         if started:
@@ -1275,7 +1304,47 @@ def _check_move_back(
             file=sys.stderr,
         )
         return 2
+    kept = instance_claims.cannot_release(
+        number,
+        clone,
+        context.config,
+        capability_root=capability_root,
+        login=getattr(context.invoker, "github_login", None),
+    )
+    if kept is not None:
+        print(
+            f"[refused] #{number} does not move back: {kept.why}. A move back releases the "
+            f"owner, so the issue never waits in {target} still claimed (DEC-006). Nothing "
+            f"was written.\n  → {kept.remedy}.",
+            file=sys.stderr,
+        )
+        return 1
     return None
+
+
+def _say_children_untold(number: int, children: _Children) -> None:
+    """The refusal of a container's move back where the state of a child of it
+    is not known, naming each such child and what lets the move go on."""
+    print(
+        f"[refused] #{number}: whether a child of it is in-progress or in review "
+        "cannot be told, so it does not move back (DEC-006). Nothing was written.",
+        file=sys.stderr,
+    )
+    if children.incomplete is not None:
+        print(
+            f"  → its children could not be listed in full: {children.incomplete}",
+            file=sys.stderr,
+        )
+    for child, why in children.untold:
+        print(f"  → {child.ref}: {why}", file=sys.stderr)
+    for child in children.open_elsewhere:
+        print(
+            f"  → {child.ref} is open in {child.repository}, where only open or closed is "
+            f"read, so it holds #{number} until it closes.",
+            file=sys.stderr,
+        )
+    if children.incomplete is not None or children.untold:
+        print("  → run this again once every child can be read.", file=sys.stderr)
 
 
 def _infer_current_state(
