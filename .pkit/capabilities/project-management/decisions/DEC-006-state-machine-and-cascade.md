@@ -42,6 +42,8 @@ The Todo → Backlog gate means the **user-held scheduling commitment** ("this i
 
 The wrapper that carries it is `promote-issue`, whose `--milestone` is optional ([project-management:DEC-026-work-ownership-lifecycle], "The seven commands"). The gate's severity is **bypassable-with-audit** in every project, whether it runs Milestones or not.
 
+Where the project's topology declares pools of workers, a seat that builds, a worker or a lead, takes of its own choosing only a Task in an open Milestone of a pool it serves. So a Task scheduled with an audited reason and no Milestone is taken only where the user directs a seat to it (refinement per [project-management:DEC-061-pools-of-workers] point 5). Putting a Task into a Milestone in a pool, or moving it from one pool to another, is then the user's act, held like the transitions the user authorises at hard-reject severity and never bypassed with an audit (DEC-061 point 6). That hold sits on the write of the Task's Milestone, beside the scheduling gate, whose severity stays bypassable-with-audit.
+
 ### Cascade rule
 
 Three behaviours, encoded in the schema's `cascade` block:

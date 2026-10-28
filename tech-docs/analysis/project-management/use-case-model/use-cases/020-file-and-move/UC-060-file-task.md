@@ -57,6 +57,7 @@ pkit:
         - project-management:DEC-039
         - project-management:DEC-041
         - project-management:DEC-054#4
+        - project-management:DEC-061#6
         - COR-005
         - COR-013
         - COR-017
@@ -143,6 +144,7 @@ pkit:
 
 - **10a.** The body still holds a placeholder of the template. The system warns, and files the Task. Its first move of the [issue lifecycle](../../../glossary.md#term-issue-lifecycle--issue-lifecycle) is then refused until the body is written ([DEC-031](../../../../../../.pkit/capabilities/project-management/decisions/DEC-031-reject-unauthored-placeholder-bodies.md)).
 - **11a.** The developer answers no at the terminal. The system writes nothing, and the use case ends.
+- **11b.** The Milestone of `--milestone` is in a [pool](../../../glossary.md#term-pool--pool) of workers, so the Task would enter that pool. The system asks the developer at the terminal, or takes `--yes` as [consent](../../../../core/glossary.md#term-consent--consent), and with neither refuses and writes nothing ([DEC-061 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#6-putting-work-into-a-pool-is-the-persons-act)). Once the Task is filed, an [audit comment](../../../glossary.md#term-audit-comment--audit-comment) on the Task records the consent.
 - **12a.** GitHub refuses the filing. The system says so and exits `3`, and nothing is filed. The use case ends.
 - **13a.** The link to the parent fails. The system warns that the Task is filed under its parent by its body alone, and names `pkit pm link-parent <n>`, which makes the link ([DEC-005](../../../../../../.pkit/capabilities/project-management/decisions/DEC-005-linking-and-containment.md)). The use case ends with the Task filed.
 - **13b.** The project keeps containment as text, where its GitHub has no sub-issues. The system makes no link, and rewrites the comment on the parent that lists its children ([DEC-039](../../../../../../.pkit/capabilities/project-management/decisions/DEC-039-containment-substrate-selection.md)).

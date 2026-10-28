@@ -5,9 +5,10 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""Project-management capability — next-task (DEC-059 point 7).
+"""Project-management capability — next-task (DEC-059 point 7, DEC-061 point 5).
 
-A worker takes its next task from one pool that every seat shares:
+A worker takes its next task from one pool that every seat shares, or, where
+the topology declares pools of workers, from the pools its seat serves:
 
     next-task [--dry-run] [--yes] [--limit N]
 
@@ -30,6 +31,13 @@ Steps:
     the `start-work` this command runs does not name it again (DEC-059 point 1).
     A clone that holds no seat, holds a planner's seat or whose seat cannot be
     confirmed takes nothing. Outside a topology a clone takes with no scope.
+    Code that cannot read the topology in full takes nothing (DEC-061 point 9).
+  - The pools (DEC-061 point 5, ADR-072 point 2): where the topology declares
+    pools, the open milestones are read once and mapped to their pools by
+    their `Pool:` lines (`_lib/pools`), and the reckoning keeps only a Task
+    whose native milestone is an open milestone of a pool the seat serves.
+    A seat that names no pool takes nothing. Where no pool is declared, no
+    milestone is read, and every seat takes from the one shared pool.
   - One listing of the open issues of work (`_lib/issue_list`), which leaves
     state issues out. The ready Tasks are ranked from it.
   - Where the clone takes part in instance ownership, the owner of each Task in
@@ -46,10 +54,13 @@ Exit codes:
   1  membership refusal / foreign-repo refusal
   2  usage error / a clone that holds no seat, or a planner's seat / this
      clone's seat could not be confirmed / the listing reached its limit, so
-     an open dependency could be missed
-  3  the open issues could not be read, or a ready Task's owner could not be
-     read and no other Task was free
-  5  no Task is ready for this clone, so nothing was started
+     an open dependency could be missed / this code cannot read the topology
+     in full (DEC-061 point 9)
+  3  the open issues, or where pools are declared the open milestones, could
+     not be read, or a ready Task's owner could not be read and no other Task
+     was free
+  5  no Task is ready for this clone, so nothing was started; where pools are
+     declared, the line says why in terms of the seat's pools
   *  a failed `start-work` passes its exit code through
 """
 
@@ -70,6 +81,7 @@ from _lib import (
     instance_claims,
     instance_ownership,
     issue_list,
+    pools,
     session_guard,
     task_pool,
 )
@@ -91,9 +103,10 @@ DEFAULT_LIMIT = 1000
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Take the next ready Task from the shared pool, the highest in priority "
-            "first, within this clone's seat's scope, and start it, claimed, through "
-            "start-work (DEC-059 point 7)."
+            "Take the next ready Task from the shared pool, or from the pools this "
+            "clone's seat serves where the topology declares them, the highest in "
+            "priority first, within the seat's scope, and start it, claimed, through "
+            "start-work (DEC-059 point 7, DEC-061 point 5)."
         ),
     )
     parser.add_argument(
@@ -151,6 +164,24 @@ def main() -> int:
         print(f"[refused] next-task: {taker.refusal}", file=sys.stderr)
         return 2
 
+    # Where the topology declares pools, the open milestones are read once, and
+    # the seat takes only from its pools' (DEC-061 point 5, ADR-072 point 2).
+    pool_map: pools.PoolMap | None = None
+    milestones: frozenset[int] | None = None
+    if taker.declared is not None:
+        pool_map = pools.read_map(taker.declared, config=config)
+        if pool_map is None:
+            print(
+                "[failed] next-task: the open milestones could not be read, so which Tasks "
+                "this seat's pools hold cannot be told, and nothing was started "
+                "(DEC-061 point 8).",
+                file=sys.stderr,
+            )
+            return 3
+        for warning in pool_map.warnings():
+            print(f"[warn] next-task: {warning}", file=sys.stderr)
+        milestones = pool_map.numbers(taker.pools)
+
     listing = _list_open(config, args.limit)
     if listing is None:
         return 3
@@ -173,6 +204,7 @@ def main() -> int:
         scope=taker.scope,
         takes_over=taker.takes_over,
         readers=readers,
+        milestones=milestones,
     )
     print(f"next-task: {_pool_line(len(ready), taker)}")
 
@@ -246,6 +278,12 @@ def main() -> int:
             file=sys.stderr,
         )
         return 3
+    if pool_map is not None:
+        print(
+            "[ok] next-task: no Task is ready for this clone, so nothing was started: "
+            f"{pools.why_none_ready(taker.pools, pool_map)}."
+        )
+        return EXIT_NONE_READY
     print("[ok] next-task: no Task is ready for this clone, so nothing was started.")
     return EXIT_NONE_READY
 
@@ -298,6 +336,9 @@ def _pool_line(count: int, taker: task_pool.Taker) -> str:
         if scope.types:
             parts.append("types " + ", ".join(scope.types))
         within = "within the scope of " + " and ".join(parts)
+    if taker.declared is not None:
+        served = ", ".join(taker.pools) or "none"
+        within = f"from its pools ({served}), {within}"
     noun = "Task is" if count == 1 else "Tasks are"
     order = (
         "the highest in priority first"

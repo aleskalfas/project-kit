@@ -31,6 +31,7 @@ pkit:
         - project-management:DEC-035#3
         - project-management:DEC-035#4
         - project-management:DEC-059#7
+        - project-management:DEC-061#5
         - COR-017
         - COR-021
         - COR-042
@@ -77,7 +78,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `create-issue` writes no owner. DEC-035 point 3 decides that the instance that files an issue owns the issue, and #519 tracks it.
 
-- **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task with `pkit pm next-task`, and so may the agent of every seat that builds with no scope. The command hands the Task to no seat whose scope leaves the Task out ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
+- **4b.** The next piece is a Task of the kind `test`, and a testing [seat](../../../glossary.md#term-seat--seat)'s scope names that kind of work. That seat's agent may take the Task with `pkit pm next-task`, and so may the agent of every seat that builds with no scope. The command hands the Task to no seat whose scope leaves the Task out ([DEC-059 point 7](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool) and [DEC-012](../../../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)). Where the topology declares [pools](../../../glossary.md#term-pool--pool), only the seats that serve the pool of the Task's [Milestone](../../../glossary.md#term-milestone--milestone) may take the Task ([DEC-061 point 5](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#5-a-seat-that-builds-chooses-its-work-only-from-its-pools)).
 
 **Postconditions:** What the next piece needs from this piece has landed on the [default branch](../../../../core/glossary.md#term-default-branch--default-branch), and the next piece's [Task](../../../glossary.md#term-task--task) can start.
 

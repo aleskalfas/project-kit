@@ -288,6 +288,8 @@ def _wire_main_mocks(
         return milestone_obj
 
     monkeypatch.setattr(pi, "resolve_milestone", fake_resolve_milestone)
+    # The open milestones carry no `Pool:` line, so no pool asks (DEC-061 point 6).
+    monkeypatch.setattr(pi, "list_open_milestones", lambda _c, gh=None: [])
 
     def fake_attach(issue_number, title, config):
         if attach_called is not None:
@@ -610,3 +612,50 @@ def test_bypass_owner_posts_its_reason_first_and_once(pi, monkeypatch, capsys) -
     captured = capsys.readouterr()
     assert "--bypass-owner let this clone, instance 2, act on it" in captured.err
     assert "audit comment already present; idempotent skip" in captured.out
+
+
+# ---- pools of workers (DEC-061 point 6) ----------------------------------------------
+
+
+def _pooled(pi, monkeypatch, argv: list[str]) -> list[tuple]:
+    """Promote #42, a Task in no milestone, into milestone #7 of the pool alpha;
+    return each move-issue run, by its arguments."""
+    moves: list[tuple] = []
+    _wire_main_mocks(
+        pi,
+        monkeypatch,
+        sys_argv=["promote-issue", "42", "--milestone", "7", "--reason", "PM approved", *argv],
+        milestone_obj=_FakeMilestone(number=7, title="Sprint 7"),
+        current_state="todo",
+    )
+    monkeypatch.setattr(pi, "resolve_capability_root", lambda _: CAPABILITY_ROOT)
+    rows = [{"number": 7, "title": "Sprint 7", "description": "Pool: alpha"}]
+    monkeypatch.setattr(pi, "list_open_milestones", lambda _c, gh=None: rows)
+    monkeypatch.setattr(pi.pools, "declared_pools", lambda _r: (("alpha",), None))
+    monkeypatch.setattr(pi.pools.consent, "at_a_terminal", lambda: False)
+    issue = json.dumps({"title": "[Task] do the thing", "milestone": None})
+    monkeypatch.setattr(
+        pi, "gh_run", lambda *_a, **_k: SimpleNamespace(returncode=0, stdout=issue, stderr="")
+    )
+    monkeypatch.setattr(pi, "_invoke_move_issue", lambda *a, **_k: moves.append(a) or 0)
+    return moves
+
+
+def test_a_task_scheduled_into_a_pool_off_a_terminal_without_yes_is_refused(
+    pi, monkeypatch, capsys
+) -> None:
+    moves = _pooled(pi, monkeypatch, [])
+    assert pi.main() == 1
+    assert moves == []
+    assert "Putting #42 into the pool alpha is the person's to authorise" in (
+        capsys.readouterr().err
+    )
+
+
+def test_a_task_scheduled_into_a_pool_with_consent_logs_it_in_the_audit_comment(
+    pi, monkeypatch
+) -> None:
+    moves = _pooled(pi, monkeypatch, ["--yes"])
+    assert pi.main() == 0
+    ((_number, _target, reason, *_rest),) = moves
+    assert reason == ("PM approved; pool none → alpha, with the person's consent (DEC-061 point 6)")

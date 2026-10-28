@@ -31,6 +31,8 @@ pkit:
         - project-management:DEC-059#3
         - project-management:DEC-059#4
         - project-management:DEC-059#6
+        - project-management:DEC-061#9
+        - project-management:DEC-061#10
         - COR-017
         - COR-021
       artefact:
@@ -69,8 +71,15 @@ pkit:
 
 - **1a.** The planner lists from a clone that holds no [seat](../../../glossary.md#term-seat--seat). The listing signs nothing, since only an [instance](../../../glossary.md#term-instance--instance) signs its listings ([DEC-059 point 6](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and [DEC-035 point 1](../../../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)). The planner lists from an instance instead.
 - **3a.** A [change](../../../../core/glossary.md#term-change--change) that added seats was closed unmerged. The listing of the seats names each [state issue](../../../glossary.md#term-state-issue--state-issue) that no seat names, for a person to close ([DEC-059 point 3](../../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#3-each-seat-has-a-state-issue-which-the-topology-names)).
+- **3b.** The [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool) of workers. The listing shows the pools each seat serves, and each pool's open [Milestones](../../../glossary.md#term-milestone--milestone) by number and title. It warns of the work left stranded ([DEC-061 point 10](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#10-the-check-refuses-an-undeclared-pool-and-the-listings-warn-of-stranded-work)):
+   - a pool that no seat serves, or a pool with no open Milestone
+   - a seat that builds and names no pool
+   - a Milestone that names a pool the topology does not declare
+   - the count of the Tasks in Backlog in no pool, and of those each seat owns outside its pools
+- **3c.** The open Milestones cannot be read, where the topology declares pools. The listing shows the rest, says that the Milestones could not be read, and exits `3` (`seats.py`).
+- **3d.** The code the planner runs cannot read the topology in full. The listing shows what it read, and warns of what it did not understand ([DEC-061 point 9](../../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#9-code-that-cannot-read-the-topology-in-full-uses-none-of-the-authority-it-grants)).
 
-**Postconditions:** The planner knows which [instance](../../../glossary.md#term-instance--instance) works on each open [issue](../../../glossary.md#term-issue--issue), and how far each owned [Task](../../../glossary.md#term-task--task) has come, without visiting any agent. The planner knows too which clone holds each [seat](../../../glossary.md#term-seat--seat).
+**Postconditions:** The planner knows which [instance](../../../glossary.md#term-instance--instance) works on each open [issue](../../../glossary.md#term-issue--issue), and how far each owned [Task](../../../glossary.md#term-task--task) has come, without visiting any agent. The planner knows too which clone holds each [seat](../../../glossary.md#term-seat--seat), and, where the [topology](../../../glossary.md#term-topology--topology) declares [pools](../../../glossary.md#term-pool--pool), what each pool holds.
 
 **Minimal guarantees:**
 

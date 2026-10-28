@@ -725,14 +725,16 @@ A project that runs several agents at once, each in a clone of its own, declares
 schema_version: 1
 settings:
   release_mode: tolerant      # the only mode built
+pools: [alpha, bravo]         # optional pools of workers
 seats:
   - name: planner             # unique, and never renamed
-    role: planner             # planner, worker or lead
+    role: planner             # planner, worker or lead; a planner names no pool
     organizer: true           # at most one seat
     state_issue: 2210         # written by create-seats
   - name: tester
     role: worker
     agent: project-manager    # the default
+    pools: [alpha]            # the pools a seat that builds serves
     scope:
       types: [test]           # workstreams, types of the type axis, or both
     state_issue: 2211
@@ -746,6 +748,7 @@ seats:
 - **A scope narrows the work of its own seat,** and reserves nothing for that seat. It names workstreams that `project/workstreams.yaml` declares, values of the type axis, or both
 - **The organizer seat's clone** may release another seat by force. At most one seat is the organizer seat
 - **Each seat names its state issue,** which says who holds the seat. The topology never says who holds a seat
+- **Pools of workers are optional.** Where the topology declares `pools`, each seat that builds names the pools it serves, and takes its work only from them. A planner names no pool ("Pools of workers" below)
 
 **Adding seats.** Add the seats at the end of the file on a branch, and run `pkit pm create-seats` there. The command creates a state issue for each seat that names none and is not retired. It writes each issue's number into that seat's entry. Commit the file with the change, so the change lands with its state issues.
 
@@ -760,6 +763,7 @@ seats:
 - a seat name used twice, or more than one organizer seat
 - a seat that is not retired and names no state issue, or two seats that name one
 - a scope that names a workstream or a type the project does not declare
+- a seat that names a pool the topology does not declare, a seat that names pools where none are declared, or a planner's seat that names a pool
 - the `label` substrate in `project/instance-ownership.yaml`, since a label cannot carry what a claim names
 - a seat of the base deleted or moved rather than retired
 - a base that cannot be resolved, while the working tree holds a topology
@@ -772,6 +776,7 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 - **A claim on the seat's state issue.** The claim names the account, the clone's key and where the clone lies, its machine and folder. The first claim on a free seat holds. A clone that loses the seat to a claim made in the same instant holds no seat, and its agent takes another, or stops
 - **One seat for each clone.** A clone that holds a seat takes it up again, as a new session in the clone does, since the key outlives every session. It takes no second seat, and releases a retired seat it holds first
 - **No seat is taken** where the default branch cannot be resolved, where a seat names no state issue or its state issue cannot be read, or where another clone holds the seat
+- **Code that cannot read the topology in full takes no seat.** It exits 2, and says what it did not understand ("Code that cannot read the topology in full" below)
 
 **Releasing a seat.** A seat stays taken until it is released: the tolerant mode is the only one built, so no seat is freed for its clone's silence. `pkit pm release-seat` releases the seat this clone holds, and the clone then forgets it. `pkit pm release-seat <name> --force --reason "<why>"` releases a seat whoever holds it, and the seat's state issue logs the reason.
 
@@ -779,7 +784,7 @@ The check compares a change with a base, so it is no member of `pkit validate`, 
 - **What a release frees:** every claim that the seat's clone made as that seat stops counting, with no write to those issues. A dead clone's Tasks in Backlog and In Progress are then free for another clone to take. A clone that takes the seat again, the same clone included, revives none of those claims
 - **What a release leaves in Review:** a Task in Review waits on its reviewers and a person, so no worker takes it up ([project-management:DEC-059-topology-of-seats] point 9). `seats` names each such Task with its pull request, and the person lands it or hands it over to a worker
 
-**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition and its scope. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub.
+**Listing the seats.** `pkit pm seats` lists each seat, read from the default branch, with its number, its role, its agent definition, its scope and its pools. It also shows whether the seat is the organizer seat or retired, its state issue and its holder, and marks the seat this clone holds. It then names each open state issue of a seat that no seat names, such as one a change closed unmerged left, for a person to close on GitHub. Where the topology declares pools, it shows each pool's open milestones too ("Pools of workers" below).
 
 **The Tasks in Review a released seat left.** Last, `seats` names each Task in Review whose claim stopped counting because its seat was released, by its clone or by force. It lists them under the seat and the clone that made the claim, each with the open pull request from the Task's branch, `<type>/<N>-<slug>`:
 
@@ -803,9 +808,27 @@ Tasks in Review that a released seat left, each for a person to land or to hand 
 
 `scripts/_lib/topology.py` is the one reader of the topology. Every command that acts as a seat reads the topology through it, from the default branch. It also builds each run's snapshot: the topology, the members who may write on a state issue, and the clone's account, key and place. `schemas/topology.schema.json` holds the file's shape.
 
+**Code that cannot read the topology in full.** The parse marks a topology with a key this code does not know, at any depth ([project-management:DEC-061-pools-of-workers] point 9). It marks too a value it cannot read, such as an unknown role, release mode or schema version, or a list written as a string. On the mark, `next-task`, `start-work`, `take-seat` and `release-seat --force` refuse with exit 2, and say what was not understood. `seats` warns and lists the rest, and work in flight goes on, such as `review-work` and `done-work`.
+
+**The order of work.** The guard protects only the commands run from a checkout that holds it. So a project adds pools, or any later key, to its topology only once every clone that may take a seat runs this code. No check enforces this order yet: it is the operator's discipline.
+
+#### Pools of workers — the `Pool:` line and `set-pool` (per [project-management:DEC-061-pools-of-workers])
+
+A topology may declare **pools of workers**, and each seat that builds, a worker or a lead, names the pools it serves. A person puts a line of work into a pool by marking its Milestone with a `Pool: <name>` line. Each Task in that Milestone goes with it. So a line of work starts and finishes with no change to the topology.
+
+- **The `Pool:` line** is read as a whole line, wherever it stands in the Milestone's description, and the `Close trigger:` line stays first. Two such lines, a malformed one, or an undeclared pool put the Milestone in no pool, with a warning. `schemas/time-containers.yaml` declares its grammar
+- **A Task's pool** is the pool of its native Milestone field, never of the `Milestone:` line of its body. A Task in no Milestone, in a closed one or in one of no pool is in no pool
+- **Marking a Milestone is the person's act.** `create-milestone --pool <name>` files a Milestone into a pool, and `set-pool <milestone> <pool>` or `set-pool <milestone> --clear` changes or clears it. Each asks at a terminal, or takes `--yes` on the person's word, and refuses off a terminal without it. Each replaces the line, never adds a second, and logs the change and the consent in the description
+- **Bringing a Task into a pool asks the same way:** `create-issue --milestone`, `edit-issue --milestone`, `promote-issue --milestone`, and the milestone an `assign-milestone` hook sets. The Task's audit comment records the consent. Taking a Task out of a pool, or moving it within one, asks nothing
+- **A plan's approval** gives the person's word for the pools of the Tasks a planner files, where the plan names each Task's milestone and that milestone's pool
+- **What the listings show.** `seats` and `take-seat` show each pool's open milestones. They warn of a pool no seat serves, a pool with no open milestone, and a seat that builds and names no pool. They warn too of a milestone that names an undeclared pool. `seats` also counts the Tasks in Backlog in no pool, and those each seat owns outside its pools
+- **Retiring a pool.** Remove it from each seat's pools, then its name from the list, and its open Milestones fall into no pool, with a warning. Removing `pools` from the topology and from every seat brings back the one shared pool
+
+A worker takes only from its pools (`next-task`, below), and a close rolls its open Tasks forward within its pool (`close-milestone`, below). `scripts/_lib/pools.py` joins the topology's pools to the open milestones for each command that needs both. `scripts/_lib/milestone.py` holds the one parser of the line.
+
 #### Taking the next ready Task — `next-task` (per [project-management:DEC-059-topology-of-seats] point 7)
 
-`pkit pm next-task` takes this clone's own Task, else the next ready Task from one pool that every seat shares. It starts the Task, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It ranks this clone's own Tasks, and then the pool's, by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
+`pkit pm next-task` takes this clone's own Task, else the next ready Task: from the one pool every seat shares where no pools are declared, otherwise only from the pools its seat serves. It starts the Task, claimed, through `start-work`. It reads the open issues of work once, through the one read of issues. It ranks this clone's own Tasks, and then the pool's, by priority, the highest first ([project-management:DEC-012-classification-axes]), and then by number, the lowest first.
 
 A ready Task is one of two kinds:
 
@@ -813,6 +836,12 @@ A ready Task is one of two kinds:
 - **A Task In Progress whose claim no longer counts,** in a project with a topology, since the seat that claimed it was released. No claim lapses yet
 
 **This clone's own Tasks.** A Task in Backlog that this clone's instance owns is this clone's own work, outside the pool, as a lead owns what it files. Such a Task comes first where its `## Dependencies` section names no open issue and it falls in the seat's scope.
+
+**The pools.** Where the topology declares pools of workers, `next-task` reads the open milestones once and maps each `Pool:` line to its pool. It keeps only a Task whose native milestone is an open milestone of a pool the seat serves, this clone's own Tasks among them. The seat's scope then narrows what its pools hold, and a seat that names no pool takes nothing. Where no pool is declared, it reads no milestone ([project-management:DEC-061-pools-of-workers] points 5 and 8).
+
+- **Milestones that cannot be read:** the seat takes nothing, never the whole Backlog, and the command exits 3
+- **Nothing ready:** the command exits 5 and says why in terms of the seat's pools, such as `pool alpha has no open milestone`
+- **A Task outside the seat's pools:** a person may direct a seat to it with `start-work`, and the seat takes it. `start-work` warns of it, as a warning and never a gate
 
 What else holds a Task back:
 
@@ -833,9 +862,9 @@ What else holds a Task back:
 |---|---|
 | 0 | A Task was started, a dry run said which it would start, or the person declined the `Start #N?` prompt, and the command printed `aborted.` |
 | 1 | Membership refused, or the foreign-repo guard did |
-| 2 | A clone that holds no seat, a planner's seat or a seat that cannot be confirmed, or a listing that reached `--limit` |
-| 3 | The open issues could not be read, or a ready Task's owner could not be read and no other Task was free |
-| 5 | No Task is ready for this clone, so nothing was started |
+| 2 | A clone that holds no seat, a planner's seat or a seat that cannot be confirmed, a listing that reached `--limit`, or code that cannot read the topology in full |
+| 3 | The open issues could not be read, or where pools are declared the open milestones, or a ready Task's owner could not be read and no other Task was free |
+| 5 | No Task is ready for this clone, so nothing was started. Where pools are declared, the line says why in terms of the seat's pools |
 | other | `start-work`'s own exit code, where it failed for a cause other than a lost claim |
 
 `scripts/_lib/task_pool.py` reckons which Tasks are ready, once for every command that needs it ([project-management:DEC-025-parallelization-primitive]).
@@ -844,7 +873,7 @@ What else holds a Task back:
 
 At the start of each session, the project-manager agent lists the seats with `seats`, and takes one with `take-seat` where the session was started for one, or its clone holds one already. The seat's role then sets its direction, and it runs the role's loop from the pm skill's `work-loop` sub-procedure. A session that holds no seat, as in a project with no topology, infers its direction from the request as before.
 
-- **A planner** plans each intent through batch planning, and files the work with no owner. Its Tasks enter the pool once scheduled into Backlog, a move the plan's gate lists and the person's approval authorises. It builds nothing, and closes a container only on the person's authorisation
+- **A planner** plans each intent through batch planning, and files the work with no owner. Its Tasks enter the pool once scheduled into Backlog, a move the plan's gate lists and the person's approval authorises. Where the topology declares pools, it files into the milestones the person gives it, and its plan names each Task's milestone and that milestone's pool. It builds nothing, and closes a container only on the person's authorisation
 - **A worker** first goes on with what its clone has in flight: a Task In Progress, a pull request of its own that conflicts with the default branch, or a fix round on one whose verdict asks for changes. It mends a conflict by merging the default branch in, and never rebases or force-pushes. Then it takes the next ready Task with `next-task --yes`, builds it in its own clone, and opens its pull request with `open-pr --draft` and `review-work`. Each round starts by reading its pull requests in Review again, with `show-pr <branch>`
 - **A pull request that a released seat left in Review** is the person's to land, or to hand over to a worker, since its Task waits on its reviewers and a person ([project-management:DEC-059-topology-of-seats] point 9). `next-task` never offers its Task. The worker the person hands it to fetches its branch, and mends it from then on
 - **No role authorises a merge,** or anything else a person authorises. The person lands each pull request through the merge gate
@@ -930,7 +959,8 @@ pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" -
 
 | Command | What it does |
 |---|---|
-| `create-milestone <category> --name "<name>" [--close-trigger T] [--due-on YYYY-MM-DD]` | File a new Milestone in a declared `milestone_categories:` category. Computes the next number, composes the title from the category's `title_format`, and writes the `Close trigger:` first body line. |
+| `create-milestone <category> --name "<name>" [--close-trigger T] [--due-on YYYY-MM-DD] [--pool NAME]` | File a new Milestone in a declared `milestone_categories:` category. Computes the next number, composes the title from the category's `title_format`, and writes the `Close trigger:` first body line. `--pool` puts it into a pool of workers, with the person's consent. |
+| `set-pool <milestone> <pool>` or `set-pool <milestone> --clear` | Set or clear the pool of workers an open Milestone is in, by its `Pool:` line, with the person's consent, logged in its description. |
 | `close-milestone <n> [--target <M>] [--force]` | Close an open Milestone (by number or exact title) through the validated path. A date-triggered close rolls its open children forward to the next Milestone. |
 
 Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
@@ -958,6 +988,8 @@ A Milestone with an open child is reported as not eligible, with the count of op
 
 The **rollforward target** is, first to last: `--target <M>`, an open Milestone by number or exact title; the Milestone's `Rollforward target: <M>` line, which DEC-016 puts under the `Close trigger:` line and which takes a number, `#<N>`, the `[#<N>](../milestone/<N>)` link or an exact title; else the next-numbered open Milestone of its category — the declared category whose `title_format` its title fits, and in it the lowest number above its own. With no candidate, or more than one, the command refuses before it writes anything and asks you to name the target with `--target`. `--dry-run` lists every move the close would make.
 
+**Within the pool.** Where the topology declares pools of workers, the next-numbered is sought only among the open milestones of the closing one's pool ([project-management:DEC-061-pools-of-workers] point 7). A milestone in no pool rolls only into one in no pool. A target that `--target` or the `Rollforward target:` line names in another pool is named, with its pool, in the close's consent prompt. A forced close names each Task in Backlog or In Progress it leaves in no pool.
+
 The audit line counts the children rolled forward and names the target — `…; 1 child issue(s) closed; 2 rolled forward to #7 Sprint 7: Polish).` The close is written before the moves, so when a move fails the command exits 4 and the closed Milestone still records where its open children go: re-run `close-milestone <n>` and it moves the children still on the Milestone to that target. A child already moved is no longer its child and is not moved again, and `edit-issue` finds the audit comment a failed attempt posted and does not post it again (the comment carries its day, so a re-run on a later day posts a dated one of its own). A closed Milestone without that record — closed by hand, or before rollforward existed — is left as it is.
 
 A content close moves no child. When `--force` closes a content-based Milestone, or an `either` one before its due date, the open children stay on it, and the audit line counts them as still open, not rolled forward. Move one with `edit-issue <N> --milestone <next> --reason "<R>"`: the issue's current milestone may be closed (only the target must be open), and a first-line `Milestone:` ref moves with the native field. A raw `gh issue edit --milestone` changes only the native field, so the closed Milestone would go on counting the child through its first line.
@@ -976,6 +1008,8 @@ pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the 
 ```
 
 `promote-issue` without `--milestone` leaves the milestone as it is and says so (`milestone: unchanged`). On an issue already past Todo, `promote-issue --milestone` still attaches the milestone but has no transition to carry an audit comment, so it points at `edit-issue` instead.
+
+**Into a pool of workers.** Where the milestone carries a `Pool:` line, filing, scheduling or moving a Task into it is the person's act ([project-management:DEC-061-pools-of-workers] point 6). Each of these verbs asks at a terminal, or takes `--yes` on the person's word, and refuses off a terminal without it. The Task's audit comment records the consent ("Pools of workers" above).
 
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
 

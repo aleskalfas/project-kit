@@ -42,6 +42,12 @@ Gates per DEC-026:
     on the seat's state issue, and the promotion refuses where it cannot
     (DEC-059 point 6).
 
+A Task scheduled with `--milestone` into a Milestone of a pool of workers
+enters that pool, or moves between pools, which is the person's act (DEC-061
+point 6): asked at a terminal, or `--yes` on their word, and off a terminal
+without it nothing is moved. The consent is recorded in the one audit comment
+move-issue posts, with the reason.
+
 Composes over `move-issue.py`: this wrapper invokes `move-issue --to backlog`,
 **threading `--reason` to move-issue's `--bypass-reason`**, then attaches the
 milestone (if any). Per DEC-049, **move-issue is the sole audit-comment writer**
@@ -59,7 +65,8 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  promoted
   1  membership refusal / the clash guard refused an issue another instance
-     owns / this clone's seat could not be confirmed
+     owns / this clone's seat could not be confirmed / a Task scheduled into a
+     pool off a terminal without --yes
   2  usage error / gate failure / gh failure
 """  # noqa: E501 — a usage line is a command, kept whole
 
@@ -75,7 +82,15 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, instance_claims, session_guard
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    bootstrap_gate,
+    instance_claims,
+    pools,
+    session_guard,
+)
+from _lib.comment import post_comment
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -83,7 +98,8 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import resolve_milestone
+from _lib.milestone import list_open_milestones, resolve_milestone
+from _lib.structural_type import infer_structural_type
 from _lib.substrate_writes import write_milestone
 
 
@@ -190,6 +206,8 @@ def main() -> int:
     # When --milestone is omitted, skip resolution entirely — promoting on
     # --reason alone is a valid path (DEC-026, "The seven commands").
     milestone_title: str | None = None
+    milestone_number: int | None = None
+    pool_move = pools.Move(False)
     if args.milestone is not None:
         resolved = resolve_milestone(str(args.milestone), config)
         if resolved is None:
@@ -201,6 +219,10 @@ def main() -> int:
             )
             return 2
         milestone_title = resolved.title
+        milestone_number = resolved.number
+        # A Task scheduled into a Milestone of a pool enters that pool, or
+        # moves between pools, which is the person's act (DEC-061 point 6).
+        pool_move = _pool_move(args.issue_number, milestone_number, capability_root, config)
 
     # The clash guard (DEC-035 point 6), before the move and before any
     # milestone is attached: an issue another instance owns is refused, unless a
@@ -236,6 +258,8 @@ def main() -> int:
         print(f"  milestone: {milestone_title}")
     else:
         print("  milestone: unchanged (no --milestone given)")
+    if pool_move.asks:
+        print(f"  pool:      {pool_move.said()}  (the person's consent, DEC-061 point 6)")
     print(f"  reason:    {reason}")
 
     if args.dry_run:
@@ -251,7 +275,15 @@ def main() -> int:
             )
         return 0
 
-    if not args.yes and sys.stdin.isatty():
+    if pool_move.asks:
+        stop = pools.authorise(
+            pool_move, subject=f"#{args.issue_number}", yes=args.yes, verb="promote-issue"
+        )
+        if stop is not None:
+            return stop
+        # The consent is recorded in the one audit comment move-issue posts.
+        reason = f"{reason}; {pool_move.logged()}"
+    elif not args.yes and sys.stdin.isatty():
         reply = input("Proceed? [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
@@ -285,6 +317,19 @@ def main() -> int:
             args.issue_number, milestone_title, config
         ):
             return 2
+        # No transition carries an audit comment here, so the consent gets its own.
+        if pool_move.asks and not post_comment(
+            "issue",
+            args.issue_number,
+            pools.consent_comment("promote-issue", pool_move, milestone_number),
+            config,
+            run=gh_run,
+        ):
+            print(
+                f"[warn] the audit comment recording the person's consent to "
+                f"{pool_move.said()} could not be posted on #{args.issue_number}.",
+                file=sys.stderr,
+            )
         idempotent_detail = (
             "milestone attached; no state transition needed"
             if milestone_title is not None
@@ -421,6 +466,52 @@ def _detect_current_state(
 # removed in #217 — both moved to `_lib/milestone.py` along with the
 # `resolve_milestone(arg, config)` helper that handles either number
 # or title input. Call sites switched to the lib resolver.
+
+
+def _pool_move(issue_number: int, target: int, capability_root: Path, config: dict) -> pools.Move:
+    """What scheduling the issue into the milestone ``target`` does to its pool
+    (DEC-061 point 6): only a Task enters a pool. The issue's title and native
+    milestone are read here; where they cannot be, the issue is judged as a
+    Task in no milestone, so the write asks rather than skip the person. The
+    issue is read only where the milestone carries a `Pool:` line."""
+    rows = list_open_milestones(config, gh=lambda argv: gh_run(argv, config, check=False))
+    if not pools.may_ask(target, rows):
+        return pools.Move(False)
+    issue: dict = {}
+    try:
+        proc = gh_run(
+            ["gh", "issue", "view", str(issue_number), "--json", "title,milestone"],
+            config,
+            check=False,
+        )
+        if proc.returncode == 0:
+            loaded = json.loads(proc.stdout)
+            issue = loaded if isinstance(loaded, dict) else {}
+    except (FileNotFoundError, ValueError, TypeError):
+        issue = {}
+    yaml = YAML(typ="safe")
+    issue_types = _read_schema(capability_root, "issue-types.yaml", yaml)
+    classification = _read_schema(capability_root, "classification.yaml", yaml)
+    title = str(issue.get("title") or "")
+    if title and (
+        infer_structural_type(title, issue_types, classification=classification) != "task"
+    ):
+        return pools.Move(False)
+    return pools.move(
+        pools.native_number(issue), target, rows=rows, capability_root=capability_root
+    )
+
+
+def _read_schema(capability_root: Path, name: str, yaml_loader: YAML) -> dict:
+    """A parsed capability schema (`schemas/<name>`), or {} where it cannot be read."""
+    path = capability_root / "schemas" / name
+    if not path.is_file():
+        return {}
+    try:
+        data = yaml_loader.load(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 # ---- side-effects ------------------------------------------------------

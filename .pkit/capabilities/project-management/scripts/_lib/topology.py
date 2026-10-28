@@ -39,11 +39,34 @@ instance ownership, which confirms the clone's seat before a command writes
 (DEC-059 point 6) and passes each seat's holder to the ownership fold
 ([pkit:ADR-041] point 7). The time of reading joins it when a claim lapses.
 
+Pools of workers
+----------------
+The topology may declare pools of workers, and each seat that builds names the
+pools it serves ([project-management:DEC-061-pools-of-workers] point 1). The
+parse reads both by name, and never which Milestones a pool holds: this module
+reads no Milestone ([pkit:ADR-072] point 1). ``Topology.pools`` is None where
+the topology declares no pool, and ``Seat.pools`` None where a seat names none.
+:func:`stranded` names what would leave work stranded that the topology alone
+shows: a pool no seat serves, and a seat that builds and names no pool.
+
+What this code cannot read
+--------------------------
+:func:`parse` marks a topology it cannot read in full: a key it does not know,
+at any depth, or a value of a known key it cannot read, such as an unknown
+role, release mode or schema version, or a list written as a string
+(DEC-061 point 9, ADR-072 point 5). Each such thing is a problem of the code
+``SHAPE``, and :attr:`Topology.not_understood` names them. The parse refuses
+nothing: the reading still gives what it could read. Each command decides what
+the mark means for it: the commands that take work, a seat or a release by
+force refuse, the listings warn, and work in flight goes on.
+
 The check
 ---------
 :func:`parse` reports what the file says wrong of itself: a shape the schema
 (``schemas/topology.schema.json``) refuses, a seat name used twice, more than one
-organizer seat, a seat that names no state issue, and two seats that name one.
+organizer seat, a seat that names no state issue, two seats that name one, a
+seat that names a pool the topology does not declare, a seat that names pools
+where the topology declares none, and a planner's seat that names any pool.
 :func:`check` adds what needs more than the file: a scope that names a workstream
 or a type the project does not declare, a topology under the ``label`` ownership
 substrate (point 9), and each seat of the base deleted or moved rather than
@@ -105,8 +128,13 @@ RELEASE_MODES = (TOLERANT,)
 NAME_PATTERN = re.compile(r"[a-z](?:[a-z0-9-]{0,38}[a-z0-9])?")
 AGENT_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
 
-_TOP_KEYS = frozenset({"schema_version", "pkit_schema", "binds_to", "settings", "seats"})
-_SEAT_KEYS = frozenset({"name", "role", "agent", "scope", "organizer", "state_issue", "retired"})
+#: The roles of the seats that build, and so name the pools they serve (DEC-061 point 1).
+BUILDERS = (WORKER, LEAD)
+
+_TOP_KEYS = frozenset({"schema_version", "pkit_schema", "binds_to", "settings", "seats", "pools"})
+_SEAT_KEYS = frozenset(
+    {"name", "role", "agent", "scope", "organizer", "state_issue", "retired", "pools"}
+)
 _SCOPE_KEYS = frozenset({"workstreams", "types"})
 _SETTINGS_KEYS = frozenset({"release_mode"})
 
@@ -122,6 +150,9 @@ LABEL_SUBSTRATE = "label-substrate"
 SEAT_DELETED = "seat-deleted"
 SEAT_MOVED = "seat-moved"
 UNRESOLVED = "unresolved"
+UNDECLARED_POOL = "undeclared-pool"
+NO_POOLS_DECLARED = "no-pools-declared"
+PLANNER_POOLS = "planner-pools"
 
 #: Git's environment for a reading that stays in this clone: a partial clone
 #: fetches an object it lacks unless told not to.
@@ -162,7 +193,8 @@ class Scope:
 
 @dataclass(frozen=True)
 class Seat:
-    """One seat of the topology. ``number`` is its place in the list, from one."""
+    """One seat of the topology. ``number`` is its place in the list, from one.
+    ``pools`` are the pools it serves, by name, and None where it names none."""
 
     name: str
     number: int
@@ -172,6 +204,12 @@ class Seat:
     organizer: bool = False
     state_issue: int | None = None
     retired: bool = False
+    pools: tuple[str, ...] | None = None
+
+    @property
+    def builds(self) -> bool:
+        """Whether the seat builds, a worker's or a lead's (DEC-061 point 1)."""
+        return self.role in BUILDERS
 
 
 @dataclass(frozen=True)
@@ -181,6 +219,8 @@ class Topology:
     ``ref`` and ``commit`` name where it was read, and are None for the working
     tree. ``problems`` holds what :func:`parse` found wrong with the file. A seat
     the parse could not read is left out of ``seats``, and the problems say so.
+    ``pools`` are the pools of workers it declares, and None where it declares
+    none (DEC-061 point 1).
     """
 
     seats: tuple[Seat, ...] = ()
@@ -188,10 +228,17 @@ class Topology:
     problems: tuple[Problem, ...] = ()
     ref: str | None = None
     commit: str | None = None
+    pools: tuple[str, ...] | None = None
 
     def seat(self, name: str) -> Seat | None:
         """The seat named ``name``, the first where two share it, or None."""
         return next((s for s in self.seats if s.name == name), None)
+
+    @property
+    def not_understood(self) -> tuple[str, ...]:
+        """What the parse could not read in full, each in words a line can
+        carry: the mark of DEC-061 point 9. Empty where it read all of it."""
+        return tuple(p.message for p in self.problems if p.code == SHAPE)
 
     @property
     def active(self) -> tuple[Seat, ...]:
@@ -217,8 +264,11 @@ def parse(data: object, *, ref: str | None = None, commit: str | None = None) ->
     """The topology a parsed ``topology.yaml`` declares, with what is wrong with it.
 
     Reports a shape the schema refuses, a seat name used twice, more than one
-    organizer seat, a seat that names no state issue and is not retired, and two
-    seats that name one state issue. Never raises on what a hand wrote.
+    organizer seat, a seat that names no state issue and is not retired, two
+    seats that name one state issue, and a seat's pools the topology does not
+    allow (:func:`_pools_across`). Never raises on what a hand wrote. Each
+    shape it cannot read is a ``SHAPE`` problem, the mark of what this code
+    does not understand (:attr:`Topology.not_understood`).
     """
     problems: list[Problem] = []
     if not isinstance(data, dict):
@@ -239,6 +289,7 @@ def parse(data: object, *, ref: str | None = None, commit: str | None = None) ->
             )
         )
     release_mode = _settings(data.get("settings"), problems)
+    pools = _pool_names(data["pools"], "the topology", problems) if "pools" in data else None
     raw = data.get("seats")
     if raw is None:
         raw = []
@@ -247,7 +298,101 @@ def parse(data: object, *, ref: str | None = None, commit: str | None = None) ->
         raw = []
     seats = [s for s in (_seat(entry, i + 1, problems) for i, entry in enumerate(raw)) if s]
     problems += _across(seats)
-    return Topology(tuple(seats), release_mode, tuple(problems), ref, commit)
+    problems += _pools_across(seats, pools)
+    return Topology(tuple(seats), release_mode, tuple(problems), ref, commit, pools)
+
+
+def _pool_names(raw: object, where: str, problems: list[Problem]) -> tuple[str, ...]:
+    """The pools ``raw`` names, each a name as a seat's is. A value that is no
+    such list is a shape the parse cannot read, and reads as naming no pool, so
+    no seat takes more for it (DEC-061 point 9)."""
+    if not isinstance(raw, list) or not all(
+        isinstance(name, str) and NAME_PATTERN.fullmatch(name) for name in raw
+    ):
+        problems.append(
+            Problem(
+                SHAPE,
+                f"{where} has `pools: {raw!r}`, and pools are a list of names, each lowercase "
+                "letters, digits and hyphens, starting with a letter.",
+            )
+        )
+        return ()
+    return tuple(dict.fromkeys(raw))
+
+
+def _pools_across(seats: list[Seat], pools: tuple[str, ...] | None) -> list[Problem]:
+    """A seat's pools the topology does not allow (DEC-061 point 10): a pool it
+    does not declare, pools where it declares none, and any pool of a planner's
+    seat, which files and builds nothing."""
+    problems: list[Problem] = []
+    for seat in seats:
+        if seat.pools is None:
+            continue
+        where = f"seat {seat.number} ({seat.name})"
+        if seat.role == PLANNER:
+            problems.append(
+                Problem(
+                    PLANNER_POOLS,
+                    f"{where} is a planner's and names pools, and a planner serves no pool: it "
+                    "files into the Milestones a person gives it (DEC-061 point 1).",
+                )
+            )
+        elif pools is None:
+            problems.append(
+                Problem(
+                    NO_POOLS_DECLARED,
+                    f"{where} names pools, and the topology declares none: declare them in "
+                    "the top-level `pools`, or remove the seat's (DEC-061 point 10).",
+                )
+            )
+        else:
+            for name in seat.pools:
+                if name not in pools:
+                    problems.append(
+                        Problem(
+                            UNDECLARED_POOL,
+                            f"{where} names the pool {name!r}, which the topology does not "
+                            f"declare ({', '.join(pools) or 'none'}).",
+                        )
+                    )
+    return problems
+
+
+def stranded(tree: Topology) -> list[str]:
+    """What would leave work stranded that the topology alone shows, where it
+    declares pools (DEC-061 point 10): each pool no active seat that builds
+    serves, and each active seat that builds and names no pool, which takes
+    nothing of its own choosing (point 8). Empty where it declares none."""
+    if tree.pools is None:
+        return []
+    builders = [seat for seat in tree.active if seat.builds]
+    served = {name for seat in builders for name in seat.pools or ()}
+    found = [
+        f"the pool {name} is served by no seat, so no worker takes its work."
+        for name in tree.pools
+        if name not in served
+    ]
+    found += [
+        f"the seat {seat.name}, a {seat.role}, names no pool, so it takes no work of its own "
+        "choosing (DEC-061 point 8)."
+        for seat in builders
+        if not seat.pools
+    ]
+    return found
+
+
+def not_understood_refusal(tree: Topology) -> str | None:
+    """The clause a command that takes work, a seat or a release by force
+    refuses with, where the code cannot read ``tree`` in full, or None
+    (DEC-061 point 9, ADR-072 point 5)."""
+    if not tree.not_understood:
+        return None
+    said = " ".join(tree.not_understood)
+    return (
+        f"this code cannot read the topology of {tree.where()} in full, so it uses none of "
+        f"the authority the topology grants (DEC-061 point 9). What it did not understand: "
+        f"{said} Update this checkout to a version that reads it."
+    )
 
 
 def _settings(raw: object, problems: list[Problem]) -> str:
@@ -329,6 +474,7 @@ def _seat(entry: object, number: int, problems: list[Problem]) -> Seat | None:
         organizer=flags["organizer"],
         state_issue=state_issue,
         retired=flags["retired"],
+        pools=_pool_names(entry["pools"], where, problems) if "pools" in entry else None,
     )
 
 

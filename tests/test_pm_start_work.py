@@ -966,6 +966,80 @@ def test_a_claim_whose_seat_cannot_be_read_refuses(run_main, sw, seats, capsys) 
     )
 
 
+def test_code_that_cannot_read_the_topology_in_full_makes_no_claim(
+    run_main, sw, monkeypatch, capsys
+) -> None:
+    """DEC-061 point 9, ADR-072 point 5: the claim that starts a Task refuses on
+    the mark with exit 2, before anything is written."""
+    claims = sw.instance_claims
+    ownership = claims.ownership
+    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
+    reading = claims.Topology(
+        claims.Seat("worker-2", 2, "worker"), held, refusal="this code cannot read it in full."
+    )
+    topology_with(claims, monkeypatch, reading, key="k2")
+    github = _assigned_42()
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), github=github)
+    assert (rc, mutations) == (2, [])
+    assert "[refused] start-work #42: this code cannot read it in full." in capsys.readouterr().err
+    assert github.issues[42].comments == []
+
+
+def _pooled(sw, monkeypatch, *, seat_pools: tuple[str, ...], rows: Any) -> None:
+    """This clone holds `worker-2`, serving `seat_pools`, in a topology that
+    declares the pools alpha and bravo; `rows` are the open milestones (None: the
+    read fails)."""
+    claims = sw.instance_claims
+    ownership = claims.ownership
+    held = {"worker-2": ownership.Holder(ownership.SEAT_HELD, "me", "k2")}
+    seat = claims.Seat("worker-2", 2, "worker", None, seat_pools)
+    topology_with(
+        claims, monkeypatch, claims.Topology(seat, held, pools=("alpha", "bravo")), key="k2"
+    )
+    monkeypatch.setattr(sw.pools.milestone, "list_open_milestones", lambda _c, gh=None: rows)
+
+
+def _in_milestone(number: int | None) -> dict:
+    task = _task(["type:bug", "state:backlog"])
+    task["milestone"] = None if number is None else {"number": number, "title": "M"}
+    return task
+
+
+ROWS = [{"number": 3, "description": "Pool: alpha"}, {"number": 4, "description": "Pool: bravo"}]
+
+
+@pytest.mark.parametrize(
+    ("milestone", "said"),
+    [(4, "it is in the pool bravo, outside the pools this seat serves (alpha)"), (None, "no pool")],
+)
+def test_a_task_outside_the_seats_pools_warns_and_is_taken(
+    run_main, sw, monkeypatch, capsys, milestone, said
+) -> None:
+    """DEC-061 point 5: the take's own check is a warning, never a gate."""
+    _pooled(sw, monkeypatch, seat_pools=("alpha",), rows=ROWS)
+    rc, mutations = run_main(_in_milestone(milestone), github=_assigned_42())
+    assert rc == 0 and ("move", "in-progress") in mutations
+    err = capsys.readouterr().err
+    assert "[warn] start-work #42:" in err and said in err
+
+
+def test_a_task_in_the_seats_pools_takes_with_no_warning(run_main, sw, monkeypatch, capsys) -> None:
+    _pooled(sw, monkeypatch, seat_pools=("alpha",), rows=ROWS)
+    rc, _mutations = run_main(_in_milestone(3), github=_assigned_42())
+    assert rc == 0
+    assert "[warn] start-work" not in capsys.readouterr().err
+
+
+def test_a_milestone_that_cannot_be_read_warns_and_the_take_goes_on(
+    run_main, sw, monkeypatch, capsys
+) -> None:
+    """ADR-072 point 6: the take's own check warns where it cannot read the Milestone."""
+    _pooled(sw, monkeypatch, seat_pools=("alpha",), rows=None)
+    rc, _mutations = run_main(_in_milestone(3), github=_assigned_42())
+    assert rc == 0
+    assert "the pool of its Milestone #3 could not be read" in capsys.readouterr().err
+
+
 def test_a_clone_that_holds_no_seat_marks_nothing(run_main, sw, monkeypatch, capsys) -> None:
     """DEC-059 point 6: no seat, no instance, whatever id file the clone kept."""
     claims = sw.instance_claims

@@ -20,6 +20,14 @@ Per [project-management:DEC-016-time-bound-containers]:
   - The category's title_format must include `{n}` + `{name}` placeholders.
   - Each instance carries an explicit `Close trigger:` first body line.
 
+Per [project-management:DEC-061-pools-of-workers], `--pool <name>` puts the new
+Milestone into a pool of workers the topology of the default branch declares,
+by a `Pool: <name>` line under the `Close trigger:` line (point 2). It is the
+person's act (point 6): asked at a terminal, or `--yes` on their word, and off
+a terminal without it the command refuses. The description logs the change
+and the consent, in a line that never takes the `Pool:` form. A name the
+topology does not declare, or a topology that cannot be read, is refused.
+
 Membership gate per DEC-021 runs at startup.
 
 Self-contained via PEP 723; runs via
@@ -29,15 +37,17 @@ Or via the dispatcher:
   pkit project-management create-milestone <category> --name "..."
 
 Exit codes:
-  0  milestone created (or dry-run)
-  1  membership refusal
-  2  usage error (no categories declared / category not declared / invalid format)
+  0  milestone created (or dry-run), or the person declined at the prompt
+  1  membership refusal / a pool off a terminal without --yes
+  2  usage error (no categories declared / category not declared / invalid format
+     / a pool the topology does not declare, or cannot be told to declare)
   3  gh failure
 """  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import re
 import subprocess
@@ -51,7 +61,7 @@ _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 import contextlib
 
-from _lib import bootstrap_gate, session_guard, title_rules
+from _lib import bootstrap_gate, consent, milestone, pools, session_guard, title_rules
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -109,6 +119,17 @@ def main() -> int:
         "--description",
         default="",
         help="Optional body text after the `Close trigger:` first line.",
+    )
+    parser.add_argument(
+        "--pool",
+        default=None,
+        metavar="NAME",
+        help=(
+            "Put the new milestone into this pool of workers, one the topology "
+            "declares, by a `Pool:` line in its description (DEC-061 point 2). It is "
+            "the person's act: asked at a terminal, or --yes on their word, and "
+            "logged in the description (DEC-061 point 6)."
+        ),
     )
     parser.add_argument(
         "--capability-root",
@@ -242,12 +263,25 @@ def main() -> int:
         body_lines.append("")
         body_lines.append(args.description)
     body = "\n".join(body_lines)
+    if args.pool is not None:
+        refusal = pools.write_refusal(args.pool, capability_root)
+        if refusal is not None:
+            print(f"[refused] create-milestone: {refusal} Nothing was created.", file=sys.stderr)
+            return 2
+        body = milestone.with_log_line(
+            milestone.with_pool_line(body, args.pool),
+            milestone.pool_log_line(
+                None, args.pool, verb="create-milestone", today=dt.date.today().isoformat()
+            ),
+        )
 
     # Preview.
     print("about to create milestone:")
     print(f"  category:      {args.category}")
     print(f"  title:         {title}")
     print(f"  close_trigger: {close_trigger}")
+    if args.pool is not None:
+        print(f"  pool:          {args.pool}  (the person's consent, DEC-061 point 6)")
     if args.due_on:
         print(f"  due_on:        {args.due_on}")
     print("  body:")
@@ -258,7 +292,17 @@ def main() -> int:
         print("\n[dry-run] gh would be invoked; nothing written.")
         return 0
 
-    if not args.yes and sys.stdin.isatty():
+    if args.pool is not None:
+        # Putting a line of work into a pool is the person's act (DEC-061 point 6).
+        stop = consent.authorise(
+            f"Create this milestone in the pool {args.pool}? [y/N] ",
+            yes=args.yes,
+            step=f"Putting the new milestone {title!r} into the pool {args.pool}",
+            verb="create-milestone",
+        )
+        if stop is not None:
+            return stop
+    elif not args.yes and sys.stdin.isatty():
         reply = input("Proceed? [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)

@@ -90,6 +90,7 @@ from _lib import (
     instance_claims,
     issue_branch,
     issue_position,
+    pools,
     session_guard,
 )
 from _lib import lifecycle_inference as infer
@@ -281,6 +282,18 @@ def main() -> int:
     except instance_claims.Unconfirmed as exc:
         instance_claims.say_unconfirmed("start-work", args.issue_number, exc)
         return 2
+    # The claim that starts a Task uses the authority the topology grants, so
+    # code that cannot read the topology in full makes none (DEC-061 point 9).
+    if clone is not None and clone.refusal is not None:
+        print(
+            f"[refused] start-work #{args.issue_number}: {clone.refusal} Nothing was written.",
+            file=sys.stderr,
+        )
+        return 2
+    # The take's own check of the Task's pool: a warning, never a gate (DEC-061 point 5).
+    if clone is not None:
+        for line in pools.check_take(issue, clone, config):
+            print(f"[warn] start-work #{args.issue_number}: {line}", file=sys.stderr)
 
     # The clash guard (DEC-035 point 6), before anything is written: an issue
     # another instance owns is refused, unless a bypass posts its reason.

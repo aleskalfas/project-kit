@@ -28,6 +28,17 @@ its child issues. And it holds the reads a date-triggered close rolls the open
 children forward by (#1175): whether the date trigger fired, the Milestone's
 `Rollforward target:` line, and the next-numbered open Milestone of its
 category.
+
+The pool
+--------
+A Milestone joins a pool of workers by a `Pool: <name>` line in its description
+([project-management:DEC-061-pools-of-workers] point 2), whose grammar
+`schemas/time-containers.yaml` declares beside the close trigger's. This module
+holds its one parser, :func:`parse_pool_line`, the one function that gives a
+Milestone's pool, :func:`milestone_pool`, and the one builder of the line a
+write puts in place, :func:`with_pool_line` ([pkit:ADR-072] point 3). No other
+code parses or builds a `Pool:` line. None of them reads GitHub or the topology:
+the caller passes the pools the topology declares.
 """
 
 from __future__ import annotations
@@ -36,6 +47,7 @@ import datetime as dt
 import json
 import re
 import sys
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from typing import Any
 
@@ -71,8 +83,9 @@ _MILESTONE_NUMBER_REF = re.compile(
     r"^(?:\[#(?P<link>\d+)\]\(\.\./milestone/(?P=link)\)|#?(?P<plain>\d+))$"
 )
 
-# The fields a milestone-children read needs from the issue corpus.
-_CHILDREN_FIELDS = "number,title,state,body,milestone"
+# The fields a milestone-children read needs from the issue corpus: the labels
+# tell where in the lifecycle a child a forced close leaves stands.
+_CHILDREN_FIELDS = "number,title,state,body,milestone,labels"
 
 
 @dataclass(frozen=True)
@@ -83,24 +96,24 @@ class Milestone:
     title: str
 
 
-def list_open_milestones(config: dict[str, Any]) -> list[dict] | None:
+#: The `gh` call that lists the open milestones, every page of them.
+OPEN_MILESTONES_ARGV = ("gh", "api", "--paginate", "repos/{owner}/{repo}/milestones?state=open")
+
+
+def list_open_milestones(
+    config: dict[str, Any], *, gh: Callable[[list[str]], Any] | None = None
+) -> list[dict] | None:
     """Fetch every open milestone in the current repo via `gh api`.
 
     Returns the parsed list of milestone dicts, or None if `gh` is
     missing or the API call fails. Each dict carries at minimum
-    `number: int` and `title: str`.
+    `number: int` and `title: str`, and `description` where GitHub gives
+    one. ``gh`` runs the call where a caller passes its own runner, as the
+    commands that act as a seat do; else it goes through the gh helper.
     """
+    argv = list(OPEN_MILESTONES_ARGV)
     try:
-        proc = gh_run(
-            [
-                "gh",
-                "api",
-                "--paginate",
-                "repos/{owner}/{repo}/milestones?state=open",
-            ],
-            config,
-            check=False,
-        )
+        proc = gh(argv) if gh is not None else gh_run(argv, config, check=False)
     except FileNotFoundError:
         return None
     if proc.returncode != 0:
@@ -184,6 +197,145 @@ def resolve_close_trigger(description: str, due_on: object) -> tuple[str, bool]:
     return infer_close_trigger(due_on), True
 
 
+# ---- the pool (DEC-061 point 2, ADR-072 point 3) ------------------------------
+
+#: What a line opens with to count as a `Pool:` line, well formed or not.
+POOL_OPENING = "Pool:"
+
+# The `Pool: <name>` line, a whole line; the name as a seat's is written.
+_POOL_LINE = re.compile(r"^Pool:\s+(?P<name>[a-z](?:[a-z0-9-]{0,38}[a-z0-9])?)$")
+
+# Why a Milestone is in no pool. A caller tells them apart by these codes.
+NO_POOL_LINE = "no-line"
+TWO_POOL_LINES = "two-lines"
+UNREAD_POOL_LINE = "unread"
+UNDECLARED_POOL = "undeclared"
+
+
+@dataclass(frozen=True)
+class Pool:
+    """A Milestone's pool: its name, or None with the reason it is in none."""
+
+    name: str | None
+    reason: str | None = None
+    #: The line as it stands, where one could not be read or names an undeclared pool.
+    said: str = ""
+
+    def warning(self, number: int) -> str | None:
+        """The warning a reader gives of Milestone ``number``, or None where its
+        line is sound or it has none (DEC-061 point 2)."""
+        where = f"milestone #{number}"
+        if self.reason == TWO_POOL_LINES:
+            return f"{where} has more than one `Pool:` line, so it is in no pool."
+        if self.reason == UNREAD_POOL_LINE:
+            return f"{where} has the line {self.said!r}, which names no pool, so it is in no pool."
+        if self.reason == UNDECLARED_POOL:
+            return (
+                f"{where} names the pool {self.said!r}, which the topology does not declare, "
+                "so it is in no pool."
+            )
+        return None
+
+
+def _pool_lines(description: str) -> list[str]:
+    """Every line of ``description`` that opens with `Pool:`, stripped."""
+    return [
+        s for s in (line.strip() for line in description.splitlines()) if s.startswith(POOL_OPENING)
+    ]
+
+
+def parse_pool_line(description: str) -> Pool:
+    """The pool a Milestone's description names by its `Pool:` line, read as a
+    whole line wherever it stands.
+
+    Every line that opens with `Pool:` counts, well formed or not: none, two,
+    or one that names no pool put the Milestone in no pool, with the reason.
+    Reads no GitHub and no topology."""
+    lines = _pool_lines(description)
+    if not lines:
+        return Pool(None, NO_POOL_LINE)
+    if len(lines) > 1:
+        return Pool(None, TWO_POOL_LINES)
+    found = _POOL_LINE.match(lines[0])
+    if found is None:
+        return Pool(None, UNREAD_POOL_LINE, lines[0])
+    return Pool(found.group("name"))
+
+
+def milestone_pool(description: str, declared: Collection[str] | None) -> Pool:
+    """A Milestone's pool, from its description and the pools the topology
+    declares, None where it declares none: the parser's name where the
+    topology declares that pool, otherwise no pool, with the reason.
+
+    The one function every reader of a Milestone's pool calls (ADR-072 point 3).
+    """
+    line = parse_pool_line(description)
+    if line.name is None:
+        return line
+    if declared is None or line.name not in declared:
+        return Pool(None, UNDECLARED_POOL, line.name)
+    return line
+
+
+def pool_line(name: str) -> str:
+    """The `Pool:` line that puts a Milestone into the pool ``name``."""
+    if _POOL_LINE.match(f"{POOL_OPENING} {name}") is None:
+        raise ValueError(f"{name!r} is no pool's name")
+    return f"{POOL_OPENING} {name}"
+
+
+def with_pool_line(description: str, name: str | None) -> str:
+    """``description`` with its pool set to ``name``, or cleared where it is None.
+
+    The line replaces the first `Pool:` line it finds, and every other such
+    line goes, so a write never adds a second (DEC-061 point 2). Where it
+    finds none, the line goes under the `Close trigger:` line and a
+    `Rollforward target:` line right below it, which stay first, or first
+    where the description opens with neither."""
+    lines = description.splitlines()
+    first = next((i for i, line in enumerate(lines) if line.strip().startswith(POOL_OPENING)), None)
+    kept = [line for line in lines if not line.strip().startswith(POOL_OPENING)]
+    if name is None:
+        return "\n".join(kept)
+    new = pool_line(name)
+    at = first if first is not None else _after_markers(kept)
+    return "\n".join([*kept[:at], new, *kept[at:]])
+
+
+def pool_log_line(before: str | None, after: str | None, *, verb: str, today: str) -> str:
+    """The line a change of a Milestone's pool logs in its description, since a
+    Milestone holds no comments: the change, the command and the person's
+    consent (DEC-061 point 6). It never opens with `Pool:`, so no reader takes
+    it for the Milestone's pool."""
+    line = (
+        f"Pool change by `pkit pm {verb}` on {today}: {before or 'none'} → {after or 'none'}, "
+        "with the person's consent (DEC-061 point 6)."
+    )
+    assert not line.startswith(POOL_OPENING)
+    return line
+
+
+def with_log_line(description: str, line: str) -> str:
+    """``description`` with ``line`` appended as a paragraph of its own."""
+    if not description.strip():
+        return line
+    return description.rstrip() + "\n\n" + line
+
+
+def _after_markers(lines: list[str]) -> int:
+    """The place under the description's opening `Close trigger:` line and a
+    `Rollforward target:` line right below it, or 0 where it opens with neither."""
+    at = 0
+    while at < len(lines) and not lines[at].strip():
+        at += 1
+    if at < len(lines) and _CLOSE_TRIGGER_LINE.match(lines[at].strip()):
+        at += 1
+        if at < len(lines) and _ROLLFORWARD_TARGET_LINE.match(lines[at].strip()):
+            at += 1
+        return at
+    return 0
+
+
 # ---- a Milestone and its children ------------------------------------
 
 
@@ -235,10 +387,10 @@ def list_milestone_children(
     is refused rather than answered from: a child past the ceiling may be
     open, and a list short of it would call the Milestone closeable.
 
-    Returns a list of `{number, title, state, type, milestone}` dicts (state
-    lower-cased, type inferred from the title prefix, milestone the native
-    Milestone payload or None, sorted by number), or None — with the reason on
-    stderr — on a gh failure or a truncated corpus.
+    Returns a list of `{number, title, state, type, milestone, labels}` dicts
+    (state lower-cased, type inferred from the title prefix, milestone the
+    native Milestone payload or None, labels by name, sorted by number), or
+    None — with the reason on stderr — on a gh failure or a truncated corpus.
     """
     corpus = containment.fetch_issue_corpus(config, fields=_CHILDREN_FIELDS)
     if corpus is None:
@@ -275,6 +427,10 @@ def list_milestone_children(
                     row_title, issue_types, classification=classification
                 ),
                 "milestone": native if isinstance(native, dict) else None,
+                "labels": [
+                    str(label.get("name", "")) if isinstance(label, dict) else str(label)
+                    for label in row.get("labels") or []
+                ],
             }
         )
     children.sort(key=lambda c: c["number"])

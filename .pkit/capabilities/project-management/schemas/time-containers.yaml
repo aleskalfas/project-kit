@@ -80,8 +80,31 @@ containers:
         default_behaviour: |
           When absent, rollforward target is the next-numbered open
           Milestone. If multiple candidates remain ambiguous, the
-          agent prompts the user at rollforward time.
+          agent prompts the user at rollforward time. Where the
+          project's topology declares pools of workers, the next is
+          sought within the closing Milestone's pool, or among the
+          Milestones in no pool for one in none (DEC-061 point 7).
         wrong_target_severity: "[validation-severity:warning]"
+      pool_field:
+        pattern: '^Pool: [a-z](?:[a-z0-9-]{0,38}[a-z0-9])?$'
+        opening: 'Pool:'
+        position: |
+          Anywhere in the description, read as a whole line and never
+          required first; the `Close trigger:` line stays first
+          (DEC-061 point 2). Every line that opens with `Pool:` counts,
+          well formed or not.
+        absent_behaviour: |
+          A Milestone with no `Pool:` line is in no pool. Two such
+          lines, one that does not match the pattern, or one naming a
+          pool the topology does not declare, put the Milestone in no
+          pool too, with a warning.
+        write_rule: |
+          Written only with the person's consent, by `create-milestone
+          --pool` or `set-pool`, which replace the line and never add a
+          second, and log the change and the consent in the
+          description in a line that never opens with `Pool:`
+          (DEC-061 point 6).
+        malformed_severity: "[validation-severity:warning]"
     rollforward_behaviour:
       steps:
         - "The Milestone closes regardless of how many children are still open. Date is the trigger; no exception."

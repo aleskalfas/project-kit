@@ -37,6 +37,18 @@ log is read only once a seat's state issue logs a release. The pull request is
 the open one from the Task's branch, `<type>/<N>-<slug>` (DEC-013), read in one
 listing.
 
+Where the topology declares pools of workers (DEC-061 point 10), it shows each
+pool's open milestones, by number and title, read once (`_lib/pools`), and
+warns of what would leave work stranded: a pool no seat serves, a pool with no
+open milestone, a seat that builds and names no pool, and a milestone whose
+`Pool:` line names an undeclared pool. It counts the Tasks in Backlog in no
+pool, such as those a forced close left, and, for each seat, the Tasks in
+Backlog it owns outside the pools it serves. Such a Task's log is folded only
+where some seat could own it outside its pools.
+
+Where this code cannot read the topology in full, the listing shows what it
+read and warns of what it did not understand (DEC-061 point 9).
+
 A read of a state issue restores a marker a hand removed from its description,
 the one write a read makes (ADR-071 point 5), so the foreign-repo guard runs
 first, after the membership gate (DEC-021) and the bootstrap gate.
@@ -48,8 +60,9 @@ Exit codes:
   0  listed, or the default branch declares no topology
   1  refused: membership, or the default branch cannot be resolved
   2  usage error: the capability is not found, or not bootstrapped
-  3  a seat's state issue, the listing of open issues, a Task's log or the
-     listing of open pull requests could not be read
+  3  a seat's state issue, the listing of open issues, a Task's log, the
+     listing of open pull requests, or where pools are declared the open
+     milestones, could not be read
 """
 
 from __future__ import annotations
@@ -76,8 +89,10 @@ from _lib import (
     issue_branch,
     issue_list,
     issue_position,
+    pools,
     session_guard,
     state_issues,
+    task_pool,
     topology,
 )
 from _lib import instance_ownership as ownership
@@ -93,7 +108,7 @@ from _lib.membership import (
 VERB = "seats"
 
 #: The fields of the one listing of open issues: the state issues no seat names,
-#: and the Tasks in Review a released seat left.
+#: the Tasks in Review a released seat left, and the Tasks the pools hold back.
 LIST_FIELDS = "number,title,labels,assignees,milestone,state"
 
 #: How many open issues, and open pull requests, one listing reads.
@@ -180,11 +195,31 @@ def list_seats(
     )
     for problem in tree.problems:
         print(f"warn: {topology.TOPOLOGY_RELATIVE}: {problem.message}", file=sys.stderr)
+    if tree.not_understood:
+        print(
+            "warn: this code cannot read the topology in full, so it takes no work, no seat "
+            "and no release by force until this checkout is updated (DEC-061 point 9).",
+            file=sys.stderr,
+        )
     code = 0
     for state in snap.states():
         print(seat_line(state, mine=state.held_by(snap.clone)))
         if state.state == topology.UNREAD and state.seat.state_issue is not None:
             code = 3
+    pool_map: pools.PoolMap | None = None
+    if tree.pools is not None:
+        pool_map = pools.read_map(tree.pools, gh=snap.run.gh)
+        if pool_map is None:
+            print(
+                "[error] the open milestones could not be read, so no pool's milestones are "
+                "shown, and no Task is counted by its pool.",
+                file=sys.stderr,
+            )
+            code = 3
+        else:
+            pools.show_pools(pool_map)
+        for warning in pools.listing_warnings(tree, pool_map):
+            print(f"warn: {warning}", file=sys.stderr)
     listing, cause = list_open(snap.run.gh)
     if listing is None:
         print(
@@ -204,11 +239,116 @@ def list_seats(
         print("\nState issues no seat names, for a person to close (DEC-059 point 3):")
         for number, key in strays:
             print(f"  #{number}  seat {key}")
-    left = left_in_review(
-        snap, listing.rows or (), substrate_map=axis_labels.load_substrate_map(capability_root)
-    )
+    substrate_map = axis_labels.load_substrate_map(capability_root)
+    if pool_map is not None:
+        readers = task_pool.Readers(
+            issue_types=read_schema(capability_root, "issue-types.yaml"),
+            classification=read_schema(capability_root, "classification.yaml"),
+            substrate_map=substrate_map,
+        )
+        back = held_back(snap, listing.rows or (), pool_map, readers)
+        show_held_back(back)
+        if back.unread:
+            code = 3
+    left = left_in_review(snap, listing.rows or (), substrate_map=substrate_map)
     show_left(left)
     return 3 if left.unread else code
+
+
+# ---- the Tasks the pools hold back (DEC-061 points 5 and 10) ---------------------------
+
+
+@dataclass(frozen=True)
+class HeldBack:
+    """The Tasks in Backlog the pools hold back: how many are in no pool, and,
+    for each seat, how many it owns outside the pools it serves. ``unread``
+    names each Task whose owner could not be read."""
+
+    no_pool: int = 0
+    outside: tuple[tuple[str, int], ...] = ()
+    unread: tuple[str, ...] = ()
+
+
+def held_back(
+    snap: topology.Snapshot,
+    rows: Iterable[Any],
+    pool_map: pools.PoolMap,
+    readers: task_pool.Readers,
+) -> HeldBack:
+    """Count the Tasks in Backlog among ``rows`` that are in no pool, and those
+    each seat owns outside its pools, which those pools hold back from it
+    (DEC-061 points 5 and 10).
+
+    A Task's owner is folded from its whole log by the ownership seam, against
+    the seats' holders this run read, and only where some seat could own it
+    outside its pools: a Task assigned to an account, in no pool or in a pool
+    that not every seat that builds serves."""
+    tree = snap.topology
+    builders = [seat for seat in tree.active if seat.builds]
+    by_number = {seat.number: seat for seat in tree.seats}
+    no_pool = 0
+    outside: dict[str, int] = {}
+    unread: list[str] = []
+    holders = instance_claims.SeatHolders(snap)
+    for row in rows:
+        if task_pool.task_state(row, readers) != task_pool.BACKLOG:
+            continue
+        pool = pool_map.pool_of(task_pool.native_milestone(row))
+        if pool is None:
+            no_pool += 1
+        accounts = _assignees(row)
+        if not accounts or (
+            pool is not None and all(pool in (seat.pools or ()) for seat in builders)
+        ):
+            continue
+        number = row["number"]
+        log = ownership.read_log(number, snap.run.gh)
+        if not log.complete:
+            unread.append(
+                f"the log of #{number}, in Backlog, could not be read ({log.cause}), so whether "
+                "a seat owns it outside its pools cannot be told."
+            )
+            continue
+        owners = set()
+        for account in accounts:
+            owners |= ownership.resolve_owner(
+                comments=log.comments, labels=(), assignee_login=account, holders=holders
+            ).owners
+        for instance in sorted(owners):
+            seat = by_number.get(instance)
+            if seat is not None and (pool is None or pool not in (seat.pools or ())):
+                outside[seat.name] = outside.get(seat.name, 0) + 1
+    ordered = tuple(sorted(outside.items(), key=lambda item: _place(snap, item[0])))
+    return HeldBack(no_pool, ordered, tuple(unread))
+
+
+def show_held_back(back: HeldBack) -> None:
+    """Warn of the Tasks the pools hold back, as counts (DEC-061 point 10)."""
+    if back.no_pool:
+        print(
+            f"warn: {back.no_pool} Task(s) in Backlog are in no pool, such as those a forced "
+            "close left, so no seat takes them of its own choosing.",
+            file=sys.stderr,
+        )
+    for seat, count in back.outside:
+        print(
+            f"warn: the seat {seat} owns {count} Task(s) in Backlog outside the pools it "
+            "serves, which those pools hold back from it: its clone releases each, so that a "
+            "seat that serves its pool may take it (DEC-061 point 10).",
+            file=sys.stderr,
+        )
+    for problem in back.unread:
+        print(f"[error] {problem}", file=sys.stderr)
+
+
+def read_schema(capability_root: Path, name: str) -> dict:
+    """A capability schema (`schemas/<name>`), or {} where it cannot be read."""
+    file = capability_root / "schemas" / name
+    try:
+        data = YAML(typ="safe").load(file.read_text(encoding="utf-8")) if file.is_file() else None
+    except (OSError, YAMLError):
+        data = None
+    return data if isinstance(data, dict) else {}
 
 
 # ---- the Tasks in Review a released seat left (DEC-059 points 5 and 9) ---------------
@@ -442,6 +582,8 @@ def seat_line(state: topology.SeatState, *, mine: bool) -> str:
             if names
         ]
         marks.append("scope: " + " with ".join(parts))
+    if seat.pools is not None:
+        marks.append("pools: " + (", ".join(seat.pools) or "none"))
     issue = f"#{seat.state_issue}" if seat.state_issue is not None else "no state issue"
     holder = "no state issue named" if seat.state_issue is None else state.said()
     line = f"  {seat.number}. {seat.name} ({', '.join(marks)}), {issue}: {holder}"

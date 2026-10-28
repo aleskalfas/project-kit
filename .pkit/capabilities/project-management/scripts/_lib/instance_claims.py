@@ -31,7 +31,12 @@ claims for good, with no write, even where the same clone takes the seat again
 (point 5). A planner's seat files with no owner, so its work enters the shared
 pool, and every other seat claims at filing; a worker claims at ``start-work``
 (point 7). Renewal, lapse and parking
-are not built yet.
+are not built yet. The reading carries the pools the topology declares, and
+the seat the pools it serves ([project-management:DEC-061-pools-of-workers]
+point 1). Where this code cannot read the topology in full, the reading
+carries the clause a command that takes refuses with (DEC-061 point 9): the
+claim that starts a Task and the choice of the next one refuse on it, and every
+other command goes on.
 
 **The seat is confirmed before each write** (DEC-059 point 6). Every command
 that acts as an instance asks :func:`this_clone` before it writes, where the
@@ -160,23 +165,30 @@ Run = Callable[[list[str]], Any]
 @dataclass(frozen=True)
 class Seat:
     """A seat of the topology, as this clone holds it: its name, its number,
-    which is its place in the topology, its role, and the scope that narrows its
-    own pool of work, where it has one (DEC-059 points 2, 6 and 7)."""
+    which is its place in the topology, its role, the scope that narrows its
+    own pool of work, where it has one (DEC-059 points 2, 6 and 7), and the
+    pools it serves, by name, where it names them (DEC-061 point 1)."""
 
     name: str
     number: int
     role: str
     scope: topology.Scope | None = None
+    pools: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
 class Topology:
     """One run's reading of the project's topology, as instance ownership takes
     it from its caller (ADR-041 point 7, ADR-071 point 1): the seat this clone
-    holds, or None, and each seat's holder."""
+    holds, or None, and each seat's holder. ``pools`` are the pools of workers
+    the topology declares, None where it declares none (DEC-061 point 1), and
+    ``refusal`` the clause a command that takes refuses with where this code
+    cannot read the topology in full, or None (DEC-061 point 9)."""
 
     seat: Seat | None
     holders: Mapping[str, ownership.Holder]
+    pools: tuple[str, ...] | None = None
+    refusal: str | None = None
 
 
 @dataclass(frozen=True)
@@ -194,6 +206,11 @@ class Clone:
     seat: Seat | None = None
     key: str | None = None
     holders: Mapping[str, ownership.Holder] | None = None
+    #: The pools of workers the topology declares, None where it declares none.
+    pools: tuple[str, ...] | None = None
+    #: Why a command that takes refuses, where this code cannot read the
+    #: topology in full (DEC-061 point 9), or None.
+    refusal: str | None = None
 
     @property
     def files_unowned(self) -> bool:
@@ -313,6 +330,8 @@ def seat_clone(reading: Topology, capability_root: Path, login: str | None) -> C
         seat=reading.seat,
         key=key,
         holders=reading.holders,
+        pools=reading.pools,
+        refusal=reading.refusal,
     )
 
 
@@ -377,7 +396,12 @@ def read_topology(
     if where is not None:
         print(f"[note] ownership: this clone read the topology of {where}.", file=sys.stderr)
     seat = confirm_seat(snap, capability_root, dry_run=dry_run)
-    return Topology(seat, SeatHolders(snap))
+    return Topology(
+        seat,
+        SeatHolders(snap),
+        pools=snap.topology.pools,
+        refusal=topology.not_understood_refusal(snap.topology),
+    )
 
 
 def _snapshot(capability_root: Path, config: dict, login: str | None) -> topology.Snapshot | None:
@@ -444,7 +468,8 @@ def confirm_seat(
     if state.seat.retired:
         _release_retired(snapshot, state, capability_root, dry_run=dry_run)
         return None
-    return Seat(state.seat.name, state.seat.number, state.seat.role, state.seat.scope)
+    seat = state.seat
+    return Seat(seat.name, seat.number, seat.role, seat.scope, seat.pools)
 
 
 def _release_retired(

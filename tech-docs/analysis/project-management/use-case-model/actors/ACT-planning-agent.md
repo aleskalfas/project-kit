@@ -14,11 +14,12 @@ pkit:
         - project-management:DEC-029
         - project-management:DEC-008
         - project-management:DEC-059#7
+        - project-management:DEC-061#1
 ---
 
 # ACT-planning-agent — Planning agent
 
-An AI agent of a topology that slices a project's work and files the work for the other agents, and builds none of the work. The planning agent plans on the planner's direction, and files nothing before the planner approves the plan ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The planning agent files the work with no [owner](../../glossary.md#term-owner--owner), so the work joins the ready Tasks that every [seat](../../glossary.md#term-seat--seat) shares ([DEC-059 point 7](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)).
+An AI agent of a topology that slices a project's work and files the work for the other agents, and builds none of the work. The planning agent plans on the planner's direction, and files nothing before the planner approves the plan ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)). The planning agent files the work with no [owner](../../glossary.md#term-owner--owner), so the work joins the ready Tasks that every [seat](../../glossary.md#term-seat--seat) shares ([DEC-059 point 7](../../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the [topology](../../glossary.md#term-topology--topology) declares [pools](../../glossary.md#term-pool--pool), the planning agent files into the [Milestones](../../glossary.md#term-milestone--milestone) the planner gives, and the work joins their pools ([DEC-061 point 1](../../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#1-the-topology-declares-pools-and-each-seat-that-builds-names-those-it-serves)).
 
 **Role holders:** an agent that follows the `pm` [skill](../../../core/glossary.md#term-skill--skill)'s `batch-plan` procedure, such as the project-manager agent ([DEC-029](../../../../../.pkit/capabilities/project-management/decisions/DEC-029-project-manager-agent-shape.md)).
 
@@ -28,6 +29,7 @@ An AI agent of a topology that slices a project's work and files the work for th
 
 - the planner's intent
 - the [topology](../../glossary.md#term-topology--topology)'s scopes
+- the [Milestones](../../glossary.md#term-milestone--milestone) the planner gives, and each Milestone's [pool](../../glossary.md#term-pool--pool), where the topology declares pools
 - the [project](../../../core/glossary.md#term-project--project)'s use cases, where the project keeps use cases ([DEC-054](../../../../../.pkit/capabilities/project-management/decisions/DEC-054-use-case-validation.md))
 
 **Note:** the planning agent is not the planner, the person whose intent the planning agent plans and who approves the planning agent's plan ([DEC-008](../../../../../.pkit/capabilities/project-management/decisions/DEC-008-pm-and-implementer-roles.md)). The planning agent is an AI agent (`core:ACT-ai-agent`) with its own job in a [topology](../../glossary.md#term-topology--topology).

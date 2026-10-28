@@ -50,6 +50,13 @@ clone in any other seat claims what it files for its seat (DEC-059 point 7). A
 clone that took a seat confirms it on the seat's state issue before anything is
 written, and the command refuses where it cannot (DEC-059 point 6).
 
+A Task filed with `--milestone` into a Milestone of a pool of workers enters
+that pool, which is the person's act (DEC-061 point 6): asked at a terminal,
+or `--yes` on their word, and off a terminal without it the filing is refused
+before anything is written. The consent is recorded in an audit comment on the
+Task. An `after_create_issue` hook that assigns a Milestone is handed this
+run's `--yes`, and asks the same way.
+
 Membership predicate per DEC-021 runs at startup; closed mode refuses
 non-members with the standard structured refusal.
 
@@ -70,7 +77,8 @@ loudly with the exact remediation command and exits 4.
 
 Exit codes:
   0  issue created
-  1  membership refusal, or this clone's seat could not be confirmed
+  1  membership refusal, or this clone's seat could not be confirmed, or a
+     Task filed into a pool off a terminal without --yes
   2  usage error / validation refusal
   3  gh failure (auth, network, repo not found, ...)
   4  issue created, but --from-report link failed (issue NOT rolled back;
@@ -102,12 +110,14 @@ from _lib import (
     containment,
     decision_ids,
     instance_claims,
+    pools,
     provenance,
     session_guard,
     title_rules,
     use_case_citations,
     workstreams,
 )
+from _lib.comment import post_comment
 from _lib.containment import LinkOutcome, link_sub_issue
 from _lib.gh import gh_project_run, gh_run, load_adopter_config
 from _lib.hooks import fire_hooks
@@ -117,7 +127,7 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import resolve_milestone
+from _lib.milestone import list_open_milestones, resolve_milestone
 from _lib.placeholder_detection import (
     PHASE_CREATE,
     detect_placeholder_residuals,
@@ -448,6 +458,17 @@ def main() -> int:
         args.milestone = resolved.number
         milestone_title = resolved.title
 
+    # A Task filed into a Milestone of a pool enters that pool, which is the
+    # person's act (DEC-061 point 6): judged here, asked before the write.
+    pool_move = pools.Move(False)
+    if args.type == "task" and args.milestone is not None:
+        pool_move = pools.move(
+            None,
+            args.milestone,
+            rows=list_open_milestones(config, gh=lambda argv: gh_run(argv, config, check=False)),
+            capability_root=capability_root,
+        )
+
     # Workstream requirement when a LABEL carries the axis.
     #
     # The gate MIRRORS the writer's (`_build_labels`) write/no-write decision for
@@ -734,6 +755,8 @@ def main() -> int:
             print("  containment: native   (native sub-issue link + textual ref)")
     if args.milestone:
         print(f"  milestone:  #{args.milestone}")
+    if pool_move.asks:
+        print(f"  pool:       {pool_move.said()}  (the person's consent, DEC-061 point 6)")
     print(f"  assignee:   {assignee}")
     print(f"  labels:     {', '.join(labels)}")
     # Instance ownership (DEC-035): None unless this clone set an instance id,
@@ -768,7 +791,11 @@ def main() -> int:
         print("\n[dry-run] gh would be invoked; nothing written.")
         return 0
 
-    if not args.yes and sys.stdin.isatty():
+    if pool_move.asks:
+        stop = pools.authorise(pool_move, subject="the new Task", yes=args.yes, verb="create-issue")
+        if stop is not None:
+            return stop
+    elif not args.yes and sys.stdin.isatty():
         reply = input("Proceed? [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
@@ -814,6 +841,20 @@ def main() -> int:
         # One-time immutable filing-version comment (DEC-041): the
         # load-bearing record of the version this issue was born under.
         print(provenance.post_filing_comment(new_issue_number, capability_root, config))
+        # The person's consent to the Task's pool, in its own audit comment
+        # (DEC-061 point 6). A failed post is a warning: the Task stays filed.
+        if pool_move.asks and not post_comment(
+            "issue",
+            new_issue_number,
+            pools.consent_comment("create-issue", pool_move, args.milestone),
+            config,
+            run=gh_run,
+        ):
+            print(
+                f"[warn] #{new_issue_number} was filed into {pool_move.said()}, and the audit "
+                "comment recording the person's consent could not be posted.",
+                file=sys.stderr,
+            )
         # Claim the filed issue for this clone (DEC-035 point 3). An issue
         # filed for another person is not this clone's (DEC-035 point 5), and
         # a planner's seat files with no owner (DEC-059 point 7).
@@ -900,7 +941,18 @@ def main() -> int:
     # / project node ids let the `set-board-field` hook target the new item;
     # both stay absent in label-fallback mode (no board), where that hook is a
     # no-op skip by design.
-    issue_context: dict[str, Any] = {"number": new_issue_number, "title": full_title}
+    # The issue's milestone, as this run filed it, lets an `assign-milestone`
+    # hook tell where a Task moves from (DEC-061 point 6), and `--yes` is the
+    # person's consent it may need.
+    issue_context: dict[str, Any] = {
+        "number": new_issue_number,
+        "title": full_title,
+        "milestone": (
+            {"number": args.milestone, "title": milestone_title}
+            if args.milestone is not None
+            else None
+        ),
+    }
     if board_item_id is not None:
         issue_context["board_item_id"] = board_item_id
     fire_hooks(
@@ -912,6 +964,7 @@ def main() -> int:
         },
         config=config,
         capability_root=capability_root,
+        yes=args.yes,
     )
 
     # --from-report: link the new issue into the report's `## Tracked by` by

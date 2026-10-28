@@ -31,7 +31,11 @@ that would move it — scheduling a Todo issue, unscheduling a Backlog one — i
 refused and the verb that owns that transition is named. A milestone change
 takes `--reason` and posts an audit comment (from, to, why) before it writes,
 and the issue's type must be one `issue-types.yaml` lets sit under a
-milestone (#1016).
+milestone (#1016). Where the move brings a Task into a pool of workers, or
+moves it from one pool to another, it is the person's act (DEC-061 point 6):
+asked at a terminal, or `--yes` on their word, refused off a terminal without
+it, and recorded in that audit comment. A move out of a pool, or within one,
+asks nothing.
 
 Refuses on hard-reject validation findings, and on any a schema declares
 bypassable-with-audit (no rule it checks is today); warns on warning-level
@@ -62,7 +66,7 @@ Exit codes:
   1  membership refusal / validation refusal / a milestone edit that would
      move the issue in the lifecycle or orphan its parent-ref / the clash
      guard refused an issue another instance owns / this clone's seat could
-     not be confirmed
+     not be confirmed / a move into a pool off a terminal without --yes
   2  usage error (issue not found; no mode specified; milestone matches no
      open milestone)
   3  gh failure
@@ -93,6 +97,7 @@ from _lib import (
     bootstrap_gate,
     decision_ids,
     instance_claims,
+    pools,
     provenance,
     session_guard,
     title_rules,
@@ -108,7 +113,7 @@ from _lib.membership import (
     resolve_capability_root,
     resolve_invoker_identity,
 )
-from _lib.milestone import Milestone, resolve_milestone
+from _lib.milestone import Milestone, list_open_milestones, resolve_milestone
 from _lib.structural_type import infer_structural_type
 from _lib.substrate_writes import clear_milestone, write_milestone
 
@@ -378,6 +383,21 @@ def main() -> int:
     writes_issue = title_changed or body_changed or first_line_moved
     writes_milestone = milestone_edit is not None and milestone_edit.changed
 
+    # A Task brought into a pool, or moved between pools, is the person's act
+    # (DEC-061 point 6); one taken out of a pool asks nothing.
+    pool_move = pools.Move(False)
+    if (
+        writes_milestone
+        and milestone_edit is not None
+        and _is_task(new_title, issue_types, classification)
+    ):
+        pool_move = pools.move(
+            _milestone_number(milestone_edit.current),
+            _milestone_number(milestone_edit.target),
+            rows=list_open_milestones(config, gh=lambda argv: gh_run(argv, config, check=False)),
+            capability_root=capability_root,
+        )
+
     print(f"edit-issue: #{args.issue_number}")
     print(f"  current title: {current_title}")
     if args.title is not None:
@@ -386,6 +406,8 @@ def main() -> int:
         print(f"  body change:   {len(current_body)} → {len(new_body)} chars")
     if milestone_edit is not None:
         print(f"  milestone:     {milestone_edit.describe()}")
+    if pool_move.asks:
+        print(f"  pool:          {pool_move.said()}  (the person's consent, DEC-061 point 6)")
     if first_line_moved:
         target_number = _milestone_number(milestone_edit.target) if milestone_edit else None
         print(
@@ -466,7 +488,13 @@ def main() -> int:
     if args.dry_run:
         print("\n[dry-run] gh would be invoked; nothing written.")
         return 0
-    if not args.yes and sys.stdin.isatty():
+    if pool_move.asks:
+        stop = pools.authorise(
+            pool_move, subject=f"#{args.issue_number}", yes=args.yes, verb="edit-issue"
+        )
+        if stop is not None:
+            return stop
+    elif not args.yes and sys.stdin.isatty():
         reply = input("Write the edit? [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
@@ -489,7 +517,9 @@ def main() -> int:
     # between leaves a state a re-run completes, since an already-set milestone
     # is not written again and the posted comment is not posted twice.
     if writes_milestone:
-        if not _post_milestone_audit(args.issue_number, milestone_edit, reason, config):
+        if not _post_milestone_audit(
+            args.issue_number, milestone_edit, reason, config, pool=pool_move
+        ):
             return 3
         if not _write_milestone(args.issue_number, milestone_edit, config):
             return 3
@@ -628,6 +658,11 @@ def _follow_milestone_in_first_line(
     return None
 
 
+def _is_task(title: str, issue_types: dict, classification: dict) -> bool:
+    """Whether the issue is a Task, the only issue a pool holds (DEC-061 point 4)."""
+    return infer_structural_type(title, issue_types, classification=classification) == "task"
+
+
 def _parent_ref_optional(title: str, issue_types: dict, classification: dict) -> bool:
     """Whether the issue's type may go without a parent-ref (an EPIC). An
     unrecognised type is treated as requiring one — the cautious reading."""
@@ -650,18 +685,27 @@ def _type_may_carry_milestone(structural_type: str | None, issue_types: dict) ->
 
 
 def _post_milestone_audit(
-    issue_number: int, edit: MilestoneEdit, reason: str, config: dict
+    issue_number: int,
+    edit: MilestoneEdit,
+    reason: str,
+    config: dict,
+    *,
+    pool: pools.Move | None = None,
 ) -> bool:
     """Post the milestone-change audit comment unless it is already there.
 
     The record of who moved the issue and why (#1016): a milestone change is a
     scheduling decision, which the workflow gives to the user, so it carries its
-    reason the way `promote-issue`'s milestone attach does. Posted through the
-    shared `post_audit_once`: a retry of a failed attempt finds its own comment
-    and does not post it again.
+    reason the way `promote-issue`'s milestone attach does. Where the change
+    brought a Task into a pool or moved it between pools, the comment records
+    the person's consent too (DEC-061 point 6). Posted through the shared
+    `post_audit_once`: a retry of a failed attempt finds its own comment and
+    does not post it again.
     """
     key = _milestone_audit_key(edit, reason)
     body = _milestone_audit_body(edit, reason, dt.date.today().isoformat(), key)
+    if pool is not None and pool.asks:
+        body = body.replace(f"\n\n{key}", f"\n\n{pool.logged()}\n\n{key}")
     return post_audit_once(
         "issue",
         issue_number,

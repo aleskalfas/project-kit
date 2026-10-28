@@ -59,6 +59,18 @@ The axes are read through the read seam (``axis_labels.resolve_read``), and a
 Task's type falls back to its title's prefix, as ``start-work`` reads it. An axis
 that a board carries is not read here, so such a Task ranks after every Task whose
 priority is read, and a scope that names a part on that axis does not take it.
+
+The pools
+---------
+Where the topology declares pools of workers, a seat that builds chooses its
+work only from ready Tasks in an open Milestone of a pool it serves
+([project-management:DEC-061-pools-of-workers] point 5). This module reads no
+GitHub for it: :func:`candidates` takes the seat's set of Milestone numbers, which
+``next-task`` reads once in its run (``_lib/pools``, [pkit:ADR-072] point 2), and
+keeps only a Task whose native Milestone is in the set, this clone's own Tasks
+among them. None stands for no pools declared, and the set then filters
+nothing: the one shared pool of DEC-059. The empty set keeps no Task. Neither
+ever stands for the other. The seat's scope then narrows what the set kept.
 """
 
 from __future__ import annotations
@@ -132,11 +144,15 @@ class Readers:
 @dataclass(frozen=True)
 class Taker:
     """Who takes from the pool: this clone where it takes part in instance
-    ownership, the scope of its seat, and why it may not take, where it may not."""
+    ownership, the scope of its seat, and why it may not take, where it may not.
+    ``declared`` are the pools of workers the topology declares, None where it
+    declares none, and ``pools`` those the seat serves (DEC-061 point 1)."""
 
     clone: instance_claims.Clone | None
     scope: topology.Scope | None = None
     refusal: str | None = None
+    declared: tuple[str, ...] | None = None
+    pools: tuple[str, ...] = ()
 
     @property
     def takes_over(self) -> bool:
@@ -156,10 +172,13 @@ def taker(
     topology, a clone with an instance id, or with none, takes with no scope. In
     a project with a topology, a clone takes only from the seat it holds: one
     that holds none may not take, nor may a planner's seat, which builds none of
-    the work (DEC-059 point 2)."""
+    the work (DEC-059 point 2). Code that cannot read the topology in full takes
+    nothing (DEC-061 point 9)."""
     reading = instance_claims.read_topology(capability_root, config, login=login, dry_run=dry_run)
     if reading is None:
         return Taker(instance_claims.numbered_clone(capability_root, login))
+    if reading.refusal is not None:
+        return Taker(None, refusal=reading.refusal)
     clone = instance_claims.seat_clone(reading, capability_root, login)
     if clone is None:
         return Taker(
@@ -178,7 +197,12 @@ def taker(
                 "work and builds none of it (DEC-059 point 2)."
             ),
         )
-    return Taker(clone, seat_scope(seat))
+    return Taker(
+        clone,
+        seat_scope(seat),
+        declared=reading.pools,
+        pools=tuple(seat.pools or ()) if seat is not None else (),
+    )
 
 
 def seat_scope(seat: instance_claims.Seat | None) -> topology.Scope | None:
@@ -236,6 +260,7 @@ def candidates(
     scope: topology.Scope | None,
     takes_over: bool,
     readers: Readers,
+    milestones: Collection[int] | None = None,
 ) -> list[Candidate]:
     """The open Tasks the pool may hand out, the highest in priority first.
 
@@ -243,11 +268,16 @@ def candidates(
     :data:`LIST_FIELDS`. ``open_numbers`` are the numbers of every open issue,
     state issues among them. ``login`` is this clone's account: a Task assigned
     to another account is left out, since ``start-work`` refuses it. A Task In
-    Progress is kept only where ``takes_over``. Owners are not judged here."""
+    Progress is kept only where ``takes_over``. ``milestones`` is the seat's set
+    of Milestone numbers where the topology declares pools, and a Task whose
+    native Milestone is not in it is left out; None filters by no Milestone
+    (DEC-061 point 5). Owners are not judged here."""
     still_open = frozenset(open_numbers)
     order = _priorities(readers.classification)
     out: list[Candidate] = []
     for row in rows:
+        if milestones is not None and native_milestone(row) not in milestones:
+            continue
         candidate = _candidate(row, login, scope, takes_over, readers, order)
         if candidate is None:
             continue
@@ -304,6 +334,31 @@ def _candidate(
         rank=order.get(priority or "", len(order)),
         assigned=bool(assignees),
     )
+
+
+def native_milestone(row: Any) -> int | None:
+    """The number of a Task's native Milestone field, as the listing returns it,
+    never its body's `Milestone:` line, which links a parent (DEC-061 point 4)."""
+    native = row.get("milestone") if isinstance(row, dict) else None
+    number = native.get("number") if isinstance(native, dict) else None
+    return number if isinstance(number, int) and not isinstance(number, bool) else None
+
+
+def task_state(row: Any, readers: Readers) -> str | None:
+    """The lifecycle state of ``row``, an open issue of work, where it is a
+    Task, else None: how a listing counts the Tasks in Backlog."""
+    if not isinstance(row, dict) or not isinstance(row.get("number"), int):
+        return None
+    labels = _label_names(row)
+    structural = infer_structural_type(
+        str(row.get("title") or ""),
+        dict(readers.issue_types),
+        classification=dict(readers.classification),
+        labels=labels,
+    )
+    if structural != "task":
+        return None
+    return issue_position.current_state(row, labels, readers.substrate_map)
 
 
 def _priorities(classification: Mapping[str, Any]) -> dict[str, int]:
