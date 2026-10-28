@@ -35,6 +35,7 @@ The schema's `transitions` list fixes who authorises each transition and what th
 | Review → Done | User (per-PR approval) | hard-reject |
 | Backlog/Todo → Done (won't-do) | User | hard-reject |
 | In Progress → Done (parent cascade-eligibility close) | User | hard-reject |
+| Todo, Backlog or In Progress → Done (a Task completed without a pull request) | User (naming where the work's result lives) | hard-reject |
 | In Progress → Backlog or Todo (move back) | User (with the reason the work stopped) | hard-reject |
 
 The user holds the scheduling of the work, its end, and the move back from In Progress, which settles what becomes of the scheduling. The agent starts the work and puts a Task up for review on its own. Authorisations govern a move asked for directly, and are per-issue and in-session — no standing "go ahead with everything" applies in a later turn. The agent records the bypass with an audit-trail comment per [project-management:DEC-014-validation-severity-model] when a bypassable transition is overridden.
@@ -55,7 +56,7 @@ A Task's branch and draft pull request stay as they are, for the next taker to c
 
 Three behaviours, encoded in the schema's `cascade` block:
 
-- **Forward cascade (Todo → Backlog → In Progress).** Direction `upward`. Automatic. A container is never behind the work under it: when an issue moves forward, the agent checks each ancestor — its parent, that parent's parent, and so on to the top — and brings any that is behind up to the moved issue's state, capped at In Progress. An ancestor moves only through transitions the schema declares: one in Todo under a started issue goes to Backlog and then to In Progress. Where a journal is kept ([project-management:DEC-049-audit-journal-model]), each step is recorded with the move that caused it as its reason. The cascade is not an authorisation and asks for none: the authorisation gates on a transition govern a move asked for directly, on that issue. So an ancestor can stand in Backlog with no Milestone and no audited promotion of its own — the scheduling commitment the user holds was given on the descendant when it was scheduled, and the ancestor's state reports it. A move to Done from Todo or Backlog — a won't-do close — moves no ancestor forward. Idempotent — repeated firings on already-cascaded ancestors are no-ops.
+- **Forward cascade (Todo → Backlog → In Progress).** Direction `upward`. Automatic. A container is never behind the work under it: when an issue moves forward, the agent checks each ancestor — its parent, that parent's parent, and so on to the top — and brings any that is behind up to the moved issue's state, capped at In Progress. An ancestor moves only through transitions the schema declares: one in Todo under a started issue goes to Backlog and then to In Progress. Where a journal is kept ([project-management:DEC-049-audit-journal-model]), each step is recorded with the move that caused it as its reason. The cascade is not an authorisation and asks for none: the authorisation gates on a transition govern a move asked for directly, on that issue. So an ancestor can stand in Backlog with no Milestone and no audited promotion of its own — the scheduling commitment the user holds was given on the descendant when it was scheduled, and the ancestor's state reports it. A move to Done from Todo or Backlog moves no ancestor forward, whether it is a won't-do close or the close of a Task completed without a pull request. Idempotent — repeated firings on already-cascaded ancestors are no-ops.
 - **Closure cascade (→ Done).** Direction `upward`. Semi-automatic. When the *last open* child of a parent closes, the parent becomes **eligible to close** but never auto-closes. The agent validates the parent's close criteria (Feature acceptance criteria ticked, EPIC success criteria met, Umbrella purpose served) and prompts the user to authorise closure at each level.
 - **Downward cascade.** Direction `none`. Disallowed. Parent state changes do not change children. The wrong direction of causation.
 
@@ -63,10 +64,11 @@ Three behaviours, encoded in the schema's `cascade` block:
 
 ### Closure triggers
 
-Four paths reach Done, encoded as schema entries:
+Five paths reach Done, encoded as schema entries:
 
 - **`pr-merge-into-main`** — Task's normal path. PR opens → user authorises merge → agent squash-merges (head branch deleted on merge) → GitHub's `Closes #N` auto-closes the Task → cascade runs.
 - **`pr-merge-into-integration`** — same mechanics but PR base is `integration/<slug>` (per [project-management:DEC-013-branch-and-pr-conventions]).
+- **`manual-completed`** — a Task whose work was not a pull request, such as an audit, an investigation or a decision walked with the user. The user authorises the close once every checkbox is ticked, per [project-management:DEC-007-checkbox-validation], and the close comment names where the work's result lives: an issue, a record or a comment. GitHub records the Task as completed, and the closure cascade runs as for a PR-merge closure. It closes a Task in Todo, Backlog or In Progress, since a Task in Review has a pull request open and closes through its merge.
 - **`manual-wont-do`** — user authorises with a reason; agent verifies all checkboxes are ticked or removed per [project-management:DEC-007-checkbox-validation], records the reason in a close comment.
 - **`cascade-eligibility-close`** — triggered by closure cascade; agent validates parent's close criteria and prompts user per-level.
 
@@ -79,6 +81,8 @@ Upward-only cascade matches the natural direction of causation in planning: a pa
 Review models a PR open for a leaf, and a container has no PR of its own. A container in Review would be stuck: Review's only forward exit is Done, while children remain to build. So no `Review → In Progress` back-edge is needed, since a container never enters Review.
 
 The "eligible to close but never auto-close" asymmetry makes the cascade safe. Closing a Feature is a commitment ("this capability shipped"); closing an EPIC is a bigger one. Auto-closing on the last child closing would produce a chain reaction with no human pause point. Stopping at each parent for explicit authorisation preserves the deliberate quality of those commitments.
+
+**Why a Task closes as completed without a pull request.** Some work ends with nothing to merge: an audit whose findings are filed as issues, an investigation, a decision walked with the user. Without a close of its own, such a Task can only stay open, stating work not yet done, or close as won't-do, stating work dropped, and both are false. The close names where the result lives, so a later reader finds the work, as a merged pull request's reference leads to code. The user authorises it as the user authorises every end of work, and the ticked criteria are what say the work is done.
 
 **Why a move back, and why it is the user's.** People planning the work, and agents choosing what to take next, read In Progress as work that is moving. An issue left In Progress after its work stopped states something false, and without a move back the only way to make it true is to close live work. The user's commitment is the scheduling, not the start of work, which the agent takes on its own. A move back settles what becomes of the scheduling: a move to Todo withdraws it, and a move to Backlog keeps it. So the user holds the move back, as the user holds the scheduling and the end. Releasing the claim frees the work for whoever takes it next, and the reason on the issue tells a later reader why the work stopped.
 
@@ -97,6 +101,8 @@ A container moved back over a child In Progress or in Review would stand behind 
 - **Lower the Todo → Backlog severity to `warning` in a project that runs no Milestone.** Rejected — it would hand the agent the scheduling commitment, which the user holds. The audited reason already serves such a project at bypassable-with-audit. A severity that varies with a project's configuration would also break [project-management:DEC-014-validation-severity-model]'s dispatch on the severity token without per-rule logic.
 - **Let the agent move back an issue it finds idle.** Rejected — whether work has stopped is a judgement on a commitment the user made, and an agent reading inactivity alone could stop live work.
 - **Move a container back together with its children.** Rejected — a container's move would change its children's states, the downward cascade this record disallows.
+- **Close a Task whose work was not a pull request as won't-do, with a reason naming the result.** Rejected — the tracker records it as not planned, so every reader of the close reason takes the work as dropped.
+- **Give such a Task a pull request, such as a note committed only to close it.** Rejected — the commit adds a file nobody needs, and the result still lives elsewhere.
 
 ## Implications
 
