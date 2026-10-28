@@ -52,7 +52,7 @@ Before it binds state to its board, the project checks its board's Status option
 
 ### 6. A migration replaces the flag's carriage in each project
 
-The change that ends the flag's carriage raises the version of the configuration's schema, the `schema_version` of a project's `config.yaml`, from 1 to 2, since the flag's meaning changes. It ships a migration ([pkit:COR-010]), whose sign that it has not run is that version. The migration acts only in a project whose configuration is at version 1, and writes version 2 in every project, the ones it changes nothing else in included. In a project whose flag is set, it binds each axis as follows.
+The change that ends the flag's carriage raises the version of the configuration's schema, the `schema_version` of a project's `config.yaml`, from 1 to 2, since the flag's meaning changes. It ships a migration ([pkit:COR-010]), whose sign that it has not run is that version. The migration acts only in a project whose configuration is at version 1, and writes version 2 in every project, the ones it changes nothing else in included. In a project whose flag is set, it treats each axis as follows.
 
 - **Priority and workstream** stay on the board, as the flag carries them. Each that the map omits or marks `unsupported` gets `board: true`, keeping the axis's `default:`.
 - **State, in a present map,** stays as it is. Where the map omits state or marks it `unsupported`, the migration leaves it so, and the state degrades (point 2). It is read from the native primitives as it was, and the board's Status stays with the project's people (point 5).
