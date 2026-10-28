@@ -389,3 +389,20 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - not everything is data yet: some code still hard-codes what a schema declares (the order of states)
   - a YAML rule with no prose beside it can be applied without anyone knowing why; the decision must stay linked
 - **Maintainer's notes:**
+
+## 17. The process substrate: staged processes with gates (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** a reusable state machine with no content of its own (COR-033). A capability describes its own staged process as data, a *process definition*: the states, the moves between them, the gate each move must pass, how a parent follows its children. The substrate's engine then gives every such process two things: a **deterministic check of each move** (may this subject move here now?) and a **memory of where each subject stands** (a journal per subject, with why each move happened). project-management's issue lifecycle (Todo → Backlog → In Progress → Review → Done) is bound onto it: each issue has a journal (`project/process/issue-lifecycle/<n>.journal.jsonl`), and the cascade of a parent following its children is the substrate's composition. A second, separate binding grounded the design. A `process` skill helps author a definition's shape, and the `process-author` agent writes the predicates behind each gate (COR-044).
+- **Problem:** every discipline with stages (an issue's life, a release, a build, a review) invents its own state handling, its own "may I move?" checks and its own history, each slightly different, none explainable the same way.
+- **Gain:**
+  - one engine for every staged process: an agent asks the same three questions anywhere (where am I, may I move, am I valid) and gets a deterministic answer
+  - a history per subject, readable by a person with no manual
+  - a new process is a definition, not new machinery
+- **Weight:** nothing in a session; adopters meet it only through a capability's process (the issue lifecycle).
+- **Evidence (this session):** the move back and the completed close were added as moves in the lifecycle's definition; every move today was journalled, and the critic of the Icebox found exactly where the engine's fixed order of states would resist a new state.
+- **Weak spot:**
+  - abstract: hard to show without a capability on top of it
+  - two bindings so far; whether it fits a third discipline is untested
+- **Maintainer's notes:**
