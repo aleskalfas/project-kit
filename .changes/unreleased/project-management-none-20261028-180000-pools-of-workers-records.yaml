@@ -1,0 +1,9 @@
+component: project-management
+kind: none
+body: >
+  Design-ahead: the record DEC-061 decides pools of workers. A topology may
+  declare pools, each seat that builds names the pools it serves, and a person
+  puts a Milestone into a pool by a `Pool:` line in its description. A seat
+  that builds then takes only ready Tasks in an open Milestone of its pools.
+  DEC-061 partially supersedes DEC-059, and refines it, DEC-016, DEC-006 and
+  DEC-025 in place. No behaviour changes until the records are built.

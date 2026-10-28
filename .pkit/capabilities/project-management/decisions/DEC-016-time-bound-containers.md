@@ -105,7 +105,11 @@ The Milestone description opens with a `Close trigger:` line. Three valid values
 
 Marker pattern: `^Close trigger: (date-based|content-based|either)$`. Severity for a new Milestone filing missing or malformed marker: `[validation-severity:hard-reject]`. Severity for an existing Milestone read without the marker: `[validation-severity:warning]` — the agent infers (has due date → date-based; no due date → content-based) and offers to write the marker into the description.
 
-Optional `Rollforward target: <Milestone>` second line on date-based Milestones declares an explicit rollforward destination. Default (when absent) is the next-numbered open Milestone; ambiguous candidates prompt the user at rollforward time.
+Optional `Rollforward target: <Milestone>` second line on date-based Milestones declares an explicit rollforward destination. Default (when absent) is the next-numbered open Milestone; ambiguous candidates prompt the user at rollforward time. For a Milestone in a pool of workers, the default is the next-numbered open Milestone of its category in the same pool, and the user is asked where there is none or more than one (refinement per [project-management:DEC-061-pools-of-workers] point 7).
+
+### Pool — an optional line that puts the Milestone into a pool of workers
+
+Where the project's topology declares pools of workers, a Milestone's description may carry a `Pool: <name>` line, which puts the Milestone and each issue in it into that pool (refinement per [project-management:DEC-061-pools-of-workers] point 2). The line is read as a whole line wherever it stands, while `Close trigger:` stays first. Two `Pool:` lines, or one naming a pool the topology does not declare, put the Milestone in no pool, with a warning. The line is written only with the user's consent (DEC-061 point 6).
 
 ### Rollforward cascade for date-based Milestone close
 
