@@ -1,7 +1,7 @@
 ---
 id: DEC-062
 title: Each axis is put on the board in the substrate map, and the board flag says only that a board exists
-status: proposed
+status: accepted
 date: 2026-10-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
