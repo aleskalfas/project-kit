@@ -36,6 +36,24 @@ Working notes for the Friday talk (goal reconsidered 26 October: present project
 18. Connections: how components hand each other data
 19. Capabilities: opt-in disciplines (project-management, software-engineering, software-analysis, living-docs; and evidence, doc-examples, demo-recording)
 
+## The talk's order (agreed 28 October)
+
+The flow follows an adopter: install it, learn it, keep it current.
+
+1. **Install pkit** — `pkit init`, what lands in your project, and the one-owner rule: the methodology's files and your files are never shared (was 13's install part and 14). One line on adapters: install wires pkit into your AI tool, today Claude Code (6).
+2. **Decision records** (1)
+3. **Checked every time** — validation: files point at each other, pointers break quietly, one command walks them all (1b, was 11)
+4. **Rules** (2)
+5. **Scratchpad notes** (3)
+6. **Skills and the commands they pair with** — the judgement and the mechanics together (4, with the CLI, 12)
+7. **Agents: roles with limits** (5)
+8. **Your rules, not the tool's guesses** — permissions, and where agents write (7, with 8)
+9. **Docs that know when they're wrong** — anchors and answers (9)
+10. **Rule sets** — skipped for now while the rules are reworked (10)
+11. Still to walk: schemas (16), the process substrate (17), connections (18), capabilities (19)
+12. **Stay current** — sync, upgrade, migrations, versioning and release (13's upgrade part, with 15), the closing block
+
+
 ## 1. Decision records
 
 - **What:** each significant choice is a record with one shape: front matter (id, title, status, date, author) and four sections, Context, Decision, Rationale, Implications, the decision split into numbered points that keep their numbers for good. Four namespaces: COR for the methodology's own (63), PRJ for the project's way of working (11 here), ADR for its architecture (70 here), DEC for each capability's (78). A record is proposed, accepted or superseded.
