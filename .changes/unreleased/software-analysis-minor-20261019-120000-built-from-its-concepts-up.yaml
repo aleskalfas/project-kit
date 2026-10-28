@@ -13,7 +13,7 @@ body: >
   added later and for a brownfield project's candidates (point 9). The
   `analysis-author` skill walks it in a new sub-procedure,
   `build-analysis.md`, which says when each step is done, and the README's
-  "Adopting it" says so.
+  "Adopter setup" says so.
   `SAN` holds a new judgement rule, `RS-SAN-008`, proposed: an analysis
   artefact uses a domain concept only where a term of the glossary defines
   it, and names it by that term's name, and no two terms define one concept.
