@@ -165,9 +165,7 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - the walk through a brownfield project that produced the first core records (`done/2026-05-04-inventory.md`) is named in `CLAUDE.md` but is not in the repository: it predates the repository's first commit
   - this week: release candidates (the note became the records of PR #2224), what answers are and should be called (on its own branch), which rules reach which session (on its own branch, written today after two critics took the slicing apart)
 - **Weak spot:**
-  - "active" holds stale notes: 16 of the 32 started before July, and nothing reminds anyone to retire them
-  - no note was ever dropped: abandoned lines stay "active" or are dropped inside another note, not recorded as such
   - notes kept on side branches (two this week) are not on main, so the next session does not find them
   - nothing checks a note's state: one note sits in both `active/` and `done/` (#2263)
   - non-normative by design, so nothing stops someone building on a note's idea before it is a record; the acceptance gate speaks of records only
-- **Maintainer's notes:**
+- **Maintainer's notes (28 October):** a scratchpad is the desk of a home office: papers where ideas are caught before they become real assignments, issues or records. Like papers on a desk, some stay a long time while it is not decided whether they are wanted, and that is fine: 16 notes older than July are undecided ideas, not neglect, and none dropped means none was decided against. Talk line: question, then a note, then a record, then the rules.
