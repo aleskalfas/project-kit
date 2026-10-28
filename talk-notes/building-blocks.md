@@ -25,7 +25,7 @@ Working notes for the Friday talk (goal reconsidered 26 October: present project
 11. (moved to 1b)
 
 **E. How it reaches a project and stays current**
-12. The CLI: `pkit`
+12. (folded into 4 and 13 on 28 October: the CLI is the deterministic half paired with skills; its lifecycle commands go with 13)
 13. Lifecycle: install, sync, upgrade, and migrations
 14. Ownership: core files and project files, never shared (`.pkit/project/`)
 15. Versioning and release
@@ -351,3 +351,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - inheritance with version pins is a lot of machinery for a handful of sets
 - **Maintainer's notes:**
   - Decided 28 October: skipped for now; the rules are being reworked (operational rules becoming rule sets, #2270). Revisit for the talk once that lands, probably together with block 2.
+  - Decided 28 October: the CLI is folded in here — block 4 becomes "skills and the commands they pair with": the skill carries the judgement, the command the part that must come out the same every time (stamping, checks, gated moves). Its lifecycle commands (init, sync, upgrade) go with block 13.
