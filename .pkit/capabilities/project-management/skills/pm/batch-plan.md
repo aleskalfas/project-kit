@@ -20,7 +20,7 @@ Six sequential steps. The agent narrates each step's start to the user per the s
 - Read every reference artifact the user points at, using the `Read` tool. Common shapes: a scratchpad note under `.pkit/scratchpad/`, a handoff document, a related GitHub issue (fetch via `gh issue view`), a decision record, or a verbal description from earlier in the session.
 - If any reference cannot be resolved (path not found, issue not accessible), surface the gap before proposing a slicing — do not guess content.
 - If the user's intent has missing inputs that prevent slicing (no reference at all; scope too vague), ask at most two clarifying questions per the storyboard's Scenario 2 — not a sequence of single-question turns.
-- **Where the project declares a topology, read the seats too:** `pkit pm seats` lists each seat on the default branch, with its role and its scope ([project-management:DEC-059-topology-of-seats] point 1). The slicing uses them to see which seats may take each Task, and the gate names each Task that no seat may take.
+- **Where the project declares a topology, read the seats too:** `pkit pm seats` lists each seat on the default branch, with its role and its scope ([project-management:DEC-059-topology-of-seats] point 1). The slicing uses them to see which seats may take each Task, and the gate names each Task that no seat may take. Where the topology declares pools of workers, `seats` also shows each pool's open milestones, and the plan files each Task into a milestone the person gives ([project-management:DEC-061-pools-of-workers] point 1).
 
 ### 2. Walk the use cases (while the use-case point is not off)
 
@@ -84,10 +84,12 @@ Then apply the methodology's typing rules to the work units implied by intent + 
   5. **When the Task is in the plan, it comes first.** Only the issues that touch what users do depend on it, each naming it in its `## Dependencies` section; internal work does not. The dependent issues state the goals they serve as text and cite no use case, since none has settled. One of the Task's acceptance criteria is that the dependent issues name their use cases: once the use cases have settled, each dependent Feature and Task gains its `## Use cases` section.
   6. **The Use cases column shows the judgement** for every Feature and Task, as the walk over a set with entries shows `none`: the Task's number (`T1`) where the issue depends on it, `declined` where the issue touches what users do and the Task is left out on the user's answer, and `none` for internal work. Every other type shows `—`.
 
-Render the slicing as a single table the user can scan at a glance (the Use cases column only when step 2 read a set, empty or not):
+Render the slicing as a single table the user can scan at a glance (the Use cases column only when step 2 read a set, empty or not, and the Pool column only where the topology declares pools of workers):
 
-| # | Type | Title | Parent | Workstream | Milestone | Priority | Use cases | Notes |
-|---|---|---|---|---|---|---|---|---|
+| # | Type | Title | Parent | Workstream | Milestone | Pool | Priority | Use cases | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+
+The Pool column names the pool of each Task's milestone, or `none`. The approval of a plan that names them is the person's word for each Task's pool ([project-management:DEC-061-pools-of-workers] point 6).
 
 ### 4. Adversarial review (when threshold applies)
 
@@ -107,7 +109,7 @@ Present the slicing to the user as a single message:
 - The dependency chain (explicit ordering).
 - Where step 3 named shared choices: each shared choice with its judgement. A settled choice says where it is settled, one in hand names its foundation's Feature, and an open one says whether the foundation's records or its skeleton settle it. The person may overrule any judgement. A first plan says that the slices wait for a second plan, once the foundation's Feature closes ([project-management:DEC-060-foundation-before-slices] point 3).
 - A first plan's edits to issues already filed: each Task that gains the foundation's Feature among its dependencies, and each Task In Progress or in Review that the foundation's first Task names.
-- Which issues the plan schedules into Backlog on approval, with their Milestone, and which stay in Todo. A Task in Backlog may be taken by a worker at once. The approval authorises each of those moves ([project-management:DEC-006-state-machine-and-cascade]).
+- Which issues the plan schedules into Backlog on approval, with their Milestone, and which stay in Todo. A Task in Backlog may be taken by a worker at once. The approval authorises each of those moves ([project-management:DEC-006-state-machine-and-cascade]). Where the topology declares pools, each Task's Milestone shows with its pool, so the approval covers putting the Task into that pool.
 - Where the project declares a topology, each Task that no seat may take.
 - Reviewer findings summary (which were incorporated, which are noted, which need user resolution).
 - When step 2 walked a set: the use-case mapping (the table's column) and both kinds of gap — each use case the intent touches that no planned issue names, and the behaviour the plan builds that no use case describes. Over a partly checked set: that the set may be incomplete, which filler did not answer, and the second kind as possible gaps. Where the walk went by titles alone, that too.
@@ -135,7 +137,7 @@ In dependency order (parents before children so parent-ref values are available)
 
 - **A first plan** files the EPIC, then the foundation's Feature, then its Tasks in their order, so that each names the one before by number. It then names the Feature in the EPIC's `## Outline of the slices`, with `edit-issue`. It adds the Feature to the `## Dependencies` section of each Task already filed that the gate listed, and names each Task In Progress or in Review in the first Task's section.
 - **An edit the clash guard refuses,** on a Task another instance owns, is never bypassed: name the Task to the user, who settles it with that Task's owner.
-- **From a planner's seat,** `create-issue` files with no owner, so each Task enters the pool that every seat shares once it is in Backlog ([work-loop](work-loop.md)).
+- **From a planner's seat,** `create-issue` files with no owner, so each Task enters the pool that every seat shares once it is in Backlog ([work-loop](work-loop.md)). Where the topology declares pools, it enters the pool of its Milestone instead.
 - For each ticket: call `scripts/create-issue.py` with `--type`, `--title`, `--kind`, `--workstream`, `--priority`, `--parent` (if any), `--yes` — and, when the plan originated from a feedback/change-request report #N, `--from-report N` so each filed issue is auto-linked into #N's `## Tracked by` (per [project-management:DEC-048-from-report-auto-link]; a link failure exits 4 with a remediation command and never rolls the issue back).
 - Parse the script's `[ok] created: <URL>` line for the new issue number.
 - Immediately call `scripts/edit-issue.py --body-file <tmp> --yes` to overwrite the auto-generated template body with the planned body content (the create-issue.py script produces a placeholder body; the real content is what was approved at the gate). When a Feature or Task names use cases, its body lists them in a `## Use cases` section, one per line (`- UC-003 — <the use case's title>`); an issue that serves none has no such section, and neither has a body of another type.
@@ -147,6 +149,7 @@ In dependency order (parents before children so parent-ref values are available)
   - **Whenever the Task is left out on the user's answer**, given at this gate or kept, the plan's topmost new issue says in prose that it was planned without use cases — or, where the plan files only under an existing issue, each filed issue does.
   - **Internal work only, or the Task removed because an open issue already plans the authoring:** keep nothing and write no such line. In the second case, the dependent issues name that open issue in their `## Dependencies` sections.
 - **Schedule** each issue the gate listed as scheduled: `pkit pm promote-issue <N> --reason "<the user's approval of the plan>"`, with `--milestone <M>` where the plan names one. It moves the issue from Todo to Backlog with an audit comment ([project-management:DEC-006-state-machine-and-cascade]). A Milestone schedules the issue it is attached to, so attach none to an issue the plan leaves in Todo.
+- **A Task into a Milestone of a pool:** `promote-issue` asks the person's consent to the pool. Pass `--yes` only where the approved plan named the Task's Milestone and that Milestone's pool, since that approval is the person's word. Otherwise ask the person, and pass nothing for them ([project-management:DEC-061-pools-of-workers] point 6).
 - Handle each script's failure modes per [validate-body](validate-body.md)'s severity model: warnings emit and continue; hard-rejects pause and follow the storyboard's Scenario 4 walkthrough.
 
 After the filing loop completes:
