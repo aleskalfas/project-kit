@@ -146,3 +146,28 @@ Objections a sceptical engineering audience would raise, with the honest answer 
 Survives: one short file every session loads, owned and refreshed by the methodology, beside one the project owns; each rule pointing to its reason; one test for what goes where; and the habit that lets the file grow honestly: text repeated in prompts becomes a rule (over two hundred briefs became rule 21, a line of rule 17 and project rule 4), and a rule that must hold gets a mechanism behind it (rule 14 and ADR-028).
 
 To admit: a rule is advice, and how often agents follow it is not measured; the file has nearly tripled since June, and some rules are long; numbers move, and stale citations exist (#1687); nothing asks a rule to recheck when the record it cites changes; a rule change reaches a running session only when a new one starts; rules have no proposed state, and an adopter cannot switch a core rule off; several core rules serve only those who change pkit itself; project-kit's own CLAUDE.md restates rules the file already holds.
+
+## 3. Scratchpad notes (draft, 28 October)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** a working draft for a question too big to decide on the spot (COR-012). One Markdown file per question in `.pkit/scratchpad/`; the folder is its state: `active/` while it is worked, `done/` once it has produced records, documents or tools (its front matter lists what), `dropped/` when the line is abandoned, with the reason. It is not normative: it may restate, contradict, try and discard. `pkit new scratchpad <slug>` starts one (with the `scratchpad-author` skill); `pkit scratchpad done <slug> --produced <ref>…` and `pkit scratchpad drop <slug>` retire it.
+- **Problem:** a large question does not fit a record on the first pass, and a conversation is gone the next session. Without a place for the exploring, the agent either decides too early or the reasoning, the rejected lines included, is lost.
+- **Gain:**
+  - the exploring has a home that outlives the session, and anyone, agent or person, can pick it up
+  - rejected lines are kept with why they fell, so nobody walks them again
+  - a retired note names what it produced, so a record can be traced back to how it was reached
+- **Weight:** nothing loads at session time; a note is read only when its question is worked. One small area README and four commands.
+- **Relation to blocks 1 and 2:** decisions are the source, and rules their projection; a scratchpad note is where a decision is worked out before it becomes a record.
+- **Evidence:**
+  - 57 notes since 22 May: 25 retired as done, 32 active, none dropped
+  - the 25 done notes produced between 1 and 14 artefacts each; most retired within a few days of starting (the multi-clone coordination arc: 5 days, 14 artefacts; the autonomous feature flow: 1 day, 14)
+  - the first, the walk through a brownfield project (`done/2026-05-04-inventory.md`), produced the first core records
+  - this week: release candidates (the note became the records of PR #2224), what answers are and should be called (on its own branch), which rules reach which session (on its own branch, written today after two critics took the slicing apart)
+- **Weak spot:**
+  - "active" holds stale notes: 16 of the 32 started before July, and nothing reminds anyone to retire them
+  - no note was ever dropped: abandoned lines stay "active" or are dropped inside another note, not recorded as such
+  - notes kept on side branches (two this week) are not on main, so the next session does not find them
+  - nothing checks a note's state: one note sits in both `active/` and `done/` (#2263)
+  - non-normative by design, so nothing stops someone building on a note's idea before it is a record; the acceptance gate speaks of records only
+- **Maintainer's notes:**
