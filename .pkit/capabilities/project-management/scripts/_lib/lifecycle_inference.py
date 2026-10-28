@@ -307,8 +307,9 @@ def state_before_close(
     The one reading of it, for each reader of that move: close-issue's journal
     entry, move-issue's entry for relabelling an issue GitHub closed, and the
     forward cascade, which tells a finished issue from a won't-do one by where
-    it came from. A closed issue reads as `done` whatever else it carries, so
-    this is :func:`infer_current_state` read as if the issue were still open:
+    it came from, where the issue did not close as completed. A closed issue
+    reads as `done` whatever else it carries, so this is
+    :func:`infer_current_state` read as if the issue were still open:
 
     - its state label, where it has one — on an issue GitHub closed when a pull
       request merged, where the merge found it, for as long as nothing has

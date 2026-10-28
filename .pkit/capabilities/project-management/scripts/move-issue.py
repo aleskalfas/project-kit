@@ -65,7 +65,9 @@ behind up to the issue's state, capped
 at in-progress, through declared transitions only — an ancestor in todo
 goes to backlog, then to in-progress, each step its own label write,
 journaled where a journal is kept with the issue's move as the reason.
-A move to done from todo or backlog (won't-do) moves no ancestor. The
+A won't-do close from todo or backlog moves no ancestor, and a close as
+completed brings them level from any state, a Task's completed close from
+todo or backlog included (DEC-006). The
 cascade is not an authorisation: it asks for no confirmation, posts no audit
 comment and fires no hook. At the `full` audit projection each ancestor it
 moves gets the provenance comment a governed move gets, naming the move that
@@ -650,12 +652,12 @@ def main() -> int:
         # The forward cascade is idempotent, so the issue already being in place
         # does not end the walk: re-running a move whose cascade left an ancestor
         # behind brings that ancestor level. An issue already at done came there
-        # from where its old label places it — a merge's close leaves review —
-        # which tells a finished issue from a won't-do one; where the label
-        # already reads done, or neither a state label nor a milestone records
-        # where it was, its close reason tells them apart instead. It is the one
-        # reading the journal entries for the close take, so the two agree.
-        # Where the board carries the state, the card read above records it.
+        # from where its old label places it — a merge's close leaves review. A
+        # close as completed tells a finished issue from a won't-do one wherever
+        # it came from, and otherwise that origin does (`_finished_work`). The
+        # origin is the one reading the journal entries for the close take, so
+        # the two agree. Where the board carries the state, the card read above
+        # records the origin.
         if not args.no_cascade:
             origin = (
                 infer.state_before_close(
@@ -1870,7 +1872,7 @@ def _cascade_forward_target(child_target: str) -> str:
 
 
 # Where an issue's move to done comes from when it finished work, not abandoned
-# it: a move to done from todo or backlog is a won't-do close.
+# it, whatever close reason the tracker reports for it.
 _COMPLETING_ORIGINS = ("in-progress", "review")
 
 
@@ -1889,15 +1891,15 @@ def _forward_cascade_target(mover: _MovedIssue) -> str | None:
 def _finished_work(mover: _MovedIssue) -> bool:
     """Whether a move to done finished the issue's work rather than dropped it.
 
-    It did from in-progress or review, and did not from todo or backlog — a
-    won't-do close. Where the issue's label already reads done, so where it
-    came from is not recorded, its close reason tells: completed finished it;
-    any other reason, or none reported, does not say it did."""
-    if mover.origin in _COMPLETING_ORIGINS:
+    A close as completed did, wherever the issue came from: completed work is
+    progress, so a Task's completed close from todo or backlog brings its
+    ancestors level too (DEC-006). A move from in-progress or review did, too.
+    Any other move did not say it did: one from todo or backlog is a won't-do
+    close, and one whose origin is not recorded, closed for another reason or
+    with none reported, cannot be told from one."""
+    if mover.closed_as == CLOSED_COMPLETED:
         return True
-    if mover.origin in ("todo", "backlog"):
-        return False
-    return mover.closed_as == CLOSED_COMPLETED
+    return mover.origin in _COMPLETING_ORIGINS
 
 
 def _no_cascade_to_done(mover: _MovedIssue) -> str:

@@ -1047,6 +1047,77 @@ def test_a_wont_do_move_to_done_moves_no_ancestor(
     assert world.moves(feature) == world.moves(epic) == []
 
 
+@pytest.mark.parametrize("origin", ["todo", "backlog"])
+def test_a_task_closed_as_completed_from_todo_or_backlog_brings_its_ancestors_level(
+    world: World, origin: str
+) -> None:
+    """Completed work is progress (DEC-006): a Task closed as completed whose
+    label still reads Todo or Backlog is no won't-do close, so its move to Done
+    brings its ancestors up to In Progress."""
+    epic, feature, task = _epic_feature_task(world, task=origin)
+    world.tracker.close(task, "COMPLETED")
+
+    assert world.move(task, "done") == 0
+
+    for number in (feature, epic):
+        assert world.moves(number) == TODO_TO_IN_PROGRESS
+        assert world.journal(number)[0]["reason"] == _reason(task, f"{origin} → done")
+
+
+def test_a_task_closed_as_not_planned_from_backlog_moves_no_ancestor(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    epic, feature, task = _epic_feature_task(world, task="backlog")
+    world.tracker.close(task, "NOT_PLANNED")
+    capsys.readouterr()
+
+    assert world.move(task, "done") == 0
+
+    assert (
+        "[cascade] the forward cascade moves no ancestor: "
+        "a move to done from backlog is a won't-do close."
+    ) in capsys.readouterr().out
+    assert world.moves(feature) == world.moves(epic) == []
+
+
+COMPLETED_RESULT = "the findings are filed as #908"
+
+
+@pytest.mark.parametrize("origin", ["todo", "backlog"])
+def test_a_completed_close_brings_the_ancestors_level_before_the_closure_cascade(
+    world: World,
+    cl: ModuleType,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    origin: str,
+) -> None:
+    """close-issue's completed close of a Task with no pull request, from Todo
+    or Backlog, runs move-issue's forward cascade, so its Feature and its EPIC
+    reach In Progress. The closure cascade runs after it, and offers the Feature,
+    with no open child left, for closing (DEC-006)."""
+    # The fold over the Feature's children is the engine's, answered by
+    # predicates this harness does not run: no open child is left, it says here.
+    monkeypatch.setattr(cl, "_engine_cascade_fold", lambda _n: {"opened": True})
+    epic, feature, task = _epic_feature_task(world, task="" if origin == "todo" else origin)
+    capsys.readouterr()
+
+    assert world.close(task, "--mode", "completed", "--result", COMPLETED_RESULT) == 0
+
+    out = capsys.readouterr().out
+    assert world.views(task) == ("done", "done")
+    assert world.moves(task)[-1] == (origin, "done", "close-issue")
+    for number in (feature, epic):
+        assert world.moves(number) == TODO_TO_IN_PROGRESS
+        assert world.journal(number)[0]["reason"] == _reason(task, "at done")
+        assert world.labels(number) == ["state:in-progress"]
+    closure = f"[cascade] parents to check for eligibility: #{feature}"
+    assert out.index("[cascade] forward cascade") < out.index(closure)
+    assert (
+        f"eligible to close: run `pkit pm close-issue {feature} --mode=cascade-eligibility-close`"
+    ) in out
+    _no_drift(world, capsys, task, feature, epic)
+
+
 def _reviewed_task_merged(world: World, *, closed: bool) -> tuple[int, int, int]:
     """A Task in Review under a Feature and an EPIC still in Todo, its pull
     request merged by another hand — GitHub having closed it already, or not."""

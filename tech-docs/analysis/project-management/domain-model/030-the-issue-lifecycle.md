@@ -62,17 +62,18 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How an issue moves through its lifecycle
-  accDescr: An authorisation takes an issue from Todo to Backlog. It then moves to In Progress, and a Task to Review. An authorisation takes it back from In Progress to Backlog or Todo once its work stopped. An authorisation takes it to Done, and closing as won't do also needs one. A forward move brings the issues above forward, and a parent with no open child becomes eligible to close.
+  accDescr: An authorisation takes an issue from Todo to Backlog. It then moves to In Progress, and a Task to Review. An authorisation takes it back from In Progress to Backlog or Todo once its work stopped. An authorisation takes it to Done, and a won't-do close or a completed close also needs one. A forward move, or a completed close, brings the issues above forward. A parent with no open child becomes eligible to close.
   todo[Todo] -->|authorisation| backlog[Backlog]
   backlog --> inprogress[In Progress]
   inprogress -->|authorisation, work stopped| backlog
   inprogress -->|authorisation, work stopped| todo
   inprogress -->|a Task| review[Review]
   review -->|authorisation| done[Done]
-  inprogress -->|authorisation, a parent issue| done
-  todo -->|authorisation, won't do| done
-  backlog -->|authorisation, won't do| done
+  inprogress -->|authorisation, a parent issue or a completed close| done
+  todo -->|authorisation, won't do or a completed close| done
+  backlog -->|authorisation, won't do or a completed close| done
   inprogress -.-> forward([Issues above brought forward])
+  done -.->|a completed close| forward
   done -.-> eligible([A parent with no open child eligible to close])
 ```
 
@@ -104,7 +105,7 @@ The issue lifecycle is the [process](../../core/glossary.md#term-process--proces
 ```mermaid
 stateDiagram-v2
   accTitle: The states of the issue lifecycle
-  accDescr: Todo, Backlog, In Progress, Review and Done, in that order. Only a Task enters Review. In Progress may go back to Backlog or Todo, once the work stopped. Todo and Backlog may go straight to Done, as won't do.
+  accDescr: Todo, Backlog, In Progress, Review and Done, in that order. Only a Task enters Review. In Progress may go back to Backlog or Todo, once the work stopped. Todo and Backlog may go straight to Done, by a won't-do close or a completed close.
   [*] --> Todo
   Todo --> Backlog
   Backlog --> InProgress
@@ -129,7 +130,9 @@ Defined in [TERM-authorisation](../glossary.md#term-authorisation--authorisation
 
 **Why:** Scheduling and ending the work are commitments an agent must not make on its own. A move back from In Progress settles what becomes of the scheduling, so a person holds that move too. Held as refusals the agent cannot pass, the gates turn the [methodology](../../core/glossary.md#term-methodology--methodology)'s authority into something enforced rather than trusted ([DEC-006](../../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
 
-An authorisation is a person's decision on one move they hold. Scheduling an [issue](../glossary.md#term-issue--issue) needs one, and so does merging a [Task](../glossary.md#term-task--task)'s [pull request](../../core/glossary.md#term-pull-request--pull-request). Closing an issue as won't do, or a finished parent issue, needs one too, and so does moving back an issue whose work stopped. The person gives it in the session, for the issue at hand, and it never stands for a later move.
+An authorisation is a person's decision on one move they hold. Scheduling an [issue](../glossary.md#term-issue--issue) needs one, and so does ending a [Task](../glossary.md#term-task--task)'s work, by a merge of the Task's [pull request](../../core/glossary.md#term-pull-request--pull-request) or by a completed close. A completed close closes a Task whose work was not a pull request, as completed. Closing an issue as won't do, or a finished parent issue, needs one too, and so does moving back an issue whose work stopped.
+
+The person gives an authorisation in the session, for the issue at hand, and it never stands for a later move.
 
 **Attributes:**
 
@@ -173,7 +176,7 @@ The cascade is what one issue's move does to the issues above it. Moving forward
 - It moves an issue above only forward, and never past In Progress (DEC-006).
 - It never moves a child because its parent moved (DEC-006).
 - A move back from In Progress moves no other issue. A parent issue moves back only while no child of it is In Progress or in Review, so it never stands behind its children (DEC-006).
-- A move to Done from Todo or Backlog, a won't-do close, moves no issue above (DEC-006).
+- A won't-do close from Todo or Backlog moves no issue above. A completed close brings each issue above that is behind up to In Progress, since completed work is progress (DEC-006).
 - A parent issue closes only once its [checkboxes](../glossary.md#term-checkbox--checkbox) are ticked and its children are done ([DEC-034](../../../../.pkit/capabilities/project-management/decisions/DEC-034-cascade-slot-binding.md)).
 
 ## Audit comment

@@ -56,7 +56,7 @@ The top-level `hooks:` map keys are lifecycle event names; each value is an orde
 | Event | Fires |
 |---|---|
 | `after_create_issue` | After the issue exists on GitHub *and* is added to the board (per DEC-019) |
-| `after_close_issue` | After the issue is closed in either `wont-do` or `pr-merge` mode |
+| `after_close_issue` | After the issue is closed in `wont-do`, `pr-merge`, `completed` or `cascade-eligibility-close` mode |
 | `after_open_pr` | After `gh pr create` succeeds |
 | `after_merge_pr` | After the merge completes and cascades land |
 | `after_move_issue` | After a state transition lands (per DEC-006) |
