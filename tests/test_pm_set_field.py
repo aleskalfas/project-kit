@@ -924,20 +924,25 @@ def _stub_board_reads(
     project=None,
     fields_read=None,
     item=None,
+    owners: list | None = None,
 ) -> None:
+    """Stub the three reads; ``owners`` collects the owner each board read names."""
     bf = sf.board_fields
+    seen = owners if owners is not None else []
     monkeypatch.setattr(
         bf,
         "read_project_node_id",
         lambda config, owner=None, gh_call=None: (
-            project or bf.ProjectLookup(ok=True, node_id="PVT_board7")
+            seen.append(owner) or project or bf.ProjectLookup(ok=True, node_id="PVT_board7")
         ),
     )
     monkeypatch.setattr(
         bf,
         "read_fields",
         lambda config, owner=None, gh_call=None: (
-            fields_read or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},))
+            seen.append(owner)
+            or fields_read
+            or bf.BoardFieldsRead(ok=True, fields=({"id": "F", "name": "Priority"},))
         ),
     )
     monkeypatch.setattr(
@@ -975,6 +980,25 @@ def test_read_board_state_composes_the_exact_item_add_remediation(sf, monkeypatc
     assert state.membership_remediation == (
         "gh project item-add 7 --owner an-org --url https://github.com/an-org/r/issues/42"
     )
+
+
+@pytest.mark.parametrize("owner", ["an-org", "a-person"])
+def test_read_board_state_without_a_default_owner_reads_the_issues_owners_board(
+    sf, monkeypatch, owner
+) -> None:
+    """A single-owner adopter omits `gh.default_owner` (the README, the `gh:`
+    block): the board is then the repository's owner's, a person's or an
+    organisation's, which the issue's url names."""
+    owners: list = []
+    _stub_board_reads(sf, monkeypatch, owners=owners)
+    config = {key: value for key, value in _BOARD_CONFIG.items() if key != "gh"}
+    issue = {"id": "I_issue42", "url": f"https://github.com/{owner}/r/issues/42"}
+
+    state = sf._read_board_state(config, issue=issue, issue_number=42)
+
+    assert state.error is None
+    assert owners == [owner, owner]
+    assert f"--owner {owner} " in state.membership_remediation
 
 
 def test_read_board_state_surfaces_a_read_failure_verbatim(sf, monkeypatch) -> None:

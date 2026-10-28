@@ -1288,8 +1288,11 @@ def test_main_label_fallback_path_omits_board_keys_hook_skips(ci, tmp_path, monk
 # milestone, as `_lib/lifecycle_inference` reads it.
 
 
-def _status_kept_filing(ci, tmp_path: Path, monkeypatch, *, axes: dict | None):
-    """Stage a board filing, and route the board's calls to a `BoardTracker`."""
+def _status_kept_filing(
+    ci, tmp_path: Path, monkeypatch, *, axes: dict | None, repository: str = "acme/repo"
+):
+    """Stage a board filing in ``repository``, whose owner owns the board, and
+    route the board's calls to a `BoardTracker`."""
     import shutil
 
     from tests.pm_board_world import BoardTracker
@@ -1297,7 +1300,8 @@ def _status_kept_filing(ci, tmp_path: Path, monkeypatch, *, axes: dict | None):
     root = _stage_capability_tree(tmp_path, has_board=True)
     shutil.copy(SCRIPT_PATH.parent.parent / "schemas" / "workflow.yaml", root / "schemas")
     board = BoardTracker()
-    benign = _gh_command_dispatcher("https://github.com/acme/repo/issues/42")
+    board.repository, board.owner = repository, repository.split("/", 1)[0]
+    benign = _gh_command_dispatcher(f"https://github.com/{repository}/issues/42")
 
     def run(cmd, *args, **kwargs):
         argv = [str(c) for c in cmd]
@@ -1315,16 +1319,30 @@ def _status_kept_filing(ci, tmp_path: Path, monkeypatch, *, axes: dict | None):
     return board
 
 
-def test_a_filed_issues_card_gets_its_first_status(ci, tmp_path, monkeypatch, capsys) -> None:
+@pytest.mark.parametrize(
+    "repository",
+    [
+        pytest.param("acme/repo", id="an-organisations-board"),
+        pytest.param("alice/repo", id="a-persons-board"),
+    ],
+)
+def test_a_filed_issues_card_gets_its_first_status(
+    ci, tmp_path, monkeypatch, capsys, repository
+) -> None:
+    """With no `gh.default_owner`, the board is found under the owner the new
+    issue's url names, the repository's (the README, the `gh:` block)."""
     from tests.pm_board_world import LABEL_STATE
 
-    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE)
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=LABEL_STATE, repository=repository)
 
     assert ci.main() == 0
 
     assert board.adds == [42]
     assert board.edits == [(42, "Todo")]
     assert "[board] #42: Status set to 'Todo'" in capsys.readouterr().out
+    owner = repository.split("/", 1)[0]
+    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
+    assert {argv[argv.index("--owner") + 1] for argv in reads} == {owner}
 
 
 def test_a_first_status_not_written_is_one_line_and_the_issue_stands(

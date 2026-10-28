@@ -19,10 +19,11 @@ The three layers
 ----------------
 ADR-053's, in its order. Carriage is asked first and cannot fail. The board read
 seam, `_lib/board_fields`, gives the project, the Status field and the issue's
-card. The write goes through ADR-031's sole constructor,
-`substrate_writes.write_field_value`. What a failure means is the caller's: a
-write that cannot be made comes back as one line, never an error, since the
-native state is the source and `sync-board` writes the projection again.
+card, the board found under its owner (`board_fields.board_owner`). The write
+goes through ADR-031's sole constructor, `substrate_writes.write_field_value`.
+What a failure means is the caller's: a write that cannot be made comes back as
+one line, never an error, since the native state is the source and `sync-board`
+writes the projection again.
 
 The option a state takes is its display name in workflow.yaml (`Todo`,
 `Backlog`, `In Progress`, `Review`, `Done`), matched against the Status
@@ -85,12 +86,13 @@ class FieldRead:
     answered: bool = False
 
 
-def read_status_field(config: dict[str, Any], *, owner: str | None = None) -> FieldRead:
-    """Read the project and its Status field, through the board read seam.
+def read_status_field(config: dict[str, Any], *, repository_owner: str | None = None) -> FieldRead:
+    """Read the project and its Status field, through the board read seam, under
+    the board's owner as `board_fields.board_owner` resolves it.
 
-    ``owner`` is the board's owner where `gh.default_owner` names none, as the
-    caller knows it, such as from the repository."""
-    owner = board_fields.default_owner(config) or owner
+    ``repository_owner`` is the repository's owner where the caller holds it, by
+    which the board is found where `gh.default_owner` is unset."""
+    owner = board_fields.board_owner(config, repository_owner=repository_owner)
     project = board_fields.read_project_node_id(config, owner=owner)
     if not project.ok or not project.node_id:
         return FieldRead(None, _one_line(project.error or "the board resolved to no project"))
@@ -155,11 +157,15 @@ class Projector:
 
     ``config`` names the board, as `board_fields` reads it. The project and its
     Status field are read at the first write and kept for the run, so a move and
-    its cascade read them once."""
+    its cascade read them once. ``repository_owner`` is the repository's owner
+    where the caller holds it, as :func:`read_status_field` takes it."""
 
-    def __init__(self, config: dict[str, Any], workflow: dict) -> None:
+    def __init__(
+        self, config: dict[str, Any], workflow: dict, *, repository_owner: str | None = None
+    ) -> None:
         self._config = config
         self._workflow = workflow
+        self._repository_owner = repository_owner
         self._field: FieldRead | None = None
 
     @property
@@ -169,7 +175,7 @@ class Projector:
     def field(self) -> FieldRead:
         """The Status field, read once."""
         if self._field is None:
-            self._field = read_status_field(self._config)
+            self._field = read_status_field(self._config, repository_owner=self._repository_owner)
         return self._field
 
     def write(self, number: int, state: str, *, item_id: str | None = None) -> Written:

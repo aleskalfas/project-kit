@@ -703,7 +703,7 @@ def _check_board_status(
             "not a projection this check covers",
         )
     workflow = _read_yaml_file(capability_root / "schemas" / "workflow.yaml")
-    read = board_status.read_status_field(config, owner=owner)
+    read = board_status.read_status_field(config, repository_owner=owner)
     if read.field is None:
         return CheckResult(
             _BOARD_STATUS_CHECK,

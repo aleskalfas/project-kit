@@ -185,6 +185,40 @@ def test_an_issue_with_no_card_is_said_and_the_move_stands(
     assert said in capsys.readouterr().err
 
 
+@pytest.mark.parametrize(
+    ("repository", "owner", "default_owner"),
+    [
+        pytest.param("acme/repo", "acme", None, id="an-organisations-board-no-default-owner"),
+        pytest.param("alice/repo", "alice", None, id="a-persons-board-no-default-owner"),
+        pytest.param("alice/repo", "acme", "acme", id="a-board-of-another-owner-named"),
+    ],
+)
+def test_a_move_finds_the_board_under_its_owner(
+    world: World,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    repository: str,
+    owner: str,
+    default_owner: str | None,
+) -> None:
+    """With no `gh.default_owner`, the board is the repository's owner's (the
+    README, the `gh:` block), never that of the person who runs `gh`."""
+    config = (
+        dict(BOARD_CONFIG, gh={"default_owner": default_owner}) if default_owner else BOARD_CONFIG
+    )
+    _with_config(world, monkeypatch, config)
+    _with_substrate_map(world, monkeypatch, LABEL_STATE)
+    board.repository, board.owner = repository, owner
+    task = _task(world, board)
+    world.tracker.issues[task]["labels"].append("state:backlog")
+
+    assert world.move(task, "in-progress") == 0
+
+    assert board.status(task) == "In Progress"
+    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
+    assert reads and {argv[argv.index("--owner") + 1] for argv in reads} == {owner}
+
+
 @pytest.mark.usefixtures("kept")
 def test_a_dry_run_names_the_write_and_writes_nothing(
     world: World, board: BoardTracker, capsys: pytest.CaptureFixture[str]

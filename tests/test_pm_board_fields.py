@@ -96,6 +96,52 @@ def test_default_owner_reads_the_gh_block(bf) -> None:
     assert bf.default_owner({}) is None
 
 
+# --- the board's owner ------------------------------------------------------
+# A single-owner adopter whose board lives in the repository's owner omits
+# `gh.default_owner` (the capability's README, the `gh:` block). The board is
+# then the repository's owner's, a person's or an organisation's.
+
+
+def test_board_owner_is_the_default_owner_where_one_is_configured(bf) -> None:
+    calls: list = []
+    owner = bf.board_owner(BOARD_CONFIG, repository_owner="acme", gh_call=_runner(calls=calls))
+    assert owner == "an-org"
+    assert calls == []
+
+
+def test_board_owner_is_the_repositorys_owner_the_caller_holds(bf) -> None:
+    calls: list = []
+    assert bf.board_owner({}, repository_owner="acme", gh_call=_runner(calls=calls)) == "acme"
+    assert calls == []
+
+
+def test_board_owner_reads_the_repositorys_owner_where_the_caller_holds_none(bf) -> None:
+    calls: list = []
+    payload = json.dumps({"nameWithOwner": "acme/repo"})
+    assert bf.board_owner({}, gh_call=_runner(payload, calls=calls)) == "acme"
+    assert [call["args"] for call in calls] == [["gh", "repo", "view", "--json", "nameWithOwner"]]
+
+
+def test_board_owner_is_none_where_the_repository_cannot_be_read(bf) -> None:
+    failed = _runner(returncode=1, stderr="not a git repository")
+    assert bf.board_owner({}, gh_call=failed) is None
+    assert bf.board_owner({}, gh_call=_runner(json.dumps({"nameWithOwner": ""}))) is None
+
+
+@pytest.mark.parametrize(
+    ("url", "owner"),
+    [
+        ("https://github.com/acme/repo/issues/42", "acme"),
+        ("https://github.example.com/alice/repo/issues/1", "alice"),
+        ("u", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_url_owner_reads_the_owner_a_url_names(bf, url, owner) -> None:
+    assert bf.url_owner(url) == owner
+
+
 # --- project node id --------------------------------------------------------
 
 

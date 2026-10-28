@@ -6,6 +6,11 @@ id, the issue's card, every card with its Status, a card added and a Status
 written. Each card is keyed by the issue it holds; `foreign_cards` holds cards
 the board carries for other repositories, pull requests and drafts.
 
+The board has an owner, the repository's by default, and `gh` runs as someone
+else. A `gh project` call that names no `--owner` looks among the boards of
+whoever runs `gh`, as `gh` does, so it finds the board only under the owner it
+names.
+
 A config and a substrate map put the board in reach: `BOARD_CONFIG` configures
 board #4, and `LABEL_STATE` binds the state to the kit's own labels, so the
 board configured does not carry it (DEC-051) and its Status is a projection the
@@ -23,6 +28,8 @@ from tests.pm_lifecycle_world import Tracker
 PROJECT_ID = "PVT_board4"
 STATUS_FIELD_ID = "PVTSSF_status"
 REPOSITORY = "acme/repo"
+#: Who runs `gh`, and so the owner a `gh project` call with no `--owner` reads.
+VIEWER = "octocat"
 FIVE = ("Todo", "Backlog", "In Progress", "Review", "Done")
 
 BOARD_CONFIG: dict[str, Any] = {"has_projects_v2_board": True, "projects_v2_board_id": 4}
@@ -63,10 +70,13 @@ class BoardTracker(Tracker):
     or None>}`. `edits` lists each Status written, `(issue, option name)`.
     `fail_reads` names the board reads that fail (`fields`, `items`, `card`),
     `fail_edits` the issues whose Status write fails, and `fail_adds` those whose
-    card cannot be added."""
+    card cannot be added. `repository` is this repository's `owner/name`, and
+    `owner` the board's owner, the repository's unless a test sets another."""
 
     def __init__(self, options: tuple[str, ...] = FIVE, *, field: str = "Status") -> None:
         super().__init__()
+        self.repository = REPOSITORY
+        self.owner = REPOSITORY.split("/", 1)[0]
         self.options = {name: f"opt-{name.lower().replace(' ', '-')}" for name in options}
         self.field_name = field
         self.field_type = "ProjectV2SingleSelectField"
@@ -111,7 +121,7 @@ class BoardTracker(Tracker):
             return _done(argv, stdout=json.dumps({"id": f"I_{argv[3]}"}))
         if argv[1:3] == ["repo", "view"]:
             self.calls.append(argv)
-            return _done(argv, stdout=json.dumps({"nameWithOwner": REPOSITORY}))
+            return _done(argv, stdout=json.dumps({"nameWithOwner": self.repository}))
         if argv[1:3] == ["issue", "list"]:
             self.calls.append(argv)
             return self._list(argv)
@@ -119,6 +129,11 @@ class BoardTracker(Tracker):
 
     def _project(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         verb = argv[2]
+        owner = _option(argv, "--owner") or VIEWER
+        if verb in ("view", "field-list", "item-add") and owner != self.owner:
+            number = argv[3]
+            stderr = f"GraphQL: Could not resolve to a ProjectV2 with the number {number}."
+            return _done(argv, 1, stderr=stderr)
         if verb == "view":
             return _done(argv, stdout=json.dumps({"id": PROJECT_ID, "number": 4}))
         if verb == "field-list":
@@ -191,7 +206,7 @@ class BoardTracker(Tracker):
                 "title": issue["title"],
                 "body": issue["body"],
                 "state": issue["state"],
-                "repository": {"nameWithOwner": REPOSITORY},
+                "repository": {"nameWithOwner": self.repository},
             },
             "fieldValueByName": value,
         }
@@ -211,7 +226,7 @@ class BoardTracker(Tracker):
                 "state": issue["state"],
                 "labels": [{"name": name} for name in issue["labels"]],
                 "milestone": issue["milestone"],
-                "url": f"https://github.com/{REPOSITORY}/issues/{number}",
+                "url": f"https://github.com/{self.repository}/issues/{number}",
             }
             rows.append({field: row[field] for field in fields})
         return _done(argv, stdout=json.dumps(rows))

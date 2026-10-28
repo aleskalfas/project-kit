@@ -943,6 +943,7 @@ def main() -> int:
                 _set_first_status(
                     new_issue_number,
                     board_item_id,
+                    owner=owner,
                     board_config=dict(config, projects_v2_board_id=board_id),
                     substrate_map=substrate_map,
                     workflow=_read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader),
@@ -1626,6 +1627,7 @@ def _set_first_status(
     number: int,
     item_id: str,
     *,
+    owner: str | None,
     board_config: dict,
     substrate_map: axis_labels.SubstrateMap | None,
     workflow: dict,
@@ -1638,15 +1640,17 @@ def _set_first_status(
     and the state not carried on it (`_lib/board_status`). The state is read as
     `_lib/lifecycle_inference` reads an open issue's: Todo, or Backlog with a
     milestone. ``board_config`` names the board the card was added to, `--board`
-    included. A write that fails is one line, and the issue stays filed."""
+    included, and ``owner`` is the repository's owner, read from the issue's url,
+    by which the board is found where `gh.default_owner` is unset. A write that
+    fails is one line, and the issue stays filed."""
     if not board_status.maintained(board_config, substrate_map):
         return
     milestone = {"title": milestone_title} if milestone_title else None
     state = infer.infer_current_state(
         state="open", milestone=milestone, labels=labels, substrate_map=substrate_map
     )
-    written = board_status.Projector(board_config, workflow).write(number, state, item_id=item_id)
-    board_status.report(written, stands="the issue is filed")
+    status = board_status.Projector(board_config, workflow, repository_owner=owner)
+    board_status.report(status.write(number, state, item_id=item_id), stands="the issue is filed")
 
 
 def _resolve_project_node_id(board_id: int, owner: str | None, config: dict) -> str | None:

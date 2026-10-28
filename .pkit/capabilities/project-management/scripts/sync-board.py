@@ -150,8 +150,14 @@ def main() -> int:
         )
         return 2
 
+    # The repository tells its cards from others', and its owner is the board's
+    # where `gh.default_owner` is unset (`board_fields.board_owner`).
+    repository, failure = _repository(config)
+    if repository is None:
+        print(f"error: this repository could not be read: {failure}", file=sys.stderr)
+        return 3
     workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", yaml_loader)
-    status = board_status.Projector(config, workflow)
+    status = board_status.Projector(config, workflow, repository_owner=repository.split("/", 1)[0])
     read = status.field()
     if read.field is None:
         print(f"error: the board's Status could not be read: {read.error}", file=sys.stderr)
@@ -163,10 +169,6 @@ def main() -> int:
             file=sys.stderr,
         )
 
-    repository, failure = _repository(config)
-    if repository is None:
-        print(f"error: this repository could not be read: {failure}", file=sys.stderr)
-        return 3
     corpus = containment.fetch_issue_corpus(config, fields=_ISSUE_FIELDS, state="open")
     if corpus is None:
         print("error: the open issues could not be read (gh failed).", file=sys.stderr)
@@ -342,9 +344,10 @@ def _apply(plan: Plan, status: board_status.Projector, config: dict) -> int:
 def _add_card(url: str, config: dict) -> tuple[str | None, str]:
     """Add the issue at ``url`` to the configured board: its card's id, or None
     and why. Board membership (DEC-019), which ADR-031 point 3 names out of the
-    substrate writes, so it is constructed here, as `create-issue` does."""
+    substrate writes, so it is constructed here, as `create-issue` does: on the
+    board of `gh.default_owner`, else of the issue's owner, the repository's."""
     number = board_fields.board_number(config)
-    owner = url.split("/")[3] if url.count("/") >= 4 else None
+    owner = board_fields.url_owner(url)
     cmd = ["gh", "project", "item-add", str(number), "--url", url, "--format", "json"]
     try:
         proc = gh_project_run(cmd, config, fallback_owner=owner, check=False)

@@ -51,6 +51,8 @@ Exports:
     FieldOptionsRead / ItemsRead / BoardItem — the workstream mutators' reads
     board_number(config)            — the configured board NUMBER, or None
     default_owner(config)           — `gh.default_owner`, or None
+    board_owner(config, ...)        — the board's owner: `gh.default_owner`, else the repo's
+    url_owner(url)                  — the owner a GitHub url names, or None
     read_project_node_id(...)       — board number → project node id (rich)
     resolve_project_node_id(...)    — the same, as a bare `str | None`
     read_fields(...)                — the board's live fields + their options
@@ -65,6 +67,7 @@ Exports:
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -164,6 +167,45 @@ def default_owner(config: dict[str, Any]) -> str | None:
         if isinstance(owner, str) and owner:
             return owner
     return None
+
+
+def board_owner(
+    config: dict[str, Any],
+    *,
+    repository_owner: str | None = None,
+    gh_call: GhCall | None = None,
+) -> str | None:
+    """The board's owner, which a `gh project` read names: `gh.default_owner`,
+    else the repository's owner.
+
+    A single-owner adopter whose board lives in the repository's owner omits
+    `gh.default_owner`, a person or an organisation alike. A `gh project` read
+    with no `--owner` looks among the boards of whoever runs `gh`, so it misses an
+    organisation's board, and may find a same-numbered board of that person's.
+
+    ``repository_owner`` is the repository's owner where the caller holds it, such
+    as from an issue's url. Where it holds none, `gh repo view` reads it, and only
+    then. None where neither resolves: the read then names no owner."""
+    owner = default_owner(config)
+    if owner:
+        return owner
+    if repository_owner:
+        return repository_owner
+    proc, _error = _invoke(
+        ["gh", "repo", "view", "--json", "nameWithOwner"], config, owner=None, gh_call=gh_call
+    )
+    payload = _parse_json(proc.stdout) if proc is not None else None
+    name = payload.get("nameWithOwner") if isinstance(payload, dict) else None
+    if isinstance(name, str) and "/" in name:
+        return name.split("/", 1)[0] or None
+    return None
+
+
+def url_owner(url: str | None) -> str | None:
+    """The owner a GitHub url names, as `https://<host>/<owner>/<repo>/…` does,
+    such as an issue's; None for a url that names none."""
+    match = re.match(r"https?://[^/]+/([^/]+)/", url or "")
+    return match.group(1) if match else None
 
 
 # ----- the three reads ---------------------------------------------------

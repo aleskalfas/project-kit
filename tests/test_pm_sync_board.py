@@ -169,6 +169,47 @@ def test_with_nobody_to_ask_and_no_yes_it_refuses_and_writes_nothing(
     assert "pkit pm sync-board" in capsys.readouterr().err
 
 
+# --- the board's owner -------------------------------------------------------
+# With no `gh.default_owner`, the board is the repository's owner's, a person's or
+# an organisation's (the capability's README, the `gh:` block). Every read and
+# card added names that owner, never the person who runs `gh`.
+
+
+@pytest.mark.parametrize(
+    ("repository", "owner", "default_owner"),
+    [
+        pytest.param("acme/repo", "acme", None, id="an-organisations-board-no-default-owner"),
+        pytest.param("acme/repo", "acme", "acme", id="an-organisations-board-its-default-owner"),
+        pytest.param("alice/repo", "alice", None, id="a-persons-board-no-default-owner"),
+        pytest.param("alice/repo", "alice", "alice", id="a-persons-board-its-default-owner"),
+        pytest.param("alice/repo", "acme", "acme", id="a-board-of-another-owner-named"),
+    ],
+)
+def test_the_board_is_found_under_its_owner(
+    sb: ModuleType,
+    board: BoardTracker,
+    monkeypatch: pytest.MonkeyPatch,
+    repository: str,
+    owner: str,
+    default_owner: str | None,
+) -> None:
+    board.repository, board.owner = repository, owner
+    if default_owner:
+        _configure(
+            sb, monkeypatch, dict(BOARD_CONFIG, gh={"default_owner": default_owner}), LABEL_STATE
+        )
+    n = _a_board_out_of_step(board)
+
+    assert _sync(sb, "--yes") == 0
+
+    assert (n["started"], "In Progress") in board.edits
+    assert board.adds == [n["no_card"]]
+    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
+    assert {argv[argv.index("--owner") + 1] if "--owner" in argv else None for argv in reads} == {
+        owner
+    }
+
+
 # --- the Status options ----------------------------------------------------
 
 

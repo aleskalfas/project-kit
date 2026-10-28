@@ -137,6 +137,62 @@ def test_a_write_that_cannot_be_made_says_why_in_one_line(
     assert board.status(7) in (None, "Todo")
 
 
+# --- the board's owner ---------------------------------------------------------
+# A single-owner adopter whose board lives in the repository's owner omits
+# `gh.default_owner` (the capability's README, the `gh:` block). The board is then
+# found under the repository's owner, whether a person or an organisation owns it.
+# A `gh project` read with no `--owner` would look among the boards of whoever
+# runs `gh`, here someone else (`pm_board_world.VIEWER`).
+
+
+def _owners(board: BoardTracker) -> set[str | None]:
+    """The owner each read of the board named, None for a read that named none."""
+    reads = [argv for argv in board.calls if argv[1:2] == ["project"] and argv[2] != "item-edit"]
+    return {argv[argv.index("--owner") + 1] if "--owner" in argv else None for argv in reads}
+
+
+@pytest.mark.parametrize(
+    ("repository", "owner", "default_owner"),
+    [
+        pytest.param("acme/repo", "acme", None, id="an-organisations-board-no-default-owner"),
+        pytest.param("acme/repo", "acme", "acme", id="an-organisations-board-its-default-owner"),
+        pytest.param("alice/repo", "alice", None, id="a-persons-board-no-default-owner"),
+        pytest.param("alice/repo", "alice", "alice", id="a-persons-board-its-default-owner"),
+        pytest.param("alice/repo", "acme", "acme", id="a-board-of-another-owner-named"),
+    ],
+)
+def test_the_board_is_found_under_its_owner(
+    board: BoardTracker, repository: str, owner: str, default_owner: str | None
+) -> None:
+    board.repository, board.owner = repository, owner
+    board.card(7, "Todo")
+    config = (
+        dict(BOARD_CONFIG, gh={"default_owner": default_owner}) if default_owner else BOARD_CONFIG
+    )
+
+    written = board_status.Projector(config, WORKFLOW).write(7, "review")
+
+    assert written.ok, written.failure
+    assert board.edits == [(7, "Review")]
+    assert _owners(board) == {owner}
+    # The repository is read for its owner only where no field names the board's.
+    reads = [argv for argv in board.calls if argv[1:3] == ["repo", "view"]]
+    assert len(reads) == (0 if default_owner else 1)
+
+
+def test_a_caller_that_holds_the_repositorys_owner_reads_no_repository(
+    board: BoardTracker,
+) -> None:
+    board.card(7)
+
+    assert (
+        board_status.Projector(BOARD_CONFIG, WORKFLOW, repository_owner="acme").write(7, "todo").ok
+    )
+
+    assert _owners(board) == {"acme"}
+    assert not [argv for argv in board.calls if argv[1:3] == ["repo", "view"]]
+
+
 # --- the Status field and its options ----------------------------------------
 
 
