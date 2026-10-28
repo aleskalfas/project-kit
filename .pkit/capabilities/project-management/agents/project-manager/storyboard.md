@@ -486,7 +486,7 @@ A platform starts a session in a sandbox's clone, with `PKIT_AGENT=project-manag
 >
 > **project-manager:** *Listing the seats…* *Taking the first free worker seat…* I hold seat 2, `worker-a`. *Taking the next ready Task…* Started #320 "Export a report as CSV", on its branch `feat/320-export-csv`.
 >
-> **project-manager:** *Reading #320 and its EPIC…* *Starting a fresh helper to build it…* The helper's tests and checks pass, and both its acceptance criteria are met. *Opening the pull request…* PR #330 is ready for review, and #320 is in Review.
+> **project-manager:** *Reading #320, its EPIC and the framework record…* *Building…* Its tests and checks pass, and both its acceptance criteria are met. *Opening the pull request…* PR #330 is ready for review, and #320 is in Review.
 >
 > **project-manager:** *Taking the next ready Task…* No Task is ready for this clone, since #321 waits on #320. I'm ending the loop, and keeping the seat. The merge of PR #330 is yours.
 
@@ -495,9 +495,8 @@ A platform starts a session in a sandbox's clone, with `PKIT_AGENT=project-manag
 - `pkit pm seats` marks no seat as this clone's. The operator asked for a role, so `pkit pm take-seat --role worker`, with no `--agent`, since `PKIT_AGENT` names the definition. Its `role:` line reads `worker`: the worker's loop, in Implementer direction.
 - This fresh clone has nothing in flight: no Task branch, and a clean working tree. A clone that had would go on with that Task, or with a fix round, first.
 - `pkit pm next-task --yes`. Starting a Task is the worker's own move, so no person is asked. It starts #320 through `start-work`, which claims it for this clone's instance and cuts its branch here.
-- `pkit pm show-issue 320`, then #320's body and its EPIC's body, enough for the helper's brief. The brief names the record its foundation settled and the skeleton, for the helper to read.
-- `pkit pm seats` still marks seat 2 as this clone's. The worker starts a helper agent that builds through the harness, with no name, so its whole result comes back. The helper starts with none of the session's context. It builds #320 in this clone, on `feat/320-export-csv`, by the project's conventions, tests and checks, and the skeleton's patterns. It writes the answers the change check asks, commits, and writes nothing to GitHub. Its result names the commits, the checks and how each ended, and the two criteria met.
-- The worker checks the result against the clone: the commits are on the branch, the working tree is clean, and the checks pass. `pkit pm check-criterion 320 1 2` ticks the criteria met, and the branch is pushed once `pkit pm seats` still marks the seat. A harness that could not start a helper would have the worker say so, and build #320 in its own session.
+- `pkit pm show-issue 320`, then #320's body, its EPIC's body and the record its foundation settled. The build follows the project's conventions, tests and checks, and the skeleton's patterns.
+- `pkit pm check-criterion 320 1 2` ticks the criteria met. The answers the change check asks are written, and the work is committed and pushed.
 - `pkit pm open-pr 320 --draft --body-file <file>`, then `pkit pm review-work 320`, which checks the body, makes the pull request ready and moves #320 to Review.
 - `pkit pm next-task --yes` again exits 5, since #321 names #320, which is still open. The loop ends, and the seat stays taken, so a new session in this clone takes it up.
 - The worker merges nothing. The person lands PR #330 through the merge gate, or asks the worker to, and authorises the merge of its head. A verdict on PR #330 that asks for changes comes first in the next round, fixed on #320's branch.

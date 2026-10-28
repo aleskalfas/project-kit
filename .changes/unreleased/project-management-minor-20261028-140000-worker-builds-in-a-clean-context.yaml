@@ -1,8 +1,0 @@
-component: project-management
-kind: minor
-custom:
-  category: Changed
-body: >
-  A worker now has a fresh helper agent build each Task, so no Task inherits
-  the context of the one before it, and builds in its own session as before
-  where its harness cannot start a helper.
