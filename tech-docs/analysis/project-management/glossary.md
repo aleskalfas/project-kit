@@ -208,7 +208,7 @@ TERM-issue:
 TERM-issue-lifecycle:
   name: issue lifecycle
   status: active
-  definition: "process that takes an item of tracked work from Todo through Backlog, In Progress and Review to Done, a person holding its start and end"
+  definition: "process that takes an item of tracked work from Todo through Backlog, In Progress and Review to Done, a person holding its scheduling and end"
   pkit:
     friction:
       anchors:
@@ -262,7 +262,7 @@ TERM-owner:
   name: owner
   noun-forms: [owners]
   status: active
-  definition: "instance an issue belongs to from filing or start until close, paired with the issue's assignee, whose other instances leave the issue alone"
+  definition: "instance an issue belongs to, paired with the issue's assignee, whose other instances leave the issue alone"
   pkit:
     friction:
       anchors:
@@ -593,7 +593,7 @@ Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#instance).
 **Distinctions:**
 
 - **Session:** one run of an AI agent in a clone. A session ends or dies, and the instance's number stays, held by a file in the clone ([DEC-035 point 1](../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#1-activation-is-per-clone-and-opt-in)).
-- **A clone with no number:** a clone that never set a number. Such a clone marks nothing and is guarded by nothing, as before instances existed (DEC-035 point 1).
+- **A clone with no number:** a clone that never set a number. Such a clone marks nothing and is guarded by nothing, as before instances existed, with one exception. It cannot move back from In Progress an [issue](#term-issue--issue) an instance owns, since it cannot release the [owner](#term-owner--owner) (DEC-035 point 1).
 - **A linked worktree:** a further working tree of a clone. Whether a linked worktree reads the clone's identity, or may set a separate identity, is not decided yet ([DEC-059 point 6](../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#6-a-clones-identity-is-its-seats-name-and-its-number-comes-from-the-topology) and #1140).
 - **Seat:** a place in a [topology](#term-topology--topology), taken by a clone. The clone's name and number are then the [seat](#term-seat--seat)'s, and never typed (DEC-059 point 6).
 
