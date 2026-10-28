@@ -6,6 +6,7 @@ Working notes for the Friday talk (goal reconsidered 26 October: present project
 
 **A. What the agent remembers**
 1. Decision records: `.pkit/decisions/`
+1b. Validation: one check that every file's form and every pointer between files hold (moved here from 11 on 28 October)
 2. Rules: `.pkit/rules/`
 3. Scratchpad notes: `.pkit/scratchpad/`
 
@@ -21,7 +22,7 @@ Working notes for the Friday talk (goal reconsidered 26 October: present project
 **D. What stays true over time**
 9. Anchors and answers (friction): documents know what they rest on
 10. Rule sets: writing rules a reviewer judges
-11. Validation: `pkit validate`, one check of everything
+11. (moved to 1b)
 
 **E. How it reaches a project and stays current**
 12. The CLI: `pkit`
@@ -94,6 +95,26 @@ What this does to the attack: the context-size objection dissolves (nobody loads
 Talk claim: decisions are the source, the system is their projection. Change the decision first, then the system follows, and checks show where the projection lags (the analysis's "not built yet" boxes, the change check).
 
 Finding: pkit does not state this anywhere an adopter reads. COR-006 gives records the why; CONTRIBUTING's axiom framing is maintainer-only; the acceptance gate says only "build on accepted"; core analysis has UC-037 (record a decision) and JRN-003 (deliver a change built on accepted records), but no flow "a change starts with its decision, and the system follows".
+
+## 1b. Validation: checked every time (draft, 28 October; placed after decisions)
+
+*Facts checked against the repository on 28 October.*
+
+- **What:** `pkit validate` runs every registered check of the project's state in one command, grouped: manifests, schemas, configuration, packages, connections, versions, decisions, friction, rule sets, references, processes, data, and each installed capability's own checks (16 validators here today). Only errors fail; warnings and reports print. Checks that judge a change rather than the state (`friction check`, `migrations check-diff`, `release lint`) run per change, in CI and before landing.
+- **Problem:** a methodology made of files breaks quietly: a citation to a record that no longer exists, a schema a file no longer matches, a number used twice, a capability that needs a newer backbone. Nobody notices until something reads it wrong.
+- **Gain:**
+  - one command says whether the project's own structure holds, before a person or an agent relies on it
+  - a capability brings its checks with it, so installing one adds its rules to the same command
+  - CI runs it on every change, so a break is caught where it is made
+- **Weight:** one command; seconds to run; nothing in a session's context.
+- **Evidence (this session):** every builder ran it before opening a pull request; `pkit decisions check-diff` caught the DEC-062 number taken twice; it reported 61 warnings today (for example, citations to a point a record does not hold), none failing.
+- **Weak spot:**
+  - warnings pile up (61 today) and are easy to ignore
+  - it checks structure, not meaning: a record can be valid and wrong
+- **Maintainer's notes:**
+  - Decided 28 October: a block of its own, told through the mechanism and the why. Headline: **"Checked every time."** The mechanism in three layers: each kind of file has a declared shape (schemas); each connection is written so a machine can follow it (typed citations, anchors); each part registers its own checks (core and every capability), and `pkit validate` runs them all. The why: agents act on what they read, so a deterministic check catches what a person would notice and an agent would not; it is the mechanical half of carrying out decisions ("rules, not guesses" applied to the project's own structure); and it lets the system grow without anyone knowing all of it. The honest example: 61 warnings had piled up (42 of them broken citations), because each check was introduced as a warning and never finished; #2300 clears them, and #2301 makes each cleared kind fail from then on (a project chooses, so adopters are not broken).
+
+  - Placed after block 1 on 28 October: the clearest examples are about records (two records numbered DEC-062 in different pull requests; reviewer instructions citing a point "D4" that DEC-002 does not have), and once the audience has seen numbered records the next question is what keeps their numbers and citations from breaking. It stays a block of its own because it checks every kind of file; each later block can say "and validation checks this too". The plain telling: the files point at each other; pointers break quietly; a person notices a dead link, an agent follows it; one command walks all files and pointers.
 
 ## 2. Rules
 
@@ -330,21 +351,3 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - inheritance with version pins is a lot of machinery for a handful of sets
 - **Maintainer's notes:**
   - Decided 28 October: skipped for now; the rules are being reworked (operational rules becoming rule sets, #2270). Revisit for the talk once that lands, probably together with block 2.
-
-## 11. Validation: one check of everything (draft, 28 October)
-
-*Facts checked against the repository on 28 October.*
-
-- **What:** `pkit validate` runs every registered check of the project's state in one command, grouped: manifests, schemas, configuration, packages, connections, versions, decisions, friction, rule sets, references, processes, data, and each installed capability's own checks (16 validators here today). Only errors fail; warnings and reports print. Checks that judge a change rather than the state (`friction check`, `migrations check-diff`, `release lint`) run per change, in CI and before landing.
-- **Problem:** a methodology made of files breaks quietly: a citation to a record that no longer exists, a schema a file no longer matches, a number used twice, a capability that needs a newer backbone. Nobody notices until something reads it wrong.
-- **Gain:**
-  - one command says whether the project's own structure holds, before a person or an agent relies on it
-  - a capability brings its checks with it, so installing one adds its rules to the same command
-  - CI runs it on every change, so a break is caught where it is made
-- **Weight:** one command; seconds to run; nothing in a session's context.
-- **Evidence (this session):** every builder ran it before opening a pull request; `pkit decisions check-diff` caught the DEC-062 number taken twice; it reported 61 warnings today (for example, citations to a point a record does not hold), none failing.
-- **Weak spot:**
-  - warnings pile up (61 today) and are easy to ignore
-  - it checks structure, not meaning: a record can be valid and wrong
-- **Maintainer's notes:**
-  - Decided 28 October: a block of its own, told through the mechanism and the why. Headline: **"Checked every time."** The mechanism in three layers: each kind of file has a declared shape (schemas); each connection is written so a machine can follow it (typed citations, anchors); each part registers its own checks (core and every capability), and `pkit validate` runs them all. The why: agents act on what they read, so a deterministic check catches what a person would notice and an agent would not; it is the mechanical half of carrying out decisions ("rules, not guesses" applied to the project's own structure); and it lets the system grow without anyone knowing all of it. The honest example: 61 warnings had piled up (42 of them broken citations), because each check was introduced as a warning and never finished; #2300 clears them, and #2301 makes each cleared kind fail from then on (a project chooses, so adopters are not broken).
