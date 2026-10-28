@@ -52,7 +52,8 @@ The flow follows an adopter: install it, learn it, keep it current.
 8. **Your rules, not the tool's guesses** — permissions, and where agents write (7, with 8)
 9. **Docs that know when they're wrong** — anchors and answers (9)
 10. **Rule sets** — skipped for now while the rules are reworked (10)
-11. Still to walk: connections (18), capabilities (19)
+11. **Capabilities** (19), still to walk
+11b. **Connections** — how capabilities hand each other data without knowing each other; right after capabilities, since the audience must know what a capability is first (18, decided 28 October)
 12. **Stay current** — sync, upgrade, migrations, versioning and release (13's upgrade part, with 15), the closing block
 
 
@@ -425,3 +426,4 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - abstract, and only visible through what it enables (fixers after a merge, readers of a page)
   - each role has exactly one provider so far, so swapping is designed, not yet shown
 - **Maintainer's notes:**
+  - Decided 28 October: placed right after the capabilities block, not before it: connections between capabilities only make sense once capabilities are introduced. The example: fixers started after a merge, through `pkit::work-tracking:fixers`.
