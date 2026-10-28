@@ -85,9 +85,12 @@ class FieldRead:
     answered: bool = False
 
 
-def read_status_field(config: dict[str, Any]) -> FieldRead:
-    """Read the project and its Status field, through the board read seam."""
-    owner = board_fields.default_owner(config)
+def read_status_field(config: dict[str, Any], *, owner: str | None = None) -> FieldRead:
+    """Read the project and its Status field, through the board read seam.
+
+    ``owner`` is the board's owner where `gh.default_owner` names none, as the
+    caller knows it, such as from the repository."""
+    owner = board_fields.default_owner(config) or owner
     project = board_fields.read_project_node_id(config, owner=owner)
     if not project.ok or not project.node_id:
         return FieldRead(None, _one_line(project.error or "the board resolved to no project"))
