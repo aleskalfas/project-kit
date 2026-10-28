@@ -942,6 +942,16 @@ def test_main_board_path_uses_cached_node_id_no_project_view(ci, tmp_path, monke
         config_path.read_text(encoding="utf-8") + "projects_v2_node_id: PVT_cached\n",
         encoding="utf-8",
     )
+    # The axes on the kit's own labels, and the state left out, so no board
+    # Status is written for it (DEC-062 point 5): the one board read left is the
+    # hook's, which the cache spares.
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n"
+        "  type:\n    kit-label: true\n"
+        "  priority:\n    kit-label: true\n"
+        "  workstream:\n    kit-label: true\n",
+        encoding="utf-8",
+    )
 
     project_view_calls = {"n": 0}
 
@@ -1288,6 +1298,16 @@ def test_main_label_fallback_path_omits_board_keys_hook_skips(ci, tmp_path, monk
 # milestone, as `_lib/lifecycle_inference` reads it.
 
 
+#: A map that puts priority, workstream and state on the board, and keeps type on
+#: the kit's own labels.
+BOARD_AXES: dict = {
+    "type": {"kit-label": True},
+    "priority": {"board": True},
+    "workstream": {"board": True},
+    "state": {"board": True},
+}
+
+
 def _status_kept_filing(
     ci, tmp_path: Path, monkeypatch, *, axes: dict | None, repository: str = "acme/repo"
 ):
@@ -1365,9 +1385,9 @@ def test_a_first_status_not_written_is_one_line_and_the_issue_stands(
 def test_no_first_status_is_written_where_the_board_carries_the_state(
     ci, tmp_path, monkeypatch
 ) -> None:
-    """With no map, the flag carries the state on the board (DEC-051): its Status
-    is the state's source, which create-issue leaves as it was (#2271)."""
-    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=None)
+    """The map binds state to the board: its Status is the state's source, which
+    create-issue leaves as it was (#2271)."""
+    board = _status_kept_filing(ci, tmp_path, monkeypatch, axes=BOARD_AXES)
 
     assert ci.main() == 0
 
@@ -2887,17 +2907,19 @@ def test_build_labels_map_binding_beats_the_board_flag(ci) -> None:
 
 
 def test_build_labels_board_carried_axis_writes_no_label_and_no_advisory(ci) -> None:
-    """The map is silent about `priority`, so the flag still governs and the board
-    carries it: no label — and NO "unsupported" advisory, because the axis is
-    SERVED. `resolve_write` returns DEGRADE for a board-carried axis exactly as it
-    does for an absent one, so a writer keying on the resolver alone would report a
-    served axis as unsupported (ADR-053 decision point 6)."""
+    """The map binds `priority` to the board, so the board carries it: no label —
+    and NO "unsupported" advisory, because the axis is SERVED. `resolve_write`
+    returns DEGRADE for a board-carried axis exactly as it does for an absent one,
+    so a writer keying on the resolver alone would report a served axis as
+    unsupported (ADR-053 decision point 6)."""
     labels, advisories, resolved = ci._build_labels(
         kind="feature",
         priority="High",
         workstream=None,
         config=_BOARD_CONFIG_ONLY,
-        substrate_map=None,
+        substrate_map=ci.axis_labels.SubstrateMap(
+            axes={"type": {"kit-label": True}, "priority": {"board": True}}
+        ),
     )
     assert not any(lbl.startswith("priority") or lbl == "P0" for lbl in labels)
     assert "priority" not in resolved

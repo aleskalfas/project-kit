@@ -179,15 +179,25 @@ def test_kit_labels_expected_only_in_greenfield(pc, axis_labels) -> None:
         assert pc.axis_carriage.expects_kit_labels(axis, {}, parsed) is False
 
 
-def test_kit_labels_not_expected_for_a_board_claimed_axis(pc, axis_labels) -> None:
-    """The gating decision now sees the BOARD too (DEC-051 decision point 4).
-    Greenfield under a configured board: `type` is still kit-label-carried (it is
-    always a label), while the three board-claimable axes are not — which the
-    caller used to decide with its own `if has_board` instead of asking."""
+def test_kit_labels_expected_under_a_board_the_map_binds_nothing_to(pc, axis_labels) -> None:
+    """The board flag carries no axis (DEC-062 point 1): with no map, a
+    configured board leaves every axis on the kit's own labels, `type` and the
+    other three alike."""
     board = {"has_projects_v2_board": True}
-    assert pc.axis_carriage.expects_kit_labels("type", board, None) is True
-    for axis in ("priority", "workstream", "state"):
-        assert pc.axis_carriage.expects_kit_labels(axis, board, None) is False
+    for axis in ("type", "priority", "workstream", "state"):
+        assert pc.axis_carriage.expects_kit_labels(axis, board, None) is True
+
+
+def test_kit_labels_expected_for_a_kit_label_binding(pc, axis_labels) -> None:
+    """A map binding an axis with `kit-label: true` keeps the kit-label check on
+    for that axis, and that axis alone (DEC-062 points 3 and 4)."""
+    parsed = axis_labels.SubstrateMap(
+        axes={"priority": {"kit-label": True}, "workstream": {"board": True}}
+    )
+    board = {"has_projects_v2_board": True}
+    assert pc.axis_carriage.expects_kit_labels("priority", board, parsed) is True
+    assert pc.axis_carriage.expects_kit_labels("workstream", board, parsed) is False
+    assert pc.axis_carriage.expects_kit_labels("type", board, parsed) is False
 
 
 def test_skip_line_distinguishes_bound_from_degraded(pc, axis_labels) -> None:
@@ -201,14 +211,22 @@ def test_skip_line_distinguishes_bound_from_degraded(pc, axis_labels) -> None:
 
 
 def test_skip_line_names_the_board_for_a_board_carried_axis(pc, axis_labels) -> None:
-    """The wording the map-only version could not produce: an axis the FLAG
-    carries (absent from the map entirely) used to read "unsupported/absent —
-    degraded", the opposite of the truth."""
-    parsed = axis_labels.SubstrateMap(axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}})
+    """An axis the map binds `board: true` is named as on the board, never as
+    unsupported."""
+    parsed = axis_labels.SubstrateMap(axes={"priority": {"board": True}})
     line = pc._axis_label_check_skipped("priority", {"has_projects_v2_board": True}, parsed)
     assert line.status == "skip"
     assert "board" in line.detail
     assert "unsupported" not in line.detail
+
+
+def test_skip_line_says_an_axis_omitted_under_a_board_degrades(pc, axis_labels) -> None:
+    """An axis a present map omits degrades under a board as without one
+    (DEC-062 point 2), and the line says so."""
+    parsed = axis_labels.SubstrateMap(axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}})
+    line = pc._axis_label_check_skipped("priority", {"has_projects_v2_board": True}, parsed)
+    assert line.status == "skip"
+    assert "unsupported" in line.detail
 
 
 def test_state_label_check_degrades_under_derive_binding(pc, axis_labels) -> None:
@@ -222,12 +240,13 @@ def test_state_label_check_degrades_under_derive_binding(pc, axis_labels) -> Non
     assert "derive" in result.detail or "not required" in result.detail
 
 
-def test_state_label_check_degrades_under_a_board(pc) -> None:
-    """Greenfield + a configured board: `state` is board-carried, so the kit's
-    `state:*` labels are not demanded — and the check now SAYS so instead of
-    being skipped silently by its caller (no `gh` call is made either; the path
-    above would fail on the nonexistent capability root if it reached it)."""
-    result = pc._check_state_labels(Path("/nonexistent"), {"has_projects_v2_board": True}, None)
+def test_state_label_check_skips_where_the_board_carries_the_state(pc, axis_labels) -> None:
+    """A map binding `state: {board: true}` puts the state on the board's Status,
+    so the kit's `state:*` labels are not demanded — and the check SAYS so (no
+    `gh` call is made either; the path below would fail on the nonexistent
+    capability root if it reached it)."""
+    parsed = axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    result = pc._check_state_labels(Path("/nonexistent"), {"has_projects_v2_board": True}, parsed)
     assert result.status == "skip"
     assert "board" in result.detail
 

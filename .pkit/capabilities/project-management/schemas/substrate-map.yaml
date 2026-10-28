@@ -11,7 +11,8 @@
 #   - NO substrate-map.yaml at all  ⇒ greenfield. Every axis reads the
 #     kit's own `<axis>:<value>` labels directly, byte-unchanged.
 #   - A map PRESENT ⇒ per axis, the read seam resolves a ternary:
-#       * bound        — resolve through the declared binding;
+#       * bound        — resolve through the declared binding (`kit-label`
+#                        names the kit's own labels, as with no map);
 #       * unsupported  — degrade (advisory / disabled);
 #       * ABSENT from a present map — treated as `unsupported`, NOT
 #         greenfield. This is the load-bearing rule: an adopter who omits
@@ -34,6 +35,12 @@
 #                   `priority` / `workstream` ONLY, and requires a board in
 #                   project/config.yaml. CONTRAST `unsupported`: a `board`
 #                   axis is SERVED — rules needing it are not softened.
+#   - kit-label:    the kit's own `<axis>:<value>` labels, read, written and
+#                   checked as with no map (DEC-062 point 3). PARAMETERLESS
+#                   (`kit-label: true`), and admissible on every axis. A map
+#                   carries nothing beyond its bindings (DEC-062 point 4), so
+#                   a project can move one axis off the kit's labels and keep
+#                   the others on them with none degrading.
 #   - unsupported:  the axis has no native encoding; degrade.
 # Any binding MAY carry an optional `default:` — a substrate value the
 # writer seeds when the caller supplies none. The read seam never invents

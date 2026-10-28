@@ -99,6 +99,25 @@ def test_derive_binding_accepted(validator: Draft202012Validator) -> None:
     assert _errors(validator, doc) == []
 
 
+@pytest.mark.parametrize("axis", ["type", "priority", "workstream", "state"])
+def test_kit_label_binding_accepted_on_every_axis(
+    validator: Draft202012Validator, axis: str
+) -> None:
+    """`kit-label: true` names the kit's own labels, admissible on every axis
+    (project-management DEC-062 point 3)."""
+    assert _errors(validator, _doc({axis: {"kit-label": True}})) == []
+
+
+def test_kit_label_false_rejected(validator: Draft202012Validator) -> None:
+    """Parameterless and `const: true`, as `unsupported` and `board` are."""
+    assert _errors(validator, _doc({"priority": {"kit-label": False}}))
+
+
+def test_kit_label_beside_another_arm_rejected(validator: Draft202012Validator) -> None:
+    doc = _doc({"priority": {"kit-label": True, "label": {"remap": {"High": "P0"}}}})
+    assert _errors(validator, doc)
+
+
 def test_default_alongside_binding_accepted(validator: Draft202012Validator) -> None:
     doc = _doc({"priority": {"label": {"remap": {"High": "P0"}}, "default": "P1"}})
     assert _errors(validator, doc) == []

@@ -47,10 +47,14 @@ STATUS_FIELD = "Status"
 
 def maintained(config: dict[str, Any], substrate_map: axis_labels.SubstrateMap | None) -> bool:
     """Whether the board's Status is a projection this project keeps: a board is
-    configured, and the state is not carried on it. No I/O."""
-    return board_fields.board_number(config) is not None and not axis_carriage.is_board_carried(
-        "state", config, substrate_map
-    )
+    configured, and the state is carried off it — with no map, or where the map
+    binds state to a substrate other than the board. Where a present map omits
+    state or marks it `unsupported`, the state degrades and no Status is written,
+    so the board's Status stays with the people who move it
+    ([project-management:DEC-062-axes-chosen-in-the-map] point 5). No I/O."""
+    if board_fields.board_number(config) is None:
+        return False
+    return axis_carriage.carriage("state", config, substrate_map) not in ("board", "degrade")
 
 
 def option_name(workflow: dict, state: str) -> str | None:

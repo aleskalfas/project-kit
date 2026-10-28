@@ -33,6 +33,17 @@ def stage_project(cap_root: Path, workstreams: str, *, board: bool = False) -> N
     config = "schema_version: 1\ndefault_branch: main\nworkstreams: []\n"
     if board:
         config += "has_projects_v2_board: true\nprojects_v2_board_id: 7\n"
+        # The board carries workstream only where the map binds it there
+        # (project-management DEC-062 point 1); the other axes stay on the kit's
+        # own labels.
+        (project / "substrate-map.yaml").write_text(
+            "schema_version: 1\naxes:\n"
+            "  type:\n    kit-label: true\n"
+            "  priority:\n    kit-label: true\n"
+            "  workstream:\n    board: true\n"
+            "  state:\n    kit-label: true\n",
+            encoding="utf-8",
+        )
     (project / "config.yaml").write_text(config, encoding="utf-8")
     (project / "bootstrap-stamp.yaml").write_text(
         "schema_version: 1\n"

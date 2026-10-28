@@ -382,6 +382,41 @@ def test_present_map_resolve_write_never_emits_a_kit_label_for_any_axis_value() 
             )
 
 
+# --- the `kit-label` arm (DEC-062 point 3) ---------------------------------
+
+#: A map that keeps `priority` on the kit's own labels, moves `workstream` to the
+#: board, and says nothing about `type` or `state`.
+KIT_MAP = axis_labels.SubstrateMap(
+    axes={"priority": {"kit-label": True}, "workstream": {"board": True}},
+)
+
+
+def test_kit_label_axis_resolves_as_with_no_map() -> None:
+    """A `kit-label` axis is read, written and checked as with no map, so a map
+    carries nothing beyond its bindings (DEC-062 points 3 and 4)."""
+    assert axis_labels.axis_disposition("priority", KIT_MAP) == "served"
+    assert axis_labels.axis_expects_kit_labels("priority", KIT_MAP) is True
+    assert axis_labels.resolve_write("priority", "High", KIT_MAP) == "priority:High"
+    assert axis_labels.resolve_write("priority", "High", KIT_MAP) == axis_labels.resolve_write(
+        "priority", "High", None
+    )
+    labels = ["priority:Low", "type:bug"]
+    assert axis_labels.resolve_read("priority", labels, KIT_MAP) == "Low"
+    assert axis_labels.resolve_read("priority", labels, KIT_MAP) == axis_labels.resolve_read(
+        "priority", labels, None
+    )
+
+
+def test_kit_label_on_one_axis_leaves_the_others_to_their_bindings() -> None:
+    """Only the axis the arm names reads the kit's labels: the others keep their
+    own bindings, and an axis the map leaves out still degrades."""
+    assert axis_labels.axis_expects_kit_labels("workstream", KIT_MAP) is False
+    assert axis_labels.axis_expects_kit_labels("type", KIT_MAP) is False
+    assert axis_labels.axis_disposition("type", KIT_MAP) == "unsupported"
+    assert axis_labels.resolve_write("type", "bug", KIT_MAP) is axis_labels.DEGRADE
+    assert axis_labels.resolve_read("type", ["type:bug"], KIT_MAP) is None
+
+
 # --- defaults --------------------------------------------------------------
 
 

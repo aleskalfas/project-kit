@@ -793,10 +793,11 @@ def test_no_mismatch_finding_without_classification(
     assert "classification.type.structural-mismatch" not in _labels(findings)
 
 
-def test_board_mode_does_not_require_priority_or_workstream_labels(
+def test_a_board_alone_carries_no_axis_so_the_kit_labels_are_required(
     vi, issue_types, titles, body_format, board_config
 ) -> None:
-    """In board mode, priority and workstream live on board fields, not labels."""
+    """The board flag says only that a board exists (DEC-062 point 1): with no
+    map, priority and workstream stay on the kit's own labels, board or no board."""
     issue = _make_issue(
         title="[Task] Install the Claude Code CLI inside the sandbox",
         body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
@@ -808,6 +809,35 @@ def test_board_mode_does_not_require_priority_or_workstream_labels(
         titles=titles,
         body_format=body_format,
         config=board_config,
+    )
+    assert "classification.priority.missing" in _labels(findings)
+    assert "classification.workstream.missing" in _labels(findings)
+
+
+def test_axes_the_map_binds_to_the_board_require_no_labels(
+    vi, issue_types, titles, body_format, board_config
+) -> None:
+    """Where the map binds priority and workstream `board: true`, they live on
+    board fields, not labels."""
+    issue = _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=("Feature: #1\n\n## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."),
+        labels=["type:feature"],
+    )
+    smap = vi.axis_labels.SubstrateMap(
+        axes={
+            "type": {"kit-label": True},
+            "priority": {"board": True},
+            "workstream": {"board": True},
+        }
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=board_config,
+        substrate_map=smap,
     )
     assert "classification.priority.missing" not in _labels(findings)
     assert "classification.workstream.missing" not in _labels(findings)
@@ -2401,9 +2431,9 @@ def test_board_carried_axis_reports_unverified_not_missing(
     body_format,
     board_config,
 ) -> None:
-    """Greenfield under a board: the board carries priority/workstream. The gate
-    must demand no kit label AND not claim the value is missing — it reports that
-    it did not check. UNVERIFIED is not MISSING and is not satisfied either."""
+    """The map binds priority/workstream to the board. The gate must demand no
+    kit label AND not claim the value is missing — it reports that it did not
+    check. UNVERIFIED is not MISSING and is not satisfied either."""
     findings = vi._validate_issue(
         issue=_make_issue(
             title="[Task] Wire the sandbox allowlist",
@@ -2416,7 +2446,9 @@ def test_board_carried_axis_reports_unverified_not_missing(
         titles=titles,
         body_format=body_format,
         config=board_config,
-        substrate_map=None,
+        substrate_map=vi.axis_labels.SubstrateMap(
+            axes={"priority": {"board": True}, "workstream": {"board": True}}
+        ),
     )
     found = _labels(findings)
     assert "classification.priority.missing" not in found
@@ -2448,7 +2480,9 @@ def test_board_carried_unverified_is_a_warning_and_names_the_board(
         titles=titles,
         body_format=body_format,
         config=board_config,
-        substrate_map=None,
+        substrate_map=vi.axis_labels.SubstrateMap(
+            axes={"priority": {"board": True}, "workstream": {"board": True}}
+        ),
     )
     unverified = next(f for f in findings if f.label == "classification.priority.unverified")
     assert unverified.severity == vi.SEVERITY_WARNING
@@ -2464,8 +2498,8 @@ def test_board_declared_in_the_map_is_also_unverified(
     body_format,
     board_config,
 ) -> None:
-    """The `board: true` arm reaches the same place as the flag — one accessor,
-    one answer, whether the adopter declared it or the flag supplied it."""
+    """The `board: true` arm is the one way an axis reaches the board — one
+    accessor, one answer."""
     smap = vi.axis_labels.SubstrateMap(axes={"priority": {"board": True}})
     found = _board_labels(
         vi,
@@ -2477,9 +2511,10 @@ def test_board_declared_in_the_map_is_also_unverified(
         substrate_map=smap,
     )
     assert "classification.priority.unverified" in found
-    # `workstream` is absent from a PRESENT map under a board: the flag still
-    # carries it (DEC-051 decision point 3), so it too is unverified, not missing.
-    assert "classification.workstream.unverified" in found
+    # `workstream` is absent from a PRESENT map under a board: it degrades, as an
+    # omitted axis does board or no board (DEC-062 point 2) — neither on the
+    # board nor demanded as a label.
+    assert "classification.workstream.unverified" not in found
     assert "classification.workstream.missing" not in found
 
 

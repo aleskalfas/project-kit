@@ -1120,8 +1120,9 @@ def _build_labels(
     **Carriage is resolved first, per axis, for every axis.** Which substrate
     carries an axis is asked of :func:`axis_carriage.carriage`
     ([project-management:DEC-051-axis-carriage-activation] decision point 4): a
-    map binding governs the axis it names, and the board flag governs only where
-    the map is silent. ``priority`` and ``workstream`` used to be appended to the
+    map binding governs the axis it names, and the board flag carries no axis
+    ([project-management:DEC-062-axes-chosen-in-the-map] point 1). ``priority``
+    and ``workstream`` used to be appended to the
     resolution list only ``if not has_board`` — a board-versus-label decision taken
     BEFORE the seam was consulted, so under a configured board a label-bound
     priority never reached the seam and no label was written for an axis whose map

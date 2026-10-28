@@ -1019,10 +1019,11 @@ def test_landed_moves_is_empty_when_the_timeline_cannot_be_read(mi, monkeypatch)
 
 
 def test_landed_moves_reads_no_timeline_when_no_label_carries_state(mi, monkeypatch) -> None:
-    """A board carries state, so `move-issue` writes no label and the timeline's
-    label events say nothing about moves."""
+    """The map binds state to the board, so `move-issue` writes no label and the
+    timeline's label events say nothing about moves."""
     monkeypatch.setattr(mi, "gh_run", _no_gh)
-    assert mi._landed_moves(42, _LOGGING_OFF, {"has_projects_v2_board": True}, None) == ""
+    on_board = mi.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    assert mi._landed_moves(42, _LOGGING_OFF, {"has_projects_v2_board": True}, on_board) == ""
 
 
 def test_audit_comment_is_posted_before_the_label_write() -> None:

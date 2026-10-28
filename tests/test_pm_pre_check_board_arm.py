@@ -4,20 +4,19 @@ The substrate map gained a `board: true` arm so a brownfield adopter can declare
 that an axis is carried by a field on their Projects-v2 board. Until it existed,
 pre-check's own remediation told adopters to spell that `unsupported: true` — a
 declaration the schema defines as the axis having NO encoding, with every rule
-needing it degrading. These pin the three checks the arm brings with it, plus the
-corrected guidance:
+needing it degrading. These pin the checks the arm brings with it:
 
   * **hard** — `board: true` with no configured board is UNSATISFIABLE and fails.
-    Explicitly a `fail`, and explicitly NOT covered by the softening DEC-051
-    decision point 5 applies to the neighbouring double-claim refusal.
-  * **advisory** — a board-declarable axis ABSENT from a PRESENT map under a
-    configured board is reported, never failed: decision point 3 keeps that
-    axis's carriage exactly as today and buys the cleanliness with a diagnostic
-    instead of a semantics change.
   * **warning** — a `default:` on a `board:` arm with no `set-board-field` hook
     behind it is a value nothing writes. The claim is bounded by what a hook
     actually declares (an opaque `field_id`, never an axis), so an existing hook
     yields "unverified", not a false all-clear.
+
+The board flag carries no axis
+([project-management:DEC-062-axes-chosen-in-the-map] point 1), so neither the
+double-claim warning nor the nudge to declare an axis the map omits survives: an
+axis the map omits under a configured board degrades, and the capability matrix
+reports it so, as it reports any omitted axis.
 
 Pure: no `gh`, no network. Every check reads only the already-loaded config
 mapping, the parsed substrate-map, and (for the `default:` check) hooks.yaml off
@@ -112,15 +111,6 @@ def test_board_declarable_axes_match_the_schema(pc) -> None:
     }
     admitted = set(axis_props) - refused
     assert set(pc.BOARD_DECLARABLE_AXES) == admitted == {"priority", "workstream"}
-
-
-def test_board_declarable_is_a_strict_subset_of_board_claimed(pc) -> None:
-    """`state` is board-CLAIMED by the flag today but not board-DECLARABLE in the
-    map. Collapsing the two tuples would produce a remediation telling a `state`
-    adopter to write a binding the schema refuses."""
-    assert set(pc.BOARD_DECLARABLE_AXES) < set(pc.BOARD_CLAIMED_AXES)
-    assert "state" in pc.BOARD_CLAIMED_AXES
-    assert "state" not in pc.BOARD_DECLARABLE_AXES
 
 
 # =========================================================================
@@ -228,83 +218,20 @@ def test_board_arm_on_state_is_not_read_as_declared(pc, axis_labels) -> None:
 
 
 # =========================================================================
-# ADVISORY: the absent-axis nudge
+# An omitted axis degrades under a board
 # =========================================================================
 
 
-def test_absent_board_claimable_axis_is_reported_under_a_board(pc, axis_labels) -> None:
-    """DEC-051 decision point 3: an axis the map does not name keeps today's
-    carriage — under a configured board, the board carries it. That is reported,
-    with the one-line edit that makes it explicit."""
+def test_matrix_reports_an_axis_omitted_under_a_board_as_degraded(pc, axis_labels) -> None:
+    """DEC-062's Implications: the prerequisite check reports an axis the map
+    omits under a configured board as degraded, as it reports any omitted axis.
+    The board's existence carries no axis."""
     sm = _map(axis_labels, {"type": {"title-prefix": {"remap": {"task": "[Task]"}}}})
-    results = pc._check_board_axis_absent_from_map(BOARD_CONFIG, sm)
-    labels = [r.label for r in results]
-    assert len(results) == 2
-    assert any("priority" in lbl for lbl in labels)
-    assert any("workstream" in lbl for lbl in labels)
-    assert all("board: true" in r.detail for r in results)
-
-
-def test_absent_axis_nudge_never_fails(pc, axis_labels) -> None:
-    """Informational, deliberately. Making a present map authoritative was
-    REJECTED as a silent behaviour change by upgrade; the cleanliness is bought
-    with this diagnostic INSTEAD of semantics, so it must not gate."""
-    sm = _map(axis_labels, {"type": {"title-prefix": {"remap": {"task": "[Task]"}}}})
-    results = pc._check_board_axis_absent_from_map(BOARD_CONFIG, sm)
-    assert results
-    assert all(r.status == "skip" for r in results)
-    assert not any(r.status in ("fail", "warn") for r in results)
-
-
-def test_absent_axis_nudge_silent_without_a_board(pc, axis_labels) -> None:
-    """With no board configured, an absent axis is degrading rather than
-    board-carried — nudging toward `board: true` would point at the very pair the
-    hard check refuses."""
-    sm = _map(axis_labels, {"type": {"title-prefix": {"remap": {"task": "[Task]"}}}})
-    assert pc._check_board_axis_absent_from_map(NO_BOARD_CONFIG, sm) == []
-
-
-def test_absent_axis_nudge_silent_for_a_declared_axis(pc, axis_labels) -> None:
-    """An axis the map DOES name — bound, or explicitly `unsupported` — is a
-    declaration, not an oversight. Re-reading it as one is the overreach decision
-    point 3 rejects."""
-    sm = _map(
-        axis_labels,
-        {
-            "priority": {"label": {"remap": {"High": "P0"}}},
-            "workstream": {"unsupported": True},
-        },
-    )
-    assert pc._check_board_axis_absent_from_map(BOARD_CONFIG, sm) == []
-
-
-def test_absent_axis_nudge_silent_for_an_already_declared_board_arm(pc, axis_labels) -> None:
-    """The destination state: both axes declared `board: true`. Nothing left to
-    nudge."""
-    sm = _map(axis_labels, {"priority": {"board": True}, "workstream": {"board": True}})
-    assert pc._check_board_axis_absent_from_map(BOARD_CONFIG, sm) == []
-
-
-def test_absent_axis_nudge_needs_a_present_map(pc, axis_labels, tmp_path) -> None:
-    """A project with NO substrate-map gets nothing. Greenfield has nothing to
-    declare, and the check is wired inside pre-check's present-map block — this
-    pins that wiring, not just the function."""
-    cap_root = tmp_path / "cap"
-    (cap_root / "project").mkdir(parents=True)
-    assert axis_labels.load_substrate_map(cap_root) is None
-    source = SCRIPT.read_text(encoding="utf-8")
-    block = source.split("substrate_map = axis_labels.load_substrate_map", 1)[1]
-    guarded = block.split("if substrate_map is not None:", 1)[1]
-    guarded = guarded.split("\n    # 3b.", 1)[0]
-    assert "_check_board_axis_absent_from_map" in guarded
-
-
-def test_state_is_never_nudged(pc, axis_labels) -> None:
-    """`state` is board-claimed by the flag but not board-declarable, so nudging
-    it would recommend a binding the schema refuses."""
-    sm = _map(axis_labels, {"priority": {"board": True}, "workstream": {"board": True}})
-    results = pc._check_board_axis_absent_from_map(BOARD_CONFIG, sm)
-    assert not any("state" in r.label for r in results)
+    results = pc._check_substrate_capability_matrix(sm)
+    for axis in ("priority", "workstream", "state"):
+        line = next(r for r in results if f"`{axis}`" in r.label)
+        assert "degraded" in line.label
+    assert not hasattr(pc, "_check_board_axis_absent_from_map")
 
 
 # =========================================================================
@@ -446,54 +373,16 @@ def test_default_check_never_fails(pc, axis_labels, tmp_path) -> None:
 
 
 # =========================================================================
-# The corrected guidance (the withdrawn `unsupported`-means-board instruction)
+# The double claim no longer arises
 # =========================================================================
 
 
-def test_conflict_remediation_names_the_board_arm(pc, axis_labels) -> None:
-    """The one place the withdrawn instruction was actually SHOWN to an adopter.
-    It now names `board: true`."""
-    sm = _map(axis_labels, {"priority": {"label": {"remap": {"High": "P0"}}}})
-    found = next(
-        r for r in pc._check_substrate_board_conflict(BOARD_CONFIG, sm) if r.status == "warn"
-    )
-    assert found.remediation is not None
-    assert "board: true" in found.remediation
-    assert "unsupported: true" not in found.remediation
-
-
-def test_conflict_remediation_does_not_recommend_board_for_state(pc, axis_labels) -> None:
-    """`state` is board-claimed but NOT board-declarable. Telling a `state`
-    adopter to write `board: true` would hand them a map `pkit schemas validate`
-    rejects, so that arm gets the only honest instruction available: drop the
-    binding and let the flag govern (decision point 3)."""
-    sm = _map(axis_labels, {"state": {"label": {"remap": {"open": "Open"}}}})
-    found = next(
-        r for r in pc._check_substrate_board_conflict(BOARD_CONFIG, sm) if r.status == "warn"
-    )
-    assert found.remediation is not None
-    assert "state: { board: true }" not in found.remediation
-    assert "cannot yet declare board carriage" in found.remediation
-    assert "Remove the `label:` binding" in found.remediation
-
-
-def test_conflict_docstring_no_longer_calls_unsupported_the_board_shape(pc) -> None:
-    """The docstring is read by every future author of this check; leaving the
-    withdrawn framing there would reintroduce it. It must not describe an
-    `unsupported` axis as agreeing with the writer about board carriage."""
-    doc = pc._check_substrate_board_conflict.__doc__
-    assert doc is not None
-    assert "board: true" in doc
-    assert "it agrees with the\n    writer" not in doc
-    assert "the shape a board-backed axis uses" not in doc
-
-
-def test_board_arm_is_not_a_conflict(pc, axis_labels) -> None:
-    """`board: true` NAMES the board as the substrate — the same answer the flag
-    gives — so it is agreement, not a competing claim."""
-    sm = _map(axis_labels, {"priority": {"board": True}, "workstream": {"board": True}})
-    results = pc._check_substrate_board_conflict(BOARD_CONFIG, sm)
-    assert all(r.status != "fail" for r in results)
+def test_no_double_claim_check_survives(pc) -> None:
+    """A `label:` binding under a configured board is no double claim: the flag
+    claims no axis (DEC-062 point 1), so the warning DEC-051 point 5 softened has
+    nothing left to report, and is gone."""
+    assert not hasattr(pc, "_check_substrate_board_conflict")
+    assert not hasattr(pc, "BOARD_CLAIMED_AXES")
 
 
 # =========================================================================
@@ -549,7 +438,7 @@ def test_every_new_result_is_json_serialisable(pc, axis_labels, tmp_path) -> Non
     sm = _map(axis_labels, {"priority": {"board": True, "default": "P1"}})
     results = [
         *pc._check_substrate_board_arm_satisfiable(NO_BOARD_CONFIG, sm),
-        *pc._check_board_axis_absent_from_map(BOARD_CONFIG, sm),
+        *pc._check_substrate_capability_matrix(sm),
         *pc._check_board_arm_default_has_hook(cap_root, sm),
     ]
     assert results
@@ -558,7 +447,7 @@ def test_every_new_result_is_json_serialisable(pc, axis_labels, tmp_path) -> Non
 
 def test_this_repos_own_config_trips_none_of_the_new_checks(pc, axis_labels) -> None:
     """Self-hosting sanity: project-kit's own pm config is board-less with no
-    substrate-map, so none of the three can fire."""
+    substrate-map, so neither check can fire."""
     from ruamel.yaml import YAML
 
     cap_root = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -567,6 +456,5 @@ def test_this_repos_own_config_trips_none_of_the_new_checks(pc, axis_labels) -> 
     )
     assert axis_labels.load_substrate_map(cap_root) is None
     empty = _map(axis_labels, {})
-    assert pc._check_board_axis_absent_from_map(config, empty) == []
     assert pc._check_board_arm_default_has_hook(cap_root, empty) == []
     assert all(r.status != "fail" for r in pc._check_substrate_board_arm_satisfiable(config, empty))

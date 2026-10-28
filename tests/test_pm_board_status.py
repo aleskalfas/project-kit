@@ -47,8 +47,18 @@ def board(monkeypatch: pytest.MonkeyPatch) -> BoardTracker:
 # --- when the Status is a projection -----------------------------------------
 
 
-def test_the_status_is_kept_where_a_board_is_configured_and_does_not_carry_the_state() -> None:
-    assert board_status.maintained(BOARD_CONFIG, LABEL_MAP) is True
+@pytest.mark.parametrize(
+    "substrate_map",
+    [
+        LABEL_MAP,
+        None,  # no map: the kit's own labels carry the state (DEC-062 point 1)
+        axis_labels.SubstrateMap(axes={"state": {"kit-label": True}}),
+    ],
+)
+def test_the_status_is_kept_where_a_board_is_configured_and_does_not_carry_the_state(
+    substrate_map,
+) -> None:
+    assert board_status.maintained(BOARD_CONFIG, substrate_map) is True
 
 
 @pytest.mark.parametrize(
@@ -56,8 +66,12 @@ def test_the_status_is_kept_where_a_board_is_configured_and_does_not_carry_the_s
     [
         ({}, None),
         ({"has_projects_v2_board": True}, LABEL_MAP),  # a flag with no board number
-        (BOARD_CONFIG, None),  # the flag carries the state on the board (DEC-051)
-        (BOARD_CONFIG, axis_labels.SubstrateMap(axes={})),  # absent ⇒ the flag's
+        # The map binds state to the board: its Status is the source.
+        (BOARD_CONFIG, axis_labels.SubstrateMap(axes={"state": {"board": True}})),
+        # A present map leaves state out: the state degrades, and no Status is
+        # written for it (DEC-062 point 5).
+        (BOARD_CONFIG, axis_labels.SubstrateMap(axes={})),
+        (BOARD_CONFIG, axis_labels.SubstrateMap(axes={"state": {"unsupported": True}})),
     ],
 )
 def test_the_status_is_not_kept_with_no_board_or_where_the_board_carries_the_state(

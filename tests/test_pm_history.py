@@ -233,7 +233,8 @@ def test_report_drift_skips_when_no_label_carries_state(hist, monkeypatch, capsy
         raise AssertionError("no timeline read for a non-label state substrate")
 
     monkeypatch.setattr(hist, "_timeline_state_adds", must_not_run)
-    rc = hist._report_drift(42, [], {"has_projects_v2_board": True})
+    on_board = hist.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    rc = hist._report_drift(42, [], {"has_projects_v2_board": True}, on_board)
     out = capsys.readouterr().out
     assert rc == 0
     assert "SKIPPED" in out and "board" in out

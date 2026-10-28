@@ -278,7 +278,9 @@ def _validate_issue(
     # Title format / pattern.
     #
     # The kit's title vocabulary (issue-types prefixes + the titles.yaml regex)
-    # is the authority ONLY in greenfield. Under a substrate-map:
+    # is the authority ONLY where the kit's own labels carry `type`: with no map,
+    # or under `type: {kit-label: true}`, which reads as no map does (DEC-062
+    # point 4). Elsewhere under a substrate-map:
     #   * `type` bound to title-prefix ⇒ the type IS title-carried, and the
     #     yardstick is the ADOPTER's prefixes (resolved above). A title matching
     #     none of them resolves to NO structural type — an undeterminable
@@ -291,12 +293,11 @@ def _validate_issue(
     #   * `type` bound to label/derive/unsupported/absent ⇒ the type is NOT
     #     title-carried; no title-format demand is made (its presence gate / the
     #     capability matrix covers the axis via its own substrate).
-    type_title_carried = substrate_map is None or axis_labels.axis_is_title_carried(
-        "type", substrate_map
-    )
+    kit_type = axis_labels.axis_expects_kit_labels("type", substrate_map)
+    type_title_carried = kit_type or axis_labels.axis_is_title_carried("type", substrate_map)
     if type_title_carried and structural_type is None:
         expected = _expected_type_prefixes(issue_types, substrate_map, classification)
-        if substrate_map is None:
+        if kit_type:
             findings.append(
                 Finding(
                     SEVERITY_HARD_REJECT,
@@ -315,7 +316,7 @@ def _validate_issue(
                     f"(expected one of {', '.join(expected)}).",
                 )
             )
-    elif structural_type is not None and substrate_map is None:
+    elif structural_type is not None and kit_type:
         # Greenfield: also run the type's titles.yaml checks — the pattern and
         # every declared wording rule (#803). Under a present map they do not
         # apply (the adopter owns the title format). At a transition a blocking
@@ -450,7 +451,7 @@ def _validate_issue(
             if (
                 kind is not None
                 and structural_type is not None
-                and substrate_map is None
+                and kit_type
                 and classification_rules.kind_drives_title(structural_type, classification or {})
             ):
                 expected_prefix = classification_rules.title_prefix_by_value(

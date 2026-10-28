@@ -268,10 +268,10 @@ def test_where_the_board_carries_the_state_nothing_changes(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The flag claims the state where the map is silent (DEC-051): the Status is
-    then the state's source, and the move only narrates it, as before (#2271)."""
+    """The map binds the state to the board: the Status is then the state's
+    source, and the move only narrates it, as before (#2271)."""
     _with_config(world, monkeypatch, BOARD_CONFIG)
-    _with_substrate_map(world, monkeypatch, None)
+    _with_substrate_map(world, monkeypatch, {"state": {"board": True}})
     task = _task(world, board)
     world.tracker.issues[task]["milestone"] = MILESTONE
 
@@ -283,27 +283,3 @@ def test_where_the_board_carries_the_state_nothing_changes(
     # The note cites what decides the Status, not DEC-019, which is about membership.
     assert "the agent maintains the Status (DEC-006)" in out
     assert "DEC-019" not in out
-
-
-def test_where_the_board_carries_the_state_a_move_back_is_refused(
-    world: World,
-    board: BoardTracker,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """The board's Status write for a board-carried state comes with #2271, so
-    the move back writes nothing, and journals no move (DEC-006)."""
-    _with_config(world, monkeypatch, BOARD_CONFIG)
-    _with_substrate_map(world, monkeypatch, None)
-    task = _task(world, board, status="In Progress")
-    world.tracker.issues[task]["milestone"] = MILESTONE
-    world.tracker.issues[task]["labels"].append("state:in-progress")
-    labels = list(world.labels(task))
-
-    assert world.move(task, "backlog", "--reason", "the work stopped") == 1
-
-    assert world.labels(task) == labels and world.journal(task) == []
-    assert board.board_calls() == [] and board.status(task) == "In Progress"
-    assert "the board's Status write for a board-carried state comes with #2271" in (
-        capsys.readouterr().err
-    )
