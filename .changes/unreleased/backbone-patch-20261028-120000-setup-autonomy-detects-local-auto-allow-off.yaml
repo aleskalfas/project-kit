@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit permissions setup autonomy` now reports a local
+  `autoAllowBashIfSandboxed: false` in `.claude/settings.local.json` as an
+  override of the autonomy posture, beside the other overrides it detects.
+  That local value, which Claude Code's `/sandbox` panel writes, wins over the
+  committed `true`, so the box confined while every command still prompted and
+  setup reported success. Removing it takes the same consent as the other
+  overrides, a yes at a terminal or `--remove-overrides`, and keeps the rest of
+  the local file. On macOS, where the box is intended off, it is not reported.

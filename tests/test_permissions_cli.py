@@ -4384,6 +4384,82 @@ def test_detect_clean_local_finds_nothing(tmp_path, monkeypatch):
     assert _perm._detect_overlay_overrides(proj) == []
 
 
+def test_detect_auto_allow_off_is_override_on_viable_platform(tmp_path, monkeypatch):
+    # A local `autoAllowBashIfSandboxed: false`, as the `/sandbox` panel writes,
+    # wins over the committed `true`: the box confines yet every command still
+    # prompts (#2280) → an OVERRIDE, named with how it defeats the posture.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": True, "autoAllowBashIfSandboxed": False}})
+    findings = _perm._detect_overlay_overrides(proj)
+    assert [f.key for f in findings] == ["autoAllowBashIfSandboxed"]
+    assert findings[0].kind == "override"
+    assert "autoAllowBashIfSandboxed: false" in findings[0].current
+    assert "prompts" in findings[0].why
+
+
+def test_detect_auto_allow_off_reported_beside_the_other_overrides(tmp_path, monkeypatch):
+    # Reported beside the other overrides, in the stable order, and each named
+    # in the loud block.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(
+        proj,
+        {
+            "sandbox": {
+                "enabled": False,
+                "allowUnsandboxedCommands": True,
+                "autoAllowBashIfSandboxed": False,
+            }
+        },
+    )
+    findings = _perm._detect_overlay_overrides(proj)
+    assert [f.key for f in findings] == [
+        "enabled",
+        "allowUnsandboxedCommands",
+        "autoAllowBashIfSandboxed",
+    ]
+    text = "\n".join(_perm._overlay_override_report(proj, findings, confirm=None))
+    assert "✗ local `autoAllowBashIfSandboxed: false`" in text
+
+
+def test_detect_auto_allow_on_is_not_flagged(tmp_path, monkeypatch):
+    # A local `true` agrees with the posture → no finding.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"enabled": True, "autoAllowBashIfSandboxed": True}})
+    assert _perm._detect_overlay_overrides(proj) == []
+
+
+def test_detect_auto_allow_off_not_flagged_on_macos(tmp_path, monkeypatch):
+    # On macOS the intended posture is sandbox-OFF (#336): with no box, auto-allow
+    # suppresses no prompt, so a local `false` defeats nothing → NOT an override.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "darwin")
+    _write_local(proj, {"sandbox": {"autoAllowBashIfSandboxed": False}})
+    assert _perm._detect_overlay_overrides(proj) == []
+
+
+def test_remove_auto_allow_off_keeps_the_rest_of_the_local_file(tmp_path, monkeypatch):
+    # Consent-gated removal strips ONLY the auto-allow key; every other local key
+    # survives verbatim.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(
+        proj,
+        {
+            "sandbox": {"enabled": True, "autoAllowBashIfSandboxed": False},
+            "permissions": {"allow": ["Bash(ls:*)"]},
+        },
+    )
+    findings = _perm._detect_overlay_overrides(proj)
+    lines = _perm._overlay_override_report(proj, findings, confirm=lambda _m: True)
+    assert any("removed `sandbox.autoAllowBashIfSandboxed`" in line for line in lines)
+    data = json.loads((proj / ".claude" / "settings.local.json").read_text())
+    assert data["sandbox"] == {"enabled": True}
+    assert data["permissions"] == {"allow": ["Bash(ls:*)"]}
+
+
 def test_remove_whole_file_when_purely_overriding(tmp_path, monkeypatch):
     # Local file holds ONLY overriding attributes → whole-file removal.
     proj = _with_adapter(_setup(tmp_path))
@@ -4501,6 +4577,41 @@ def test_setup_autonomy_cli_unseal_warned_then_reconciled_by_seal_reassert(tmp_p
     assert "allowUnsandboxedCommands: true" in out  # named the override
     assert "already reconciled" in out  # seal re-assert resolved it
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False  # ends SEALED
+
+
+def test_setup_autonomy_cli_removes_auto_allow_off_with_consent(tmp_path, monkeypatch):
+    # End to end on a viable platform: the confinement step writes the committed
+    # `true`, which the local `false` still beats, so only the consented removal
+    # restores auto-allow; the rest of the local file is kept.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(
+        proj,
+        {
+            "sandbox": {"enabled": True, "autoAllowBashIfSandboxed": False},
+            "permissions": {"allow": ["Bash(ls:*)"]},
+        },
+    )
+    out = _run(proj, monkeypatch, "setup", "autonomy", "--remove-overrides")
+    assert "autoAllowBashIfSandboxed: false" in out  # warned loudly
+    assert "removed `sandbox.autoAllowBashIfSandboxed`" in out
+    assert "autoAllowBashIfSandboxed" not in _sb_local(proj)
+    assert _sb_committed(proj)["autoAllowBashIfSandboxed"] is True
+    assert _sb(proj)["autoAllowBashIfSandboxed"] is True  # effective: prompt-free again
+    assert _sb_local(proj)["enabled"] is True  # the rest of the local file kept
+    local = json.loads((proj / ".claude" / "settings.local.json").read_text())
+    assert "Bash(ls:*)" in local["permissions"]["allow"]
+
+
+def test_setup_autonomy_cli_leaves_auto_allow_off_without_consent(tmp_path, monkeypatch):
+    # Never silent: without consent the override is warned of and left in place.
+    proj = _with_adapter(_setup(tmp_path))
+    _force_platform(monkeypatch, "linux")
+    _write_local(proj, {"sandbox": {"autoAllowBashIfSandboxed": False}})
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "autoAllowBashIfSandboxed: false" in out
+    assert "left in place — no consent" in out
+    assert _sb_local(proj)["autoAllowBashIfSandboxed"] is False
 
 
 def _removal_answers(proj: Path, monkeypatch) -> list[bool]:
