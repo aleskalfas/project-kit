@@ -646,7 +646,7 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 
 #### Clone-local instance identity — `set-instance` (per [project-management:DEC-035-instance-ownership])
 
-`set-instance` records **which of your clones this is** — the opt-in, per-clone activation gate for instance ownership in a project with no topology of seats. One person running several clones of the repo gives each a numeric instance id; the id is written to a **git-ignored** runtime file under the capability's `project/instance/` directory (declared in `package.yaml`'s `runtime_ignore:`), so it never commits and never leaves the clone. Outside a topology of seats, a clone with **no id set is byte-for-byte unchanged** — no ownership marking, no clash guard, no signed listing (the presence of the id is the sole activation gate).
+`set-instance` records **which of your clones this is** — the opt-in, per-clone activation gate for instance ownership in a project with no topology of seats. One person running several clones of the repo gives each a numeric instance id; the id is written to a **git-ignored** runtime file under the capability's `project/instance/` directory (declared in `package.yaml`'s `runtime_ignore:`), so it never commits and never leaves the clone. Outside a topology of seats, a clone with **no id set** marks nothing and runs no clash guard or signed listing (the presence of the id is the sole activation gate). The one exception is the move back from In Progress: on an issue that has an owner, such a clone cannot release the owner, so the move refuses and names the owner (DEC-035 point 4).
 
 | Command | What it does |
 |---|---|
