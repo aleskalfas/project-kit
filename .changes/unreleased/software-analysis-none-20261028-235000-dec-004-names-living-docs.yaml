@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  DEC-004 names living-docs in brackets before the DEC-002 point it cites, and
+  the README's answer is written. No decision changes, and the capability's
+  behaviour is unchanged.
