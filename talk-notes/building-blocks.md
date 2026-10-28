@@ -188,6 +188,6 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
 - **Weak spot:**
   - a skill helps only when it is invoked; rule 3 requires it for authoring, but nothing checks it was: the command stamps either way
   - every session carries every description, and they grow (`analysis-author`'s is 169 words)
-  - the core skills are anchored to none of the records they follow (only two capability skills carry anchors), so when a record changes nothing asks a core skill to recheck; `gates:` checks only that the record is accepted, not that the skill still says what it decides
+  - the core skills are anchored to none of the records they follow (only the `analysis-author` skill carries some), so when a record changes nothing asks a core skill to recheck; `gates:` checks only that the record is accepted, not that the skill still says what it decides
   - composites grow large (`pm` about 15 000 words with its sub-procedures)
 - **Maintainer's notes:**
