@@ -1,8 +1,8 @@
 ---
 id: REQ-008
-title: "Until #1600 is done, no change adds an area or an adapter a release ships, other than the `rule-sets` area, and none removes one"
+title: "Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed"
 status: active
-statement: No change adds an area or an adapter that a release ships, other than the `rule-sets` area, and no change removes an area or an adapter, or takes `ownership.py` from the `lifecycle` area.
+statement: The only area or adapter a change adds to a release is `rule-sets`, and no change removes one or takes `ownership.py` from the `lifecycle` area.
 measure: "A release ships the twelve areas and the one adapter, `claude-code`, that #1572 left, and the `rule-sets` area. The `lifecycle` area still holds `ownership.py`."
 applies-to: "Every change in the methodology's source repository, and so every release made from it. It holds until #1600, which builds the full check of a clash of area names, is done."
 actors:
@@ -19,7 +19,7 @@ pkit:
         - ACT-adopter
 ---
 
-# REQ-008 · Constraint · Until #1600 is done, no change adds an area or an adapter a release ships, other than the `rule-sets` area, and none removes one
+# REQ-008 · Constraint · Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed
 
 **Verified by:** A test compares the [areas](../../../glossary.md#term-area--area) and the [adapters](../../../glossary.md#term-adapter--adapter) a [release](../../../glossary.md#term-release--release) ships with the lists #1572 left, with `rule-sets` among the areas. It fails on any difference. It also fails when the `lifecycle` area no longer holds `ownership.py`. Its message names #1600 and the exception.
 
