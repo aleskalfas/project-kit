@@ -370,22 +370,22 @@ slides:
       path: .pkit/decisions/
       kinds:
       - tag: COR
-        owner: pkit
+        tone: core
         head: pkit's principles
         text: How the method works, the same in every project.
         path: core/COR-065-records-and-projection.md
         why: 'Apart from yours: each upgrade replaces them, so you never edit them.'
       - tag: PRJ
-        owner: yours
+        tone: yours
         head: Your way of working
         text: How your team works, in the choices pkit leaves to you.
         path: project/PRJ-002-version-bump-policy.md
         why: 'Yours alone: no upgrade ever writes here.'
-    - head: What you build
-      path: docs/architecture/decisions/, a path you choose
+    - head: What you build, at a path you choose
+      path: docs/architecture/decisions/
       kinds:
       - tag: ADR
-        owner: yours
+        tone: architecture
         head: Your architecture
         text: How your system is built, its structure, technologies and boundaries.
         path: ADR-001-project-root-resolution.md

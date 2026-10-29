@@ -12111,7 +12111,7 @@
     "parent": "LIB",
     "text": "accent_inverse\n#78A9FF",
     "width": 360,
-    "x": 660,
+    "x": 1580,
     "y": 3116
    },
    "fields": {
@@ -12123,7 +12123,7 @@
     "parent": "LIB",
     "text": "accent_inverse\n#78A9FF",
     "width": 360,
-    "x": 660,
+    "x": 1580,
     "y": 3116
    },
    "mural_id": "6442f296-1e25-4d96-9ad3-5c2e4de0276c",
@@ -12154,7 +12154,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231074292
+   "updatedOn": 1793306626621
   },
   "LIB.theme.label.background": {
    "board": {
@@ -12221,8 +12221,8 @@
     "parent": "LIB",
     "text": "background_inverse\n#393939",
     "width": 360,
-    "x": 3420,
-    "y": 2710
+    "x": 660,
+    "y": 3116
    },
    "fields": {
     "align": "left",
@@ -12233,8 +12233,8 @@
     "parent": "LIB",
     "text": "background_inverse\n#393939",
     "width": 360,
-    "x": 3420,
-    "y": 2710
+    "x": 660,
+    "y": 3116
    },
    "mural_id": "71fde021-0a5c-4d9d-9bd2-b8fc98172bdd",
    "tracked": [
@@ -12264,7 +12264,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231074292
+   "updatedOn": 1793306626380
   },
   "LIB.theme.label.border_strong": {
    "board": {
@@ -13145,6 +13145,116 @@
     "file"
    ],
    "updatedOn": 1793231074292
+  },
+  "LIB.theme.label.role_architecture": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 24,
+    "ink": "#161616FF",
+    "parent": "LIB",
+    "text": "role_architecture\n#0E6027",
+    "width": 360,
+    "x": 3420,
+    "y": 2710
+   },
+   "fields": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 24,
+    "ink": "#161616FF",
+    "parent": "LIB",
+    "text": "role_architecture\n#0E6027",
+    "width": 360,
+    "x": 3420,
+    "y": 2710
+   },
+   "mural_id": "b37c91a0-8a5a-4b24-a5c9-7741c76e4d3d",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306624333
+  },
+  "LIB.theme.label.role_architecture_bg": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 24,
+    "ink": "#161616FF",
+    "parent": "LIB",
+    "text": "role_architecture_bg\n#DEFBE6",
+    "width": 360,
+    "x": 200,
+    "y": 3116
+   },
+   "fields": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 24,
+    "ink": "#161616FF",
+    "parent": "LIB",
+    "text": "role_architecture_bg\n#DEFBE6",
+    "width": 360,
+    "x": 200,
+    "y": 3116
+   },
+   "mural_id": "dee88d9e-3c82-4252-855d-f771438ea0b2",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306624333
   },
   "LIB.theme.label.role_checks": {
    "board": {
@@ -14146,7 +14256,7 @@
     "parent": "LIB",
     "text": "text_inverse\n#FFFFFF",
     "width": 360,
-    "x": 200,
+    "x": 1120,
     "y": 3116
    },
    "fields": {
@@ -14158,7 +14268,7 @@
     "parent": "LIB",
     "text": "text_inverse\n#FFFFFF",
     "width": 360,
-    "x": 200,
+    "x": 1120,
     "y": 3116
    },
    "mural_id": "aa1b8981-2447-4f77-9a82-bea2930815d5",
@@ -14189,7 +14299,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231074292
+   "updatedOn": 1793306626524
   },
   "LIB.theme.label.text_on_color": {
    "board": {
@@ -14862,7 +14972,7 @@
     "parent": "LIB",
     "text": "",
     "width": 360,
-    "x": 660,
+    "x": 1580,
     "y": 2900
    },
    "fields": {
@@ -14875,7 +14985,7 @@
     "parent": "LIB",
     "text": "",
     "width": 360,
-    "x": 660,
+    "x": 1580,
     "y": 2900
    },
    "mural_id": "5e293bb0-fcbf-4eaa-9d12-cb40ae8f875c",
@@ -14906,7 +15016,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231073079
+   "updatedOn": 1793306626503
   },
   "LIB.theme.swatch.background": {
    "board": {
@@ -14976,8 +15086,8 @@
     "parent": "LIB",
     "text": "",
     "width": 360,
-    "x": 3420,
-    "y": 2494
+    "x": 660,
+    "y": 2900
    },
    "fields": {
     "border_color": "#C6C6C6FF",
@@ -14989,8 +15099,8 @@
     "parent": "LIB",
     "text": "",
     "width": 360,
-    "x": 3420,
-    "y": 2494
+    "x": 660,
+    "y": 2900
    },
    "mural_id": "5c414774-89cd-4554-9d9f-bd2fd8e1a73a",
    "tracked": [
@@ -15020,7 +15130,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231073079
+   "updatedOn": 1793306626315
   },
   "LIB.theme.swatch.border_strong": {
    "board": {
@@ -15933,6 +16043,120 @@
     "file"
    ],
    "updatedOn": 1793231073079
+  },
+  "LIB.theme.swatch.role_architecture": {
+   "board": {
+    "border_color": "#C6C6C6FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#0E6027FF",
+    "height": 200,
+    "ink": "#000000FF",
+    "parent": "LIB",
+    "text": "",
+    "width": 360,
+    "x": 3420,
+    "y": 2494
+   },
+   "fields": {
+    "border_color": "#C6C6C6FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#0E6027FF",
+    "height": 200,
+    "ink": "#000000FF",
+    "parent": "LIB",
+    "text": "",
+    "width": 360,
+    "x": 3420,
+    "y": 2494
+   },
+   "mural_id": "24a5d933-8001-415b-a6b8-ed2efa41b476",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306623541
+  },
+  "LIB.theme.swatch.role_architecture_bg": {
+   "board": {
+    "border_color": "#C6C6C6FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#DEFBE6FF",
+    "height": 200,
+    "ink": "#000000FF",
+    "parent": "LIB",
+    "text": "",
+    "width": 360,
+    "x": 200,
+    "y": 2900
+   },
+   "fields": {
+    "border_color": "#C6C6C6FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#DEFBE6FF",
+    "height": 200,
+    "ink": "#000000FF",
+    "parent": "LIB",
+    "text": "",
+    "width": 360,
+    "x": 200,
+    "y": 2900
+   },
+   "mural_id": "be1e70c3-f370-44c3-8838-7e355aaf4e54",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306623541
   },
   "LIB.theme.swatch.role_checks": {
    "board": {
@@ -16971,7 +17195,7 @@
     "parent": "LIB",
     "text": "",
     "width": 360,
-    "x": 200,
+    "x": 1120,
     "y": 2900
    },
    "fields": {
@@ -16984,7 +17208,7 @@
     "parent": "LIB",
     "text": "",
     "width": 360,
-    "x": 200,
+    "x": 1120,
     "y": 2900
    },
    "mural_id": "0d2b9d53-81a2-44ec-9b25-f1a81f99e2e1",
@@ -17015,7 +17239,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231073079
+   "updatedOn": 1793306626437
   },
   "LIB.theme.swatch.text_on_color": {
    "board": {
@@ -24707,6 +24931,236 @@
    ],
    "updatedOn": 1793231750102
   },
+  "T-decisions-bar1": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 6,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-bar1",
+    "width": 1856,
+    "x": 128,
+    "y": 740
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 6,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-bar1",
+    "width": 1856,
+    "x": 128,
+    "y": 740
+   },
+   "mural_id": "ac1b3b1b-98f1-4517-a319-e0a7c6813419",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306527366
+  },
+  "T-decisions-bar1.bar": {
+   "board": {
+    "border_color": "#8D8D8DFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#8D8D8DFF",
+    "height": 6,
+    "ink": "#161616FF",
+    "parent": "T-decisions-bar1",
+    "text": "",
+    "title": "tpl:tree_bar#bar",
+    "width": 1856,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#8D8D8DFF",
+    "border_width": 1,
+    "color": "#8D8D8DFF",
+    "height": 6,
+    "ink": "#161616FF",
+    "parent": "T-decisions-bar1",
+    "text": "",
+    "title": "tpl:tree_bar#bar",
+    "width": 1856,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "617dce99-1d7a-4b7c-b1e7-9399efd311c5",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306623541
+  },
+  "T-decisions-bar2": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 6,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-bar2",
+    "width": 896,
+    "x": 2176,
+    "y": 740
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 6,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-bar2",
+    "width": 896,
+    "x": 2176,
+    "y": 740
+   },
+   "mural_id": "87c62e4e-9ee9-48c5-b71b-5c2030c6eb5c",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306527979
+  },
+  "T-decisions-bar2.bar": {
+   "board": {
+    "border_color": "#8D8D8DFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#8D8D8DFF",
+    "height": 6,
+    "ink": "#161616FF",
+    "parent": "T-decisions-bar2",
+    "text": "",
+    "title": "tpl:tree_bar#bar",
+    "width": 896,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#8D8D8DFF",
+    "border_width": 1,
+    "color": "#8D8D8DFF",
+    "height": 6,
+    "ink": "#161616FF",
+    "parent": "T-decisions-bar2",
+    "text": "",
+    "title": "tpl:tree_bar#bar",
+    "width": 896,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "2c4f2720-fcc7-47e9-9b36-65bea07a4aaa",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306623541
+  },
   "T-decisions-col1": {
    "board": {
     "border_color": "#FFFFFF00",
@@ -24720,7 +25174,7 @@
     "title": "T-decisions-col1",
     "width": 896,
     "x": 128,
-    "y": 724
+    "y": 770
    },
    "fields": {
     "border_color": "#FFFFFF00",
@@ -24732,9 +25186,9 @@
     "title": "T-decisions-col1",
     "width": 896,
     "x": 128,
-    "y": 724
+    "y": 770
    },
-   "mural_id": "8fefbc89-920a-424a-94ee-f5362e4f6609",
+   "mural_id": "97322b23-795f-4dee-862e-d46b33335496",
    "tracked": [
     "title",
     "text",
@@ -24762,14 +25216,14 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306273684
+   "updatedOn": 1793306527386
   },
   "T-decisions-col1.bg": {
    "board": {
-    "border_color": "#6929C4FF",
+    "border_color": "#525252FF",
     "border_style": "solid",
     "border_width": 2,
-    "color": "#F6F2FFFF",
+    "color": "#F4F4F4FF",
     "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col1",
@@ -24780,9 +25234,9 @@
     "y": 0
    },
    "fields": {
-    "border_color": "#6929C4FF",
+    "border_color": "#525252FF",
     "border_width": 2,
-    "color": "#F6F2FFFF",
+    "color": "#F4F4F4FF",
     "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col1",
@@ -24792,7 +25246,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "0e8689bf-ddcf-4066-82f0-85a89dcd3b1a",
+   "mural_id": "b8caeb3f-20df-4801-85b7-5153c7216686",
    "tracked": [
     "title",
     "text",
@@ -24820,7 +25274,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306623541
   },
   "T-decisions-col1.head": {
    "board": {
@@ -24847,7 +25301,7 @@
     "x": 40,
     "y": 164
    },
-   "mural_id": "d7347b36-b237-488f-ac64-d041550691a7",
+   "mural_id": "a6b4cc42-603c-4cf4-9233-854de02a1f05",
    "tracked": [
     "title",
     "text",
@@ -24875,7 +25329,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col1.path": {
    "board": {
@@ -24883,7 +25337,7 @@
     "color": "#FFFFFF00",
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#6929C4FF",
+    "ink": "#525252FF",
     "parent": "T-decisions-col1",
     "text": "core/COR-065-records-and-projection.md",
     "title": "tpl:kind#path",
@@ -24894,7 +25348,7 @@
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#6929C4FF",
+    "ink": "#525252FF",
     "parent": "T-decisions-col1",
     "text": "core/COR-065-records-and-projection.md",
     "title": "tpl:kind#path",
@@ -24902,7 +25356,7 @@
     "x": 40,
     "y": 352
    },
-   "mural_id": "ef07c87b-6155-4485-873f-d563f572c2f0",
+   "mural_id": "3e262967-d30e-464f-8c9f-d9b00b9d4f78",
    "tracked": [
     "title",
     "text",
@@ -24930,14 +25384,14 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col1.tag": {
    "board": {
-    "border_color": "#6929C4FF",
+    "border_color": "#525252FF",
     "border_style": "solid",
     "border_width": 1,
-    "color": "#6929C4FF",
+    "color": "#525252FF",
     "height": 88,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col1",
@@ -24948,9 +25402,9 @@
     "y": 40
    },
    "fields": {
-    "border_color": "#6929C4FF",
+    "border_color": "#525252FF",
     "border_width": 1,
-    "color": "#6929C4FF",
+    "color": "#525252FF",
     "height": 88,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col1",
@@ -24960,7 +25414,7 @@
     "x": 40,
     "y": 40
    },
-   "mural_id": "4ac41d97-7d0c-4a86-9b59-3c3cf057e67c",
+   "mural_id": "f82372e3-1d3c-4266-b451-8de3cdb5a7a2",
    "tracked": [
     "title",
     "text",
@@ -24988,7 +25442,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306623541
   },
   "T-decisions-col1.tagtext": {
    "board": {
@@ -25016,7 +25470,7 @@
     "x": 40,
     "y": 44
    },
-   "mural_id": "e36b2cb1-f33e-4e9e-8155-879339a2fcf8",
+   "mural_id": "650387d0-e4aa-438b-a4e5-fa43fb002851",
    "tracked": [
     "title",
     "text",
@@ -25044,7 +25498,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col1.text": {
    "board": {
@@ -25071,7 +25525,7 @@
     "x": 40,
     "y": 240
    },
-   "mural_id": "9a61dc28-774c-4895-935a-46564c1965bf",
+   "mural_id": "66d83b1f-4670-4c34-afb2-1f9e343af30b",
    "tracked": [
     "title",
     "text",
@@ -25099,7 +25553,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col1.why": {
    "board": {
@@ -25126,7 +25580,7 @@
     "x": 40,
     "y": 428
    },
-   "mural_id": "a3a68b4f-6a3f-4e81-a9e3-29476c44798d",
+   "mural_id": "bc2230f3-9df0-4b33-9995-f532aeb347ee",
    "tracked": [
     "title",
     "text",
@@ -25154,7 +25608,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col2": {
    "board": {
@@ -25169,7 +25623,7 @@
     "title": "T-decisions-col2",
     "width": 896,
     "x": 1088,
-    "y": 724
+    "y": 770
    },
    "fields": {
     "border_color": "#FFFFFF00",
@@ -25181,9 +25635,9 @@
     "title": "T-decisions-col2",
     "width": 896,
     "x": 1088,
-    "y": 724
+    "y": 770
    },
-   "mural_id": "5c7a24d9-7840-486c-aa76-aa8e5f498338",
+   "mural_id": "c8682dca-20d0-4822-ad13-877d0bcaf3fe",
    "tracked": [
     "title",
     "text",
@@ -25211,7 +25665,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306273768
+   "updatedOn": 1793306527500
   },
   "T-decisions-col2.bg": {
    "board": {
@@ -25241,7 +25695,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "359664f5-8c0a-4a24-bae2-cdfe0c87acee",
+   "mural_id": "087c9aad-5068-4e51-a3ab-ae427982f18a",
    "tracked": [
     "title",
     "text",
@@ -25269,7 +25723,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306623541
   },
   "T-decisions-col2.head": {
    "board": {
@@ -25296,7 +25750,7 @@
     "x": 40,
     "y": 164
    },
-   "mural_id": "7825e5b9-8d0e-4d02-a4a8-d0da5048254b",
+   "mural_id": "546c39bf-b84a-4b2f-a9ae-458d612c4d9c",
    "tracked": [
     "title",
     "text",
@@ -25324,7 +25778,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col2.path": {
    "board": {
@@ -25351,7 +25805,7 @@
     "x": 40,
     "y": 352
    },
-   "mural_id": "4332614f-f37c-4968-8448-7b47aa47ea9e",
+   "mural_id": "b0d3e40c-f79e-42cd-b155-647a947acf04",
    "tracked": [
     "title",
     "text",
@@ -25379,7 +25833,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col2.tag": {
    "board": {
@@ -25409,7 +25863,7 @@
     "x": 40,
     "y": 40
    },
-   "mural_id": "db5fb0f3-acf4-4a6f-931a-bf2b4467ab21",
+   "mural_id": "57159826-c46c-42cd-8ab9-3fe6e05de1e3",
    "tracked": [
     "title",
     "text",
@@ -25437,7 +25891,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306623541
   },
   "T-decisions-col2.tagtext": {
    "board": {
@@ -25465,7 +25919,7 @@
     "x": 40,
     "y": 44
    },
-   "mural_id": "6026ea23-d644-4709-84ea-0addf18d0f2f",
+   "mural_id": "446faa1e-3d25-4c44-92c9-8f0fa17bb4af",
    "tracked": [
     "title",
     "text",
@@ -25493,7 +25947,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col2.text": {
    "board": {
@@ -25520,7 +25974,7 @@
     "x": 40,
     "y": 240
    },
-   "mural_id": "dfe7141d-bb9f-4392-b453-2fdbde5cacab",
+   "mural_id": "42d7848c-b0a1-4c33-aa7e-dce782d442f9",
    "tracked": [
     "title",
     "text",
@@ -25548,7 +26002,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col2.why": {
    "board": {
@@ -25575,7 +26029,7 @@
     "x": 40,
     "y": 428
    },
-   "mural_id": "dd9aa3f6-ec19-4c4b-9739-711f026ad4e0",
+   "mural_id": "db055eea-3f9d-47a6-acdd-c76c97bc3f96",
    "tracked": [
     "title",
     "text",
@@ -25603,7 +26057,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col3": {
    "board": {
@@ -25618,7 +26072,7 @@
     "title": "T-decisions-col3",
     "width": 896,
     "x": 2176,
-    "y": 724
+    "y": 770
    },
    "fields": {
     "border_color": "#FFFFFF00",
@@ -25630,9 +26084,9 @@
     "title": "T-decisions-col3",
     "width": 896,
     "x": 2176,
-    "y": 724
+    "y": 770
    },
-   "mural_id": "f809dfac-b83f-41cb-85c6-5e5363c8f925",
+   "mural_id": "7134bb6f-7ca3-4fb6-bcf8-7cad198b4046",
    "tracked": [
     "title",
     "text",
@@ -25660,14 +26114,14 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306311949
+   "updatedOn": 1793306528035
   },
   "T-decisions-col3.bg": {
    "board": {
-    "border_color": "#0043CEFF",
+    "border_color": "#0E6027FF",
     "border_style": "solid",
     "border_width": 2,
-    "color": "#EDF5FFFF",
+    "color": "#DEFBE6FF",
     "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col3",
@@ -25678,9 +26132,9 @@
     "y": 0
    },
    "fields": {
-    "border_color": "#0043CEFF",
+    "border_color": "#0E6027FF",
     "border_width": 2,
-    "color": "#EDF5FFFF",
+    "color": "#DEFBE6FF",
     "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col3",
@@ -25690,7 +26144,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "e2c39b12-b34e-4b87-bb26-da0ed6706456",
+   "mural_id": "79487168-4967-4ae2-ad98-18679d326b9a",
    "tracked": [
     "title",
     "text",
@@ -25718,7 +26172,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306623541
   },
   "T-decisions-col3.head": {
    "board": {
@@ -25745,7 +26199,7 @@
     "x": 40,
     "y": 164
    },
-   "mural_id": "0fe2167b-8d9d-4ebe-9a52-b2ea7b30cf84",
+   "mural_id": "77485533-f253-47b2-a426-af49a030dc4d",
    "tracked": [
     "title",
     "text",
@@ -25773,7 +26227,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col3.path": {
    "board": {
@@ -25781,7 +26235,7 @@
     "color": "#FFFFFF00",
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#0043CEFF",
+    "ink": "#0E6027FF",
     "parent": "T-decisions-col3",
     "text": "ADR-001-project-root-resolution.md",
     "title": "tpl:kind#path",
@@ -25792,7 +26246,7 @@
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#0043CEFF",
+    "ink": "#0E6027FF",
     "parent": "T-decisions-col3",
     "text": "ADR-001-project-root-resolution.md",
     "title": "tpl:kind#path",
@@ -25800,7 +26254,7 @@
     "x": 40,
     "y": 352
    },
-   "mural_id": "e27b0801-307c-4d17-ad31-d013c52f6ac5",
+   "mural_id": "9f1a2b6d-6ffe-4cb0-b6dc-70aa085b1bf7",
    "tracked": [
     "title",
     "text",
@@ -25828,14 +26282,14 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col3.tag": {
    "board": {
-    "border_color": "#0043CEFF",
+    "border_color": "#0E6027FF",
     "border_style": "solid",
     "border_width": 1,
-    "color": "#0043CEFF",
+    "color": "#0E6027FF",
     "height": 88,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col3",
@@ -25846,9 +26300,9 @@
     "y": 40
    },
    "fields": {
-    "border_color": "#0043CEFF",
+    "border_color": "#0E6027FF",
     "border_width": 1,
-    "color": "#0043CEFF",
+    "color": "#0E6027FF",
     "height": 88,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col3",
@@ -25858,7 +26312,7 @@
     "x": 40,
     "y": 40
    },
-   "mural_id": "936831bf-c001-4fe2-9967-a462be2798a4",
+   "mural_id": "fcb4f6a4-5d93-4f94-8db0-27e813d37135",
    "tracked": [
     "title",
     "text",
@@ -25886,7 +26340,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306623541
   },
   "T-decisions-col3.tagtext": {
    "board": {
@@ -25914,7 +26368,7 @@
     "x": 40,
     "y": 44
    },
-   "mural_id": "e85261d8-3daa-493d-af24-b5736a55c6ea",
+   "mural_id": "46f328f4-4ae0-4811-b2d6-dde83f7bf4d3",
    "tracked": [
     "title",
     "text",
@@ -25942,7 +26396,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col3.text": {
    "board": {
@@ -25969,7 +26423,7 @@
     "x": 40,
     "y": 240
    },
-   "mural_id": "77d871d1-7648-408a-b5db-d4c84a6e4a52",
+   "mural_id": "44a81bde-9dd6-4fb4-a790-935b08574818",
    "tracked": [
     "title",
     "text",
@@ -25997,7 +26451,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-col3.why": {
    "board": {
@@ -26024,7 +26478,7 @@
     "x": 40,
     "y": 428
    },
-   "mural_id": "55d4f539-cf0e-4ddd-b312-e7da5916d6f4",
+   "mural_id": "61b9ba52-5bd2-4789-a88a-274bcc704874",
    "tracked": [
     "title",
     "text",
@@ -26052,7 +26506,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-grp1": {
    "board": {
@@ -26061,7 +26515,7 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 124,
+    "height": 56,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-grp1",
@@ -26073,7 +26527,7 @@
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 124,
+    "height": 56,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-grp1",
@@ -26081,7 +26535,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "2758d6f8-4734-4d85-8f04-2814e1df4096",
+   "mural_id": "5185dd39-f4e5-48db-9ff3-48a4bed77e72",
    "tracked": [
     "title",
     "text",
@@ -26109,65 +26563,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306273639
-  },
-  "T-decisions-grp1.bar": {
-   "board": {
-    "border_color": "#8D8D8DFF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#8D8D8DFF",
-    "height": 6,
-    "ink": "#161616FF",
-    "parent": "T-decisions-grp1",
-    "text": "",
-    "title": "tpl:kind_group#bar",
-    "width": 1856,
-    "x": 0,
-    "y": 116
-   },
-   "fields": {
-    "border_color": "#8D8D8DFF",
-    "border_width": 1,
-    "color": "#8D8D8DFF",
-    "height": 6,
-    "ink": "#161616FF",
-    "parent": "T-decisions-grp1",
-    "text": "",
-    "title": "tpl:kind_group#bar",
-    "width": 1856,
-    "x": 0,
-    "y": 116
-   },
-   "mural_id": "78afbad5-9452-4322-bc57-e7980721cff7",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306527242
   },
   "T-decisions-grp1.head": {
    "board": {
@@ -26194,7 +26590,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "14f9e641-638f-4a0d-b6a0-ddf9368bcb50",
+   "mural_id": "4de9a081-745b-4996-b213-51f6dc1cb7e5",
    "tracked": [
     "title",
     "text",
@@ -26222,62 +26618,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
-  },
-  "T-decisions-grp1.path": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-grp1",
-    "text": ".pkit/decisions/",
-    "title": "tpl:kind_group#path",
-    "width": 1856,
-    "x": 0,
-    "y": 58
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-grp1",
-    "text": ".pkit/decisions/",
-    "title": "tpl:kind_group#path",
-    "width": 1856,
-    "x": 0,
-    "y": 58
-   },
-   "mural_id": "453ad917-95c6-414a-bdde-efe1909f85c8",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-grp2": {
    "board": {
@@ -26286,7 +26627,7 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 124,
+    "height": 56,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-grp2",
@@ -26298,7 +26639,7 @@
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 124,
+    "height": 56,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-grp2",
@@ -26306,7 +26647,7 @@
     "x": 2176,
     "y": 576
    },
-   "mural_id": "d7c58cd5-6433-43d5-925e-4cba0e1256e2",
+   "mural_id": "8f8bc547-af4a-4a08-a768-86dd5a677fdf",
    "tracked": [
     "title",
     "text",
@@ -26334,65 +26675,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306273835
-  },
-  "T-decisions-grp2.bar": {
-   "board": {
-    "border_color": "#8D8D8DFF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#8D8D8DFF",
-    "height": 6,
-    "ink": "#161616FF",
-    "parent": "T-decisions-grp2",
-    "text": "",
-    "title": "tpl:kind_group#bar",
-    "width": 896,
-    "x": 0,
-    "y": 116
-   },
-   "fields": {
-    "border_color": "#8D8D8DFF",
-    "border_width": 1,
-    "color": "#8D8D8DFF",
-    "height": 6,
-    "ink": "#161616FF",
-    "parent": "T-decisions-grp2",
-    "text": "",
-    "title": "tpl:kind_group#bar",
-    "width": 896,
-    "x": 0,
-    "y": 116
-   },
-   "mural_id": "3a41afaa-c75b-45c7-b27d-f4edfba1f044",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306527510
   },
   "T-decisions-grp2.head": {
    "board": {
@@ -26402,7 +26685,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-decisions-grp2",
-    "text": "What you build",
+    "text": "What you build, at a path you choose",
     "title": "tpl:kind_group#head",
     "width": 896,
     "x": 0,
@@ -26413,13 +26696,13 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-decisions-grp2",
-    "text": "What you build",
+    "text": "What you build, at a path you choose",
     "title": "tpl:kind_group#head",
     "width": 896,
     "x": 0,
     "y": 0
    },
-   "mural_id": "22b6e55e-33de-4128-b145-b854d4fe5f26",
+   "mural_id": "73d4f863-d4cf-4cd8-a026-795829ce7baf",
    "tracked": [
     "title",
     "text",
@@ -26447,62 +26730,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
-  },
-  "T-decisions-grp2.path": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-grp2",
-    "text": "docs/architecture/decisions/, a path you choose",
-    "title": "tpl:kind_group#path",
-    "width": 896,
-    "x": 0,
-    "y": 58
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-grp2",
-    "text": "docs/architecture/decisions/, a path you choose",
-    "title": "tpl:kind_group#path",
-    "width": 896,
-    "x": 0,
-    "y": 58
-   },
-   "mural_id": "6e9ce724-4685-463b-a5a8-c44bc1ea2c43",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
   },
   "T-decisions-limit": {
    "board": {
@@ -26517,7 +26745,7 @@
     "title": "T-decisions-limit",
     "width": 2944,
     "x": 128,
-    "y": 1372
+    "y": 1418
    },
    "fields": {
     "border_color": "#FFFFFF00",
@@ -26529,9 +26757,9 @@
     "title": "T-decisions-limit",
     "width": 2944,
     "x": 128,
-    "y": 1372
+    "y": 1418
    },
-   "mural_id": "16e7ae92-a97b-44dc-8bc0-c99c5fd664ce",
+   "mural_id": "7e18cd3a-9948-49e8-b04f-47506bb0583c",
    "tracked": [
     "title",
     "text",
@@ -26559,7 +26787,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306273949
+   "updatedOn": 1793306528078
   },
   "T-decisions-limit.bar": {
    "board": {
@@ -26589,7 +26817,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "8b4ac853-bd34-448a-a421-6a0a57ce84ba",
+   "mural_id": "d83d962c-906b-45ff-baa5-fec008f81364",
    "tracked": [
     "title",
     "text",
@@ -26617,7 +26845,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306623541
   },
   "T-decisions-limit.bg": {
    "board": {
@@ -26647,7 +26875,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "b93923c3-b630-4ec7-b32c-265093be5ceb",
+   "mural_id": "e2104060-226c-4bdf-8906-c99ef3e24f71",
    "tracked": [
     "title",
     "text",
@@ -26675,7 +26903,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306313221
+   "updatedOn": 1793306623541
   },
   "T-decisions-limit.text": {
    "board": {
@@ -26702,7 +26930,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "5d82ff11-5351-4225-9988-ee3b192cf934",
+   "mural_id": "62844047-cf4e-4dfc-8dce-9ab82b4db3d4",
    "tracked": [
     "title",
     "text",
@@ -26730,7 +26958,217 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306314056
+   "updatedOn": 1793306624333
+  },
+  "T-decisions-path1": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 76,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-path1",
+    "width": 432,
+    "x": 128,
+    "y": 644
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 76,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-path1",
+    "width": 432,
+    "x": 128,
+    "y": 644
+   },
+   "mural_id": "de17be09-57b0-4de6-9221-c7b9d3c8844f",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306527265
+  },
+  "T-decisions-path1.img": {
+   "board": {
+    "height": 76,
+    "parent": "T-decisions-path1",
+    "title": "tpl:term_image#img",
+    "width": 432,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "file": "2026-10-29-friday-talk-icons/chip-decisions-path1.png@9496e67502360be8",
+    "height": 76,
+    "parent": "T-decisions-path1",
+    "title": "tpl:term_image#img",
+    "width": 432,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "44a6570b-6393-4f78-b6b0-8790f4183c25",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306625265
+  },
+  "T-decisions-path2": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 76,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-path2",
+    "width": 720,
+    "x": 2176,
+    "y": 644
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 76,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-path2",
+    "width": 720,
+    "x": 2176,
+    "y": 644
+   },
+   "mural_id": "57ba16f6-9f61-4ed0-b0be-de1af3f04d69",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306622778
+  },
+  "T-decisions-path2.img": {
+   "board": {
+    "height": 76,
+    "parent": "T-decisions-path2",
+    "title": "tpl:term_image#img",
+    "width": 720,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "file": "2026-10-29-friday-talk-icons/chip-decisions-path2.png@173ac012af11d08b",
+    "height": 76,
+    "parent": "T-decisions-path2",
+    "title": "tpl:term_image#img",
+    "width": 720,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "dbf44279-fe4a-4bb4-88f4-f1fba437af58",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306625280
   },
   "T-decisions.bg": {
    "board": {

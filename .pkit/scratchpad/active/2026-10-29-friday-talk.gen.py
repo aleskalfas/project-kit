@@ -459,7 +459,7 @@ def highlight(pid, x, y, w, v):
 
 KIND_H = 600
 KIND_TEMPLATE = {
-    "note": "A kind of a thing as a column in its owner's colour: a filled tag (its prefix), a head, what it decides, a real file of it, and why it lives where it does; made by the slide generator.",
+    "note": "A kind of a thing as a column in its own tone: a filled tag (its prefix), a head, what it decides, a real file of it, and why it lives where it does; made by the slide generator.",
     "root": {**CLEAR_AREA, "width": 896, "height": KIND_H},
     "parts": {
         "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 896, "height": KIND_H,
@@ -473,24 +473,47 @@ KIND_TEMPLATE = {
         "why": {"type": "text", "text": "{why}", "style": "@style.body", "ink": "@text_primary", "x": 40, "y": 428, "width": 816, "height": 150},
     },
 }
-GROUP_H = 124
+GROUP_HEAD_H, CHIP_FONT, CHIP_PAD = 56, 40, 24
+CHIP_H = round(CHIP_FONT * 1.9)
+GROUP_H = GROUP_HEAD_H + 12 + CHIP_H + 20 + 6  # the heading, the path, the bar
 GROUP_TEMPLATE = {
-    "note": "A group's heading over the columns it holds: what they share, where they live, and a bar as wide as the group; made by the slide generator.",
-    "root": {**CLEAR_AREA, "width": 1856, "height": GROUP_H},
+    "note": "A group's heading over the columns it holds, saying what they share; its path and bar are separate instances; made by the slide generator.",
+    "root": {**CLEAR_AREA, "width": 1856, "height": GROUP_HEAD_H},
     "parts": {
-        "head": {"type": "text", "text": "{head}", "style": "@style.key", "ink": "@text_primary", "x": 0, "y": 0, "width": 1856, "height": 56},
-        "path": {"type": "text", "text": "{path}", "style": "@style.body", "ink": "@text_secondary", "x": 0, "y": 58, "width": 1856, "height": 52},
-        "bar": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 116, "width": 1856, "height": 6,
-                "color": "@border_strong", "border_color": "@border_strong", "border_width": 1, "ink": "@text_primary"},
+        "head": {"type": "text", "text": "{head}", "style": "@style.key", "ink": "@text_primary", "x": 0, "y": 0, "width": 1856, "height": GROUP_HEAD_H},
     },
 }
-KIND_TONES = {"pkit": ("role_code_bg", "role_code"), "yours": ("role_people_bg", "role_people")}
+KIND_TONES = {"core": ("role_neutral_bg", "role_neutral"), "yours": ("role_people_bg", "role_people"),
+              "architecture": ("role_architecture_bg", "role_architecture"), "pkit": ("role_code_bg", "role_code")}
 GROUP_GAP = 192
 
 
+def chip_png(name, text, font_size=CHIP_FONT):
+    """A path in the deck's terminal style, as a one-line chip: a light panel, IBM Plex Mono, near-black text.
+    Mural has no monospace font, so the chip is an image beside the map. Returns the file and its size."""
+    import html as htmllib
+    import subprocess
+    from pathlib import Path
+
+    w = round(2 * CHIP_PAD + len(text) * 0.6 * font_size)
+    h = CHIP_H
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">'
+           f'<rect x="1" y="1" width="{w - 2}" height="{h - 2}" fill="#F4F4F4" stroke="#E0E0E0" stroke-width="2"/>'
+           f'<text x="{CHIP_PAD}" y="{round(h / 2 + font_size * 0.36)}" font-family="IBM Plex Mono" font-size="{font_size}" '
+           f'fill="{TERM["plain"]}" xml:space="preserve">{htmllib.escape(text, quote=False)}</text></svg>')
+    folder = Path(MAP_DIR) / ICONS_DIR
+    svg_path = folder / f"chip-{name}.svg"
+    png_path = folder / f"chip-{name}.png"
+    svg_path.write_text(svg, encoding="utf-8")
+    subprocess.run(["rsvg-convert", "-w", str(2 * w), "-h", str(2 * h), "-o", str(png_path), str(svg_path)], check=True)
+    svg_path.unlink()
+    return f"chip-{name}", w, h
+
+
 def kinds(pid, y, v):
-    """Kinds of a thing as columns in their owner's colour (pkit's purple, yours blue), in groups across
-    the slide: each group under a heading (what its kinds share, where they live) and a bar its width."""
+    """Kinds of a thing as columns, each in its own tone (`tone`: core grey, yours blue, architecture green), in groups across
+    the slide: each group under its heading (what its kinds share), its path as a chip in the terminal style,
+    and a bar its width."""
     out = {}
     groups = v["groups"]
     n = sum(len(g["kinds"]) for g in groups)
@@ -501,12 +524,21 @@ def kinds(pid, y, v):
     for gi, g in enumerate(groups, 1):
         gw = round(len(g["kinds"]) * w + (len(g["kinds"]) - 1) * GUT)
         out[f"{pid}-grp{gi}"] = {
-            "template": "kind_group", "parent": pid, "x": round(x), "y": y, "head": md(g["head"]), "path": md(g["path"]),
-            "override": {"root": {"width": gw}, "head": {"width": gw}, "path": {"width": gw}, "bar": {"width": gw}},
+            "template": "kind_group", "parent": pid, "x": round(x), "y": y, "head": md(g["head"]),
+            "override": {"root": {"width": gw}, "head": {"width": gw}},
+        }
+        file, cw, ch = chip_png(f"{pid}-path{gi}".removeprefix("T-"), g["path"])
+        out[f"{pid}-path{gi}"] = {
+            "template": "term_image", "parent": pid, "x": round(x), "y": y + GROUP_HEAD_H + 12, "file": file,
+            "override": {"root": {"width": cw, "height": ch}, "img": {"width": cw, "height": ch}},
+        }
+        out[f"{pid}-bar{gi}"] = {
+            "template": "tree_bar", "parent": pid, "x": round(x), "y": y + GROUP_H - 6,
+            "override": {"root": {"width": gw, "height": 6}, "bar": {"width": gw, "height": 6}},
         }
         for it in g["kinds"]:
             i += 1
-            bg, tone = KIND_TONES[it.get("owner", "pkit")]
+            bg, tone = KIND_TONES[it.get("tone", "pkit")]
             out[f"{pid}-col{i}"] = {
                 "template": "kind", "parent": pid, "x": round(x), "y": y + GROUP_H + 24,
                 "tag": it["tag"], "head": md(it["head"]), "text": md(it["text"]), "path": md(it["path"]), "why": md(it["why"]),

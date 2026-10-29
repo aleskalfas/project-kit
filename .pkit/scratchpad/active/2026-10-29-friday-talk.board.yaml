@@ -21,6 +21,8 @@ theme:
     role_admin_bg: '#E5F6FFFF'
     role_neutral: '#525252FF'
     role_neutral_bg: '#F4F4F4FF'
+    role_architecture: '#0E6027FF'
+    role_architecture_bg: '#DEFBE6FF'
     background_inverse: '#393939FF'
     text_inverse: '#FFFFFFFF'
     accent_inverse: '#78A9FFFF'
@@ -1833,8 +1835,8 @@ templates:
         width: 1440
         height: 400
   kind:
-    note: 'A kind of a thing as a column in its owner''s colour: a filled tag (its prefix), a head, what
-      it decides, a real file of it, and why it lives where it does; made by the slide generator.'
+    note: 'A kind of a thing as a column in its own tone: a filled tag (its prefix), a head, what it decides,
+      a real file of it, and why it lives where it does; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1915,8 +1917,8 @@ templates:
         width: 816
         height: 150
   kind_group:
-    note: 'A group''s heading over the columns it holds: what they share, where they live, and a bar as
-      wide as the group; made by the slide generator.'
+    note: A group's heading over the columns it holds, saying what they share; its path and bar are separate
+      instances; made by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -1925,7 +1927,7 @@ templates:
       border_color: '#FFFFFF00'
       border_width: 1
       width: 1856
-      height: 124
+      height: 56
     parts:
       head:
         type: text
@@ -1936,27 +1938,6 @@ templates:
         y: 0
         width: 1856
         height: 56
-      path:
-        type: text
-        text: '{path}'
-        style: '@style.body'
-        ink: '@text_secondary'
-        x: 0
-        y: 58
-        width: 1856
-        height: 52
-      bar:
-        type: shape
-        shape: rectangle
-        text: ''
-        x: 0
-        y: 116
-        width: 1856
-        height: 6
-        color: '@border_strong'
-        border_color: '@border_strong'
-        border_width: 1
-        ink: '@text_primary'
 instances:
   L01:
     template: slide
@@ -3271,33 +3252,57 @@ instances:
     x: 128
     y: 576
     head: How work is done
-    path: .pkit/decisions/
     override:
       root:
         width: 1856
       head:
         width: 1856
-      path:
+    mural_ids:
+      root: 5185dd39-f4e5-48db-9ff3-48a4bed77e72
+      head: 4de9a081-745b-4996-b213-51f6dc1cb7e5
+  T-decisions-path1:
+    template: term_image
+    parent: T-decisions
+    x: 128
+    y: 644
+    file: chip-decisions-path1
+    override:
+      root:
+        width: 432
+        height: 76
+      img:
+        width: 432
+        height: 76
+    mural_ids:
+      root: de17be09-57b0-4de6-9221-c7b9d3c8844f
+      img: 44a6570b-6393-4f78-b6b0-8790f4183c25
+  T-decisions-bar1:
+    template: tree_bar
+    parent: T-decisions
+    x: 128
+    y: 740
+    override:
+      root:
         width: 1856
+        height: 6
       bar:
         width: 1856
+        height: 6
     mural_ids:
-      root: 2758d6f8-4734-4d85-8f04-2814e1df4096
-      bar: 78afbad5-9452-4322-bc57-e7980721cff7
-      head: 14f9e641-638f-4a0d-b6a0-ddf9368bcb50
-      path: 453ad917-95c6-414a-bdde-efe1909f85c8
+      root: ac1b3b1b-98f1-4517-a319-e0a7c6813419
+      bar: 617dce99-1d7a-4b7c-b1e7-9399efd311c5
   T-decisions-col1:
     template: kind
     parent: T-decisions
     x: 128
-    y: 724
+    y: 770
     tag: COR
     head: pkit's principles
     text: How the method works, the same in every project.
     path: core/COR-065-records-and-projection.md
     why: 'Apart from yours: each upgrade replaces them, so you never edit them.'
-    bg: role_code_bg
-    tone: role_code
+    bg: role_neutral_bg
+    tone: role_neutral
     override:
       root:
         width: 896
@@ -3312,19 +3317,19 @@ instances:
       why:
         width: 816
     mural_ids:
-      root: 8fefbc89-920a-424a-94ee-f5362e4f6609
-      bg: 0e8689bf-ddcf-4066-82f0-85a89dcd3b1a
-      tag: 4ac41d97-7d0c-4a86-9b59-3c3cf057e67c
-      tagtext: e36b2cb1-f33e-4e9e-8155-879339a2fcf8
-      head: d7347b36-b237-488f-ac64-d041550691a7
-      text: 9a61dc28-774c-4895-935a-46564c1965bf
-      path: ef07c87b-6155-4485-873f-d563f572c2f0
-      why: a3a68b4f-6a3f-4e81-a9e3-29476c44798d
+      root: 97322b23-795f-4dee-862e-d46b33335496
+      bg: b8caeb3f-20df-4801-85b7-5153c7216686
+      tag: f82372e3-1d3c-4266-b451-8de3cdb5a7a2
+      tagtext: 650387d0-e4aa-438b-a4e5-fa43fb002851
+      head: a6b4cc42-603c-4cf4-9233-854de02a1f05
+      text: 66d83b1f-4670-4c34-afb2-1f9e343af30b
+      path: 3e262967-d30e-464f-8c9f-d9b00b9d4f78
+      why: bc2230f3-9df0-4b33-9995-f532aeb347ee
   T-decisions-col2:
     template: kind
     parent: T-decisions
     x: 1088
-    y: 724
+    y: 770
     tag: PRJ
     head: Your way of working
     text: How your team works, in the choices pkit leaves to you.
@@ -3346,47 +3351,71 @@ instances:
       why:
         width: 816
     mural_ids:
-      root: 5c7a24d9-7840-486c-aa76-aa8e5f498338
-      bg: 359664f5-8c0a-4a24-bae2-cdfe0c87acee
-      tag: db5fb0f3-acf4-4a6f-931a-bf2b4467ab21
-      tagtext: 6026ea23-d644-4709-84ea-0addf18d0f2f
-      head: 7825e5b9-8d0e-4d02-a4a8-d0da5048254b
-      text: dfe7141d-bb9f-4392-b453-2fdbde5cacab
-      path: 4332614f-f37c-4968-8448-7b47aa47ea9e
-      why: dd9aa3f6-ec19-4c4b-9739-711f026ad4e0
+      root: c8682dca-20d0-4822-ad13-877d0bcaf3fe
+      bg: 087c9aad-5068-4e51-a3ab-ae427982f18a
+      tag: 57159826-c46c-42cd-8ab9-3fe6e05de1e3
+      tagtext: 446faa1e-3d25-4c44-92c9-8f0fa17bb4af
+      head: 546c39bf-b84a-4b2f-a9ae-458d612c4d9c
+      text: 42d7848c-b0a1-4c33-aa7e-dce782d442f9
+      path: b0d3e40c-f79e-42cd-b155-647a947acf04
+      why: db055eea-3f9d-47a6-acdd-c76c97bc3f96
   T-decisions-grp2:
     template: kind_group
     parent: T-decisions
     x: 2176
     y: 576
-    head: What you build
-    path: docs/architecture/decisions/, a path you choose
+    head: What you build, at a path you choose
     override:
       root:
         width: 896
       head:
         width: 896
-      path:
+    mural_ids:
+      root: 8f8bc547-af4a-4a08-a768-86dd5a677fdf
+      head: 73d4f863-d4cf-4cd8-a026-795829ce7baf
+  T-decisions-path2:
+    template: term_image
+    parent: T-decisions
+    x: 2176
+    y: 644
+    file: chip-decisions-path2
+    override:
+      root:
+        width: 720
+        height: 76
+      img:
+        width: 720
+        height: 76
+    mural_ids:
+      root: 57ba16f6-9f61-4ed0-b0be-de1af3f04d69
+      img: dbf44279-fe4a-4bb4-88f4-f1fba437af58
+  T-decisions-bar2:
+    template: tree_bar
+    parent: T-decisions
+    x: 2176
+    y: 740
+    override:
+      root:
         width: 896
+        height: 6
       bar:
         width: 896
+        height: 6
     mural_ids:
-      root: d7c58cd5-6433-43d5-925e-4cba0e1256e2
-      bar: 3a41afaa-c75b-45c7-b27d-f4edfba1f044
-      head: 22b6e55e-33de-4128-b145-b854d4fe5f26
-      path: 6e9ce724-4685-463b-a5a8-c44bc1ea2c43
+      root: 87c62e4e-9ee9-48c5-b71b-5c2030c6eb5c
+      bar: 2c4f2720-fcc7-47e9-9b36-65bea07a4aaa
   T-decisions-col3:
     template: kind
     parent: T-decisions
     x: 2176
-    y: 724
+    y: 770
     tag: ADR
     head: Your architecture
     text: How your system is built, its structure, technologies and boundaries.
     path: ADR-001-project-root-resolution.md
     why: 'Apart from how you work: they sit with your system''s docs, where its architect keeps them.'
-    bg: role_people_bg
-    tone: role_people
+    bg: role_architecture_bg
+    tone: role_architecture
     override:
       root:
         width: 896
@@ -3401,26 +3430,26 @@ instances:
       why:
         width: 816
     mural_ids:
-      root: f809dfac-b83f-41cb-85c6-5e5363c8f925
-      bg: e2c39b12-b34e-4b87-bb26-da0ed6706456
-      tag: 936831bf-c001-4fe2-9967-a462be2798a4
-      tagtext: e85261d8-3daa-493d-af24-b5736a55c6ea
-      head: 0fe2167b-8d9d-4ebe-9a52-b2ea7b30cf84
-      text: 77d871d1-7648-408a-b5db-d4c84a6e4a52
-      path: e27b0801-307c-4d17-ad31-d013c52f6ac5
-      why: 55d4f539-cf0e-4ddd-b312-e7da5916d6f4
+      root: 7134bb6f-7ca3-4fb6-bcf8-7cad198b4046
+      bg: 79487168-4967-4ae2-ad98-18679d326b9a
+      tag: fcb4f6a4-5d93-4f94-8db0-27e813d37135
+      tagtext: 46f328f4-4ae0-4811-b2d6-dde83f7bf4d3
+      head: 77485533-f253-47b2-a426-af49a030dc4d
+      text: 44a81bde-9dd6-4fb4-a790-935b08574818
+      path: 9f1a2b6d-6ffe-4cb0-b6dc-70aa085b1bf7
+      why: 61b9ba52-5bd2-4789-a88a-274bcc704874
   T-decisions-limit:
     template: notice
     parent: T-decisions
     text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that bind later
       work.'
     x: 128
-    y: 1372
+    y: 1418
     mural_ids:
-      root: 16e7ae92-a97b-44dc-8bc0-c99c5fd664ce
-      bg: b93923c3-b630-4ec7-b32c-265093be5ceb
-      bar: 8b4ac853-bd34-448a-a421-6a0a57ce84ba
-      text: 5d82ff11-5351-4225-9988-ee3b192cf934
+      root: 7e18cd3a-9948-49e8-b04f-47506bb0583c
+      bg: e2104060-226c-4bdf-8906-c99ef3e24f71
+      bar: d83d962c-906b-45ff-baa5-fec008f81364
+      text: 62844047-cf4e-4dfc-8dce-9ab82b4db3d4
   T-found:
     template: slide
     title: Decided once, found later
@@ -7160,13 +7189,15 @@ objects:
     library: true
     parent: LIB
     text: ''
-    x: 3420
-    y: 2494
+    x: 660
+    y: 2900
     width: 360
     height: 200
     color: '#393939FF'
     border_color: '#C6C6C6FF'
     border_width: 1
+    border_style: solid
+    ink: '#000000FF'
   LIB.theme.label.background_inverse:
     mural_id: 71fde021-0a5c-4d9d-9bd2-b8fc98172bdd
     type: text
@@ -7175,12 +7206,15 @@ objects:
     text: 'background_inverse
 
       #393939'
-    x: 3420
-    y: 2710
+    x: 660
+    y: 3116
     width: 360
     height: 90
     font_size: 24
     ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
   LIB.theme.swatch.text_inverse:
     mural_id: 0d2b9d53-81a2-44ec-9b25-f1a81f99e2e1
     type: shape
@@ -7188,13 +7222,15 @@ objects:
     library: true
     parent: LIB
     text: ''
-    x: 200
+    x: 1120
     y: 2900
     width: 360
     height: 200
     color: '#FFFFFFFF'
     border_color: '#C6C6C6FF'
     border_width: 1
+    border_style: solid
+    ink: '#000000FF'
   LIB.theme.label.text_inverse:
     mural_id: aa1b8981-2447-4f77-9a82-bea2930815d5
     type: text
@@ -7203,12 +7239,15 @@ objects:
     text: 'text_inverse
 
       #FFFFFF'
-    x: 200
+    x: 1120
     y: 3116
     width: 360
     height: 90
     font_size: 24
     ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
   LIB.theme.swatch.accent_inverse:
     mural_id: 5e293bb0-fcbf-4eaa-9d12-cb40ae8f875c
     type: shape
@@ -7216,13 +7255,15 @@ objects:
     library: true
     parent: LIB
     text: ''
-    x: 660
+    x: 1580
     y: 2900
     width: 360
     height: 200
     color: '#78A9FFFF'
     border_color: '#C6C6C6FF'
     border_width: 1
+    border_style: solid
+    ink: '#000000FF'
   LIB.theme.label.accent_inverse:
     mural_id: 6442f296-1e25-4d96-9ad3-5c2e4de0276c
     type: text
@@ -7231,12 +7272,15 @@ objects:
     text: 'accent_inverse
 
       #78A9FF'
-    x: 660
+    x: 1580
     y: 3116
     width: 360
     height: 90
     font_size: 24
     ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
   LIB.label.L15:
     mural_id: 98ebab56-d5cc-46bc-90ee-070a8676f653
     type: text
@@ -7549,3 +7593,69 @@ objects:
     font: proxima-nova
     font_size: 28
     ink: '#525252FF'
+  LIB.theme.swatch.role_architecture:
+    mural_id: 24a5d933-8001-415b-a6b8-ed2efa41b476
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 3420
+    y: 2494
+    width: 360
+    height: 200
+    color: '#0E6027FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_architecture:
+    mural_id: b37c91a0-8a5a-4b24-a5c9-7741c76e4d3d
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_architecture
+
+      #0E6027'
+    x: 3420
+    y: 2710
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
+  LIB.theme.swatch.role_architecture_bg:
+    mural_id: be1e70c3-f370-44c3-8838-7e355aaf4e54
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 200
+    y: 2900
+    width: 360
+    height: 200
+    color: '#DEFBE6FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+    border_style: solid
+    ink: '#000000FF'
+  LIB.theme.label.role_architecture_bg:
+    mural_id: dee88d9e-3c82-4252-855d-f771438ea0b2
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_architecture_bg
+
+      #DEFBE6'
+    x: 200
+    y: 3116
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+    color: '#FFFFFF00'
+    align: left
+    font: proxima-nova
