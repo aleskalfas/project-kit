@@ -4326,6 +4326,15 @@ def unreadable_configuration(target_root: Path, tree: RepositoryTree | None = No
     return None
 
 
+def configuration_at(target_root: Path, tree: RepositoryTree | None = None) -> dict[str, Any]:
+    """The backbone configuration's mapping at one state, read as the settings are:
+    forgivingly, `{}` for a file that is absent or does not read as a mapping (COR-048
+    point 4). With a `tree`, the file that state holds."""
+    rel = project_config_path(target_root).relative_to(target_root).as_posix()
+    config, _unparsed = _yaml_reader(target_root, tree)(rel)
+    return config
+
+
 def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) -> dict[str, Any]:
     """The declared places, the files they hold and the artefacts in them, as one
     stable document — what `pkit friction artefacts --json` prints.

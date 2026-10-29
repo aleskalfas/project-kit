@@ -130,10 +130,13 @@ def test_a_valid_rule_set_is_clean_and_parsed(adopter: AdopterRepo) -> None:
     assert first is not None and first.section.startswith("## RS-CMN-001 — Rule RS-CMN-001")
     assert first.offers == ("cause-location",)
     shipped = len(shipped_rules(adopter.root))  # the backbone's set, each rule accepted
-    assert rs.summary_lines(result) == [
+    counts, *files = rs.summary_lines(result)
+    assert counts == (
         f"2 rule set(s), {6 + shipped} rule(s) (1 proposed, {3 + shipped} accepted, "
         "1 superseded, 1 withdrawn); 0 error(s), 0 report(s)."
-    ]
+    )
+    # then each rules file a session loads, with its count (COR-069 point 5)
+    assert [line.split(":")[0] for line in files] == ["rules file .pkit/rules/core.md"]
 
 
 def test_a_rule_without_status_is_proposed_and_binds_nothing(adopter: AdopterRepo) -> None:

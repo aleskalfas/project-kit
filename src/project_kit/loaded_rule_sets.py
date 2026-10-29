@@ -23,6 +23,13 @@ on an artefact (COR-068 points 1 and 2). This module is the one home of that fil
   that fails a loaded file out of step with its set (ADR-075 point 5): byte for
   byte once line endings are read as `\\n`, only where the set is authored, by the
   tree's own predicate (`is_synced_copy`).
+- **Its budget** (COR-069; ADR-077 points 1 to 6): the one count of a rules file's
+  words (`word_count`), which the check, the report and the generator all call;
+  each rules file a session loads, with its count and its budget, and the findings
+  of the member on them (`check_budgets`); and each budget a change raises, lowers,
+  adds or removes, for `pkit rule-sets altered` (`budget_changes`). A rules file is
+  the loaded file of a loaded set, or the project's rules kept as a plain file, whose
+  budget is `rule-sets.plain-file-budget` in the configuration.
 
 The generator and the check both call `project`, so a file the generator writes
 always passes the check (ADR-075, "Why one function for the generator and the
@@ -32,9 +39,11 @@ check"). The set's body is read through the one reading of a document's parts
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+import re
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import Any, cast
 
 import click
 
@@ -42,6 +51,7 @@ from project_kit import document_parts, lifecycle_ownership
 from project_kit import friction_discovery as fd
 from project_kit import rule_sets as rs
 from project_kit.line_breaks import universal_newlines
+from project_kit.project_config import PROJECT_CONFIG_RELPATH
 
 #: The backbone's loaded set's loaded file: the path the harness's include reads
 #: (ADR-075 point 2).
@@ -224,6 +234,327 @@ def _stale(path: Path, expected: str) -> str | None:
     return None if actual == expected else "the file differs from"
 
 
+# --- the budget (COR-069; ADR-077 points 1 to 4) --------------------------------------
+
+#: Unicode's White_Space property, character by character (the Unicode Character
+#: Database's PropList.txt): what separates the words a budget counts (COR-069 point 1).
+#: Named here rather than left to a language's split, which takes other characters as
+#: space too, such as the information separators U+001C to U+001F (ADR-077 point 3).
+WHITE_SPACE: frozenset[str] = frozenset(
+    chr(code)
+    for code in (
+        *range(0x09, 0x0E),  # tab, line feed, line tabulation, form feed, carriage return
+        0x20,  # space
+        0x85,  # next line
+        0xA0,  # no-break space
+        0x1680,  # ogham space mark
+        *range(0x2000, 0x200B),  # en quad to hair space
+        0x2028,  # line separator
+        0x2029,  # paragraph separator
+        0x202F,  # narrow no-break space
+        0x205F,  # medium mathematical space
+        0x3000,  # ideographic space
+    )
+)
+
+_WORD = re.compile("[^" + "".join(re.escape(c) for c in sorted(WHITE_SPACE)) + "]+")
+
+#: The configuration block and key that give the project's plain rules file its budget
+#: (COR-069 point 3; ADR-077 point 2), and the key as the findings name it.
+RULE_SETS_BLOCK = "rule-sets"
+PLAIN_FILE_BUDGET_KEY = "plain-file-budget"
+PLAIN_FILE_BUDGET = f"{RULE_SETS_BLOCK}.{PLAIN_FILE_BUDGET_KEY}"
+
+#: The configuration file, as the findings name it.
+CONFIG_FILE = PROJECT_CONFIG_RELPATH.as_posix()
+
+
+def word_count(text: str) -> int:
+    """The words of a rules file's text: each run of characters none of which has
+    Unicode's White_Space property (COR-069 point 1). The one count of a rules file:
+    the check, the report and the generator all call it (ADR-077 point 3). It is not
+    the prose lint's count, which serves the writing rules by another definition."""
+    return sum(1 for _ in _WORD.finditer(text))
+
+
+def plain_file_budget(config: Mapping[str, Any]) -> int | None:
+    """`rule-sets.plain-file-budget` from a configuration as read, or None where it is
+    absent or of another shape, which the configuration pass reports (COR-048 point 4)."""
+    block = config.get(RULE_SETS_BLOCK)
+    if not isinstance(block, Mapping):
+        return None
+    return rs.read_budget(cast(Mapping[str, Any], block).get(PLAIN_FILE_BUDGET_KEY))
+
+
+def measure(words: int, budget: int | None) -> str:
+    """A file's count against its budget, as the report and the generator say it."""
+    if budget is None:
+        return f"{words} word(s), no budget"
+    if words > budget:
+        return f"{words} word(s), budget {budget}, {words - budget} over"
+    return f"{words} word(s), budget {budget}, {budget - words} to spare"
+
+
+@dataclass(frozen=True)
+class RulesFile:
+    """One rules file a session loads (COR-069 point 1), as validation counts it.
+
+    - `path`: the loaded file of a loaded set, or the project's rules kept as a plain
+      file, relative to the root
+    - `words`: its count, of the file as written; None where there is no file to count:
+      missing, a link, or not text
+    - `budget`: the most words it may hold, or None where it has none
+    - `rule_set`: the loaded set it is generated from; None for the plain file
+    - `checked`: whether its owner can correct it here, so that validation fails it past
+      its budget: a component's file where its set is authored, a project's own always
+    """
+
+    path: PurePosixPath
+    words: int | None
+    budget: int | None
+    rule_set: rs.RuleSet | None
+    checked: bool
+
+    @property
+    def budget_set_in(self) -> str:
+        """Where its budget is set, as the findings name it."""
+        if self.rule_set is None:
+            return f"`{PLAIN_FILE_BUDGET}` in {CONFIG_FILE}"
+        return f"`{rs.BUDGET_KEY}` in {self.rule_set.citation} ({self.rule_set.path})"
+
+
+@dataclass(frozen=True)
+class BudgetCheck:
+    """The rules files a session loads here, and the member's findings on their budgets."""
+
+    files: tuple[RulesFile, ...]
+    findings: tuple[rs.RuleSetFinding, ...]
+
+
+def check_budgets(target_root: Path, discovery: rs.RuleSetDiscovery) -> BudgetCheck:
+    """Each rules file a session loads here with its count and its budget, and what
+    validation's `rule-sets` member finds on them (COR-069 point 5; ADR-077 point 4).
+
+    The rules files: the loaded file of the first loaded set of the backbone and of the
+    project, by path, and the project's plain rules file where the project has no loaded
+    set of its own and keeps one. A capability's loaded set has no loaded file (COR-068
+    point 4), and a deployed copy of a loaded file is counted as the file it copies, so
+    neither is a rules file here. Each is reported in every project.
+
+    The findings, in this order:
+
+    - a component's loaded set that gives no `budget`, where the set is authored
+      (`loaded-set-without-budget`, an error)
+    - a rules file holding more words than its budget, where its owner can correct it
+      (`rules-file-over-budget`, an error): a component's where its set is authored, a
+      project's own always. A project is never failed for a file it receives.
+    - `rule-sets.plain-file-budget` set where the project keeps no plain rules file
+      (`plain-file-budget-unused`, a warning)
+
+    A tree without the ownership module cannot tell where a component's set is
+    authored, so its file is counted and neither of the first two is judged on it; the
+    staleness check reports the tree.
+    """
+    is_synced_copy = synced_copy_test(target_root)
+
+    def authored(rule_set: rs.RuleSet) -> bool:
+        return is_synced_copy is not None and not is_synced_copy(rule_set.path)
+
+    key_budget = plain_file_budget(fd.configuration_at(target_root))
+    own = first_loaded(discovery, None)
+    files: list[RulesFile] = []
+    for rule_set in (first_loaded(discovery, fd.BACKBONE_COMPONENT), own):
+        loaded_file = None if rule_set is None else loaded_file_of(rule_set)
+        if rule_set is None or loaded_file is None:
+            continue
+        checked = rule_set.component is None or authored(rule_set)
+        words = _words_of(target_root / loaded_file)
+        files.append(RulesFile(loaded_file, words, rule_set.budget, rule_set, checked))
+    plain = target_root / PROJECT_LOADED_FILE
+    has_plain = own is None and (plain.exists() or plain.is_symlink())
+    if has_plain:
+        files.append(RulesFile(PROJECT_LOADED_FILE, _words_of(plain), key_budget, None, True))
+
+    findings: list[rs.RuleSetFinding] = [
+        _missing_budget(rule_set)
+        for rule_set in loaded_sets(discovery)
+        if rule_set.component is not None
+        and rs.BUDGET_KEY not in rule_set.front_matter
+        and authored(rule_set)
+    ]
+    findings.extend(
+        _over_budget(file)
+        for file in files
+        if file.checked
+        and file.words is not None
+        and file.budget is not None
+        and file.words > file.budget
+    )
+    if key_budget is not None and not has_plain:
+        findings.append(_unused_key(own))
+    return BudgetCheck(tuple(files), tuple(findings))
+
+
+def summary_line(file: RulesFile) -> str:
+    """One rules file's line under validation's `rule-sets` heading: its path, its
+    count, and its budget or that it has none (ADR-077 point 4)."""
+    if file.words is None:
+        budget = "no budget" if file.budget is None else f"budget {file.budget}"
+        return f"rules file {file.path}: no file to count, {budget}."
+    return f"rules file {file.path}: {measure(file.words, file.budget)}."
+
+
+#: What the findings past a budget, and the generator, tell whoever meets them (COR-069
+#: point 4).
+_TRIM = (
+    "raising a budget is a person's decision (COR-069 point 4): trim the file, or bring "
+    "the raise to the person who authorises the change"
+)
+
+
+def _over_budget(file: RulesFile) -> rs.RuleSetFinding:
+    assert file.words is not None and file.budget is not None
+    how = (
+        ""
+        if file.rule_set is None
+        else f" Trim the rules in {file.rule_set.path} and run `{GENERATE_COMMAND}`."
+    )
+    return rs.RuleSetFinding(
+        str(file.path),
+        "",
+        rs.Severity.ERROR,
+        rs.RuleSetFindingKind.RULES_FILE_OVER_BUDGET,
+        f"the rules file holds {file.words} words, {file.words - file.budget} past its "
+        f"budget of {file.budget}, set as {file.budget_set_in}. Every session loads the "
+        f"file whole, and {_TRIM}.{how}",
+    )
+
+
+def _missing_budget(rule_set: rs.RuleSet) -> rs.RuleSetFinding:
+    return rs.RuleSetFinding(
+        rule_set.path,
+        "",
+        rs.Severity.ERROR,
+        rs.RuleSetFindingKind.LOADED_SET_WITHOUT_BUDGET,
+        f"{rule_set.owner}'s loaded set {rule_set.citation} gives no `{rs.BUDGET_KEY}`. A "
+        f"component's loaded set holds the file it generates to a budget in words, so that "
+        f"each project receiving the file sees what it costs, and its growth is a raise a "
+        f"person authorises (COR-069 point 2). Add `{rs.BUDGET_KEY}: <words>` beside "
+        f"`{rs.LOADED_KEY}: true`; `{GENERATE_COMMAND}` prints the file's count.",
+    )
+
+
+def _unused_key(own: rs.RuleSet | None) -> rs.RuleSetFinding:
+    if own is None:
+        why = f"the project keeps no rules file at {PROJECT_LOADED_FILE}"
+        fix = "Remove the key, or keep the project's rules there."
+    else:
+        why = (
+            f"the project keeps its rules as the loaded set {own.citation} ({own.path}), "
+            f"whose own `{rs.BUDGET_KEY}` bounds its loaded file"
+        )
+        fix = f"Move the budget into the set's `{rs.BUDGET_KEY}`, and remove the key."
+    return rs.RuleSetFinding(
+        CONFIG_FILE,
+        f"/{RULE_SETS_BLOCK}/{PLAIN_FILE_BUDGET_KEY}",
+        rs.Severity.WARNING,
+        rs.RuleSetFindingKind.PLAIN_FILE_BUDGET_UNUSED,
+        f"`{PLAIN_FILE_BUDGET}` bounds the project's rules kept as a plain file, but {why}, "
+        f"so the key bounds nothing, and one budget has one place (COR-069 point 3). {fix}",
+    )
+
+
+def _words_of(path: Path) -> int | None:
+    """The count of the file at `path` as written, or None where there is none to count:
+    missing, a link, which the staleness check reads as no file, or not text."""
+    if not path.is_file() or path.is_symlink():
+        return None
+    try:
+        return word_count(path.read_bytes().decode("utf-8"))
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+# --- what a change does to the budgets (ADR-077 point 6) --------------------------------
+
+#: How a change sets a budget otherwise than its base.
+RAISED, LOWERED, ADDED, REMOVED = "raised", "lowered", "added", "removed"
+
+
+@dataclass(frozen=True)
+class BudgetChange:
+    """A budget of a rules file that a change sets otherwise than its base.
+
+    - `set_by`: the loaded set as cited, or `rule-sets.plain-file-budget`
+    - `path`: the file the budget is written in
+    - `file`: the rules file it bounds; None for a capability's set, which has none
+    - `base`, `head`: the budget at each state, None where it has none
+    """
+
+    set_by: str
+    path: str
+    file: str | None
+    base: int | None
+    head: int | None
+
+    @property
+    def change(self) -> str:
+        if self.base is None:
+            return ADDED
+        if self.head is None:
+            return REMOVED
+        return RAISED if self.head > self.base else LOWERED
+
+
+def budget_changes(
+    target_root: Path,
+    base: rs.RuleSetDiscovery,
+    head: rs.RuleSetDiscovery,
+    base_tree: fd.RepositoryTree,
+    head_tree: fd.RepositoryTree | None,
+) -> tuple[BudgetChange, ...]:
+    """Each budget of a rules file that a change sets otherwise than its base (COR-069
+    point 4): each loaded set's `budget`, the sets paired by how they are cited, those of
+    the head in its path order and then those only the base holds; then
+    `rule-sets.plain-file-budget`, read from the configuration each state holds (the
+    working tree's where `head_tree` is None). A budget the schemas refuse reads as
+    none."""
+    before, after = _loaded_by_citation(base), _loaded_by_citation(head)
+    changes: list[BudgetChange] = []
+    for citation in [*after, *(c for c in before if c not in after)]:
+        was, now = before.get(citation), after.get(citation)
+        shown = now if now is not None else was
+        assert shown is not None
+        was_budget = None if was is None else was.budget
+        now_budget = None if now is None else now.budget
+        if was_budget != now_budget:
+            loaded_file = loaded_file_of(shown)
+            changes.append(
+                BudgetChange(
+                    citation,
+                    shown.path,
+                    None if loaded_file is None else str(loaded_file),
+                    was_budget,
+                    now_budget,
+                )
+            )
+    was_key = plain_file_budget(fd.configuration_at(target_root, base_tree))
+    now_key = plain_file_budget(fd.configuration_at(target_root, head_tree))
+    if was_key != now_key:
+        changes.append(
+            BudgetChange(PLAIN_FILE_BUDGET, CONFIG_FILE, str(PROJECT_LOADED_FILE), was_key, now_key)
+        )
+    return tuple(changes)
+
+
+def _loaded_by_citation(discovery: rs.RuleSetDiscovery) -> dict[str, rs.RuleSet]:
+    """Each loaded set by how it is cited, the first by path where two share a name."""
+    found: dict[str, rs.RuleSet] = {}
+    for rule_set in loaded_sets(discovery):
+        found.setdefault(rule_set.citation, rule_set)
+    return found
+
+
 # --- the generator (ADR-075 point 4) --------------------------------------------------
 
 
@@ -239,6 +570,8 @@ class Generated:
     set_path: str
     path: str  # the loaded file, relative to the root
     changed: bool
+    words: int  # the count of the text it writes (COR-069 point 1)
+    budget: int | None  # the set's `budget`, or None
 
 
 @dataclass(frozen=True)
@@ -269,7 +602,9 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
       loaded file (`_stale`), so the generator writes through none
 
     A set that arrives by sync beside one authored here is left, and listed. The file
-    is written with `\\n` line breaks, and only where its text differs. `write=False`
+    is written with `\\n` line breaks, and only where its text differs. Each file comes
+    with the count of the text written and the set's budget (ADR-077 point 5): the
+    generator writes a file past its budget all the same, and says so. `write=False`
     computes the same answer and writes nothing.
     """
     discovery = rs.discover_rule_sets(target_root)
@@ -331,16 +666,29 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
         if changed and write:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(text.encode("utf-8"))
-        written.append(Generated(rule_set.citation, rule_set.path, str(loaded_file), changed))
+        written.append(
+            Generated(
+                rule_set.citation,
+                rule_set.path,
+                str(loaded_file),
+                changed,
+                word_count(text),
+                rule_set.budget,
+            )
+        )
     return Generation(tuple(written), received)
 
 
 def render(generation: Generation) -> str:
-    """The generator's report: one line for each loaded file, then each set left to sync."""
+    """The generator's report: for each loaded file, whether it changed, then its count
+    against its budget on a line beneath; then each set left to sync. A file past its
+    budget says what to do, as validation's finding does (ADR-077 point 5)."""
     lines: list[str] = []
     for item in generation.written:
         verb = "wrote" if item.changed else "unchanged"
         lines.append(f"  {verb:<10} {item.path}  (from {item.rule_set}, {item.set_path})")
+        over = item.budget is not None and item.words > item.budget
+        lines.append(f"{'':<13}{measure(item.words, item.budget)}{f'; {_TRIM}' if over else ''}")
     for item in generation.received:
         lines.append(f"  {'left':<10} {item.path}  ({item.rule_set} arrives by sync)")
     return "\n".join(lines) + "\n"
