@@ -1948,8 +1948,14 @@ def _fake_git(
     import subprocess
 
     seen: list[list[str]] = []
+    real_run = subprocess.run
 
     def fake_run(argv, **kwargs):
+        # Only git is faked: any other command, such as `pkit repository base`, which
+        # project-management's one pkit start looks `subprocess.run` up for when it
+        # runs (#2322), runs as it would without this fake.
+        if not argv or argv[0] != "git":
+            return real_run(argv, **kwargs)
         seen.append(list(argv))
         if argv[:2] == ["git", "symbolic-ref"]:
             return subprocess.CompletedProcess(
