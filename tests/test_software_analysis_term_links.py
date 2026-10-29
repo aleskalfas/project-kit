@@ -27,6 +27,10 @@ Held to software-analysis DEC-004 point 7 and DEC-001 points 1 and 2:
 - **one name, one concept** — validation refuses two terms in force of one name, a
   plural among the names, and a name another term replaces, within an analysis and
   across the analyses it builds on, two of those included, whatever any rule's status.
+
+The validator, the links and the stamp run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2326). One test keeps a process: the link
+command's exit code and the lines it prints.
 """
 
 from __future__ import annotations
@@ -49,6 +53,7 @@ from tests.analysis_repo import (
     FUNCTIONAL,
     GLOSSARY,
     JOURNEYS,
+    LINK,
     QUALITY,
     SA,
     SETTINGS_TEXT,
@@ -60,6 +65,7 @@ from tests.analysis_repo import (
     link,
     load_lib,
     prepare,
+    run_in_process,
     run_script,
     stamped,
 )
@@ -238,7 +244,8 @@ def bare(
 
 
 def _validate(repo: AdopterRepo) -> list[tuple[str, str]]:
-    completed = run_script(repo, VALIDATE, "--json")
+    """The validator's errors, `--json` alone, in the test's own process."""
+    completed = run_in_process(repo, VALIDATE, "--json")
     assert completed.returncode == 0, completed.stderr
     return [
         (f["location"], f["message"])
@@ -284,13 +291,18 @@ def test_the_stamp_opens_each_section_with_its_link_to_its_term(
 # --- the command writes the links ------------------------------------------------------------
 
 
+@pytest.mark.process(
+    "the link command's end-to-end test: its exit code and the lines it prints, from a "
+    "process of its own, and the pkit it starts"
+)
 def test_the_command_links_each_first_mention_with_every_safeguard(project: AdopterRepo) -> None:
     """Each first mention in a section links to its term's entry; the safeguards keep a
     link off the rest (DEC-004 point 7). The view and the glossary's entries come out
     exactly as `VIEW_LINKED` and `ENTRIES_LINKED` show them, and a term's definition, in
     front matter, stays plain."""
     before = _read(project, GLOSSARY).split("\n---\n", 1)[0]
-    completed = link(project)
+    completed = run_script(project, LINK)
+    assert completed.returncode == 0, completed.stderr
     assert completed.stdout.splitlines() == [
         f"linked {GLOSSARY} (5 link(s) written or mended)",
         f"linked {VIEW} (9 link(s) written or mended)",

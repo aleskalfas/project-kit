@@ -1,0 +1,80 @@
+[
+  {
+    "id": "sa-validator-json-exits-1-on-errors",
+    "file": ".pkit/capabilities/software-analysis/scripts/validate.py",
+    "find": "        print(json.dumps(outcome.document(), indent=2, ensure_ascii=False))\n        return 0\n",
+    "replace": "        print(json.dumps(outcome.document(), indent=2, ensure_ascii=False))\n        return 1 if outcome.errors else 0\n"
+  },
+  {
+    "id": "sa-overview-fresh-said-written",
+    "file": ".pkit/capabilities/software-analysis/scripts/overview.py",
+    "find": "print(f\"{'wrote' if written.changed else 'fresh already:'} {written.path}\")",
+    "replace": "print(f\"{'wrote' if True else 'fresh already:'} {written.path}\")"
+  },
+  {
+    "id": "sa-overview-kept-none-exits-0",
+    "file": ".pkit/capabilities/software-analysis/scripts/overview.py",
+    "find": "            file=sys.stderr,\n        )\n        return 1\n    try:\n",
+    "replace": "            file=sys.stderr,\n        )\n        return 0\n    try:\n"
+  },
+  {
+    "id": "sa-overview-stale-never-said",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/overview.py",
+    "find": "    if value == now:\n        return []\n    if reads != VERSION:\n",
+    "replace": "    if True:\n        return []\n    if reads != VERSION:\n"
+  },
+  {
+    "id": "sa-stamp-overview-not-refreshed",
+    "file": ".pkit/capabilities/software-analysis/scripts/new.py",
+    "find": "        wrote, failed = overview.refresh(backbone.project_root(), args.analysis)\n",
+    "replace": "        wrote, failed = None, None\n"
+  },
+  {
+    "id": "sa-record-ignores-its-analysis",
+    "file": ".pkit/capabilities/software-analysis/scripts/new.py",
+    "find": "        analysis=args.analysis,\n    )\n    return revalidation.stamp_record(",
+    "replace": "        analysis=None,\n    )\n    return revalidation.stamp_record("
+  },
+  {
+    "id": "sa-diagram-json-printed-as-text",
+    "file": ".pkit/capabilities/software-analysis/scripts/diagram.py",
+    "find": "    if args.json:\n        print(json.dumps(diagrams.document(found)",
+    "replace": "    if args.json and False:\n        print(json.dumps(diagrams.document(found)"
+  },
+  {
+    "id": "sa-diagram-unnamed-analysis-exits-0",
+    "file": ".pkit/capabilities/software-analysis/scripts/diagram.py",
+    "find": "        print(f\"error: {exc}; nothing is drawn.\", file=sys.stderr)\n        return 1\n",
+    "replace": "        print(f\"error: {exc}; nothing is drawn.\", file=sys.stderr)\n        return 0\n"
+  },
+  {
+    "id": "sa-readers-json-printed-as-text",
+    "file": ".pkit/capabilities/software-analysis/scripts/fill-readers.py",
+    "find": "    if args.json:\n        print(json.dumps(readers.envelope(value)",
+    "replace": "    if args.json and False:\n        print(json.dumps(readers.envelope(value)"
+  },
+  {
+    "id": "sa-check-numbers-collision-exits-0",
+    "file": ".pkit/capabilities/software-analysis/scripts/check-numbers.py",
+    "find": "    return 1 if comparison.outcome.errors else 0\n",
+    "replace": "    return 0\n"
+  },
+  {
+    "id": "sa-use-cases-no-answer-exits-0",
+    "file": ".pkit/capabilities/software-analysis/scripts/fill-use-cases.py",
+    "find": "        print(f\"error: {exc}; no use cases can be given.\", file=sys.stderr)\n        return 1\n",
+    "replace": "        print(f\"error: {exc}; no use cases can be given.\", file=sys.stderr)\n        return 0\n"
+  },
+  {
+    "id": "sa-use-cases-read-from-the-working-tree",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/settled_use_cases.py",
+    "find": "        return use_cases(backbone.read_analysis(root, at=branch.commit, run=run))\n",
+    "replace": "        return use_cases(backbone.read_analysis(root, run=run))\n"
+  },
+  {
+    "id": "sa-link-says-nothing-written-after-writing",
+    "file": ".pkit/capabilities/software-analysis/scripts/link.py",
+    "find": "    elif not written:\n        print(\"Every link is as it should be; nothing written.\")\n",
+    "replace": "    elif written:\n        print(\"Every link is as it should be; nothing written.\")\n"
+  }
+]

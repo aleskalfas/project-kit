@@ -27,18 +27,37 @@ from tests.in_process import InProcessPkit, Runner, load, route_pkit
 CAPABILITY = "project-management"
 
 
+def _is_pm_lib(module: object) -> bool:
+    """Whether `module` is a module of a project-management `_lib`, by its file's place."""
+    if not isinstance(module, ModuleType):
+        return False
+    path = Path(getattr(module, "__file__", None) or "")
+    in_lib = len(path.parents) > 2 and path.parent.name == "_lib"
+    return in_lib and path.parents[2].name == CAPABILITY
+
+
 def route_every_backbone(monkeypatch: pytest.MonkeyPatch, pkit: Runner | None = None) -> Runner:
     """Send every `pkit` call of project-management's `_lib` modules this process has
     imported to the in-process `pkit`, or to `pkit` when given. A module that imports its
     siblings in both forms, as part of the `_lib` package or standalone-by-path, may
-    reach either copy of `_lib/backbone.py`, so each copy imported is routed
-    (`tests/in_process.py`, `route_pkit`). Returns the runner."""
+    reach either copy of `_lib/backbone.py`, so each copy is routed (`tests/in_process.py`,
+    `route_pkit`). A copy counts where a module reaches it, not only where `sys.modules`
+    lists it: a module imported earlier keeps the copy it imported, as its runners'
+    defaults do, after a loader took that copy out of `sys.modules` (`load`). So the
+    walk starts at each `_lib` module `sys.modules` lists and follows the `_lib` modules
+    each holds. Returns the runner."""
     runner = pkit if pkit is not None else InProcessPkit()
-    for module in list(sys.modules.values()):
-        path = Path(getattr(module, "__file__", None) or "")
-        if path.name == "backbone.py" and len(path.parents) > 2:
-            if path.parents[2].name == CAPABILITY and path.parent.name == "_lib":
-                route_pkit(monkeypatch, module, runner)
+    pending = [module for module in list(sys.modules.values()) if _is_pm_lib(module)]
+    reached: dict[int, ModuleType] = {}
+    while pending:
+        module = pending.pop()
+        if id(module) in reached:
+            continue
+        reached[id(module)] = module
+        pending.extend(value for value in vars(module).values() if _is_pm_lib(value))
+    for module in reached.values():
+        if Path(module.__file__ or "").name == "backbone.py":
+            route_pkit(monkeypatch, module, runner)
     return runner
 
 
@@ -234,6 +253,23 @@ def test_the_writers_give_pkit_the_argument_lists_they_gave(
     assert _calls(recorded, lambda: journal(7, "todo", "in-progress", "me", "why")) == [
         ([*move, "--actor", "me", "--reason", "why"], READ)
     ]
+
+
+def test_every_backbone_is_routed_where_a_module_still_reaches_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A copy of `_lib/backbone.py` that `sys.modules` no longer lists, since the loader
+    took it out, but that a module imported earlier still reaches, through its runners'
+    defaults, is routed too: otherwise that module starts a real `pkit` (#2322)."""
+    (fa,) = load("project-management", "friction_answers")
+    copy = fa.default_branch.backbone
+    assert all(module is not copy for module in sys.modules.values())
+    monkeypatch.setitem(sys.modules, "pm_friction_answers_reached", fa)
+    recorder = Recorder()
+    route_every_backbone(monkeypatch, recorder)
+    with pytest.raises(fa.default_branch.Unanswered):
+        fa.default_branch.check_base("main")
+    assert recorder.calls and recorder.calls[0][0][:4] == ["pkit", "repository", "base", "--json"]
 
 
 def test_a_route_answers_every_call_in_this_process(

@@ -42,7 +42,7 @@ from project_kit.friction_git import CommitTree
 from project_kit.line_breaks import universal_newlines
 from project_kit.working_tree import WorkingTree
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import POINTED, POINTS, pointed_record
+from tests.friction_documents import POINTED, POINTS, commit_install, pointed_record
 from tests.shipped_rule_sets import own, without_shipped_rule_sets
 
 CONFIG = ".pkit/project/config.yaml"
@@ -130,8 +130,9 @@ def _evidence_declares(adopter: AdopterRepo, blocks: str) -> None:
 @pytest.fixture
 def adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """Project places and a capability's, a document, a collection, a plain file and
-    an excluded one."""
-    repo = make_adopter_repo(capabilities=("evidence",))
+    an excluded one, on the install the template committed (`commit_install`), so a
+    test's commit holds only what it changed."""
+    repo = make_adopter_repo(capabilities=("evidence",), prepare=commit_install)
     _evidence_declares(
         repo,
         "docs:\n"

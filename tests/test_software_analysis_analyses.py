@@ -19,6 +19,10 @@ Held to software-analysis DEC-001 points 2, 3, 4 and 8, and DEC-003 point 6:
 - **what reads them all:** the readers point gives each actor the needs every
   analysis states for it, a diagram draws one analysis, and the core's friction
   reading gives each nested artefact its place's type.
+
+The validator, the stamp, the number check, the readers' filler and the diagrams' query
+run in the test's own process, their `pkit` calls answered there too
+(`tests/in_process.py`, #2326).
 """
 
 from __future__ import annotations
@@ -47,8 +51,9 @@ from tests.analysis_repo import (
     installed,
     load_lib,
     new,
+    prepare,
     prepare_seeded,
-    run_script,
+    run_in_process,
     stamped,
 )
 
@@ -86,21 +91,30 @@ def seeded(
     return installed(make_adopter_repo, monkeypatch, then=prepare_seeded)
 
 
+def _two(repo: AdopterRepo) -> None:
+    """`prepare`, then two analyses, the core's and billing's, which builds on it, each
+    with an actor and a use case stamped and filled."""
+    prepare(repo)
+    repo.write({SETTINGS: listing(CORE, BILLING)})
+    stamped(repo, "actor", "tester", "--analysis", "core", "--path", "src/**")
+    stamped(repo, "use-case", "run-suite", "--actor", "ACT-tester", "--analysis", "core")
+    stamped(repo, "actor", "clerk", "--analysis", "billing", "--path", "src/**")
+    stamped(repo, "use-case", "invoice", "--actor", "ACT-clerk", "--analysis", "billing")
+    fill(repo)
+
+
 @pytest.fixture
-def two(project: AdopterRepo) -> AdopterRepo:
-    """Two analyses, the core's and billing's, which builds on it, each with an actor
-    and a use case stamped and filled."""
-    project.write({SETTINGS: listing(CORE, BILLING)})
-    stamped(project, "actor", "tester", "--analysis", "core", "--path", "src/**")
-    stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--analysis", "core")
-    stamped(project, "actor", "clerk", "--analysis", "billing", "--path", "src/**")
-    stamped(project, "use-case", "invoice", "--actor", "ACT-clerk", "--analysis", "billing")
-    fill(project)
-    return project
+def two(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """`_two`, stamped once per session in the test's own process: a copy of its
+    template."""
+    return installed(make_adopter_repo, monkeypatch, then=_two)
 
 
 def check(repo: AdopterRepo, *args: str) -> dict[str, Any]:
-    completed = run_script(repo, VALIDATE, "--json", *args)
+    """The validator's findings document, in the test's own process."""
+    completed = run_in_process(repo, VALIDATE, "--json", *args)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -329,7 +343,7 @@ def test_a_number_another_analysis_took_on_the_default_branch_collides(two: Adop
             .replace("UC-002", "UC-003")
         }
     )
-    completed = run_script(two, SA / "scripts" / "check-numbers.py", "--base", MAIN, "--json")
+    completed = run_in_process(two, SA / "scripts" / "check-numbers.py", "--base", MAIN, "--json")
     assert completed.returncode == 1, completed.stderr
     (collision,) = [f for f in json.loads(completed.stdout)["findings"] if f["severity"] == "error"]
     assert collision["location"] == ours
@@ -558,7 +572,7 @@ def test_the_readers_point_gives_each_actor_the_needs_every_analysis_states(
     """An actor's reader carries its own needs, then those each analysis that lists it
     states beside it (DEC-001 point 8)."""
     _with_head(two, _head(needs="Never lose a bill."), _head_text())
-    completed = run_script(two, FILL_READERS, "--json")
+    completed = run_in_process(two, FILL_READERS, "--json")
     assert completed.returncode == 0, completed.stderr
     readers = {r["id"]: r["description"] for r in json.loads(completed.stdout)["value"]}
     assert readers["act-tester"].endswith("; Never lose a bill.")
@@ -568,21 +582,21 @@ def test_the_readers_point_gives_each_actor_the_needs_every_analysis_states(
 def test_a_diagram_draws_one_analysis_and_another_s_actor_by_its_id(two: AdopterRepo) -> None:
     """Where several are listed, the query names the analysis it draws, and an actor of
     another analysis is drawn among the actors by that id alone (DEC-003 point 6)."""
-    completed = run_script(two, DIAGRAM, "use-cases")
+    completed = run_in_process(two, DIAGRAM, "use-cases")
     assert completed.returncode == 1
     assert "name the one to draw" in completed.stderr
     _with_head(two, _head(), _head_text())
     uc = place("billing", "use-case-model/use-cases/UC-002-invoice.md")
     text = (two.root / uc).read_text(encoding="utf-8")
     two.write({uc: text.replace("other-actors: []", "other-actors: [core:ACT-tester]")})
-    completed = run_script(two, DIAGRAM, "use-cases", "--analysis", "billing")
+    completed = run_in_process(two, DIAGRAM, "use-cases", "--analysis", "billing")
     assert completed.returncode == 0, completed.stderr
     assert 'core_ACT_tester["core:ACT-tester"]' in completed.stdout
     assert "UC_002" in completed.stdout and "UC_001" not in completed.stdout
 
 
 def test_a_record_is_kept_in_its_analysis_s_folder(two: AdopterRepo) -> None:
-    completed = run_script(
+    completed = run_in_process(
         two,
         SA / "scripts" / "new.py",
         "revalidation",

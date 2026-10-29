@@ -40,7 +40,7 @@ from ruamel.yaml import YAML
 from scripts import friction_tracking_issue as publisher
 
 from project_kit import friction_repository as fr
-from tests.adopter_repo import MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import Timeline, guide
 
 #: The documents here say each artefact's answers beside its anchors, and each write
@@ -635,8 +635,8 @@ def test_a_body_no_utf8_can_hold_is_published_escaped(gh: FakeGh) -> None:
 # --- end to end ----------------------------------------------------------------------------
 
 
-def test_a_real_history_end_to_end(make_adopter_repo: MakeAdopterRepo, gh: FakeGh) -> None:
-    timeline = Timeline(make_adopter_repo())
+def test_a_real_history_end_to_end(committed_adopter: AdopterRepo, gh: FakeGh) -> None:
+    timeline = Timeline(committed_adopter)
     timeline.start({"docs/guide.md": guide()})
     timeline.commit("change the CLI", {"src/cli/main.py": "print('2')\n"})
     root = timeline.adopter.root
