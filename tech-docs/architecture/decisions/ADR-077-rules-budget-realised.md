@@ -1,7 +1,7 @@
 ---
 id: ADR-077
 title: Each rules file's budget is set where its owner keeps its data, and validation holds the file to it
-status: proposed
+status: accepted
 date: 2026-10-29
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
