@@ -106,10 +106,14 @@ is held from its first test.
   kept apart in `sys.modules`. `run_main(script, *args, cwd=...)` runs a
   script's `main` as its process ran.
 - `route_pkit(monkeypatch, backbone)` answers every `pkit` call of a capability
-  with the backbone's CLI in the test's own process. Each capability makes every
-  call through one private function, `_lib.backbone._run`, looked up when called,
-  and the route replaces only that function. The argument lists and the
-  documents are unchanged (ADR-057 point 1).
+  with the backbone's CLI in the test's own process. Each capability makes its
+  calls through one private function, `_lib.backbone._run`, looked up when
+  called, and the route replaces only that function. The argument lists and the
+  documents are unchanged (ADR-057 point 1). project-management's streaming
+  starts (`agent_runs`, `merge_queue`) and its top-level scripts' calls do not
+  go through it, and its route takes the keywords its calls pass (`timeout`, an
+  `env` with routing off, UTF-8 decoding with `replace`), which the in-process
+  `pkit` itself refuses.
 - `InProcessPkit`, the in-process `pkit`, answers as a process does. It gives a
   `CompletedProcess` with its exit code and standard error apart, from the
   working directory given, in the environment the runner gives a query. An
@@ -147,6 +151,13 @@ tests took 23 s on the clock in a pass of their own, `-n 4`, against 127 s befor
 other modules of the process engine and project-management's closure fold. Their
 288 tests took 43 s on the clock in a pass of their own, `-n 3`, against 207 s
 before (2026-10-29).
+
+`test_friction_check.py`'s row predates #2320, which commits the install of the
+friction modules once per session (`committed_adopter`). Its 148 tests and the
+164 of four other friction modules took 359 s on the clock, against 564 s before.
+Both passes ran only these modules, `-n 3`, on 2026-10-29, on a Mac other builders
+were sharing. Each of its tests still runs the change check, which reads git for its
+base.
 
 `test_software_analysis_check.py` is converted (#2319): its 61 tests took 58 s on
 the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
@@ -200,12 +211,13 @@ do when a change raises a count, and the only causes for raising the baseline.
 
 Most tests that need "a project with the kit installed" should not `git init`
 and call `install_kit` by hand. `tests/adopter_repo.py` provides one builder
-and `tests/conftest.py` exposes it as two fixtures:
+and `tests/conftest.py` exposes it as three fixtures:
 
 | Fixture | Gives you | Reach for it when |
 |---|---|---|
 | `make_adopter_repo` | A factory: `make_adopter_repo(capabilities=(), history=False, chdir=True, root=tmp_path, prepare=None, fresh=False)` returning an `AdopterRepo`, a copy of a template built once per session (below). | A test drives the CLI or the Python API against an installed adopter. `make_adopter_repo()` with no arguments is the bare shape — `git init`ed `tmp_path`, backbone installed, adapter shell primitives stubbed, cwd moved there, **no commits** — that the per-file `installed_target` / `kit_target` fixtures wrap. |
 | `adopter_repo` | `make_adopter_repo(history=True)`: the same adopter with the scripted history committed; `adopter_repo.history` holds the SHAs. | A test needs real git state — validators that read history, the friction engine (COR-050), anything tracing a front-matter field across commits. |
+| `committed_adopter` | `make_adopter_repo(prepare=commit_install)`: the bare shape, its install committed on `main` in one commit dated `INSTALLED_AT` (`tests/friction_documents.py`). | A test commits a base of its own, as the friction tests do. It then commits only its own files, never the whole installed `.pkit/` (#2320). |
 
 Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
 `build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly; it builds the

@@ -21,19 +21,20 @@ from project_kit import friction_check as fc
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
 from project_kit.friction_git import DiffEntry, FrictionCheckError
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 from tests.test_answer_files import CLI, GUIDE, T3, answer_path, answers, bare_guide, entry
 from tests.test_friction_revisit import DECISION, SOURCE_DOC, TEST_FILE, declare_linker, requirement
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    return make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    return committed_adopter
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str], mode: str = "warning") -> None:
-    """Commit the base state on `main` and branch `feature` off it."""
+    """Commit the base state on `main`, on the install the template committed, and branch
+    `feature` off it."""
     adopter.write({CONFIG: friction_config(mode=mode), **SOURCE, **files})
     adopter.commit("base", files=None)
     adopter.checkout("feature", create=True)
@@ -330,13 +331,13 @@ def test_a_revisit_entry_on_a_target_no_link_takes_fails(repo: AdopterRepo) -> N
 
 
 def test_a_revisit_entry_answers_where_its_reason_differs_from_the_one_it_replaces(
-    make_adopter_repo: MakeAdopterRepo,
+    committed_adopter: AdopterRepo,
 ) -> None:
     """A changed statement asks the requirement to revisit both targets. In an answer
     file, an entry answers its target where its reason differs from that of each entry
     it replaces (COR-062 point 5): the decision's does, and the test's, repeating `a0`'s
     words, writes nothing, so its target is not revisited."""
-    adopter = make_adopter_repo()
+    adopter = committed_adopter
     declare_linker(adopter.root)
     test, decision = Anchor("path", TEST_FILE), Anchor("path", DECISION)
     adopter.write(

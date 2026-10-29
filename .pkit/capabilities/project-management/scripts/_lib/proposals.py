@@ -43,7 +43,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
-from _lib import default_branch, drift, drift_queue, fixer_contract
+from _lib import backbone, default_branch, drift, drift_queue, fixer_contract
 from _lib.membership import CAPABILITY_NAME, resolve_capability_root
 
 #: The commands of the batch, as `pkit pm <verb>`.
@@ -353,7 +353,7 @@ def line_problem(text: str) -> str | None:
 # --- the default branch, and the checkout the change is made in ------------------------------
 
 
-def pin(repo_root: Path, run: Runner = subprocess.run) -> tuple[str, str]:
+def pin(repo_root: Path, run: Runner = backbone.run) -> tuple[str, str]:
     """The default branch's name and commit, as the backbone resolves them."""
     try:
         branch = default_branch.read(cwd=repo_root, run=run).default_branch
@@ -453,7 +453,7 @@ def apply_one(
     because: str | None,
     sentence: str | None,
     run: Runner = subprocess.run,
-    write: Runner = subprocess.run,
+    write: Runner = backbone.run,
     dry_run: bool = False,
 ) -> Outcome:
     """Apply one accepted proposal to the checkout at `root`: its diff, where it
