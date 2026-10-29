@@ -32,14 +32,12 @@ and the `pkit` they read through is the real CLI under this interpreter
 
 from __future__ import annotations
 
-import importlib.util
 import json
 import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
 import pytest
@@ -55,6 +53,7 @@ from project_kit.manifest import (
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import document as friction_document
+from tests.in_process import load
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -78,21 +77,8 @@ DEPLOYED_AGENT = REPO / ".claude" / "agents" / f"{AGENT}.md"
 READERS_FILLER = "tech-docs/pkit/fillers/pkit/documentation/readers.yaml"
 
 
-def _library(name: str) -> ModuleType:
-    """A module of the capability's script library, under a name of its own: the
-    library is `_lib` in every capability, so it is never imported by that name."""
-    spec = importlib.util.spec_from_file_location(
-        f"living_docs_lib_{name}", CAPABILITY / "scripts" / "_lib" / f"{name}.py"
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-readers_lib = _library("readers")
-doc_check_lib = _library("doc_check")
+#: Two modules of the capability's script library, loaded with its `_lib` kept apart.
+readers_lib, doc_check_lib = load("living-docs", "readers", "doc_check")
 
 
 def _package() -> dict[str, Any]:

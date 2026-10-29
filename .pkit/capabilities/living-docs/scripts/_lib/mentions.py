@@ -92,7 +92,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 from urllib.parse import unquote
 
-from _lib import formats
+from _lib import backbone, formats
 from _lib.artefacts import Artefact
 from _lib.declarations import CAPABILITIES_DIR, load_yaml, mapping, normalise
 
@@ -234,7 +234,7 @@ Lookup = Callable[[Sequence[str]], Mapping[str, str | None]]
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
-def look_up(root: Path, run: Runner = subprocess.run) -> Lookup:
+def look_up(root: Path, run: Runner = backbone.run) -> Lookup:
     """The backbone's resolver of records' ids, through `pkit refs lookup --json`:
     each id the file it resolves to, or `None`. Raises Unreadable when there is no
     answer to read."""

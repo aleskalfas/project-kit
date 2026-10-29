@@ -19,7 +19,6 @@ modules cost in all (#1204).
 
 from __future__ import annotations
 
-import importlib
 import json
 import re
 import subprocess
@@ -34,6 +33,7 @@ from scripts import prose_lint as pl
 
 from project_kit import document_parts
 from project_kit.friction_check import BASE_ENV
+from tests import in_process
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, Prepare
 
 REPO = Path(__file__).resolve().parent.parent
@@ -128,23 +128,10 @@ _yaml: Any = YAML(typ="safe")
 
 
 def load_lib(*names: str) -> tuple[ModuleType, ...]:
-    """Pure `_lib` modules of the capability's scripts, imported together as the scripts
-    import them: `_lib` is on the path only while they load, since another capability's
-    `_lib` is not importable beside it."""
-    scripts = str(CAPABILITY / "scripts")
-
-    def ours() -> list[str]:
-        return [k for k in sys.modules if k == "_lib" or k.startswith("_lib.")]
-
-    saved = {k: sys.modules.pop(k) for k in ours()}
-    sys.path.insert(0, scripts)
-    try:
-        return tuple(importlib.import_module(f"_lib.{name}") for name in names)
-    finally:
-        sys.path.remove(scripts)
-        for key in ours():
-            del sys.modules[key]
-        sys.modules.update(saved)
+    """`_lib` modules of the capability's scripts, imported together as the scripts import
+    them, through the one loader (`tests/in_process.py`, `load`): `_lib` is on the path
+    only while they load, since another capability's `_lib` is not importable beside it."""
+    return in_process.load(CAPABILITY / "scripts", *names)
 
 
 def field_hint(kind: str, name: str) -> str:

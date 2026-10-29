@@ -27,6 +27,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from _lib import backbone
+
 #: The document version this reading understands (the CLI reference, "friction
 #: artefacts"); a later backbone that changes its meaning raises it.
 SCHEMA_VERSION = 1
@@ -189,7 +191,7 @@ class Reading:
     artefacts: tuple[Artefact, ...] = ()
 
 
-def read_artefacts(root: Path, run: Runner = subprocess.run) -> Reading:
+def read_artefacts(root: Path, run: Runner = backbone.run) -> Reading:
     """The declared places and their documents in the project at `root`, through
     `pkit friction artefacts --json`. Raises Unreadable when there is no document
     to read: `pkit` absent, a backbone without the command, a configuration it

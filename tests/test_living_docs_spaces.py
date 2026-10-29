@@ -36,31 +36,32 @@ The capability's first artefacts, each held to living-docs DEC-001:
   their documents through `pkit friction artefacts` and carry no matcher,
   listing or place reader of their own (#1099; ADR-057 point 2).
 
-The validator runs as a subprocess under this interpreter, as the backbone
-runs it (its `--json` findings document); where `pkit validate` runs it, the
-script's `uv run --script` shebang is pointed at this interpreter, and the
-`pkit` it reads the places and the readers point through is the real CLI under
-this interpreter (`pkit_on_path`), so no test reaches `uv` or the network.
-project-kit's own configuration passing is in `test_self_host_documentation.py`.
+The validator's `main` runs in the test's own process, with `--json` alone, as
+the backbone runs it, and every `pkit` it reads through is answered by the
+backbone's CLI in this process too (`tests/in_process.py`). Where `pkit
+validate` starts it, it is started in this process through the runner's one
+lookup. Two tests keep a real process, each marked with why: `pkit validate`
+starting the validator as its member, and the listing a person reads. There
+the script's `uv run --script` shebang is pointed at this interpreter, and the
+`pkit` it reads through is the real CLI under this interpreter
+(`pkit_on_path`), so no test reaches `uv` or the network. project-kit's own
+configuration passing is in `test_self_host_documentation.py`.
 """
 
 from __future__ import annotations
 
 import ast
-import importlib.util
 import io
 import json
-import os
 import re
 import subprocess
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
@@ -75,6 +76,15 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.in_process import (
+    QUERY_ENVIRONMENT,
+    InProcessPkit,
+    Runner,
+    load,
+    route_pkit,
+    run_main,
+    start_in_process,
+)
 from tests.test_rule_sets import anchored_to, rule_set_text, rules
 
 REPO = Path(__file__).resolve().parent.parent
@@ -217,17 +227,44 @@ def left_out(*pages: str) -> dict[str, str]:
     }
 
 
-def run(repo: AdopterRepo) -> dict[str, Any]:
-    """The validator's findings document, run as the backbone runs it."""
-    completed = subprocess.run(
-        [sys.executable, str(repo.root / SCRIPT), "--json"],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def _validated(
+    repo: AdopterRepo, *args: str, pkit: Runner | None = None, page_kinds: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    """The validator's `main` with `args`, run in this process from the repository's root
+    in the environment the backbone gives a query (`tests/in_process.py`). Every `pkit` it
+    reads through is answered in this process, by `pkit` when given. `page_kinds`, when
+    given, is read for the kinds' structures in place of the declaration the capability
+    ships, which stays as synced."""
+    validate, backbone, spaces = load("living-docs", "validate.py", "backbone", "spaces")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone, pkit)
+        if page_kinds is not None:
+            patched.setattr(spaces, "PAGE_KINDS", page_kinds)
+        completed = run_main(validate, *args, cwd=repo.root, env=QUERY_ENVIRONMENT)
     assert completed.returncode == 0, completed.stderr
-    return json.loads(completed.stdout)
+    return completed
+
+
+def run(repo: AdopterRepo, *, pkit: Runner | None = None) -> dict[str, Any]:
+    """The validator's findings document, as the backbone reads it: `--json` alone, its
+    `pkit` reads answered by `pkit` when given."""
+    return json.loads(_validated(repo, "--json", pkit=pkit).stdout)
+
+
+def listing(repo: AdopterRepo) -> list[str]:
+    """The lines of the validator's listing for a person, without `--json`."""
+    return _validated(repo).stdout.splitlines()
+
+
+def validated(monkeypatch: pytest.MonkeyPatch) -> Result:
+    """`pkit validate --only living-docs:spaces`, which starts the validator in this
+    process, its command found through the runner's one lookup (`start_in_process`)."""
+    started = start_in_process(monkeypatch)
+    result = CliRunner().invoke(
+        main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
+    )
+    assert [script.name for script in started] == ["validate.py"]
+    return result
 
 
 def errors(document: Mapping[str, Any]) -> list[tuple[str, str]]:
@@ -262,6 +299,10 @@ def test_a_clean_project_answers_with_no_finding_and_names_the_readers(
     )
 
 
+@pytest.mark.process(
+    "the validate command's end-to-end test: pkit validate starts the validator, as its "
+    "living-docs:spaces member, and the validator starts pkit"
+)
 def test_the_validator_is_a_member_of_pkit_validate(project: AdopterRepo) -> None:
     result = CliRunner().invoke(
         main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
@@ -462,13 +503,17 @@ def test_a_place_of_rule_sets_passed_over_leaves_its_space_to_the_next_place(
     assert document["summary"][1].startswith("user: 3 page(s);")
 
 
+#: The modules of the capability's script library its tests read directly, loaded with
+#: its `_lib` kept apart (`tests/in_process.py`).
+formats, binding, artefacts = load("living-docs", "formats", "binding", "artefacts")
+
+
 @pytest.mark.parametrize(("rule_sets", "held"), [({"component": None}, True), (None, False)])
 def test_a_place_holds_rule_sets_as_the_backbone_s_answer_marks_it(
     rule_sets: Any, held: bool
 ) -> None:
     """Read from the answer's `rule_sets`, never from the path: a place the answer
     does not mark, or an answer without the key, holds none."""
-    artefacts = _library("artefacts")
     place = {"source": "project", "declared": True, "written": OLD_RULE_SETS}
     answer = {
         "schema_version": 1,
@@ -1019,6 +1064,10 @@ def test_a_document_that_declares_no_page_kind_takes_no_type_and_is_unclassified
     assert "1 unclassified document(s) for onboarding" in document["summary"][3]
 
 
+@pytest.mark.process(
+    "the validator as a person runs it, without --json: the listing it prints and its exit "
+    "code, from a process of its own"
+)
 def test_a_page_left_unanchored_counts_unless_its_block_gives_an_accepted_reason(
     project: AdopterRepo,
 ) -> None:
@@ -1096,15 +1145,7 @@ def test_a_page_anchored_only_on_parts_is_anchored(project: AdopterRepo) -> None
     assert errors(document) == []
     (line,) = [line for line in document["summary"] if line.startswith("pages unanchored:")]
     assert line.startswith("pages unanchored: 3 without an accepted reason,")
-    human = subprocess.run(
-        [sys.executable, str(project.root / SCRIPT)],
-        cwd=project.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert human.returncode == 0, human.stderr
-    lines = human.stdout.splitlines()
+    lines = listing(project)
     forgotten = lines.index(
         "page(s) unanchored without an accepted reason, for onboarding to anchor or accept (3):"
     )
@@ -1335,23 +1376,38 @@ def test_a_space_without_a_definition_yet_is_reported(project: AdopterRepo) -> N
 # --- the places, read through the backbone --------------------------------------------
 
 
+#: How a `pkit` older or broken in one command answers it: from the argument list and
+#: the backbone's own answer, read when asked for.
+Answer = Callable[[list[str], Callable[[], subprocess.CompletedProcess[Any]]], Any]
+
+
+def _answering(command: str, answer: Answer) -> Runner:
+    """A `pkit` that answers `command`, its first word after `pkit`, with `answer`, and
+    every other command as the backbone does, in this process."""
+    pkit = InProcessPkit()
+
+    def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        words = list(argv)
+
+        def own() -> subprocess.CompletedProcess[Any]:
+            return pkit(words, **options)
+
+        return answer(words, own) if words[1] == command else own()
+
+    return run
+
+
+def _exits_2(said: str) -> Answer:
+    """An answer that exits 2 with `said` on standard error, and no document."""
+    return lambda argv, _own: subprocess.CompletedProcess(argv, 2, "", f"{said}\n")
+
+
 def test_places_the_backbone_gives_no_reading_of_are_one_error_and_nothing_checked(
     project: AdopterRepo,
-    pkit_on_path: Path,
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A backbone without the read command: the spaces cannot be told, which is
     one error — never a pass on no places."""
-    old = tmp_path_factory.mktemp("old-pkit")
-    (old / "pkit").write_text(
-        '#!/bin/sh\nif [ "$1" = friction ]; then echo "Error: No such command." >&2; exit 2; fi\n'
-        f'exec "{pkit_on_path}/pkit" "$@"\n',
-        encoding="utf-8",
-    )
-    (old / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{old}{os.pathsep}{os.environ['PATH']}")
-    document = run(project)
+    document = run(project, pkit=_answering("friction", _exits_2("Error: No such command.")))
     location, message = only_error(document)
     assert location == CONFIG
     assert message.startswith(
@@ -1409,7 +1465,7 @@ def test_the_package_declares_the_page_and_template_types(project: AdopterRepo) 
 
 def _artefacts(repo: AdopterRepo) -> dict[str, Any]:
     """The backbone's artefacts document over `repo`, as the validator reads it."""
-    completed = subprocess.run(
+    completed = InProcessPkit()(
         ["pkit", "friction", "artefacts", "--json"],
         cwd=repo.root,
         capture_output=True,
@@ -1490,33 +1546,24 @@ def test_a_document_declaring_no_kind_in_a_place_giving_the_page_type_is_unclass
 
 def test_a_backbone_that_gives_no_types_is_one_error_and_nothing_checked(
     project: AdopterRepo,
-    pkit_on_path: Path,
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A backbone whose artefacts document predates types: the validator cannot tell
     a page by its type, which is one error — never every page read as untyped."""
-    old = tmp_path_factory.mktemp("untyped-pkit")
-    strip = old / "strip.py"
-    strip.write_text(
-        "import json, sys\n"
-        "document = json.load(sys.stdin)\n"
-        "document.pop('types', None)\n"
-        "for artefact in document.get('artefacts', []):\n"
-        "    for key in ('type', 'type_place', 'type_conflict', 'ranked_places'):\n"
-        "        artefact.pop(key, None)\n"
-        "json.dump(document, sys.stdout)\n",
-        encoding="utf-8",
-    )
-    (old / "pkit").write_text(
-        '#!/bin/sh\nif [ "$1" = friction ] && [ "$2" = artefacts ]; then\n'
-        f'  "{pkit_on_path}/pkit" "$@" | "{sys.executable}" "{strip}"; exit $?\nfi\n'
-        f'exec "{pkit_on_path}/pkit" "$@"\n',
-        encoding="utf-8",
-    )
-    (old / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{old}{os.pathsep}{os.environ['PATH']}")
-    location, message = only_error(run(project))
+
+    def untyped(
+        argv: list[str], own: Callable[[], subprocess.CompletedProcess[Any]]
+    ) -> subprocess.CompletedProcess[Any]:
+        completed = own()
+        if argv[2] == "artefacts":
+            document = json.loads(completed.stdout)
+            document.pop("types", None)
+            for artefact in document.get("artefacts", []):
+                for key in ("type", "type_place", "type_conflict", "ranked_places"):
+                    artefact.pop(key, None)
+            completed.stdout = json.dumps(document)
+        return completed
+
+    location, message = only_error(run(project, pkit=_answering("friction", untyped)))
     assert location == CONFIG
     assert "answered without each artefact's type and ranked places" in message
 
@@ -1760,21 +1807,6 @@ def test_the_page_schema_refuses_a_wrong_reader(reader: Any) -> None:
 # --- page formats: a page's body against its kind's structure (RS-LDOC-004; #1267) -------
 
 
-def _library(name: str) -> ModuleType:
-    """A module of the capability's script library, under a name of its own: the
-    library is `_lib` in every capability, so it is never imported by that name."""
-    spec = importlib.util.spec_from_file_location(
-        f"living_docs_lib_{name}", CAPABILITY / "scripts" / "_lib" / f"{name}.py"
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-formats = _library("formats")
-
 PAGE_KINDS = CAPABILITY / "schemas" / "page-kinds.yaml"
 PAGE_KINDS_PATH = f"{LD.as_posix()}/schemas/page-kinds.yaml"
 LDOC = CAPABILITY / "rule-sets" / "ldoc.md"
@@ -1789,19 +1821,6 @@ LACKS_TITLE = (
 )
 
 INSTALL, USE = {"level": 2, "text": "Install"}, {"level": 2, "text": "Use"}
-
-#: Runs the validator's check with the kinds' declaration read from another file.
-KINDS_DRIVER = """
-import json, sys
-from pathlib import Path
-
-sys.path.insert(0, sys.argv[1])
-from _lib import spaces
-from _lib.declarations import project_root
-
-spaces.PAGE_KINDS = Path(sys.argv[2])
-print(json.dumps(spaces.check(project_root()).document()))
-"""
 
 
 def _page(kind: str, body: str) -> str:
@@ -1822,16 +1841,8 @@ def _declaration(folder: Path, kinds: Mapping[str, Any]) -> Path:
 
 def run_declaring(repo: AdopterRepo, declaration: Path) -> dict[str, Any]:
     """The validator's findings document with the kinds' structures read from
-    `declaration`: what the adopter's copy of the capability ships stays as synced."""
-    completed = subprocess.run(
-        [sys.executable, "-c", KINDS_DRIVER, str(repo.root / LD / "scripts"), str(declaration)],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert completed.returncode == 0, completed.stderr
-    return json.loads(completed.stdout)
+    `declaration`: what the capability ships stays as synced."""
+    return json.loads(_validated(repo, "--json", page_kinds=declaration).stdout)
 
 
 def test_a_page_that_follows_its_kind_s_structure_passes(project: AdopterRepo) -> None:
@@ -1885,18 +1896,16 @@ def test_a_title_after_code_fenced_under_a_list_item_is_read(project: AdopterRep
 
 
 def test_pkit_validate_fails_on_a_page_departing_from_its_kind_s_structure(
-    project: AdopterRepo,
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     project.write({"docs/ref.md": _page("reference", "What it is, and nothing more.\n")})
-    result = CliRunner().invoke(
-        main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
-    )
+    result = validated(monkeypatch)
     assert result.exit_code == 1
     assert "docs/ref.md, a page of kind 'reference', lacks a title" in result.output
 
 
 def test_a_kind_that_declares_no_structure_is_reported_with_its_pages_and_never_failed(
-    project: AdopterRepo,
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A kind the project adds, and a kind mistyped: each is one report naming the
     kind, the pages that name it and the kinds that are declared."""
@@ -1931,9 +1940,7 @@ def test_a_kind_that_declares_no_structure_is_reported_with_its_pages_and_never_
         f"{PAGE_KINDS_PATH}, 0 departing from it; 3 page(s) not checked, of 2 kind(s) that "
         "declare no structure."
     )
-    result = CliRunner().invoke(
-        main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
-    )
+    result = validated(monkeypatch)
     assert result.exit_code == 0, result.output
     assert "kind 'tutorial' declares no structure" in result.output
 
@@ -2040,23 +2047,12 @@ def test_a_page_reached_through_a_pin_behind_ldoc_s_major_is_not_checked(
 
 def test_where_the_rules_bind_unread_is_one_error_and_no_structure_or_reader_checked(
     project: AdopterRepo,
-    pkit_on_path: Path,
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A `pkit` that gives no answer of where the rules bind: a check of a rule's part
     runs only where the rule binds, which cannot be told, so neither part is
     checked, and that is one error (DEC-001 point 3)."""
-    broken = tmp_path_factory.mktemp("no-reach-pkit")
-    (broken / "pkit").write_text(
-        '#!/bin/sh\nif [ "$1" = rule-sets ]; then echo "no reach here" >&2; exit 2; fi\n'
-        f'exec "{pkit_on_path}/pkit" "$@"\n',
-        encoding="utf-8",
-    )
-    (broken / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{broken}{os.pathsep}{os.environ['PATH']}")
     project.write({"docs/ref.md": _page("reference", "No title.\n")})
-    document = run(project)
+    document = run(project, pkit=_answering("rule-sets", _exits_2("no reach here")))
     location, message = only_error(document)
     assert location == CONFIG
     assert message == (
@@ -2130,7 +2126,7 @@ def test_the_rule_on_text_alternatives_ships_proposed_and_checks_no_diagram(
 
 
 def test_where_the_rule_binds_a_diagram_without_a_text_alternative_fails(
-    project: AdopterRepo,
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _accept_alternative_rule(project)
     titled_only = "```mermaid\nflowchart LR\n  accTitle: Two steps\n  A --> B\n```\n"
@@ -2149,9 +2145,7 @@ def test_where_the_rule_binds_a_diagram_without_a_text_alternative_fails(
         "diagrams (RS-LDOC-008, accepted): 4 `mermaid` fence(s) in 5 page(s) checked for a "
         "text alternative, 2 lacking one."
     )
-    result = CliRunner().invoke(
-        main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
-    )
+    result = validated(monkeypatch)
     assert result.exit_code == 1
     assert "docs/flow.md: the `mermaid` fence at line 8 lacks" in result.output
 
@@ -2231,9 +2225,6 @@ def test_the_diagrams_of_a_body_and_what_each_carries() -> None:
     assert [h.text for h in formats.headings(text + "```mermaid\n# no\n```\n")] == ["Flow"]
 
 
-binding = _library("binding")
-
-
 def test_the_answer_of_where_rules_bind_reads_each_document_s_rules() -> None:
     """The `pkit rule-sets reach --json` document, read as the validator reads it:
     each document artefact's rules as cited; an entry of a collection file is no
@@ -2293,12 +2284,12 @@ def test_the_validator_reads_a_fill_only_where_the_rule_it_fills_binds(
         return {f"tech-docs/rule-sets/{key}.md": rule_set_text(f) for key, f in fronts.items()}
 
     project.write(sets("proposed"))
-    read = binding.read_binding(project.root)
+    read = binding.read_binding(project.root, run=InProcessPkit())
     assert read.binds("docs/guide.md", "living-docs:RS-LDOC-003")
     assert not read.binds("docs/guide.md", "RS-GUIDE-001")
     assert not read.binds("docs/guide.md", "RS-MID-001")
     project.write(sets("accepted"))
-    read = binding.read_binding(project.root)
+    read = binding.read_binding(project.root, run=InProcessPkit())
     assert read.binds("docs/guide.md", "RS-GUIDE-001")
     assert read.binds("docs/guide.md", "RS-MID-001")
 
