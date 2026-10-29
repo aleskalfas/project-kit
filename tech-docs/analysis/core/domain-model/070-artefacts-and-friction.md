@@ -32,6 +32,7 @@ pkit:
         - COR-054#3
         - COR-056
         - COR-062
+        - COR-068
       artefact:
         - TERM-anchor
         - TERM-place
@@ -477,7 +478,8 @@ A rule set is a collection file of rules that artefacts must satisfy. It has its
 
 - Each of its rules is an artefact of its own, whose answers to [friction](../glossary.md#term-friction--friction) lie in [answer](../glossary.md#term-answer--answer) files apart from the set (COR-051 point 2).
 - Its scope selects artefacts by path or by artefact type (COR-051 point 2).
-- A rule set the [backbone](../glossary.md#term-backbone--backbone) or a [component](../glossary.md#term-component--component) ships takes no scope. It binds only through a set of the project's own that inherits it (COR-051 points 6 and 7).
+- A rule set the [backbone](../glossary.md#term-backbone--backbone) or a [component](../glossary.md#term-component--component) ships takes no scope. Unless it is a loaded set, it binds only through a set of the project's own that inherits it (COR-051 points 6 and 7).
+- A loaded set binds on the work of the sessions that load a file generated from it, never on an artefact. It has no scope, and no set inherits it ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 
 **States:** None.
 
@@ -655,6 +657,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-053 — Re-pin an inherited rule set once I have reviewed its new major](../use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md)
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
+- [REQ-008 · Constraint · Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 
 **Artefact type:** None.
 

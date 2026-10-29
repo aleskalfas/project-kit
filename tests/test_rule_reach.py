@@ -25,6 +25,7 @@ from project_kit import rule_sets as rs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T2, friction_config, guide
+from tests.shipped_rule_sets import own
 from tests.test_rule_sets import QUOTE, anchored_to, rule_set_text, rules
 
 Kind = rs.RuleSetFindingKind
@@ -862,8 +863,8 @@ def test_the_rule_set_reader_reads_a_commit_through_discovery_s_tree(repo: Adopt
     tree = fc.CommitTree(repo.root, commit)
     at_commit = rs.discover_rule_sets(repo.root, tree=tree)
     now = rs.discover_rule_sets(repo.root)
-    assert [s.name for s in at_commit.rule_sets] == ["CMN", "DOC", "GONE"]
-    assert [s.name for s in now.rule_sets] == ["CMN", "DOC"]
+    assert [s.name for s in own(at_commit.rule_sets)] == ["CMN", "DOC", "GONE"]
+    assert [s.name for s in own(now.rule_sets)] == ["CMN", "DOC"]
     assert [r.id for r in at_commit.sets_named("CMN")[0].rules] == ["RS-CMN-001"]
     # the reader and discovery claim the same rule-set files at one state
     walked = fd.discover_artefacts(repo.root, tree=tree)

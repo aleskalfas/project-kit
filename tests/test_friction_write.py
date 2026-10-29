@@ -47,6 +47,7 @@ from tests.friction_documents import (
     own_answer_file,
     own_entry,
 )
+from tests.shipped_rule_sets import own
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -1077,7 +1078,7 @@ def test_written_answers_read_back_identically_and_validate_in_the_pure_layer(
     The artefact's file is the repository's to keep: the round trip checks it."""
     schema, why = af.load_schema(repo.root)
     assert schema is not None, why
-    (place,) = discover_artefacts(repo.root).places
+    (place,) = own(discover_artefacts(repo.root).places)  # the shipped rule sets' left out
     name = "20261005T100000Z-00000000.yaml"
     for seed in (s for s in SEEDS if s not in ROUND_TRIP_SEEDS):
         rng = random.Random(seed)

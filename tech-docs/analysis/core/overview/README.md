@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:4d83bfde2e72b81adb192a713706b7245f663ceedf1cf8cc699df8118c26bd4b -->
+<!-- pkit:overview reads=5 fingerprint=sha256:e98ec247fc161244086329cc4feaea6bbe8d96857752d089729a52c9da13b8b4 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -27,7 +27,7 @@ Develop the methodology in its own source repository, and extend it with capabil
 
 **Its requirements:**
 
-- [REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships](../requirements/constraints/010-develop/REQ-008-areas-held.md)
+- [REQ-008 · Constraint · Until #1600 is done, the only area or adapter a change may add is `rule-sets`, and none may be removed](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 
 **Its use cases:**
 
