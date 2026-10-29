@@ -1414,15 +1414,6 @@ def test_with_journal_logging_off_the_cascade_warns_of_nothing(
 # --- where the kit does not write the state as a label ----------------------
 
 
-def _with_config(world: World, monkeypatch: pytest.MonkeyPatch, config: dict) -> None:
-    read_yaml = world.mi._read_yaml
-
-    def read(path: Path, loader):
-        return dict(config) if path.name == "config.yaml" else read_yaml(path, loader)
-
-    monkeypatch.setattr(world.mi, "_read_yaml", read)
-
-
 def _with_substrate_map(world: World, monkeypatch: pytest.MonkeyPatch, axes: dict) -> None:
     substrate_map = world.mi.axis_labels.SubstrateMap(axes=axes)
     monkeypatch.setattr(world.mi.axis_labels, "load_substrate_map", lambda *a, **kw: substrate_map)
@@ -1431,7 +1422,6 @@ def _with_substrate_map(world: World, monkeypatch: pytest.MonkeyPatch, axes: dic
 @pytest.mark.parametrize(
     ("carriage", "says"),
     [
-        ("board", "state is carried on your Projects-v2 board"),
         ("degrade", "state is carried by nothing"),
         ("label binding without backlog", "the state label binding has no value for 'backlog'"),
     ],
@@ -1445,9 +1435,7 @@ def test_the_cascade_does_not_run_where_the_kit_writes_no_state_label(
 ) -> None:
     epic, feature, task = _epic_feature_task(world)
     world.tracker.issues[task]["milestone"] = MILESTONE  # Backlog, by its milestone
-    if carriage == "board":
-        _with_config(world, monkeypatch, {"has_projects_v2_board": True})
-    elif carriage == "degrade":
+    if carriage == "degrade":
         _with_substrate_map(world, monkeypatch, {})
     else:
         remap = {"todo": "Inbox", "in-progress": "Doing", "review": "Review", "done": "Done"}

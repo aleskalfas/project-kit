@@ -2,9 +2,10 @@
 
 `BoardTracker` answers the `gh` calls the board's Status projection makes
 (#2276): the project's id, its fields with the Status options, an issue's node
-id, the issue's card, every card with its Status, a card added and a Status
-written. Each card is keyed by the issue it holds; `foreign_cards` holds cards
-the board carries for other repositories, pull requests and drafts.
+id, the cards of the issues a read lists by node id, every card with its Status,
+a card added and a Status written. Each card is keyed by the issue it holds;
+`foreign_cards` holds cards the board carries for other repositories, pull
+requests and drafts.
 
 The board has an owner, the repository's by default, and `gh` runs as someone
 else. A `gh project` call that names no `--owner` looks among the boards of
@@ -57,10 +58,18 @@ def _option(argv: list[str], flag: str) -> str | None:
 
 def _field(argv: list[str], name: str) -> str | None:
     """The value of a `-f name=value` or `-F name=value` field of `gh api graphql`."""
-    for i, arg in enumerate(argv[:-1]):
-        if arg in ("-f", "-F") and argv[i + 1].startswith(f"{name}="):
-            return argv[i + 1].split("=", 1)[1]
-    return None
+    found = _fields(argv, name)
+    return found[0] if found else None
+
+
+def _fields(argv: list[str], name: str) -> list[str]:
+    """Every value of a `-f name=value` or `-F name=value` field, in order, as
+    `ids[]` passes a list."""
+    return [
+        argv[i + 1].split("=", 1)[1]
+        for i, arg in enumerate(argv[:-1])
+        if arg in ("-f", "-F") and argv[i + 1].startswith(f"{name}=")
+    ]
 
 
 class BoardTracker(Tracker):
@@ -173,15 +182,24 @@ class BoardTracker(Tracker):
 
     def _graphql(self, argv: list[str]) -> subprocess.CompletedProcess[str]:
         query = str(_field(argv, "query"))
+        if "nodes(ids:" in query:
+            if "card" in self.fail_reads:
+                return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
+            nodes = [self._issue_node(issue_id, query) for issue_id in _fields(argv, "ids[]")]
+            return _done(argv, stdout=json.dumps({"data": {"nodes": nodes}}))
         if "projectItems" in query:
             if "card" in self.fail_reads:
                 return _done(argv, 1, stderr="HTTP 502: Bad Gateway")
             number = int(str(_field(argv, "issue")).removeprefix("I_"))
-            nodes = (
-                [{"id": self.cards[number]["id"], "project": {"id": PROJECT_ID}}]
-                if number in self.cards
-                else []
-            )
+            nodes = []
+            if number in self.cards:
+                node: dict[str, Any] = {
+                    "id": self.cards[number]["id"],
+                    "project": {"id": PROJECT_ID},
+                }
+                if "fieldValueByName" in query:
+                    node["fieldValueByName"] = self._value(number)
+                nodes.append(node)
             return _done(
                 argv, stdout=json.dumps({"data": {"node": {"projectItems": {"nodes": nodes}}}})
             )
@@ -193,15 +211,36 @@ class BoardTracker(Tracker):
             return _done(argv, stdout=json.dumps({"data": {"node": {"items": page}}}))
         raise AssertionError(f"unexpected gh api graphql call: {argv}")
 
+    def _issue_node(self, issue_id: str, query: str) -> dict[str, Any] | None:
+        """The issue a node id names, with its cards, as `nodes(ids:)` gives it;
+        None for an id that names no issue."""
+        number = int(issue_id.removeprefix("I_"))
+        if number not in self.issues:
+            return None
+        cards = []
+        if number in self.cards:
+            card: dict[str, Any] = {"id": self.cards[number]["id"], "project": {"id": PROJECT_ID}}
+            if "fieldValueByName" in query:
+                card["fieldValueByName"] = self._value(number)
+            cards.append(card)
+        page = {"pageInfo": {"hasNextPage": False}, "nodes": cards}
+        return {"id": issue_id, "projectItems": page}
+
+    def _value(self, number: int) -> dict[str, Any] | None:
+        """The Status the issue's card holds, as GraphQL gives a single-select's
+        value, or None for a card with none."""
+        status = self.cards[number]["status"]
+        return {"optionId": self.options[status], "name": status} if status else None
+
     def _card_node(self, number: int) -> dict[str, Any]:
         card = self.cards[number]
         issue = self.issues[number]
-        status = card["status"]
-        value = {"optionId": self.options[status], "name": status} if status else None
+        value = self._value(number)
         return {
             "id": card["id"],
             "content": {
                 "__typename": "Issue",
+                "id": f"I_{number}",
                 "number": number,
                 "title": issue["title"],
                 "body": issue["body"],
@@ -221,10 +260,12 @@ class BoardTracker(Tracker):
                 continue
             row = {
                 "number": number,
+                "id": f"I_{number}",
                 "title": issue["title"],
                 "body": issue["body"],
                 "state": issue["state"],
                 "labels": [{"name": name} for name in issue["labels"]],
+                "assignees": [{"login": login} for login in issue.get("assignees") or []],
                 "milestone": issue["milestone"],
                 "url": f"https://github.com/{self.repository}/issues/{number}",
             }

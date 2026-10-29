@@ -223,11 +223,16 @@ def _plan_state_reset(
         note = None
         if carriage == "board":
             note = (
-                "the state lives on your Projects-v2 board; reset its Status by "
-                "hand (pkit does not write the board state yet)."
+                "the state lives on your Projects-v2 board's Status, and the card of a "
+                "reopened issue still says where it was when it closed: set it on the "
+                "board to where the issue stands now, Backlog or Todo."
             )
         return StateReset(
-            position=_open_position(labels, milestone, substrate_map),
+            position=(
+                "read from its card's Status on the board"
+                if carriage == "board"
+                else _open_position(labels, milestone, substrate_map)
+            ),
             remove_labels=(),
             stuck_at_done=False,
             note=note,

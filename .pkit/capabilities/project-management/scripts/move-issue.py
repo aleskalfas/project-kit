@@ -24,28 +24,37 @@ parity-critical wrapper-side concerns STAY here: membership, placeholder,
 authorisation/bypass/TTY, and the forward cascade.
 
 The substrate-specific mechanics differ per adopter config. WHICH substrate
-carries `state` is asked of `_lib/axis_carriage` — the map governs the axis
-where it binds it, and `has_projects_v2_board` governs only where the map is
-silent (per [project-management:DEC-051-axis-carriage-activation]):
+carries `state` is asked of `_lib/axis_carriage` — the substrate map alone
+decides it, and `has_projects_v2_board` says only that a board exists (per
+[project-management:DEC-062-axes-chosen-in-the-map] point 1):
 
-  * `board` — the Projects v2 single-select `Status` field carries the state.
-    DEC-006 has the agent maintain the Status, but the write on this path is
-    not built yet: it follows the read of a board-carried state (#2271), and
-    until then the move surfaces as a guidance message, and a move back from
-    in-progress is refused.
+  * `board` — the map binds `state: {board: true}`, and the Projects v2
+    single-select `Status` field is the source of an open issue's position
+    (DEC-062 point 5). An open issue's position is read from its card's Status
+    (DEC-051 point 6), and the move writes the card's Status: that write is the
+    move, so one that fails ends the move unmade (exit 3), and nothing is
+    journaled. A closed issue is Done whatever its card says.
   * `kit-label` / `adopter-label` — the state lives as a label: the kit's
-    `state:*` in greenfield, or the adopter's own label under a `label:`
-    binding. State changes happen via `gh issue edit --add-label <new>
-    --remove-label <old>`, both resolved through the seam.
+    `state:*` with no map or under `kit-label: true`, or the adopter's own label
+    under a `label:` binding. State changes happen via `gh issue edit
+    --add-label <new> --remove-label <old>`, both resolved through the seam.
   * `derived` / `degrade` — no label is written or removed (a derived state is
     carried by open/closed, and a degraded one by nothing); the wrapper's other
     domain side-effects still fire.
 
-Where a board is configured and does not carry the state, its Status is a
-projection of the state the agent maintains (DEC-006). The move writes the
+Where a board is configured and the map carries the state off it, its Status is
+a projection of the state the agent maintains (DEC-006). The move writes the
 card's Status to the issue's new state, through `_lib/board_status`, and so does
 a move that finds the issue already there; the forward cascade writes each
-ancestor's. A write that fails is one line, and the move stands.
+ancestor's. A write that fails is one line, and the move stands. Where a present
+map leaves the state out, it degrades, and no Status is written.
+
+Where the board carries the state and the board's Status does not place an
+open issue — the board cannot be read, the issue has no card, its card has no
+Status, or a Status naming no open state — the move is refused and writes
+nothing: the board that cannot be read with exit 3, each other with exit 1,
+each with its own message (DEC-051 point 6). Its position is never guessed
+from the labels or the milestone.
 
 The forward cascade per DEC-006 fires upward on a forward move: the
 script walks from the issue to the top of its hierarchy, one parent at a
@@ -65,8 +74,10 @@ moves gets the provenance comment a governed move gets, naming the move that
 caused it. It runs on the no-op path too, so running a
 move again finishes a cascade a failure left incomplete — for a move to
 done, once the issue has closed as completed — and it does not run where
-the state is not written as a label. See the "forward cascade" section
-near the end of this file.
+the state is written neither as a label nor as the board's Status. Where the
+board carries the state, each step writes the ancestor's Status, and an
+ancestor whose Status does not place it stops the walk. See the "forward
+cascade" section near the end of this file.
 
 The move back per DEC-006 ("Moving back from In Progress") takes an issue
 nobody is working on from in-progress back to backlog, or to todo. The person
@@ -79,7 +90,7 @@ each such child named, or where its children cannot all be told. So is an
 issue with an owner this clone cannot release, the owner named: any owner,
 where this clone takes no part in instance ownership, and a claim another
 account made on the comment log (`_lib/instance_claims.cannot_release`). So is
-every move back where the board carries the state, until #2271. The reason
+every move back where the board carries the state (DEC-006). The reason
 is posted as the move's audit comment before the label changes, at every
 projection but `off`, and journaled with the move. The owner's claim is then
 released through `_lib/instance_claims.release`, the one release path
@@ -114,10 +125,13 @@ Exit codes:
      issue another instance owns / this clone's seat could not be confirmed /
      a move back with no reason, or of a container with a child in-progress or
      in review, or whose children cannot all be told, or of an issue with an
-     owner this clone cannot release, or where the board carries the state
+     owner this clone cannot release, or where the board carries the state /
+     where the board carries the state, an open issue with no card, no Status,
+     or a Status naming no open state
   2  usage error (unknown state, illegal transition, issue not found, a move
      back to the state it does not land in, --reason on any other move)
-  3  gh failure
+  3  gh failure, the board's Status unreadable where it carries the state, or
+     a Status write that failed where it is the state's source
 """
 
 from __future__ import annotations
@@ -140,6 +154,7 @@ from _lib import audit as _audit
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_fields,
     board_status,
     body_parent_ref,
     bootstrap_gate,
@@ -444,38 +459,62 @@ def main() -> int:
     # fallback below is map-aware (agrees with the engine's map-aware detection).
     substrate_map = axis_labels.load_substrate_map(capability_root)
 
+    # WHICH substrate carries `state` — one question, one answer, asked of the
+    # accessor ([project-management:DEC-051-axis-carriage-activation] decision
+    # point 4): the map binds it, and the board flag carries no axis (DEC-062
+    # point 1). Under a map binding `state` to the board, its Status is the
+    # source of an open issue's position; under a `derive` binding the label
+    # planner writes nothing.
+    state_on_board = axis_carriage.is_board_carried("state", config, substrate_map)
+
+    # The board's Status: the state's source where the map binds state to the
+    # board, its projection where a board is configured and the map carries the
+    # state off it (DEC-006), and nothing this script reads or writes otherwise
+    # — with no board, or where a present map leaves the state out (DEC-062
+    # point 5). None then, and no board call is made.
+    # The issue's card is found by its node id, from the read of the issue above,
+    # and the board under the owner its url names where `gh.default_owner` is
+    # unset; so the board read asks only the board.
+    status_role = board_status.role(config, substrate_map)
+    node_id = str(issue.get("id") or "")
+    board = (
+        board_status.StatusBoard(
+            config,
+            workflow,
+            repository_owner=board_fields.url_owner(str(issue.get("url") or "")),
+        )
+        if status_role is not None
+        else None
+    )
+    status = board if status_role == "projection" else None
+
     # Position: read from the engine (DEC-033 D5 — read, don't re-infer). The
     # engine's detection — the lifecycle's classifier — reproduces this script's
     # inference precedence (and is map-aware, ADR-026 §5), so the result is
     # identical; fall back to the local inference when the engine is unreachable
     # (e.g. `pkit` not on PATH) or cannot tell where the issue is (an
-    # indeterminate position), so a move is never blocked. The fallback is
-    # threaded the same map so it agrees with the engine under a present derive
-    # binding.
+    # indeterminate position). The fallback is threaded the same map so it agrees
+    # with the engine under a present derive binding. Where the board carries the
+    # state, the fallback reads the open issue's card's Status, as the classifier
+    # does, and a Status that does not place it refuses the move: nothing is
+    # guessed (DEC-051 point 6).
     engine_status = _engine_status(args.issue_number)
     current_state = _position_from_status(engine_status)
     if current_state is None:
-        current_state = _infer_current_state(
-            state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
+        reading = (
+            board.read(args.issue_number, issue_node_id=node_id)
+            if state_on_board and board is not None and state != "closed"
+            else None
         )
-
-    # WHICH substrate carries `state` — one question, one answer, asked of the
-    # accessor ([project-management:DEC-051-axis-carriage-activation] decision
-    # point 4). Every branch below that used to read `has_projects_v2_board`
-    # reads this instead: under a map that binds `state` to the adopter's own
-    # labels, a configured board no longer suppresses the label write, and under
-    # a `derive` binding the label planner already writes nothing.
-    state_on_board = axis_carriage.is_board_carried("state", config, substrate_map)
-
-    # The board's Status, where it is a projection this project keeps (DEC-006):
-    # a board is configured and the state is not carried on it. None otherwise,
-    # and then no board call is made. Where the board carries the state, its
-    # Status is the state's source, which this script does not write.
-    status = (
-        board_status.Projector(config, workflow)
-        if board_status.maintained(config, substrate_map)
-        else None
-    )
+        current_state = _infer_current_state(
+            state=state,
+            milestone=milestone,
+            labels=labels,
+            substrate_map=substrate_map,
+            status=reading,
+        )
+        if current_state == infer.UNDETERMINED:
+            return _refuse_unplaced(args.issue_number, args.to, reading)
 
     # Audit-comment projection (DEC-049): where the project keeps a journal it
     # records every move regardless; `audit.projection` controls the GitHub
@@ -495,10 +534,13 @@ def main() -> int:
         projection=projection,
         levels=_cascade_levels(workflow),
         status=status,
+        source=board if status_role == "source" else None,
     )
 
-    def moved_issue(origin: str | None) -> _MovedIssue:
-        """This issue as the forward cascade reads it, moved from ``origin``."""
+    def moved_issue(origin: str | None, *, origin_unread: str = "") -> _MovedIssue:
+        """This issue as the forward cascade reads it, moved from ``origin``, or
+        from where its card's read could not place it, as ``origin_unread``
+        says."""
         return _MovedIssue(
             number=args.issue_number,
             body=body,
@@ -507,6 +549,7 @@ def main() -> int:
             target=args.to,
             closed=state == "closed",
             closed_as=closed_as,
+            origin_unread=origin_unread,
         )
 
     # The clash guard (DEC-035 point 6), before anything is written: a move of an
@@ -610,7 +653,18 @@ def main() -> int:
             if args.dry_run:
                 _print_status_plan(status, workflow, args.to)
             else:
-                board_status.report(status.write(args.issue_number, args.to))
+                board_status.report(status.write(args.issue_number, args.to, issue_node_id=node_id))
+        # Where the board carries the state, a closed issue is Done whatever its
+        # card says (DEC-062 point 5). Its card may still say where the work was,
+        # which tells a finished issue from a won't-do one below, so it is read
+        # before the card is set to Done.
+        card_before = None
+        if status_role == "source" and board is not None and state == "closed":
+            card_before = board.read(args.issue_number, issue_node_id=node_id)
+            if args.dry_run:
+                _print_status_plan(board, workflow, args.to)
+            else:
+                _write_closed_card(board, args.issue_number, args.to, node_id)
         # The forward cascade is idempotent, so the issue already being in place
         # does not end the walk: re-running a move whose cascade left an ancestor
         # behind brings that ancestor level. An issue already at done came there
@@ -618,7 +672,8 @@ def main() -> int:
         # close as completed tells a finished issue from a won't-do one wherever
         # it came from, and otherwise that origin does (`_finished_work`). The
         # origin is the one reading the journal entries for the close take, so
-        # the two agree.
+        # the two agree. Where the board carries the state, the card read above
+        # records the origin, and a read that places nothing is named as such.
         if not args.no_cascade:
             origin = (
                 infer.state_before_close(
@@ -626,11 +681,16 @@ def main() -> int:
                     labels=labels,
                     closed=state == "closed",
                     substrate_map=substrate_map,
+                    status=card_before,
                 )
                 if args.to == "done"
                 else None
             )
-            cascade = _preview_forward_cascade(moved_issue(origin), cascade_context)
+            unread = card_before.finding(args.issue_number) if card_before is not None else ""
+            cascade = _preview_forward_cascade(
+                moved_issue(origin, origin_unread=unread if origin is None else ""),
+                cascade_context,
+            )
             if cascade is not None and args.dry_run:
                 print("\n[dry-run] nothing written.")
             elif cascade is not None:
@@ -741,16 +801,6 @@ def main() -> int:
             plan_line = instance_claims.release_plan(clone, when="on the move back")
             print(f"  ownership:     {plan_line}")
 
-    if state_on_board:
-        print(
-            f"\n[note] board substrate detected (projects_v2_board_id="
-            f"{config.get('projects_v2_board_id')}). State lives on the "
-            "Projects v2 Status field, and the agent maintains the Status (DEC-006), "
-            "but the write where the board carries the state is not built yet: it "
-            "follows the read of #2271. This invocation will surface the planned move "
-            "but not mutate the board field."
-        )
-
     plan = _compute_plan(
         issue_number=args.issue_number,
         current_state=current_state,
@@ -759,9 +809,9 @@ def main() -> int:
         labels=labels,
         substrate_map=substrate_map,
     )
-    _print_plan(plan)
-    if status is not None:
-        _print_status_plan(status, workflow, args.to)
+    _print_plan(plan, state_on_board=state_on_board)
+    if board is not None:
+        _print_status_plan(board, workflow, args.to, source=status_role == "source")
 
     # Cascade preview: each ancestor's steps, read before anything is written.
     cascade = None
@@ -818,14 +868,20 @@ def main() -> int:
         if not _post_transition_audit_once(args.issue_number, audit_comment, key, config):
             return 3
 
-    # Execute.
+    # Execute. Where the board carries the state, the card's Status is the
+    # state's source (DEC-062 point 5): its write is the move, so a write that
+    # fails leaves the move unmade, and nothing is journaled.
     if state_on_board:
-        # Deferred: at v1 we only narrate the planned change for board
-        # adopters. The label removal/add path is the operational one.
-        print(
-            "\n[ok] (board adopter) plan recorded; manual board edit may be "
-            "required. Label substrate would be: see plan above."
-        )
+        assert board is not None  # a board-carried state has its Status role
+        written = board.write(args.issue_number, args.to, issue_node_id=node_id)
+        if not written.ok:
+            print(
+                f"error: {written.line().removeprefix('[warn] ')}. The board carries the "
+                f"state, so #{args.issue_number} did not move: nothing was journaled.",
+                file=sys.stderr,
+            )
+            return 3
+        print(written.line())
     else:
         ok = _gh_apply_state_label(args.issue_number, plan, config)
         if not ok:
@@ -883,7 +939,7 @@ def main() -> int:
     # The board's Status follows the label written above (DEC-006). A write that
     # fails is one line, and the move stands: the label is the source.
     if status is not None:
-        board_status.report(status.write(args.issue_number, args.to))
+        board_status.report(status.write(args.issue_number, args.to, issue_node_id=node_id))
 
     # Forward cascade. Each ancestor step it writes is journaled, where a journal is
     # kept, the way this move was, by the same actor, with this move named as the
@@ -975,20 +1031,58 @@ def _compute_plan(
     return Plan(issue_number=issue_number, add_label=new_label, remove_label=old_label)
 
 
-def _print_plan(plan: Plan) -> None:
+def _print_plan(plan: Plan, *, state_on_board: bool = False) -> None:
     print("\nplan:")
     if plan.add_label:
         print(f"  + add label {plan.add_label!r}")
     if plan.remove_label:
         print(f"  - remove label {plan.remove_label!r}")
     if not plan.add_label and not plan.remove_label:
-        print("  · (substrate: board) — no label mutations.")
+        where = "board" if state_on_board else "no label"
+        print(f"  · (substrate: {where}) — no label mutations.")
 
 
-def _print_status_plan(status: board_status.Projector, workflow: dict, target: str) -> None:
+def _print_status_plan(
+    status: board_status.StatusBoard, workflow: dict, target: str, *, source: bool = False
+) -> None:
     """The plan's line for the board's Status, which reads nothing to say it."""
     name = board_status.option_name(workflow, target)
-    print(f"  ~ set the card's Status on {status.board} to {name!r}")
+    what = ", the state's source" if source else ""
+    print(f"  ~ set the card's Status on {status.board} to {name!r}{what}")
+
+
+def _refuse_unplaced(number: int, target: str, reading: infer.StatusRead | None) -> int:
+    """Refuse a move of an open issue whose board-carried state its card's Status
+    does not place, saying which of the outcomes it is (DEC-051 point 6), and
+    return the exit code: 3 for a board that could not be read, else 1. Nothing
+    was written."""
+    if reading is None:
+        reading = infer.StatusRead("unreadable", said="no board to read it from")
+    print(
+        f"[refused] #{number} does not move to {target}: {reading.finding(number)}. "
+        "The board carries the state, and its position is never guessed from the "
+        "labels or the milestone (DEC-051 point 6). Nothing was written.\n"
+        f"  → {reading.remedy(number)}.",
+        file=sys.stderr,
+    )
+    return 3 if reading.outcome == "unreadable" else 1
+
+
+def _write_closed_card(
+    board: board_status.StatusBoard, number: int, target: str, node_id: str
+) -> None:
+    """Set a closed issue's card to Done, where the board carries the state, the
+    card found by the issue's node id ``node_id``. The issue is done whatever its
+    card says (DEC-062 point 5), so a write that fails is one line, and nothing
+    else follows from it."""
+    written = board.write(number, target, issue_node_id=node_id)
+    if written.ok:
+        print(written.line())
+    else:
+        print(
+            f"{written.line()}; #{number} is closed, so it is done whatever its card says",
+            file=sys.stderr,
+        )
 
 
 # ---- workflow-schema helpers ----------------------------------------
@@ -1254,7 +1348,7 @@ def _check_move_back(
     """Refuse a move back that may not be made, saying why; the exit code, or
     None where it may (DEC-006).
 
-    Where the board carries the state, it is not made yet. It needs a reason. A
+    Where the board carries the state, it is refused, as DEC-006 says. It needs a reason. A
     container needs every child told, and none in-progress or in review. It
     lands where `_move_back_landing` says: the other target is a usage error,
     which names the right one. And this clone must be able to release every
@@ -1263,9 +1357,8 @@ def _check_move_back(
     if state_on_board:
         print(
             f"[refused] #{number} does not move back here: the board carries its state, and "
-            "the board's Status write for a board-carried state comes with #2271 (pull "
-            "request #2275). Nothing was written: no claim was released and no move "
-            "journaled (DEC-006).",
+            "where it does, a move back is refused (DEC-006). Nothing was written: no claim "
+            "was released and no move journaled.",
             file=sys.stderr,
         )
         return 1
@@ -1355,6 +1448,7 @@ def _infer_current_state(
     milestone: dict | None,
     labels: list[str],
     substrate_map: axis_labels.SubstrateMap | None = None,
+    status: infer.StatusRead | None = None,
 ) -> str:
     """Best-effort live state inference.
 
@@ -1369,10 +1463,16 @@ def _infer_current_state(
     fallback agrees with the engine's (now map-aware) detection under a present
     derive map — position resolves from open/closed, not a kit `state:*` label.
     `None` (the default) keeps the kit `state:*` precedence byte-unchanged, so
-    callers that do not thread a map see today's behaviour exactly.
+    callers that do not thread a map see today's behaviour exactly. Where the map
+    binds state to the board, ``status`` is the open issue's card's Status, as
+    `_lib/board_status` read it.
     """
     return infer.infer_current_state(
-        state=state, milestone=milestone, labels=labels, substrate_map=substrate_map
+        state=state,
+        milestone=milestone,
+        labels=labels,
+        substrate_map=substrate_map,
+        status=status,
     )
 
 
@@ -1557,10 +1657,13 @@ def _journal_closed_issue_relabel(
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
+    """The issue, its node id and url among its fields: the node id finds its
+    card on the board, and the url's owner is the board's where no
+    `gh.default_owner` names one."""
     return gh_get_issue(
         issue_number,
         config,
-        fields="title,body,labels,assignees,state,stateReason,milestone,url",
+        fields="title,body,labels,assignees,state,stateReason,milestone,url,id",
     )
 
 
@@ -1686,7 +1789,9 @@ class _CascadeContext:
     ancestor moved gets a provenance comment. ``levels`` are the issue types it
     moves (`_cascade_levels`), empty when workflow.yaml declares none.
     ``status`` writes each ancestor's board Status where the project keeps it as
-    a projection (DEC-006), None where it does not."""
+    a projection (DEC-006), None where it does not. ``source`` reads and writes
+    each ancestor's Status where the map binds state to the board, the Status
+    then being the state's source (DEC-062 point 5), None where it does not."""
 
     workflow: dict
     issue_types: dict
@@ -1696,7 +1801,8 @@ class _CascadeContext:
     invoker: object
     projection: str
     levels: tuple[str, ...]
-    status: board_status.Projector | None = None
+    status: board_status.StatusBoard | None = None
+    source: board_status.StatusBoard | None = None
 
     @property
     def actor(self) -> str | None:
@@ -1711,7 +1817,9 @@ class _MovedIssue:
     ``origin`` is where its move started: the state it held before, or, for an
     issue already at the target, where its old label places it — None when
     nothing records that. ``closed_as`` is the close reason the tracker reports
-    for it (`_close_reason`)."""
+    for it (`_close_reason`). ``origin_unread`` says why its card's read placed
+    it nowhere, where the board carries the state and the card was to record
+    the origin; empty otherwise."""
 
     number: int
     body: str
@@ -1720,19 +1828,23 @@ class _MovedIssue:
     target: str
     closed: bool
     closed_as: str | None
+    origin_unread: str = ""
 
 
 @dataclass(frozen=True)
 class _Ancestor:
     """One ancestor as the plan read it: where its labels and milestone place it,
     and the states it moves through to reach the target, in order — empty when
-    it is at or past the target, None when the workflow declares no way there."""
+    it is at or past the target, None when the workflow declares no way there.
+    ``node_id`` is its node id, from the read of its record, by which its card
+    is found where the board's Status is written."""
 
     number: int
     structural_type: str | None
     labels: tuple[str, ...]
     state: str
     steps: tuple[str, ...] | None
+    node_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -1823,9 +1935,15 @@ def _finished_work(mover: _MovedIssue) -> bool:
 
 
 def _no_cascade_to_done(mover: _MovedIssue) -> str:
-    """Why a move to done brings no ancestor up (`_finished_work`)."""
+    """Why a move to done brings no ancestor up (`_finished_work`). Where the
+    card that records the origin placed it nowhere, that read is named, with
+    what the board said."""
     if mover.origin in ("todo", "backlog"):
         return f"a move to done from {mover.origin} is a won't-do close"
+    if mover.origin is None and mover.origin_unread:
+        return (
+            f"where #{mover.number} stood before it closed is not known, as {mover.origin_unread}"
+        )
     if mover.closed_as is not None:
         return f"#{mover.number} closed as {mover.closed_as}, not as completed"
     return (
@@ -1941,16 +2059,22 @@ def _declared_path(
 def _cascade_not_run(context: _CascadeContext, target: str) -> str | None:
     """Why the forward cascade does not run, or None when it does.
 
-    It writes an ancestor's state as a label, so it runs only where the kit
-    writes the state as one: the kit's own `state:*` labels, or an adopter's
-    `label:` binding that has a value for every state the walk may write. Where
-    a board carries the state, a derivation, the title, or nothing, no label is
-    written and nothing would be recorded for an ancestor.
+    It writes an ancestor's state where the kit writes the state: as a label —
+    the kit's own `state:*` labels, or an adopter's `label:` binding that has a
+    value for every state the walk may write — or as the board's Status, where
+    the map binds the state to the board and the Status is its source (DEC-006,
+    DEC-062 point 5). Where a derivation, the title, or nothing carries the
+    state, nothing is written and nothing would be recorded for an ancestor.
     """
     config, substrate_map = context.config, context.substrate_map
+    if context.source is not None:
+        return None
     if not state_timeline.label_carries_state(config, substrate_map):
         where = axis_carriage.describe("state", config, substrate_map)
-        return f"state is carried {where}, and the forward cascade writes state only as a label"
+        return (
+            f"state is carried {where}, and the forward cascade writes state only as a "
+            "label or as the board's Status"
+        )
     order = infer.STATE_ORDER
     for state in order[order.index("backlog") : order.index(target) + 1]:
         if not isinstance(axis_labels.resolve_write("state", state, substrate_map), str):
@@ -2025,14 +2149,26 @@ def _plan_forward_cascade(
         if kind is not None and kind not in context.levels:
             stop = f"#{number}, named as #{child}'s parent, is a {kind}, not a container"
             break
+        # Where the board carries the state, an open ancestor stands where its
+        # card's Status places it, the card found by the node id its record
+        # carries; one it does not place stops the walk, with nothing guessed
+        # (DEC-051 point 6).
+        node_id = str(issue.get("id") or "")
+        reading = None
+        if context.source is not None and str(issue.get("state", "")).lower() != "closed":
+            reading = context.source.read(number, issue_node_id=node_id)
         state = _infer_current_state(
             state=str(issue.get("state", "")).lower(),
             milestone=issue.get("milestone") or {},
             labels=labels,
             substrate_map=context.substrate_map,
+            status=reading,
         )
+        if state == infer.UNDETERMINED and reading is not None:
+            stop = f"#{number}, named as #{child}'s parent: {reading.finding(number)}"
+            break
         steps = _cascade_steps(context.workflow, state, target, kind, context.levels)
-        ancestors.append(_Ancestor(number, kind, tuple(labels), state, steps))
+        ancestors.append(_Ancestor(number, kind, tuple(labels), state, steps, node_id))
         resolution = containment.resolve_parent(
             context.config,
             issue_number=number,
@@ -2270,7 +2406,9 @@ def _cascade_ancestor(
                 behind=True,
             )
         origin, labels = engine_state, _label_names(record.issue)
-    return _step_ancestor(number, origin, steps, labels, plan.reason, context)
+    return _step_ancestor(
+        number, origin, steps, labels, plan.reason, context, node_id=ancestor.node_id
+    )
 
 
 def _step_ancestor(
@@ -2280,15 +2418,19 @@ def _step_ancestor(
     labels: list[str],
     reason: str,
     context: _CascadeContext,
+    *,
+    node_id: str = "",
 ) -> _AncestorOutcome:
     """Write each step as its own label edit, computed from the labels as the
     step before left them, and journal it; then project the steps that landed
-    (`_project_cascaded_move`, `_project_cascaded_status`).
+    (`_project_cascaded_move`, `_project_cascaded_status`). Where the board
+    carries the state, each step is its own write of the ancestor's Status
+    instead, the state's source (DEC-006).
 
-    A step whose label landed is followed by the next whether or not the engine
+    A step whose write landed is followed by the next whether or not the engine
     took it, so the ancestor never rests between the two writes of one step; a
     write that fails ends the ancestor there, at the state the step before left
-    it in, carrying that state's label alone."""
+    it in. ``node_id`` is the ancestor's node id, by which its card is found."""
     reached = [origin]
     said: list[str] = []
     all_journaled = True
@@ -2298,15 +2440,16 @@ def _step_ancestor(
             issue_number=number,
             current_state=current,
             target_state=step,
-            state_on_board=False,
+            state_on_board=context.source is not None,
             labels=labels,
             substrate_map=context.substrate_map,
         )
         print(f"[cascade] #{number}: {current} → {step}")
-        if not _gh_apply_state_label(number, edit, context.config):
-            said.append(f"{current} → {step} not written (the label write failed)")
+        failure = _cascade_write(number, step, edit, context, node_id=node_id)
+        if failure is not None:
+            said.append(f"{current} → {step} not written ({failure})")
             _project_cascaded_move(number, reached, reason, context)
-            _project_cascaded_status(number, reached, context)
+            _project_cascaded_status(number, reached, context, node_id=node_id)
             return _AncestorOutcome(
                 number,
                 "; ".join(said) if len(said) > 1 else f"not moved: {said[0]}",
@@ -2322,10 +2465,27 @@ def _step_ancestor(
         reached.append(step)
         current = step
     _project_cascaded_move(number, reached, reason, context)
-    _project_cascaded_status(number, reached, context)
+    _project_cascaded_status(number, reached, context, node_id=node_id)
     if not all_journaled:
         return _AncestorOutcome(number, "; ".join(said), complete=False)
     return _AncestorOutcome(number, " → ".join(reached))
+
+
+def _cascade_write(
+    number: int, step: str, edit: Plan, context: _CascadeContext, *, node_id: str = ""
+) -> str | None:
+    """Write one cascaded step of ancestor ``number``: its card's Status, found by
+    its node id ``node_id``, where the board carries the state, its label
+    otherwise. None where it landed, else why not, in a few words."""
+    if context.source is not None:
+        written = context.source.write(number, step, issue_node_id=node_id)
+        if written.ok:
+            print(f"  {written.line()}")
+            return None
+        return f"the Status write failed: {written.failure}"
+    if not _gh_apply_state_label(number, edit, context.config):
+        return "the label write failed"
+    return None
 
 
 def _project_cascaded_move(
@@ -2353,14 +2513,16 @@ def _project_cascaded_move(
         )
 
 
-def _project_cascaded_status(number: int, reached: list[str], context: _CascadeContext) -> None:
+def _project_cascaded_status(
+    number: int, reached: list[str], context: _CascadeContext, *, node_id: str = ""
+) -> None:
     """Where the project keeps the board's Status as a projection (DEC-006), set
-    ancestor ``number``'s to the state its steps reached: one write, however many
-    steps landed, and none when none did. A write that fails is one line, and the
-    ancestor's move stands."""
+    ancestor ``number``'s to the state its steps reached, its card found by its
+    node id ``node_id``: one write, however many steps landed, and none when none
+    did. A write that fails is one line, and the ancestor's move stands."""
     if context.status is None or len(reached) < 2:
         return
-    board_status.report(context.status.write(number, reached[-1]))
+    board_status.report(context.status.write(number, reached[-1], issue_node_id=node_id))
 
 
 def _print_cascade_report(

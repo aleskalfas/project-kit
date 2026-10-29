@@ -372,6 +372,7 @@ def _issue_record(**fields) -> str:
     """An issue's REST record as `gh api repos/{owner}/{repo}/issues/<n>` prints it."""
     record = {
         "id": 999,
+        "node_id": "I_kwDO344",
         "number": 344,
         "title": "[Feature] A feature",
         "body": "EPIC: #7\n\n## What\n",
@@ -398,6 +399,7 @@ def test_read_issue_record_reads_the_issue_and_its_native_parent_in_one_call(
     read = containment.read_issue_record({}, issue_number=344)
     assert calls == [["gh", "api", "repos/{owner}/{repo}/issues/344"]]
     assert read.issue == {
+        "id": "I_kwDO344",
         "title": "[Feature] A feature",
         "body": "EPIC: #7\n\n## What\n",
         "labels": [{"name": "state:backlog"}],

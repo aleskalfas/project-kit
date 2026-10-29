@@ -57,9 +57,12 @@ Exit codes:
   1  membership or foreign-repo refusal / PR body not ready for review
      (validate-at-ready; --force overrides) / the clash guard refused an
      issue another instance owns / this clone's seat could not be confirmed
-  2  usage error / gate failure / illegal transition / issue not found
+  2  usage error / gate failure / illegal transition / issue not found /
+     where the board carries the state, a card whose Status does not place
+     the issue
   3  gh failure: `gh pr create` could not open the PR, or `gh pr ready`
-     could not make it ready
+     could not make it ready, or the board carrying the state could not be
+     read
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -226,13 +229,28 @@ def main() -> int:
     # Gate: the move to Review is legal from where the issue is (#947). Asked
     # before the PR is opened or flipped ready and before reviewers are
     # requested, so a refusal changes nothing. The state is read as
-    # start-work's gate reads it (#942, #1242).
+    # start-work's gate reads it (#942, #1242): where the board carries it, from
+    # the card's Status, and a Status that does not place the issue refuses, a
+    # board that cannot be read as the gh failure it is (DEC-051 point 6).
+    status = issue_position.read_status(args.issue_number, issue, config, substrate_map, workflow)
+    current = issue_position.current_state(issue, labels, substrate_map, status)
+    if current == infer.UNDETERMINED:
+        print(
+            issue_position.unplaced_refusal(
+                "review-work",
+                args.issue_number,
+                status,
+                untouched="no PR opened or made ready, no reviewers requested",
+            ),
+            file=sys.stderr,
+        )
+        return 3 if status is None or status.outcome == "unreadable" else 2
     refusal = composed_move.transition_refusal(
         "review-work",
         args.issue_number,
         issue,
         labels,
-        issue_position.current_state(issue, labels, substrate_map),
+        current,
         target=TARGET_STATE,
         untouched="no PR opened or made ready, no reviewers requested",
         workflow=workflow,
@@ -460,7 +478,10 @@ def _derive_pr_title(issue: dict, branch: str) -> str:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels,body,state,milestone")
+    """The issue, with the fields the early check reads its card by
+    (`issue_position.ISSUE_FIELDS`)."""
+    fields = f"title,labels,body,state,milestone,{issue_position.ISSUE_FIELDS}"
+    return gh_get_issue(issue_number, config, fields=fields)
 
 
 def _left_behind(

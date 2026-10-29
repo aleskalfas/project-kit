@@ -4,8 +4,9 @@ Where a board is configured and the state is not carried on it, DEC-006 makes
 the board's Status a projection the agent maintains. `move-issue`, and so every
 wrapper over it, writes the card's Status to the issue's new state, and the
 forward cascade writes each ancestor's. A write that fails is one line and the
-move stands: the native state is the source. Where the board carries the state,
-nothing changes here: that path is #2271's.
+move stands: the native state is the source. Where the map binds the state to
+the board, its Status is the source, which `tests/test_pm_board_carried_state.py`
+pins (#2271), and where a present map leaves the state out, nothing is written.
 
 These tests run the real scripts and the real engine against an in-memory GitHub
 with a board (`tests/pm_board_world.py`).
@@ -262,48 +263,16 @@ def test_with_no_board_no_board_call_is_made(
     assert board.board_calls() == []
 
 
-def test_where_the_board_carries_the_state_nothing_changes(
-    world: World,
-    board: BoardTracker,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
+def test_where_the_state_degrades_no_board_call_is_made(
+    world: World, board: BoardTracker, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The flag claims the state where the map is silent (DEC-051): the Status is
-    then the state's source, and the move only narrates it, as before (#2271)."""
+    """A present map that leaves the state out degrades it, and no Status is
+    written for it: the board's Status stays with the people who move it
+    (DEC-062 point 5)."""
     _with_config(world, monkeypatch, BOARD_CONFIG)
-    _with_substrate_map(world, monkeypatch, None)
+    _with_substrate_map(world, monkeypatch, {"type": {"kit-label": True}})
     task = _task(world, board)
-    world.tracker.issues[task]["milestone"] = MILESTONE
 
-    assert world.move(task, "in-progress") == 0
+    assert world.move(task, "backlog", "--bypass", "--bypass-reason", "scheduled") == 0
 
     assert board.board_calls() == [] and board.status(task) == "Todo"
-    out = capsys.readouterr().out
-    assert "[ok] (board adopter) plan recorded; manual board edit may be required." in out
-    # The note cites what decides the Status, not DEC-019, which is about membership.
-    assert "the agent maintains the Status (DEC-006)" in out
-    assert "DEC-019" not in out
-
-
-def test_where_the_board_carries_the_state_a_move_back_is_refused(
-    world: World,
-    board: BoardTracker,
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """The board's Status write for a board-carried state comes with #2271, so
-    the move back writes nothing, and journals no move (DEC-006)."""
-    _with_config(world, monkeypatch, BOARD_CONFIG)
-    _with_substrate_map(world, monkeypatch, None)
-    task = _task(world, board, status="In Progress")
-    world.tracker.issues[task]["milestone"] = MILESTONE
-    world.tracker.issues[task]["labels"].append("state:in-progress")
-    labels = list(world.labels(task))
-
-    assert world.move(task, "backlog", "--reason", "the work stopped") == 1
-
-    assert world.labels(task) == labels and world.journal(task) == []
-    assert board.board_calls() == [] and board.status(task) == "In Progress"
-    assert "the board's Status write for a board-carried state comes with #2271" in (
-        capsys.readouterr().err
-    )

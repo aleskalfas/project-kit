@@ -173,13 +173,18 @@ def test_compute_plan_skips_existing_state_labels(
 def test_compute_plan_omits_state_labels_in_board_mode(
     bs, tmp_path, classification, workflow_data
 ) -> None:
-    """In board mode, state:* labels are NOT created (skip message instead)."""
+    """Where the map binds state to the board, state:* labels are NOT created
+    (skip message instead). The map binds it, not the flag (DEC-062 point 1)."""
     schemas_dir = tmp_path / "schemas"
     schemas_dir.mkdir()
     (schemas_dir / "workflow.yaml").write_text(
         "states:\n  - id: todo\n  - id: backlog\n  - id: in-progress\n  - id: review\n"
         "  - id: done\n",
         encoding="utf-8",
+    )
+    (tmp_path / "project").mkdir()
+    (tmp_path / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n  state:\n    board: true\n", encoding="utf-8"
     )
 
     original = bs._fetch_existing_labels

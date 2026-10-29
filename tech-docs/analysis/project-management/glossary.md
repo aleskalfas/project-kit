@@ -218,6 +218,7 @@ TERM-issue-lifecycle:
         record:
           - project-management:DEC-006
           - project-management:DEC-033
+          - project-management:DEC-062#5
 TERM-merge-gate:
   name: merge gate
   status: active
@@ -619,7 +620,7 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 - **Process:** the core's word for any declared course of a subject through states. The issue lifecycle is the [process](../core/glossary.md#term-process--process) project-management defines for issues, which the core's engine checks ([DEC-033](../../../.pkit/capabilities/project-management/decisions/DEC-033-rebind-issue-lifecycle-onto-process-substrate.md)).
 - **Review:** the state of a [Task](#term-task--task) whose pull request is open. A parent [issue](#term-issue--issue) never enters it, and goes from In Progress to Done by its own close ([DEC-006](../../../.pkit/capabilities/project-management/decisions/DEC-006-state-machine-and-cascade.md)).
-- **A board's Status column:** a projection of the state, where a [project](../core/glossary.md#term-project--project) keeps a Projects v2 board. Where the two disagree, the state the issue itself carries wins (DEC-006).
+- **A board's Status column:** where a [project](../core/glossary.md#term-project--project)'s substrate map binds the state to its Projects v2 board, the source of where an open issue stands ([DEC-062 point 5](../../../.pkit/capabilities/project-management/decisions/DEC-062-axes-chosen-in-the-map.md#5-where-the-map-puts-state-on-the-board-the-boards-status-is-the-source-of-an-open-issues-position)). Elsewhere it is a projection of the state, and the state the issue itself carries wins where the two disagree (DEC-006).
 
 ## TERM-merge-gate — merge gate
 

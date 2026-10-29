@@ -1019,10 +1019,11 @@ def test_landed_moves_is_empty_when_the_timeline_cannot_be_read(mi, monkeypatch)
 
 
 def test_landed_moves_reads_no_timeline_when_no_label_carries_state(mi, monkeypatch) -> None:
-    """A board carries state, so `move-issue` writes no label and the timeline's
-    label events say nothing about moves."""
+    """The map binds state to the board, so `move-issue` writes no label and the
+    timeline's label events say nothing about moves."""
     monkeypatch.setattr(mi, "gh_run", _no_gh)
-    assert mi._landed_moves(42, _LOGGING_OFF, {"has_projects_v2_board": True}, None) == ""
+    on_board = mi.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    assert mi._landed_moves(42, _LOGGING_OFF, {"has_projects_v2_board": True}, on_board) == ""
 
 
 def test_audit_comment_is_posted_before_the_label_write() -> None:
@@ -1409,9 +1410,8 @@ def test_a_move_back_of_an_issue_that_cannot_be_read_is_refused(monkeypatch, cap
 
 
 def test_where_the_board_carries_the_state_the_move_back_is_refused(monkeypatch, capsys) -> None:
-    """The board's Status write for a board-carried state comes with #2271:
-    until then the move back writes nothing, releases no claim and journals no
-    move (DEC-006)."""
+    """Where the board carries the state, the move back is refused and writes
+    nothing, so it releases no claim and journals no move (DEC-006)."""
     rc, writes, github = _move_back(
         monkeypatch, "--to", "backlog", "--reason", "stalled", "--yes", board_carried=True
     )
@@ -1419,7 +1419,7 @@ def test_where_the_board_carries_the_state_the_move_back_is_refused(monkeypatch,
     assert writes == [] and github.calls == []
     err = capsys.readouterr().err
     assert "[refused] #42 does not move back here: the board carries its state" in err
-    assert "comes with #2271 (pull request #2275)" in err
+    assert "where it does, a move back is refused (DEC-006)" in err
     assert "no claim was released and no move journaled" in err
 
 

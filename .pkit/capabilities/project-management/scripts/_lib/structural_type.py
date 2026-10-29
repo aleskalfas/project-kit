@@ -21,7 +21,9 @@ Four vocabularies, consulted in a fixed precedence
    vocabulary is not the yardstick, so a non-match resolves to `None` rather
    than falling through (#553). A map binding `type` any other way
    (`label` / `derive` / `unsupported` / absent) means the type is not
-   title-carried at all — also `None`.
+   title-carried at all — also `None`. A map binding `type` with
+   `kit-label: true` reads the kit's vocabularies below, as with no map
+   (project-management DEC-062 point 4).
 2. **Kit structural prefixes** from `issue-types.yaml` `types[*].title_prefix`
    — `[EPIC]` / `[Feature]` / `[Umbrella]` / `[Task]`.
 3. **Kind-driven prefixes** from `classification.yaml`
@@ -91,7 +93,9 @@ def infer_structural_type(
     """
     # 1. Brownfield: the adopter's vocabulary replaces the kit's, or the type
     #    is not title-carried at all. Either way the kit prefixes do not apply.
-    if substrate_map is not None:
+    #    A map binding `type` to the kit's own labels reads as no map does
+    #    (DEC-062 point 4), so that question is asked of the `type` binding.
+    if not axis_labels.axis_expects_kit_labels("type", substrate_map):
         if axis_labels.axis_title_prefix_remap("type", substrate_map) is None:
             return None
         return axis_labels.resolve_title_prefix_read("type", title, substrate_map)
