@@ -14,7 +14,7 @@ pkit:
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
-      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", "COR-065", "COR-066#1", "COR-066#4"]
+      record: [COR-001, COR-003, COR-014, COR-019, COR-025, COR-041, COR-046, "COR-050#1", "COR-050#2", "COR-050#7", COR-051, COR-053, COR-055, COR-058, "COR-059#3", "COR-063#5", "COR-064#6", "COR-065", "COR-066#1", "COR-066#4", COR-068]
       artefact:
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
@@ -60,6 +60,7 @@ Rules are not decision records, but they share their guarantees ([COR-051](core/
 - **The acceptance gate** applies per rule, wherever the rule set lives. That includes project-owned rule sets outside this folder, under the project's internal documentation root by default. A proposed rule binds nothing, and accepting one is a reviewed change.
 - **Origins.** Every accepted rule carries an origin: when it was decided, by whom and why, in the decider's words — or a cited decision record, which must be accepted whenever the rule is.
 - **Where rule sets live.** A method rule set ships with its component and is cited with the component's name; a project rule set is the project's, and is cited bare. A project never edits a method rule set: it inherits it, pinning the set's major version.
+- **Loaded rule sets.** A *loaded* set keeps operational rules: its accepted rules bind on the work of each session that loads the file generated from it, never on an artefact, and no set inherits it ([COR-068](core/COR-068-loaded-rule-sets.md)). Core's operational rules are the backbone's loaded set `OPS`, so core rule 19 is `backbone:RS-OPS-019`. The rules area's README says where the set and its file live.
 - **Citing a rule.** `RS-CMN-003` names a rule and `RS-CMN-003#cause-location` an extension point it offers. A method rule set's rules are cited with the component in front — `[living-docs:RS-LDOC-003]` in prose, bracketed like a capability decision citation.
 - **Checked by validation.** `pkit validate` checks every rule set — the schema, the join between data and prose, ids, origins, successors and inheritance — and `pkit decisions validate` reports a rule id claimed twice. Where rule-set files live, their front-matter layout and every check are in the schemas reference, "Rule-set files" (`.pkit/schemas/README.md`).
 

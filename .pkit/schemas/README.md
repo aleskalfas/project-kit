@@ -23,9 +23,10 @@ pkit:
         - src/project_kit/friction_check.py
         - src/project_kit/answer_files.py
         - src/project_kit/rule_sets.py
+        - src/project_kit/loaded_rule_sets.py
         - src/project_kit/working_tree.py
         - .pkit/lifecycle/ownership.py
-      record: [COR-010, COR-017, COR-018, COR-019, COR-020, COR-023, COR-029, COR-030, "COR-033#P7", COR-041, COR-048, "COR-049#5", "COR-049#6", COR-050, COR-051, COR-052, COR-053, "COR-054#1", COR-055, COR-056, COR-062, "COR-064#1", "COR-064#2", ADR-056, ADR-057, "ADR-058#1", "ADR-058#3", "ADR-058#5", "ADR-068#1"]
+      record: [COR-010, COR-017, COR-018, COR-019, COR-020, COR-023, COR-029, COR-030, "COR-033#P7", COR-041, COR-048, "COR-049#5", "COR-049#6", COR-050, COR-051, COR-052, COR-053, "COR-054#1", COR-055, COR-056, COR-062, "COR-064#1", "COR-064#2", COR-068, ADR-056, ADR-057, "ADR-058#1", "ADR-058#3", "ADR-058#5", "ADR-068#1"]
       artefact:
         - .pkit/cli/README.md#friction-artefacts---at-rev---json
         - .pkit/cli/README.md#schemas-validate-path
@@ -583,7 +584,7 @@ A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown f
 
 | Folder | Holds | The set is cited |
 |---|---|---|
-| `.pkit/rule-sets/` | the backbone's method rule sets | `backbone:<SET>` |
+| `.pkit/rule-sets/` | the backbone's method rule sets, its loaded set `OPS` among them | `backbone:<SET>` |
 | `.pkit/capabilities/<name>/rule-sets/` | an installed capability's method rule sets, shipped, versioned and synced with it | `<name>:<SET>` |
 | `rule-sets/` under the internal documentation root (`docs/rule-sets/` by default, COR-049) | the project's rule sets | bare, `<SET>` |
 | any declared place — a `friction.places` entry of the project or of a capability — whose path has a `rule-sets` segment | more project rule sets, wherever the project keeps them | bare |
@@ -635,6 +636,7 @@ The statement.
 | Key | Meaning |
 |---|---|
 | `rule-set` | Required. Upper-case letters and digits, starting with a letter. Unique among all rule sets; every rule id carries it. |
+| `loaded` | `true` makes the set a *loaded* one ([COR-068](../decisions/core/COR-068-loaded-rule-sets.md)): its accepted rules bind on the work of the agent sessions that load the file generated from it, and on no artefact ("Loaded sets" below). Absent or `false`, the set is an ordinary one. |
 | `version` | Required. The set's own semantic version, not its component's. A new major is due when an accepted rule is withdrawn, superseded or tightened, when an offered extension point is removed, when a new accepted rule is added, or when what the set inherits changes: a set added or dropped, or a pin moved to another major (COR-051 point 7). |
 | `inherits` | The sets this one inherits, each pinned to a major: `<SET>@<major>` for a project rule set, `<component>:<SET>@<major>` for a method one. |
 | `scope` | Which artefacts the set's rules apply to, by the paths of their files and by their types (COR-051 point 2). A mapping of three keys, each a list that is not empty: `paths` selects an artefact whose file one of them matches, `exclude` leaves a selected one out, and `types` selects an artefact whose type, or a type in contention for it, is one of them ([COR-056](../decisions/core/COR-056-artefact-types.md) point 3). A key left out selects everything: every file for `paths`, every artefact, typed or not, for `types`, and nothing left out for `exclude`. A scope needs `paths` or `types`. A plain list of paths is its `paths`, so a scope written as a list keeps its meaning. Each path is read as a place is. A type is `<component>:<name>`, `backbone:rule`, or a bare type a project place gives, and a type no owner declares is an error. A method rule set takes no scope, and a scope on one is an error. `pkit friction artefacts` names on each artefact the rule sets whose scope covers it. |
@@ -649,13 +651,29 @@ The statement.
 
 Unknown keys are refused at every level, each with the nearest known key. The shape carries no version of its own; it is migrated when it changes (ADR-056 point 3).
 
+**Loaded sets** (COR-068; ADR-073 point 6). A loaded set keeps operational rules, the rules every session loads. The backbone's is `OPS`, `.pkit/rule-sets/ops.md`, whose loaded file is `.pkit/rules/core.md` (the rules area's README). Its rules bind on what a session does, not on files, so it takes none of the parts that say where a rule binds.
+
+- **The schema refuses on a set marked loaded** what the file alone shows: `scope`, `inherits` and `checks`, and `offers` or `fills` on any rule.
+- **The `rule-sets` pass refuses** what needs other files:
+  - a set whose `inherits` names a loaded set (`inherits-loaded`)
+  - a second loaded set of the backbone, or of the project, after the first by path (`second-loaded-set`): one to an owner, so "core rule 19" names one rule
+  - a set marked loaded in a capability's folder (`capability-loaded-set`), until the first capability that ships one decides how its loaded file reaches the sessions (COR-068 point 4)
+  - a first-level heading in the set's body (`loaded-heading`), since the loaded file is included under the host's heading
+- **The loaded file** is generated from the set by `pkit rule-sets generate`: the backbone's at `.pkit/rules/core.md`, a project's own at `.pkit/rules/project.md`. Where it goes is fixed by the set's owner, never by a key. It holds the set's body, each accepted rule's section under the heading `N. Title (RS-<SET>-NNN)` at the level the set writes it, and leaves out the front matter and each other rule's section.
+- **Kept in step** (`loaded-file-stale`, an error): where the set is authored, the pass compares the loaded file with the generator's output, byte for byte once line endings are read as `\n`. A file that differs, or is missing, fails. Where the set is authored is asked of the tree's own predicate, `is_synced_copy`: where the set arrives by sync, the project receives both files together, and the pass compares neither. A tree without the ownership module cannot tell, so the pass skips the comparison and reports it (`loaded-file-unchecked`).
+- **What holds as for every set:** the other keys, the join, ids, origins and successors. A loaded rule is an artefact, so a change to it is friction for what anchors to it.
+- **Where it binds:** no route starts at a loaded set or passes through one (below), so the rule-set reviewer and every per-artefact check judge no artefact against a loaded rule.
+- **Citing a loaded rule:** by its id, `backbone:RS-OPS-019`, or by layer and number, "core rule 19" ("Citing a rule" below).
+
 **The body.** One section per rule, headed by its id and its title — `## RS-DOC-001 — Answer first`, at any heading level — holding the statement. A rule's content, for friction, is its data entry together with that section. Headings inside fenced code are not sections.
 
 **Ids.** `RS-<SET>-NNN`: the family prefix, the set's name, and a number of at least three digits, zero-padded below 100 (COR-051 point 3). An extension point is written after `#`: `RS-DOC-001#example-kind`. An id is never renumbered and never reused: superseded and withdrawn rules stay in the file with their ids and sections, so a new rule under a retired id is a duplicate. Whether an id was reused after its rule was deleted outright cannot be seen in one repository state, and this pass reads no history.
 
 **Statuses** (COR-051 point 4). A proposed rule binds nothing; an accepted one binds where a route reaches its set (below), and writers and checks follow it; a superseded one names its successor and binds nothing; a withdrawn one is retired without a successor and binds nothing. Accepting a rule is a reviewed change, as accepting a decision record is (the decision-record specification, "The acceptance gate").
 
-**Citing a rule.** `RS-<SET>-NNN` or `RS-<SET>-NNN#<point>`, and with the owning component in front for a method rule set — `[living-docs:RS-LDOC-003]` in prose, in brackets like a capability decision citation, and `living-docs:RS-LDOC-003` in data. A bare id resolves too, since set names are unique; a component, when written, must be the one that owns the set. `pkit refs validate` resolves every rule citation in an agent's or skill's body; `pkit refs lookup <citation>` prints where the rule lives; `refs.schema.json#/$defs/rule_citation` checks the shape in data; `pkit decisions validate` reports a rule id claimed twice across the rule sets.
+**Citing a rule.** `RS-<SET>-NNN` or `RS-<SET>-NNN#<point>`, and with the owning component in front for a method rule set — `[living-docs:RS-LDOC-003]` in prose, in brackets like a capability decision citation, and `living-docs:RS-LDOC-003` in data. A bare id resolves too, since set names are unique; a component, when written, must be the one that owns the set. `pkit refs validate` resolves every rule citation in an agent's or skill's body, but a loaded set's, which the next check reads; `pkit refs lookup <citation>` prints where the rule lives; `refs.schema.json#/$defs/rule_citation` checks the shape in data; `pkit decisions validate` reports a rule id claimed twice across the rule sets.
+
+**Citing an operational rule** (COR-068 point 6; ADR-073 point 8). A rule of a loaded set is cited by its id, as any rule is, or by its layer and number: `core rule 19` names `backbone:RS-OPS-019`, and `project rule N` a rule of the project's own loaded set. Validation's `refs` member reads both, and warns of a citation of a rule the set lacks, or of a superseded or withdrawn one, naming its successor. The forms it reads, and the files it reads them in, are the CLI reference's (`validate`).
 
 **What the pass checks.** Errors fail `pkit validate`; reports print under its `rule-sets` heading.
 
@@ -676,6 +694,7 @@ Unknown keys are refused at every level, each with the nearest known key. The sh
 - *Successors* — each exists, in the same set or in a set that inherits it, and is not the rule itself.
 - *Check parts* (COR-051 point 2) — a part declared under `checks` for a rule the set does not hold is an error: a rule's owner declares the part beside the rule. A check that is not there is **reported** without failing: a backbone check that names no `pkit` command, or a component's command no installed component registers. That part then goes back to whoever judges the rest of the rule. A project's own tool is trusted by its name.
 - *Inheritance* (COR-051 point 7) — a pinned set exists under the address written (a method set with its component, a project set bare); no cycle; a method rule set never inherits a project one, the backbone's only the backbone's, and a capability's another capability's only if its `package.yaml` declares that capability in `requires_capabilities` as a required entry, without `optional: true` (COR-030); any capability may inherit the backbone's. A fill names a point that a rule of an inherited set offers; each point is filled at most once along the chain — the set and everything it inherits, each set once — reported where the second fill arrives. A filling rule **anchors to the rule it fills**, so that a change to the inherited rule flags the fill as friction: its `artefact` anchors name that rule, bare or as it is cited (`living-docs:RS-LDOC-003`), never one of its points; a fill whose rule carries no such anchor is an error at the fill, naming the anchor to add. A superseded or withdrawn rule binds nothing, so its own fills are neither checked nor counted. A fill of a superseded or withdrawn rule is **reported** as orphaned, and no anchor is asked of it: it is to be removed.
+- *Loaded sets* (COR-068) — the refusals and the check of the loaded file under "Loaded sets" above.
 - *Conflicts between routes* (COR-051 point 7) — read from the reach walk's answer at the working tree (below), each an error on the artefact, naming both routes. One is an artefact reached through routes that pin one set at different majors. The other is an artefact whose most specific sets bring different fills for one extension point, a fill against none included.
 
 **The pinned major** is a version relation, checked and reported with the others under the `versions` heading of `pkit validate` (the lifecycle README, "Version relations"): a pin whose major is not the inherited set's is an error on the inheriting set that names the new major — the set is at `2.1.0`, so update the pin to `CMN@2` — until its owner reviews what changed and updates the pin. **`pkit status` shows the same pins** under its `Rule sets` heading, from the same check: each inheriting set whose pin is behind, the version the inherited set is at, and the fix — the edit to `inherits` that re-pins it (`DOC pins CMN@1; CMN is at 2.1.0`, then ``fix: review what changed in CMN, then update the pin to CMN@2 in `inherits` of docs/rule-sets/doc.md``). No command re-pins: the review is the point. Until the pin is updated, no rule binds through it (below).
@@ -684,6 +703,7 @@ Unknown keys are refused at every level, each with the nearest known key. The sh
 
 - **A route** starts at a set of the project's own whose scope selects the artefact, as `in_scope_of` names it. It follows what the set inherits, pin by pin. It passes only through sets whose own scope, where they have one, also selects the artefact. So an inherited rule binds within the scope of the set that inherits it. A set with no scope binds only through the sets that inherit it, and a parent with a scope of its own keeps it.
 - **A method rule set** takes no scope, so it starts no route. Its rules bind only through a set of the project's own that inherits it, directly or not.
+- **A loaded set** starts no route and is no parent on one, even where validation refuses a scope or an inheritance on it. So no loaded rule binds on an artefact, and `pkit rule-sets reach` names none (COR-068 point 2). `pkit rule-sets altered` still lists a loaded rule a change alters, as an artefact.
 - **An accepted rule binds** on the artefact when a route leads to its set and no pin on that route is behind its set. A pin behind its set is one whose major is older than the set's. A pin ahead of its set is not behind it, though the version relations report it as not holding. A rule reached only through a pin behind its set binds nothing, and the answer names it as held back, with the pins that hold it.
 - **A successor** binds wherever its own set is reached. The rule it replaces binds nothing.
 - **A fill** binds only where the rule it fills binds through the filling set, and only while both are accepted. Where the offering rule binds through several sets whose scopes select the artefact, the most specific of them decide the point: those that no other of them inherits. Where they bring different fills, a fill against none included, no fill binds, the answer names the conflict, and validation fails. Each brings the fill its chain holds, whatever the chain's pins, where that fill binds through the filling set. A rule that fills binds only as a fill, so one whose fill names no point an inherited rule offers binds nowhere.
