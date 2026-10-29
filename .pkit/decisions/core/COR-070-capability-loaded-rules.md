@@ -1,7 +1,7 @@
 ---
 id: COR-070
 title: A capability's operational rules load where it is installed, and no layer's rules loosen another's
-status: proposed
+status: accepted
 date: 2026-10-29
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
