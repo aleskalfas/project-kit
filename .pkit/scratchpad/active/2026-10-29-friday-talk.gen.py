@@ -611,60 +611,63 @@ TIES_TONES = {"code": ("role_neutral_bg", "role_neutral"), "pkit": ("role_code_b
 
 
 def ideas(pid, y, v):
-    """Where ideas start, as a flow that branches: a conversation, a scratchpad note, and the note's two
-    ends, done (with what it produced) and dropped. A box per step; a step's picture is a terminal image
-    inside its box. The diagram is one instance of a template made for this slide."""
+    """Where ideas start: a conversation, the scratchpad note that keeps it, and what the note becomes, the
+    products large on the right, the first (records) dark like the pyramid's apex, dropped small below. A box
+    per step; the note's picture is a terminal image inside it. One instance of a template made for this slide."""
     W = SPAN16
     fs = v.get("font_size", 26)
-    cw, nw = 640, 960
-    cx, nx = 0, cw + 120
+    conv, note, prods, dropped = v["conversation"], v["note"], v["becomes"], v["dropped"]
+    cw, nw = 600, 960
+    nx = cw + 120
     ex = nx + nw + 160
     ew = W - ex
-    st = {k: v[k] for k in ("conversation", "note", "done", "dropped")}
-    pics = {k: terminal_png(f"{pid}-{k}".removeprefix("T-"), s["terminal"], (nw if k == "note" else ew) - 80, fs)
-            for k, s in st.items() if s.get("terminal")}
-
-    def height(k, s):
-        top = 136 if s.get("icon") else 32
-        text_h = s.get("text_h", 100)
-        pic = pics.get(k)
-        return top + 72 + text_h + (24 + pic[1] if pic else 0) + 40
-
-    hs = {k: height(k, s) for k, s in st.items()}
-    H = hs["done"] + 40 + hs["dropped"]
-    tops = {"conversation": (H - hs["conversation"]) / 2, "note": (H - hs["note"]) / 2, "done": 0, "dropped": hs["done"] + 40}
-    xs = {"conversation": (cx, cw), "note": (nx, nw), "done": (ex, ew), "dropped": (ex, ew)}
+    file, ph = terminal_png(f"{pid}-note".removeprefix("T-"), note["terminal"], nw - 80, fs)
+    PROD_H, PROD_GAP, HEAD_H, DROP_H = 172, 24, 72, 96
+    prods_top = HEAD_H
+    drop_top = prods_top + len(prods) * PROD_H + (len(prods) - 1) * PROD_GAP + 32
+    H = drop_top + DROP_H
+    conv_h = 136 + 72 + conv.get("text_h", 100) + 40
+    note_h = 136 + 72 + note.get("text_h", 100) + 24 + ph + 40
     parts = {}
-    for k, s in st.items():
-        x, w = xs[k]
-        top, h = round(tops[k]), hs[k]
-        bg, line = TIES_TONES[s.get("tone", "pkit")]
-        parts[f"{k}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": top, "width": w, "height": h,
-                            "color": f"@{bg}", "border_color": f"@{line}", "border_width": 2, "ink": "@text_primary"}
-        hy = top + (136 if s.get("icon") else 32)
-        if s.get("icon"):
-            parts[f"{k}icon"] = {"type": "image", "file": f"{ICONS_DIR}/{s['icon']}.png", "x": x + 40, "y": top + 40, "width": 72, "height": 72}
-        parts[f"{k}head"] = {"type": "text", "text": md(s["head"]), "style": "@style.tile_heading", "ink": "@text_primary",
-                             "x": x + 40, "y": hy, "width": w - 80, "height": 64}
-        parts[f"{k}text"] = {"type": "text", "text": md(s["text"]), "style": "@style.body", "ink": "@text_primary",
-                             "x": x + 40, "y": hy + 72, "width": w - 80, "height": s.get("text_h", 100)}
-        if k in pics:
-            file, ph = pics[k]
-            parts[f"{k}pic"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": x + 40, "y": hy + 72 + s.get("text_h", 100) + 24,
-                                "width": w - 80, "height": ph}
 
-    def arrow(key, p1, p2):
+    def shape(key, x, top, w, h, fill, line):
+        parts[key] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": round(top), "width": w, "height": h,
+                      "color": fill, "border_color": line, "border_width": 2, "ink": "@text_primary"}
+
+    def text(key, s, style, x, top, w, h, ink="@text_primary"):
+        parts[key] = {"type": "text", "text": md(s), "style": style, "ink": ink, "x": x, "y": round(top), "width": w, "height": h}
+
+    for k, s, x, w, top, h in (("conversation", conv, 0, cw, (H - conv_h) / 2, conv_h), ("note", note, nx, nw, (H - note_h) / 2, note_h)):
+        shape(f"{k}box", x, top, w, h, "@role_code_bg", "@role_code")
+        parts[f"{k}icon"] = {"type": "image", "file": f"{ICONS_DIR}/{s['icon']}.png", "x": x + 40, "y": round(top + 40), "width": 72, "height": 72}
+        text(f"{k}head", s["head"], "@style.tile_heading", x + 40, top + 136, w - 80, 64)
+        text(f"{k}text", s["text"], "@style.body", x + 40, top + 208, w - 80, s.get("text_h", 100))
+    ntop = (H - note_h) / 2
+    parts["notepic"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": nx + 40, "y": round(ntop + 208 + note.get("text_h", 100) + 24),
+                        "width": nw - 80, "height": ph}
+    text("rhead", v["becomes_head"], "@style.key", ex, 0, ew, 56)
+    for i, p in enumerate(prods):
+        top = prods_top + i * (PROD_H + PROD_GAP)
+        dark = i == 0
+        ink = "@text_on_color" if dark else "@text_primary"
+        shape(f"p{i}box", ex, top, ew, PROD_H, "@role_code" if dark else "@role_code_bg", "@role_code")
+        text(f"p{i}head", p["head"], "@style.tile_heading", ex + 40, top + 24, ew - 80, 64, ink)
+        text(f"p{i}text", p["text"], "@style.body", ex + 40, top + 100, ew - 80, 50, ink)
+    shape("dropbox", ex, drop_top, ew, DROP_H, "@role_neutral_bg", "@role_neutral")
+    text("droptext", dropped["text"], "@style.body", ex + 40, drop_top + 23, ew - 80, 50)
+
+    def arrow(key, p1, p2, dashed=False):
         parts[key] = {"type": "arrow", "points": [[round(p1[0]), round(p1[1])], [round(p2[0]), round(p2[1])]], "arrow_type": "straight",
-                      "tip": "end", "color": "@text_secondary", "border_width": 4, "border_style": "solid"}
+                      "tip": "end", "color": "@text_secondary", "border_width": 4, "border_style": "dashed" if dashed else "solid"}
 
-    mid = H / 2
-    ntop, nh = tops["note"], hs["note"]
-    arrow("a1", (cw + 16, mid), (nx - 16, mid))
-    arrow("a2", (nx + nw + 16, ntop + nh * 0.3), (ex - 16, hs["done"] / 2))
-    arrow("a3", (nx + nw + 16, ntop + nh * 0.7), (ex - 16, tops["dropped"] + hs["dropped"] / 2))
+    arrow("a1", (cw + 16, H / 2), (nx - 16, H / 2))
+    ends = [prods_top + i * (PROD_H + PROD_GAP) + PROD_H / 2 for i in range(len(prods))] + [drop_top + DROP_H / 2]
+    for i, ey in enumerate(ends):
+        sy = ntop + note_h * (0.2 + 0.6 * i / (len(ends) - 1))
+        arrow(f"b{i}", (nx + nw + 16, sy), (ex - 16, ey), dashed=i == len(prods))
     name = f"ideas_{pid}"
     EXTRA_TEMPLATES[name] = {
-        "note": "Where ideas start, drawn for one slide by the slide generator: a conversation, a scratchpad note, and its two ends.",
+        "note": "Where ideas start, drawn for one slide by the slide generator: a conversation, the note that keeps it, and what the note becomes.",
         "root": {**CLEAR_AREA, "width": W, "height": H},
         "parts": parts,
     }

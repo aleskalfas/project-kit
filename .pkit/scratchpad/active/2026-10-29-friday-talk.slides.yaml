@@ -358,48 +358,48 @@ slides:
 - id: ideas
   part: P1
   title: Where ideas start
-  message: In conversation, and in a scratchpad note when a question needs longer. The note ends by producing
-    records, or by being dropped.
+  message: In conversation. A scratchpad note keeps what you agreed past the session, until it becomes records, issues
+    or docs.
   problem: ''
   does: []
-  show: 'In project-kit: 28 notes done, each listing what it produced'
+  show: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
   visual:
     kind: ideas
     font_size: 26
     conversation:
       icon: row-chat
       head: A conversation
-      text: You and the agent talk a question through.
+      text: You and the agent work an idea out, until the session ends or its context fills.
+      text_h: 150
     note:
       icon: row-doc
       head: A scratchpad note
-      text: 'When a question needs longer: its forces, its options, what was tried.'
+      text: Keeps what you agreed. It waits without a deadline, and the next session reads it.
       terminal: |-
         .pkit/scratchpad/active/
           2026-10-29-friday-talk.md
-        # this talk is one
-    done:
-      head: Done
-      text: It lists what it produced.
-      text_h: 50
-      terminal: |-
-        done/2026-07-03-private-company-content-distribution.md
-        started: 2026-07-03
-        retired: 2026-07-07
-        produced:
-          - COR-041
-          - ADR-040
+        # this talk: each new session
+        # began by reading its hand-off
+    becomes_head: When it is done, it becomes
+    becomes:
+    - head: Decision records
+      text: COR-041 and ADR-040, from a note of 3 July
+    - head: Issues
+      text: '14 issues: one big feature, planned'
+    - head: Docs
+      text: 10 use cases and 2 journeys, from one note
     dropped:
-      tone: code
-      head: Dropped
-      text: Kept, with why it did not pan out, so nobody walks that path again unaware.
-  limit: 'A note retires only when someone retires it: 14 of the 33 active have been open since May or June.'
+      text: Or dropped, kept with why it did not pan out.
+  limit: 'Nothing writes the note for you: what stays only in the conversation is lost with it.'
   minutes: 1
-  notes: 'This talk is itself a scratchpad note: it started as a conversation and needed longer. The folder is the
-    note''s state (COR-012): pkit new scratchpad <slug> starts one in active/, pkit scratchpad done <slug>
-    --produced <ref> moves it to done/ and lists what it produced, pkit scratchpad drop moves it to dropped/.
-    The example produced the two records you will see again under the release guide, COR-041 and ADR-040.
-    None has been dropped in project-kit yet. Next: what a record is.'
+  notes: 'Everyone here has hit the context limit. This talk is itself a scratchpad note: it was built over several
+    sessions, and each new one began by reading the note''s hand-off. A note can wait: 14 of the 33 active ones
+    have been open since May or June, and that is fine. The folder is the note''s state (COR-012): pkit new
+    scratchpad <slug> starts one in .pkit/scratchpad/active/, pkit scratchpad done <slug> --produced <ref>
+    moves it to done/ and lists what it became, pkit scratchpad drop moves it to dropped/. It is a file in the
+    repository, not a chat or a tool''s memory, so colleagues and every agent read the same note, and a done
+    note stays as the story of how a decision was reached. The 28 done notes also produced a schema, a pull
+    request and a milestone. COR-041 and ADR-040 come back under the release guide. Next: what a record is.'
 - id: decisions
   part: P1
   title: Decision records

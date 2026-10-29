@@ -35987,7 +35987,7 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 814,
+    "height": 764,
     "parent": "T-ideas",
     "show_title": false,
     "title": "T-ideas-ideas",
@@ -35999,7 +35999,7 @@
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 814,
+    "height": 764,
     "parent": "T-ideas",
     "show_title": false,
     "title": "T-ideas-ideas",
@@ -36007,7 +36007,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "098a59ea-25e4-44bc-8d32-94a3964ee779",
+   "mural_id": "fcab02da-876f-4904-82ef-3ea3e4ddbc49",
    "tracked": [
     "title",
     "text",
@@ -36035,7 +36035,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311972962
+   "updatedOn": 1793312905305
   },
   "T-ideas-ideas.a1": {
    "board": {
@@ -36046,12 +36046,12 @@
     "parent": "T-ideas-ideas",
     "points": [
      [
-      656,
-      407
+      616,
+      382
      ],
      [
-      744,
-      407
+      704,
+      382
      ]
     ],
     "text": "",
@@ -36066,18 +36066,18 @@
     "parent": "T-ideas-ideas",
     "points": [
      [
-      656,
-      407
+      616,
+      382
      ],
      [
-      744,
-      407
+      704,
+      382
      ]
     ],
     "tip": "end",
     "title": "tpl:ideas_T-ideas#a1"
    },
-   "mural_id": "00ef13e7-2a40-4624-9cad-749a8a3b5999",
+   "mural_id": "109b9373-a48c-402a-a744-16708c9420e9",
    "tracked": [
     "title",
     "text",
@@ -36105,9 +36105,9 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311984156
+   "updatedOn": 1793312909109
   },
-  "T-ideas-ideas.a2": {
+  "T-ideas-ideas.b0": {
    "board": {
     "arrow_type": "straight",
     "border_style": "solid",
@@ -36116,17 +36116,17 @@
     "parent": "T-ideas-ideas",
     "points": [
      [
-      1736,
-      294
+      1696,
+      201
      ],
      [
-      1864,
-      265
+      1824,
+      158
      ]
     ],
     "text": "",
     "tip": "end",
-    "title": "tpl:ideas_T-ideas#a2"
+    "title": "tpl:ideas_T-ideas#b0"
    },
    "fields": {
     "arrow_type": "straight",
@@ -36136,18 +36136,18 @@
     "parent": "T-ideas-ideas",
     "points": [
      [
-      1736,
-      294
+      1696,
+      201
      ],
      [
-      1864,
-      265
+      1824,
+      158
      ]
     ],
     "tip": "end",
-    "title": "tpl:ideas_T-ideas#a2"
+    "title": "tpl:ideas_T-ideas#b0"
    },
-   "mural_id": "d35cf7e1-7ac5-4b77-854c-56d95267f63f",
+   "mural_id": "9f49b89e-bb6a-45f2-8422-e71c36ed9b1a",
    "tracked": [
     "title",
     "text",
@@ -36175,9 +36175,9 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311984246
+   "updatedOn": 1793312909236
   },
-  "T-ideas-ideas.a3": {
+  "T-ideas-ideas.b1": {
    "board": {
     "arrow_type": "straight",
     "border_style": "solid",
@@ -36186,17 +36186,17 @@
     "parent": "T-ideas-ideas",
     "points": [
      [
-      1736,
-      520
+      1696,
+      322
      ],
      [
-      1864,
-      692
+      1824,
+      354
      ]
     ],
     "text": "",
     "tip": "end",
-    "title": "tpl:ideas_T-ideas#a3"
+    "title": "tpl:ideas_T-ideas#b1"
    },
    "fields": {
     "arrow_type": "straight",
@@ -36206,18 +36206,18 @@
     "parent": "T-ideas-ideas",
     "points": [
      [
-      1736,
-      520
+      1696,
+      322
      ],
      [
-      1864,
-      692
+      1824,
+      354
      ]
     ],
     "tip": "end",
-    "title": "tpl:ideas_T-ideas#a3"
+    "title": "tpl:ideas_T-ideas#b1"
    },
-   "mural_id": "12fdfc30-8f0e-4026-9b4f-19ca12264683",
+   "mural_id": "98660e11-c78e-4daf-b0b1-ef2b14740004",
    "tracked": [
     "title",
     "text",
@@ -36245,7 +36245,147 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311984297
+   "updatedOn": 1793312909124
+  },
+  "T-ideas-ideas.b2": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 4,
+    "color": "#525252FF",
+    "parent": "T-ideas-ideas",
+    "points": [
+     [
+      1696,
+      442
+     ],
+     [
+      1824,
+      550
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:ideas_T-ideas#b2"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 4,
+    "color": "#525252FF",
+    "parent": "T-ideas-ideas",
+    "points": [
+     [
+      1696,
+      442
+     ],
+     [
+      1824,
+      550
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:ideas_T-ideas#b2"
+   },
+   "mural_id": "b3a34164-bddf-46ab-b20a-3abec883da07",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312909228
+  },
+  "T-ideas-ideas.b3": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "dashed",
+    "border_width": 4,
+    "color": "#525252FF",
+    "parent": "T-ideas-ideas",
+    "points": [
+     [
+      1696,
+      563
+     ],
+     [
+      1824,
+      716
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:ideas_T-ideas#b3"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "dashed",
+    "border_width": 4,
+    "color": "#525252FF",
+    "parent": "T-ideas-ideas",
+    "points": [
+     [
+      1696,
+      563
+     ],
+     [
+      1824,
+      716
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:ideas_T-ideas#b3"
+   },
+   "mural_id": "14b906f1-71d1-4fa9-9dbb-b641db79e07b",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312909304
   },
   "T-ideas-ideas.conversationbox": {
    "board": {
@@ -36253,29 +36393,29 @@
     "border_style": "solid",
     "border_width": 2,
     "color": "#F6F2FFFF",
-    "height": 348,
+    "height": 398,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
     "text": "",
     "title": "tpl:ideas_T-ideas#conversationbox",
-    "width": 640,
+    "width": 600,
     "x": 0,
-    "y": 233
+    "y": 183
    },
    "fields": {
     "border_color": "#6929C4FF",
     "border_width": 2,
     "color": "#F6F2FFFF",
-    "height": 348,
+    "height": 398,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
     "text": "",
     "title": "tpl:ideas_T-ideas#conversationbox",
-    "width": 640,
+    "width": 600,
     "x": 0,
-    "y": 233
+    "y": 183
    },
-   "mural_id": "d75021df-6d64-48ee-9e8a-ac256d0d1665",
+   "mural_id": "630ec363-9e8e-4d7f-a653-9eee1d3ff684",
    "tracked": [
     "title",
     "text",
@@ -36303,7 +36443,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793312906251
   },
   "T-ideas-ideas.conversationhead": {
    "board": {
@@ -36315,9 +36455,9 @@
     "parent": "T-ideas-ideas",
     "text": "A conversation",
     "title": "tpl:ideas_T-ideas#conversationhead",
-    "width": 560,
+    "width": 520,
     "x": 40,
-    "y": 369
+    "y": 319
    },
    "fields": {
     "font": "proxima-nova",
@@ -36326,11 +36466,11 @@
     "parent": "T-ideas-ideas",
     "text": "A conversation",
     "title": "tpl:ideas_T-ideas#conversationhead",
-    "width": 560,
+    "width": 520,
     "x": 40,
-    "y": 369
+    "y": 319
    },
-   "mural_id": "3a655246-3fe3-439e-9f0b-4aa264434c85",
+   "mural_id": "b1903a89-81bc-4d8d-b7c8-50c2c740fac5",
    "tracked": [
     "title",
     "text",
@@ -36358,7 +36498,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793312907229
   },
   "T-ideas-ideas.conversationicon": {
    "board": {
@@ -36367,7 +36507,7 @@
     "title": "tpl:ideas_T-ideas#conversationicon",
     "width": 72,
     "x": 40,
-    "y": 273
+    "y": 223
    },
    "fields": {
     "file": "2026-10-29-friday-talk-icons/row-chat.png@aae3a60c61c00f54",
@@ -36376,9 +36516,9 @@
     "title": "tpl:ideas_T-ideas#conversationicon",
     "width": 72,
     "x": 40,
-    "y": 273
+    "y": 223
    },
-   "mural_id": "817d68c3-b451-4f51-92fa-74c7743dbe97",
+   "mural_id": "a4039aea-4cc5-4c7b-9396-a4b42ee5d524",
    "tracked": [
     "title",
     "text",
@@ -36406,7 +36546,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311981648
+   "updatedOn": 1793312908190
   },
   "T-ideas-ideas.conversationtext": {
    "board": {
@@ -36416,24 +36556,24 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "You and the agent talk a question through.",
+    "text": "You and the agent work an idea out, until the session ends or its context fills.",
     "title": "tpl:ideas_T-ideas#conversationtext",
-    "width": 560,
+    "width": 520,
     "x": 40,
-    "y": 441
+    "y": 391
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "You and the agent talk a question through.",
+    "text": "You and the agent work an idea out, until the session ends or its context fills.",
     "title": "tpl:ideas_T-ideas#conversationtext",
-    "width": 560,
+    "width": 520,
     "x": 40,
-    "y": 441
+    "y": 391
    },
-   "mural_id": "e5bc96d4-c490-4aa1-9296-964536bbb094",
+   "mural_id": "ce88cf08-c55c-4c00-a918-cea3093409b9",
    "tracked": [
     "title",
     "text",
@@ -36461,363 +36601,92 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793312907229
   },
-  "T-ideas-ideas.donebox": {
-   "board": {
-    "border_color": "#6929C4FF",
-    "border_style": "solid",
-    "border_width": 2,
-    "color": "#F6F2FFFF",
-    "height": 530,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "",
-    "title": "tpl:ideas_T-ideas#donebox",
-    "width": 1064,
-    "x": 1880,
-    "y": 0
-   },
-   "fields": {
-    "border_color": "#6929C4FF",
-    "border_width": 2,
-    "color": "#F6F2FFFF",
-    "height": 530,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "",
-    "title": "tpl:ideas_T-ideas#donebox",
-    "width": 1064,
-    "x": 1880,
-    "y": 0
-   },
-   "mural_id": "a911b821-d477-4e42-a9d1-3a3e11829999",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793311978974
-  },
-  "T-ideas-ideas.donehead": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 48,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "Done",
-    "title": "tpl:ideas_T-ideas#donehead",
-    "width": 984,
-    "x": 1920,
-    "y": 32
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 48,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "Done",
-    "title": "tpl:ideas_T-ideas#donehead",
-    "width": 984,
-    "x": 1920,
-    "y": 32
-   },
-   "mural_id": "cd25f73d-b4cf-4a38-b76f-529d54c0875a",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793311980282
-  },
-  "T-ideas-ideas.donepic": {
-   "board": {
-    "height": 312,
-    "parent": "T-ideas-ideas",
-    "title": "tpl:ideas_T-ideas#donepic",
-    "width": 984,
-    "x": 1920,
-    "y": 178
-   },
-   "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-ideas-done.png@cb8519e6bdb48003",
-    "height": 312,
-    "parent": "T-ideas-ideas",
-    "title": "tpl:ideas_T-ideas#donepic",
-    "width": 984,
-    "x": 1920,
-    "y": 178
-   },
-   "mural_id": "9f1fefdb-d0bb-439a-a2ac-32122b8ac9a8",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793311981836
-  },
-  "T-ideas-ideas.donetext": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "It lists what it produced.",
-    "title": "tpl:ideas_T-ideas#donetext",
-    "width": 984,
-    "x": 1920,
-    "y": 104
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "It lists what it produced.",
-    "title": "tpl:ideas_T-ideas#donetext",
-    "width": 984,
-    "x": 1920,
-    "y": 104
-   },
-   "mural_id": "8ca7a362-703f-4d9f-b02c-c81483c901b5",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793311980282
-  },
-  "T-ideas-ideas.droppedbox": {
+  "T-ideas-ideas.dropbox": {
    "board": {
     "border_color": "#525252FF",
     "border_style": "solid",
     "border_width": 2,
     "color": "#F4F4F4FF",
-    "height": 244,
+    "height": 96,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
     "text": "",
-    "title": "tpl:ideas_T-ideas#droppedbox",
-    "width": 1064,
-    "x": 1880,
-    "y": 570
+    "title": "tpl:ideas_T-ideas#dropbox",
+    "width": 1104,
+    "x": 1840,
+    "y": 668
    },
    "fields": {
     "border_color": "#525252FF",
     "border_width": 2,
     "color": "#F4F4F4FF",
-    "height": 244,
+    "height": 96,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
     "text": "",
-    "title": "tpl:ideas_T-ideas#droppedbox",
-    "width": 1064,
+    "title": "tpl:ideas_T-ideas#dropbox",
+    "width": 1104,
+    "x": 1840,
+    "y": 668
+   },
+   "mural_id": "a5ea6fb7-0c00-4f12-8eb3-bb0addab5696",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312906251
+  },
+  "T-ideas-ideas.droptext": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "Or dropped, kept with why it did not pan out.",
+    "title": "tpl:ideas_T-ideas#droptext",
+    "width": 1024,
     "x": 1880,
-    "y": 570
-   },
-   "mural_id": "854686da-7eb7-47ad-a656-125e8e3cab2f",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793311978974
-  },
-  "T-ideas-ideas.droppedhead": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 48,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "Dropped",
-    "title": "tpl:ideas_T-ideas#droppedhead",
-    "width": 984,
-    "x": 1920,
-    "y": 602
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 48,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "Dropped",
-    "title": "tpl:ideas_T-ideas#droppedhead",
-    "width": 984,
-    "x": 1920,
-    "y": 602
-   },
-   "mural_id": "e6a52137-1f2e-4a86-a9e6-ef564070d2b4",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793311980282
-  },
-  "T-ideas-ideas.droppedtext": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-ideas-ideas",
-    "text": "Kept, with why it did not pan out, so nobody walks that path again unaware.",
-    "title": "tpl:ideas_T-ideas#droppedtext",
-    "width": 984,
-    "x": 1920,
-    "y": 674
+    "y": 691
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "Kept, with why it did not pan out, so nobody walks that path again unaware.",
-    "title": "tpl:ideas_T-ideas#droppedtext",
-    "width": 984,
-    "x": 1920,
-    "y": 674
+    "text": "Or dropped, kept with why it did not pan out.",
+    "title": "tpl:ideas_T-ideas#droptext",
+    "width": 1024,
+    "x": 1880,
+    "y": 691
    },
-   "mural_id": "9dcea8b7-b2ac-4854-8a93-49c56f3c61ce",
+   "mural_id": "3b06ced0-94a3-4d0d-abad-c1fd66c1fb12",
    "tracked": [
     "title",
     "text",
@@ -36845,7 +36714,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793312975445
   },
   "T-ideas-ideas.notebox": {
    "board": {
@@ -36853,29 +36722,29 @@
     "border_style": "solid",
     "border_width": 2,
     "color": "#F6F2FFFF",
-    "height": 564,
+    "height": 604,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
     "text": "",
     "title": "tpl:ideas_T-ideas#notebox",
     "width": 960,
-    "x": 760,
-    "y": 125
+    "x": 720,
+    "y": 80
    },
    "fields": {
     "border_color": "#6929C4FF",
     "border_width": 2,
     "color": "#F6F2FFFF",
-    "height": 564,
+    "height": 604,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
     "text": "",
     "title": "tpl:ideas_T-ideas#notebox",
     "width": 960,
-    "x": 760,
-    "y": 125
+    "x": 720,
+    "y": 80
    },
-   "mural_id": "346f3d69-4b35-4bce-a6bb-e989311ce089",
+   "mural_id": "4f9dbf46-1151-4f01-8c37-ff2895fd3ff7",
    "tracked": [
     "title",
     "text",
@@ -36903,7 +36772,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793312906251
   },
   "T-ideas-ideas.notehead": {
    "board": {
@@ -36916,8 +36785,8 @@
     "text": "A scratchpad note",
     "title": "tpl:ideas_T-ideas#notehead",
     "width": 880,
-    "x": 800,
-    "y": 261
+    "x": 760,
+    "y": 216
    },
    "fields": {
     "font": "proxima-nova",
@@ -36927,10 +36796,10 @@
     "text": "A scratchpad note",
     "title": "tpl:ideas_T-ideas#notehead",
     "width": 880,
-    "x": 800,
-    "y": 261
+    "x": 760,
+    "y": 216
    },
-   "mural_id": "598813a9-07b1-4adf-ab1b-d0ee319bb0bb",
+   "mural_id": "53836afd-1195-4462-b381-f5fb1ac3f763",
    "tracked": [
     "title",
     "text",
@@ -36958,7 +36827,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793312907229
   },
   "T-ideas-ideas.noteicon": {
    "board": {
@@ -36966,8 +36835,8 @@
     "parent": "T-ideas-ideas",
     "title": "tpl:ideas_T-ideas#noteicon",
     "width": 72,
-    "x": 800,
-    "y": 165
+    "x": 760,
+    "y": 120
    },
    "fields": {
     "file": "2026-10-29-friday-talk-icons/row-doc.png@3ed7865554bc6d6a",
@@ -36975,10 +36844,10 @@
     "parent": "T-ideas-ideas",
     "title": "tpl:ideas_T-ideas#noteicon",
     "width": 72,
-    "x": 800,
-    "y": 165
+    "x": 760,
+    "y": 120
    },
-   "mural_id": "28ca1f30-2b6c-4ee3-ab7f-8144ff18eefc",
+   "mural_id": "c0728285-8c91-43f6-a182-afe4b9bf8d2f",
    "tracked": [
     "title",
     "text",
@@ -37006,27 +36875,27 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311981740
+   "updatedOn": 1793312908152
   },
   "T-ideas-ideas.notepic": {
    "board": {
-    "height": 192,
+    "height": 232,
     "parent": "T-ideas-ideas",
     "title": "tpl:ideas_T-ideas#notepic",
     "width": 880,
-    "x": 800,
-    "y": 457
+    "x": 760,
+    "y": 412
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-ideas-note.png@8562d7a74532528a",
-    "height": 192,
+    "file": "2026-10-29-friday-talk-icons/term-ideas-note.png@dd1ebe7d90905f01",
+    "height": 232,
     "parent": "T-ideas-ideas",
     "title": "tpl:ideas_T-ideas#notepic",
     "width": 880,
-    "x": 800,
-    "y": 457
+    "x": 760,
+    "y": 412
    },
-   "mural_id": "a7fc36f0-47e9-416a-85f8-b19b7c6fac5a",
+   "mural_id": "429f25c5-ec6b-49a2-830c-d88b2aa2fdd7",
    "tracked": [
     "title",
     "text",
@@ -37054,7 +36923,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311981805
+   "updatedOn": 1793312907973
   },
   "T-ideas-ideas.notetext": {
    "board": {
@@ -37064,24 +36933,24 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "When a question needs longer: its forces, its options, what was tried.",
+    "text": "Keeps what you agreed. It waits without a deadline, and the next session reads it.",
     "title": "tpl:ideas_T-ideas#notetext",
     "width": 880,
-    "x": 800,
-    "y": 333
+    "x": 760,
+    "y": 288
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "When a question needs longer: its forces, its options, what was tried.",
+    "text": "Keeps what you agreed. It waits without a deadline, and the next session reads it.",
     "title": "tpl:ideas_T-ideas#notetext",
     "width": 880,
-    "x": 800,
-    "y": 333
+    "x": 760,
+    "y": 288
    },
-   "mural_id": "6eca9320-8997-4169-9d06-7f4210893b02",
+   "mural_id": "27e3ddc8-e688-455d-b1e2-23bad9c9896b",
    "tracked": [
     "title",
     "text",
@@ -37109,7 +36978,566 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793312907229
+  },
+  "T-ideas-ideas.p0box": {
+   "board": {
+    "border_color": "#6929C4FF",
+    "border_style": "solid",
+    "border_width": 2,
+    "color": "#6929C4FF",
+    "height": 172,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "",
+    "title": "tpl:ideas_T-ideas#p0box",
+    "width": 1104,
+    "x": 1840,
+    "y": 72
+   },
+   "fields": {
+    "border_color": "#6929C4FF",
+    "border_width": 2,
+    "color": "#6929C4FF",
+    "height": 172,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "",
+    "title": "tpl:ideas_T-ideas#p0box",
+    "width": 1104,
+    "x": 1840,
+    "y": 72
+   },
+   "mural_id": "6430de2a-df68-4176-8999-02dfe5e80f0e",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312906251
+  },
+  "T-ideas-ideas.p0head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-ideas-ideas",
+    "text": "Decision records",
+    "title": "tpl:ideas_T-ideas#p0head",
+    "width": 1024,
+    "x": 1880,
+    "y": 96
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-ideas-ideas",
+    "text": "Decision records",
+    "title": "tpl:ideas_T-ideas#p0head",
+    "width": 1024,
+    "x": 1880,
+    "y": 96
+   },
+   "mural_id": "9a5159e9-4846-449c-ab02-f58ed8e5dd69",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312907229
+  },
+  "T-ideas-ideas.p0text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-ideas-ideas",
+    "text": "COR-041 and ADR-040, from a note of 3 July",
+    "title": "tpl:ideas_T-ideas#p0text",
+    "width": 1024,
+    "x": 1880,
+    "y": 172
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-ideas-ideas",
+    "text": "COR-041 and ADR-040, from a note of 3 July",
+    "title": "tpl:ideas_T-ideas#p0text",
+    "width": 1024,
+    "x": 1880,
+    "y": 172
+   },
+   "mural_id": "1e1a131c-844c-417e-9ed7-71c68390dbcc",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312907229
+  },
+  "T-ideas-ideas.p1box": {
+   "board": {
+    "border_color": "#6929C4FF",
+    "border_style": "solid",
+    "border_width": 2,
+    "color": "#F6F2FFFF",
+    "height": 172,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "",
+    "title": "tpl:ideas_T-ideas#p1box",
+    "width": 1104,
+    "x": 1840,
+    "y": 268
+   },
+   "fields": {
+    "border_color": "#6929C4FF",
+    "border_width": 2,
+    "color": "#F6F2FFFF",
+    "height": 172,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "",
+    "title": "tpl:ideas_T-ideas#p1box",
+    "width": 1104,
+    "x": 1840,
+    "y": 268
+   },
+   "mural_id": "1bf8be7e-1e0b-4618-b1e5-69d7e46d9bc8",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312906251
+  },
+  "T-ideas-ideas.p1head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "Issues",
+    "title": "tpl:ideas_T-ideas#p1head",
+    "width": 1024,
+    "x": 1880,
+    "y": 292
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "Issues",
+    "title": "tpl:ideas_T-ideas#p1head",
+    "width": 1024,
+    "x": 1880,
+    "y": 292
+   },
+   "mural_id": "59fb3b2c-9eb4-4e2d-8917-54294489786a",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312907229
+  },
+  "T-ideas-ideas.p1text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "14 issues: one big feature, planned",
+    "title": "tpl:ideas_T-ideas#p1text",
+    "width": 1024,
+    "x": 1880,
+    "y": 368
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "14 issues: one big feature, planned",
+    "title": "tpl:ideas_T-ideas#p1text",
+    "width": 1024,
+    "x": 1880,
+    "y": 368
+   },
+   "mural_id": "e1f3a424-0868-4841-8aaa-d77e27e20154",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312907229
+  },
+  "T-ideas-ideas.p2box": {
+   "board": {
+    "border_color": "#6929C4FF",
+    "border_style": "solid",
+    "border_width": 2,
+    "color": "#F6F2FFFF",
+    "height": 172,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "",
+    "title": "tpl:ideas_T-ideas#p2box",
+    "width": 1104,
+    "x": 1840,
+    "y": 464
+   },
+   "fields": {
+    "border_color": "#6929C4FF",
+    "border_width": 2,
+    "color": "#F6F2FFFF",
+    "height": 172,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "",
+    "title": "tpl:ideas_T-ideas#p2box",
+    "width": 1104,
+    "x": 1840,
+    "y": 464
+   },
+   "mural_id": "deb97df6-c083-46a0-a072-5d01bcc8ba1f",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312906251
+  },
+  "T-ideas-ideas.p2head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "Docs",
+    "title": "tpl:ideas_T-ideas#p2head",
+    "width": 1024,
+    "x": 1880,
+    "y": 488
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "Docs",
+    "title": "tpl:ideas_T-ideas#p2head",
+    "width": 1024,
+    "x": 1880,
+    "y": 488
+   },
+   "mural_id": "4acde9bc-a898-45cd-a68c-d356168c1fc5",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312907229
+  },
+  "T-ideas-ideas.p2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "10 use cases and 2 journeys, from one note",
+    "title": "tpl:ideas_T-ideas#p2text",
+    "width": 1024,
+    "x": 1880,
+    "y": 564
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "10 use cases and 2 journeys, from one note",
+    "title": "tpl:ideas_T-ideas#p2text",
+    "width": 1024,
+    "x": 1880,
+    "y": 564
+   },
+   "mural_id": "b9ed471d-14a7-43ef-bc5f-1e5114e7090b",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312907229
+  },
+  "T-ideas-ideas.rhead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "When it is done, it becomes",
+    "title": "tpl:ideas_T-ideas#rhead",
+    "width": 1104,
+    "x": 1840,
+    "y": 0
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-ideas-ideas",
+    "text": "When it is done, it becomes",
+    "title": "tpl:ideas_T-ideas#rhead",
+    "width": 1104,
+    "x": 1840,
+    "y": 0
+   },
+   "mural_id": "57c87dc9-84f7-4616-9a9e-c6865ac515aa",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793312907229
   },
   "T-ideas-limit": {
    "board": {
@@ -37124,7 +37552,7 @@
     "title": "T-ideas-limit",
     "width": 2944,
     "x": 128,
-    "y": 1438
+    "y": 1388
    },
    "fields": {
     "border_color": "#FFFFFF00",
@@ -37136,9 +37564,9 @@
     "title": "T-ideas-limit",
     "width": 2944,
     "x": 128,
-    "y": 1438
+    "y": 1388
    },
-   "mural_id": "8179777a-725c-4b90-9510-52bba2387868",
+   "mural_id": "17de317b-e3f8-4bec-83c4-c5519f180375",
    "tracked": [
     "title",
     "text",
@@ -37166,7 +37594,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311973013
+   "updatedOn": 1793312905403
   },
   "T-ideas-limit.bar": {
    "board": {
@@ -37196,7 +37624,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "cfc4d56d-959f-47f8-ae35-20a7db683ae0",
+   "mural_id": "b5befef5-91e5-4da7-9f50-2023396d303a",
    "tracked": [
     "title",
     "text",
@@ -37224,7 +37652,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793312906251
   },
   "T-ideas-limit.bg": {
    "board": {
@@ -37254,7 +37682,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "607b7623-4962-4f07-a238-2378aad170bb",
+   "mural_id": "eaff7d8d-de07-4244-b14b-8e78c493a49d",
    "tracked": [
     "title",
     "text",
@@ -37282,7 +37710,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793312906251
   },
   "T-ideas-limit.text": {
    "board": {
@@ -37292,7 +37720,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-ideas-limit",
-    "text": "Limit: A note retires only when someone retires it: 14 of the 33 active have been open since May or June.",
+    "text": "Limit: Nothing writes the note for you: what stays only in the conversation is lost with it.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -37303,13 +37731,13 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-ideas-limit",
-    "text": "Limit: A note retires only when someone retires it: 14 of the 33 active have been open since May or June.",
+    "text": "Limit: Nothing writes the note for you: what stays only in the conversation is lost with it.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
     "y": 28
    },
-   "mural_id": "40f63ccb-938a-44c9-ae00-f987675a14b9",
+   "mural_id": "08ba8603-1f2b-484a-a6f5-edcebf47c21d",
    "tracked": [
     "title",
     "text",
@@ -37337,7 +37765,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793312907229
   },
   "T-ideas.bg": {
    "board": {
@@ -37404,7 +37832,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-ideas",
-    "text": "In conversation, and in a scratchpad note when a question needs longer. The note ends by producing records, or by being dropped.",
+    "text": "In conversation. A scratchpad note keeps what you agreed past the session, until it becomes records, issues or docs.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -37415,7 +37843,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-ideas",
-    "text": "In conversation, and in a scratchpad note when a question needs longer. The note ends by producing records, or by being dropped.",
+    "text": "In conversation. A scratchpad note keeps what you agreed past the session, until it becomes records, issues or docs.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -37449,7 +37877,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793313031405
   },
   "T-ideas.num": {
    "board": {
@@ -37515,7 +37943,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-ideas",
-    "text": "In project-kit: 28 notes done, each listing what it produced",
+    "text": "In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -37526,7 +37954,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-ideas",
-    "text": "In project-kit: 28 notes done, each listing what it produced",
+    "text": "In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -37560,7 +37988,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793312909367
   },
   "T-ideas.title": {
    "board": {

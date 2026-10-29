@@ -1,3 +1,4 @@
+# mural-boards map: pull before editing, push to apply (see the mural-boards skill).
 schema: mural-boards/1
 mural: ibmresearchdesign6459.1793230020758
 url: https://app.mural.co/t/ibmresearchdesign6459/m/ibmresearchdesign6459/1793230020758/311a5a3a4aeef1ac127c90b21b7e6ad6292360f8
@@ -87,7 +88,8 @@ templates:
         height: 48
         style: '@style.caption'
         align: right
-    note: 'Carbon 16:9 slide: an invisible area with a background shape; title, lead and footer on the 2x grid. Designed in master L01.'
+    note: 'Carbon 16:9 slide: an invisible area with a background shape; title, lead and footer on the
+      2x grid. Designed in master L01.'
   tile:
     master: L02
     root:
@@ -150,7 +152,8 @@ templates:
         width: =@grid.span.3 - 2 * @space.05
         height: 256
         style: '@style.body'
-    note: 'Carbon tile: layer fill, no border or shadow, 32 padding; an identifier tag, a space tag (user or tech), heading and body. Designed in master L02.'
+    note: 'Carbon tile: layer fill, no border or shadow, 32 padding; an identifier tag, a space tag (user
+      or tech), heading and body. Designed in master L02.'
   listhead:
     master: L03
     root:
@@ -244,7 +247,8 @@ templates:
         color: '@border_subtle'
         border_color: '@border_subtle'
         border_width: 1
-    note: 'Carbon structured list row: identifier tag and key in the first four columns, the value in the other twelve. `key_ink` and `value_ink` (defaults text_primary, text_secondary) mute a row with
+    note: 'Carbon structured list row: identifier tag and key in the first four columns, the value in
+      the other twelve. `key_ink` and `value_ink` (defaults text_primary, text_secondary) mute a row with
       text_helper.'
     defaults:
       key_ink: text_primary
@@ -335,7 +339,8 @@ templates:
         color: '@border_subtle'
         border_color: '@border_subtle'
         border_width: 1
-    note: 'A comparison column: space tag, heading, and two structured-list rows. Two side by side fill the grid.'
+    note: 'A comparison column: space tag, heading, and two structured-list rows. Two side by side fill
+      the grid.'
   callout:
     master: L06
     root:
@@ -386,7 +391,8 @@ templates:
         width: =@grid.span.16 - 80
         height: 56
         style: '@style.body'
-    note: 'Carbon inline notification, low contrast, info: tinted background with a thin bar on its left. One per slide at most.'
+    note: 'Carbon inline notification, low contrast, info: tinted background with a thin bar on its left.
+      One per slide at most.'
   node:
     master: L07
     root:
@@ -429,7 +435,8 @@ templates:
         width: =@grid.span.3 - 112
         height: 56
         style: '@style.key'
-    note: 'IBM technical-diagram node: white fill, 2-wide outline and a marker in its space''s colour (user, tech or code).'
+    note: 'IBM technical-diagram node: white fill, 2-wide outline and a marker in its space''s colour
+      (user, tech or code).'
   glyph:
     master: L08
     root:
@@ -459,7 +466,8 @@ templates:
       title: '{id}'
       show_title: false
       width: =@grid.span.5
-      height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption * 1.5
+      height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption
+        * 1.5
       color: '#FFFFFF00'
       border_color: '#FFFFFF00'
       border_width: 1
@@ -471,7 +479,8 @@ templates:
         x: 0
         y: 0
         width: =@grid.span.5
-        height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption * 1.5
+        height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption
+          * 1.5
         color: '@layer'
         border_color: '@layer'
         border_width: 1
@@ -500,7 +509,8 @@ templates:
         height: =@size.caption * 1.5
         style: '@style.caption'
         ink: '@text_helper'
-    note: 'Carbon stat tile: layer fill, no border or shadow, 32 padding; a big number, what it counts, and its source. Designed in master L09.'
+    note: 'Carbon stat tile: layer fill, no border or shadow, 32 padding; a big number, what it counts,
+      and its source. Designed in master L09.'
   card:
     master: L10
     root:
@@ -508,7 +518,8 @@ templates:
       title: '{id}'
       show_title: false
       width: =@grid.span.5
-      height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25 + @space.05
+      height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25
+        + @space.05
       color: '#FFFFFF00'
       border_color: '#FFFFFF00'
       border_width: 1
@@ -520,7 +531,8 @@ templates:
         x: 0
         y: 0
         width: =@grid.span.5
-        height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25 + @space.05
+        height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25
+          + @space.05
         color: '@layer'
         border_color: '@layer'
         border_width: 1
@@ -565,8 +577,9 @@ templates:
         height: =5 * @size.body * 1.25
         style: '@style.body'
         ink: '@{body_ink}'
-    note: 'Carbon tile, five columns wide: layer fill, 32 padding; an identifier tag, a space tag, a heading of up to two lines and up to five lines of body. Three fill a row. `heading_ink` / `body_ink`
-      (defaults text_primary, text_secondary) mute it with text_helper. Designed in master L10.'
+    note: 'Carbon tile, five columns wide: layer fill, 32 padding; an identifier tag, a space tag, a heading
+      of up to two lines and up to five lines of body. Three fill a row. `heading_ink` / `body_ink` (defaults
+      text_primary, text_secondary) mute it with text_helper. Designed in master L10.'
     defaults:
       heading_ink: text_primary
       body_ink: text_secondary
@@ -613,13 +626,15 @@ templates:
         width: =@grid.span.4 - 2 * @space.05
         height: =3 * @size.key * 1.25
         style: '@style.key'
-    note: 'A statement in a chain or a process: layer fill, 32 padding, a small id or role tag and one sentence of up to three lines. Joined by glyph arrows. Designed in master L11. A `fill` parameter (default
-      layer) highlights a conclusion with info_bg.'
+    note: 'A statement in a chain or a process: layer fill, 32 padding, a small id or role tag and one
+      sentence of up to three lines. Joined by glyph arrows. Designed in master L11. A `fill` parameter
+      (default layer) highlights a conclusion with info_bg.'
     defaults:
       fill: layer
   role_badge:
     master: L12
-    note: 'Diagram role badge (from sketch E): the role''s Carbon pictogram and its name in the role colour, a size step above step text. Parameters: role (code, checks, agents, people: icon file 2026-10-29-friday-talk-icons/<role>.png
+    note: 'Diagram role badge (from sketch E): the role''s Carbon pictogram and its name in the role colour,
+      a size step above step text. Parameters: role (code, checks, agents, people: icon file 2026-10-29-friday-talk-icons/<role>.png
       and colour @role_<role>) and name. Designed in master L12.'
     root:
       type: area
@@ -651,7 +666,8 @@ templates:
         fit_pad: 16
   role_node:
     master: L13
-    note: 'Diagram step node (from sketch E): white, outlined in the role colour, a role-colour dot and one line of step text; the box is sized around its text. Parameters: role, text. Designed in master
+    note: 'Diagram step node (from sketch E): white, outlined in the role colour, a role-colour dot and
+      one line of step text; the box is sized around its text. Parameters: role, text. Designed in master
       L13.'
     root:
       type: area
@@ -700,8 +716,10 @@ templates:
         fit_pad: 0
   cycle_ring:
     master: L14
-    note: 'Diagram cycle ring (sketch E): four steps on one true circle, clockwise from the top, each a role node with its role badge outside the ring, short arcs marking the direction, and what the loop
-      keeps in the centre. Slots n1-n4 use role_node, b1-b4 use role_badge (roles code, checks, agents, people). Parameters: step1-step4, centre. Designed in master L14.'
+    note: 'Diagram cycle ring (sketch E): four steps on one true circle, clockwise from the top, each
+      a role node with its role badge outside the ring, short arcs marking the direction, and what the
+      loop keeps in the centre. Slots n1-n4 use role_node, b1-b4 use role_badge (roles code, checks, agents,
+      people). Parameters: step1-step4, centre. Designed in master L14.'
     root:
       type: area
       title: '{id}'
@@ -848,7 +866,8 @@ templates:
         border_style: solid
   section:
     master: L15
-    note: 'Section slide: opens each part of the deck. Carbon expressive: the inverse surface, an accent bar, the part number, the part''s title at display size and one line on what the part establishes.
+    note: 'Section slide: opens each part of the deck. Carbon expressive: the inverse surface, an accent
+      bar, the part number, the part''s title at display size and one line on what the part establishes.
       No footer or number. Designed in master L15.'
     root:
       type: area
@@ -914,7 +933,8 @@ templates:
         ink: '@text_inverse'
   stage:
     master: L16
-    note: 'Diagram stage: a step of a process with a short head and a line or two of what happens; white, outlined in its role''s colour, a role dot. Sized to its text by script (overrides of width and
+    note: 'Diagram stage: a step of a process with a short head and a line or two of what happens; white,
+      outlined in its role''s colour, a role dot. Sized to its text by script (overrides of width and
       height); joined by links. Designed in master L16.'
     root:
       type: area
@@ -969,8 +989,9 @@ templates:
         height: 96
   link:
     master: L17
-    note: 'Diagram link: one of Mural''s own arrows from a node to the next, in an invisible frame the size of the gap between them. Parameters: the arrow''s end points inside the frame, and its tone (a
-      colour role). Designed in master L17.'
+    note: 'Diagram link: one of Mural''s own arrows from a node to the next, in an invisible frame the
+      size of the gap between them. Parameters: the arrow''s end points inside the frame, and its tone
+      (a colour role). Designed in master L17.'
     root:
       type: area
       title: '{id}'
@@ -1001,8 +1022,9 @@ templates:
       tone: text_secondary
   branch:
     master: L18
-    note: 'Diagram branch: an outcome of a decision, a right-angled arrow in the outcome''s colour with its label (OK in text_success, NOK in text_error). Parameters: four points, the label and where it
-      sits, the tone. Designed in master L18.'
+    note: 'Diagram branch: an outcome of a decision, a right-angled arrow in the outcome''s colour with
+      its label (OK in text_success, NOK in text_error). Parameters: four points, the label and where
+      it sits, the tone. Designed in master L18.'
     root:
       type: area
       title: '{id}'
@@ -1052,7 +1074,8 @@ templates:
       tone: text_error
   label:
     master: L19
-    note: 'A label over a diagram or a column: one line in a theme text style. Parameters: text, style (default key), ink. Designed in master L19.'
+    note: 'A label over a diagram or a column: one line in a theme text style. Parameters: text, style
+      (default key), ink. Designed in master L19.'
     root:
       type: area
       title: '{id}'
@@ -1077,7 +1100,8 @@ templates:
       ink: text_primary
   notice:
     master: L20
-    note: 'Carbon inline notification with one sentence: the slide''s takeaway, low contrast info (a callout without a body). Designed in master L20.'
+    note: 'Carbon inline notification with one sentence: the slide''s takeaway, low contrast info (a callout
+      without a body). Designed in master L20.'
     root:
       type: area
       title: '{id}'
@@ -1122,8 +1146,9 @@ templates:
         height: 56
   reader:
     master: L21
-    note: 'A reader of the docs: a rule in the reader''s colour, their role badge, the first question the docs must answer, and what they get. Five columns wide; three fill a row. Heights follow the texts
-      (overrides). Designed in master L21.'
+    note: 'A reader of the docs: a rule in the reader''s colour, their role badge, the first question
+      the docs must answer, and what they get. Five columns wide; three fill a row. Heights follow the
+      texts (overrides). Designed in master L21.'
     root:
       type: area
       title: '{id}'
@@ -1180,7 +1205,8 @@ templates:
         height: 96
   code:
     master: L22
-    note: 'A code snippet (Carbon): layer fill, 32 padding, the text line by line. Mural has no monospace font, so it uses the body font. Height follows the lines (overrides). Designed in master L22.'
+    note: 'A code snippet (Carbon): layer fill, 32 padding, the text line by line. Mural has no monospace
+      font, so it uses the body font. Height follows the lines (overrides). Designed in master L22.'
     root:
       type: area
       title: '{id}'
@@ -1214,7 +1240,8 @@ templates:
         ink: '@text_primary'
   timeline:
     master: L23
-    note: 'A timeline of four milestones: one of Mural''s arrows as the time axis, a marker per milestone, when it happens above the axis, its name and what happens below. Designed in master L23.'
+    note: 'A timeline of four milestones: one of Mural''s arrows as the time axis, a marker per milestone,
+      when it happens above the axis, its name and what happens below. Designed in master L23.'
     root:
       type: area
       title: '{id}'
@@ -1387,7 +1414,8 @@ templates:
         height: 144
   actor:
     master: L24
-    note: 'Diagram actor (sketch B with pictograms): a circle tinted in its role''s colour with the role''s pictogram, and its name centred below in the role colour. Parameters: role (colour @role_<role>),
+    note: 'Diagram actor (sketch B with pictograms): a circle tinted in its role''s colour with the role''s
+      pictogram, and its name centred below in the role colour. Parameters: role (colour @role_<role>),
       icon (2026-10-29-friday-talk-icons/<icon>.png), name. Designed in master L24.'
     root:
       type: area
@@ -1430,8 +1458,10 @@ templates:
         height: 56
   artefact:
     master: L25
-    note: 'Diagram artefact: what a step reads or produces (a report, the repo, the rules, the docs debt) or what starts it (a push, a schedule): a layer tile with its pictogram and a one-line label, sized
-      to the label by script. Parameters: icon (2026-10-29-friday-talk-icons/<icon>.png), text, ink (default text_primary; text_helper mutes it). Designed in master L25.'
+    note: 'Diagram artefact: what a step reads or produces (a report, the repo, the rules, the docs debt)
+      or what starts it (a push, a schedule): a layer tile with its pictogram and a one-line label, sized
+      to the label by script. Parameters: icon (2026-10-29-friday-talk-icons/<icon>.png), text, ink (default
+      text_primary; text_helper mutes it). Designed in master L25.'
     root:
       type: area
       title: '{id}'
@@ -1474,8 +1504,10 @@ templates:
       ink: text_primary
   cover:
     master: L26
-    note: 'Cover: the deck''s first slide. Carbon expressive on the light surface: the project logo and name, an accent bar, the presentation title at display size, the author, and the version with its
-      date. No footer or number. Parameters: title, project, author, version, date; a new version is a parameter change. Designed in master L26.'
+    note: 'Cover: the deck''s first slide. Carbon expressive on the light surface: the project logo and
+      name, an accent bar, the presentation title at display size, the author, and the version with its
+      date. No footer or number. Parameters: title, project, author, version, date; a new version is a
+      parameter change. Designed in master L26.'
     root:
       type: area
       title: '{id}'
@@ -1556,7 +1588,8 @@ templates:
         width: =@grid.span.8
         height: 48
   pstage:
-    note: Diagram stage with a pictogram (2026-10-29-friday-talk-icons/<icon>.png) in place of the role dot; made by the slide generator from the stage template.
+    note: Diagram stage with a pictogram (2026-10-29-friday-talk-icons/<icon>.png) in place of the role
+      dot; made by the slide generator from the stage template.
     root:
       type: area
       title: '{id}'
@@ -1604,7 +1637,8 @@ templates:
         width: 576
         height: 96
   tree_bar:
-    note: A connector line of a tree, drawn as a thin bar so every line has one thickness; made by the slide generator.
+    note: A connector line of a tree, drawn as a thin bar so every line has one thickness; made by the
+      slide generator.
     root:
       type: area
       title: '{id}'
@@ -1630,7 +1664,8 @@ templates:
     defaults:
       tone: border_strong
   tree_tag:
-    note: 'A tag in a tree: a filled box with one line of text in a role''s colour; made by the slide generator.'
+    note: 'A tag in a tree: a filled box with one line of text in a role''s colour; made by the slide
+      generator.'
     root:
       type: area
       title: '{id}'
@@ -1684,7 +1719,8 @@ templates:
         width: 600
         height: 58
   terminal:
-    note: 'The deck''s terminal: a dark panel holding commands and their output, syntax coloured; made by the slide generator.'
+    note: 'The deck''s terminal: a dark panel holding commands and their output, syntax coloured; made
+      by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1717,7 +1753,8 @@ templates:
         width: 1360
         height: 328
   highlight:
-    note: 'An important note: a light yellow box with a yellow bar on its left, a pictogram, a question and a line of text; made by the slide generator.'
+    note: 'An important note: a light yellow box with a yellow bar on its left, a pictogram, a question
+      and a line of text; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1778,7 +1815,8 @@ templates:
         width: 1260
         height: 100
   term_image:
-    note: 'The deck''s terminal, rendered as an image (Mural has no monospace font): the file is term-<name>.png beside the map; made by the slide generator.'
+    note: 'The deck''s terminal, rendered as an image (Mural has no monospace font): the file is term-<name>.png
+      beside the map; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1797,7 +1835,8 @@ templates:
         width: 1440
         height: 400
   kind:
-    note: 'A kind of a thing as a column in its own tone: a filled tag (its prefix), a head, what it decides, a real file of it, and why it lives where it does; made by the slide generator.'
+    note: 'A kind of a thing as a column in its own tone: a filled tag (its prefix), a head, what it decides,
+      a real file of it, and why it lives where it does; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1878,7 +1917,8 @@ templates:
         width: 816
         height: 150
   kind_group:
-    note: A group's heading over the columns it holds, saying what they share; its path and bar are separate instances; made by the slide generator.
+    note: A group's heading over the columns it holds, saying what they share; its path and bar are separate
+      instances; made by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -1899,7 +1939,8 @@ templates:
         width: 1856
         height: 56
   step_card:
-    note: 'A step of a story with its picture inside: the stage''s box, dot, head and text, and a terminal image below them; made by the slide generator from the stage template.'
+    note: 'A step of a story with its picture inside: the stage''s box, dot, head and text, and a terminal
+      image below them; made by the slide generator from the stage template.'
     root:
       type: area
       title: '{id}'
@@ -1959,7 +2000,8 @@ templates:
         width: 576
         height: 300
   ties_T-checked:
-    note: 'Documents'' ties, drawn for one slide by the slide generator: the files they describe, the records they carry out, a line per tie.'
+    note: 'Documents'' ties, drawn for one slide by the slide generator: the files they describe, the
+      records they carry out, a line per tie.'
     root:
       type: area
       title: '{id}'
@@ -2497,7 +2539,8 @@ templates:
         border_width: 4
         border_style: solid
   ideas_T-ideas:
-    note: 'Where ideas start, drawn for one slide by the slide generator: a conversation, a scratchpad note, and its two ends.'
+    note: 'Where ideas start, drawn for one slide by the slide generator: a conversation, the note that
+      keeps it, and what the note becomes.'
     root:
       type: area
       title: '{id}'
@@ -2506,16 +2549,16 @@ templates:
       border_color: '#FFFFFF00'
       border_width: 1
       width: 2944
-      height: 814
+      height: 764
     parts:
       conversationbox:
         type: shape
         shape: rectangle
         text: ''
         x: 0
-        y: 233
-        width: 640
-        height: 348
+        y: 183
+        width: 600
+        height: 398
         color: '@role_code_bg'
         border_color: '@role_code'
         border_width: 2
@@ -2524,7 +2567,7 @@ templates:
         type: image
         file: 2026-10-29-friday-talk-icons/row-chat.png
         x: 40
-        y: 273
+        y: 223
         width: 72
         height: 72
       conversationhead:
@@ -2533,26 +2576,26 @@ templates:
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 40
-        y: 369
-        width: 560
+        y: 319
+        width: 520
         height: 64
       conversationtext:
         type: text
-        text: You and the agent talk a question through.
+        text: You and the agent work an idea out, until the session ends or its context fills.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
-        y: 441
-        width: 560
-        height: 100
+        y: 391
+        width: 520
+        height: 150
       notebox:
         type: shape
         shape: rectangle
         text: ''
-        x: 760
-        y: 125
+        x: 720
+        y: 80
         width: 960
-        height: 564
+        height: 604
         color: '@role_code_bg'
         border_color: '@role_code'
         border_width: 2
@@ -2560,8 +2603,8 @@ templates:
       noteicon:
         type: image
         file: 2026-10-29-friday-talk-icons/row-doc.png
-        x: 800
-        y: 165
+        x: 760
+        y: 120
         width: 72
         height: 72
       notehead:
@@ -2569,129 +2612,206 @@ templates:
         text: A scratchpad note
         style: '@style.tile_heading'
         ink: '@text_primary'
-        x: 800
-        y: 261
+        x: 760
+        y: 216
         width: 880
         height: 64
       notetext:
         type: text
-        text: 'When a question needs longer: its forces, its options, what was tried.'
+        text: Keeps what you agreed. It waits without a deadline, and the next session reads it.
         style: '@style.body'
         ink: '@text_primary'
-        x: 800
-        y: 333
+        x: 760
+        y: 288
         width: 880
         height: 100
       notepic:
         type: image
         file: 2026-10-29-friday-talk-icons/term-ideas-note.png
-        x: 800
-        y: 457
+        x: 760
+        y: 412
         width: 880
-        height: 192
-      donebox:
+        height: 232
+      rhead:
+        type: text
+        text: When it is done, it becomes
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1840
+        y: 0
+        width: 1104
+        height: 56
+      p0box:
         type: shape
         shape: rectangle
         text: ''
+        x: 1840
+        y: 72
+        width: 1104
+        height: 172
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      p0head:
+        type: text
+        text: Decision records
+        style: '@style.tile_heading'
+        ink: '@text_on_color'
         x: 1880
-        y: 0
-        width: 1064
-        height: 530
+        y: 96
+        width: 1024
+        height: 64
+      p0text:
+        type: text
+        text: COR-041 and ADR-040, from a note of 3 July
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 1880
+        y: 172
+        width: 1024
+        height: 50
+      p1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1840
+        y: 268
+        width: 1104
+        height: 172
         color: '@role_code_bg'
         border_color: '@role_code'
         border_width: 2
         ink: '@text_primary'
-      donehead:
+      p1head:
         type: text
-        text: Done
+        text: Issues
         style: '@style.tile_heading'
         ink: '@text_primary'
-        x: 1920
-        y: 32
-        width: 984
+        x: 1880
+        y: 292
+        width: 1024
         height: 64
-      donetext:
+      p1text:
         type: text
-        text: It lists what it produced.
+        text: '14 issues: one big feature, planned'
         style: '@style.body'
         ink: '@text_primary'
-        x: 1920
-        y: 104
-        width: 984
+        x: 1880
+        y: 368
+        width: 1024
         height: 50
-      donepic:
-        type: image
-        file: 2026-10-29-friday-talk-icons/term-ideas-done.png
-        x: 1920
-        y: 178
-        width: 984
-        height: 312
-      droppedbox:
+      p2box:
         type: shape
         shape: rectangle
         text: ''
+        x: 1840
+        y: 464
+        width: 1104
+        height: 172
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      p2head:
+        type: text
+        text: Docs
+        style: '@style.tile_heading'
+        ink: '@text_primary'
         x: 1880
-        y: 570
-        width: 1064
-        height: 244
+        y: 488
+        width: 1024
+        height: 64
+      p2text:
+        type: text
+        text: 10 use cases and 2 journeys, from one note
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1880
+        y: 564
+        width: 1024
+        height: 50
+      dropbox:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1840
+        y: 668
+        width: 1104
+        height: 96
         color: '@role_neutral_bg'
         border_color: '@role_neutral'
         border_width: 2
         ink: '@text_primary'
-      droppedhead:
+      droptext:
         type: text
-        text: Dropped
-        style: '@style.tile_heading'
-        ink: '@text_primary'
-        x: 1920
-        y: 602
-        width: 984
-        height: 64
-      droppedtext:
-        type: text
-        text: Kept, with why it did not pan out, so nobody walks that path again unaware.
+        text: Or dropped, kept with why it did not pan out.
         style: '@style.body'
         ink: '@text_primary'
-        x: 1920
-        y: 674
-        width: 984
-        height: 100
+        x: 1880
+        y: 691
+        width: 1024
+        height: 50
       a1:
         type: arrow
         points:
-        - - 656
-          - 407
-        - - 744
-          - 407
+        - - 616
+          - 382
+        - - 704
+          - 382
         arrow_type: straight
         tip: end
         color: '@text_secondary'
         border_width: 4
         border_style: solid
-      a2:
+      b0:
         type: arrow
         points:
-        - - 1736
-          - 294
-        - - 1864
-          - 265
+        - - 1696
+          - 201
+        - - 1824
+          - 158
         arrow_type: straight
         tip: end
         color: '@text_secondary'
         border_width: 4
         border_style: solid
-      a3:
+      b1:
         type: arrow
         points:
-        - - 1736
-          - 520
-        - - 1864
-          - 692
+        - - 1696
+          - 322
+        - - 1824
+          - 354
         arrow_type: straight
         tip: end
         color: '@text_secondary'
         border_width: 4
         border_style: solid
+      b2:
+        type: arrow
+        points:
+        - - 1696
+          - 442
+        - - 1824
+          - 550
+        arrow_type: straight
+        tip: end
+        color: '@text_secondary'
+        border_width: 4
+        border_style: solid
+      b3:
+        type: arrow
+        points:
+        - - 1696
+          - 563
+        - - 1824
+          - 716
+        arrow_type: straight
+        tip: end
+        color: '@text_secondary'
+        border_width: 4
+        border_style: dashed
 instances:
   L01:
     template: slide
@@ -3833,7 +3953,8 @@ instances:
     parent: T-fits
     role: neutral
     head: Checked
-    text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when you accept a new one.
+    text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when
+      you accept a new one.
     x: 2352
     y: 1068
     override:
@@ -3881,7 +4002,8 @@ instances:
   T-install:
     template: slide
     title: Install pkit
-    lead: Install the tool once, then add pkit to each project with one command. Every file it adds is either pkit's or yours.
+    lead: Install the tool once, then add pkit to each project with one command. Every file it adds is
+      either pkit's or yours.
     rests: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
     n: 3
     total: 17
@@ -3918,7 +4040,8 @@ instances:
     y: 1016
     icon: step-lock-important
     head: Don't want pkit in your repository?
-    body: 'pkit stays in your clone only, hidden by git''s own exclude file: nothing of it is committed, and your agent still uses all of it.'
+    body: 'pkit stays in your clone only, hidden by git''s own exclude file: nothing of it is committed,
+      and your agent still uses all of it.'
     override:
       root:
         width: 1440
@@ -3982,13 +4105,14 @@ instances:
   T-ideas:
     template: slide
     title: Where ideas start
-    lead: In conversation, and in a scratchpad note when a question needs longer. The note ends by producing records, or by being dropped.
-    rests: 'In project-kit: 28 notes done, each listing what it produced'
+    lead: In conversation. A scratchpad note keeps what you agreed past the session, until it becomes
+      records, issues or docs.
+    rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
     total: 17
     override:
       rests:
-        text: 'In project-kit: 28 notes done, each listing what it produced'
+        text: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     mural_ids:
       root: c410b0aa-b580-42a7-a831-097f009d98f5
       bg: 86493d10-7c58-49be-8770-c506c57650e1
@@ -4002,41 +4126,49 @@ instances:
     x: 128
     y: 576
     mural_ids:
-      root: 098a59ea-25e4-44bc-8d32-94a3964ee779
-      conversationbox: d75021df-6d64-48ee-9e8a-ac256d0d1665
-      notebox: 346f3d69-4b35-4bce-a6bb-e989311ce089
-      donebox: a911b821-d477-4e42-a9d1-3a3e11829999
-      droppedbox: 854686da-7eb7-47ad-a656-125e8e3cab2f
-      conversationhead: 3a655246-3fe3-439e-9f0b-4aa264434c85
-      conversationtext: e5bc96d4-c490-4aa1-9296-964536bbb094
-      notehead: 598813a9-07b1-4adf-ab1b-d0ee319bb0bb
-      notetext: 6eca9320-8997-4169-9d06-7f4210893b02
-      donehead: cd25f73d-b4cf-4a38-b76f-529d54c0875a
-      donetext: 8ca7a362-703f-4d9f-b02c-c81483c901b5
-      droppedhead: e6a52137-1f2e-4a86-a9e6-ef564070d2b4
-      droppedtext: 9dcea8b7-b2ac-4854-8a93-49c56f3c61ce
-      conversationicon: 817d68c3-b451-4f51-92fa-74c7743dbe97
-      noteicon: 28ca1f30-2b6c-4ee3-ab7f-8144ff18eefc
-      notepic: a7fc36f0-47e9-416a-85f8-b19b7c6fac5a
-      donepic: 9f1fefdb-d0bb-439a-a2ac-32122b8ac9a8
-      a1: 00ef13e7-2a40-4624-9cad-749a8a3b5999
-      a2: d35cf7e1-7ac5-4b77-854c-56d95267f63f
-      a3: 12fdfc30-8f0e-4026-9b4f-19ca12264683
+      root: fcab02da-876f-4904-82ef-3ea3e4ddbc49
+      conversationbox: 630ec363-9e8e-4d7f-a653-9eee1d3ff684
+      notebox: 4f9dbf46-1151-4f01-8c37-ff2895fd3ff7
+      p0box: 6430de2a-df68-4176-8999-02dfe5e80f0e
+      p1box: 1bf8be7e-1e0b-4618-b1e5-69d7e46d9bc8
+      p2box: deb97df6-c083-46a0-a072-5d01bcc8ba1f
+      dropbox: a5ea6fb7-0c00-4f12-8eb3-bb0addab5696
+      conversationhead: b1903a89-81bc-4d8d-b7c8-50c2c740fac5
+      conversationtext: ce88cf08-c55c-4c00-a918-cea3093409b9
+      notehead: 53836afd-1195-4462-b381-f5fb1ac3f763
+      notetext: 27e3ddc8-e688-455d-b1e2-23bad9c9896b
+      rhead: 57c87dc9-84f7-4616-9a9e-c6865ac515aa
+      p0head: 9a5159e9-4846-449c-ab02-f58ed8e5dd69
+      p0text: 1e1a131c-844c-417e-9ed7-71c68390dbcc
+      p1head: 59fb3b2c-9eb4-4e2d-8917-54294489786a
+      p1text: e1f3a424-0868-4841-8aaa-d77e27e20154
+      p2head: 4acde9bc-a898-45cd-a68c-d356168c1fc5
+      p2text: b9ed471d-14a7-43ef-bc5f-1e5114e7090b
+      droptext: 3b06ced0-94a3-4d0d-abad-c1fd66c1fb12
+      conversationicon: a4039aea-4cc5-4c7b-9396-a4b42ee5d524
+      noteicon: c0728285-8c91-43f6-a182-afe4b9bf8d2f
+      notepic: 429f25c5-ec6b-49a2-830c-d88b2aa2fdd7
+      a1: 109b9373-a48c-402a-a744-16708c9420e9
+      b0: 9f49b89e-bb6a-45f2-8422-e71c36ed9b1a
+      b1: 98660e11-c78e-4daf-b0b1-ef2b14740004
+      b2: b3a34164-bddf-46ab-b20a-3abec883da07
+      b3: 14b906f1-71d1-4fa9-9dbb-b641db79e07b
   T-ideas-limit:
     template: notice
     parent: T-ideas
-    text: 'Limit: A note retires only when someone retires it: 14 of the 33 active have been open since May or June.'
+    text: 'Limit: Nothing writes the note for you: what stays only in the conversation is lost with it.'
     x: 128
-    y: 1438
+    y: 1388
     mural_ids:
-      root: 8179777a-725c-4b90-9510-52bba2387868
-      bg: 607b7623-4962-4f07-a238-2378aad170bb
-      bar: cfc4d56d-959f-47f8-ae35-20a7db683ae0
-      text: 40f63ccb-938a-44c9-ae00-f987675a14b9
+      root: 17de317b-e3f8-4bec-83c4-c5519f180375
+      bg: eaff7d8d-de07-4244-b14b-8e78c493a49d
+      bar: b5befef5-91e5-4da7-9f50-2023396d303a
+      text: 08ba8603-1f2b-484a-a6f5-edcebf47c21d
   T-decisions:
     template: slide
     title: Decision records
-    lead: A decision record keeps one choice and why it was made. Where it lives says what it is about, and who may change it.
+    lead: A decision record keeps one choice and why it was made. Where it lives says what it is about,
+      and who may change it.
     rests: 'This week: COR-065 overturned a sentence of COR-006, by a new record, not an edit'
     n: 5
     total: 17
@@ -4245,7 +4377,8 @@ instances:
   T-decisions-limit:
     template: notice
     parent: T-decisions
-    text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that bind later work.'
+    text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that bind later
+      work.'
     x: 128
     y: 1418
     mural_ids:
@@ -4256,13 +4389,16 @@ instances:
   T-found:
     template: slide
     title: Decided once, found later
-    lead: You accept a choice before work builds on it, and a later session finds it before changing what it governs.
-    rests: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted with the code that carries it out'
+    lead: You accept a choice before work builds on it, and a later session finds it before changing what
+      it governs.
+    rests: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted
+      with the code that carries it out'
     n: 6
     total: 17
     override:
       rests:
-        text: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted with the code that carries it out'
+        text: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted
+          with the code that carries it out'
     mural_ids:
       root: d29fd65e-5ac2-41c1-8117-1f9dfb3f8014
       bg: c82a4af9-33a2-4514-8b83-6c8b8800e409
@@ -4412,7 +4548,8 @@ instances:
   T-found-limit:
     template: notice
     parent: T-found
-    text: 'Limit: Only records tied to a file are found, directly or through a document that depends on it.'
+    text: 'Limit: Only records tied to a file are found, directly or through a document that depends on
+      it.'
     x: 128
     y: 1425
     mural_ids:
@@ -4523,7 +4660,8 @@ instances:
   T-schemas:
     template: slide
     title: Rules and processes as data
-    lead: 'Rules precise enough for a program are data the tools read, and a staged process is data too: every move is checked and logged.'
+    lead: 'Rules precise enough for a program are data the tools read, and a staged process is data too:
+      every move is checked and logged.'
     rests: 'This week: who may move an issue back, and how strictly, is two settings in workflow.yaml'
     n: 8
     total: 17
@@ -4799,7 +4937,8 @@ instances:
   T-schemas-code:
     template: code
     parent: T-schemas
-    code: "# workflow.yaml (project-management)\n- from: in-progress\n  to: backlog\n  authorisation: user\n  severity: hard-reject"
+    code: "# workflow.yaml (project-management)\n- from: in-progress\n  to: backlog\n  authorisation:\
+      \ user\n  severity: hard-reject"
     x: 1632
     y: 1120
     override:
@@ -4839,7 +4978,8 @@ instances:
   T-skills:
     template: slide
     title: Skills and the commands they pair with
-    lead: A skill carries the judgement; the command it pairs with does the part that must come out the same every time.
+    lead: A skill carries the judgement; the command it pairs with does the part that must come out the
+      same every time.
     rests: A record once filed by hand got the wrong number; since then agents must use the skill
     n: 9
     total: 17
@@ -4857,7 +4997,8 @@ instances:
     template: callout
     parent: T-skills
     title: The problem
-    body: Asked to add a record, an agent improvises a number, a layout and a level of care, different each time.
+    body: Asked to add a record, an agent improvises a number, a layout and a level of care, different
+      each time.
     x: 128
     y: 576
     mural_ids:
@@ -4925,12 +5066,14 @@ instances:
     template: slide
     title: 'Agents: roles with limits'
     lead: 'No agent judges its own work: separate reviewers each catch one kind of failure.'
-    rests: 'This week: the critic changed two designs; reviewers caught two doc claims that were no longer true'
+    rests: 'This week: the critic changed two designs; reviewers caught two doc claims that were no longer
+      true'
     n: 10
     total: 17
     override:
       rests:
-        text: 'This week: the critic changed two designs; reviewers caught two doc claims that were no longer true'
+        text: 'This week: the critic changed two designs; reviewers caught two doc claims that were no
+          longer true'
     mural_ids:
       root: bfbb88d4-5b03-49b0-a82a-50e5a940705c
       bg: b103eb41-2a44-49bf-9f10-b09cacb9786f
@@ -5075,12 +5218,14 @@ instances:
     template: slide
     title: Permissions you write down
     lead: What agents may do is your project's written rules, not the tool's guesses.
-    rests: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent said no'
+    rests: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent
+      said no'
     n: 11
     total: 17
     override:
       rests:
-        text: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent said no'
+        text: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that
+          agent said no'
     mural_ids:
       root: fe91f9b1-4955-484e-90b6-de181abf7590
       bg: d4d73382-e772-499e-bf2e-ce3a3788841c
@@ -5092,7 +5237,8 @@ instances:
     template: callout
     parent: T-permissions
     title: The problem
-    body: 'The AI tool decides action by action: nobody can see its rules, and every role is treated the same.'
+    body: 'The AI tool decides action by action: nobody can see its rules, and every role is treated the
+      same.'
     x: 128
     y: 576
     mural_ids:
@@ -5148,7 +5294,8 @@ instances:
   T-permissions-limit:
     template: notice
     parent: T-permissions
-    text: 'Limit: The rules stop ordinary commands, not a determined workaround; the OS sandbox is off on macOS.'
+    text: 'Limit: The rules stop ordinary commands, not a determined workaround; the OS sandbox is off
+      on macOS.'
     x: 128
     y: 1424
     mural_ids:
@@ -5159,7 +5306,8 @@ instances:
   T-checked:
     template: slide
     title: Checked every time
-    lead: An agent follows the ties between files without doubting them, so every tie is checked on every change.
+    lead: An agent follows the ties between files without doubting them, so every tie is checked on every
+      change.
     rests: In project-kit, this check runs before every push and on every pull request
     n: 12
     total: 17
@@ -5260,12 +5408,14 @@ instances:
     template: slide
     title: Docs that know when they're wrong
     lead: When code changes, the documents that depend on it are named, not found later by accident.
-    rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it wasn''t'
+    rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it
+      wasn''t'
     n: 13
     total: 17
     override:
       rests:
-        text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it wasn''t'
+        text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed
+          it wasn''t'
     mural_ids:
       root: 5a08a160-06d0-4f78-b452-e92b6b2a6d75
       bg: cfafd034-7933-4b66-b968-10868b08872f
@@ -5346,7 +5496,8 @@ instances:
   T-docs-code:
     template: code
     parent: T-docs
-    code: "# trial run: the greeting in cli.py changed\n$ pkit friction check\n  ACT-cli-user     depends on cli.py\n  UC-001           depends on cli.py\n  docs/usage.md    depends on cli.py\n3 documents\
+    code: "# trial run: the greeting in cli.py changed\n$ pkit friction check\n  ACT-cli-user     depends\
+      \ on cli.py\n  UC-001           depends on cli.py\n  docs/usage.md    depends on cli.py\n3 documents\
       \ to answer for"
     x: 1632
     y: 800
@@ -5664,7 +5815,8 @@ instances:
   T-pm-limit:
     template: notice
     parent: T-pm
-    text: 'Limit: GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual.'
+    text: 'Limit: GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not
+      the manual.'
     x: 128
     y: 1072
     mural_ids:
@@ -5675,13 +5827,16 @@ instances:
   T-se:
     template: slide
     title: software-engineering
-    lead: The builder follows your conventions; its three reviewers join every code merge with nothing to wire.
-    rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed before merge'
+    lead: The builder follows your conventions; its three reviewers join every code merge with nothing
+      to wire.
+    rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
+      before merge'
     n: 15
     total: 17
     override:
       rests:
-        text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed before merge'
+        text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
+          fixed before merge'
     mural_ids:
       root: 91d5ee59-af96-45c5-a731-b8d9adf07e93
       bg: 70e9e24d-1f68-49a6-b170-6cd595e75d9a
@@ -5884,13 +6039,16 @@ instances:
   T-current:
     template: slide
     title: Over time
-    lead: Improvements arrive by one command and never overwrite your files, and three new things already run, still being shaped.
-    rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until you decide'
+    lead: Improvements arrive by one command and never overwrite your files, and three new things already
+      run, still being shaped.
+    rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until
+      you decide'
     n: 16
     total: 17
     override:
       rests:
-        text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until you decide'
+        text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes
+          until you decide'
     mural_ids:
       root: fad3dc86-7aae-47ff-99ac-0952eabdd4e7
       bg: f33e95ee-b2cf-455d-ad0f-a267298b8d68
@@ -6250,7 +6408,8 @@ layouts:
 objects:
   LIB:
     mural_id: 8bccad2a-99c9-4f05-9fbd-bc2c59407fbc
-    note: 'the library zone: component masters with mock text in brackets; fills bottom-up, grows upward, never below y -2000'
+    note: 'the library zone: component masters with mock text in brackets; fills bottom-up, grows upward,
+      never below y -2000'
     type: area
     library: true
     title: LIBRARY · component masters · not presentation content
