@@ -59,7 +59,7 @@ COR-068 leaves open:
 - **What else carries over:** the set's prose before its first section, its italic preface, and its group headings with the prose under them, at the levels the set writes them.
 - **What it leaves out:** the front matter, so every origin and status, and the section of each rule that is proposed, superseded or withdrawn.
 - **No H1,** since the host file owns it (core rule 13). A loaded set's body holds none either (point 6).
-- **Nothing added.** The function writes no text the set does not hold. The set's preface says where the set lives and which command writes the loaded file, in words true in both files, such as "The loaded file is generated from `.pkit/rule-sets/ops.md` by `pkit rule-sets generate`; edit the set, not the loaded file." A reader of either then knows where to edit.
+- **Nothing added.** The function writes no text the set does not hold. The set's preface says where the set lives and which command writes the loaded file, in words true in both files, such as "The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync edits neither (core rule 1)." A reader of either then knows where the rules are edited, and that a project which receives them edits neither.
 
 ### 4. `pkit rule-sets generate` writes the loaded file where the set is authored
 
@@ -74,7 +74,7 @@ COR-068 leaves open:
 ### 5. Validation fails a loaded file out of step, where the set is authored
 
 - **The check:** a part of validation's `rule-sets` member. For each loaded set, it compares the loaded file with point 2's output, byte for byte once line endings are read as `\n`, so a checkout that converts them still passes. A file that differs, or is missing, is an `error`, since COR-068 point 3 makes it fail validation. The finding names the file, the set and `pkit rule-sets generate`.
-- **Where the set is authored:** where the set's file is no synced copy. The check asks the tree's own predicate, `is_synced_copy` in the lifecycle area's ownership module. That predicate decides by the component's origin and by whether the repository is the methodology's source, never by the path, and `pkit new` refusals and documentation places ask the same one.
+- **Where the set is authored:** where the set's file is no synced copy. The check asks the tree's own predicate for a synced copy, in the lifecycle area's ownership module. That predicate decides by the component's origin and by whether the repository is the methodology's source, never by the path, and `pkit new` refusals and documentation places ask the same one.
 - **Where the set arrives by sync** the check does not run. The project receives the set and its loaded file together, and edits neither.
 - **A tree without the ownership module** cannot tell, so the check skips the set and reports that it did, as a tree without a schema skips its kind (ADR-056 point 1).
 
@@ -137,7 +137,7 @@ COR-068 leaves open:
 
 **Why those files are left out.** A synced copy is checked where it is authored. Superseded records, answer files, changesets and the changelog record what was true when they were written, and COR-068 point 6 keeps them as written. Scratchpad notes are working drafts that retire (COR-012).
 
-**Why a project's loaded set waits for its own record.** A project's set would need a loaded file at the project's path, a generator that runs in an adopter, and a check of `project rule N` against it. Each is a choice this record need not make to ship core's set. Until that record, a project's rules stay a plain file, as COR-068 point 7 allows.
+**Why a project converts its own file by its own step.** A project's rules are its own, and only the project knows who decided each rule and why, so only it can give each rule its origin (COR-051 point 5). A command or a migration that converted the file would have to invent those origins, or leave them out. So the project writes the set and the origins, and the same function, generator and check then serve its set as they serve core's, with its loaded file at the path its include reads. Until it converts, its rules stay a plain file, as COR-068 point 7 allows.
 
 **Why no migration.** The area and the command are added, and the schema gains an optional key. The loaded file keeps its path, and only its content changes, as any refresh of a synced file does. No path in a tree the methodology ships is renamed or removed, and no command changes its signature, so none of COR-010's triggers applies.
 
@@ -157,7 +157,7 @@ COR-068 leaves open:
 
 ## Implications
 
-- **The build of #2260** realises this record. It writes `OPS` with each rule's origin, generates `.pkit/rules/core.md` from it, adds the area, the marker, the command, both checks and the classification. It updates the hold's test, `tests/test_area_name_clash.py`, so its held areas include `rule-sets`, and its message and its account of itself name the exception (ADR-065 point 13).
+- **The build of #2260** realises this record. It writes `OPS` with each rule's origin, generates `.pkit/rules/core.md` from it, adds the area, the marker, the command, both checks and the classification. It updates the hold's test so its held areas include `rule-sets`, and its message and its account of itself name the exception (ADR-065 point 13).
 - **ADR-065 point 13** names `rule-sets` as the one area that passes its hold.
 - **References to update in the same change:**
   - the rules area's README: where the set and its loaded file live, that the file is generated, and how a project converts its own file into a loaded set
