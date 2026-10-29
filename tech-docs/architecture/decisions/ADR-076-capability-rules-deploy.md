@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Summary
 
-**In plain terms:** this record is how project-kit builds [COR-069](../../../.pkit/decisions/core/COR-069-capability-loaded-rules.md), under which a capability's operational rules load in every session where it is installed.
+**In plain terms:** this record is how project-kit builds [COR-070](../../../.pkit/decisions/core/COR-070-capability-loaded-rules.md), under which a capability's operational rules load in every session where it is installed.
 - **The set and its file:** a capability's loaded set sits in its `rule-sets/` folder like its other sets. Its loaded file is `.pkit/capabilities/<name>/rules.md`, written by `pkit rule-sets generate` and checked as core's is.
 - **The deploy:** the Claude Code adapter links that file to `.claude/rules/<name>.md`, which Claude Code loads at every session's start, through a deploy primitive of its own. Uninstall removes the link.
 - **The declaration:** the adapter's package metadata says where it deploys a capability's rules file, so the backbone can check the deploy without knowing `.claude/`.
@@ -17,7 +17,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-COR-069 decides that each adapter deploys an installed capability's loaded file where its harness loads files at every session's start, and that validation fails where it is missing. Its Implications leave to an architecture record:
+COR-070 decides that each adapter deploys an installed capability's loaded file where its harness loads files at every session's start, and that validation fails where it is missing. Its Implications leave to an architecture record:
 - where the capability's loaded set and its loaded file live
 - Claude Code's place, and how the adapter deploys there and removes what it deployed
 - how the backbone learns an adapter's place, since it names no adapter's paths ([ADR-009](ADR-009-git-footprint-visibility.md) rule 1)
@@ -62,13 +62,13 @@ Claude Code loads, at the start of a session, every Markdown file in the project
 ### 4. Validation's `rule-sets` member checks the deploy
 
 - **The check:** for each capability the manifest registers that ships a loaded set, and for each adapter the manifest registers that declares `loaded_rules:`, the declared path with the capability's name must exist. Read through any link, it must hold the bytes of the capability's `rules.md`, once line endings are read as `\n`. Otherwise it is an `error`, `loaded-file-undeployed`, naming the capability, the adapter, the path and the sync that deploys it.
-- **No declaration:** a registered adapter without `loaded_rules:` gets a `warning` for each capability that ships a loaded set, naming the adapter, since that harness's sessions load no capability's rules (COR-069 point 6).
+- **No declaration:** a registered adapter without `loaded_rules:` gets a `warning` for each capability that ships a loaded set, naming the adapter, since that harness's sessions load no capability's rules (COR-070 point 6).
 - **Where it runs:** in every project, where the capability is authored and where it arrives by sync, since the deploy is the project's own state. It reads files only, never a session.
 - **Why this member:** loaded sets and their files are its subject already (ADR-075 point 5), and one subject keeps one member (ADR-058).
 
 ### 5. The harness requirement, and Claude Code's answer
 
-- **The requirement:** `.pkit/schemas/harness-requirements.yaml` gains `session-loads-rules`. Its behaviour is that each session the harness starts in a project holds every file the methodology places for the harness to load at session start, from the session's start. That covers a session a person starts, a delegated helper and an unattended run. Its observation point is `in-session`, and its evidence is the design dependency of COR-069 point 6.
+- **The requirement:** `.pkit/schemas/harness-requirements.yaml` gains `session-loads-rules`. Its behaviour is that each session the harness starts in a project holds every file the methodology places for the harness to load at session start, from the session's start. That covers a session a person starts, a delegated helper and an unattended run. Its observation point is `in-session`, and its evidence is the design dependency of COR-070 point 6.
 - **Claude Code's answer:** `harness-support.yaml` answers it `at-cost`. The cost says that Claude Code's documentation has a session started in the project load these files, and that no source shows whether a delegated helper's context holds them. Its `harness_versions` stays empty until a session is observed holding a deployed file, so it vouches for no version. Only whoever observes it widens the range, as COR-047 point 2 requires.
 - **The report:** an `in-session` requirement resolves `indeterminate` from outside a session (COR-047 point 4). `pkit harness report` names the requirement with that reason, never as satisfied.
 
@@ -105,9 +105,9 @@ Claude Code loads, at the start of a session, every Markdown file in the project
 ## Implications
 
 - **The build of #2269** realises this record: the loaded file's path for a capability, the refusal lifted, `deploy-rules.sh`, the undeploy, the `loaded_rules:` key and its schema, the check, the harness requirement and Claude Code's answer, the migration, and their tests.
-- **First loaded sets:** software-engineering and project-management each ship one, holding the rules COR-069 point 5 moves to them. Project rule 2, on which tests a builder runs, moves to software-engineering, and project-kit's `project.md` keeps a one-line pointer. Its project-specific detail, such as `scripts/check.sh`, stays in project-kit's own documents. The branch and pull-request conventions core rule 9 defers to "the installed work-tracking capability's documentation" move to project-management. Core rule 9 keeps its universal claim, conventional commits with one logical unit each, and names no capability.
-- **ADR-075 points 2 and 6** and **COR-068 points 3 and 4** gain forward pointers to this record and to COR-069 once both are accepted.
+- **First loaded sets:** software-engineering and project-management each ship one, holding the rules COR-070 point 5 moves to them. Project rule 2, on which tests a builder runs, moves to software-engineering, and project-kit's `project.md` keeps a one-line pointer. Its project-specific detail, such as `scripts/check.sh`, stays in project-kit's own documents. The branch and pull-request conventions core rule 9 defers to "the installed work-tracking capability's documentation" move to project-management. Core rule 9 keeps its universal claim, conventional commits with one logical unit each, and names no capability.
+- **ADR-075 points 2 and 6** and **COR-068 points 3 and 4** gain forward pointers to this record and to COR-070 once both are accepted.
 - **References to update in the same change:** the rules README, the Claude Code adapter's README, the adapters README's table of primitives, the lifecycle README's package-metadata reference, the schemas README's rule-set table, the CLI reference's `validate` and `harness report` entries, and the README of each capability that ships a loaded set.
 - **A size budget:** where a budget on loaded files is decided (#2262), it applies to a capability's as the record that decides it says.
 - **Changesets:** a backbone `minor` for the key, the check and the generator's new owner; an adapter `minor` for the primitive, the footprint, the support answer and the migration; a `minor` for each capability whose sessions now load its rules.
-- **Stands on these records, all accepted:** COR-010, COR-047, COR-068, ADR-009, ADR-056, ADR-058, ADR-066 and ADR-075, and on COR-069 once it is accepted.
+- **Stands on these records, all accepted:** COR-010, COR-047, COR-068, ADR-009, ADR-056, ADR-058, ADR-066 and ADR-075, and on COR-070 once it is accepted.

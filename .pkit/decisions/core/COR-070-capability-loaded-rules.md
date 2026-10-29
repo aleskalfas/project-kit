@@ -1,5 +1,5 @@
 ---
-id: COR-069
+id: COR-070
 title: A capability's operational rules load in every session where it is installed
 status: proposed
 date: 2026-10-29
