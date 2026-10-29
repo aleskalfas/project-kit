@@ -20,12 +20,18 @@ the unwired-outcome correct-wait case, the acyclicity guard (self + transitive,
 fail-closed), the keyed-inner required-subject rule, the determinate keyed-inner
 resolution, status surfacing (narrative + JSON), read-only resolution, and the
 behaviour-preserving non-embedding case.
+
+Each predicate the engine starts runs in the test's own process, its command
+still found through the runner's one lookup (`tests/in_process.py`,
+`start_in_process`).
 """
 
 from __future__ import annotations
 
 import json
 import stat
+import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -36,6 +42,17 @@ from project_kit.process import (
     render_status_json,
     render_status_narrative,
 )
+from tests.in_process import start_in_process
+
+
+@pytest.fixture(autouse=True)
+def predicates_started(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    """The predicate scripts the engine's runner starts, each run in this process
+    (`start_in_process`). No bytecode is written, so a script a test rewrites is read
+    afresh."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    return start_in_process(monkeypatch)
+
 
 # --- fixture process definitions ------------------------------------------
 
@@ -113,8 +130,12 @@ process:
 
 
 def _write_script(path: Path, body: str) -> None:
+    """An executable predicate script whose `main` runs `body`, as a process and in this
+    process alike."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("#!/usr/bin/env python3\n" + body, encoding="utf-8")
+    code = "import sys\n\n\ndef main():\n" + textwrap.indent(body, "    ")
+    code += "\n\nif __name__ == '__main__':\n    sys.exit(main())\n"
+    path.write_text("#!/usr/bin/env python3\n" + code, encoding="utf-8")
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
