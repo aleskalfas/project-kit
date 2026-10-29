@@ -465,21 +465,73 @@ slides:
 - id: checked
   part: P1
   title: Checked every time
-  message: Records, docs and code cite each other; one command checks every citation, on every change.
-  problem: A person notices a dead link; an agent follows it.
-  does:
-  - Every kind of file has a declared shape
-  - Every citation is written so a program can follow it
-  - pkit and each capability add checks; pkit validate runs them all
-  show: 'This week: two pull requests each added a record numbered DEC-062; a check caught it before merge'
+  message: An agent follows the ties without doubting them, so every tie is checked on every change.
+  problem: ''
+  does: []
+  show: In project-kit, this check runs before every push and on every pull request
   visual:
-    kind: code
-    code: "$ pkit validate\n  warning  agents/code-reviewer.md:42\n    → '[software-engineering:DEC-002] D4'\n \
-      \     names point D4, which DEC-002\n      does not hold\n  16 validators ran; 0 errors\n"
+    kind: ties
+    center:
+      head: The release guide
+      path: .pkit/release/README.md
+    left_head: The code it describes
+    right_head: The records it carries out
+    left:
+    - label: release.py
+    - label: changesets.py
+    - label: versioning.py
+    - label: .changie.yaml
+    - label: release-pr.yml
+    - label: release-tag.yml
+    - label: latest_tag.py
+    right:
+    - label: COR-010  Lifecycle
+      tone: pkit
+    - label: COR-030  Dependencies
+      tone: pkit
+    - label: COR-041  External sources
+      tone: pkit
+    - label: 'PRJ-020  no such record'
+      tone: yours
+      broken: true
+    - label: PRJ-004  Distribution
+      tone: yours
+    - label: ADR-040  Fetch at the pin
+      tone: architecture
+    terminal:
+    - - - '$ '
+        - prompt
+      - - pkit
+        - command
+      - - ' friction check'
+        - args
+    - - - FINDINGS
+        - output
+    - - - '  .pkit/release/README.md'
+        - args
+    - - - '    '
+        - output
+      - - dead-anchor
+        - del
+      - - '  record PRJ-020'
+        - args
+    - - - '      names no record; the anchor was added'
+        - output
+    - - - '      in this diff'
+        - output
+    - - - 'Result: '
+        - output
+      - - failed
+        - del
+    - - - '# the pull request''s checks fail until it is fixed'
+        - comment
+    font_size: 24
   limit: 'It checks structure, not meaning: a record can be valid and still wrong.'
   minutes: 1
-  notes: 61 warnings like this one had piled up, because each check started as a warning. Cleared this week; each
-    kind will fail from now on.
+  notes: 'The release guide from the slide before, with every tie its front matter declares: the seven files it
+    describes and the six records it carries out. A typo turns PRJ-002 into PRJ-020, and the change check names
+    it before anything merges. Thirteen ties on one ordinary page: nobody keeps them right by hand. The check
+    reads the change, so a tie that was wrong before it is the whole-tree checks'' to find.'
 - id: schemas
   part: P1
   title: Rules and processes as data

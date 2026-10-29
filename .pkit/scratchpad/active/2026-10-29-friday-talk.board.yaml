@@ -1999,6 +1999,495 @@ templates:
         y: 216
         width: 576
         height: 300
+  ties_T-checked:
+    note: 'One document''s ties, drawn for one slide by the slide generator: the files it describes, the
+      records it carries out, a line per tie.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 1960
+      height: 588
+    parts:
+      lhead:
+        type: text
+        text: The code it describes
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 0
+        width: 580
+        height: 56
+      rhead:
+        type: text
+        text: The records it carries out
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1400
+        y: 0
+        width: 560
+        height: 56
+      cbox:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 600
+        y: 242
+        width: 600
+        height: 176
+        color: '@background'
+        border_color: '@text_primary'
+        border_width: 4
+        ink: '@text_primary'
+      chead:
+        type: text
+        text: The release guide
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 632
+        y: 274
+        width: 536
+        height: 56
+      cpath:
+        type: text
+        text: .pkit/release/README.md
+        style: '@style.body'
+        x: 632
+        y: 338
+        width: 536
+        height: 50
+      l0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 72
+        width: 380
+        height: 60
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      l0text:
+        type: text
+        text: release.py
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 20
+        y: 78
+        width: 340
+        height: 50
+      l0tie:
+        type: arrow
+        points:
+        - - 380
+          - 102
+        - - 600
+          - 262
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      l1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 148
+        width: 380
+        height: 60
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      l1text:
+        type: text
+        text: changesets.py
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 20
+        y: 154
+        width: 340
+        height: 50
+      l1tie:
+        type: arrow
+        points:
+        - - 380
+          - 178
+        - - 600
+          - 285
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      l2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 224
+        width: 380
+        height: 60
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      l2text:
+        type: text
+        text: versioning.py
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 20
+        y: 230
+        width: 340
+        height: 50
+      l2tie:
+        type: arrow
+        points:
+        - - 380
+          - 254
+        - - 600
+          - 307
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      l3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 300
+        width: 380
+        height: 60
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      l3text:
+        type: text
+        text: .changie.yaml
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 20
+        y: 306
+        width: 340
+        height: 50
+      l3tie:
+        type: arrow
+        points:
+        - - 380
+          - 330
+        - - 600
+          - 330
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      l4box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 376
+        width: 380
+        height: 60
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      l4text:
+        type: text
+        text: release-pr.yml
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 20
+        y: 382
+        width: 340
+        height: 50
+      l4tie:
+        type: arrow
+        points:
+        - - 380
+          - 406
+        - - 600
+          - 353
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      l5box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 452
+        width: 380
+        height: 60
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      l5text:
+        type: text
+        text: release-tag.yml
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 20
+        y: 458
+        width: 340
+        height: 50
+      l5tie:
+        type: arrow
+        points:
+        - - 380
+          - 482
+        - - 600
+          - 375
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      l6box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 528
+        width: 380
+        height: 60
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      l6text:
+        type: text
+        text: latest_tag.py
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 20
+        y: 534
+        width: 340
+        height: 50
+      l6tie:
+        type: arrow
+        points:
+        - - 380
+          - 558
+        - - 600
+          - 398
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      r0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1400
+        y: 110
+        width: 560
+        height: 60
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      r0text:
+        type: text
+        text: COR-010  Lifecycle
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1420
+        y: 116
+        width: 520
+        height: 50
+      r0tie:
+        type: arrow
+        points:
+        - - 1400
+          - 140
+        - - 1200
+          - 262
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      r1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1400
+        y: 186
+        width: 560
+        height: 60
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      r1text:
+        type: text
+        text: COR-030  Dependencies
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1420
+        y: 192
+        width: 520
+        height: 50
+      r1tie:
+        type: arrow
+        points:
+        - - 1400
+          - 216
+        - - 1200
+          - 289
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      r2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1400
+        y: 262
+        width: 560
+        height: 60
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      r2text:
+        type: text
+        text: COR-041  External sources
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1420
+        y: 268
+        width: 520
+        height: 50
+      r2tie:
+        type: arrow
+        points:
+        - - 1400
+          - 292
+        - - 1200
+          - 316
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      r3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1400
+        y: 338
+        width: 560
+        height: 60
+        color: '@background'
+        border_color: '@text_error'
+        border_width: 4
+        ink: '@text_primary'
+      r3text:
+        type: text
+        text: PRJ-020  no such record
+        style: '@style.body'
+        ink: '@text_error'
+        x: 1420
+        y: 344
+        width: 520
+        height: 50
+      r3tie:
+        type: arrow
+        points:
+        - - 1400
+          - 368
+        - - 1200
+          - 344
+        arrow_type: straight
+        tip: none
+        color: '@text_error'
+        border_width: 4
+        border_style: dashed
+      r4box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1400
+        y: 414
+        width: 560
+        height: 60
+        color: '@role_people_bg'
+        border_color: '@role_people'
+        border_width: 2
+        ink: '@text_primary'
+      r4text:
+        type: text
+        text: PRJ-004  Distribution
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1420
+        y: 420
+        width: 520
+        height: 50
+      r4tie:
+        type: arrow
+        points:
+        - - 1400
+          - 444
+        - - 1200
+          - 371
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
+      r5box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1400
+        y: 490
+        width: 560
+        height: 60
+        color: '@role_architecture_bg'
+        border_color: '@role_architecture'
+        border_width: 2
+        ink: '@text_primary'
+      r5text:
+        type: text
+        text: ADR-040  Fetch at the pin
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1420
+        y: 496
+        width: 520
+        height: 50
+      r5tie:
+        type: arrow
+        points:
+        - - 1400
+          - 520
+        - - 1200
+          - 398
+        arrow_type: straight
+        tip: none
+        color: '@border_strong'
+        border_width: 4
+        border_style: solid
 instances:
   L01:
     template: slide
@@ -3685,15 +4174,13 @@ instances:
   T-checked:
     template: slide
     title: Checked every time
-    lead: Records, docs and code cite each other; one command checks every citation, on every change.
-    rests: 'This week: two pull requests each added a record numbered DEC-062; a check caught it before
-      merge'
+    lead: An agent follows the ties without doubting them, so every tie is checked on every change.
+    rests: In project-kit, this check runs before every push and on every pull request
     n: 6
     total: 16
     override:
       rests:
-        text: 'This week: two pull requests each added a record numbered DEC-062; a check caught it before
-          merge'
+        text: In project-kit, this check runs before every push and on every pull request
     mural_ids:
       root: 8ef20c9f-a269-4223-80ee-4ba53a1165c2
       bg: 95b2c0cd-c757-4cab-b872-9a28114bf185
@@ -3701,105 +4188,84 @@ instances:
       lead: d7acbc1f-a9a8-4afc-984d-b5a64a35c66b
       rests: 4024fc69-28eb-4c18-8dfd-92cc835a7c19
       num: 1c981f1c-018e-437e-b307-eeb29e9605ab
-  T-checked-problem:
-    template: callout
+  T-checked-ties:
+    template: ties_T-checked
     parent: T-checked
-    title: The problem
-    body: A person notices a dead link; an agent follows it.
     x: 128
     y: 576
     mural_ids:
-      root: c57def66-9269-41cd-abd8-379500264005
-      bg: 801a7d34-43f1-4cad-9c9f-dd487d5a747d
-      bar: e9bc6520-788e-42ff-9436-67e9aee6cba6
-      title: e4aa689f-7c59-4968-9ecf-d82a584b712c
-      body: 45596a4e-1301-45c6-9a4b-588f0fa075c0
-  T-checked-d1:
-    template: step
+      root: d44b7fd5-1184-4ca8-834a-22c44f85d5c0
+      cbox: 2c98650e-7d43-42ed-93cc-ef05927f14c7
+      l0box: cf26094e-7e4a-4606-a100-56d661402333
+      l1box: f06060a4-c39a-486a-bdf2-4b2af767badb
+      l2box: 53374115-0e82-44d0-9575-47f7a67f93d9
+      l3box: fe97d61d-1ed7-4705-8ecb-ae4e3527ed24
+      l4box: f32cf247-b0e5-41b8-8515-6b919c745858
+      l5box: dce60bd7-a72c-44f7-8ef2-28575d438800
+      l6box: be80389e-8c96-4cff-a6d2-07ccc43464b6
+      r0box: 8434bd76-db8d-4929-851a-d2145c7b191a
+      r1box: 7b3b5400-5eac-4733-91d9-d31668a8ede3
+      r2box: 1013b7e6-569f-4fe1-8f64-ce107e2ed50a
+      r3box: cbc98936-8c6a-4d2c-b6e8-94914e869fb8
+      r4box: 28942868-ecab-44d6-802e-12e64e4ff1d4
+      r5box: ac8be5bd-b07c-471d-a8fb-9446effbd35e
+      lhead: f220e941-df6a-4d66-8099-fe783b82cc00
+      rhead: ca6fb1b8-0d4b-4cd9-bea0-7c4595d05b15
+      chead: 60be03e0-fe37-4708-b0bd-9ab4cee7af30
+      cpath: 213a7680-e505-4e2b-83d7-11f0b9c8c9e5
+      l0text: 3eb3f148-f709-46bc-8534-449053b93e4f
+      l1text: 248094ea-1237-4044-bb41-be19edf71192
+      l2text: 5f79a687-8f7c-401f-a104-2013ac04ed8b
+      l3text: 2224d83c-dbbe-4dcc-a50b-e4ec1e0c20fe
+      l4text: 9e6ebe00-0cff-43dd-a266-6ccba3c1bafd
+      l5text: 82df83e4-90fb-4d72-b371-bb8c6de7e994
+      l6text: 505ec3bd-da18-4993-a5f4-a3c286870549
+      r0text: a25112ba-e41b-4de0-a47f-cd76cabc8fe0
+      r1text: 931253c5-9578-4d85-b114-e2565dad7c97
+      r2text: 370742d9-056b-4910-9fcd-9b288d9a07ac
+      r3text: 824c7c69-35fc-496f-82f7-163df068e8f6
+      r4text: fa2f7a80-409e-4e75-8885-a1cac2e57519
+      r5text: 3eb09f4e-9af8-4ae7-9ea9-b091c698fff3
+      l0tie: 76a1eec0-7e03-4a70-aac6-63fdfb8b14f2
+      l1tie: 611c1b2c-a958-4119-ac65-7f016e99a684
+      l2tie: a8b90d87-40d1-447b-b296-c39a332eba52
+      l3tie: 2d2d8bae-e6e4-4438-869b-b8e00a7de59f
+      l4tie: 68a367eb-0ddd-4ca5-b95e-68c200b0321d
+      l5tie: 9be06904-c554-43bd-b5be-26e4c27780b9
+      l6tie: 64202f39-5a56-42dd-b81d-c600c28e2b5a
+      r0tie: 2c55e443-43b9-4b9f-afed-1440b19d4480
+      r1tie: d78f3b1f-369b-4753-b05a-b1b51c48c19f
+      r2tie: 68928158-6eae-414d-a09d-89216db6c865
+      r3tie: a1fd816e-3050-41f2-a34e-de2ee7382fc1
+      r4tie: 14931b3e-2fde-47c9-9efa-bacf2694947a
+      r5tie: 93624570-372c-48a4-9814-d6b4625bf8eb
+  T-checked-check:
+    template: term_image
     parent: T-checked
-    ident: '1'
-    text: Every kind of file has a declared shape
-    x: 128
-    y: 800
+    x: 2152
+    y: 796
+    file: term-checked-check
     override:
       root:
-        width: 688
-      bg:
-        width: 688
-      text:
-        width: 624
+        width: 920
+        height: 368
+      img:
+        width: 920
+        height: 368
     mural_ids:
-      root: dd30bf65-2539-4a71-9fdd-2345202a65d4
-      bg: aeccf315-31cf-4ef3-a02b-6540c66adf33
-      tag: 11e1a350-42ad-471b-a247-51a2e76007f9
-      text: 4335b44d-fd38-418e-aee8-73e68755ba51
-  T-checked-d2:
-    template: step
-    parent: T-checked
-    ident: '2'
-    text: Every citation is written so a program can follow it
-    x: 880
-    y: 800
-    override:
-      root:
-        width: 688
-      bg:
-        width: 688
-      text:
-        width: 624
-    mural_ids:
-      root: a8d27fb3-be83-4f12-b7fb-70e5ba5559f9
-      bg: 16cb8e39-2fb2-46ea-8145-1289a35c5664
-      tag: 554fbb84-73db-4b65-8fa4-d00a4d025b87
-      text: accf71ee-375e-4f49-b401-38d8a584427a
-  T-checked-d3:
-    template: step
-    parent: T-checked
-    ident: '3'
-    text: pkit and each capability add checks; pkit validate runs them all
-    x: 128
-    y: 1158
-    override:
-      root:
-        width: 688
-      bg:
-        width: 688
-      text:
-        width: 624
-    mural_ids:
-      root: 03c9ddb6-f78d-4327-b8b7-8d0a29a63add
-      bg: c9f51e9d-7890-445c-88f5-f0d22cad8f89
-      tag: 33a9d796-612a-4b3a-937d-39773c93b73a
-      text: 3bee1cf1-46c0-42e5-8d5e-f57cdc62902c
-  T-checked-code:
-    template: code
-    parent: T-checked
-    code: "$ pkit validate\n  warning  agents/code-reviewer.md:42\n    → '[software-engineering:DEC-002]\
-      \ D4'\n      names point D4, which DEC-002\n      does not hold\n  16 validators ran; 0 errors"
-    x: 1632
-    y: 800
-    override:
-      root:
-        height: 352
-      bg:
-        height: 352
-      text:
-        height: 288
-    mural_ids:
-      root: 4f780746-52fe-4aba-a223-2cdc385c4f5d
-      bg: a54ce63f-830a-489e-9351-744c31540e6d
-      text: 52ab8844-8961-40a7-bb4a-ea850a254875
+      root: 0524318b-3161-474e-a140-2793392ad33e
+      img: 594fa9ce-e841-4cd9-a229-d84a7eb39190
   T-checked-limit:
     template: notice
     parent: T-checked
     text: 'Limit: It checks structure, not meaning: a record can be valid and still wrong.'
     x: 128
-    y: 1516.0
+    y: 1212
     mural_ids:
-      root: 153721f5-5c74-4299-b869-5d901d6fd74f
-      bg: 24b33492-2340-440b-9c13-566958187ae0
-      bar: ca1dae46-6e2c-488e-a04b-6776e99a9e1c
-      text: 4875edf5-083b-438b-b751-344bf6148b1b
+      root: 7419b0ef-4a95-44a0-8818-d1a5128dff1b
+      bg: 5cca2cb3-b6b4-4b70-a65a-4fa99527fc8e
+      bar: 23987b0c-9e30-495a-bebc-0ca8d647f20d
+      text: f49e4518-e479-4053-b720-2cb7d6c1ffea
   T-schemas:
     template: slide
     title: Rules and processes as data

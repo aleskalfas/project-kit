@@ -604,6 +604,66 @@ def story(pid, y, v):
     return out, CARD_IMG_Y + max(ph for _, ph in pics) + 32
 
 
+EXTRA_TEMPLATES = {}  # templates made for one slide, added to the map beside the shared ones
+TIES_ROW, TIES_NODE_H, TIES_HEAD_H, TIES_CENTER_H = 76, 60, 72, 176
+TIES_TONES = {"code": ("role_neutral_bg", "role_neutral"), "pkit": ("role_code_bg", "role_code"),
+              "yours": ("role_people_bg", "role_people"), "architecture": ("role_architecture_bg", "role_architecture")}
+
+
+def ties(pid, y, v):
+    """One document's ties: the files it describes on the left, the records it carries out on the right, a
+    line for each tie, a broken one red and dashed. The diagram is one instance of a template made for this
+    slide; the check's output stands beside it."""
+    left, right, c = v["left"], v["right"], v["center"]
+    W, lw, cw, rw = 1960, 380, 600, 560
+    lx, cx, rx = 0, 600, 1960 - 560
+    n = max(len(left), len(right))
+    body = n * TIES_ROW - (TIES_ROW - TIES_NODE_H)
+    H = TIES_HEAD_H + body
+    cy = TIES_HEAD_H + body / 2 - TIES_CENTER_H / 2
+    parts = {
+        "lhead": {"type": "text", "text": md(v["left_head"]), "style": "@style.key", "ink": "@text_primary", "x": lx, "y": 0, "width": lw + 200, "height": 56},
+        "rhead": {"type": "text", "text": md(v["right_head"]), "style": "@style.key", "ink": "@text_primary", "x": rx, "y": 0, "width": rw, "height": 56},
+        "cbox": {"type": "shape", "shape": "rectangle", "text": "", "x": cx, "y": round(cy), "width": cw, "height": TIES_CENTER_H,
+                 "color": "@background", "border_color": "@text_primary", "border_width": 4, "ink": "@text_primary"},
+        "chead": {"type": "text", "text": md(c["head"]), "style": "@style.key", "ink": "@text_primary", "x": cx + 32, "y": round(cy + 32), "width": cw - 64, "height": 56},
+        "cpath": {"type": "text", "text": md(c["path"]), "style": "@style.body", "x": cx + 32, "y": round(cy + 96), "width": cw - 64, "height": 50},
+    }
+
+    def column(items, side, x, w):
+        off = (n - len(items)) * TIES_ROW / 2
+        for i, it in enumerate(items):
+            ny = TIES_HEAD_H + off + i * TIES_ROW
+            broken = it.get("broken", False)
+            bg, tone = TIES_TONES[it.get("tone", "code")]
+            parts[f"{side}{i}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": round(ny), "width": w, "height": TIES_NODE_H,
+                                     "color": "@background" if broken else f"@{bg}", "border_color": "@text_error" if broken else f"@{tone}",
+                                     "border_width": 4 if broken else 2, "ink": "@text_primary"}
+            parts[f"{side}{i}text"] = {"type": "text", "text": md(it["label"]), "style": "@style.body", "ink": "@text_error" if broken else "@text_primary",
+                                      "x": x + 20, "y": round(ny + 6), "width": w - 40, "height": 50}
+            # the tie: from the node's inner edge to the guide's edge, spread along it
+            ey = cy + 20 + i * (TIES_CENTER_H - 40) / max(len(items) - 1, 1)
+            x1, x2 = (x + w, cx) if side == "l" else (x, cx + cw)
+            parts[f"{side}{i}tie"] = {"type": "arrow", "points": [[x1, round(ny + TIES_NODE_H / 2)], [x2, round(ey)]], "arrow_type": "straight", "tip": "none",
+                                     "color": "@text_error" if broken else "@border_strong", "border_width": 4,
+                                     "border_style": "dashed" if broken else "solid"}
+
+    column(left, "l", lx, lw)
+    column(right, "r", rx, rw)
+    name = f"ties_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "One document's ties, drawn for one slide by the slide generator: the files it describes, the records it carries out, a line per tie.",
+        "root": {**CLEAR_AREA, "width": W, "height": H},
+        "parts": parts,
+    }
+    out = {f"{pid}-ties": {"template": name, "parent": pid, "x": MARGIN, "y": y}}
+    tx = MARGIN + W + 64
+    d, th = terminal(pid, tx, y, MARGIN + SPAN16 - tx, v["terminal"], key="check", font_size=v.get("font_size", 24))
+    d[f"{pid}-check"]["y"] = y + H - th  # level with the broken tie, at the diagram's foot
+    out.update(d)
+    return out, H
+
+
 PYR_H, PYR_GAP = 172, 18
 
 
@@ -851,6 +911,8 @@ def build_slide(s, n, total):
             add(compare(pid, y, v["left"], v["right"]))
         elif kind == "kinds":
             add(kinds(pid, y, v))
+        elif kind == "ties":
+            add(ties(pid, y, v))
         elif kind == "story":
             add(story(pid, y, v))
         elif kind == "pyramid":
@@ -945,6 +1007,7 @@ def main(slides_path, board_path):
             if of["part"] == p["id"]:
                 new.update(build_slide({**var, "part": p["id"]}, content.index(of) + 1, total))
                 rows[sid].append(f"T-{var['id']}")
+    board["templates"].update(EXTRA_TEMPLATES)
     for k, v in new.items():
         if k in old_ids:
             v["mural_ids"] = old_ids[k]
