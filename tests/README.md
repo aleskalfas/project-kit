@@ -103,9 +103,9 @@ is held from its first test.
 
 - `load(capability, *names)` loads a capability's scripts, such as `validate.py`,
   and its `_lib` modules in the test's own process. Each capability's `_lib` is
-  kept apart in `sys.modules`, and a `_lib` module imported by path is kept out
-  while they load. `run_main(script, *args, cwd=...)` runs a script's `main` as
-  its process ran.
+  kept apart in `sys.modules`. While a call loads, no `_lib` folder is on the
+  import path and no `_lib` module imported by path is in `sys.modules`.
+  `run_main(script, *args, cwd=...)` runs a script's `main` as its process ran.
 - `route_pkit(monkeypatch, backbone)` answers every `pkit` call of a capability
   with the backbone's CLI in the test's own process. Each capability makes its
   calls through one private function, `_lib.backbone._run`, looked up when
@@ -127,9 +127,10 @@ is held from its first test.
 
 **A test leaves the import path as it found it.** A fixture that puts a folder on
 `sys.path` takes it off after its tests, through `monkeypatch.syspath_prepend` or
-its own teardown. A folder left there outlives the test on its worker, and every
-later test there imports from it. A capability's `_lib` folder left there made
-`friction_answers`' tests start a real `pkit` on one of CI's workers (#2353).
+its own teardown. A folder left on the path outlives the test, and every later
+test on its worker imports from it. A capability's `_lib` folder left so made
+eleven of `friction_answers`' tests start a real `pkit` on one of CI's workers
+(#2353).
 
 **The spot-check** is `uv run python scripts/spot_check.py BUGS --base REF TEST...`.
 It plants each bug the JSON file BUGS lists, one at a time, and runs the tests as
