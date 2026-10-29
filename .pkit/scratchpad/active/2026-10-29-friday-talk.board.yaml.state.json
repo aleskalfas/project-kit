@@ -55078,8 +55078,8 @@
     "parent": "T-sessions",
     "show_title": false,
     "title": "T-sessions-s1",
-    "width": 900,
-    "x": 418,
+    "width": 1000,
+    "x": 368,
     "y": 576
    },
    "fields": {
@@ -55090,11 +55090,11 @@
     "parent": "T-sessions",
     "show_title": false,
     "title": "T-sessions-s1",
-    "width": 900,
-    "x": 418,
+    "width": 1000,
+    "x": 368,
     "y": 576
    },
-   "mural_id": "0d286085-50fd-43f5-be4f-fc52b6ad7592",
+   "mural_id": "64d59fcb-1a94-49e4-9e97-3e00706b81d9",
    "tracked": [
     "title",
     "text",
@@ -55122,7 +55122,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314885011
+   "updatedOn": 1793315135491
   },
   "T-sessions-s1.box": {
    "board": {
@@ -55135,7 +55135,7 @@
     "parent": "T-sessions-s1",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 900,
+    "width": 1000,
     "x": 0,
     "y": 0
    },
@@ -55148,11 +55148,11 @@
     "parent": "T-sessions-s1",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 900,
+    "width": 1000,
     "x": 0,
     "y": 0
    },
-   "mural_id": "8166f9c2-cac0-450e-a83c-2219f3afd762",
+   "mural_id": "cac87525-7a1e-48ed-8503-0e28cbc7a106",
    "tracked": [
     "title",
     "text",
@@ -55180,7 +55180,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886006
+   "updatedOn": 1793315136381
   },
   "T-sessions-s1.dot": {
    "board": {
@@ -55210,7 +55210,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "2c26bc6d-ea7c-4bfc-8db6-bff0c5b9072e",
+   "mural_id": "0c8f88cc-a4d6-462e-8de6-db83dd35df7d",
    "tracked": [
     "title",
     "text",
@@ -55238,7 +55238,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886006
+   "updatedOn": 1793315136381
   },
   "T-sessions-s1.head": {
    "board": {
@@ -55248,9 +55248,9 @@
     "font_size": 40,
     "ink": "#FFFFFFFF",
     "parent": "T-sessions-s1",
-    "text": "The decision: COR-065, point 7",
+    "text": "The decision (COR-065)",
     "title": "tpl:stage#head",
-    "width": 836,
+    "width": 936,
     "x": 32,
     "y": 22
    },
@@ -55260,13 +55260,13 @@
     "font_size": 40,
     "ink": "#FFFFFFFF",
     "parent": "T-sessions-s1",
-    "text": "The decision: COR-065, point 7",
+    "text": "The decision (COR-065)",
     "title": "tpl:stage#head",
-    "width": 836,
+    "width": 936,
     "x": 32,
     "y": 22
    },
-   "mural_id": "c1438b0d-9442-43e3-acb3-d7e865d28926",
+   "mural_id": "6b91229e-31f1-43b9-a0cc-5629242e15d8",
    "tracked": [
     "title",
     "text",
@@ -55294,7 +55294,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886741
+   "updatedOn": 1793315137217
   },
   "T-sessions-s1.text": {
    "board": {
@@ -55304,9 +55304,9 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-sessions-s1",
-    "text": "Records are read to change the system, not loaded to run it.",
+    "text": "An agent reads the records only when it changes something, not in every session.",
     "title": "tpl:stage#text",
-    "width": 836,
+    "width": 936,
     "x": 32,
     "y": 92
    },
@@ -55316,13 +55316,13 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-sessions-s1",
-    "text": "Records are read to change the system, not loaded to run it.",
+    "text": "An agent reads the records only when it changes something, not in every session.",
     "title": "tpl:stage#text",
-    "width": 836,
+    "width": 936,
     "x": 32,
     "y": 92
    },
-   "mural_id": "ee451b28-8a3d-478c-b3c4-3cd28732ce97",
+   "mural_id": "12b96667-fc8b-432b-b017-9c880d343dda",
    "tracked": [
     "title",
     "text",
@@ -55350,7 +55350,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886741
+   "updatedOn": 1793315137217
   },
   "T-sessions-s2": {
    "board": {
@@ -55363,8 +55363,8 @@
     "parent": "T-sessions",
     "show_title": false,
     "title": "T-sessions-s2",
-    "width": 1190,
-    "x": 273,
+    "width": 1240,
+    "x": 248,
     "y": 794
    },
    "fields": {
@@ -55375,11 +55375,11 @@
     "parent": "T-sessions",
     "show_title": false,
     "title": "T-sessions-s2",
-    "width": 1190,
-    "x": 273,
+    "width": 1240,
+    "x": 248,
     "y": 794
    },
-   "mural_id": "02e46b85-db4c-437d-a751-86dfaeac5c6c",
+   "mural_id": "8fe5acd6-fac7-4c35-87ed-310b72c46460",
    "tracked": [
     "title",
     "text",
@@ -55407,7 +55407,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314885050
+   "updatedOn": 1793315135581
   },
   "T-sessions-s2.box": {
    "board": {
@@ -55420,7 +55420,7 @@
     "parent": "T-sessions-s2",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1190,
+    "width": 1240,
     "x": 0,
     "y": 0
    },
@@ -55433,11 +55433,11 @@
     "parent": "T-sessions-s2",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1190,
+    "width": 1240,
     "x": 0,
     "y": 0
    },
-   "mural_id": "fc2c946e-08a9-4496-acfb-5c525830ee19",
+   "mural_id": "6016657f-d4c7-49e4-ab89-fff5b5bc711c",
    "tracked": [
     "title",
     "text",
@@ -55465,7 +55465,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886006
+   "updatedOn": 1793315136381
   },
   "T-sessions-s2.dot": {
    "board": {
@@ -55495,7 +55495,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "0978c433-f486-4327-8d08-51c73b25b2ff",
+   "mural_id": "e42d5bae-103e-4640-8d68-e8fedc132654",
    "tracked": [
     "title",
     "text",
@@ -55523,7 +55523,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886006
+   "updatedOn": 1793315136381
   },
   "T-sessions-s2.head": {
    "board": {
@@ -55533,9 +55533,9 @@
     "font_size": 40,
     "ink": "#FFFFFFFF",
     "parent": "T-sessions-s2",
-    "text": "The rule: RS-OPS-022",
+    "text": "The rule every session gets (rule 22)",
     "title": "tpl:stage#head",
-    "width": 1126,
+    "width": 1176,
     "x": 32,
     "y": 22
    },
@@ -55545,13 +55545,13 @@
     "font_size": 40,
     "ink": "#FFFFFFFF",
     "parent": "T-sessions-s2",
-    "text": "The rule: RS-OPS-022",
+    "text": "The rule every session gets (rule 22)",
     "title": "tpl:stage#head",
-    "width": 1126,
+    "width": 1176,
     "x": 32,
     "y": 22
    },
-   "mural_id": "03a3afa4-a930-433a-84ad-76408890490a",
+   "mural_id": "2eeb371c-1d28-459c-8f94-fa4d2fa712ad",
    "tracked": [
     "title",
     "text",
@@ -55579,7 +55579,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886741
+   "updatedOn": 1793315137217
   },
   "T-sessions-s2.text": {
    "board": {
@@ -55589,9 +55589,9 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-sessions-s2",
-    "text": "Read the records a change's files lead to first.",
+    "text": "Before you change files, read the records behind them.",
     "title": "tpl:stage#text",
-    "width": 1126,
+    "width": 1176,
     "x": 32,
     "y": 92
    },
@@ -55601,13 +55601,13 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-sessions-s2",
-    "text": "Read the records a change's files lead to first.",
+    "text": "Before you change files, read the records behind them.",
     "title": "tpl:stage#text",
-    "width": 1126,
+    "width": 1176,
     "x": 32,
     "y": 92
    },
-   "mural_id": "2ab0195a-22b2-45b6-8a9a-a3706b0048d4",
+   "mural_id": "44b76bb0-8326-4354-a20d-c724e935e31b",
    "tracked": [
     "title",
     "text",
@@ -55635,7 +55635,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886741
+   "updatedOn": 1793315137217
   },
   "T-sessions-s3": {
    "board": {
@@ -55818,7 +55818,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-sessions-s3",
-    "text": "Every session, from its start",
+    "text": "What the agent does",
     "title": "tpl:stage#head",
     "width": 1416,
     "x": 32,
@@ -55830,7 +55830,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-sessions-s3",
-    "text": "Every session, from its start",
+    "text": "What the agent does",
     "title": "tpl:stage#head",
     "width": 1416,
     "x": 32,
@@ -55864,7 +55864,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886741
+   "updatedOn": 1793315138120
   },
   "T-sessions-s3.text": {
    "board": {
@@ -55874,7 +55874,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-sessions-s3",
-    "text": "So, on the slide before, the agent looked up the guide's records first.",
+    "text": "That is why, on the slide before, it looked up the release guide's records.",
     "title": "tpl:stage#text",
     "width": 1416,
     "x": 32,
@@ -55886,7 +55886,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-sessions-s3",
-    "text": "So, on the slide before, the agent looked up the guide's records first.",
+    "text": "That is why, on the slide before, it looked up the release guide's records.",
     "title": "tpl:stage#text",
     "width": 1416,
     "x": 32,
@@ -55920,7 +55920,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314886741
+   "updatedOn": 1793315138112
   },
   "T-sessions.bg": {
    "board": {
@@ -55987,7 +55987,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "A few short rules on how to act, pkit's and yours, each pointing to the decision it carries out.",
+    "text": "A few short rules on how to work, pkit's and yours. Each rule names the decision behind it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -55998,7 +55998,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "A few short rules on how to act, pkit's and yours, each pointing to the decision it carries out.",
+    "text": "A few short rules on how to work, pkit's and yours. Each rule names the decision behind it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -56032,7 +56032,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314888510
+   "updatedOn": 1793315138069
   },
   "T-sessions.num": {
    "board": {

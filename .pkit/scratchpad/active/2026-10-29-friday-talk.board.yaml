@@ -4560,8 +4560,7 @@ instances:
   T-sessions:
     template: slide
     title: What every session is told
-    lead: A few short rules on how to act, pkit's and yours, each pointing to the decision it carries
-      out.
+    lead: A few short rules on how to work, pkit's and yours. Each rule names the decision behind it.
     rests: 'This week: each rule got a permanent id and a status, and the file every session loads is
       generated from them'
     n: 7
@@ -4581,30 +4580,30 @@ instances:
     template: stage
     parent: T-sessions
     role: neutral
-    head: 'The decision: COR-065, point 7'
-    text: Records are read to change the system, not loaded to run it.
-    x: 418
+    head: The decision (COR-065)
+    text: An agent reads the records only when it changes something, not in every session.
+    x: 368
     y: 576
     override:
       root:
-        width: 900
+        width: 1000
         height: 200
       box:
-        width: 900
+        width: 1000
         height: 200
         color: '#491D8BFF'
         border_color: '#491D8BFF'
       head:
         x: 32
         y: 22
-        width: 836
+        width: 936
         height: 64
         align: center
         ink: '@text_on_color'
       text:
         x: 32
         y: 92
-        width: 836
+        width: 936
         height: 90
         align: center
         ink: '@text_on_color'
@@ -4612,39 +4611,39 @@ instances:
         color: '#491D8BFF'
         border_color: '#491D8BFF'
     mural_ids:
-      root: 0d286085-50fd-43f5-be4f-fc52b6ad7592
-      box: 8166f9c2-cac0-450e-a83c-2219f3afd762
-      dot: 2c26bc6d-ea7c-4bfc-8db6-bff0c5b9072e
-      head: c1438b0d-9442-43e3-acb3-d7e865d28926
-      text: ee451b28-8a3d-478c-b3c4-3cd28732ce97
+      root: 64d59fcb-1a94-49e4-9e97-3e00706b81d9
+      box: cac87525-7a1e-48ed-8503-0e28cbc7a106
+      dot: 0c8f88cc-a4d6-462e-8de6-db83dd35df7d
+      head: 6b91229e-31f1-43b9-a0cc-5629242e15d8
+      text: 12b96667-fc8b-432b-b017-9c880d343dda
   T-sessions-s2:
     template: stage
     parent: T-sessions
     role: neutral
-    head: 'The rule: RS-OPS-022'
-    text: Read the records a change's files lead to first.
-    x: 273
+    head: The rule every session gets (rule 22)
+    text: Before you change files, read the records behind them.
+    x: 248
     y: 794
     override:
       root:
-        width: 1190
+        width: 1240
         height: 200
       box:
-        width: 1190
+        width: 1240
         height: 200
         color: '#6929C4FF'
         border_color: '#6929C4FF'
       head:
         x: 32
         y: 22
-        width: 1126
+        width: 1176
         height: 64
         align: center
         ink: '@text_on_color'
       text:
         x: 32
         y: 92
-        width: 1126
+        width: 1176
         height: 90
         align: center
         ink: '@text_on_color'
@@ -4652,17 +4651,17 @@ instances:
         color: '#6929C4FF'
         border_color: '#6929C4FF'
     mural_ids:
-      root: 02e46b85-db4c-437d-a751-86dfaeac5c6c
-      box: fc2c946e-08a9-4496-acfb-5c525830ee19
-      dot: 0978c433-f486-4327-8d08-51c73b25b2ff
-      head: 03a3afa4-a930-433a-84ad-76408890490a
-      text: 2ab0195a-22b2-45b6-8a9a-a3706b0048d4
+      root: 8fe5acd6-fac7-4c35-87ed-310b72c46460
+      box: 6016657f-d4c7-49e4-ab89-fff5b5bc711c
+      dot: e42d5bae-103e-4640-8d68-e8fedc132654
+      head: 2eeb371c-1d28-459c-8f94-fa4d2fa712ad
+      text: 44b76bb0-8326-4354-a20d-c724e935e31b
   T-sessions-s3:
     template: stage
     parent: T-sessions
     role: neutral
-    head: Every session, from its start
-    text: So, on the slide before, the agent looked up the guide's records first.
+    head: What the agent does
+    text: That is why, on the slide before, it looked up the release guide's records.
     x: 128
     y: 1012
     override:

@@ -510,27 +510,27 @@ slides:
 - id: sessions
   part: P1
   title: What every session is told
-  message: A few short rules on how to act, pkit's and yours, each pointing to the decision it carries out.
+  message: A few short rules on how to work, pkit's and yours. Each rule names the decision behind it.
   problem: ''
   does: []
   show: 'This week: each rule got a permanent id and a status, and the file every session loads is generated from them'
   visual:
     kind: rules
     center: 868
-    top_w: 900
-    step: 290
+    top_w: 1000
+    step: 240
     level_h: 200
     levels:
-    - head: 'The decision: COR-065, point 7'
-      text: Records are read to change the system, not loaded to run it.
+    - head: The decision (COR-065)
+      text: An agent reads the records only when it changes something, not in every session.
       fill: '#491D8BFF'
       ink: '@text_on_color'
-    - head: 'The rule: RS-OPS-022'
-      text: Read the records a change's files lead to first.
+    - head: The rule every session gets (rule 22)
+      text: Before you change files, read the records behind them.
       fill: '#6929C4FF'
       ink: '@text_on_color'
-    - head: Every session, from its start
-      text: So, on the slide before, the agent looked up the guide's records first.
+    - head: What the agent does
+      text: That is why, on the slide before, it looked up the release guide's records.
       fill: '#BE95FFFF'
       ink: '@text_primary'
     font_size: 28
