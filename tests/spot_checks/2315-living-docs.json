@@ -1,0 +1,74 @@
+[
+  {
+    "id": "ld-enclosing-place-reported-not-failed",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "                ERROR,\n                f\"{BACKBONE_CONFIG}:{place.pointer}\",\n                f\"project place {place.written!r} is equal to or encloses \"",
+    "replace": "                REPORT,\n                f\"{BACKBONE_CONFIG}:{place.pointer}\",\n                f\"project place {place.written!r} is equal to or encloses \""
+  },
+  {
+    "id": "ld-tie-at-the-first-place",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "f\"{BACKBONE_CONFIG}:{b.pointer}\",\n                f\"project places {a.written!r} and",
+    "replace": "f\"{BACKBONE_CONFIG}:{a.pointer}\",\n                f\"project places {a.written!r} and"
+  },
+  {
+    "id": "ld-page-count-off-by-one",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "lines.append(f\"{space}: {count} page(s); \"",
+    "replace": "lines.append(f\"{space}: {count + 1} page(s); \""
+  },
+  {
+    "id": "ld-commented-title-counts",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/formats.py",
+    "find": "_ACC_TITLE = re.compile(r\"^accTitle[ \\t]*:(.*)$\")",
+    "replace": "_ACC_TITLE = re.compile(r\"accTitle[ \\t]*:(.*)$\")"
+  },
+  {
+    "id": "ld-readers-unsorted",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/readers.py",
+    "find": "    ids = sorted(\n        str(entry[\"id\"])",
+    "replace": "    ids = list(\n        str(entry[\"id\"])"
+  },
+  {
+    "id": "ld-collection-entries-bind",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/binding.py",
+    "find": "entry.get(\"kind\") != DOCUMENT",
+    "replace": "entry.get(\"kind\") is None"
+  },
+  {
+    "id": "ld-rule-sets-place-unmarked",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/artefacts.py",
+    "find": "rule_sets=isinstance(entry.get(\"rule_sets\"), Mapping),",
+    "replace": "rule_sets=False,"
+  },
+  {
+    "id": "ld-places-unread-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "f\"the documentation places cannot be read — {str(exc).rstrip('.')}. No space is \"",
+    "replace": "f\"the places cannot be read — {str(exc).rstrip('.')}. No space is \""
+  },
+  {
+    "id": "ld-reach-unread-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "f\"where {LDOC}'s rules bind cannot be read — {str(exc).rstrip('.')}. No page's \"",
+    "replace": "f\"where {LDOC}'s rules bind is unknown — {str(exc).rstrip('.')}. No page's \""
+  },
+  {
+    "id": "ld-untyped-backbone-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/artefacts.py",
+    "find": "answered without each artefact's type and ranked places; ",
+    "replace": "answered without types; "
+  },
+  {
+    "id": "ld-undeclared-kind-said-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "f\"kind {kind!r} declares no structure, so the body of the {len(rels)} page(s) that \"",
+    "replace": "f\"kind {kind!r} has no structure, so the body of the {len(rels)} page(s) that \""
+  },
+  {
+    "id": "ld-accepted-reason-listed-otherwise",
+    "file": ".pkit/capabilities/living-docs/scripts/validate.py",
+    "find": "print(f\"  {rel} — {reason}\")",
+    "replace": "print(f\"  {rel}: {reason}\")"
+  }
+]

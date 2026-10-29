@@ -1,0 +1,20 @@
+[
+  {
+    "id": "sa-no-heading-said-otherwise",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/check.py",
+    "find": "\"has no heading\" if written is None else",
+    "replace": "\"has no title\" if written is None else"
+  },
+  {
+    "id": "sa-wrong-heading-passes",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/check.py",
+    "find": "        if written == wanted:\n            continue\n        shown =",
+    "replace": "        if written is not None:\n            continue\n        shown ="
+  },
+  {
+    "id": "sa-other-number-passes",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/check.py",
+    "find": "elif identity(artefact.id) != named:",
+    "replace": "elif identity(artefact.id) != named and False:"
+  }
+]
