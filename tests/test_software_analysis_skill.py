@@ -26,14 +26,15 @@ requirement (#1692), revalidation record. Held here:
   stamped and filled is checked with `pkit analysis validate --preview`, and a
   part of the project's own, under a proposed rule of its own, is previewed on
   the candidate and written by the stamp once it is stamped again.
+
+The stamp, its help and the check run in the test's own process, their `pkit`
+calls answered there too (`tests/in_process.py`, #2325).
 """
 
 from __future__ import annotations
 
 import json
 import re
-import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,7 @@ from click.testing import CliRunner
 from project_kit import refs
 from project_kit.cli import main
 from project_kit.friction_validate import validate_friction
+from tests import in_process
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ANALYSIS,
@@ -58,7 +60,7 @@ from tests.analysis_repo import (
     fill,
     installed,
     load,
-    run_script,
+    run_in_process,
     stamped,
 )
 from tests.test_software_analysis_check import check, errors
@@ -250,13 +252,9 @@ def test_the_skill_is_deployed_beside_its_sub_procedures() -> None:
 
 
 def _help(kind: str) -> str:
-    completed = subprocess.run(
-        [sys.executable, str(REPO / NEW), kind, "--help"],
-        cwd=REPO,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    """`pkit analysis new <kind> --help`: the stamp's `main`, in the test's own process."""
+    (stamp,) = in_process.load("software-analysis", NEW.name)
+    completed = in_process.run_main(stamp, kind, "--help", cwd=REPO)
     assert completed.returncode == 0, completed.stderr
     return completed.stdout
 
@@ -294,7 +292,6 @@ def project(
     return installed(make_adopter_repo, monkeypatch)
 
 
-# Slow by design: ten stamps and the check, each a script that starts `pkit` processes.
 def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_block(
     project: AdopterRepo,
 ) -> None:
@@ -325,13 +322,13 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
         "--confirmed-by",
         "Sam",
     )
-    completed = run_script(project, NEW, *stale)
+    completed = run_in_process(project, NEW, *stale)
     assert completed.returncode == 0, completed.stderr
 
     fill(project)  # the walkthroughs' "Fill it": the check fails a placeholder left
     assert errors(check(project)) == []
     assert validate_friction(project.root).errors == ()
-    listing = subprocess.run(
+    listing = in_process.InProcessPkit()(
         ["pkit", "friction", "artefacts", "--json"],
         cwd=project.root,
         capture_output=True,
@@ -421,14 +418,13 @@ STRUCTURES_TEXT = (
 def _previewed(repo: AdopterRepo, rel: str) -> tuple[str, list[tuple[str, str]]]:
     """What `pkit analysis validate --preview` says: its summary of the structure, and
     each finding on one artefact, with its severity."""
-    completed = run_script(repo, VALIDATE, "--json", "--preview")
+    completed = run_in_process(repo, VALIDATE, "--json", "--preview")
     assert completed.returncode == 0, completed.stderr
     document = json.loads(completed.stdout)
     found = [(f["severity"], f["message"]) for f in document["findings"] if f["location"] == rel]
     return document["summary"][1], found
 
 
-# Slow by design: two stamps and three checks, each a script that starts `pkit` processes.
 def test_a_candidate_is_previewed_and_stamped_again_with_the_project_s_own_part(
     project: AdopterRepo,
 ) -> None:
