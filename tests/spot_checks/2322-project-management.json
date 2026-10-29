@@ -24,10 +24,10 @@
     "replace": "found.append(Problem(ERROR, f\"{entry.type} is not a type of {capability}'s own\"))"
   },
   {
-    "id": "pm-doc-mapping-repeated-pattern-one-key",
+    "id": "pm-fill-doc-check-first-document-only",
     "file": ".pkit/capabilities/project-management/scripts/_lib/doc_check.py",
-    "find": "suffix = f\"#{seen[code]}\" if seen[code] > 1 else \"\"",
-    "replace": "suffix = \"\""
+    "find": "\"documents\": [str(d) for d in documents],",
+    "replace": "\"documents\": [str(d) for d in documents[:1]],"
   },
   {
     "id": "pm-doc-mapping-changed-page-meets-nothing",
