@@ -1,0 +1,86 @@
+[
+  {
+    "id": "pm-list-fixers-answer-said-otherwise",
+    "file": ".pkit/capabilities/project-management/scripts/list-fixers.py",
+    "find": "answer = answers.of(agent, entry.type) or \"not asked\"",
+    "replace": "answer = answers.of(agent, entry.type) or \"not answered\""
+  },
+  {
+    "id": "pm-grant-fixer-dry-run-said-otherwise",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/fixer_cli.py",
+    "find": "print(f\"Would record in {shown}, which exists: {what}. Nothing was written (--dry-run).\")",
+    "replace": "print(f\"Would record in {shown}: {what}. Nothing was written (--dry-run).\")"
+  },
+  {
+    "id": "pm-ask-fixers-nothing-waits-said-otherwise",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/fixer_cli.py",
+    "find": "out.write(\"No fixer waits for an answer.\\n\")",
+    "replace": "out.write(\"No fixer waits.\\n\")"
+  },
+  {
+    "id": "pm-check-fixers-capability-entry-an-error",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/fixers.py",
+    "find": "found.append(Problem(REPORT, f\"{entry.type} is not a type of {capability}'s own\"))",
+    "replace": "found.append(Problem(ERROR, f\"{entry.type} is not a type of {capability}'s own\"))"
+  },
+  {
+    "id": "pm-doc-mapping-repeated-pattern-one-key",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/doc_check.py",
+    "find": "suffix = f\"#{seen[code]}\" if seen[code] > 1 else \"\"",
+    "replace": "suffix = \"\""
+  },
+  {
+    "id": "pm-doc-mapping-changed-page-meets-nothing",
+    "file": ".pkit/capabilities/project-management/scripts/check-doc-mapping.py",
+    "find": "        if any(_matches(page, f) for f in changed_set):\n            print(f\"  ✓ [{source}] {page} → answered in the diff\")",
+    "replace": "        if False:\n            print(f\"  ✓ [{source}] {page} → answered in the diff\")"
+  },
+  {
+    "id": "pm-doc-mapping-answer-meets-any-page",
+    "file": ".pkit/capabilities/project-management/scripts/check-doc-mapping.py",
+    "find": "        file = answered.get(page)\n",
+    "replace": "        file = answered.get(page) or next(iter(answered.values()), None)\n"
+  },
+  {
+    "id": "pm-doc-mapping-enforcing-source-passes",
+    "file": ".pkit/capabilities/project-management/scripts/check-doc-mapping.py",
+    "find": "                \"a `## Doc impact` line does not meet them.\",\n                file=sys.stderr,\n            )\n            failed = True",
+    "replace": "                \"a `## Doc impact` line does not meet them.\",\n                file=sys.stderr,\n            )\n            failed = False"
+  },
+  {
+    "id": "pm-ruled-artefacts-ruled-inverted",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/ruled_artefacts.py",
+    "find": "ruled=any(side[\"rules\"] for side in sides),",
+    "replace": "ruled=not any(side[\"rules\"] for side in sides),"
+  },
+  {
+    "id": "pm-ruled-artefacts-change-kept-as-changed",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/ruled_artefacts.py",
+    "find": "                change=change,\n",
+    "replace": "                change=CHANGED if change != UNALTERED else change,\n"
+  },
+  {
+    "id": "pm-friction-answers-places-change-missed",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/friction_answers.py",
+    "find": "    if places[0] != places[1]:\n",
+    "replace": "    if places[0] == places[1]:\n"
+  },
+  {
+    "id": "pm-friction-answers-outdated-never",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/friction_answers.py",
+    "find": "        return bool(_mapping((self.document or {}).get(\"base\")).get(\"outdated\"))",
+    "replace": "        return False"
+  },
+  {
+    "id": "pm-friction-answers-unreadable-settings-pass",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/friction_answers.py",
+    "find": "    if proc.returncode != 0:\n        return f\"{command}: it exited {proc.returncode}\" + (f\": {said[-1]}\" if said else \"\")\n    try:\n        document = json.loads(proc.stdout or \"\")\n    except ValueError:\n        return f\"{command}: its answer is not JSON\"\n    if not isinstance(document, dict) or document.get(\"schema_version\", 1) != SCHEMA_VERSION:\n        return f\"{command}: its answer is not a document of version {SCHEMA_VERSION}\"",
+    "replace": "    if proc.returncode != 0:\n        return {}\n    try:\n        document = json.loads(proc.stdout or \"\")\n    except ValueError:\n        return f\"{command}: its answer is not JSON\"\n    if not isinstance(document, dict) or document.get(\"schema_version\", 1) != SCHEMA_VERSION:\n        return f\"{command}: its answer is not a document of version {SCHEMA_VERSION}\""
+  },
+  {
+    "id": "pm-friction-answers-checkout-kept",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/friction_answers.py",
+    "find": "    if isinstance(found, _NoDocument) and found.elsewhere:\n",
+    "replace": "    if isinstance(found, _NoDocument):\n"
+  }
+]

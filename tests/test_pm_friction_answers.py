@@ -6,6 +6,12 @@ The list is the change check's: `derive` runs the real `pkit friction check
 registered anchor kind's resolver must run, from a temporary checkout of the head.
 The rendering, the closing-reference refusal and the section's place in a body are
 tested on the check's document shape.
+
+Where a test runs the change check, its `pkit` is answered by the backbone's CLI in
+the test's own process, the argument lists unchanged (`tests/in_process.py`). The
+check at a merge names the change's own head in its environment, which the
+in-process `pkit` does not model, so a test that reaches it stands the check in.
+Six tests keep a real process, each marked with why.
 """
 
 from __future__ import annotations
@@ -36,6 +42,7 @@ from tests.friction_documents import (
     friction_config,
     guide,
 )
+from tests.in_process import MODELLED, InProcessPkit, Runner
 from tests.test_friction_revisit import (
     DECISION,
     SOURCE_DOC,
@@ -44,6 +51,7 @@ from tests.test_friction_revisit import (
     requirement,
 )
 from tests.test_friction_revisit import entry as revisit_entry
+from tests.test_pm_backbone import route_every_backbone
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -69,6 +77,13 @@ def fa() -> Iterator[ModuleType]:
     spec.loader.exec_module(module)
     yield module
     sys.path.remove(str(LIB_DIR))
+
+
+@pytest.fixture
+def pkit_here(fa: ModuleType, monkeypatch: pytest.MonkeyPatch) -> Runner:
+    """Every `pkit` call of the module answered by the backbone's CLI in this process,
+    through each copy of `_lib/backbone.py` it may reach (`route_every_backbone`)."""
+    return route_every_backbone(monkeypatch)
 
 
 def _entry(
@@ -1054,6 +1069,10 @@ def _branch_with_an_answer(make_adopter_repo: MakeAdopterRepo) -> tuple[AdopterR
     return repo, repo.head()
 
 
+@pytest.mark.process(
+    "derive's end-to-end test: the real `pkit friction check --head` from another "
+    "checkout, uncommitted work not read, the merge base carried"
+)
 def test_the_list_is_derived_at_the_head_from_another_checkout(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
@@ -1070,7 +1089,7 @@ def test_the_list_is_derived_at_the_head_from_another_checkout(
 
 
 def test_a_revisit_entry_derived_from_the_check_is_listed_in_words(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner
 ) -> None:
     """The real change check's revisit entries (#1703): a source whose trigger field
     changed, one target it revisits by changing it and one it leaves out of date. The
@@ -1110,7 +1129,7 @@ def test_a_revisit_entry_derived_from_the_check_is_listed_in_words(
 
 
 def test_a_base_that_moved_on_is_outdated(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner
 ) -> None:
     repo, head = _branch_with_an_answer(make_adopter_repo)
     repo.checkout("main")
@@ -1120,7 +1139,7 @@ def test_a_base_that_moved_on_is_outdated(
 
 
 def test_no_document_is_unreadable_never_a_pass(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner
 ) -> None:
     _repo, head = _branch_with_an_answer(make_adopter_repo)
     found = fa.derive(head, "no-such-base")
@@ -1249,7 +1268,7 @@ def test_only_the_resolver_refusal_is_answered_from_a_checkout(
 
 
 def test_a_base_that_cannot_be_fetched_is_unreadable(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner
 ) -> None:
     repo, head = _branch_with_an_answer(make_adopter_repo)
     repo.git("remote", "add", "origin", str(repo.root / "no-such-remote"))
@@ -1261,6 +1280,10 @@ def test_a_base_that_cannot_be_fetched_is_unreadable(
     )
 
 
+@pytest.mark.process(
+    "derive's checkout path end to end: the backbone refuses a registered kind's "
+    "resolver away from the head, then runs it from a temporary checkout"
+)
 def test_a_resolver_runs_from_a_temporary_checkout_of_the_head(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
@@ -1328,7 +1351,7 @@ def _branch_needing_its_resolver(make_adopter_repo: MakeAdopterRepo) -> tuple[Ad
 def test_no_checkout_is_made_when_the_first_run_answers(
     fa: ModuleType,
     make_adopter_repo: MakeAdopterRepo,
-    pkit_on_path: Path,
+    pkit_here: Runner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     repo, head = _branch_with_an_answer(make_adopter_repo)
@@ -1345,7 +1368,7 @@ def test_no_checkout_is_made_when_the_first_run_answers(
 def test_a_failure_other_than_the_resolver_refusal_is_kept_with_no_checkout(
     fa: ModuleType,
     make_adopter_repo: MakeAdopterRepo,
-    pkit_on_path: Path,
+    pkit_here: Runner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     repo, head = _branch_with_an_answer(make_adopter_repo)
@@ -1361,7 +1384,7 @@ def test_a_failure_other_than_the_resolver_refusal_is_kept_with_no_checkout(
 def test_a_check_that_raises_inside_the_checkout_leaves_nothing_behind(
     fa: ModuleType,
     make_adopter_repo: MakeAdopterRepo,
-    pkit_on_path: Path,
+    pkit_here: Runner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     repo, head = _branch_needing_its_resolver(make_adopter_repo)
@@ -1393,6 +1416,10 @@ def test_a_check_that_raises_inside_the_checkout_leaves_nothing_behind(
     )
 
 
+@pytest.mark.process(
+    "derive's checkout path, whose check at the head starts the fixture kind's "
+    "resolver, a script with no main that only a process runs"
+)
 def test_only_this_runs_worktree_is_removed(
     fa: ModuleType,
     make_adopter_repo: MakeAdopterRepo,
@@ -1443,7 +1470,7 @@ def test_a_termination_signal_removes_the_checkout(
 
 
 def test_a_change_that_sets_friction_dormant_lists_the_setting(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner
 ) -> None:
     """The settings decide what the change check asks: a change that empties the
     places makes the check dormant at its head, so it lists no answer — and the
@@ -1474,6 +1501,10 @@ def test_a_change_that_sets_friction_dormant_lists_the_setting(
     assert fa.lines(found.document, found.settings) == ["Checked locations: docs → none"]
 
 
+@pytest.mark.process(
+    "settings_change's end-to-end test: two real `pkit friction artefacts --json "
+    "--at` documents, the script-to-backbone contract"
+)
 def test_a_change_that_excludes_an_artefact_lists_it(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
@@ -1491,7 +1522,7 @@ def test_a_change_that_excludes_an_artefact_lists_it(
 
 
 def test_settings_that_cannot_be_read_make_the_derivation_unreadable(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner
 ) -> None:
     repo = make_adopter_repo()
     repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
@@ -1832,6 +1863,9 @@ def test_a_sentence_the_list_must_not_hold_is_named(
 # -- a later head an authorisation covers (DEC-055 point 3) -------------------------
 
 
+@pytest.mark.process(
+    "covers' end-to-end test: three real `pkit friction since` runs over a real history"
+)
 def test_the_backbone_says_a_later_head_of_answers_is_covered(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
@@ -1997,6 +2031,10 @@ def _land_elsewhere(repo: AdopterRepo, branch: str) -> str:
     return landed
 
 
+@pytest.mark.process(
+    "merged's end-to-end test: the race shows only through a real merge, a worktree "
+    "checkout and the real check at the merge, which names the change's own head"
+)
 def test_two_changes_that_pass_alone_are_refused_together(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
@@ -2026,13 +2064,19 @@ def test_two_changes_that_pass_alone_are_refused_together(
 
 
 def test_the_merge_is_built_even_where_signing_is_asked_for(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+    fa: ModuleType,
+    make_adopter_repo: MakeAdopterRepo,
+    pkit_here: Runner,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The merge reaches no branch, so it is never signed: with signing asked for, and a
-    signing program that refuses (the suite's), it is built all the same."""
+    signing program that refuses (the suite's), it is built all the same. The check at
+    the merge is stood in: it reads the merge only once it is built."""
     repo, _anchor, engine = _race(make_adopter_repo)
     _land_elsewhere(repo, "anchor")
     repo.git("config", "commit.gpgsign", "true")
+    passing = {"schema_version": 1, "failed": False, "findings": [], "answers": []}
+    monkeypatch.setattr(fa, "_run_check", lambda *_a, **_k: passing)
     found = fa.merged(engine, "main")
     assert found.problem is None, found.problem
     assert "gpgsig" not in repo.git("cat-file", "-p", found.merge).stdout
@@ -2041,7 +2085,7 @@ def test_the_merge_is_built_even_where_signing_is_asked_for(
 def test_a_head_that_holds_the_tip_its_own_check_read_is_not_checked_again(
     fa: ModuleType,
     make_adopter_repo: MakeAdopterRepo,
-    pkit_on_path: Path,
+    pkit_here: Runner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Where the head's own check read the tip the fetch finds, and the head holds it,
@@ -2065,17 +2109,20 @@ def test_a_head_that_holds_the_tip_its_own_check_read_is_not_checked_again(
 def test_the_check_runs_at_the_merge_with_the_head_as_its_own_head(
     fa: ModuleType,
     make_adopter_repo: MakeAdopterRepo,
-    pkit_on_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """From a checkout of the merge, against the tip, unrouted, with the head named as
-    the change's own head, as a pull request's checks run it (COR-062 point 4)."""
+    the change's own head, as a pull request's checks run it (COR-062 point 4). The
+    reading of the base is answered by the backbone's CLI in this process."""
     repo, _anchor, engine = _race(make_adopter_repo)
     landed = _land_elsewhere(repo, "anchor")
     real = subprocess.run
+    pkit = InProcessPkit()
     seen: list[tuple[list[str], str, str, str | None, str | None]] = []
 
     def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        if argv[:3] == ["pkit", "repository", "base"]:
+            return pkit(argv, **{key: kwargs[key] for key in MODELLED if key in kwargs})
         if argv[:3] != ["pkit", "friction", "check"]:
             return real(argv, **kwargs)
         cwd = str(kwargs.get("cwd"))
@@ -2097,7 +2144,7 @@ def test_the_check_runs_at_the_merge_with_the_head_as_its_own_head(
 
 
 def test_a_merge_that_conflicts_names_its_files_and_checks_nothing(
-    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_here: Runner
 ) -> None:
     repo, _anchor, _engine = _race(make_adopter_repo)
     repo.checkout("cli", create=True)
@@ -2128,7 +2175,7 @@ def test_a_base_that_cannot_be_fetched_leaves_the_merge_unchecked(
 def test_a_check_with_no_document_at_the_merge_is_a_problem_never_a_pass(
     fa: ModuleType,
     make_adopter_repo: MakeAdopterRepo,
-    pkit_on_path: Path,
+    pkit_here: Runner,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     repo, _anchor, engine = _race(make_adopter_repo)
