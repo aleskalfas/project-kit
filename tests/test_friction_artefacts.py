@@ -398,8 +398,11 @@ DOC_RULES = (
 
 
 def _part_anchors(document: dict[str, Any]) -> dict[str, Any]:
-    """Each artefact listing a part anchor, by location."""
-    return {a["location"]: a["part_anchors"] for a in document["artefacts"] if a["part_anchors"]}
+    """Each artefact the test wrote that lists a part anchor, by location: the shipped
+    sets' rules, one of which anchors a point of a core record, are left out."""
+    return {
+        a["location"]: a["part_anchors"] for a in own(document["artefacts"]) if a["part_anchors"]
+    }
 
 
 def test_an_anchor_on_an_entry_gives_the_span_its_part_resolves_to(adopter: AdopterRepo) -> None:
