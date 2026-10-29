@@ -293,7 +293,8 @@ process:
         refused, the owner named, where this clone cannot release it. A
         container with a child In Progress or in Review is refused, the
         child named, and so is one whose children cannot all be told. Where
-        the board carries the state, the move is refused (#2271).
+        the substrate map binds the state to the board, the move is refused
+        and writes nothing (DEC-006).
 
     - from: in-progress
       to: todo
