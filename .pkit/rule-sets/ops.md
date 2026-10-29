@@ -1,7 +1,7 @@
 ---
 rule-set: OPS
 loaded: true
-version: 1.0.0
+version: 2.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -136,7 +136,7 @@ rules:
       friction:
         anchors: {record: ["COR-065#7"]}
   RS-OPS-023:
-    status: proposed
+    status: accepted
     origin: {decision: COR-065}
     pkit:
       friction:
