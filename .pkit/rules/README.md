@@ -76,7 +76,7 @@ Seven categories:
 - **Working across repositories** — a session mutates only its own repository's context.
 - **Answers on artefacts** — a reviewer checks the answers your change owes, and a person, or the delegate they named, decides any other answer on an artefact.
 - **When a step fails** — retry once a step that failed for a cause outside your own work, then stop and report.
-- **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly.
+- **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly; and before a choice later work will build on, draft the record that decides it, for a person to accept.
 
 Each rule is terse — one statement plus a pointer to the COR / area README that owns the rationale, or, where none does, to the issue that decided the rule. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
 

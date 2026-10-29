@@ -23,6 +23,7 @@ from project_kit import friction_discovery as fd
 from project_kit import rule_set_reading as reading
 from project_kit import rule_sets as rs
 from project_kit.cli import main
+from project_kit.friction_git import SHORT
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T2, friction_config, guide
 from tests.shipped_rule_sets import own
@@ -1186,6 +1187,235 @@ def test_reach_at_a_commit_reads_that_state(repo: AdopterRepo) -> None:
     assert at["commit"] == commit and [a["location"] for a in at["artefacts"]] == [A]
     refused = _cli("reach", "--at", "no-such-rev")
     assert refused.exit_code == 1 and "names no commit" in refused.output
+
+
+# --- the rules of the paths given (#2273) --------------------------------------------------
+
+
+def _given(*args: str) -> dict[str, Any]:
+    """`pkit rule-sets reach <args> --json`, answered."""
+    result = _cli("reach", *args, "--json")
+    assert result.exit_code == 0, result.output
+    return json.loads(result.output)
+
+
+def _answers(document: Mapping[str, Any]) -> list[tuple[str, str | None, str, list[str]]]:
+    """Each path given: as given, the path it names, what the state holds there, and the
+    artefacts at it."""
+    return [(p["given"], p["path"], p["answer"], p["artefacts"]) for p in document["paths"]]
+
+
+def _locations(document: Mapping[str, Any]) -> list[str]:
+    return [artefact["location"] for artefact in document["artefacts"]]
+
+
+def test_reach_given_a_file_under_one_set_lists_only_its_rules_and_their_text(
+    repo: AdopterRepo,
+) -> None:
+    lay_out(repo, {"doc": rule_set("DOC", scope=scoped(f"{GUIDES}/**"))}, a=page(), b=page("B"))
+    document = _given(A)
+    assert _answers(document) == [(A, A, "artefact", [A])]
+    assert _locations(document) == [A]
+    [rule] = document["artefacts"][0]["rules"]
+    assert {k: rule[k] for k in ("rule", "rule_set", "status", "fills")} == {
+        "rule": "RS-DOC-001",
+        "rule_set": "DOC",
+        "status": "accepted",
+        "fills": [],
+    }
+    assert rule["text"].startswith("## RS-DOC-001 — Rule RS-DOC-001")
+    # Without a path, every ruled artefact, and no paths.
+    plain = _given()
+    assert plain["paths"] is None and _locations(plain) == [A, f"{GUIDES}/b.md"]
+    human = _cli("reach", A)
+    assert human.exit_code == 0
+    assert human.output == (
+        "Rules that bind on the paths given — the working tree\n"
+        "\n"
+        "  docs/guides/a.md\n"
+        "    RS-DOC-001  (DOC)  through docs/rule-sets/doc.md\n"
+        "\n"
+        "The text of each rule that binds:\n"
+        "\n"
+        "  RS-DOC-001  (DOC, accepted)\n"
+        "    ## RS-DOC-001 — Rule RS-DOC-001\n"
+        "\n"
+        "    The statement of RS-DOC-001.\n"
+        "\n"
+        "1 path(s), 1 artefact(s), 1 rule(s) binding.\n"
+    )
+
+
+def test_reach_given_a_file_under_an_inheriting_set_gives_its_fills(repo: AdopterRepo) -> None:
+    lay_out(
+        repo,
+        {
+            "cmn": _offering(),
+            "doc": rule_set(
+                "DOC",
+                inherits=["CMN@1"],
+                scope=scoped(f"{GUIDES}/**"),
+                entries=rules("RS-DOC-001", **_filling()),
+            ),
+        },
+        a=page(),
+    )
+    document = _given(A)
+    rules_given = document["artefacts"][0]["rules"]
+    assert [(r["rule"], r["rule_set"], r["covering"], r["fills"]) for r in rules_given] == [
+        ("RS-CMN-001", "CMN", [f"{SETS}/doc.md"], []),
+        ("RS-CMN-002", "CMN", [f"{SETS}/doc.md"], []),
+        ("RS-DOC-001", "DOC", [f"{SETS}/doc.md"], ["RS-CMN-001#where"]),
+    ]
+    human = _cli("reach", A).output
+    assert "    RS-DOC-001  (DOC, fills RS-CMN-001#where)  through docs/rule-sets/doc.md\n" in human
+    for cited, rule_set_name in (
+        ("RS-CMN-001", "CMN"),
+        ("RS-CMN-002", "CMN"),
+        ("RS-DOC-001", "DOC"),
+    ):
+        assert f"  {cited}  ({rule_set_name}, accepted)\n    ## {cited} — Rule {cited}\n" in human
+    assert human.endswith("1 path(s), 1 artefact(s), 3 rule(s) binding.\n")
+
+
+def test_reach_answers_a_path_no_rule_binds_on_plainly_never_as_an_error(
+    repo: AdopterRepo,
+) -> None:
+    lay_out(
+        repo, {"doc": rule_set("DOC", scope=scoped(f"{GUIDES}/sub/**"))}, a=page(), sub__c=page()
+    )
+    broken = f"{GUIDES}/broken.md"
+    repo.write({"docs/elsewhere.md": page(), broken: "---\ntitle: [unclosed\n---\n\nBody.\n"})
+    missing = f"{GUIDES}/missing.md"
+    outside = str(repo.root.parent / "elsewhere.md")
+    given = (A, broken, "docs/elsewhere.md", missing, GUIDES, f"{GUIDES}/", outside)
+    document = _given(*given)
+    assert _answers(document) == [
+        (A, A, "artefact", [A]),
+        (broken, broken, "unreadable", []),
+        ("docs/elsewhere.md", "docs/elsewhere.md", "not-artefact", []),
+        (missing, missing, "absent", []),
+        (GUIDES, GUIDES, "folder", []),
+        (f"{GUIDES}/", GUIDES, "folder", []),
+        (outside, None, "outside", []),
+    ]
+    assert document["artefacts"] == []
+    human = _cli("reach", *given)
+    assert human.exit_code == 0, human.output
+    assert human.output.splitlines()[2:] == [
+        "  docs/guides/a.md",
+        "    no accepted rule binds on it",
+        "  docs/guides/broken.md",
+        "    a declared place holds it, but its front matter does not parse: "
+        "`pkit validate` reports it",
+        "  docs/elsewhere.md",
+        "    no declared place holds it as an artefact, so no rule set selects it",
+        "  docs/guides/missing.md",
+        "    the working tree holds no file here, so no rule binds on it",
+        "  docs/guides",
+        "    a folder: give the files in it",
+        f"  {outside}",
+        "    outside the repository, so no rule binds on it",
+        "",
+        "7 path(s), 0 artefact(s), 0 rule(s) binding.",
+    ]
+
+
+def test_reach_given_paths_at_a_commit_answers_from_what_the_commit_holds(
+    repo: AdopterRepo,
+) -> None:
+    lay_out(repo, {"doc": rule_set("DOC", scope=scoped(f"{GUIDES}/**"))}, a=page())
+    commit = repo.commit("ruled")
+    new = f"{GUIDES}/new.md"
+    repo.write({new: page("New"), f"{SETS}/doc.md": None})
+    at = _given(A, new, "--at", "HEAD")
+    assert at["commit"] == commit
+    assert _answers(at) == [(A, A, "artefact", [A]), (new, new, "absent", [])]
+    assert _locations(at) == [A]
+    now = _given(A, new)
+    assert _answers(now) == [(A, A, "artefact", [A]), (new, new, "artefact", [new])]
+    assert _locations(now) == []
+    human = _cli("reach", new, "--at", "HEAD").output
+    assert f"commit {commit[:SHORT]} holds no file here, so no rule binds on it" in human
+
+
+def test_reach_given_paths_narrows_the_preview(repo: AdopterRepo) -> None:
+    lay_out(
+        repo,
+        {"doc": rule_set("DOC", scope=scoped(A), entries={"RS-DOC-001": {}})},
+        a=page(),
+        b=page("B"),
+    )
+    b = f"{GUIDES}/b.md"
+    assert _locations(_given(A, b)) == []
+    document = _given(A, b, "--preview")
+    assert document["preview"] is True and _answers(document) == [
+        (A, A, "artefact", [A]),
+        (b, b, "artefact", [b]),
+    ]
+    assert _locations(document) == [A]
+    [rule] = document["artefacts"][0]["rules"]
+    assert (rule["rule"], rule["status"], rule["previewed"]) == ("RS-DOC-001", "proposed", True)
+    human = _cli("reach", A, b, "--preview").output
+    assert human.startswith(
+        "Rules that would bind on the paths given, every proposed rule taken as accepted"
+    )
+    assert "    RS-DOC-001  (DOC)  through docs/rule-sets/doc.md  (previewed)\n" in human
+    assert "  docs/guides/b.md\n    no accepted or proposed rule binds on it\n" in human
+    assert "  RS-DOC-001  (DOC, proposed)\n" in human
+    assert human.endswith(
+        "2 path(s), 1 artefact(s), 1 rule(s) binding, 1 only under the preview.\n"
+    )
+
+
+def test_reach_reads_a_relative_path_from_the_working_directory(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lay_out(repo, {"doc": rule_set("DOC", scope=scoped(f"{GUIDES}/**"))}, a=page())
+    monkeypatch.chdir(repo.root / "docs")
+    document = _given("guides/a.md", "..")
+    assert _answers(document) == [
+        ("guides/a.md", A, "artefact", [A]),
+        ("..", ".", "folder", []),
+    ]
+    assert _locations(document) == [A]
+
+
+def test_reach_lists_the_entries_of_one_file_with_one_answer_together(
+    repo: AdopterRepo,
+) -> None:
+    two = f"{SETS}/two.md"
+    lay_out(
+        repo,
+        {
+            "doc": rule_set("DOC", scope=scoped(two)),
+            "two": rule_set("TWO", entries=rules("RS-TWO-001", "RS-TWO-002")),
+        },
+    )
+    entries = [f"{two}#RS-TWO-001", f"{two}#RS-TWO-002"]
+    document = _given(two)
+    assert _answers(document) == [(two, two, "artefact", entries)]
+    assert _locations(document) == entries
+    human = _cli("reach", two).output
+    assert (
+        "  docs/rule-sets/two.md, each of its 2 entries\n"
+        "    RS-DOC-001  (DOC)  through docs/rule-sets/doc.md\n"
+        "\n"
+        "The text of each rule that binds:\n"
+    ) in human
+    # Entries with different answers are listed apart, those alike by their ids.
+    ruled = document["artefacts"][0]
+    split = {
+        **document,
+        "paths": [{**document["paths"][0], "artefacts": [*entries, f"{two}#RS-TWO-003"]}],
+        "artefacts": [ruled, {**ruled, "location": entries[1]}],
+    }
+    assert reading.render_reach_human(split).splitlines()[2:6] == [
+        "  docs/rule-sets/two.md, entries RS-TWO-001, RS-TWO-002",
+        "    RS-DOC-001  (DOC)  through docs/rule-sets/doc.md",
+        "  docs/rule-sets/two.md#RS-TWO-003",
+        "    no accepted rule binds on it",
+    ]
 
 
 # --- what a change altered, with the rules at each state ----------------------------------

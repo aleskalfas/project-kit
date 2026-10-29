@@ -30,7 +30,12 @@ from project_kit import rule_sets as rs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import HANGING, RESOLVING, register_kinds
-from tests.shipped_rule_sets import own, shipped_rules, without_shipped_rule_sets
+from tests.shipped_rule_sets import (
+    own,
+    shipped_rules,
+    shipped_statuses,
+    without_shipped_rule_sets,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 CONFIG = ".pkit/project/config.yaml"
@@ -129,11 +134,13 @@ def test_a_valid_rule_set_is_clean_and_parsed(adopter: AdopterRepo) -> None:
     first = rule_set.rule("RS-CMN-001")
     assert first is not None and first.section.startswith("## RS-CMN-001 — Rule RS-CMN-001")
     assert first.offers == ("cause-location",)
-    shipped = len(shipped_rules(adopter.root))  # the backbone's set, each rule accepted
+    shipped = len(shipped_rules(adopter.root))  # the backbone's set, beside the project's
+    by_status = shipped_statuses(adopter.root)
     counts, *files = rs.summary_lines(result)
     assert counts == (
-        f"2 rule set(s), {6 + shipped} rule(s) (1 proposed, {3 + shipped} accepted, "
-        "1 superseded, 1 withdrawn); 0 error(s), 0 report(s)."
+        f"2 rule set(s), {6 + shipped} rule(s) ({1 + by_status['proposed']} proposed, "
+        f"{3 + by_status['accepted']} accepted, 1 superseded, 1 withdrawn); "
+        "0 error(s), 0 report(s)."
     )
     # then each rules file a session loads, with its count (COR-069 point 5)
     assert [line.split(":")[0] for line in files] == ["rules file .pkit/rules/core.md"]
@@ -1337,14 +1344,16 @@ def test_validate_command_prints_the_rule_sets_section_and_fails_on_errors(
 
 
 def test_validate_command_is_quiet_on_a_fresh_install(adopter: AdopterRepo) -> None:
-    """A fresh install holds the backbone's rule sets alone, each rule accepted, and they
-    pass (COR-068; ADR-075 point 1)."""
+    """A fresh install holds the backbone's rule sets alone, and they pass (COR-068;
+    ADR-075 point 1). A rule the backbone adds may be proposed on its change's branch
+    (COR-066 point 1)."""
     rules = len(shipped_rules(adopter.root))
     assert rules > 0
+    breakdown = ", ".join(f"{n} {s}" for s, n in shipped_statuses(adopter.root).items() if n)
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert result.exit_code == 0, result.output
     assert (
-        f"\n  rule-sets\n    1 rule set(s), {rules} rule(s) ({rules} accepted); "
+        f"\n  rule-sets\n    1 rule set(s), {rules} rule(s) ({breakdown}); "
         "0 error(s), 0 report(s).\n"
     ) in result.output
 

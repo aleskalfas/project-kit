@@ -503,8 +503,8 @@ def _rule_22() -> str:
     text = CORE_RULES.read_text(encoding="utf-8")
     section = text.split(f"\n{SECTION}\n", 1)[1].split("\n## ", 1)[0]
     headings = [line for line in section.splitlines() if line.startswith("### ")]
-    assert headings == [RULE_22_HEADING], "rule 22 is not the one rule of its section"
-    return section.split(f"{RULE_22_HEADING}\n", 1)[1].strip()
+    assert RULE_22_HEADING in headings, "rule 22 is not in its section"
+    return section.split(f"{RULE_22_HEADING}\n", 1)[1].split("\n### ", 1)[0].strip()
 
 
 def test_rule_22_tells_an_agent_to_run_the_lookup_before_changing_files() -> None:

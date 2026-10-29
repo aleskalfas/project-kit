@@ -2,7 +2,7 @@
 rule-set: OPS
 loaded: true
 budget: 2772
-version: 1.0.0
+version: 2.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -136,6 +136,12 @@ rules:
     pkit:
       friction:
         anchors: {record: ["COR-065#7"]}
+  RS-OPS-023:
+    status: accepted
+    origin: {decision: COR-065}
+    pkit:
+      friction:
+        anchors: {record: ["COR-065#3", "COR-065#1", "COR-064#6", "COR-066#1"]}
 ---
 
 *Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync edits neither (core rule 1). The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
@@ -249,6 +255,10 @@ How a session relates to repos other than the one it is rooted in.
 ### RS-OPS-022 — Read the records a change's files lead to first
 
 **When you change the system, read first the accepted records its files lead to.** The records are where the system is decided, and the files carry those decisions out. Run `pkit refs records-for` once, with every file your change will commit, and read each record it lists as tied to them directly, at the points it names. Where it reaches a file only through another artefact, read that artefact, the narrowest first, and follow the records it rests on that bear on your change. An empty answer is no sign that no record governs a file. What the lookup reads, and why: the decisions README, "Finding the records a path leads to" ([project-kit#2165](https://github.com/aleskalfas/project-kit/issues/2165)).
+
+### RS-OPS-023 — A choice later work builds on starts with its record
+
+**Before you make a choice that later work will build on, draft the record that decides it, and let no work rest on the choice until a person accepts the record (COR-065 point 3).** Such choices include a library, an interface or format others use, a convention and a boundary between parts. A change to what an accepted record decides needs a record too. Where your project received that record from elsewhere, follow it in your own files, or propose the change where the record is kept. An accepted rule whose origin states the choice serves as its record. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs no record. Nor does a choice an accepted record already makes. Where you and the person who authorises the merge disagree, that person decides.
 
 ## Where rationale lives
 

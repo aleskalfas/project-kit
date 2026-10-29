@@ -7,9 +7,12 @@ walk routes or judge pins itself (ADR-057 point 1):
 - `pkit rule-sets reach` (`reach_document`): the walk at one state — the
   working tree, or a commit named with `--at`. It lists each artefact on
   which an accepted rule binds, whose routes conflict, or from which a pin
-  behind its set holds a rule back. With `--preview`, the walk takes every
-  proposed rule as accepted, and marks what holds only under the preview.
-  Validation and every gate read the answer without it.
+  behind its set holds a rule back. Given paths, it lists only the artefacts
+  at those paths, and says for each path what the state holds there
+  (`path_entry`), so a writer can read the rules of its files before it
+  writes them. With `--preview`, the walk takes every proposed rule as
+  accepted, and marks what holds only under the preview. Validation and
+  every gate read the answer without it.
 - `pkit rule-sets altered` (`altered_document`): the artefacts a change
   altered between a base and a head, with the walk's answer at each state
   that holds the artefact. The base is the change check's: the merge-base of
@@ -38,8 +41,10 @@ commands are all they read. Neither writes anything.
 
 from __future__ import annotations
 
+import bisect
 import json
-from collections.abc import Mapping
+import os
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +54,7 @@ from project_kit import friction_discovery as fd
 from project_kit import loaded_rule_sets as lr
 from project_kit import rule_sets as rs
 from project_kit.friction_git import SHORT, CommitTree
-from project_kit.working_tree import WorkingTree
+from project_kit.working_tree import WorkingTree, working_tree
 
 #: The version of the document `reach_document` returns. A change a reader could break
 #: against — a key removed, renamed or given another meaning — raises it; a key added
@@ -65,7 +70,12 @@ ALTERED_SCHEMA_VERSION = 1
 
 
 def reach_document(
-    target_root: Path, commit: str | None = None, *, preview: bool = False
+    target_root: Path,
+    commit: str | None = None,
+    *,
+    preview: bool = False,
+    paths: Sequence[str] | None = None,
+    cwd: Path | None = None,
 ) -> dict[str, Any]:
     """The walk at one state, as one stable document — what `pkit rule-sets reach --json`
     prints.
@@ -73,23 +83,146 @@ def reach_document(
     - `commit`: the commit read, or `null` for the working tree.
     - `preview`: whether the walk took every proposed rule as accepted
       (`rule_sets.PREVIEW`). A superseded or withdrawn rule binds nothing either way.
+    - `paths`: `null` when no path is given. Given `paths`, each read from `cwd` (the
+      root by default) when relative, each path in the order given, with what the
+      state holds there (`path_entry`).
     - `artefacts`: in discovery's walk order, each artefact on which a rule binds,
       whose routes conflict, or from which a pin behind its set holds a rule back
-      (`artefact_entry`). Any other artefact has no binding rule at this state.
+      (`artefact_entry`); given `paths`, only those at a path given. Any other
+      artefact has no binding rule at this state.
+
+    The walk is the same either way: the paths only narrow its answer.
     """
     tree = None if commit is None else CommitTree(target_root, commit)
     discovery, _rule_sets, answer = rs.reach_at(target_root, tree, preview=preview)
     presence = rs.CheckPresence(target_root, tree)
+    given = (
+        None
+        if paths is None
+        else _given_paths(target_root, discovery, tree, paths, target_root if cwd is None else cwd)
+    )
+    selected = None if given is None else {at for entry in given for at in entry["artefacts"]}
     return {
         "schema_version": REACH_SCHEMA_VERSION,
         "commit": commit,
         "preview": answer.preview,
+        "paths": given,
         "artefacts": [
             artefact_entry(artefact, answer.of(artefact.location), presence)
             for artefact in discovery.artefacts
             if artefact.location in answer.by_location
+            and (selected is None or artefact.location in selected)
         ],
     }
+
+
+# What the state holds at a path given to `pkit rule-sets reach` (`path_entry`).
+
+#: One artefact or more: a document, or the entries of a collection file.
+ARTEFACT = "artefact"
+#: A file that is no artefact: no declared place walks it, so no rule set selects it.
+NOT_ARTEFACT = "not-artefact"
+#: A file a declared place matches whose front matter does not parse: `pkit validate`
+#: reports it.
+UNREADABLE = "unreadable"
+#: Files beneath it, none at it.
+FOLDER = "folder"
+#: No file at it, and none beneath it.
+ABSENT = "absent"
+#: A path outside the repository.
+OUTSIDE = "outside"
+
+
+def path_entry(
+    given: str,
+    path: str | None,
+    artefacts: Sequence[str],
+    *,
+    unreadable: bool,
+    files: Sequence[str],
+) -> dict[str, Any]:
+    """One path given to `pkit rule-sets reach`, with what the state holds there.
+
+    - `given`: the path as given.
+    - `path`: the repository-relative POSIX path it names, `.` for the root, or `null`
+      outside the repository.
+    - `answer`: what the state holds at the path, the first that holds: `outside` the
+      repository; an `artefact`, or several entries of one collection file; a file
+      `unreadable` as an artefact; a file that is `not-artefact`; a `folder`, with
+      files beneath it; else `absent`.
+    - `artefacts`: the locations of the artefacts at the path, in walk order. Those on
+      which a rule binds, whose routes conflict or from which a rule is held back are
+      the document's `artefacts`; on any other, no rule binds.
+
+    `unreadable` says whether the walk could not read the file at `path`, and `files`
+    are the sorted files of the state read, links included.
+    """
+    if path is None:
+        answer = OUTSIDE
+    elif artefacts:
+        answer = ARTEFACT
+    elif unreadable:
+        answer = UNREADABLE
+    elif _first_from(files, path) == path:
+        answer = NOT_ARTEFACT
+    elif _holds_beneath(files, path):
+        answer = FOLDER
+    else:
+        answer = ABSENT
+    return {"given": given, "path": path, "answer": answer, "artefacts": list(artefacts)}
+
+
+def _holds_beneath(files: Sequence[str], path: str) -> bool:
+    """Whether a file of the sorted `files` lies beneath the folder `path`, `.` the root."""
+    if path == ".":
+        return bool(files)
+    return _first_from(files, f"{path}/").startswith(f"{path}/")
+
+
+def _first_from(files: Sequence[str], start: str) -> str:
+    """The first of the sorted `files` that is not before `start`, or `""`."""
+    index = bisect.bisect_left(files, start)
+    return files[index] if index < len(files) else ""
+
+
+def repository_path(target_root: Path, given: str, cwd: Path) -> str | None:
+    """The repository-relative POSIX path that `given` names, read from `cwd` when it is
+    relative: `.` for the root, `None` outside the repository. It need not exist. Only
+    the folders above its last part are resolved, so a link is named, never followed."""
+    candidate = Path(os.path.normpath(given if os.path.isabs(given) else cwd / given))
+    named = Path(os.path.realpath(candidate.parent)) / candidate.name
+    try:
+        return named.relative_to(target_root.resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def _given_paths(
+    target_root: Path,
+    discovery: fd.Discovery,
+    tree: CommitTree | None,
+    paths: Sequence[str],
+    cwd: Path,
+) -> list[dict[str, Any]]:
+    """Each path given, in order, with what the state `discovery` walked holds there."""
+    at_path: dict[str, list[str]] = {}
+    for artefact in discovery.artefacts:
+        at_path.setdefault(artefact.path, []).append(artefact.location)
+    unreadable = {found.path for found in discovery.unreadable}
+    files = (working_tree(target_root) if tree is None else tree).files()
+    entries: list[dict[str, Any]] = []
+    for given in paths:
+        path = repository_path(target_root, given, cwd)
+        entries.append(
+            path_entry(
+                given,
+                path,
+                [] if path is None else at_path.get(path, []),
+                unreadable=path is not None and path in unreadable,
+                files=files,
+            )
+        )
+    return entries
 
 
 def artefact_entry(
@@ -394,24 +527,29 @@ def render_json(document: Mapping[str, Any]) -> str:
 def render_reach_human(document: Mapping[str, Any]) -> str:
     """The read view of the walk at one state: each artefact with the rules that bind on
     it and the sets whose scope it reaches them through. A preview says so in its title,
-    and marks what holds only under it."""
+    and marks what holds only under it. Given paths, each path with what the state holds
+    there, then the text of each rule that binds (`_paths_lines`)."""
     commit = document["commit"]
     preview = document.get("preview") is True
+    given = document.get("paths")
     state = "the working tree" if commit is None else f"commit {commit[:SHORT]}"
+    on = "each artefact" if given is None else "the paths given"
     title = (
-        "Rules that would bind on each artefact, every proposed rule taken as accepted"
+        f"Rules that would bind on {on}, every proposed rule taken as accepted"
         if preview
-        else "Rules that bind on each artefact"
+        else f"Rules that bind on {on}"
     )
     lines = [cli_render.style("title", title) + f" — {state}", ""]
     artefacts = document["artefacts"]
-    if not artefacts:
-        lines.append(
-            f"  no {'accepted or proposed' if preview else 'accepted'} rule binds on any artefact"
-        )
-    for artefact in artefacts:
-        lines.append(f"  {artefact['location']}")
-        lines.extend(_answer_lines(artefact, "    "))
+    statuses = "accepted or proposed" if preview else "accepted"
+    if given is not None:
+        lines.extend(_paths_lines(given, artefacts, state, statuses))
+    else:
+        if not artefacts:
+            lines.append(f"  no {statuses} rule binds on any artefact")
+        for artefact in artefacts:
+            lines.append(f"  {artefact['location']}")
+            lines.extend(_answer_lines(artefact, "    "))
     rules = {rule["rule"] for artefact in artefacts for rule in artefact["rules"]}
     binding = {
         rule["rule"]
@@ -420,8 +558,71 @@ def render_reach_human(document: Mapping[str, Any]) -> str:
         if not rule.get("previewed")
     }
     only = f", {len(rules - binding)} only under the preview" if preview else ""
-    lines.extend(["", f"{len(artefacts)} artefact(s), {len(rules)} rule(s) binding{only}."])
+    counted = "" if given is None else f"{len(given)} path(s), "
+    lines.extend(
+        ["", f"{counted}{len(artefacts)} artefact(s), {len(rules)} rule(s) binding{only}."]
+    )
     return "\n".join(lines) + "\n"
+
+
+def _paths_lines(
+    given: Sequence[Mapping[str, Any]],
+    artefacts: Sequence[Mapping[str, Any]],
+    state: str,
+    statuses: str,
+) -> list[str]:
+    """Each path given, once, with the rules that bind on each artefact there or why none
+    does; then the text of each rule that binds, once, so a writer can follow the rules of
+    its files without reading another file. The entries of one collection file that have
+    the same answer are listed together."""
+    by_location = {artefact["location"]: artefact for artefact in artefacts}
+    unruled = (f"    no {statuses} rule binds on it",)
+    why = {
+        NOT_ARTEFACT: "no declared place holds it as an artefact, so no rule set selects it",
+        UNREADABLE: "a declared place holds it, but its front matter does not parse: "
+        "`pkit validate` reports it",
+        FOLDER: "a folder: give the files in it",
+        ABSENT: f"{state} holds no file here, so no rule binds on it",
+        OUTSIDE: "outside the repository, so no rule binds on it",
+    }
+    lines: list[str] = []
+    shown: set[str] = set()
+    for entry in given:
+        named = entry["given"] if entry["path"] is None else entry["path"]
+        if named in shown:
+            continue
+        shown.add(named)
+        if entry["answer"] != ARTEFACT:
+            lines.extend([f"  {named}", f"    {why[entry['answer']]}"])
+            continue
+        alike: dict[tuple[str, ...], list[str]] = {}
+        for at in entry["artefacts"]:
+            answer = tuple(_answer_lines(by_location[at], "    ")) if at in by_location else unruled
+            alike.setdefault(answer, []).append(at)
+        for answer, locations in alike.items():
+            lines.append(f"  {_artefacts_named(named, locations, len(entry['artefacts']))}")
+            lines.extend(answer)
+    texts = {rule["rule"]: rule for artefact in artefacts for rule in artefact["rules"]}
+    if texts:
+        lines.extend(["", "The text of each rule that binds:"])
+    for cited, rule in texts.items():
+        lines.extend(["", f"  {cited}  ({rule['rule_set']}, {rule['status']})"])
+        lines.extend(
+            f"    {line}" if line.strip() else "" for line in rule["text"].rstrip().splitlines()
+        )
+    return lines
+
+
+def _artefacts_named(path: str, locations: Sequence[str], at_path: int) -> str:
+    """How the read view names artefacts at `path` that have one answer: a document, or an
+    entry, by its location; several entries of the file by their ids, or as each of its
+    entries where they are all `at_path` of them."""
+    if len(locations) == 1:
+        return locations[0]
+    if len(locations) == at_path:
+        return f"{path}, each of its {at_path} entries"
+    ids = ", ".join(location.removeprefix(f"{path}#") for location in locations)
+    return f"{path}, entries {ids}"
 
 
 def render_altered_human(document: Mapping[str, Any]) -> str:
