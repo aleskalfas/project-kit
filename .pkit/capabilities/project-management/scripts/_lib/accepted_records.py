@@ -36,6 +36,11 @@ try:
     import friction_answers  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover
     from _lib import friction_answers  # type: ignore[no-redef]
+# The one start of a `pkit` call, the package's first, as `friction_answers` imports it.
+try:
+    from _lib import backbone
+except ImportError:  # pragma: no cover
+    import backbone  # type: ignore[no-redef]
 
 #: The backbone's command, as `friction_answers` runs it: routing off.
 CHECK_DIFF = ("decisions", "check-diff")
@@ -113,7 +118,7 @@ def derive(head: str, base: str) -> Derivation:
     argv = [*friction_answers.PKIT, *CHECK_DIFF, "--json", "--base", base, "--head", head]
     command = f"`{' '.join(argv)}`"
     try:
-        proc = subprocess.run(
+        proc = backbone.run(
             argv,
             env={**os.environ, **friction_answers.UNROUTED},
             capture_output=True,
