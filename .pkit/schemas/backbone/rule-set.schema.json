@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rule-set.schema.json",
   "title": "A rule-set file's front matter",
-  "description": "A backbone file schema (ADR-056): the data of one rule set (COR-051 point 2) — its name, its own version, what it inherits, its scope, one entry per rule carrying the rule's machine fields, and the parts of its rules that checks enforce. The statements are the file's body, one section per rule headed by its id. The join between data and prose, the id rules, origins, successors and inheritance are checked by `project_kit.rule_sets` on top of this shape; inside each rule entry the methodology's container (`pkit`) is read by the container schema and rule (`container.schema.json`, COR-053 point 10). Bound by location — a Markdown file in a place declared to hold rule sets — never by a field. The shape is backbone-owned: it carries no version of its own and is migrated when it changes (COR-010). The `version` key is the rule set's own version, the one inheritors pin.",
+  "description": "A backbone file schema (ADR-056): the data of one rule set (COR-051 point 2) — its name, whether it is loaded (COR-068), its own version, what it inherits, its scope, one entry per rule carrying the rule's machine fields, and the parts of its rules that checks enforce. The statements are the file's body, one section per rule headed by its id. The join between data and prose, the id rules, origins, successors and inheritance are checked by `project_kit.rule_sets` on top of this shape; inside each rule entry the methodology's container (`pkit`) is read by the container schema and rule (`container.schema.json`, COR-053 point 10). Bound by location — a Markdown file in a place declared to hold rule sets — never by a field. The shape is backbone-owned: it carries no version of its own and is migrated when it changes (COR-010). The `version` key is the rule set's own version, the one inheritors pin.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,6 +14,10 @@
     "rule-set": {
       "description": "The rule set's name: upper-case letters and digits, starting with a letter. Unique among rule sets; every rule id carries it (COR-051 point 3).",
       "$ref": "#/$defs/set-name"
+    },
+    "loaded": {
+      "description": "`true` makes the set a loaded one (COR-068 point 1): its accepted rules bind on the work of the agent sessions that load the file generated from it, not on artefacts. A loaded set takes no `scope`, `inherits` or `checks`, and none of its rules `offers` or `fills` an extension point. Without it, or with `false`, the set is an ordinary one. Which component's folder may hold a loaded set, one to a component, and that no set inherits one are checked in Python.",
+      "type": "boolean"
     },
     "version": {
       "description": "The rule set's own version, semantic-versioned; not its component's. Its major is what an inheriting set pins. A major is required when an accepted rule is withdrawn, superseded or tightened, when an offered extension point is removed, or when a new accepted rule is added (COR-051 point 7).",
@@ -66,6 +70,33 @@
     }
   },
   "$defs": {
+    "loaded": {
+      "title": "What a loaded set refuses (COR-068 point 1; ADR-073 point 6)",
+      "description": "A loaded set binds on the work of the sessions that load it, not on artefacts, so it takes none of the parts that say where rules bind: no scope, no inheritance, no part a check enforces, and no extension point offered or filled.",
+      "properties": {
+        "scope": {
+          "not": {}
+        },
+        "inherits": {
+          "not": {}
+        },
+        "checks": {
+          "not": {}
+        },
+        "rules": {
+          "additionalProperties": {
+            "properties": {
+              "offers": {
+                "not": {}
+              },
+              "fills": {
+                "not": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "rule": {
       "title": "One rule's machine fields (COR-051 points 2, 4 and 5)",
       "description": "A rule without a status is proposed and binds nothing. A superseded rule names its successor; no other rule names one.",
@@ -302,5 +333,18 @@
       "type": "string",
       "minLength": 1
     }
+  },
+  "if": {
+    "properties": {
+      "loaded": {
+        "const": true
+      }
+    },
+    "required": [
+      "loaded"
+    ]
+  },
+  "then": {
+    "$ref": "#/$defs/loaded"
   }
 }

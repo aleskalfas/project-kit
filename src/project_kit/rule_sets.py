@@ -229,6 +229,11 @@ def parse_pin(text: Any) -> Pin | None:
 #: (COR-051 point 2): beside the rules, never among a rule's own fields.
 CHECKS_KEY = "checks"
 
+#: The front-matter key that makes a set a loaded one (COR-068 point 1; ADR-073 point
+#: 6): `loaded: true`. A loaded set's accepted rules bind on the work of the sessions
+#: that load the file generated from it, never on an artefact.
+LOADED_KEY = "loaded"
+
 #: The owner a backbone check is named with (`backbone:<command>`).
 BACKBONE_OWNER = fd.BACKBONE_COMPONENT
 
@@ -400,6 +405,12 @@ class RuleSet:
     def version(self) -> str | None:
         version = self.front_matter.get("version")
         return version if isinstance(version, str) else None
+
+    @property
+    def loaded(self) -> bool:
+        """Whether the set is a loaded one: `loaded: true` (COR-068 point 1). A value of
+        another shape is the schema's to report, and reads as an ordinary set."""
+        return self.front_matter.get(LOADED_KEY) is True
 
     @property
     def major(self) -> int | None:
@@ -836,6 +847,13 @@ class RuleSetFindingKind(Enum):
     UNKNOWN_CHECK = "unknown-check"  # a backbone check or registered command that is not there
     PIN_CONFLICT = "pin-conflict"  # routes to one artefact pinning one set at different majors
     FILL_CONFLICT = "fill-conflict"  # the most specific sets bring different fills for a point
+    # A loaded set (COR-068; ADR-073 points 5 and 6).
+    INHERITS_LOADED = "inherits-loaded"  # a set inheriting a loaded set, which none inherits
+    SECOND_LOADED = "second-loaded-set"  # a second loaded set of one component, or the project
+    CAPABILITY_LOADED = "capability-loaded-set"  # a capability's set marked loaded
+    LOADED_HEADING = "loaded-heading"  # an H1 in a loaded set's body
+    LOADED_FILE_STALE = "loaded-file-stale"  # the loaded file differs from its set, or is missing
+    LOADED_FILE_UNCHECKED = "loaded-file-unchecked"  # no ownership module: not compared
 
 
 @dataclass(frozen=True)
@@ -935,7 +953,7 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
         findings.extend(_scope_findings(rule_set, scope_types))
         findings.extend(_set_name_findings(rule_set, discovery))
         findings.extend(_id_findings(rule_set, catalogue))
-        findings.extend(_join_findings(rule_set))
+        findings.extend(join_findings(rule_set))
         if container_schema is not None:
             findings.extend(_container_findings(rule_set, container_schema, wiring))
         findings.extend(_origin_findings(rule_set, catalogue))
@@ -943,6 +961,7 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
         findings.extend(_inheritance_findings(rule_set, catalogue))
         findings.extend(_fill_findings(rule_set, catalogue))
         findings.extend(_check_part_findings(rule_set, catalogue))
+        findings.extend(_loaded_set_findings(rule_set, discovery))
     findings.extend(_cycle_findings(catalogue))
     findings.extend(_conflict_findings(reach(fd.shared_discovery(target_root), discovery)))
     return RuleSetValidation(discovery=discovery, findings=tuple(findings))
@@ -1046,7 +1065,14 @@ def _render_schema_error(rule_set: RuleSet, error: ValidationError) -> list[Rule
         ]
     # The status/successor coupling reads better said than as the schema's message.
     message = error.message
-    if "dependentSchemas" in schema_path:
+    if schema_path[:1] == ["then"] and schema_path[-1:] == ["not"]:  # what a loaded set refuses
+        key = path[-1] if path else ""
+        message = (
+            f"a loaded rule set takes no `{key}`: its rules bind on the work of the sessions "
+            f"that load it, not on artefacts, so it has no scope, no inheritance, no part a "
+            f"check enforces and no extension point (COR-068 point 1). Remove `{key}`."
+        )
+    elif "dependentSchemas" in schema_path:
         pointer = "/successor"
         message = (
             "only a superseded rule names a successor: set `status: superseded`, or remove "
@@ -1158,7 +1184,7 @@ def _id_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[RuleSetFi
 # --- per file: the join between data and prose --------------------------------
 
 
-def _join_findings(rule_set: RuleSet) -> Iterable[RuleSetFinding]:
+def join_findings(rule_set: RuleSet) -> Iterable[RuleSetFinding]:
     """Every rule has a section and every section has data (COR-051 point 2)."""
     counts: dict[str, int] = {}
     for section in rule_set.sections:
@@ -1416,6 +1442,65 @@ def _successor_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[Ru
             )
 
 
+# --- per file: a loaded set ------------------------------------------------------
+
+
+def _loaded_set_findings(
+    rule_set: RuleSet, discovery: RuleSetDiscovery
+) -> Iterable[RuleSetFinding]:
+    """What a loaded set gets wrong beyond its file's shape (COR-068; ADR-073 point 6).
+
+    - a capability's set marked loaded: how its loaded file would reach the sessions is
+      decided with the first capability that ships one, so until then its accepted rules
+      would bind nowhere unseen (COR-068 point 4)
+    - a second loaded set of one component, or of the project, after the first by path:
+      one loaded set to an owner, so a citation by layer and number names one rule
+      (COR-068 point 1)
+    - an H1 in its body: the host file of the loaded file owns it (core rule 13)
+
+    A set that inherits a loaded set is the inheritance check's (`_inheritance_findings`),
+    and what the file alone shows is the schema's.
+    """
+    if not rule_set.loaded:
+        return
+    component = rule_set.component
+    if component is not None and component != fd.BACKBONE_COMPONENT:
+        yield _error(
+            rule_set.path,
+            f"/{LOADED_KEY}",
+            RuleSetFindingKind.CAPABILITY_LOADED,
+            f"{rule_set.owner} ships this rule set marked loaded, and a capability's loaded "
+            f"set is refused until the first capability that ships one decides how its loaded "
+            f"file reaches the sessions, so no accepted rule binds nowhere unseen (COR-068 "
+            f"point 4). Remove `{LOADED_KEY}`, or keep the rules in an ordinary set.",
+        )
+    first = next(
+        (other for other in discovery.rule_sets if other.loaded and other.component == component),
+        rule_set,
+    )
+    if first is not rule_set:
+        yield _error(
+            rule_set.path,
+            f"/{LOADED_KEY}",
+            RuleSetFindingKind.SECOND_LOADED,
+            f"{rule_set.owner} has a loaded rule set already, {first.citation} in {first.path}; "
+            f"one loaded set to a component, and one to a project, so a citation by layer and "
+            f"number names one rule (COR-068 point 1). Move these rules into {first.citation}, "
+            f"or remove `{LOADED_KEY}` here.",
+        )
+    for heading in document_parts.body_headings(rule_set.body):
+        if heading.level == 1:
+            yield _error(
+                rule_set.path,
+                "",
+                RuleSetFindingKind.LOADED_HEADING,
+                f"the body of a loaded rule set holds the top-level heading {heading.title!r}; "
+                f"the file generated from it is included into a host that owns the H1, so the "
+                f"set opens with prose or a second-level heading (ADR-073 point 6; core rule "
+                f"13). Remove the heading, or make it a second-level one.",
+            )
+
+
 # --- per file: inheritance -----------------------------------------------------
 
 
@@ -1431,6 +1516,16 @@ def _inheritance_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[
         if problem is not None:
             yield _error(rule_set.path, pointer, RuleSetFindingKind.INHERITED_SET_MISSING, problem)
         if parent is None:
+            continue
+        if parent.loaded:
+            yield _error(
+                rule_set.path,
+                pointer,
+                RuleSetFindingKind.INHERITS_LOADED,
+                f"{rule_set.citation} inherits {parent.citation}, a loaded rule set; a loaded "
+                f"set binds on the work of the sessions that load it, not on artefacts, so no "
+                f"set inherits it (COR-068 point 1). Remove {pin} from `inherits`.",
+            )
             continue
         refusal = catalogue.inheritance_refusal(rule_set, parent)
         if refusal is not None:
@@ -2301,7 +2396,9 @@ class _Walk:
             found: list[_Edge] = []
             for index, pin in rule_set.pins:
                 inherited, _problem = resolve_pin(self.rule_sets, pin)
-                if inherited is not None:
+                # A loaded set is never a parent on a route (ADR-073 point 7): its rules
+                # bind on sessions' work, never on an artefact, whatever validation finds.
+                if inherited is not None and not inherited.loaded:
                     behind = PinCheck(rule_set, index, pin, inherited).behind
                     found.append(_Edge(rule_set, index, pin, inherited, behind))
             self._edges[rule_set.path] = tuple(found)
@@ -2365,8 +2462,12 @@ class _Routes:
     def __init__(self, walk: _Walk, selecting: frozenset[str]) -> None:
         self.walk = walk
         self.selecting = selecting
+        # A loaded set starts no route (ADR-073 point 7), even one that validation
+        # refuses for a scope: no loaded rule binds on an artefact (COR-068 point 2).
         self.starts = tuple(
-            s for s in walk.rule_sets.rule_sets if s.path in selecting and s.component is None
+            s
+            for s in walk.rule_sets.rule_sets
+            if s.path in selecting and s.component is None and not s.loaded
         )
         self._clean: dict[str, dict[str, RuleSet]] = {}
         self._decided: dict[tuple[int, str], _Decided | None] = {}
