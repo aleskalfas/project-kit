@@ -12,7 +12,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - **The set:** core's rules are the backbone's set `OPS`, in a new propagated area, `.pkit/rule-sets/`.
 - **The file a session loads** stays `.pkit/rules/core.md`, so the include, the adapter and `CLAUDE.md` do not change. It holds each accepted rule as `### N. Title (RS-OPS-0NN)` and its statement, and none of the set's data.
 - **One function** turns the set into that file. A command of the `rule-sets` group, `pkit rule-sets generate`, writes the file with it. Validation's `rule-sets` member compares the file with its output, and fails a file out of step, only where the set is authored.
-- **The `loaded` marker** in the set's front matter makes it a loaded set. Validation refuses a scope, an inheritance, an extension point, a fill or a declared check on one. It also refuses a set marked loaded that a capability or a project keeps. The reach walk routes through no loaded set.
+- **The `loaded` marker** in the set's front matter makes it a loaded set. Validation refuses a scope, an inheritance, an extension point, a fill or a declared check on one. It also refuses a set marked loaded that a capability keeps. A project may convert its own file into a loaded set. The reach walk routes through no loaded set.
 - **Citations** such as "core rule 19" or `backbone:RS-OPS-019` are read by validation's `refs` member. A citation of a missing or retired rule is a warning.
 
 ## Context
