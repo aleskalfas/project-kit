@@ -148,6 +148,13 @@ other modules of the process engine and project-management's closure fold. Their
 288 tests took 43 s on the clock in a pass of their own, `-n 3`, against 207 s
 before (2026-10-29).
 
+`test_friction_check.py`'s row predates #2320, which commits the install of the
+friction modules once per session (`committed_adopter`). Its 148 tests and the
+164 of four other friction modules took 359 s on the clock, against 564 s before.
+Both passes ran only these modules, `-n 3`, on 2026-10-29, on a Mac other builders
+were sharing. Each of its tests still runs the change check, which reads git for its
+base.
+
 `test_software_analysis_check.py` is converted (#2319): its 61 tests took 58 s on
 the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
 What is left is mostly the backbone's own reading of the analysis, which each
@@ -200,12 +207,13 @@ do when a change raises a count, and the only causes for raising the baseline.
 
 Most tests that need "a project with the kit installed" should not `git init`
 and call `install_kit` by hand. `tests/adopter_repo.py` provides one builder
-and `tests/conftest.py` exposes it as two fixtures:
+and `tests/conftest.py` exposes it as three fixtures:
 
 | Fixture | Gives you | Reach for it when |
 |---|---|---|
 | `make_adopter_repo` | A factory: `make_adopter_repo(capabilities=(), history=False, chdir=True, root=tmp_path, prepare=None, fresh=False)` returning an `AdopterRepo`, a copy of a template built once per session (below). | A test drives the CLI or the Python API against an installed adopter. `make_adopter_repo()` with no arguments is the bare shape — `git init`ed `tmp_path`, backbone installed, adapter shell primitives stubbed, cwd moved there, **no commits** — that the per-file `installed_target` / `kit_target` fixtures wrap. |
 | `adopter_repo` | `make_adopter_repo(history=True)`: the same adopter with the scripted history committed; `adopter_repo.history` holds the SHAs. | A test needs real git state — validators that read history, the friction engine (COR-050), anything tracing a front-matter field across commits. |
+| `committed_adopter` | `make_adopter_repo(prepare=commit_install)`: the bare shape, its install committed on `main` in one commit dated `INSTALLED_AT` (`tests/friction_documents.py`). | A test commits a base of its own, as the friction tests do. It then commits only its own files, never the whole installed `.pkit/` (#2320). |
 
 Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
 `build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly; it builds the

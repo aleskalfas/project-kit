@@ -1,9 +1,10 @@
 """Tests for the friction change check, `pkit friction check` (Task #990, COR-050).
 
-Every test stands up a real adopter repository (`make_adopter_repo`), commits
-a base state on `main`, branches `feature` off it and makes real commits (or
-leaves uncommitted work) before running the check against `main`. The
-documents come from `tests.friction_documents`.
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`). It commits a base state on `main`, branches
+`feature` off it and makes real commits (or leaves uncommitted work) before
+running the check against `main`. The documents come from
+`tests.friction_documents`.
 """
 
 from __future__ import annotations
@@ -35,12 +36,14 @@ from tests.friction_documents import (
     T2,
     adr,
     answer_file_names,
+    commit_install,
     document,
     friction_config,
     guide,
     notes,
     pointed_record,
 )
+from tests.in_process import start_in_process
 from tests.shipped_rule_sets import without_shipped_rule_sets
 
 #: The documents here say each artefact's answers beside its anchors, and each write
@@ -53,12 +56,13 @@ ANSWERED_ELSEWHERE = guide(at=None, outcome=None, because=None)
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    return make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    return committed_adopter
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str], config: str | None = None) -> None:
-    """Commit the base state on `main` (the install included) and branch `feature` off it."""
+    """Commit the base state on `main`, on the install the template committed
+    (`commit_install`), and branch `feature` off it."""
     adopter.write({CONFIG: config or friction_config(), **SOURCE, **files})
     adopter.commit("base", files=None)
     adopter.checkout("feature", create=True)
@@ -687,7 +691,7 @@ def test_a_record_anchor_naming_no_record_is_dead(repo: AdopterRepo) -> None:
 
 
 def test_a_capability_decision_resolves_as_a_record(make_adopter_repo: MakeAdopterRepo) -> None:
-    adopter = make_adopter_repo(capabilities=("evidence",))
+    adopter = make_adopter_repo(capabilities=("evidence",), prepare=commit_install)
     decisions = sorted((adopter.pkit / "capabilities" / "evidence" / "decisions").glob("DEC-*.md"))
     stem = decisions[0].stem
     number = "-".join(stem.split("-")[:2])
@@ -1334,7 +1338,7 @@ def test_a_capability_place_in_the_package_schema_shape_is_checked(
 ) -> None:
     """The place is read from each side's package metadata as
     `{path, location?, type?, revisits?, derived-links?, description?}`."""
-    repo = make_adopter_repo(capabilities=("evidence",))
+    repo = make_adopter_repo(capabilities=("evidence",), prepare=commit_install)
     package = repo.root / ".pkit/capabilities/evidence/package.yaml"
     package.write_text(
         package.read_text(encoding="utf-8")
@@ -2401,17 +2405,23 @@ def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_comm
     assert "does not declare the query contract" in unresolved["message"]
 
 
-# A resolver that answers a file no state holds, so its answer is no answer.
-NAMES_A_STRAY_FILE = ASKED + 'print(json.dumps({"paths": ["stray.md"]}))\n'
+# A resolver that answers a file no state holds, so its answer is no answer. Its body is
+# a `main`, so the runner's start runs it in this process (`start_in_process`).
+NAMES_A_STRAY_FILE = (
+    "def main():\n"
+    + textwrap.indent(ASKED + 'print(json.dumps({"paths": ["stray.md"]}))\n', "    ")
+    + '\n\nif __name__ == "__main__":\n    main()\n'
+)
 
 
 def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
-    repo: AdopterRepo,
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """A resolver is a command run in the working tree, never read from a commit: from
     any other checkout `--head` refuses rather than read the disk as that commit; from a
     checkout at it, the resolver runs, and its answer is read against that commit's
     files, which a missing answer names."""
+    started = start_in_process(monkeypatch)
     _start(repo, {"docs/guide.md": guide()})
     register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, script_body=NAMES_A_STRAY_FILE)
     repo.write({"docs/sourced.md": document("sourced", anchors={"source": ["alpha"]}, at=T1)})
@@ -2420,7 +2430,7 @@ def test_a_named_head_runs_a_resolver_only_from_a_checkout_at_that_commit(
 
     repo.checkout("main")
     refused = _cli("--base", "main", "--head", "feature", "--json")
-    assert refused.exit_code == 1
+    assert refused.exit_code == 1 and started == []
     assert "--head feature: the anchor source 'alpha' is resolved by its capability's command" in (
         refused.output
     )
