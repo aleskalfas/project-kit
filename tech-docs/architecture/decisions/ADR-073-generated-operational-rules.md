@@ -163,6 +163,7 @@ COR-068 leaves open:
   - the rules area's README: where the set and its loaded file live, that the file is generated, and how a project converts its own file into a loaded set
   - the schemas README, "Rule-set files": the `loaded` key and what it refuses
   - the CLI reference: `rule-sets generate`, the two checks, and the forms of citation
+- **The friction checks run from a project's first install.** The set's folder is a place that holds rule sets, so every project has a place from the start. Each rule of `OPS` is anchored to a core record, or gives the reason it has none, so a project's measures count none of them. Under the default mode the checks report and fail nothing.
 - **A project's own set named `OPS`** meets the finding that two sets share a name, after the sync that brings the backbone's. No guard stops that sync. The project renames its own set and its rule ids.
 - **Changeset:** one backbone `minor`, for a new area, command, key and checks. No migration, as the Rationale says.
 - **Stands on these records, all accepted:** COR-004, COR-010, COR-012, COR-051, COR-055, COR-057, COR-065 and COR-068, and ADR-056, ADR-057, ADR-058, ADR-059 and ADR-065.
