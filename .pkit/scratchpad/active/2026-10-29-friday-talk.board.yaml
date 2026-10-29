@@ -2581,7 +2581,7 @@ templates:
         height: 64
       conversationtext:
         type: text
-        text: You and the agent work an idea out, until the session ends or its context fills.
+        text: You and the agent shape an idea, until the session ends or its context is full.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
@@ -2745,7 +2745,7 @@ templates:
         ink: '@text_primary'
       droptext:
         type: text
-        text: Or dropped, kept with why it did not pan out.
+        text: Or dropped, kept with the reason it was dropped.
         style: '@style.body'
         ink: '@text_primary'
         x: 1880
@@ -3238,7 +3238,7 @@ instances:
   T-cover:
     template: cover
     project: project-kit (pkit)
-    title: Building with AI, the way your project decides
+    title: Building with AI, the way your project decided
     author: Aleš Kalfas
     date: 30 October 2026
     version: pkit 1.149
@@ -3287,8 +3287,8 @@ instances:
     template: pstage
     parent: T-opening
     role: neutral
-    head: Choices live in chats and heads
-    text: so the agent can't know them, and makes them again
+    head: Choices stay in chats and in people's heads
+    text: so the agent cannot know them, and decides again
     x: 128
     y: 576
     override:
@@ -3428,7 +3428,7 @@ instances:
     parent: T-opening
     role: code
     head: Write your conventions down
-    text: every session loads them, and the builder follows them · Parts 1, 3
+    text: every session loads them, and agents follow them · Parts 1, 3
     x: 1648
     y: 816
     override:
@@ -3515,7 +3515,7 @@ instances:
     parent: T-opening
     role: code
     head: Tie each doc to what it depends on
-    text: a change must answer for every doc it affects · Part 2
+    text: each change rechecks the docs it affects · Part 2
     x: 1648
     y: 1056
     override:
@@ -3653,7 +3653,7 @@ instances:
     parent: T-fits
     role: neutral
     head: Decisions
-    text: The why, accepted by you.
+    text: Choices you accepted, and why.
     x: 920
     y: 576
     override:
@@ -3693,7 +3693,7 @@ instances:
     parent: T-fits
     role: neutral
     head: Working rules · schemas · processes
-    text: The exact what, read by every session and tool.
+    text: Exactly what to do, for every session and tool.
     x: 780
     y: 766
     override:
@@ -3953,8 +3953,8 @@ instances:
     parent: T-fits
     role: neutral
     head: Checked
-    text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when
-      you accept a new one.
+    text: If a layer and a decision disagree, look for the mistake in the layer first. A decision changes
+      only when you accept a new one.
     x: 2352
     y: 1068
     override:
@@ -4004,12 +4004,14 @@ instances:
     title: Install pkit
     lead: Install the tool once, then add pkit to each project with one command. Every file it adds is
       either pkit's or yours.
-    rests: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
+    rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
+      later.
     n: 3
     total: 17
     override:
       rests:
-        text: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
+        text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
+          come later.
     mural_ids:
       root: d51867d5-1a34-4b8e-97ef-8882b20450ef
       bg: feba0e21-f382-46fa-b774-156645218755
@@ -4040,8 +4042,8 @@ instances:
     y: 1016
     icon: step-lock-important
     head: Don't want pkit in your repository?
-    body: 'pkit stays in your clone only, hidden by git''s own exclude file: nothing of it is committed,
-      and your agent still uses all of it.'
+    body: pkit stays only in your clone, hidden by git's exclude file. Nothing of it is committed, and
+      your agent still uses all of it.
     override:
       root:
         width: 1440
@@ -4089,7 +4091,7 @@ instances:
         height: 1032
     mural_ids:
       root: 5e7cf31c-dbdc-4061-991c-f9d6a0d5bb24
-      img: 86d9aec9-852c-4773-b9d9-28a020e70e70
+      img: 5ca76462-3959-4067-a77e-eb8b7d7e27ab
   T-part-P1:
     template: section
     part: '2'
@@ -4169,12 +4171,14 @@ instances:
     title: Decision records
     lead: A decision record keeps one choice and why it was made. Where it lives says what it is about,
       and who may change it.
-    rests: 'This week: COR-065 overturned a sentence of COR-006, by a new record, not an edit'
+    rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
+      one'
     n: 5
     total: 17
     override:
       rests:
-        text: 'This week: COR-065 overturned a sentence of COR-006, by a new record, not an edit'
+        text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
+          one'
     mural_ids:
       root: 84534aef-8ec4-47fd-b295-4696ea808856
       bg: 125aaa62-bdfb-4010-9fda-8dc6672243f2
@@ -4236,7 +4240,7 @@ instances:
     head: pkit's principles
     text: How the method works, the same in every project.
     path: core/COR-065-records-and-projection.md
-    why: 'Apart from yours: each upgrade replaces them, so you never edit them.'
+    why: 'Kept apart from yours: each upgrade replaces them, so you never edit them.'
     bg: role_code_bg
     tone: role_code
     override:
@@ -4349,7 +4353,7 @@ instances:
     head: Your architecture
     text: How your system is built, its structure, technologies and boundaries.
     path: ADR-001-project-root-resolution.md
-    why: 'Apart from how you work: they sit with your system''s docs, where its architect keeps them.'
+    why: Kept with your system's docs, where its architect keeps them.
     bg: role_architecture_bg
     tone: role_architecture
     override:
@@ -4377,8 +4381,8 @@ instances:
   T-decisions-limit:
     template: notice
     parent: T-decisions
-    text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that bind later
-      work.'
+    text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that later work
+      builds on.'
     x: 128
     y: 1418
     mural_ids:
@@ -4389,16 +4393,16 @@ instances:
   T-found:
     template: slide
     title: Decided once, found later
-    lead: You accept a choice before work builds on it, and a later session finds it before changing what
-      it governs.
-    rests: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted
-      with the code that carries it out'
+    lead: You accept a decision before work builds on it. Later, an agent finds the decision before changing
+      the files it covers.
+    rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
+      merged with its code.'
     n: 6
     total: 17
     override:
       rests:
-        text: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted
-          with the code that carries it out'
+        text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
+          and merged with its code.'
     mural_ids:
       root: d29fd65e-5ac2-41c1-8117-1f9dfb3f8014
       bg: c82a4af9-33a2-4514-8b83-6c8b8800e409
@@ -4561,14 +4565,14 @@ instances:
     template: slide
     title: What every session is told
     lead: A few short rules on how to work, pkit's and yours. Each rule names the decision behind it.
-    rests: 'This week: each rule got a permanent id and a status, and the file every session loads is
-      generated from them'
+    rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
+      generated from the rules.'
     n: 7
     total: 17
     override:
       rests:
-        text: 'This week: each rule got a permanent id and a status, and the file every session loads
-          is generated from them'
+        text: 'This week: each rule got a permanent id and a status. The file every session loads is now
+          generated from the rules.'
     mural_ids:
       root: b83cbbe1-ce7b-48ed-9d2a-802cd1ac87f2
       bg: d4e7c315-56ee-4a20-95f8-ca409aa0da4d
@@ -5593,7 +5597,7 @@ instances:
     template: section
     part: '4'
     title: What you install
-    summary: 'Capabilities: optional add-ons for your discipline, and how they connect.'
+    summary: 'Capabilities: optional add-ons for your kind of work, and how they connect.'
     mural_ids:
       root: 4ad6bb19-216e-49f0-bd57-a9b2640f446d
       bg: b0d0210a-2a26-4d68-9e6a-2b47ff85a9e5

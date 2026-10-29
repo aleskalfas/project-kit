@@ -23884,7 +23884,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cover",
-    "text": "Building with AI, the way your project decides",
+    "text": "Building with AI, the way your project decided",
     "title": "tpl:cover#title",
     "width": 2944,
     "x": 128,
@@ -23895,7 +23895,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cover",
-    "text": "Building with AI, the way your project decides",
+    "text": "Building with AI, the way your project decided",
     "title": "tpl:cover#title",
     "width": 2944,
     "x": 128,
@@ -23929,7 +23929,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793232471323
+   "updatedOn": 1793315950707
   },
   "T-cover.version": {
    "board": {
@@ -27543,7 +27543,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-decisions-col1",
-    "text": "Apart from yours: each upgrade replaces them, so you never edit them.",
+    "text": "Kept apart from yours: each upgrade replaces them, so you never edit them.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -27554,7 +27554,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-decisions-col1",
-    "text": "Apart from yours: each upgrade replaces them, so you never edit them.",
+    "text": "Kept apart from yours: each upgrade replaces them, so you never edit them.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -27588,7 +27588,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793315952448
   },
   "T-decisions-col2": {
    "board": {
@@ -28441,7 +28441,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-decisions-col3",
-    "text": "Apart from how you work: they sit with your system's docs, where its architect keeps them.",
+    "text": "Kept with your system's docs, where its architect keeps them.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -28452,7 +28452,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-decisions-col3",
-    "text": "Apart from how you work: they sit with your system's docs, where its architect keeps them.",
+    "text": "Kept with your system's docs, where its architect keeps them.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -28486,7 +28486,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793315952398
   },
   "T-decisions-grp1": {
    "board": {
@@ -28893,7 +28893,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-decisions-limit",
-    "text": "Limit: Writing and reviewing a record takes time: worth it only for choices that bind later work.",
+    "text": "Limit: Writing and reviewing a record takes time: worth it only for choices that later work builds on.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -28904,7 +28904,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-decisions-limit",
-    "text": "Limit: Writing and reviewing a record takes time: worth it only for choices that bind later work.",
+    "text": "Limit: Writing and reviewing a record takes time: worth it only for choices that later work builds on.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -28938,7 +28938,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793315951816
   },
   "T-decisions-path1": {
    "board": {
@@ -29326,7 +29326,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-decisions",
-    "text": "This week: COR-065 overturned a sentence of COR-006, by a new record, not an edit",
+    "text": "This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old one",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -29337,7 +29337,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-decisions",
-    "text": "This week: COR-065 overturned a sentence of COR-006, by a new record, not an edit",
+    "text": "This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old one",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -29371,7 +29371,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793315952110
   },
   "T-decisions.title": {
    "board": {
@@ -31798,7 +31798,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-fits-s1",
-    "text": "The why, accepted by you.",
+    "text": "Choices you accepted, and why.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -31810,7 +31810,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-fits-s1",
-    "text": "The why, accepted by you.",
+    "text": "Choices you accepted, and why.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -31844,7 +31844,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303481928
+   "updatedOn": 1793316010337
   },
   "T-fits-s2": {
    "board": {
@@ -32083,7 +32083,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-fits-s2",
-    "text": "The exact what, read by every session and tool.",
+    "text": "Exactly what to do, for every session and tool.",
     "title": "tpl:stage#text",
     "width": 936,
     "x": 32,
@@ -32095,7 +32095,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-fits-s2",
-    "text": "The exact what, read by every session and tool.",
+    "text": "Exactly what to do, for every session and tool.",
     "title": "tpl:stage#text",
     "width": 936,
     "x": 32,
@@ -32129,7 +32129,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303481928
+   "updatedOn": 1793316010382
   },
   "T-fits-s3": {
    "board": {
@@ -33788,7 +33788,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-fits-s52",
-    "text": "Where a layer and a decision disagree, the layer is checked first; a decision changes only when you accept a new one.",
+    "text": "If a layer and a decision disagree, look for the mistake in the layer first. A decision changes only when you accept a new one.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -33799,7 +33799,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-fits-s52",
-    "text": "Where a layer and a decision disagree, the layer is checked first; a decision changes only when you accept a new one.",
+    "text": "If a layer and a decision disagree, look for the mistake in the layer first. A decision changes only when you accept a new one.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -33833,7 +33833,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303481928
+   "updatedOn": 1793315951008
   },
   "T-fits.bg": {
    "board": {
@@ -35710,7 +35710,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-found",
-    "text": "You accept a choice before work builds on it, and a later session finds it before changing what it governs.",
+    "text": "You accept a decision before work builds on it. Later, an agent finds the decision before changing the files it covers.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -35721,7 +35721,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-found",
-    "text": "You accept a choice before work builds on it, and a later session finds it before changing what it governs.",
+    "text": "You accept a decision before work builds on it. Later, an agent finds the decision before changing the files it covers.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -35755,7 +35755,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793315953346
   },
   "T-found.num": {
    "board": {
@@ -35821,7 +35821,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-found",
-    "text": "This week: ADR-075 decided how every session's working rules are made, and merged accepted with the code that carries it out",
+    "text": "This week: ADR-075 decided how the rules every session loads are made. It was accepted and merged with its code.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -35832,7 +35832,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-found",
-    "text": "This week: ADR-075 decided how every session's working rules are made, and merged accepted with the code that carries it out",
+    "text": "This week: ADR-075 decided how the rules every session loads are made. It was accepted and merged with its code.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -35866,7 +35866,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793315952947
   },
   "T-found.title": {
    "board": {
@@ -36556,7 +36556,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "You and the agent work an idea out, until the session ends or its context fills.",
+    "text": "You and the agent shape an idea, until the session ends or its context is full.",
     "title": "tpl:ideas_T-ideas#conversationtext",
     "width": 520,
     "x": 40,
@@ -36567,7 +36567,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "You and the agent work an idea out, until the session ends or its context fills.",
+    "text": "You and the agent shape an idea, until the session ends or its context is full.",
     "title": "tpl:ideas_T-ideas#conversationtext",
     "width": 520,
     "x": 40,
@@ -36601,7 +36601,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793312907229
+   "updatedOn": 1793315952274
   },
   "T-ideas-ideas.dropbox": {
    "board": {
@@ -36669,7 +36669,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "Or dropped, kept with why it did not pan out.",
+    "text": "Or dropped, kept with the reason it was dropped.",
     "title": "tpl:ideas_T-ideas#droptext",
     "width": 1024,
     "x": 1880,
@@ -36680,7 +36680,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-ideas-ideas",
-    "text": "Or dropped, kept with why it did not pan out.",
+    "text": "Or dropped, kept with the reason it was dropped.",
     "title": "tpl:ideas_T-ideas#droptext",
     "width": 1024,
     "x": 1880,
@@ -36714,7 +36714,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793312975445
+   "updatedOn": 1793315952308
   },
   "T-ideas-ideas.notebox": {
    "board": {
@@ -38388,7 +38388,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-install-hl",
-    "text": "pkit stays in your clone only, hidden by git's own exclude file: nothing of it is committed, and your agent still uses all of it.",
+    "text": "pkit stays only in your clone, hidden by git's exclude file. Nothing of it is committed, and your agent still uses all of it.",
     "title": "tpl:highlight#body",
     "width": 1260,
     "x": 140,
@@ -38399,7 +38399,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-install-hl",
-    "text": "pkit stays in your clone only, hidden by git's own exclude file: nothing of it is committed, and your agent still uses all of it.",
+    "text": "pkit stays only in your clone, hidden by git's exclude file. Nothing of it is committed, and your agent still uses all of it.",
     "title": "tpl:highlight#body",
     "width": 1260,
     "x": 140,
@@ -38433,7 +38433,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303481928
+   "updatedOn": 1793315952185
   },
   "T-install-hl.head": {
    "board": {
@@ -38605,7 +38605,7 @@
     "y": 0
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-install-listing.png@e2bdecc58a662cf6",
+    "file": "2026-10-29-friday-talk-icons/term-install-listing.png@fd20b5798314f938",
     "height": 1032,
     "parent": "T-install-listing",
     "title": "tpl:term_image#img",
@@ -38613,7 +38613,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "86d9aec9-852c-4773-b9d9-28a020e70e70",
+   "mural_id": "5ca76462-3959-4067-a77e-eb8b7d7e27ab",
    "tracked": [
     "title",
     "text",
@@ -38641,7 +38641,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793304057004
+   "updatedOn": 1793315949733
   },
   "T-install-term": {
    "board": {
@@ -38924,7 +38924,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later",
+    "text": "pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come later.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -38935,7 +38935,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later",
+    "text": "pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come later.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -38969,7 +38969,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303481928
+   "updatedOn": 1793315952359
   },
   "T-install.title": {
    "board": {
@@ -39714,7 +39714,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-opening-s1",
-    "text": "Choices live in chats and heads",
+    "text": "Choices stay in chats and in people's heads",
     "title": "tpl:pstage#head",
     "width": 1272,
     "x": 120,
@@ -39725,7 +39725,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-opening-s1",
-    "text": "Choices live in chats and heads",
+    "text": "Choices stay in chats and in people's heads",
     "title": "tpl:pstage#head",
     "width": 1272,
     "x": 120,
@@ -39759,7 +39759,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793274227325
+   "updatedOn": 1793315950723
   },
   "T-opening-s1.icon": {
    "board": {
@@ -39817,7 +39817,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-opening-s1",
-    "text": "so the agent can't know them, and makes them again",
+    "text": "so the agent cannot know them, and decides again",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -39828,7 +39828,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-opening-s1",
-    "text": "so the agent can't know them, and makes them again",
+    "text": "so the agent cannot know them, and decides again",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -39862,7 +39862,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793274227325
+   "updatedOn": 1793315950872
   },
   "T-opening-s2": {
    "board": {
@@ -40636,7 +40636,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-opening-s4",
-    "text": "every session loads them, and the builder follows them \u00b7 Parts 1, 3",
+    "text": "every session loads them, and agents follow them \u00b7 Parts 1, 3",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -40647,7 +40647,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-opening-s4",
-    "text": "every session loads them, and the builder follows them \u00b7 Parts 1, 3",
+    "text": "every session loads them, and agents follow them \u00b7 Parts 1, 3",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -40681,7 +40681,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793274227325
+   "updatedOn": 1793315950818
   },
   "T-opening-s5": {
    "board": {
@@ -41182,7 +41182,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-opening-s6",
-    "text": "a change must answer for every doc it affects \u00b7 Part 2",
+    "text": "each change rechecks the docs it affects \u00b7 Part 2",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -41193,7 +41193,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-opening-s6",
-    "text": "a change must answer for every doc it affects \u00b7 Part 2",
+    "text": "each change rechecks the docs it affects \u00b7 Part 2",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -41227,7 +41227,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793274227325
+   "updatedOn": 1793316010216
   },
   "T-opening-s7": {
    "board": {
@@ -43303,7 +43303,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P3",
-    "text": "Capabilities: optional add-ons for your discipline, and how they connect.",
+    "text": "Capabilities: optional add-ons for your kind of work, and how they connect.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -43314,7 +43314,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P3",
-    "text": "Capabilities: optional add-ons for your discipline, and how they connect.",
+    "text": "Capabilities: optional add-ons for your kind of work, and how they connect.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -43348,7 +43348,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793315953285
   },
   "T-part-P3.title": {
    "board": {
@@ -56098,7 +56098,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "This week: each rule got a permanent id and a status, and the file every session loads is generated from them",
+    "text": "This week: each rule got a permanent id and a status. The file every session loads is now generated from the rules.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -56109,7 +56109,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "This week: each rule got a permanent id and a status, and the file every session loads is generated from them",
+    "text": "This week: each rule got a permanent id and a status. The file every session loads is now generated from the rules.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -56143,7 +56143,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793314888540
+   "updatedOn": 1793315953097
   },
   "T-sessions.title": {
    "board": {
