@@ -104,6 +104,10 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 **When you change the system, read first the accepted records its files lead to.** Run `pkit refs records-for` once with every file your change will commit, read each record it ties to them directly at the points it names, and read each artefact it reaches them through, the one resting on the fewest records first, following its records that bear on your change. An empty answer is no sign that no record governs a file (the decisions README, "Finding the records a path leads to"; project-kit#2165).
 
+### 23. A choice later work builds on starts with its record (RS-OPS-023)
+
+**Before you make a choice that later work will build on, draft the record that decides it, and let no work rest on the choice until a person accepts the record (COR-065 point 3).** Such choices include a library, an interface or format others use, a convention and a boundary between parts. A change to what an accepted record decides needs a record too. Where your project received that record from elsewhere, follow it in your own files, or propose the change where the record is kept. An accepted rule whose origin states the choice serves as its record. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs no record. Nor does a choice an accepted record already makes. Where you and the person who authorises the merge disagree, that person decides.
+
 ## Where these rules came from
 
 The split between this file and `.pkit/rules/project.md` is governed by COR-014's universal-applicability principle: rules that apply to any adopting project ship here; rules tied to a specific project's tooling live in the project namespace. Capability-specific operational rules (e.g. work-tracker conventions) live in the capability's own documentation.

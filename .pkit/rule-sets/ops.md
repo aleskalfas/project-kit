@@ -1,7 +1,7 @@
 ---
 rule-set: OPS
 loaded: true
-version: 2.0.0
+version: 3.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -135,6 +135,12 @@ rules:
     pkit:
       friction:
         anchors: {record: ["COR-065#7"]}
+  RS-OPS-023:
+    status: accepted
+    origin: {decision: COR-065}
+    pkit:
+      friction:
+        anchors: {record: ["COR-065#3", "COR-065#1", "COR-064#6", "COR-066#1"]}
 ---
 
 *Operational rules shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`; a project that receives them by sync edits neither (core rule 1). A rule cites the record or issue its reason lives in, and where it cites neither, its origin in the set holds the reason: read it when the why is not obvious, and keep the rule meanwhile.*
@@ -242,6 +248,10 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 ### RS-OPS-022 — Read the records a change's files lead to first
 
 **When you change the system, read first the accepted records its files lead to.** Run `pkit refs records-for` once with every file your change will commit, read each record it ties to them directly at the points it names, and read each artefact it reaches them through, the one resting on the fewest records first, following its records that bear on your change. An empty answer is no sign that no record governs a file (the decisions README, "Finding the records a path leads to"; project-kit#2165).
+
+### RS-OPS-023 — A choice later work builds on starts with its record
+
+**Before you make a choice that later work will build on, draft the record that decides it, and let no work rest on the choice until a person accepts the record (COR-065 point 3).** Such choices include a library, an interface or format others use, a convention and a boundary between parts. A change to what an accepted record decides needs a record too. Where your project received that record from elsewhere, follow it in your own files, or propose the change where the record is kept. An accepted rule whose origin states the choice serves as its record. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs no record. Nor does a choice an accepted record already makes. Where you and the person who authorises the merge disagree, that person decides.
 
 ## Where these rules came from
 
