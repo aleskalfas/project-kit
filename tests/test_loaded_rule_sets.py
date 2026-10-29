@@ -583,9 +583,7 @@ def test_a_range_past_the_highest_rule_is_one_warning(adopter: AdopterRepo) -> N
     # The range opens at the set's highest rule, so it holds that one alone, whether or
     # not a lower number is held by another branch's proposal.
     highest = max(int(rule.id.removeprefix("RS-OPS-")) for rule in the_set(REPO, "OPS").rules)
-    adopter.write(
-        {"docs/guide.md": f"Core rules {highest}-40 say so, and core rules 30 and 31.\n"}
-    )
+    adopter.write({"docs/guide.md": f"Core rules {highest}-40 say so, and core rules 30 and 31.\n"})
     messages = [u.message for u in refs.unheld_operational_rules(adopter.root)]
     ranged = [m for m in messages if f"'Core rules {highest}-40" in m]
     assert len(ranged) == 1, messages
