@@ -173,9 +173,10 @@ dev-mode-dirs = ["src"]
 # These are achieved by enumerating the included paths rather than the whole
 # tree: `decisions/` ships `core` (hook-filtered, below) + `README.md` only;
 # `scratchpad/` lists its `README.md` only.
-# TWELVE `.pkit/` trees are deliberately absent from the list below —
+# THIRTEEN `.pkit/` trees are deliberately absent from the list below —
 # `decisions/core`, `capabilities`, `agents`, `permissions`, `adapters`,
-# `skills`, `rules`, `schemas`, `cli`, `process`, `lifecycle`, `migrations`.
+# `skills`, `rules`, `schemas`, `cli`, `process`, `lifecycle`, `migrations`,
+# `rule-sets`.
 # Only single tracked files remain here: a static DIRECTORY entry ships
 # whatever sits in it, untracked files included (#909). Do not "helpfully"
 # restore any of them: they are force-included by `hatch_build.py`, file by

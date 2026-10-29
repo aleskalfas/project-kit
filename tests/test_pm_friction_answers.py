@@ -43,6 +43,7 @@ from tests.friction_documents import (
     guide,
 )
 from tests.in_process import MODELLED, InProcessPkit, Runner
+from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_friction_revisit import (
     DECISION,
     SOURCE_DOC,
@@ -1477,6 +1478,7 @@ def test_a_change_that_sets_friction_dormant_lists_the_setting(
     settings it altered are listed instead, as they were and as they are, read
     through the backbone's discovery at each commit."""
     repo = make_adopter_repo()
+    without_shipped_rule_sets(repo)  # their folder would keep the check awake
     repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
     repo.commit("base", files=None)
     repo.checkout("feature", create=True)

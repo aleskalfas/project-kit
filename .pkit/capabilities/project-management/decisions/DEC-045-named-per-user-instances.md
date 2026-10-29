@@ -209,7 +209,7 @@ the automatic version waits for lived use of the mechanical one.
   architect, not a new agent.
 - **Fold provisioning into a separate ADR-gated record.** Considered (a reviewer flagged
   the filesystem/session-boundary surface); kept in this record as per-user pm tooling
-  with the rule-8 confirmation and rule-18 own-repo-only constraints stated. If provisioning
+  with the core rule 8 confirmation and core rule 19 own-repo-only constraints stated. If provisioning
   grows beyond clone-plus-scaffold, split it out then.
 
 ## Implications
@@ -229,8 +229,8 @@ the automatic version waits for lived use of the mechanical one.
   engine and cascade fold never read it (DEC-035 point 8 / DEC-043 D6).
 - **Two new scripts:** the **guided assignment** (local, idempotent, reconciles DEC-018
   workstream-lifecycle drift, surfaces shared/unassigned at `warning`) and
-  **`create-instance`** (clone into a sibling folder + scaffold config; rule-8 confirm
-  before filesystem mutation; rule-18 own-machine only; wires pkit setup for the new clone).
+  **`create-instance`** (clone into a sibling folder + scaffold config; core rule 8 confirm
+  before filesystem mutation; core rule 19 own-machine only; wires pkit setup for the new clone).
 - **DEC-035 point 1 points here** — instances may carry a name and reference
   workstreams for routing; the flat numeric model, the ownership marker, and the clash
   mechanics stand and remain the fallback.

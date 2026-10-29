@@ -91,7 +91,7 @@ derived-issue rollup. v1 is a live query each run; a "what's new since last view
    core CLI command + a PRJ (or CLI-spec) record, because the fixed target is
    pkit-product-specific, not a neutral principle every adopter's project follows.
 2. **Cross-repo-write framing.** Does routing a write to a *fixed foreign repo*
-   need more than rule-18's operator-gate — e.g., an explicit one-time confirm on
+   need more than core rule 19's operator-gate — e.g., an explicit one-time confirm on
    first use, or a config acknowledgement? Where does the upstream owner/repo live
    so it's honest and overridable-for-forks-later without inviting misuse now?
 3. **Identity / privacy.** Filing under the user's `gh` identity is cleanest for

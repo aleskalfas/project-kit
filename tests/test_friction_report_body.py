@@ -33,6 +33,7 @@ from scripts import friction_report_body as report
 from project_kit import friction_repository as fr
 from tests.adopter_repo import HISTORY_EPOCH, Author, MakeAdopterRepo
 from tests.friction_documents import T1, T2, Timeline, document, friction_config, guide
+from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_answer_files import GUIDE, answer_path, answers, bare_guide
 from tests.test_answer_files import entry as revalidation
 
@@ -178,6 +179,7 @@ def test_with_only_deferrals_nothing_needs_an_answer_and_they_stay_listed(
 
 
 def test_the_measures_are_rendered_and_never_counted(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     _history(timeline)
     root = timeline.adopter.root
     measures = _section(report.publication(_check(root))["body"], "Measures")
