@@ -1973,6 +1973,10 @@ def _fake_git(
             return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_d_stderr)
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
+    # The settled branch is the backbone's answer, read through pm's one start
+    # of a `pkit` call, which this global stub of `subprocess.run` would answer
+    # too; the clean-up's subject is git, so the branch is stood in here.
+    monkeypatch.setattr(dw.pr_merge.default_branch, "name", lambda config: "main")
     monkeypatch.setattr(dw.subprocess, "run", fake_run)
     return seen
 
