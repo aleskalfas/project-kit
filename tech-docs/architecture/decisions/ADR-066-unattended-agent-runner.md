@@ -65,7 +65,7 @@ The design was worked out in the retired note `2026-10-18-drift-starts-fixer`, a
 
 The points:
 - Points 1 and 2 place the runner, and set what crosses its boundary.
-- Points 3 to 8 confine a run: its settings, the bypasses it never gets, its rules in the model, its sandbox, its clone and check, and its marker.
+- Points 3 to 8 confine a run: its settings, the bypasses it never gets, its rules in the model, its sandbox, its clone and check, and its marker. A third form, the working run that builds a Task, keeps most of them and replaces the workspace with a clone it may edit (refinement per [ADR-073](ADR-073-builder-runs.md) point 4).
 - Points 9 and 10 say what the permission layer sees, and what the review command's runs get.
 - Points 11 to 13 state what stays open, the probe, and the harness requirement.
 
@@ -76,8 +76,8 @@ The points:
 - **Reached through one backbone command.** A capability never calls a harness, and never looks for an adapter. It asks the backbone's run command to run an agent.
 - **What the backbone's run command does:**
   - it refuses inside a run (point 8)
-  - it makes, checks and removes a confined run's clone (point 7)
-  - it reads the run's rules from the clone, and projects them through the shared decision core (ADR-003)
+  - it makes, checks and removes a confined run's clone (point 7), and makes, checks and keeps a working run's for its caller (refinement per [ADR-073](ADR-073-builder-runs.md) point 1)
+  - it reads the run's rules from the clone, and projects them through the shared decision core (ADR-003). For a working run it reads them, the hook, the model, the definition and the runner itself from the default branch's head the caller names, never from the clone (refinement per [ADR-073](ADR-073-builder-runs.md) point 2)
   - it judges which allowed commands the platform requires outside the sandbox, by ADR-027's test (point 6)
 - **What the runner does,** in its harness's terms:
   - it checks the platform and the harness's version
@@ -92,6 +92,7 @@ The points:
 - the agent, by name, and the brief
 - for a confined run, the commit, the command whose runs the rules name (point 5), and the folder the run's files go to
 - for the review command's run, the folder it runs in (point 10)
+- for a working run, the repository, branch and commit its clone is made at, the default branch's head its rules are read from, and the file its progress goes to (refinement per [ADR-073](ADR-073-builder-runs.md) points 1, 2 and 5)
 - a wall-clock limit, and an effort level where it sets one
 
 **The caller gets back:**
@@ -99,6 +100,7 @@ The points:
 - the agent's final message, its own text and no tool's result
 - the calls the harness refused, where it reports them
 - for a confined run, the run's files as untrusted data, the check's verdict (point 7), and each command the run ran outside the sandbox (point 6)
+- for a working run, its kept clone, the check's verdict, the harness session's id, and its progress in the file the caller named (refinement per [ADR-073](ADR-073-builder-runs.md) points 1, 5 and 7)
 
 **A run is refused before it starts when:**
 - the marker of a run is set (point 8), or no runner is found, or more than one (point 1)
@@ -124,7 +126,7 @@ Each refusal names its cause. A start report that does not match the run's setti
   - the candidate exclusions
   - the runner itself, and the deploy's resolution of an agent, which the runner applies
 
-  So no unmerged change shapes a run nobody watches, as DEC-056 point 3 keeps for the agent.
+  A working run reads them from the default branch's head instead (refinement per [ADR-073](ADR-073-builder-runs.md) point 2). So no unmerged change shapes a run nobody watches, as DEC-056 point 3 keeps for the agent.
 - **A checked agent definition.** The runner always passes the definition itself, with `--agents`. It makes it from the agent's file at the pinned commit.
   - **As the deploy resolves it.** The file is the one the adapter's deploy picks among agents of one name. The overlay is applied. Each storyboard is named by its path from the clone's root, where the run reads it.
   - **Refused where the deploy would not carry it.** The run is refused where the deploy would not resolve the file, such as over an overlay category its checks refuse ([ADR-051](ADR-051-process-author-edit-authority.md) and [ADR-052](ADR-052-optional-read-category-empty-tolerance.md)). It is refused too where the deploy would drop a value the run passes, such as a model it does not accept. Nobody watches the run to read the deploy's warning.
@@ -218,6 +220,7 @@ DEC-056 point 5 makes a fixer start no other agent. A run could start one in two
 
 - **In the session that runs the command,** the hook sees one shell call, the command itself. It judges that call for the session's subject.
 - **Inside a confined run, the hook sees nothing.** The run loads no project settings, so the hook is not registered there.
+- **Inside a working run, the hook runs,** registered by the runner from outside the run's clone, with its code and its model read from the default branch (refinement per [ADR-073](ADR-073-builder-runs.md) point 2).
 - **The runner reads the realised state back** (COR-028 point 2). The harness reports, at start, its mode, its tools, its MCP servers, its plugins, any hook it ran, and whether its sandbox started. Any of these that does not match the run's settings ends the run at once, and its files are set aside.
 - **After the run,** the harness's report of the calls it refused, and the check of point 7, show what the run tried and what it changed.
 - **Inside the review command's runs,** the hook runs as in the person's session. Which subject it judges there is not known (point 11).
@@ -260,6 +263,7 @@ Each item says what holds the intent and what is left (COR-028 point 3).
 - **The person's instructions.** The harness reads every `CLAUDE.md` above the folder it starts in, and the person's own. No file of the person's checkout reaches a run, but the person's own instructions may.
 - **An organisation's managed settings.** They reach every run, and nothing drops them. They may allow more, run hooks of their own, or set the run's rules aside. The runner cannot always read them, so the organisation closes this.
 - **The review command's runs** are unconfined (point 10). A reviewer runs in the person's checkout, may write there, and may start in a mode that approves calls no rule allows. Nothing checks its run.
+- **A working run** reaches the network hosts its build is allowed, and the rest of the machine is readable to it but for its caller's clone and the signing key. What stays open there is [ADR-073](ADR-073-builder-runs.md)'s point 10.
 - **What the limit reaches.** At the wall-clock limit, the runner ends the harness and every process of the run it can reach (points 2 and 10). The Claude Code runner reaches each process descended from the harness at that moment, one in a session of its own included. What is left:
   - A process that left the tree before the limit, such as one that daemonised, is not reached. It may run on after the run.
   - Started inside the sandbox, such a process stays inside it. Whether the sandbox ends it with the run differs by platform, and the probe shows which (point 12).

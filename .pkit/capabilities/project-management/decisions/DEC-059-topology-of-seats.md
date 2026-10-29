@@ -35,7 +35,7 @@ Each seat declares:
 - **its name,** unique in the topology, which becomes the identity of the clone that holds the seat (point 6). A seat's name never changes: renaming a seat retires it and adds a new one.
 - **its role,** one of three:
   - a planner slices the work and files it, and builds none of it
-  - a worker takes ready work and builds it up to its merge
+  - a worker takes ready work and builds it up to its merge. Each Task is built by a fresh builder agent that the capability's build command starts, so that each Task starts in a clean context (refinement per [project-management:DEC-063-task-builder] point 1)
   - a lead plans and builds within its scope, and may start helper agents of its own
 - **its agent definition,** the project-manager agent's by default (point 8)
 - **its scope,** which is optional and narrows the work its agent takes (point 7)
@@ -70,7 +70,7 @@ Taking a seat is a claim on the seat's state issue, and the first claim on a fre
 - **What the number serves:** what DEC-035 uses it for, the tie-break between two claims on one Task and the `instance:N` label. The topology's seats are the pool of numbers, whatever their count ([project-management:DEC-035-instance-ownership] point 2).
 - **No typed number.** In a project with a topology, a number is never typed into a clone, since it could take a seat's number. A clone that holds no seat marks no issue and is guarded by nothing, as a clone with no number.
 - **Confirmed before each write.** Every command that acts as an instance confirms the clone's seat on the seat's state issue, by the clone's key, before it writes. The clone may keep its seat's name as a hint of where to look, and never acts on the hint without that read.
-- **Helpers.** A helper agent that a lead starts acts as the lead's instance. How a linked worktree of the clone reads that identity is not decided here.
+- **Helpers.** A helper agent that a lead starts acts as the lead's instance. A builder that the build command starts for a worker's Task acts as no instance: the worker makes each write as its seat, and no command of this capability acts as an instance inside an agent run (refinement per [project-management:DEC-063-task-builder] point 4). How a linked worktree of the clone reads an instance's identity is not decided here.
 
 ### 7. Work reaches agents through one shared pool
 
@@ -103,7 +103,7 @@ In a project with a topology, an instance's claim on a Task rests on four safegu
 
 - **Release:** the owner releases the Task once it is done, at its merge, at its close as completed without a pull request, or as won't-do ([project-management:DEC-035-instance-ownership] point 4). It also releases the Task once it stops work on it, with an abandon event ([project-management:DEC-043-ownership-substrate-selection] point 3).
 - **Renewal:** the owner's work renews the claim, by an ownership event of its own each time. The capability's commands post one, and so does the role's procedure as it builds, before it pushes and at least once within a part of the limit. The audit-log facility renders a renewal compact ([project-management:DEC-044-audit-log-facility] point 4).
-- **Lapse:** a claim on a Task In Progress that its work has not renewed within a generous limit lapses, so another agent may take the Task over. A Task in Review waits on its reviewers and a person, not on its owner, so its claim does not lapse, and nor does a claim on a container or on a Task in Backlog. The topology sets the limit, and its default outlasts a session paused at a usage limit or overnight.
+- **Lapse:** a claim on a Task In Progress that its work has not renewed within a generous limit lapses, so another agent may take the Task over. A Task in Review waits on its reviewers and a person, not on its owner, so its claim does not lapse, and nor does a claim on a container or on a Task in Backlog. Nor does the claim that started the build, by its seat and its clone's key, on a Task whose build waits on a question or on its hand-back, which waits on whoever may answer it or bring it back (refinement per [project-management:DEC-063-task-builder] point 6). The topology sets the limit, and its default outlasts a session paused at a usage limit or overnight.
 - **A check before writing:** every command that writes as the owner reads the clone's seat and the Task's claim first. A push passes through no command of this capability, so the role's procedure checks before it pushes. Where the claim lapsed or passed to another clone, the session parks its work. It keeps what it built on a branch of its own, writes nothing to the Task's branch or pull request, and says on the Task where the parked work lies.
 
 The claims rest on the comment log:
@@ -197,7 +197,7 @@ DEC-029's mode surface and its procedure carrier, and DEC-043's selector and its
   - one that releases a seat, by its clone or by force, with the claims of its clone
   - a listing of the seats and their holders
   - In a project with a topology, `set-instance` refuses a typed number. The commands' names are the build's.
-- **The pm skill gains a procedure for each role** that batch planning does not already serve, the worker's loop among them, with the renewal and the check before each push. The project-manager agent's first step reads its seat ([project-management:DEC-029-project-manager-agent-shape]).
+- **The pm skill gains a procedure for each role** that batch planning does not already serve, the worker's loop among them, with the renewal and the check before each push. The worker's loop builds each Task through the build command ([project-management:DEC-063-task-builder]). The project-manager agent's first step reads its seat ([project-management:DEC-029-project-manager-agent-shape]).
 - **ADR-041 is refined in place** ([pkit:ADR-041]). Its fold takes from its caller the time of reading, the limit, the Task's state in the lifecycle and the seats' holders, so the ownership seam reads no other seam. Its consumers grow by the pool, the check before writing and the seat's release. The description mirror can no longer stand for the fold, since lapse depends on the time of reading. The fold reads the logs of Tasks In Progress, the only claims that lapse, and pages a long log, so it never reads one cut short. The maintainer's sign-off on this record covers that refinement, which the architect authors once this record is accepted.
 - **The ownership stamp gains a version,** carrying the seat and the clone's key ([project-management:DEC-044-audit-log-facility] point 2). Readers still accept the stamps written before it.
 - **No mesh interaction.** The topology is the project's own configuration, outside what the mesh compares across repositories ([project-management:DEC-022-methodology-mesh]), and the shared pool is the repository's own. In a project whose topology declares pools of workers, the work routes through each seat's pools instead, and they too are the repository's own, since they hold its own Milestones ([project-management:DEC-061-pools-of-workers]).
