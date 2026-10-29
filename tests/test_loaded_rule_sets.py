@@ -4,8 +4,9 @@ A loaded set (`loaded: true`) keeps operational rules. Its accepted rules bind o
 the work of the sessions that load a file generated from it, never on an artefact.
 These tests hold:
 
-- **the backbone's set**, `OPS`: core's 22 rules, each accepted with an origin,
-  each keeping its number, and `.pkit/rules/core.md` generated from it;
+- **the backbone's set**, `OPS`: core's 22 rules, each accepted and keeping its
+  number, every accepted rule with an origin, and `.pkit/rules/core.md` generated
+  from it, its accepted rules alone;
 - **the projection** (`loaded_rule_sets.project`): accepted rules only, under
   `N. Title (RS-<SET>-NNN)`, the prose and the groups kept, no front matter, no
   retired or proposed rule, nothing added;
@@ -100,15 +101,25 @@ def findings(adopter: AdopterRepo, kind: Kind) -> list[rs.RuleSetFinding]:
 # --- the backbone's set, `OPS` -------------------------------------------------------
 
 
+#: Core's rules as #2260 converted them, each keeping its number (COR-068 point 6).
+CORE_S_22 = [f"RS-OPS-{n:03d}" for n in range(1, 23)]
+
+
 def test_ops_holds_core_s_22_rules_each_accepted_with_an_origin() -> None:
+    """Core's 22 rules keep their numbers, accepted. A rule added since takes a number
+    of its own, and once accepted carries a complete origin as they do."""
     ops = the_set(REPO, "OPS")
     assert ops.path == ".pkit/rule-sets/ops.md"
     assert (ops.component, ops.citation, ops.loaded) == ("backbone", "backbone:OPS", True)
-    assert [rule.id for rule in ops.rules] == [f"RS-OPS-{n:03d}" for n in range(1, 23)]
+    ids = [rule.id for rule in ops.rules]
+    assert len(ids) == len(set(ids))
+    assert set(CORE_S_22) <= set(ids)
     for rule in ops.rules:
-        assert rule.status == "accepted", rule.id
+        if rule.id in CORE_S_22:
+            assert rule.status == "accepted", rule.id
         origin = rule.origin or {}
-        assert "decision" in origin or {"date", "by", "why"} <= set(origin), rule.id
+        if rule.status == "accepted":
+            assert "decision" in origin or {"date", "by", "why"} <= set(origin), rule.id
         # COR-068 point 6: a core record, or the decider's words; never an ADR or a PRJ.
         assert not str(origin.get("decision", "")).startswith(("ADR-", "PRJ-")), rule.id
 
@@ -121,8 +132,9 @@ def test_each_ops_rule_is_anchored_to_core_records_or_says_why_it_is_not() -> No
     artefacts = {
         a.id: a for a in fd.discover_artefacts(REPO).artefacts if a.path == ".pkit/rule-sets/ops.md"
     }
-    assert sorted(artefacts) == [f"RS-OPS-{n:03d}" for n in range(1, 23)]
     origins = {rule.id: rule.origin or {} for rule in the_set(REPO, "OPS").rules}
+    assert sorted(artefacts) == sorted(origins)
+    assert set(CORE_S_22) <= set(artefacts)
     for rule_id, artefact in artefacts.items():
         anchors, reason = dict(artefact.anchors), artefact.unanchored_because
         assert bool(anchors) != bool(reason), rule_id
@@ -145,7 +157,9 @@ def test_core_md_is_the_projection_of_ops() -> None:
 
 def test_each_rule_of_core_md_names_its_number_title_and_id() -> None:
     headings = re.findall(r"^### (\d+)\. (.+) \((RS-OPS-\d{3})\)$", CORE_RULES.read_text(), re.M)
-    assert [int(n) for n, _title, _id in headings] == list(range(1, 23))
+    accepted = [rule.id for rule in the_set(REPO, "OPS").rules if rule.status == "accepted"]
+    assert [rule_id for _n, _title, rule_id in headings] == accepted
+    assert set(CORE_S_22) <= set(accepted)
     assert all(rule_id == f"RS-OPS-{int(n):03d}" for n, _title, rule_id in headings)
     assert ("19", "A session changes only its own repository", "RS-OPS-019") in headings
 

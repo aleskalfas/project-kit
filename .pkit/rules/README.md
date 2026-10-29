@@ -11,7 +11,7 @@ pkit:
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - src/project_kit/install.py
         - src/project_kit/loaded_rule_sets.py
-      record: [COR-001, COR-014, "COR-051#6", "COR-064#1", "COR-064#2", COR-068, ADR-075]
+      record: [COR-001, COR-014, "COR-051#6", "COR-051#7", "COR-064#1", "COR-064#2", COR-068, ADR-075]
       artefact: [".pkit/schemas/README.md#rule-set-files"]
 ---
 
@@ -42,6 +42,7 @@ The kit's rules are a *loaded rule set*: a rule set whose accepted rules bind on
 - **The loaded file** is `core.md`, where the include reads it. It holds the set's accepted rules under the set's sections, each headed `### N. Title (RS-OPS-0NN)` with its statement, and none of the set's data: no front matter, no origin, no retired rule.
 - **It is generated.** `pkit rule-sets generate` writes `core.md` from `OPS` where the set is authored, in the methodology's source. A change to a rule regenerates the file in the same change, and `pkit validate` fails there on a `core.md` that differs from its set. In your project the two arrive together by sync. You neither generate nor edit `core.md`, and the command refuses to.
 - **Citations of a rule** by layer and number, such as "core rule 19", or by id are read by `pkit validate`. One that names a missing, superseded or withdrawn rule is a warning (the CLI reference, `validate`).
+- **Rules about your files** are not kept here. They are ordinary rule sets, which bind on the files their scopes select (COR-051). Core rule 24 has every session read the rules that bind on the files it writes, with `pkit rule-sets reach`, and follow them.
 
 ## Converting your `project.md` into a loaded set
 
@@ -64,7 +65,7 @@ Seven categories:
 - **Working across repositories** — a session mutates only its own repository's context.
 - **Answers on artefacts** — a reviewer checks the answers your change owes, and a person, or the delegate they named, decides any other answer on an artefact.
 - **When a step fails** — retry once a step that failed for a cause outside your own work, then stop and report.
-- **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly.
+- **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly. Read the accepted rules that rule sets bind on the files you write, and follow them.
 
 Each rule is terse — one statement plus a pointer to the COR / area README that owns the rationale, or, where none does, to the issue that decided the rule. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
 
