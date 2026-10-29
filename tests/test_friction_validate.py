@@ -2,7 +2,9 @@
 findings COR-050 point 12 assigns to validation (Task #988).
 
 Built on the shared adopter-repository fixture: a real install, so the
-container schema is read from the adopter's own `.pkit/schemas/backbone/`.
+container schema is read from the adopter's own `.pkit/schemas/backbone/`. A
+test that commits does so on the install the template committed
+(`commit_install`).
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ from tests.friction_documents import (
     POINTS,
     adr,
     blocks_in_history,
+    commit_install,
     document,
     listed_record,
     pointed_record,
@@ -460,7 +463,7 @@ def test_discovery_reads_the_recorded_location_of_the_state_it_is_given(
 ) -> None:
     """The change check reads its base commit through a tree: the location
     recorded in that commit places the base's places, not the working tree's."""
-    adopter = make_adopter_repo(capabilities=("evidence",))
+    adopter = make_adopter_repo(capabilities=("evidence",), prepare=commit_install)
     _evidence_declares(
         adopter,
         "docs:\n"
@@ -740,7 +743,7 @@ def test_a_held_document_is_walked_by_no_place_and_neither_measure_counts_it(
     """The project's place encloses the held folder: the record is left out of its
     walk and kept with its owner and that place, never an artefact — so the
     whole-repository check counts it neither as unanchored nor anywhere else."""
-    adopter = make_adopter_repo(capabilities=("evidence",))
+    adopter = make_adopter_repo(capabilities=("evidence",), prepare=commit_install)
     without_shipped_rule_sets(adopter)
     _evidence_declares(adopter, HELD_RUNS)
     adopter.write(

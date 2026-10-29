@@ -30,6 +30,10 @@ Held to software-analysis DEC-001 points 5, 6 and 9:
 - **an open regression is visible**: the check reports a record's
   `code-regressed` artefact until it is revalidated on a later day than the
   record, and never fails on it.
+
+The stamp and the check run in the test's own process, their `pkit` calls answered
+there too (`tests/in_process.py`, #2324). One test keeps the record stamp's process:
+the command end to end, its warning beside the line it stamps.
 """
 
 from __future__ import annotations
@@ -60,6 +64,7 @@ from tests.analysis_repo import (
     load_lib,
     new,
     prepare_seeded,
+    run_in_process,
     run_script,
     stamped,
 )
@@ -79,7 +84,13 @@ def _today() -> str:
 
 
 def _record(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis new revalidation …`: a record reads no default branch."""
+    """`pkit analysis new revalidation …`: a record reads no default branch. In the test's
+    own process (`run_in_process`)."""
+    return run_in_process(repo, NEW, "revalidation", *args)
+
+
+def _record_as_a_process(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
+    """`pkit analysis new revalidation …`, run as the dispatcher runs it: a process."""
     return run_script(repo, NEW, "revalidation", *args)
 
 
@@ -352,6 +363,10 @@ def test_a_source_the_record_s_schema_refuses_is_refused(
     assert _records(project) == []
 
 
+@pytest.mark.process(
+    "`pkit analysis new revalidation` end to end: its exit code, its warning on standard "
+    "error and the line it stamps on standard output, from the script's own process"
+)
 def test_a_commit_off_the_default_branch_is_written_with_a_warning(project: AdopterRepo) -> None:
     """A source naming a commit the default branch does not hold is written all the same,
     and the stamp warns that `pkit analysis check-pointers` fails the change until the
@@ -359,7 +374,7 @@ def test_a_commit_off_the_default_branch_is_written_with_a_warning(project: Adop
     no way to write the record while the design's pull request is open (#1366). The stamp
     places the commit as that command does (#1448)."""
     branch = _off_the_default_branch(project)
-    completed = _record(
+    completed = _record_as_a_process(
         project, "report-redesign", *PLANNED, "--reviewed-against", f"the redesign note @ {branch}"
     )
     assert completed.returncode == 0, completed.stderr

@@ -28,6 +28,10 @@ it from one home, so they agree on every number:
 Each test runs in a real repository: `main` holds a pilot — an actor, UC-001 to
 UC-003 and JRN-001 — whose UC-003 one commit removed and whose other use cases
 and journey the next did, and `topic` left `main` before the pilot.
+
+The stamp and the number check run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2324). The number check's end-to-end
+process tests are `test_software_analysis_numbers.py`'s.
 """
 
 from __future__ import annotations
@@ -54,7 +58,7 @@ from tests.analysis_repo import (
     installed,
     new,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
 )
 
@@ -86,7 +90,7 @@ SHORT = 12
 FIRST = f"{SETTING}:/numbering/freed-by/0"
 
 
-# Slow: five stamps, built once per session; the first test to ask pays it in its setup.
+# Five stamps, built once per session; the first test to ask pays them in its setup.
 def _piloted(repo: AdopterRepo) -> None:
     """`prepare`, `topic` leaving main there; then on main the pilot — the actor
     ACT-tester, UC-001 to UC-003 and JRN-001 through UC-001 and UC-002 — then UC-003
@@ -165,8 +169,9 @@ def next_use_case(repo: AdopterRepo) -> tuple[str, list[str]]:
 
 
 def numbers(repo: AdopterRepo) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis check-numbers --json` against main, as the dispatcher runs it."""
-    return run_script(repo, NUMBERS, "--base", MAIN, "--json")
+    """`pkit analysis check-numbers --json` against main, as the dispatcher runs it, in the
+    test's own process (`run_in_process`)."""
+    return run_in_process(repo, NUMBERS, "--base", MAIN, "--json")
 
 
 def checked(repo: AdopterRepo) -> dict[str, Any]:
@@ -231,7 +236,6 @@ MINE_TWO = f"{USE_CASES}/UC-002-mine.md"
 MINE_THREE = f"{USE_CASES}/UC-003-mine.md"
 
 
-# Slow by design: four stamps and four number checks, each starting `pkit` processes.
 @pytest.mark.parametrize(
     ("named", "next_id", "colliding", "freed"),
     [
@@ -270,7 +274,6 @@ def test_the_stamp_and_the_number_check_free_only_what_a_named_commit_removed(
     assert freed_ids(answer) == freed
 
 
-# Slow by design: four stamps and a number check, each starting `pkit` processes.
 def test_use_cases_and_journeys_restart_after_a_named_removal(piloted: AdopterRepo) -> None:
     """With both removals named, the next use case is UC-001 and the next journey
     JRN-001, and the stamp says why each is free; the number check lists, commit by
@@ -291,7 +294,7 @@ def test_use_cases_and_journeys_restart_after_a_named_removal(piloted: AdopterRe
         f"stamped UC-002 at {USE_CASES}/UC-002-second.md",
     ]
     tip = commit_of(piloted, MAIN)
-    human = run_script(piloted, NUMBERS, "--base", MAIN)
+    human = run_in_process(piloted, NUMBERS, "--base", MAIN)
     assert human.returncode == 0, human.stderr
     assert human.stdout.splitlines() == [
         f"numbers: this branch contains {MAIN} ({tip[:SHORT]}); nothing to collide with.",
@@ -315,7 +318,6 @@ def test_use_cases_and_journeys_restart_after_a_named_removal(piloted: AdopterRe
     )
 
 
-# Slow by design: two stamps and a number check, each starting `pkit` processes.
 def test_a_file_a_named_commit_renamed_keeps_its_number(piloted: AdopterRepo) -> None:
     """A named commit that moved one use case out of the analysis and deleted another
     renamed the first, and removed the second: the number the first's old name was
@@ -366,7 +368,6 @@ MOVED_INTO_AN_AREA = f"{USE_CASES}/area/UC-004-moved.md"
 GONE = f"{USE_CASES}/UC-005-gone.md"
 
 
-# Slow by design: a stamp and a number check, each starting `pkit` processes.
 def test_only_a_files_last_name_is_freed(piloted: AdopterRepo) -> None:
     """A use case moved into an area, then removed by a named commit: its number still
     counts — a number is free only when every file the history gave it is freed, and the
@@ -422,7 +423,6 @@ def _kept_by_a_merge(repo: AdopterRepo, *, on_side: bool) -> tuple[str, str]:
     return added, removed
 
 
-# Slow by design: a stamp and a number check per case, each starting `pkit` processes.
 @pytest.mark.parametrize("on_side", [True, False], ids=["kept-by-the-merge", "brought-back"])
 def test_a_file_a_merge_kept_and_another_commit_removed_holds_its_number(
     piloted: AdopterRepo, on_side: bool
@@ -455,7 +455,6 @@ def test_a_file_a_merge_kept_and_another_commit_removed_holds_its_number(
 TWICE = f"{USE_CASES}/UC-004-twice.md"
 
 
-# Slow by design: a stamp and a number check, each starting `pkit` processes.
 def test_a_path_added_more_than_once_before_the_named_commit_frees_none(
     piloted: AdopterRepo,
 ) -> None:
@@ -492,7 +491,6 @@ def test_a_path_added_more_than_once_before_the_named_commit_frees_none(
     assert [f["id"] for f in answer["freed"] if f["freed_by"] == removed] == ["UC-005"]
 
 
-# Slow by design: a stamp and a number check, each starting `pkit` processes.
 def test_an_id_a_named_commit_frees_that_no_entry_lists_stays_taken(piloted: AdopterRepo) -> None:
     """Only a listed id is freed: UC-002, which the pilot's removal would free but its entry
     does not list, still counts — the stamp numbers past it — and both tools report it."""
@@ -522,7 +520,6 @@ def test_an_id_a_named_commit_frees_that_no_entry_lists_stays_taken(piloted: Ado
     ]
 
 
-# Slow by design: a stamp, each starting `pkit` processes.
 def test_a_stamp_given_a_base_numbers_past_it_and_frees_alike(piloted: AdopterRepo) -> None:
     """A base named on the command line holds UC-002 of its own: the stamp numbers past it,
     and the pilot's UC-003, which the base's history gave the same file main's did, is as
@@ -532,7 +529,7 @@ def test_a_stamp_given_a_base_numbers_past_it_and_frees_alike(piloted: AdopterRe
     piloted.commit("UC-002 on next", {f"{USE_CASES}/UC-002-next.md": "# Next\n"})
     piloted.checkout(MAIN)
     free(piloted, *pilot_freed(piloted))
-    completed = run_script(
+    completed = run_in_process(
         piloted, NEW, "use-case", "beyond", "--actor", "ACT-tester", "--base", "next"
     )
     assert completed.returncode == 0, completed.stderr
@@ -621,7 +618,6 @@ def _a_merge_bringing_the_default_branch_in(repo: AdopterRepo) -> tuple[Entry, s
     return (back, ("UC-001",)), where(0, "ids", 0), not_freed("UC-001", back, reason)
 
 
-# Slow by design: a stamp and a number check per case, each starting `pkit` processes.
 @pytest.mark.parametrize(
     "case",
     [
@@ -676,7 +672,6 @@ exec "{git}" "$@"
 """
 
 
-# Slow by design: a stamp and a number check, each starting `pkit` processes.
 def test_a_git_too_old_to_read_where_a_path_was_lost_names_the_floor(
     piloted: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -703,7 +698,6 @@ def test_a_git_too_old_to_read_where_a_path_was_lost_names_the_floor(
     assert setting_error(checked(piloted)) == (FIRST, reason)
 
 
-# Slow by design: a stamp and a number check, each starting `pkit` processes.
 def test_a_clone_too_shallow_to_hold_the_commits_parent_says_so(
     piloted: AdopterRepo, tmp_path: Path
 ) -> None:
@@ -725,7 +719,6 @@ def test_a_clone_too_shallow_to_hold_the_commits_parent_says_so(
     assert setting_error(checked(clone)) == (FIRST, reason)
 
 
-# Slow by design: a stamp and a number check, each starting `pkit` processes.
 def test_a_configuration_that_does_not_parse_fails(piloted: AdopterRepo) -> None:
     """The stamp refuses, saying where the file does not parse; the number check fails on
     it, numbering nothing."""
@@ -740,7 +733,6 @@ def test_a_configuration_that_does_not_parse_fails(piloted: AdopterRepo) -> None
     assert finding["message"].startswith(reason)
 
 
-# Slow by design: a number check, starting `pkit` processes.
 def test_the_number_check_compares_and_fails_on_a_setting_problem(piloted: AdopterRepo) -> None:
     """On a branch that numbers, a bad entry fails the check beside the comparison, which
     the valid entries still free numbers for: UC-001, freed by the pilot's removal, is no
@@ -764,7 +756,7 @@ def test_without_a_setting_or_a_number_the_number_check_reads_no_base(
 ) -> None:
     """A setting naming nothing is no setting: nothing numbered, nothing read."""
     piloted.write({SETTING: "schema_version: 1\nnumbering:\n  freed-by: []\n"})
-    completed = run_script(piloted, NUMBERS, "--base", "origin/main", "--json")
+    completed = run_in_process(piloted, NUMBERS, "--base", "origin/main", "--json")
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout)["summary"] == [
         "numbers: no use case, journey or requirement is numbered here; nothing to compare, "

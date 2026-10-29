@@ -1,0 +1,92 @@
+[
+  {
+    "id": "sa-numbers-collision-a-warning",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/numbers.py",
+    "find": "    return ERROR, f\"{taken}: {rule}, so {renumber}\"\n",
+    "replace": "    return WARNING, f\"{taken}: {rule}, so {renumber}\"\n"
+  },
+  {
+    "id": "sa-numbers-freed-ids-unsaid",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/numbers.py",
+    "find": "        for commit, ids in freeing.ids\n        if ids\n",
+    "replace": "        for commit, ids in freeing.ids\n        if not ids\n"
+  },
+  {
+    "id": "sa-check-numbers-exits-0",
+    "file": ".pkit/capabilities/software-analysis/scripts/check-numbers.py",
+    "find": "    return 1 if comparison.outcome.errors else 0\n",
+    "replace": "    return 0\n"
+  },
+  {
+    "id": "sa-append-only-accepted-only-reports",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/append_only.py",
+    "find": "        severity, label = ERROR, \"\"\n",
+    "replace": "        severity, label = REPORT, \"\"\n"
+  },
+  {
+    "id": "sa-pointers-added-record-reported",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/pointers.py",
+    "find": "    if placed.added:\n",
+    "replace": "    if placed.added and False:\n"
+  },
+  {
+    "id": "sa-check-pointers-exits-0",
+    "file": ".pkit/capabilities/software-analysis/scripts/check-pointers.py",
+    "find": "    return 1 if checked.outcome.errors else 0\n",
+    "replace": "    return 0\n"
+  },
+  {
+    "id": "sa-met-by-counts-withdrawn",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/met_by.py",
+    "find": "a.kind in LISTERS and not a.withdrawn]",
+    "replace": "a.kind in LISTERS]"
+  },
+  {
+    "id": "sa-met-by-no-answer-exits-0",
+    "file": ".pkit/capabilities/software-analysis/scripts/met-by.py",
+    "find": "        print(f\"error: {exc}; nothing is answered.\", file=sys.stderr)\n        return 1\n",
+    "replace": "        print(f\"error: {exc}; nothing is answered.\", file=sys.stderr)\n        return 0\n"
+  },
+  {
+    "id": "sa-renumber-keeps-the-old-file",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/renumber.py",
+    "find": "            if change.renamed is not None:\n                (root / change.path).unlink()\n",
+    "replace": "            if change.renamed is not None and False:\n                (root / change.path).unlink()\n"
+  },
+  {
+    "id": "sa-renumber-writes-off-a-terminal",
+    "file": ".pkit/capabilities/software-analysis/scripts/renumber.py",
+    "find": "        if not sys.stdin.isatty():\n",
+    "replace": "        if False:\n"
+  },
+  {
+    "id": "sa-record-stamp-no-warning-off-the-default-branch",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/revalidation.py",
+    "find": "        if placement == pointers.NOT_HELD:\n",
+    "replace": "        if placement == pointers.NOT_HELD and False:\n"
+  },
+  {
+    "id": "sa-chain-dotted-arrow-drawn-solid",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/diagrams.py",
+    "find": "        edges |= {f\"{a} -.-> {b}\" for a, b in dotted}\n",
+    "replace": "        edges |= {f\"{a} --> {b}\" for a, b in dotted}\n"
+  },
+  {
+    "id": "sa-overview-lists-no-shortfall",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/overview.py",
+    "find": "    if open_:\n",
+    "replace": "    if open_ and False:\n"
+  },
+  {
+    "id": "sa-box-without-an-entry-passes",
+    "file": ".pkit/capabilities/software-analysis/scripts/_lib/check.py",
+    "find": "        for box in untaken\n",
+    "replace": "        for box in untaken\n        if False\n"
+  },
+  {
+    "id": "ld-held-document-not-its-holders",
+    "file": ".pkit/capabilities/living-docs/scripts/_lib/spaces.py",
+    "find": "    if document.held_by is not None:\n        return Claim(\"component\", document.held_by, held=True)\n",
+    "replace": "    if document.held_by is not None and False:\n        return Claim(\"component\", document.held_by, held=True)\n"
+  }
+]

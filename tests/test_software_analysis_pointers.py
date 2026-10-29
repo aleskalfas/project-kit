@@ -10,6 +10,11 @@ The commits are placed on the default branch alone (COR-054 point 5); the base
 says only which records are new (point 3). It reads history beyond the working
 tree, so it is a command of its own and not a validator (COR-055 points 1 and
 2).
+
+The pointer check runs in the test's own process, its `pkit` calls answered there
+too (`tests/in_process.py`, #2324). Two tests keep its process: the command end to
+end, in both output modes, and `$PKIT_CHECK_BASE` reaching the backbone through the
+environment its `pkit` inherits.
 """
 
 from __future__ import annotations
@@ -35,8 +40,9 @@ from tests.analysis_repo import (
     load,
     load_lib,
     prepare,
+    run_in_process,
+    run_script,
 )
-from tests.analysis_repo import run_script as _run
 
 POINTERS = SA / "scripts" / "check-pointers.py"
 
@@ -98,8 +104,14 @@ def sha(repo: AdopterRepo, rev: str) -> str:
 
 
 def pointers(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis check-pointers …`, run as the dispatcher runs it."""
-    return _run(repo, POINTERS, *args)
+    """`pkit analysis check-pointers …`, run as the dispatcher runs it, in the test's own
+    process (`run_in_process`)."""
+    return run_in_process(repo, POINTERS, *args)
+
+
+def pointers_as_a_process(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
+    """`pkit analysis check-pointers …`, run as the dispatcher runs it: a process."""
+    return run_script(repo, POINTERS, *args)
 
 
 def document(completed: subprocess.CompletedProcess[str]) -> dict[str, Any]:
@@ -256,13 +268,17 @@ def test_a_commit_the_default_branch_holds_passes(designed: AdopterRepo) -> None
     ]
 
 
+@pytest.mark.process(
+    "`pkit analysis check-pointers` end to end: its exit code, its findings document with "
+    "--json and its lines without, from the script's own process"
+)
 def test_a_branch_commit_in_a_record_the_change_adds_fails(designed: AdopterRepo) -> None:
     """The usual slip: the record names the design branch's commit, which the squash
     merge left off main. It fails, naming the record and the source — uncommitted, and
     committed on the branch alone."""
     branch = sha(designed, "design")
     designed.write({NEW: record({"title": "the design's review", "version": branch})})
-    completed = pointers(designed, "--json")
+    completed = pointers_as_a_process(designed, "--json")
     assert completed.returncode == 1, completed.stderr
     location = f"{NEW}:/reviewed-against/0/version"
     error = {
@@ -281,7 +297,7 @@ def test_a_branch_commit_in_a_record_the_change_adds_fails(designed: AdopterRepo
         NEW, "the design's review", branch, added=True, placement="not-held"
     )
     designed.commit("a new record")
-    read_view = pointers(designed)
+    read_view = pointers_as_a_process(designed)
     assert read_view.returncode == 1
     assert f"  error  {location}\n" in read_view.stdout
 
@@ -401,6 +417,10 @@ def test_a_partial_clone_fetches_nothing(designed: AdopterRepo, tmp_path: Path) 
 # --- the default branch and the base (COR-054) ------------------------------------------------
 
 
+@pytest.mark.process(
+    "`$PKIT_CHECK_BASE` reaches the backbone through the environment the script's `pkit` "
+    "inherits; the in-process `pkit` runs in a query's environment, which drops it"
+)
 def test_the_base_says_only_which_records_the_change_adds(
     designed: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -429,7 +449,7 @@ def test_the_base_says_only_which_records_the_change_adds(
     ]
 
     monkeypatch.setenv(BASE_ENV, "topic")
-    named = pointers(designed, "--json")
+    named = pointers_as_a_process(designed, "--json")
     assert named.returncode == 0, named.stderr
     assert document(named)["base"]["ref"] == "topic"
 

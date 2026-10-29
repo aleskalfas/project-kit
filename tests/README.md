@@ -164,6 +164,12 @@ the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
 What is left is mostly the backbone's own reading of the analysis, which each
 stamp and each check asks for.
 
+The numbering, renumbering and requirement modules are converted too (#2324),
+`test_software_analysis_numbers.py` among them. Their 214 tests took 1 549 s on
+the clock, `-n 3`, against 1 923 s before, on a machine other runs shared
+(2026-10-29). What is left is mostly `git`: one test spent 43 s of its 53 s
+waiting on 182 `git` processes.
+
 `test_software_analysis.py` and `test_software_analysis_resolver.py` are
 converted too (#2325), with ten other modules, and still rank among the slowest.
 Run back to back, `-n 3`, on 2026-10-29, the twelve modules' 452 tests took 179 s
