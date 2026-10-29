@@ -100,31 +100,88 @@ slides:
   does: []
   show: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
   visual:
-    kind: code2
-    left: "# once, on your machine\n$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n\
-      $ pkit --version\n\n# in each project\n$ cd your-project\n$ pkit init"
-    right: 'your-project/
+    kind: install
+    steps:
+    - icon: step-laptop
+      head: Once, on your machine
+      text: "$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n$ pkit --version"
+      h: 320
+    - icon: step-folder
+      head: In each project
+      text: '$ cd your-project
 
-      ├── .pkit/ — the methodology
+        $ pkit init'
+      h: 230
+    - icon: step-lock
+      head: Or keep pkit out of git
+      text: '$ pkit visibility private
 
-      │   ├── decisions/ — core/ pkit''s · project/ yours
-
-      │   ├── rules/ — core.md pkit''s · project.md yours
-
-      │   ├── skills/, agents/ — core/ pkit''s · project/ yours
-
-      │   ├── schemas/ — what the tools read
-
-      │   ├── capabilities/ — the add-ons you install
-
-      │   └── manifest.yaml — what is installed, at which version
-
-      ├── .claude/ — skills and agents, deployed for Claude Code
-
-      ├── CLAUDE.md — loads the rules into every session
-
-      └── src/ … — your code, untouched'
-  limit: 'Not light on disk: with four capabilities, a 4-file project''s first commit held 689 files.'
+        pkit stays in your clone only; nothing of it is committed'
+      h: 230
+      arrow: false
+    tree:
+    - - 0
+      - - - your-project/
+          - plain
+      - ''
+    - - 1
+      - - - .pkit/
+          - plain
+      - the methodology
+    - - 2
+      - - - decisions/
+          - plain
+        - - core/
+          - pkit
+        - - project/
+          - yours
+      - ''
+    - - 2
+      - - - rules/
+          - plain
+        - - core.md
+          - pkit
+        - - project.md
+          - yours
+      - ''
+    - - 2
+      - - - skills/  agents/
+          - plain
+        - - core/
+          - pkit
+        - - project/
+          - yours
+      - ''
+    - - 2
+      - - - schemas/
+          - pkit
+      - what the tools read
+    - - 2
+      - - - capabilities/
+          - pkit
+      - the add-ons you install
+    - - 2
+      - - - manifest.yaml
+          - pkit
+      - what is installed, at which version
+    - - 1
+      - - - .claude/
+          - pkit
+      - skills and agents for Claude Code
+    - - 1
+      - - - CLAUDE.md
+          - yours
+      - loads the rules into every session
+    - - 1
+      - - - src/ …
+          - yours
+      - your code, untouched
+    legend:
+    - - 'pkit''s: replaced by each upgrade'
+      - pkit
+    - - 'yours: never replaced'
+      - yours
+  limit: ''
   minutes: 2
   notes: 'pkit init writes pkit''s files into .pkit/, merges your AI tool''s settings without overwriting them,
     and installs the skills and agents where Claude Code reads them. Today that is Claude Code. In a newcomer''s

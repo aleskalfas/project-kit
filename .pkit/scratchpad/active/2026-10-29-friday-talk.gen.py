@@ -207,6 +207,123 @@ def pairs(pid, y, items, style="plain", icons=False):
     return out, n * PAIR_H + (n - 1) * PAIR_GAP
 
 
+CLEAR_AREA = {"type": "area", "title": "{id}", "show_title": False, "color": "#FFFFFF00", "border_color": "#FFFFFF00", "border_width": 1}
+
+TREE_TEMPLATES = {
+    "tree_bar": {
+        "note": "A connector line of a tree, drawn as a thin bar so every line has one thickness; made by the slide generator.",
+        "root": {**CLEAR_AREA, "width": 4, "height": 64},
+        "parts": {"bar": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 4, "height": 64,
+                          "color": "@{tone}", "border_color": "@{tone}", "border_width": 1, "ink": "@text_primary"}},
+        "defaults": {"tone": "border_strong"},
+    },
+    "tree_tag": {
+        "note": "A tag in a tree: a filled box with one line of text in a role's colour; made by the slide generator.",
+        "root": {**CLEAR_AREA, "width": 200, "height": 64},
+        "parts": {
+            "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 200, "height": 64,
+                   "color": "@{bg}", "border_color": "@{bg}", "border_width": 1, "ink": "@text_primary"},
+            "text": {"type": "text", "text": "{text}", "style": "@style.key", "ink": "@{ink}", "x": 20, "y": 2, "width": 160, "height": 60},
+        },
+    },
+    "tree_note": {
+        "note": "A note beside a tree's tag, in the secondary text colour; made by the slide generator.",
+        "root": {**CLEAR_AREA, "width": 600, "height": 64},
+        "parts": {"text": {"type": "text", "text": "{text}", "style": "@style.body", "ink": "@text_secondary", "x": 0, "y": 6, "width": 600, "height": 58}},
+    },
+}
+
+TAG_COLOURS = {"pkit": ("role_code_bg", "role_code"), "yours": ("role_people_bg", "role_people"), "plain": ("layer", "text_primary")}
+TREE_PITCH, TREE_INDENT, TAG_H, CHAR_KEY, CHAR_BODY = 76, 56, 64, 23, 19
+
+
+def tree(pid, x0, y0, rows, legend=None):
+    """A file tree drawn from shapes: each row is (depth, [(text, owner), ...], note); lines are bars."""
+    out = {}
+    n = 0
+
+    def put(template, x, y, w, h, **params):
+        nonlocal n
+        n += 1
+        key = f"{pid}-tr{n}"
+        ov = {"root": {"width": round(w), "height": round(h)}}
+        if template == "tree_bar":
+            ov["bar"] = {"width": round(w), "height": round(h)}
+        elif template == "tree_tag":
+            ov["bg"] = {"width": round(w), "height": round(h)}
+            ov["text"] = {"width": round(w - 40)}
+        else:
+            ov["text"] = {"width": round(w)}
+        out[key] = {"template": template, "parent": pid, "x": round(x), "y": round(y), **params, "override": ov}
+
+    last_child_y = {}
+    xs = {}
+    for i, (depth, tags, note) in enumerate(rows):
+        y = y0 + i * TREE_PITCH
+        x = x0 + depth * TREE_INDENT
+        xs[i] = x
+        if depth > 0:
+            # the parent is the nearest row above at depth - 1
+            parent = max(j for j in range(i) if rows[j][0] == depth - 1)
+            px = xs[parent] + 24
+            put("tree_bar", px + 2, y + TAG_H / 2 - 2, x - px - 10, 4)
+            last_child_y[parent] = y + TAG_H / 2
+        for text, owner in tags:
+            bg, ink = TAG_COLOURS[owner]
+            w = len(text) * CHAR_KEY + 40
+            put("tree_tag", x, y, w, TAG_H, text=text, bg=bg, ink=ink)
+            x += w + 16
+        if note:
+            put("tree_note", x + 8, y, len(note) * CHAR_BODY + 40, TAG_H, text=note)
+    for parent, ly in last_child_y.items():
+        py = y0 + parent * TREE_PITCH + TAG_H
+        put("tree_bar", xs[parent] + 24 - 2, py, 4, ly - py + 2)  # ends where the last elbow starts, beside it
+    h = len(rows) * TREE_PITCH
+    if legend:
+        x = x0
+        y = y0 + h + 16
+        for text, owner in legend:
+            bg, ink = TAG_COLOURS[owner]
+            w = len(text) * CHAR_KEY + 40
+            put("tree_tag", x, y, w, TAG_H, text=text, bg=bg, ink=ink)
+            x += w + 24
+        h += 16 + TAG_H
+    return out, h
+
+
+def vlink(pid, i, x, y, h):
+    return f"{pid}-l{i}", {
+        "template": "link", "parent": pid, "x": x, "y": y,
+        "x1": LINK_W / 2, "y1": 8, "x2": LINK_W / 2, "y2": h - 8, "tone": "role_code",
+        "override": {"root": {"width": LINK_W, "height": h}, "arrow": {"border_width": 6}},
+    }
+
+
+def install(pid, y, v):
+    """The commands as two tinted steps with pictograms on the left, the project's tree on the right."""
+    out = {}
+    w = SPAN8
+    hs = []
+    yy = y
+    for i, st in enumerate(v["steps"]):
+        h = st.get("h", 260)
+        k, val = with_icon(stage(pid, i + 1, MARGIN, yy, w, "code", st["head"], st["text"], h), st["icon"], w, h)
+        k, val = styled((k, val), PAIR_STYLES["tinted"]["right"])
+        out[k] = val
+        yy += h
+        if i < len(v["steps"]) - 1:
+            if v["steps"][i + 1].get("arrow", True):
+                k, val = vlink(pid, i + 1, round(MARGIN + w / 2 - LINK_W / 2), yy, 96)
+                out[k] = val
+                yy += 96
+            else:
+                yy += GAP
+    left_h = yy - y
+    d, right_h = tree(pid, MARGIN + SPAN8 + GUT, y, [(r[0], [tuple(t) for t in r[1]], r[2]) for r in v["tree"]], [tuple(t) for t in v.get("legend") or []])
+    out.update(d)
+    return out, max(left_h, right_h)
+
+
 def flow(pid, y, stages):
     out = {}
     n = len(stages)
@@ -347,6 +464,8 @@ def build_slide(s, n, total):
                 add(cards(pid, y, v["cards"]))
         elif kind == "compare":
             add(compare(pid, y, v["left"], v["right"]))
+        elif kind == "install":
+            add(install(pid, y, v))
         elif kind == "code2":
             lines = max(v["left"].rstrip("\n").count("\n"), v["right"].rstrip("\n").count("\n")) + 1
             hh = max(304, 64 + lines * 48)
@@ -394,6 +513,7 @@ def main(slides_path, board_path):
             old_origin[members[0]] = lay.get("origin", "auto")
     board["instances"] = {k: v for k, v in board["instances"].items() if not k.startswith("T-")}
     board["templates"]["pstage"] = pstage_template(board["templates"]["stage"])
+    board["templates"].update(TREE_TEMPLATES)
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     talk = sl["talk"]
     content = [s for s in sl["slides"]]
