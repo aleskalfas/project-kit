@@ -137,12 +137,16 @@ summed 1 879 s of test time and took 529 s on the clock):
 | `test_software_analysis_check.py` | 27 | 98 | 3.6 | 21.1 |
 | `test_software_analysis_resolver.py` | 53 | 89 | 1.7 | 18.7 |
 | `test_friction_check.py` | 76 | 63 | 0.8 | 1.8 |
-| `test_process_cascade_engine.py` | 33 | 60 | 1.8 | 5.9 |
 | `test_default_branch.py` | 66 | 53 | 0.8 | 27.9 |
 
 `test_living_docs_spaces.py` has left the table. #2315 converted it, and its 180
 tests took 23 s on the clock in a pass of their own, `-n 4`, against 127 s before
 (2026-10-29).
+
+`test_process_cascade_engine.py` has left it too. #2323 converted it, with eight
+other modules of the process engine and project-management's closure fold. Their
+288 tests took 43 s on the clock in a pass of their own, `-n 3`, against 207 s
+before (2026-10-29).
 
 A software-analysis test still runs the capability's scripts as the backbone
 does — a stamp, the check, the number check — each a process that starts several
