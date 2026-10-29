@@ -2745,8 +2745,7 @@ instances:
   T-fits:
     template: slide
     title: How pkit fits together
-    lead: 'Decisions are the source: everything else in pkit carries them out, and is checked against
-      them.'
+    lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
     rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
     n: 3
     total: 15

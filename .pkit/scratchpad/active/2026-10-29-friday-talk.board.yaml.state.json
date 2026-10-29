@@ -31408,7 +31408,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-fits",
-    "text": "Decisions are the source: everything else in pkit carries them out, and is checked against them.",
+    "text": "In five layers, from your decisions down to your code: each carries out the ones above it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -31419,7 +31419,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-fits",
-    "text": "Decisions are the source: everything else in pkit carries them out, and is checked against them.",
+    "text": "In five layers, from your decisions down to your code: each carries out the ones above it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -31453,7 +31453,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793302884247
   },
   "T-fits.num": {
    "board": {

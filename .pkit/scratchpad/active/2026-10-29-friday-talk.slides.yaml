@@ -273,7 +273,7 @@ slides:
 - id: fits
   part: P0
   title: How pkit fits together
-  message: 'Decisions are the source: everything else in pkit carries them out, and is checked against them.'
+  message: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
   problem: ''
   does: []
   show: 'This week: pkit wrote this order down as a decision of its own, COR-065'
