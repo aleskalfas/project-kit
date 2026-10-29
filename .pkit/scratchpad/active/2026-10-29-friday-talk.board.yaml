@@ -4560,13 +4560,16 @@ instances:
   T-sessions:
     template: slide
     title: What every session is told
-    lead: Every session loads the same working rules, each pointing to where its reason is written.
-    rests: 'One of them: retry once a step that failed for an outside cause, then stop'
+    lead: A few short rules on how to act, pkit's and yours, each pointing to the decision it carries
+      out.
+    rests: 'This week: each rule got a permanent id and a status, and the file every session loads is
+      generated from them'
     n: 7
     total: 17
     override:
       rests:
-        text: 'One of them: retry once a step that failed for an outside cause, then stop'
+        text: 'This week: each rule got a permanent id and a status, and the file every session loads
+          is generated from them'
     mural_ids:
       root: b83cbbe1-ce7b-48ed-9d2a-802cd1ac87f2
       bg: d4e7c315-56ee-4a20-95f8-ca409aa0da4d
@@ -4574,89 +4577,153 @@ instances:
       lead: bf3a7ef3-7af7-459c-94af-f935d59aa475
       rests: 092074a7-a154-434e-9097-8eb0331180e3
       num: ea0bb22b-90dc-4ead-9055-eb62a7f101cc
-  T-sessions-problem:
-    template: callout
+  T-sessions-s1:
+    template: stage
     parent: T-sessions
-    title: The problem
-    body: 'Each session starts knowing none of your working rules: you repeat them, or it breaks them.'
-    x: 128
+    role: neutral
+    head: 'The decision: COR-065, point 7'
+    text: Records are read to change the system, not loaded to run it.
+    x: 418
     y: 576
+    override:
+      root:
+        width: 900
+        height: 200
+      box:
+        width: 900
+        height: 200
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+      head:
+        x: 32
+        y: 22
+        width: 836
+        height: 64
+        align: center
+        ink: '@text_on_color'
+      text:
+        x: 32
+        y: 92
+        width: 836
+        height: 90
+        align: center
+        ink: '@text_on_color'
+      dot:
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
     mural_ids:
-      root: 250011eb-a5ed-4ddd-a266-330f6d4e4a55
-      bg: f76ed5ac-1f6e-4e0e-9ef7-3ff939cebdb5
-      bar: 67d12937-84c8-4f33-b114-51857d8e8040
-      title: 38f304df-26cd-4009-9956-24c1fbe57172
-      body: 48ec4433-fe2a-4979-b814-9e12bd25100a
-  T-sessions-d1:
-    template: step
+      root: 0d286085-50fd-43f5-be4f-fc52b6ad7592
+      box: 8166f9c2-cac0-450e-a83c-2219f3afd762
+      dot: 2c26bc6d-ea7c-4bfc-8db6-bff0c5b9072e
+      head: c1438b0d-9442-43e3-acb3-d7e865d28926
+      text: ee451b28-8a3d-478c-b3c4-3cd28732ce97
+  T-sessions-s2:
+    template: stage
     parent: T-sessions
-    ident: '1'
-    text: pkit's working rules, loaded into every session
+    role: neutral
+    head: 'The rule: RS-OPS-022'
+    text: Read the records a change's files lead to first.
+    x: 273
+    y: 794
+    override:
+      root:
+        width: 1190
+        height: 200
+      box:
+        width: 1190
+        height: 200
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+      head:
+        x: 32
+        y: 22
+        width: 1126
+        height: 64
+        align: center
+        ink: '@text_on_color'
+      text:
+        x: 32
+        y: 92
+        width: 1126
+        height: 90
+        align: center
+        ink: '@text_on_color'
+      dot:
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+    mural_ids:
+      root: 02e46b85-db4c-437d-a751-86dfaeac5c6c
+      box: fc2c946e-08a9-4496-acfb-5c525830ee19
+      dot: 0978c433-f486-4327-8d08-51c73b25b2ff
+      head: 03a3afa4-a930-433a-84ad-76408890490a
+      text: 2ab0195a-22b2-45b6-8a9a-a3706b0048d4
+  T-sessions-s3:
+    template: stage
+    parent: T-sessions
+    role: neutral
+    head: Every session, from its start
+    text: So, on the slide before, the agent looked up the guide's records first.
     x: 128
-    y: 800
+    y: 1012
     override:
       root:
-        width: 688
-      bg:
-        width: 688
+        width: 1480
+        height: 200
+      box:
+        width: 1480
+        height: 200
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+      head:
+        x: 32
+        y: 22
+        width: 1416
+        height: 64
+        align: center
+        ink: '@text_primary'
       text:
-        width: 624
+        x: 32
+        y: 92
+        width: 1416
+        height: 90
+        align: center
+        ink: '@text_primary'
+      dot:
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
     mural_ids:
-      root: d32d8884-15f6-44ef-bf87-022a7b51f025
-      bg: 554d893f-d2f4-4530-93d4-66e0901d2e07
-      tag: 66c482ea-e9ed-4450-bb30-d11cdedfc949
-      text: c1aed893-83c5-462d-b5fe-1c574b924e40
-  T-sessions-d2:
-    template: step
+      root: 767d751a-c7a5-47ef-a781-02a8f6181457
+      box: f78f05af-6ebb-4814-9c9e-e55a28a4e75f
+      dot: 7767bbdc-820b-467b-ba1d-8a61dde34782
+      head: 2761f3f7-bfb8-4afe-8a8a-2daf50a46638
+      text: ff77af3a-3e3f-495f-96c7-3581374d33d9
+  T-sessions-loads:
+    template: term_image
     parent: T-sessions
-    ident: '2'
-    text: Your own rules sit beside them; updates never touch yours
-    x: 880
-    y: 800
+    x: 1688
+    y: 664
+    file: term-sessions-loads
     override:
       root:
-        width: 688
-      bg:
-        width: 688
-      text:
-        width: 624
+        width: 1384
+        height: 459
+      img:
+        width: 1384
+        height: 459
     mural_ids:
-      root: 4b695f0e-1bc3-4ffe-9a27-d9e9149139e4
-      bg: 82fe98d7-639c-46e8-a373-f84801f6041b
-      tag: 2e620af2-b50a-4afc-abac-3b8575af719e
-      text: dc7cad22-32a9-47e3-a2db-11f1b7f4b546
-  T-sessions-code:
-    template: code
-    parent: T-sessions
-    code: '# CLAUDE.md
-
-      @.pkit/rules/core.md
-
-      @.pkit/rules/project.md'
-    x: 1632
-    y: 800
-    override:
-      root:
-        height: 304
-      bg:
-        height: 304
-      text:
-        height: 240
-    mural_ids:
-      root: 3c5dc2b5-5a81-41ea-bcfa-0b5c20784cee
-      bg: 063832eb-8b78-4539-b01f-2f16f45ad234
-      text: bfc2be48-5702-4830-a4fd-eb3f21e26e05
+      root: 02546a9f-d8e6-4681-b4e7-149f6a3f0f48
+      img: 73d10e11-b89b-4443-a88e-a55dab453d1f
   T-sessions-limit:
     template: notice
     parent: T-sessions
-    text: 'Limit: Every session carries every rule today, about 2,500 words, relevant or not.'
+    text: 'Limit: A rule is advice: an agent can still break it.'
     x: 128
-    y: 1158.0
+    y: 1260
     mural_ids:
-      root: 6f22767e-5d50-4784-b8e2-6951906445f2
-      bg: 2976a236-ca8e-41c3-ae55-ed3f94b22a58
-      bar: 2f49d029-edad-4590-ad26-d7c32eefa81e
-      text: fc1d0000-48db-48ac-94ad-63cd1ff39334
+      root: f03da116-ccce-4a7a-bf4f-26fbdc3e46b6
+      bg: b0935e86-0ca4-4f1f-b60d-d806fcd1dd55
+      bar: f2213a49-12d8-4e9f-9220-2e2037336669
+      text: a1a454d6-ab69-451a-85f8-f2694907f945
   T-schemas:
     template: slide
     title: Rules and processes as data

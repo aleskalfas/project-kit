@@ -510,25 +510,78 @@ slides:
 - id: sessions
   part: P1
   title: What every session is told
-  message: Every session loads the same working rules, each pointing to where its reason is written.
-  problem: 'Each session starts knowing none of your working rules: you repeat them, or it breaks them.'
-  does:
-  - pkit's working rules, loaded into every session
-  - Your own rules sit beside them; updates never touch yours
-  show: 'One of them: retry once a step that failed for an outside cause, then stop'
+  message: A few short rules on how to act, pkit's and yours, each pointing to the decision it carries out.
+  problem: ''
+  does: []
+  show: 'This week: each rule got a permanent id and a status, and the file every session loads is generated from them'
   visual:
-    kind: code
-    code: '# CLAUDE.md
-
-      @.pkit/rules/core.md
-
-      @.pkit/rules/project.md
-
-      '
-  limit: Every session carries every rule today, about 2,500 words, relevant or not.
+    kind: rules
+    center: 868
+    top_w: 900
+    step: 290
+    level_h: 200
+    levels:
+    - head: 'The decision: COR-065, point 7'
+      text: Records are read to change the system, not loaded to run it.
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: 'The rule: RS-OPS-022'
+      text: Read the records a change's files lead to first.
+      fill: '#6929C4FF'
+      ink: '@text_on_color'
+    - head: Every session, from its start
+      text: So, on the slide before, the agent looked up the guide's records first.
+      fill: '#BE95FFFF'
+      ink: '@text_primary'
+    font_size: 28
+    terminal:
+    - - - '# loaded at the start of every session'
+        - comment
+    - - - .pkit/rules/core.md
+        - pkit
+      - - '      # pkit''s, in every project'
+        - comment
+    - - - .pkit/rules/project.md
+        - yours
+      - - '   # yours, never touched by pkit'
+        - comment
+    - []
+    - - - '# looked up when needed'
+        - comment
+    - - - '$ '
+        - prompt
+      - - pkit
+        - command
+      - - ' refs records-for <files>'
+        - args
+      - - '  # the records behind'
+        - comment
+    - - - '                                 # what it changes'
+        - comment
+    - - - '$ '
+        - prompt
+      - - pkit
+        - command
+      - - ' rule-sets reach <paths>'
+        - args
+      - - '   # rules about what'
+        - comment
+    - - - '                                 # it writes'
+        - comment
+  limit: 'A rule is advice: an agent can still break it.'
   minutes: 1.5
-  notes: 'Being reworked now: permanent numbers, a size budget, and each capability its own rules, loaded where
-    it is installed.'
+  notes: 'Records are many, and read when something changes: the slide before. A few rules on how to act are loaded
+    into every session instead, and each points to the decision it carries out. Rule 22 is why the agent looked
+    up the release guide''s records; it carries out COR-065 point 7, the record behind the pyramid. Each rule has
+    a permanent id, a status and an origin, the record it carries out or the dated words of whoever decided it,
+    and a changed record asks its rules to recheck (COR-068, ADR-075, on main since 29 October). Your
+    project.md is yours; sync never touches it. Rules about particular files, such as Python code rules, are
+    not loaded: they are rule sets scoped to those files, looked up with pkit rule-sets reach and checked by a
+    reviewer at merge (#2273 and #2274, in review). Also in review: a size budget pkit validate checks (#2262),
+    and a rule on when a decision record starts (#2258). Next: each installed capability brings its own rules,
+    loaded while it is installed (#2269, shown with the capabilities), and the rules trimmed to a sentence or
+    two each (#2261). Today: 22 rules, about 2,800 words, in every session. Next slide: what must hold becomes
+    data a tool checks.'
 - id: schemas
   part: P1
   title: Rules and processes as data

@@ -753,17 +753,18 @@ def pyramid(pid, y, v):
     levels = v["levels"]
     cx = v.get("center", 1180)
     top_w, step = v.get("top_w", 760), v.get("step", 300)
+    lh = v.get("level_h", PYR_H)
     for i, lv in enumerate(levels):
         w = top_w + i * step
         x = round(cx - w / 2)
-        yy = y + i * (PYR_H + PYR_GAP)
-        k, val = stage(pid, i + 1, x, yy, w, "neutral", lv["head"], lv.get("text", ""), PYR_H)
-        val["override"]["box"] = {"width": w, "height": PYR_H, "color": lv["fill"], "border_color": lv["fill"]}
+        yy = y + i * (lh + PYR_GAP)
+        k, val = stage(pid, i + 1, x, yy, w, "neutral", lv["head"], lv.get("text", ""), lh)
+        val["override"]["box"] = {"width": w, "height": lh, "color": lv["fill"], "border_color": lv["fill"]}
         val["override"]["dot"] = {"color": lv["fill"], "border_color": lv["fill"]}
         val["override"]["head"] = {"x": 32, "y": 22, "width": w - 64, "height": 64, "align": "center", "ink": lv["ink"]}
-        val["override"]["text"] = {"x": 32, "y": 92, "width": w - 64, "height": PYR_H - 110, "align": "center", "ink": lv["ink"]}
+        val["override"]["text"] = {"x": 32, "y": 92, "width": w - 64, "height": lh - 110, "align": "center", "ink": lv["ink"]}
         out[k] = val
-    h = len(levels) * PYR_H + (len(levels) - 1) * PYR_GAP
+    h = len(levels) * lh + (len(levels) - 1) * PYR_GAP
     # the relations: a box per relation, on the right with an arrow beside it (down, up) or into the
     # apex (left), or on the left with an arrow into the apex (right); a box of role code is tinted purple
     sx = v.get("side_x", 2240)
@@ -801,6 +802,18 @@ def pyramid(pid, y, v):
             out[f"{pid}-l{li}"] = {"template": "link", "parent": pid, "x": sx, "y": sy, "x1": LINK_W / 2, "y1": y1, "x2": LINK_W / 2, "y2": y2,
                                    "tone": "role_code", "override": {"root": {"width": LINK_W, "height": sh}, "arrow": {"border_width": 6}}}
     return out, h
+
+
+def rules(pid, y, v):
+    """One rule's way as a slice of the pyramid, its layers stacked as the pyramid's are, and beside it a
+    terminal of what a session loads at its start and what it looks up when needed."""
+    out, h = pyramid(pid, y, {**v, "side": []})
+    widest = v["top_w"] + (len(v["levels"]) - 1) * v["step"]
+    tx = round(v["center"] + widest / 2 + 80)
+    d, th = terminal(pid, tx, y, MARGIN + SPAN16 - tx, v["terminal"], key="loads", font_size=v.get("font_size", 30))
+    d[f"{pid}-loads"]["y"] = round(y + (h - th) / 2) if th < h else y
+    out.update(d)
+    return out, max(h, th)
 
 
 def install(pid, y, v):
@@ -993,6 +1006,8 @@ def build_slide(s, n, total):
             add(kinds(pid, y, v))
         elif kind == "ideas":
             add(ideas(pid, y, v))
+        elif kind == "rules":
+            add(rules(pid, y, v))
         elif kind == "ties":
             add(ties(pid, y, v))
         elif kind == "story":
