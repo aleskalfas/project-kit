@@ -2510,6 +2510,7 @@ def _readable_configuration(target_root: Path, tree: friction_check.CommitTree |
 
 
 @rule_sets_group.command("reach")
+@click.argument("paths", metavar="[PATH]...", nargs=-1)
 @click.option(
     "--at",
     "at",
@@ -2529,7 +2530,9 @@ def _readable_configuration(target_root: Path, tree: friction_check.CommitTree |
 @click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
-def rule_sets_reach_command(at: str | None, preview: bool, as_json: bool) -> None:
+def rule_sets_reach_command(
+    paths: tuple[str, ...], at: str | None, preview: bool, as_json: bool
+) -> None:
     """Which accepted rules bind on each artefact, at one state (COR-051 point 7).
 
     The working tree by default, or commit REV with --at. Each artefact on
@@ -2542,8 +2545,16 @@ def rule_sets_reach_command(at: str | None, preview: bool, as_json: bool) -> Non
     each rule held back, binding nothing, with the pins that hold it. With
     --preview, where rules would bind if every proposed rule were accepted,
     each binding, rule held back and conflict that holds only under the
-    preview marked. Exit 0 when answered; 1 when the configuration cannot be
-    read or REV names no commit; 2 on a usage error.
+    preview marked.
+
+    Given PATHs, read from the working directory, only the artefacts at
+    those paths, so a writer reads the rules of its files before it writes
+    them: each path with what the state holds there, and the text of each
+    rule that binds. A path where no rule binds is answered so, never as an
+    error: an artefact no rule binds on, a file that is no artefact, no
+    file, a folder, or a path outside the repository. Exit 0 when answered;
+    1 when the configuration cannot be read or REV names no commit; 2 on a
+    usage error.
     """
     from project_kit import rule_set_reading, validators
 
@@ -2559,7 +2570,9 @@ def rule_sets_reach_command(at: str | None, preview: bool, as_json: bool) -> Non
         tree = friction_check.CommitTree(target_root, commit)
     _readable_configuration(target_root, tree)
     document = validators.as_one_run(
-        lambda: rule_set_reading.reach_document(target_root, commit, preview=preview)
+        lambda: rule_set_reading.reach_document(
+            target_root, commit, preview=preview, paths=paths or None, cwd=Path.cwd()
+        )
     )
     if as_json:
         click.echo(rule_set_reading.render_json(document), nl=False)
