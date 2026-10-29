@@ -1,0 +1,10 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The harness requirements gain `unattended-working-run` (ADR-073): a process
+  starts an agent unattended in a folder it names, under only its own
+  settings, inside a sandbox that writes only that folder, and can run a
+  command with no agent in the same sandbox. The build command depends on it.
+  `pkit harness report` reports it for each adapter.

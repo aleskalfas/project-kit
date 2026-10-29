@@ -1,0 +1,11 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The adapter answers `unattended-working-run` at a cost, for Claude Code
+  2.1.303, on Linux with bubblewrap: the run must leave the harness's scrub of
+  sign-in variables off, so a sign-in variable reaches every command the run
+  starts. macOS is not probed yet, so a working run there is unsupported. The
+  README's "The probe of a working run" lists each fact of ADR-073 point 11
+  the probe confirmed or disproved, and how.

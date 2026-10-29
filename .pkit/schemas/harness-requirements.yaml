@@ -57,3 +57,19 @@ requirements:
       proposing needs, and ADR-066 point 13 words what it requires of the
       harness. The drift command, `pkit pm fix-drift`, is the first command
       that depends on it.
+  unattended-working-run:
+    title: A process can start an agent unattended that edits and builds in a folder the process names
+    behaviour: >-
+      A process can start an agent with nobody attending, in a folder it
+      names, under only the settings it passes. Everything the agent runs is
+      held inside a sandbox that writes only that folder. A call no rule
+      allows is refused, not asked. Each event of the run reaches the process
+      as it happens, and so do the calls it refused. The process can run a
+      command with no agent inside the same sandbox.
+    observation_point: out-of-session
+    evidence: >-
+      A design dependency (COR-047 point 9): project-management DEC-063
+      starts a fresh builder for each of a worker's Tasks, in a sandboxed
+      clone of its own, and ADR-073 words what it requires of the harness.
+      The build command, `pkit pm build-task`, is the first command that
+      depends on it.
