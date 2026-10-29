@@ -1585,6 +1585,55 @@ templates:
         y: =@region.footer_y
         width: =@grid.span.8
         height: 48
+  pstage:
+    note: Diagram stage with a pictogram (2026-10-29-friday-talk-icons/<icon>.png) in place of the role
+      dot; made by the slide generator from the stage template.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 640
+      height: 224
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 640
+        height: 224
+        color: '@background'
+        border_color: '@role_{role}'
+        border_width: 2
+        ink: '@text_primary'
+      icon:
+        type: image
+        file: 2026-10-29-friday-talk-icons/{icon}.png
+        x: 32
+        y: 28
+        width: 64
+        height: 64
+      head:
+        type: text
+        text: '{head}'
+        style: '@style.key'
+        x: 72
+        y: 28
+        width: 536
+        height: 64
+        ink: '@text_primary'
+      text:
+        type: text
+        text: '{text}'
+        style: '@style.body'
+        x: 32
+        y: 100
+        width: 576
+        height: 96
 instances:
   L01:
     template: slide
@@ -2056,186 +2105,354 @@ instances:
       lead: 036ed3cd-75e2-4898-b90f-5634b5431410
       rests: e7b04f63-2639-4bb4-88ef-1e43a14aaf5b
       num: 77facaa8-fb51-4b8b-b57d-d1bfc5cb42ad
-  T-opening-d1:
-    template: step
+  T-opening-s1:
+    template: pstage
     parent: T-opening
-    ident: '1'
-    text: It forgets a decision, and makes it again, differently
+    role: neutral
+    head: Choices live in chats and heads
+    text: so the agent can't know them, and makes them again
     x: 128
     y: 576
     override:
       root:
-        width: 688
-      bg:
-        width: 688
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        x: 120
+        width: 1272
+        height: 64
       text:
-        width: 624
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-chat
     mural_ids:
-      root: a3486fee-32dd-4c40-9ae6-d607a591fd65
-      bg: e5fcee59-fd43-4656-aa23-417f7e940814
-      tag: dc735148-0a2b-4af2-844d-043d8df313c7
-      text: 74b197f9-a1ea-43a5-b1bc-7ed250644555
-  T-opening-d2:
-    template: step
+      root: d7cb49b5-d270-44cb-8329-ce2a803be82d
+      box: c1620763-dfe2-4f74-97df-0228cb786030
+      head: 68f09cbe-e623-400c-a0f3-15635f53abd8
+      text: a293da53-f2f6-4ac8-b5dc-2cf097536faf
+      icon: 35892670-575d-4b6e-8ff0-5fc9940368cb
+  T-opening-l1:
+    template: link
     parent: T-opening
-    ident: '2'
-    text: It writes in its own habits, not your conventions
-    x: 880
+    x: 1552
+    y: 576
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 5f941f24-9b9b-42ad-89a0-c6a670b16cd8
+      arrow: faac2656-cebd-4cd9-b49f-e373dc553ca6
+  T-opening-s2:
+    template: pstage
+    parent: T-opening
+    role: code
+    head: Capture each decision, with why
+    text: you accept it, and every session can read it · Part 1
+    x: 1648
     y: 576
     override:
       root:
-        width: 688
-      bg:
-        width: 688
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        x: 120
+        width: 1272
+        height: 64
       text:
-        width: 624
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-write
     mural_ids:
-      root: 7f15f86c-dd01-47b3-838a-39955c6ca21c
-      bg: 7f4a1aa4-ed0e-4aee-9f28-5788ed769cd9
-      tag: bf746e0c-3e49-45b0-9b95-1c4f3a53cd97
-      text: 977481da-eaa1-4574-bf90-2b8a0b0cc734
-  T-opening-d3:
-    template: step
+      root: 5ee0641b-ca79-4e4e-a719-9cbfe2cd11c1
+      box: b35edc02-876b-4d93-b920-765db21ab06a
+      head: 87d88944-4bdd-4a6a-b6ff-7971dd0fa567
+      text: 8ec6f29d-f379-4d82-805a-b86bde51637e
+      icon: aa86c6b3-f8e8-4883-8d6f-a821dd87d266
+  T-opening-s3:
+    template: pstage
     parent: T-opening
-    ident: '3'
-    text: It changes the code and leaves the docs saying something false
-    x: 1632
-    y: 576
-    override:
-      root:
-        width: 688
-      bg:
-        width: 688
-      text:
-        width: 624
-    mural_ids:
-      root: 14ee3acb-2410-4e85-a089-a97d7bae8150
-      bg: 832c054f-455f-404f-a3d4-6b85c60a342e
-      tag: c3c8d9d0-27a4-4ef2-81c1-95975fd08fe5
-      text: 048f74cf-3bd0-4b87-a61c-a3f2ab20da17
-  T-opening-d4:
-    template: step
-    parent: T-opening
-    ident: '4'
-    text: It asks you twenty times, or not at all
-    x: 2384
-    y: 576
-    override:
-      root:
-        width: 688
-      bg:
-        width: 688
-      text:
-        width: 624
-    mural_ids:
-      root: 8b78c41f-7768-4025-b70a-234209cea195
-      bg: 4f10302a-0346-445e-b138-210acfbf8865
-      tag: cef9673b-4ce5-45f9-b110-10af865b6780
-      text: 312614a0-c830-458b-8956-e25009ff7226
-  T-opening-c1:
-    template: card
-    parent: T-opening
-    ident: '1'
-    space: tech
-    space_label: Part 1
-    heading: What the agent knows
-    body: Your decisions, written down, and what every session is told.
+    role: neutral
+    head: Conventions stay unwritten
+    text: so the agent falls back on its own habits
     x: 128
-    y: 934.0
+    y: 816
     override:
       root:
-        width: 688
-      bg:
-        width: 688
-      heading:
-        width: 624
-      body:
-        width: 624
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-question
     mural_ids:
-      root: 848d4777-a0ee-42fc-8ae2-5da7c3dfbe64
-      bg: d6a7be93-0e4c-4493-b63c-ccba4d574eed
-      idtag: 179af251-868b-473d-802c-8a4f4e573ed6
-      spacetag: 5ba92393-f43a-4270-99c5-812bcb523db8
-      heading: 73b85592-e8d5-4bef-8575-c844f368e785
-      body: 168287b5-cc5c-4925-8d35-f5312da1194d
-  T-opening-c2:
-    template: card
+      root: 0055ee49-91dc-4acc-8639-00867615fbb9
+      box: 0d54a20a-1de8-4d9c-b5b7-e90bedd6ea11
+      head: ca2cdb4c-4eae-43d1-8c74-ffdd4eaa98f4
+      text: accf59bd-d80f-4d08-b21b-f0ce4f592573
+      icon: 0dbb324c-e139-420d-a5ec-bd072b3388c7
+  T-opening-l2:
+    template: link
     parent: T-opening
-    ident: '2'
-    space: tech
-    space_label: Part 2
-    heading: How the agent works
-    body: Procedures, roles and permissions, and docs that stay true.
-    x: 880
-    y: 934.0
+    x: 1552
+    y: 816
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
     override:
       root:
-        width: 688
-      bg:
-        width: 688
-      heading:
-        width: 624
-      body:
-        width: 624
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
     mural_ids:
-      root: 84cebf19-7332-4a8d-86e5-c59655096008
-      bg: ca40b84a-22cb-4593-b98b-28d34e65e557
-      idtag: aaef6fad-4f3f-4b25-8a30-b3a477d617b6
-      spacetag: 1690c29b-6058-4d5f-a500-015c923dc0ba
-      heading: e6cdef6b-5fae-4ddb-b093-185d844df571
-      body: 7ca99441-01a9-417c-b9fe-18b15c2a5549
-  T-opening-c3:
-    template: card
+      root: d5054487-7b0e-4aea-b96f-529a967bd179
+      arrow: 483fcfbb-3f0d-4370-a6c3-6393a03a0c1c
+  T-opening-s4:
+    template: pstage
     parent: T-opening
-    ident: '3'
-    space: user
-    space_label: Part 3
-    heading: What you install
-    body: 'Optional add-ons (capabilities): project-management and software-engineering.'
-    x: 1632
-    y: 934.0
+    role: code
+    head: Write your conventions down
+    text: every session loads them, and the builder follows them · Parts 1, 3
+    x: 1648
+    y: 816
     override:
       root:
-        width: 688
-      bg:
-        width: 688
-      heading:
-        width: 624
-      body:
-        width: 624
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-conventions
     mural_ids:
-      root: c21c1293-416e-4dc0-b934-dca22f5dd376
-      bg: 6f2bd78b-c264-445b-92bf-af0740243dc6
-      idtag: 2729c26e-f32d-4bda-9399-5dca6b723869
-      spacetag: dde2eeee-94d5-44d9-9f99-6fc6ba337df1
-      heading: 256e0415-be8b-4801-9430-3523841eee0f
-      body: 2727451f-5bf9-4bd1-afd2-f66c4ca209c7
-  T-opening-c4:
-    template: card
+      root: fce88319-2221-4cb6-ab37-ec8362576e8c
+      box: 5e60449e-f23b-4d0a-8899-34d900951044
+      head: 2367d52b-9844-4ae3-ab0c-ad3d46ac86fe
+      text: dbc33424-5a9f-4085-aa5d-47f871e5760e
+      icon: 832f49a3-3cff-4ab0-b91e-cfb6a7b9c660
+  T-opening-s5:
+    template: pstage
     parent: T-opening
-    ident: '4'
-    space: user
-    space_label: Part 4
-    heading: Over time
-    body: Upgrades that keep your work, and what comes next.
-    x: 2384
-    y: 934.0
+    role: neutral
+    head: Docs aren't tied to the code
+    text: so a code change leaves them false, and nobody notices
+    x: 128
+    y: 1056
     override:
       root:
-        width: 688
-      bg:
-        width: 688
-      heading:
-        width: 624
-      body:
-        width: 624
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-doc
     mural_ids:
-      root: ac4297e6-540c-4110-a847-558e0c091fc4
-      bg: 36dfaa9e-5e04-4b18-ad9f-272cc722a256
-      idtag: da4cfbbe-9642-421c-99b7-b673c4fc20d5
-      spacetag: caa045da-9066-4e3e-9799-20d87ce0c436
-      heading: 9edc4802-5982-4f26-b454-678841e4b4e8
-      body: 3912e992-30b8-4462-a092-757242b0e759
+      root: 3e095923-bd81-417b-853d-4341149dec42
+      box: 77c8a45f-d1cd-4845-9118-6ea306c2022c
+      head: d86a7587-8322-449d-ae35-f5e23cdd14f4
+      text: 9cb6ff63-2f61-477d-8396-a1c07ace5521
+      icon: eff92c8f-ed0a-4bec-970b-3c5b0c47f0c0
+  T-opening-l3:
+    template: link
+    parent: T-opening
+    x: 1552
+    y: 1056
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: bd5b6c0a-f24e-4af8-84ef-f32b5f597c21
+      arrow: cdbaa156-5311-4b8f-ad2a-e5329c0e7816
+  T-opening-s6:
+    template: pstage
+    parent: T-opening
+    role: code
+    head: Tie each doc to what it depends on
+    text: a change must answer for every doc it affects · Part 2
+    x: 1648
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-link
+    mural_ids:
+      root: 351cbcb0-5c0c-48fd-b1c7-bc2908ea76b3
+      box: 65d3cf76-e1e0-4e79-9c38-8c5e4198cdac
+      head: 2d87815f-6864-40e8-b5e5-80ed695a9376
+      text: cfff6f1b-25e1-4a96-9112-95c58468610a
+      icon: 7935c3e3-7688-419b-ba44-6f678458cc01
+  T-opening-s7:
+    template: pstage
+    parent: T-opening
+    role: neutral
+    head: What the agent may do is never said
+    text: so the tool guesses, action by action
+    x: 128
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-unguarded
+    mural_ids:
+      root: d68c0332-9a5b-47c0-8b07-b66e7b8d245e
+      box: 9f8764ab-74b0-4bd0-a400-70a7a8e92281
+      head: fccca2a9-4a0f-4674-8dd5-4ca2d01ceab3
+      text: 28d5e420-6187-437b-81e5-3e9dc4346967
+      icon: 16704acf-6be0-405d-a7ee-039126a2b8ab
+  T-opening-l4:
+    template: link
+    parent: T-opening
+    x: 1552
+    y: 1296
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: c13cb8ae-e5b9-49e4-8239-c13c01f654ee
+      arrow: 929d3f50-21d8-4f02-a123-31c2fda1b012
+  T-opening-s8:
+    template: pstage
+    parent: T-opening
+    role: code
+    head: Write down what it may do
+    text: decided once by your project, the same in every session · Part 2
+    x: 1648
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-shield
+    mural_ids:
+      root: 46a1857b-6d90-4f04-a60b-c95078ce0499
+      box: d0444c3e-c6d1-48e9-8ffb-1fc4e75ce92c
+      head: 155ff7ac-745a-483b-92c1-b29954a2778d
+      text: 98d61cef-aee8-4f6d-9129-130c026173c4
+      icon: a4cd1f1b-df9f-4c34-8ebe-276c0c7ad4a4
   T-install:
     template: slide
     title: Install pkit
@@ -2323,6 +2540,1751 @@ instances:
       bg: b51290d5-d1b1-4981-9e39-60868cd1bd9a
       bar: 251839d5-05bc-41fa-9e46-b7ce8e651056
       text: 9443e954-066f-4cb8-856f-77d7cb80daab
+  T-opening-a:
+    template: slide
+    title: Why pkit? (variant A)
+    lead: Your AI agent works fast, and forgets everything your project decided.
+    rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    n: 1
+    total: 17
+    override:
+      rests:
+        text: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    mural_ids:
+      root: 9033a7e2-ba94-483e-b637-f7120d4e348b
+      bg: dd4ca677-7d80-49dd-acda-ff6b46598b67
+      title: 7f31e54b-2f0d-4166-ac2d-45061af50918
+      lead: 85e7fd79-181c-4ca3-82c2-5ef3e7c8b5f8
+      rests: d0c152cf-e00e-45a2-8b60-fea1017ed3ca
+      num: ef888444-4522-43bb-8ae4-2d5bcedac8f4
+  T-opening-a-s1:
+    template: stage
+    parent: T-opening-a
+    role: neutral
+    head: Choices live in chats and heads
+    text: so the agent can't know them, and makes them again
+    x: 128
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: 2da1954b-8b16-460a-beee-aac3d7c98810
+      box: 0c5a969c-8a49-4dc3-9da9-a076f6b8cf6c
+      dot: 066ea61b-2eaa-4e3c-8204-5e669cfab35a
+      head: be71ca3b-9091-4a74-8187-2bc26d948edd
+      text: d2c2eaf5-7dcb-4b22-8854-3cb324b280b0
+  T-opening-a-l1:
+    template: link
+    parent: T-opening-a
+    x: 1552
+    y: 576
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: text_secondary
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 4
+    mural_ids:
+      root: 3c6f5512-40f7-4cd9-9744-8a61bfd48db6
+      arrow: ae99d04d-46aa-42e4-a02c-72a49c105287
+  T-opening-a-s2:
+    template: stage
+    parent: T-opening-a
+    role: code
+    head: Capture each decision, with why
+    text: you accept it, and every session can read it · Part 1
+    x: 1648
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: 3c439473-810f-4be4-b194-2d09a3d83aef
+      box: 985510c0-6096-4294-aa89-2f4ea6d4cd26
+      dot: 4218e052-f896-49b7-8bcd-bf97d6928ac0
+      head: 0ae8682a-26bb-49ad-bfc2-52215b3d236c
+      text: 90c51410-e8f3-48fe-9476-118d8f560c66
+  T-opening-a-s3:
+    template: stage
+    parent: T-opening-a
+    role: neutral
+    head: Conventions stay unwritten
+    text: so the agent falls back on its own habits
+    x: 128
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: eb0ed127-541b-45d6-a310-ff4aaa6e8536
+      box: 4099a87b-b4e6-4ce0-9291-44f182a1471c
+      dot: 2e874f6d-dc1d-4cdf-a958-7fa7f3253470
+      head: 8391d63f-7809-4d20-9f03-436445f825fe
+      text: 5a87c92c-ae5b-422e-9bcc-2f77614abfd9
+  T-opening-a-l2:
+    template: link
+    parent: T-opening-a
+    x: 1552
+    y: 816
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: text_secondary
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 4
+    mural_ids:
+      root: 3e8ab982-6dde-4d63-9600-e74734432559
+      arrow: e3e0c8c8-a702-4748-919a-a65ea057a4e3
+  T-opening-a-s4:
+    template: stage
+    parent: T-opening-a
+    role: code
+    head: Write your conventions down
+    text: every session loads them, and the builder follows them · Parts 1, 3
+    x: 1648
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: f2a505f4-c3f1-4830-89b5-1b1a29e2f9c0
+      box: ce9062f1-2cfe-467e-9b86-9bc251b5e964
+      dot: 6c542b4f-810e-49d5-976f-3142ec68d4f4
+      head: 834814f1-e79c-4b78-8a26-ce7dae306630
+      text: 876d2ffb-18ba-4a9f-b3cc-0834d66037e2
+  T-opening-a-s5:
+    template: stage
+    parent: T-opening-a
+    role: neutral
+    head: Docs aren't tied to the code
+    text: so a code change leaves them false, and nobody notices
+    x: 128
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: df21fc3b-d1f3-477b-860b-073f25f27b3c
+      box: 5be9f2b4-ced4-4b3e-a81e-ca62c6dc1dae
+      dot: 57b607d7-67fa-4c88-bbb2-e20d657b634f
+      head: 013b5ead-1f59-4ef8-95c9-859f89dd20fc
+      text: c07f6750-0807-4b68-b91c-f59631dc44a1
+  T-opening-a-l3:
+    template: link
+    parent: T-opening-a
+    x: 1552
+    y: 1056
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: text_secondary
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 4
+    mural_ids:
+      root: 3e942692-3bb9-428f-8aec-6c8d9300fe9c
+      arrow: 435fa665-033f-43a9-8141-64abb2d2f40a
+  T-opening-a-s6:
+    template: stage
+    parent: T-opening-a
+    role: code
+    head: Tie each doc to what it depends on
+    text: a change must answer for every doc it affects · Part 2
+    x: 1648
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: d23a8f41-b5c4-461f-8dca-85c82f78aef8
+      box: 65a04c7e-e8b1-4ddb-a9df-8cf535401295
+      dot: 72ffa7dc-495a-4857-a3ec-3dd370dd900a
+      head: 17a5478a-e778-44af-bfcd-59f38062bc11
+      text: 3b9c00df-f882-4f4d-ad7a-ec56e5084c1c
+  T-opening-a-s7:
+    template: stage
+    parent: T-opening-a
+    role: neutral
+    head: What the agent may do is never said
+    text: so the tool guesses, action by action
+    x: 128
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: b128cd1f-372f-412a-8387-ffefc1ffd9dc
+      box: 43b2ed9c-577c-49c0-887e-0a6d1801787f
+      dot: b1e2911e-9a88-4c0f-a72f-063e253cd872
+      head: 89a6862a-bbed-44ca-ad95-79cb1de49fdc
+      text: ce9ea5d1-5a61-46b5-8508-4fae7f1daf00
+  T-opening-a-l4:
+    template: link
+    parent: T-opening-a
+    x: 1552
+    y: 1296
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: text_secondary
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 4
+    mural_ids:
+      root: 02e6ea25-ee78-4032-8621-435761aee330
+      arrow: ec91605d-7d61-4902-9349-35024baf53ab
+  T-opening-a-s8:
+    template: stage
+    parent: T-opening-a
+    role: code
+    head: Write down what it may do
+    text: decided once by your project, the same in every session · Part 2
+    x: 1648
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: cf6378f6-af7b-49fc-ae5b-52e9e3f704a7
+      box: 8e5b5ab3-5bef-41f9-9caf-ff896b536b70
+      dot: c48dafe8-c9ce-467f-904d-484297b23a79
+      head: fb9ff1c9-b893-4584-9754-40e5ee5d6c84
+      text: ac0f79a3-13d9-418c-8349-92b9daa31945
+  T-opening-a1:
+    template: slide
+    title: Why pkit? (A1, tinted)
+    lead: Your AI agent works fast, and forgets everything your project decided.
+    rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    n: 1
+    total: 17
+    override:
+      rests:
+        text: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    mural_ids:
+      root: 933c017c-5fa4-45b5-8530-26dba588a47d
+      bg: fdf5ef99-a276-4e18-9ff1-a3f2b009464d
+      title: f424eb9d-cbc2-4965-98a6-344ee40efabf
+      lead: a4517bd4-ce58-4e27-8764-9e9ecc9bb373
+      rests: ae32a02b-6afa-409a-b1ac-f8ee6615d0b7
+      num: a7d1eec4-d692-4e6a-9855-48e0e757cfa6
+  T-opening-a1-s1:
+    template: stage
+    parent: T-opening-a1
+    role: neutral
+    head: Choices live in chats and heads
+    text: so the agent can't know them, and makes them again
+    x: 128
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: b58075ee-fe71-480a-acc0-2c20869f970a
+      box: fa5d2325-5ecf-4929-ac4d-1aac955dc685
+      dot: e21ac493-521b-4ad3-b65c-f81a43accc43
+      head: 09effdb5-4138-4178-b782-d24440294175
+      text: b52d338f-4d26-452d-864c-10c0e17ce6c3
+  T-opening-a1-l1:
+    template: link
+    parent: T-opening-a1
+    x: 1552
+    y: 576
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 8397d7e3-6f8f-4db0-a948-753f5077f38c
+      arrow: 72e89b0f-29b6-431b-b9da-2ae9dd1cbfe5
+  T-opening-a1-s2:
+    template: stage
+    parent: T-opening-a1
+    role: code
+    head: Capture each decision, with why
+    text: you accept it, and every session can read it · Part 1
+    x: 1648
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: b9f99466-c6cb-4576-a872-f2b2b1c84114
+      box: 38114f30-7d50-429b-a7cb-4c53e51be676
+      dot: cf93c0b9-4cf0-4e17-aba3-6e79d388ca9b
+      head: dbd1a638-d670-46c8-b572-17d046d4a7f3
+      text: e3232195-bc9a-4b04-ad03-18d25703f5a8
+  T-opening-a1-s3:
+    template: stage
+    parent: T-opening-a1
+    role: neutral
+    head: Conventions stay unwritten
+    text: so the agent falls back on its own habits
+    x: 128
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: 088fa843-75e6-49ba-ae3a-ea75715fb6c1
+      box: 4364499b-32f0-4e73-ab75-2ab81b1b3242
+      dot: 0a3fa147-12fc-4068-b0b9-c6422b7d85e0
+      head: 71ed8b01-bad3-4fe1-aa9d-55deb1c77c4e
+      text: 42755b78-eb92-4aae-8b7c-7eed92e5111f
+  T-opening-a1-l2:
+    template: link
+    parent: T-opening-a1
+    x: 1552
+    y: 816
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: dc6cef0b-7d5a-4fde-b418-fd97bb84e3cd
+      arrow: 22298a6f-2987-49b3-a47a-442073179ecc
+  T-opening-a1-s4:
+    template: stage
+    parent: T-opening-a1
+    role: code
+    head: Write your conventions down
+    text: every session loads them, and the builder follows them · Parts 1, 3
+    x: 1648
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: 0f6a388b-e28b-4c7b-aa21-cc1a9a953c94
+      box: 54c16167-44e7-46ef-8c5e-a46efc59809b
+      dot: b8bb40b4-6e1c-45d6-a94f-1dfa7125fd2c
+      head: fad36324-4699-4bc5-b637-b12f5a4709a5
+      text: a2493ca3-20f1-4e76-a285-539b5513800d
+  T-opening-a1-s5:
+    template: stage
+    parent: T-opening-a1
+    role: neutral
+    head: Docs aren't tied to the code
+    text: so a code change leaves them false, and nobody notices
+    x: 128
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: aabb6862-fa03-41e5-9072-6568f93b0408
+      box: a689b577-dd5c-47f6-97eb-e83991615c0e
+      dot: 85752051-1cfb-4408-b74c-8ef4d74a8dd7
+      head: 9ff1f413-230d-46d1-aa75-3c274479dc88
+      text: 6d010be9-391a-4e24-81de-3e079fd1cd65
+  T-opening-a1-l3:
+    template: link
+    parent: T-opening-a1
+    x: 1552
+    y: 1056
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: cb1f49c5-9791-4050-9600-a687bf8585b6
+      arrow: b40d3086-c9c5-4f9c-887b-5ed1f54a3614
+  T-opening-a1-s6:
+    template: stage
+    parent: T-opening-a1
+    role: code
+    head: Tie each doc to what it depends on
+    text: a change must answer for every doc it affects · Part 2
+    x: 1648
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: e5f35121-44fe-4981-917a-09cb2752aa1e
+      box: bf7ef8ef-ffd3-4ebf-9703-f009af2a52f8
+      dot: 59d321f5-530d-4fe7-beac-7ac4e6f512e0
+      head: 49ade6b4-5b0f-4ce7-b6e5-5b13def82bd9
+      text: a6b8c84a-a79d-4579-93f0-b5afaf945c49
+  T-opening-a1-s7:
+    template: stage
+    parent: T-opening-a1
+    role: neutral
+    head: What the agent may do is never said
+    text: so the tool guesses, action by action
+    x: 128
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: 149749eb-f19c-4c0b-8189-817ac7c8add3
+      box: 117097e2-7c40-4225-9593-41c99881f1f5
+      dot: 1b6448b8-cacc-4690-875c-6394d66b2c8e
+      head: 8bd5b60a-540e-42c5-aab1-2545f59e7e7f
+      text: 78206c02-6a12-42db-bfe2-6efefb0a7638
+  T-opening-a1-l4:
+    template: link
+    parent: T-opening-a1
+    x: 1552
+    y: 1296
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 0b59ca5e-8727-486b-8bba-87b7228a5149
+      arrow: 4d70845f-8818-4681-90f8-29f2385677cd
+  T-opening-a1-s8:
+    template: stage
+    parent: T-opening-a1
+    role: code
+    head: Write down what it may do
+    text: decided once by your project, the same in every session · Part 2
+    x: 1648
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: cf85ae53-d584-4c75-a78e-899c6414b12b
+      box: 9e61d463-9148-4f79-ba7f-46955c86641d
+      dot: c3790d01-dcf4-42d1-a723-f9823d15e1e3
+      head: 4532f5c0-216e-42f1-919e-14d0b9b2ac55
+      text: 8617163a-3d64-4a1d-8ba8-4aa2beb4ffb6
+  T-opening-a2:
+    template: slide
+    title: Why pkit? (A2, solid answers)
+    lead: Your AI agent works fast, and forgets everything your project decided.
+    rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    n: 1
+    total: 17
+    override:
+      rests:
+        text: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    mural_ids:
+      root: 88b48204-a3f0-4731-a960-97959bcf9562
+      bg: 2eca9824-d7d3-4774-87c1-6f1de3ad8d02
+      title: 53c8f5e3-ee24-41ea-8220-c35b414be8de
+      lead: 88f1bd89-97c0-40ba-ab15-bff726994a3d
+      rests: 23bf5765-1f1d-4904-a7c2-c503249e52a3
+      num: 4d394de2-bce4-44f3-b52a-efee2d3c2e29
+  T-opening-a2-s1:
+    template: stage
+    parent: T-opening-a2
+    role: neutral
+    head: Choices live in chats and heads
+    text: so the agent can't know them, and makes them again
+    x: 128
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_secondary'
+      dot:
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+    mural_ids:
+      root: 56cc07bc-676d-4dc1-abc0-391be665d370
+      box: aa1c0a2b-ea69-41ba-aff0-07b223c0065d
+      dot: fb3ca052-315e-469a-bb16-9c6f415dc4bf
+      head: 862b0006-2a55-4683-9bc5-05b8df557ee1
+      text: c83aef90-3079-474f-8424-210193a74189
+  T-opening-a2-l1:
+    template: link
+    parent: T-opening-a2
+    x: 1552
+    y: 576
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 67ca2863-39c0-4a94-8cd5-9d5ee92fd43b
+      arrow: ae8c7d4b-a16b-46c6-9608-0cb9415a6c03
+  T-opening-a2-s2:
+    template: stage
+    parent: T-opening-a2
+    role: code
+    head: Capture each decision, with why
+    text: you accept it, and every session can read it · Part 1
+    x: 1648
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code'
+        border_color: '@role_code'
+      head:
+        width: 1320
+        height: 64
+        ink: '@text_on_color'
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_on_color'
+      dot:
+        color: '@text_on_color'
+        border_color: '@text_on_color'
+    mural_ids:
+      root: 9a183023-9844-4ed2-80a8-beea51918d99
+      box: ddd20464-cbcb-4a6c-b72f-97b06d13addc
+      dot: c9b7ede2-4d8f-44d8-9922-d8248c292bbf
+      head: c726a8b3-ef12-408b-a541-155c5dc0106f
+      text: e267b0ec-e886-4c79-9ab8-78fc2c56108e
+  T-opening-a2-s3:
+    template: stage
+    parent: T-opening-a2
+    role: neutral
+    head: Conventions stay unwritten
+    text: so the agent falls back on its own habits
+    x: 128
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_secondary'
+      dot:
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+    mural_ids:
+      root: 65d48418-9dbb-4628-9695-7bc081021647
+      box: 5f7ae270-0e6b-4869-bbbe-14ff5e05951b
+      dot: 020fe4d4-0ef3-4cac-adb7-f1a60fc02e2d
+      head: a85cf418-2de5-4f23-bc6b-7c78946d42de
+      text: 667bffde-315c-47d9-af3d-dbdb59103789
+  T-opening-a2-l2:
+    template: link
+    parent: T-opening-a2
+    x: 1552
+    y: 816
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 759075b6-95e4-406b-86e5-2d5c236b912c
+      arrow: da9d8b2d-a417-495e-86e2-7535e2710af6
+  T-opening-a2-s4:
+    template: stage
+    parent: T-opening-a2
+    role: code
+    head: Write your conventions down
+    text: every session loads them, and the builder follows them · Parts 1, 3
+    x: 1648
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code'
+        border_color: '@role_code'
+      head:
+        width: 1320
+        height: 64
+        ink: '@text_on_color'
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_on_color'
+      dot:
+        color: '@text_on_color'
+        border_color: '@text_on_color'
+    mural_ids:
+      root: a69e5b19-3225-42cb-9e0d-bb725251b11f
+      box: 94bf4e30-cd24-4717-a0d0-eeb79e3fd2b0
+      dot: 21918ed5-8a63-4a28-a20c-bc03f791ccb1
+      head: 06f39ff1-afc9-4c9d-a923-3936927f80bf
+      text: 33d38708-a23f-4c48-8b40-f12e3c08f183
+  T-opening-a2-s5:
+    template: stage
+    parent: T-opening-a2
+    role: neutral
+    head: Docs aren't tied to the code
+    text: so a code change leaves them false, and nobody notices
+    x: 128
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_secondary'
+      dot:
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+    mural_ids:
+      root: 342aa4cc-dd3f-42b5-8bdc-28085cee7e6f
+      box: ffc84ca3-b02c-45a0-aa63-161718a72838
+      dot: fe8b1a02-09ae-4bf9-b048-e4756f44c632
+      head: 13fe5606-b366-47ed-b93b-8f8951f55d53
+      text: 88c07542-bd3e-4178-9ba5-508a479e3069
+  T-opening-a2-l3:
+    template: link
+    parent: T-opening-a2
+    x: 1552
+    y: 1056
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: cc6dd834-ba4b-4efc-ad30-c22973889658
+      arrow: d44fe0b7-258a-4197-93d1-4cc41b33dad6
+  T-opening-a2-s6:
+    template: stage
+    parent: T-opening-a2
+    role: code
+    head: Tie each doc to what it depends on
+    text: a change must answer for every doc it affects · Part 2
+    x: 1648
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code'
+        border_color: '@role_code'
+      head:
+        width: 1320
+        height: 64
+        ink: '@text_on_color'
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_on_color'
+      dot:
+        color: '@text_on_color'
+        border_color: '@text_on_color'
+    mural_ids:
+      root: 15d57d83-3c08-45e0-bf1c-373b1e481c2a
+      box: c7926c02-a645-46da-aa89-23fd711409bf
+      dot: 0cb8d64b-8d08-41b3-847c-b26a2c4aa215
+      head: 7d779bbf-aced-4cc6-910b-db28353c33ca
+      text: dc4fe368-552b-47b0-b6f3-9d09e69ca310
+  T-opening-a2-s7:
+    template: stage
+    parent: T-opening-a2
+    role: neutral
+    head: What the agent may do is never said
+    text: so the tool guesses, action by action
+    x: 128
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_secondary'
+      dot:
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+    mural_ids:
+      root: 8816e294-ba94-49cc-85c3-7978c4bffcaa
+      box: 4b6f4960-eb46-45b3-a311-9d830abbbffc
+      dot: 0015d4d8-1039-4520-a43f-3adf71e05b99
+      head: 847cdc6e-6c3d-497c-8278-589154344d48
+      text: c476afe1-87d0-4335-8c14-f4ff96a03203
+  T-opening-a2-l4:
+    template: link
+    parent: T-opening-a2
+    x: 1552
+    y: 1296
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 9f1f412e-a844-4a43-9cce-ad042d8c7d21
+      arrow: 7ba5132c-ed6e-4ee1-8193-c21c74a47a1d
+  T-opening-a2-s8:
+    template: stage
+    parent: T-opening-a2
+    role: code
+    head: Write down what it may do
+    text: decided once by your project, the same in every session · Part 2
+    x: 1648
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code'
+        border_color: '@role_code'
+      head:
+        width: 1320
+        height: 64
+        ink: '@text_on_color'
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_on_color'
+      dot:
+        color: '@text_on_color'
+        border_color: '@text_on_color'
+    mural_ids:
+      root: badde7b6-290e-4167-bfcc-006da38d617e
+      box: fc30df4e-f49f-4bb3-96bb-ea743ba8f717
+      dot: 2ad58413-159f-4ac8-8c2e-30e347e02736
+      head: a2aa56ac-6cc9-4a45-a02a-7c5deed3a697
+      text: c5f8e128-e976-4638-9423-3f1b8b8d1a60
+  T-opening-a3:
+    template: slide
+    title: Why pkit? (A3, dark answers)
+    lead: Your AI agent works fast, and forgets everything your project decided.
+    rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    n: 1
+    total: 17
+    override:
+      rests:
+        text: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    mural_ids:
+      root: dcfb931c-8cb1-4928-b9d7-a6683ec3d51e
+      bg: 01199981-3b9f-48a8-afb2-5c99239ea007
+      title: a6ee2aa3-3fd2-49bd-96df-8f872c15967e
+      lead: e1e319b7-a2db-418e-8f38-95bf08028b3a
+      rests: ca29ff29-35c5-48d2-9a16-40464be0f3ac
+      num: 43cf9829-7d26-4d34-8547-93a1c9772bdf
+  T-opening-a3-s1:
+    template: stage
+    parent: T-opening-a3
+    role: neutral
+    head: Choices live in chats and heads
+    text: so the agent can't know them, and makes them again
+    x: 128
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: e01a740a-a724-4eb0-8493-d41b2905353d
+      box: d43fe730-4afd-4414-96eb-4204a9161b52
+      dot: fe82d72d-b508-4d61-a556-abac80a90de2
+      head: f0762b5c-62bc-40b5-9963-94dcefc26791
+      text: 7df34da6-4e2c-4484-9378-479cc8a69e38
+  T-opening-a3-l1:
+    template: link
+    parent: T-opening-a3
+    x: 1552
+    y: 576
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: background_inverse
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 4ebf2d9c-f187-4a29-ac46-b7ca354290d1
+      arrow: bbd94583-5589-422c-a9f5-9a1e6852e6a2
+  T-opening-a3-s2:
+    template: stage
+    parent: T-opening-a3
+    role: code
+    head: Capture each decision, with why
+    text: you accept it, and every session can read it · Part 1
+    x: 1648
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@background_inverse'
+        border_color: '@background_inverse'
+      head:
+        width: 1320
+        height: 64
+        ink: '@text_inverse'
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_inverse'
+      dot:
+        color: '@accent_inverse'
+        border_color: '@accent_inverse'
+    mural_ids:
+      root: 6c1fd1a8-ac45-407f-9190-f7ddeca35c7a
+      box: 12bdd9a4-58ba-431d-a56a-1b2cb4d723c3
+      dot: eba72bc6-7484-4b9e-888f-52bc58da04cb
+      head: a881f83e-295c-414e-b66f-e7538fcbfc05
+      text: e1522e85-18fa-487b-acdf-fe1d01c32bf1
+  T-opening-a3-s3:
+    template: stage
+    parent: T-opening-a3
+    role: neutral
+    head: Conventions stay unwritten
+    text: so the agent falls back on its own habits
+    x: 128
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: 03a63fbf-daec-4a5b-b6e8-7f9cb1ac9b27
+      box: b179037b-211d-4546-a697-5ed474b813a1
+      dot: c2d61c92-9536-4c98-8530-a42b243bb1f2
+      head: 47401b67-90d0-4d25-9eef-e8df7b431fdd
+      text: 4f4258db-12ad-4371-ba56-2551b71a3843
+  T-opening-a3-l2:
+    template: link
+    parent: T-opening-a3
+    x: 1552
+    y: 816
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: background_inverse
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: b1a3ab7d-a5c4-4b8c-9bca-cab41c009e52
+      arrow: 9d8269de-76e8-447f-a042-06a83959dec1
+  T-opening-a3-s4:
+    template: stage
+    parent: T-opening-a3
+    role: code
+    head: Write your conventions down
+    text: every session loads them, and the builder follows them · Parts 1, 3
+    x: 1648
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@background_inverse'
+        border_color: '@background_inverse'
+      head:
+        width: 1320
+        height: 64
+        ink: '@text_inverse'
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_inverse'
+      dot:
+        color: '@accent_inverse'
+        border_color: '@accent_inverse'
+    mural_ids:
+      root: c79333ce-0132-42b3-bbb8-800761a5f6c6
+      box: 8929601e-3d4e-460a-b02c-569a8f24eef0
+      dot: 988bc4e0-5c22-4808-8c28-7cc94086815b
+      head: b3524cb3-6964-41cd-a26f-5b01df180f0f
+      text: cf433406-b7f4-4272-bd35-af8c52a3c709
+  T-opening-a3-s5:
+    template: stage
+    parent: T-opening-a3
+    role: neutral
+    head: Docs aren't tied to the code
+    text: so a code change leaves them false, and nobody notices
+    x: 128
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: d4d7cbd6-c3df-4ece-aead-a25376d4e5a7
+      box: 010f8b64-1825-4720-9241-6824c4c4834c
+      dot: 3321e855-52d8-48b9-b447-71dd5575640d
+      head: 6cd30b79-7f71-44f0-bb90-f70dc7fa3666
+      text: d019ec8e-2c6e-438d-8d9e-6f84d1e2c144
+  T-opening-a3-l3:
+    template: link
+    parent: T-opening-a3
+    x: 1552
+    y: 1056
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: background_inverse
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 4ffbc2c1-4c17-4aeb-9e69-e23ef0c768fb
+      arrow: 42513159-d78f-44ae-86fb-4a559eb43089
+  T-opening-a3-s6:
+    template: stage
+    parent: T-opening-a3
+    role: code
+    head: Tie each doc to what it depends on
+    text: a change must answer for every doc it affects · Part 2
+    x: 1648
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@background_inverse'
+        border_color: '@background_inverse'
+      head:
+        width: 1320
+        height: 64
+        ink: '@text_inverse'
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_inverse'
+      dot:
+        color: '@accent_inverse'
+        border_color: '@accent_inverse'
+    mural_ids:
+      root: ceb0f182-9671-4bbc-b6bf-855577e1cced
+      box: c27c9822-c416-402e-babf-cecb8f89187f
+      dot: b13931df-64e1-4f6d-89ff-1a496b854dec
+      head: c1a0d130-55bb-4d79-b1dd-8b9a9ad2da25
+      text: 673b59ea-896c-4ae5-891d-7e87eed87733
+  T-opening-a3-s7:
+    template: stage
+    parent: T-opening-a3
+    role: neutral
+    head: What the agent may do is never said
+    text: so the tool guesses, action by action
+    x: 128
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+      head:
+        width: 1320
+        height: 64
+      text:
+        y: 100
+        width: 1360
+        height: 63
+    mural_ids:
+      root: cbd2941c-ec06-4bc2-8482-cf2f4e72491b
+      box: 896597bd-fae7-4085-85da-b2e6f9f003f7
+      dot: 668c87b6-9ca8-4d17-87b4-6e106685b18b
+      head: a0544d8e-56de-45f9-9f1b-b4e052950d2d
+      text: 7bfb8e76-aab7-4e46-beb5-50a310d96aae
+  T-opening-a3-l4:
+    template: link
+    parent: T-opening-a3
+    x: 1552
+    y: 1296
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: background_inverse
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 7bafd388-effc-40cf-b218-3a8709b767d4
+      arrow: ef496973-092a-4ae2-8c52-27ff074605a5
+  T-opening-a3-s8:
+    template: stage
+    parent: T-opening-a3
+    role: code
+    head: Write down what it may do
+    text: decided once by your project, the same in every session · Part 2
+    x: 1648
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@background_inverse'
+        border_color: '@background_inverse'
+      head:
+        width: 1320
+        height: 64
+        ink: '@text_inverse'
+      text:
+        y: 100
+        width: 1360
+        height: 63
+        ink: '@text_inverse'
+      dot:
+        color: '@accent_inverse'
+        border_color: '@accent_inverse'
+    mural_ids:
+      root: 85a1dc18-a27e-4793-bcc5-48a40e252a4c
+      box: 30dacfc2-dba6-47c7-a884-87af735dca38
+      dot: 00e1eb2a-b6d6-451e-b4ec-0c964b2335ef
+      head: 0d8e1176-e563-471f-8666-4b72e91eb0f7
+      text: 258cf8c4-bb2c-4a5e-a906-a561961c24f0
+  T-opening-a1p:
+    template: slide
+    title: Why pkit? (A1 with pictograms)
+    lead: Your AI agent works fast, and forgets everything your project decided.
+    rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    n: 1
+    total: 17
+    override:
+      rests:
+        text: 'The question: how do you make it work your project''s way, without a heavy framework?'
+    mural_ids:
+      root: b1755f64-11b0-4179-bec2-dfe701780b6f
+      bg: eac9a50c-5b02-4977-a382-8ebe30306341
+      title: 9825616c-8fea-416d-bac0-85be5a503a8e
+      lead: 4efca4c3-8f2e-4c46-a37b-76337e9d9425
+      rests: 473fab2f-e287-44bf-95d4-97645266c275
+      num: bbe9380e-9e46-44c0-9e9c-834659795681
+  T-opening-a1p-s1:
+    template: pstage
+    parent: T-opening-a1p
+    role: neutral
+    head: Choices live in chats and heads
+    text: so the agent can't know them, and makes them again
+    x: 128
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-chat
+    mural_ids:
+      root: c1b2c692-e017-43f0-839c-dbc11aad2009
+      box: 4dd44902-b08b-4a22-93eb-48a024c5ac07
+      head: 692f4afc-7f5d-4767-b81a-8e104d37ea3d
+      text: 2abaee28-7bdb-4a90-8198-52c4c8a0384e
+      icon: db02e23b-5629-476b-b28d-43c9c8649212
+  T-opening-a1p-l1:
+    template: link
+    parent: T-opening-a1p
+    x: 1552
+    y: 576
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 66fa7e5d-48fd-444d-8bc5-6fc16c917c19
+      arrow: b179b869-cd98-4d62-b67f-ba73f14add5e
+  T-opening-a1p-s2:
+    template: pstage
+    parent: T-opening-a1p
+    role: code
+    head: Capture each decision, with why
+    text: you accept it, and every session can read it · Part 1
+    x: 1648
+    y: 576
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-write
+    mural_ids:
+      root: cf4b4e23-6003-4748-ab73-83652302465d
+      box: be701a8e-4c1a-4c58-8ccc-1f56aa225308
+      head: cae75c9c-9b30-47b7-962f-1aa5f50388e1
+      text: 031d6d02-88ea-4ffe-a91f-d1cecd9858a7
+      icon: 17926374-b2cb-477c-a6b5-97625e75f6ad
+  T-opening-a1p-s3:
+    template: pstage
+    parent: T-opening-a1p
+    role: neutral
+    head: Conventions stay unwritten
+    text: so the agent falls back on its own habits
+    x: 128
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-question
+    mural_ids:
+      root: bd834308-fbb7-4f0c-8b0f-b1624f615cc5
+      box: a25c1538-d9f2-4990-b129-b5a7822e4f0a
+      head: 2eaac7bd-c2a2-43a0-958b-8006c0128226
+      text: 4e8c997f-a198-40b4-b259-d59baaf78c73
+      icon: 435ff265-d6ac-4aae-96e0-01475d42d648
+  T-opening-a1p-l2:
+    template: link
+    parent: T-opening-a1p
+    x: 1552
+    y: 816
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 2c44f909-0e2d-4c59-a23a-17538c230635
+      arrow: e61907f4-9f4d-4b63-a352-c61e1b38caed
+  T-opening-a1p-s4:
+    template: pstage
+    parent: T-opening-a1p
+    role: code
+    head: Write your conventions down
+    text: every session loads them, and the builder follows them · Parts 1, 3
+    x: 1648
+    y: 816
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-conventions
+    mural_ids:
+      root: 3fb26e1b-09d2-4943-9228-d51e4d31824a
+      box: aa043821-671f-4267-9acc-f1626294421c
+      head: 3de1f777-4f8a-49de-b728-f25c5f852fa8
+      text: e4667c30-65dc-4850-a806-19aa8ea63d36
+      icon: af93dc1d-6ba7-4418-b282-d4c30d94c339
+  T-opening-a1p-s5:
+    template: pstage
+    parent: T-opening-a1p
+    role: neutral
+    head: Docs aren't tied to the code
+    text: so a code change leaves them false, and nobody notices
+    x: 128
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-doc
+    mural_ids:
+      root: 0bd50445-9aae-468b-be32-51ba62ac8a2b
+      box: 628908dd-43be-403d-8fb2-9f4268546f2d
+      head: 239e24ea-cc4d-408e-8da6-9f14102b2a2e
+      text: 951789e4-3e57-4203-831a-40f872eb088a
+      icon: eaf958a1-b775-4819-a5e4-0d8ead955df1
+  T-opening-a1p-l3:
+    template: link
+    parent: T-opening-a1p
+    x: 1552
+    y: 1056
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 83a10f74-8f47-4798-91d9-c8eab9043c1f
+      arrow: a7629f93-643b-4bec-806a-d714a236353c
+  T-opening-a1p-s6:
+    template: pstage
+    parent: T-opening-a1p
+    role: code
+    head: Tie each doc to what it depends on
+    text: a change must answer for every doc it affects · Part 2
+    x: 1648
+    y: 1056
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-link
+    mural_ids:
+      root: 5d62cea4-1fcd-430b-b5cb-f4721a9378c4
+      box: d9f0af5a-8774-4c7a-8d57-4539e5d19d4d
+      head: 9d835931-c94e-4413-925c-615d1e24d06f
+      text: 023b534b-d09f-44eb-b206-4c387489b8eb
+      icon: 5ca65ff7-479a-47f3-9798-eda7f7c2ae7b
+  T-opening-a1p-s7:
+    template: pstage
+    parent: T-opening-a1p
+    role: neutral
+    head: What the agent may do is never said
+    text: so the tool guesses, action by action
+    x: 128
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-unguarded
+    mural_ids:
+      root: 1898b28c-5494-4c77-bc68-47821b26247a
+      box: 14b84f41-2ee7-4682-bd26-08c0d966198b
+      head: 76db0ea9-eba7-4cbc-b772-866011f7da95
+      text: a16dbb81-16df-40b0-8e42-cc20902497b9
+      icon: 3c34a61a-5d59-4af1-880d-4fe5c7749a9c
+  T-opening-a1p-l4:
+    template: link
+    parent: T-opening-a1p
+    x: 1552
+    y: 1296
+    x1: 16
+    y1: 100.0
+    x2: 80
+    y2: 100.0
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 200
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: a44af9b6-b186-4baf-b325-620dc67c5c5c
+      arrow: 07daa78b-6d21-4a53-8a4c-df55b3091c43
+  T-opening-a1p-s8:
+    template: pstage
+    parent: T-opening-a1p
+    role: code
+    head: Write down what it may do
+    text: decided once by your project, the same in every session · Part 2
+    x: 1648
+    y: 1296
+    override:
+      root:
+        width: 1424
+        height: 200
+      box:
+        width: 1424
+        height: 200
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        x: 120
+        width: 1272
+        height: 64
+      text:
+        x: 120
+        y: 100
+        width: 1272
+        height: 63
+    icon: row-shield
+    mural_ids:
+      root: a87ddead-5c37-477b-9eb0-dcccc3a07507
+      box: 6794a7a1-1cfb-489e-b392-0803a79d11fd
+      head: a575a862-9d00-454f-8d36-792e53eff959
+      text: 23d5f747-4c38-455f-9f2b-63a0f7e09387
+      icon: ef5a5cd7-2393-4269-945f-c566592cd35d
   T-part-P1:
     template: section
     part: '2'
@@ -4672,6 +6634,11 @@ layouts:
   - T-part-P0
   - T-opening
   - T-install
+  - T-opening-a
+  - T-opening-a1
+  - T-opening-a2
+  - T-opening-a3
+  - T-opening-a1p
   origin:
   - -4246
   - 1241

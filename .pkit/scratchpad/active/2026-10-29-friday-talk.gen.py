@@ -108,6 +108,105 @@ def fanout(pid, y, v):
     return out, h
 
 
+PAIR_H = 200
+PAIR_GAP = 40
+
+
+CLEAR = "#FFFFFF00"
+# Styles of a pairs diagram: per side, overrides of the stage's parts; and the arrows' tone and width.
+PAIR_STYLES = {
+    "plain": {"left": {}, "right": {}, "tone": "text_secondary", "arrow": 4},
+    "tinted": {
+        "left": {"box": {"color": "@role_neutral_bg", "border_color": "@role_neutral", "border_width": 2}},
+        "right": {"box": {"color": "@role_code_bg", "border_color": "@role_code", "border_width": 4}},
+        "tone": "role_code", "arrow": 6,
+    },
+    "solid": {
+        "left": {
+            "box": {"color": "@role_neutral_bg", "border_color": "@role_neutral_bg"},
+            "dot": {"color": "@role_neutral_bg", "border_color": "@role_neutral_bg"},
+            "text": {"ink": "@text_secondary"},
+        },
+        "right": {
+            "box": {"color": "@role_code", "border_color": "@role_code"},
+            "dot": {"color": "@text_on_color", "border_color": "@text_on_color"},
+            "head": {"ink": "@text_on_color"},
+            "text": {"ink": "@text_on_color"},
+        },
+        "tone": "role_code", "arrow": 6,
+    },
+    "dark": {
+        "left": {"box": {"color": "@role_neutral_bg", "border_color": "@role_neutral_bg"}},
+        "right": {
+            "box": {"color": "@background_inverse", "border_color": "@background_inverse"},
+            "dot": {"color": "@accent_inverse", "border_color": "@accent_inverse"},
+            "head": {"ink": "@text_inverse"},
+            "text": {"ink": "@text_inverse"},
+        },
+        "tone": "background_inverse", "arrow": 6,
+    },
+}
+
+
+def styled(kv, parts):
+    k, v = kv
+    for part, fields in parts.items():
+        v["override"].setdefault(part, {}).update(fields)
+    return k, v
+
+
+ICON = 64
+
+
+def pstage_template(stage_tpl):
+    """The stage with a pictogram in place of its role dot: `icon` names a PNG in the icons folder."""
+    import copy
+
+    t = copy.deepcopy(stage_tpl)
+    t.pop("master", None)
+    t["note"] = "Diagram stage with a pictogram (2026-10-29-friday-talk-icons/<icon>.png) in place of the role dot; made by the slide generator from the stage template."
+    parts = t["parts"]
+    parts.pop("dot", None)
+    parts["icon"] = {"type": "image", "file": "2026-10-29-friday-talk-icons/{icon}.png", "x": 32, "y": 28, "width": ICON, "height": ICON}
+    t["parts"] = {"box": parts["box"], "icon": parts["icon"], "head": parts["head"], "text": parts["text"]}
+    return t
+
+
+def with_icon(kv, icon, w, h):
+    k, v = kv
+    v["template"] = "pstage"
+    v["icon"] = icon
+    v["override"]["head"] = {"x": 32 + ICON + 24, "width": w - (32 + ICON + 24) - 32, "height": 64}
+    v["override"]["text"] = {"x": 32 + ICON + 24, "y": 100, "width": w - (32 + ICON + 24) - 32, "height": h - 137}
+    return k, v
+
+
+def pairs(pid, y, items, style="plain", icons=False):
+    """One row per pair: a left stage, a link, a right stage (e.g. a problem and what answers it)."""
+    st = PAIR_STYLES[style]
+    out = {}
+    w = (SPAN16 - LINK_W) / 2
+    for i, p in enumerate(items):
+        yy = y + i * (PAIR_H + PAIR_GAP)
+        a, b = p["left"], p["right"]
+        kv = stage(pid, 2 * i + 1, MARGIN, yy, round(w), a.get("role", "neutral"), a["head"], a.get("text", ""), PAIR_H)
+        if icons:
+            kv = with_icon(kv, a["icon"], round(w), PAIR_H)
+        k, v = styled(kv, {p_: f for p_, f in st["left"].items() if not (icons and p_ == "dot")})
+        out[k] = v
+        k, v = link(pid, i + 1, round(MARGIN + w), yy, PAIR_H)
+        v["tone"] = st["tone"]
+        v["override"]["arrow"] = {"border_width": st["arrow"]}
+        out[k] = v
+        kv = stage(pid, 2 * i + 2, round(MARGIN + w + LINK_W), yy, round(w), b.get("role", "neutral"), b["head"], b.get("text", ""), PAIR_H)
+        if icons:
+            kv = with_icon(kv, b["icon"], round(w), PAIR_H)
+        k, v = styled(kv, {p_: f for p_, f in st["right"].items() if not (icons and p_ == "dot")})
+        out[k] = v
+    n = len(items)
+    return out, n * PAIR_H + (n - 1) * PAIR_GAP
+
+
 def flow(pid, y, stages):
     out = {}
     n = len(stages)
@@ -223,7 +322,7 @@ def build_slide(s, n, total):
         parts.update(d)
         y += h + GAP
 
-    if s["id"] == "opening":
+    if s["id"] == "opening" and kind == "cards":
         add(steps(pid, y, s["does"]))
         add(cards(pid, y, v["cards"]))
     elif kind == "cards":
@@ -240,6 +339,8 @@ def build_slide(s, n, total):
                 add(steps(pid, y, s["does"]))
         elif kind == "compare":
             add(compare(pid, y, v["left"], v["right"]))
+        elif kind == "pairs":
+            add(pairs(pid, y, v["pairs"], v.get("style", "plain"), bool(v.get("icons"))))
         elif kind == "fanout":
             add(fanout(pid, y, v))
             if s.get("does"):
@@ -256,6 +357,8 @@ def build_slide(s, n, total):
             y += max(h1, h2) + GAP
         if s.get("limit"):
             add(notice(pid, y, "Limit: " + s["limit"]))
+        if s.get("footnote"):
+            add(notice(pid, y, s["footnote"]))
     inst.update(parts)
     if y - GAP > 1640:
         print(f"warn: {pid} content reaches y={y - GAP:.0f}, past the footer", file=sys.stderr)
@@ -274,6 +377,7 @@ def main(slides_path, board_path):
         if members and str(members[0]).startswith("T-"):
             old_origin[members[0]] = lay.get("origin", "auto")
     board["instances"] = {k: v for k, v in board["instances"].items() if not k.startswith("T-")}
+    board["templates"]["pstage"] = pstage_template(board["templates"]["stage"])
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     talk = sl["talk"]
     content = [s for s in sl["slides"]]
@@ -296,6 +400,12 @@ def main(slides_path, board_path):
                 n = content.index(s) + 1
                 new.update(build_slide(s, n, total))
                 rows[sid].append(f"T-{s['id']}")
+        # Variants of a slide, to choose from: after the part's last slide, so nothing moves.
+        for var in sl.get("variants") or []:
+            of = next(s for s in content if s["id"] == var["of"])
+            if of["part"] == p["id"]:
+                new.update(build_slide({**var, "part": p["id"]}, content.index(of) + 1, total))
+                rows[sid].append(f"T-{var['id']}")
     for k, v in new.items():
         if k in old_ids:
             v["mural_ids"] = old_ids[k]

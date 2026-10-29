@@ -43,19 +43,21 @@ slides:
     title: "Why pkit?"
     message: "Your AI agent works fast, and forgets everything your project decided."
     problem: ""
-    does:
-      - "It forgets a decision, and makes it again, differently"
-      - "It writes in its own habits, not your conventions"
-      - "It changes the code and leaves the docs saying something false"
-      - "It asks you twenty times, or not at all"
+    does: []
     show: "The question: how do you make it work your project's way, without a heavy framework?"
     visual:
-      kind: cards
-      cards:
-        - {ident: "1", space: tech, space_label: "Part 1", heading: "What the agent knows", body: "Your decisions, written down, and what every session is told."}
-        - {ident: "2", space: tech, space_label: "Part 2", heading: "How the agent works", body: "Procedures, roles and permissions, and docs that stay true."}
-        - {ident: "3", space: user, space_label: "Part 3", heading: "What you install", body: "Optional add-ons (capabilities): project-management and software-engineering."}
-        - {ident: "4", space: user, space_label: "Part 4", heading: "Over time", body: "Upgrades that keep your work, and what comes next."}
+      kind: pairs
+      style: tinted
+      icons: true
+      pairs: &pairs_a
+        - left: {role: neutral, icon: row-chat, head: "Choices live in chats and heads", text: "so the agent can't know them, and makes them again"}
+          right: {role: code, icon: row-write, head: "Capture each decision, with why", text: "you accept it, and every session can read it · Part 1"}
+        - left: {role: neutral, icon: row-question, head: "Conventions stay unwritten", text: "so the agent falls back on its own habits"}
+          right: {role: code, icon: row-conventions, head: "Write your conventions down", text: "every session loads them, and the builder follows them · Parts 1, 3"}
+        - left: {role: neutral, icon: row-doc, head: "Docs aren't tied to the code", text: "so a code change leaves them false, and nobody notices"}
+          right: {role: code, icon: row-link, head: "Tie each doc to what it depends on", text: "a change must answer for every doc it affects · Part 2"}
+        - left: {role: neutral, icon: row-unguarded, head: "What the agent may do is never said", text: "so the tool guesses, action by action"}
+          right: {role: code, icon: row-shield, head: "Write down what it may do", text: "decided once by your project, the same in every session · Part 2"}
     limit: ""
     minutes: 2
     notes: >-
@@ -374,3 +376,72 @@ slides:
     limit: ""
     minutes: 5
     notes: ""
+
+# Variants of a slide to choose from, placed after the last slide of its part.
+# Each keeps the slide's message, and shows one relation only.
+variants:
+
+  - id: opening-a
+    of: opening
+    title: "Why pkit? (variant A)"
+    message: "Your AI agent works fast, and forgets everything your project decided."
+    problem: ""
+    does: []
+    show: "The question: how do you make it work your project's way, without a heavy framework?"
+    visual:
+      kind: pairs
+      pairs: *pairs_a
+    limit: ""
+
+  - id: opening-a1
+    of: opening
+    title: "Why pkit? (A1, tinted)"
+    message: "Your AI agent works fast, and forgets everything your project decided."
+    problem: ""
+    does: []
+    show: "The question: how do you make it work your project's way, without a heavy framework?"
+    visual:
+      kind: pairs
+      style: tinted
+      pairs: *pairs_a
+    limit: ""
+
+  - id: opening-a2
+    of: opening
+    title: "Why pkit? (A2, solid answers)"
+    message: "Your AI agent works fast, and forgets everything your project decided."
+    problem: ""
+    does: []
+    show: "The question: how do you make it work your project's way, without a heavy framework?"
+    visual:
+      kind: pairs
+      style: solid
+      pairs: *pairs_a
+    limit: ""
+
+  - id: opening-a3
+    of: opening
+    title: "Why pkit? (A3, dark answers)"
+    message: "Your AI agent works fast, and forgets everything your project decided."
+    problem: ""
+    does: []
+    show: "The question: how do you make it work your project's way, without a heavy framework?"
+    visual:
+      kind: pairs
+      style: dark
+      pairs: *pairs_a
+    limit: ""
+
+  - id: opening-a1p
+    of: opening
+    title: "Why pkit? (A1 with pictograms)"
+    message: "Your AI agent works fast, and forgets everything your project decided."
+    problem: ""
+    does: []
+    show: "The question: how do you make it work your project's way, without a heavy framework?"
+    visual:
+      kind: pairs
+      style: tinted
+      icons: true
+      pairs: *pairs_a
+    limit: ""
