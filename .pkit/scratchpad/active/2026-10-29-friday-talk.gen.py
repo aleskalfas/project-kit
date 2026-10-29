@@ -237,6 +237,18 @@ TAG_COLOURS = {"pkit": ("role_code_bg", "role_code"), "yours": ("role_people_bg"
 TREE_PITCH, TREE_INDENT, TAG_H, CHAR_KEY, CHAR_BODY = 76, 56, 64, 23, 19
 
 
+def text_w(s, size=40):
+    """An estimate of a proportional font's width: capitals wide, punctuation narrow."""
+    em = 0.0
+    for ch in s:
+        em += 0.68 if ch.isupper() else 0.56 if ch.isdigit() else 0.3 if ch in "/.:, '-" else 0.75 if ch == "…" else 0.52
+    return em * size
+
+
+def tag_w(s):
+    return text_w(s) * 1.1 + 56
+
+
 def tree(pid, x0, y0, rows, legend=None):
     """A file tree drawn from shapes: each row is (depth, [(text, owner), ...], note); lines are bars."""
     out = {}
@@ -270,7 +282,7 @@ def tree(pid, x0, y0, rows, legend=None):
             last_child_y[parent] = y + TAG_H / 2
         for text, owner in tags:
             bg, ink = TAG_COLOURS[owner]
-            w = len(text) * CHAR_KEY + 40
+            w = tag_w(text)
             put("tree_tag", x, y, w, TAG_H, text=text, bg=bg, ink=ink)
             x += w + 16
         if note:
@@ -284,7 +296,7 @@ def tree(pid, x0, y0, rows, legend=None):
         y = y0 + h + 16
         for text, owner in legend:
             bg, ink = TAG_COLOURS[owner]
-            w = len(text) * CHAR_KEY + 40
+            w = tag_w(text)
             put("tree_tag", x, y, w, TAG_H, text=text, bg=bg, ink=ink)
             x += w + 24
         h += 16 + TAG_H
@@ -299,19 +311,102 @@ def vlink(pid, i, x, y, h):
     }
 
 
+# The deck's one style for a terminal: a dark panel, the prompt and comments grey, the command
+# green, its arguments near white, output light grey. Colours travel as spans in Mural's html.
+TERM = {"prompt": "#8D8D8D", "command": "#42BE65", "args": "#F4F4F4", "comment": "#A8A8A8", "output": "#C6C6C6"}
+TERM_LINE = 46
+
+
+def terminal_html(text):
+    import html as htmllib
+
+    def span(colour, s):
+        return f'<span style="color:{colour}">{htmllib.escape(s, quote=False)}</span>'
+
+    divs = []
+    for line in text.split("\n"):
+        if not line.strip():
+            divs.append("<div><br></div>")
+        elif line.lstrip().startswith("#"):
+            divs.append("<div>" + span(TERM["comment"], line) + "</div>")
+        elif line.startswith("$ "):
+            cmd, _, rest = line[2:].partition(" ")
+            divs.append("<div>" + span(TERM["prompt"], "$ ") + span(TERM["command"], cmd) + (span(TERM["args"], " " + rest) if rest else "") + "</div>")
+        else:
+            divs.append("<div>" + span(TERM["output"], line) + "</div>")
+    return '<html v="1">' + "".join(divs) + "</html>"
+
+
+TERMINAL_TEMPLATE = {
+    "note": "The deck's terminal: a dark panel holding commands and their output, syntax coloured; made by the slide generator.",
+    "root": {**CLEAR_AREA, "width": 1440, "height": 400},
+    "parts": {
+        "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 1440, "height": 400,
+               "color": "#262626FF", "border_color": "#262626FF", "border_width": 1, "ink": "@text_primary"},
+        "text": {"type": "text", "html": "{html}", "style": "@style.body", "x": 40, "y": 36, "width": 1360, "height": 328},
+    },
+}
+
+
+def terminal(pid, x, y, w, text, key="term", font_size=32):
+    lines = text.rstrip("\n").count("\n") + 1
+    h = 72 + lines * TERM_LINE
+    return {
+        f"{pid}-{key}": {
+            "template": "terminal", "parent": pid, "x": x, "y": y, "html": terminal_html(text),
+            "override": {"root": {"width": w, "height": h}, "bg": {"width": w, "height": h},
+                         "text": {"width": w - 80, "height": h - 72, "font_size": font_size}},
+        }
+    }, h
+
+
+HIGHLIGHT_TEMPLATE = {
+    "note": "An important note: a light yellow box with a yellow bar on its left, a pictogram, a question and a line of text; made by the slide generator.",
+    "root": {**CLEAR_AREA, "width": 1440, "height": 380},
+    "parts": {
+        "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 1440, "height": 380,
+               "color": "#FCF4D6FF", "border_color": "#FCF4D6FF", "border_width": 1, "ink": "@text_primary"},
+        "bar": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 12, "height": 380,
+                "color": "#F1C21BFF", "border_color": "#F1C21BFF", "border_width": 1, "ink": "@text_primary"},
+        "icon": {"type": "image", "file": "2026-10-29-friday-talk-icons/{icon}.png", "x": 44, "y": 28, "width": 72, "height": 72},
+        "head": {"type": "text", "text": "{head}", "style": "@style.key", "ink": "@text_primary", "x": 140, "y": 36, "width": 1260, "height": 64},
+        "body": {"type": "text", "text": "{body}", "style": "@style.body", "ink": "@text_primary", "x": 140, "y": 256, "width": 1260, "height": 100},
+    },
+}
+
+
+def highlight(pid, x, y, w, v):
+    """An important note with a small terminal inside it."""
+    key = f"{pid}-hl"
+    out = {key: {"template": "highlight", "parent": pid, "x": x, "y": y, "icon": v["icon"], "head": md(v["head"]), "body": md(v["body"]),
+                 "override": {"root": {"width": w}, "bg": {"width": w}, "head": {"width": w - 180}, "body": {"width": w - 180}}}}
+    d, th = terminal(key, 140, 116, w - 180, v["command"], key="cmd")
+    out.update(d)
+    return out, 380
+
+
 def install(pid, y, v):
     """The commands as two tinted steps with pictograms on the left, the project's tree on the right."""
     out = {}
     w = SPAN8
     hs = []
     yy = y
-    for i, st in enumerate(v["steps"]):
+    if v.get("terminal"):
+        d, th = terminal(pid, MARGIN, y, w, v["terminal"])
+        out.update(d)
+        yy = y + th
+    if v.get("highlight"):
+        yy += GAP
+        d, hh = highlight(pid, MARGIN, yy, w, v["highlight"])
+        out.update(d)
+        yy += hh
+    for i, st in enumerate(v.get("steps") or []):
         h = st.get("h", 260)
         k, val = with_icon(stage(pid, i + 1, MARGIN, yy, w, "code", st["head"], st["text"], h), st["icon"], w, h)
         k, val = styled((k, val), PAIR_STYLES["tinted"]["right"])
         out[k] = val
         yy += h
-        if i < len(v["steps"]) - 1:
+        if i < len(v.get("steps") or []) - 1:
             if v["steps"][i + 1].get("arrow", True):
                 k, val = vlink(pid, i + 1, round(MARGIN + w / 2 - LINK_W / 2), yy, 96)
                 out[k] = val
@@ -514,6 +609,8 @@ def main(slides_path, board_path):
     board["instances"] = {k: v for k, v in board["instances"].items() if not k.startswith("T-")}
     board["templates"]["pstage"] = pstage_template(board["templates"]["stage"])
     board["templates"].update(TREE_TEMPLATES)
+    board["templates"]["terminal"] = TERMINAL_TEMPLATE
+    board["templates"]["highlight"] = HIGHLIGHT_TEMPLATE
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     talk = sl["talk"]
     content = [s for s in sl["slides"]]

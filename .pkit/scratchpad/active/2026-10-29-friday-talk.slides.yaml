@@ -101,24 +101,24 @@ slides:
   show: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
   visual:
     kind: install
-    steps:
-    - icon: step-laptop
-      head: Once, on your machine
-      text: "$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n$ pkit --version"
-      h: 320
-    - icon: step-folder
-      head: In each project
-      text: '$ cd your-project
+    terminal: '# once, on your machine
 
-        $ pkit init'
-      h: 230
-    - icon: step-lock
-      head: Or keep pkit out of git
-      text: '$ pkit visibility private
+      $ uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
 
-        pkit stays in your clone only; nothing of it is committed'
-      h: 230
-      arrow: false
+      $ pkit --version
+
+
+      # in each project
+
+      $ cd your-project
+
+      $ pkit init'
+    highlight:
+      icon: step-lock-important
+      head: Don't want pkit in your repository?
+      command: $ pkit visibility private
+      body: 'pkit stays in your clone only, hidden by git''s own exclude file: nothing of it is committed, and your
+        agent still uses all of it.'
     tree:
     - - 0
       - - - your-project/

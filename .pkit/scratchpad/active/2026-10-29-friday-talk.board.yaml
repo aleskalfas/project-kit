@@ -1716,6 +1716,101 @@ templates:
         y: 6
         width: 600
         height: 58
+  terminal:
+    note: 'The deck''s terminal: a dark panel holding commands and their output, syntax coloured; made
+      by the slide generator.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 1440
+      height: 400
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 1440
+        height: 400
+        color: '#262626FF'
+        border_color: '#262626FF'
+        border_width: 1
+        ink: '@text_primary'
+      text:
+        type: text
+        html: '{html}'
+        style: '@style.body'
+        x: 40
+        y: 36
+        width: 1360
+        height: 328
+  highlight:
+    note: 'An important note: a light yellow box with a yellow bar on its left, a pictogram, a question
+      and a line of text; made by the slide generator.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 1440
+      height: 380
+    parts:
+      bg:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 1440
+        height: 380
+        color: '#FCF4D6FF'
+        border_color: '#FCF4D6FF'
+        border_width: 1
+        ink: '@text_primary'
+      bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 12
+        height: 380
+        color: '#F1C21BFF'
+        border_color: '#F1C21BFF'
+        border_width: 1
+        ink: '@text_primary'
+      icon:
+        type: image
+        file: 2026-10-29-friday-talk-icons/{icon}.png
+        x: 44
+        y: 28
+        width: 72
+        height: 72
+      head:
+        type: text
+        text: '{head}'
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 140
+        y: 36
+        width: 1260
+        height: 64
+      body:
+        type: text
+        text: '{body}'
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 140
+        y: 256
+        width: 1260
+        height: 100
 instances:
   L01:
     template: slide
@@ -2553,132 +2648,81 @@ instances:
       lead: 1d232d21-7416-4d29-81f5-2589778080ae
       rests: a586af72-6265-4445-844e-29cd672e822a
       num: f78307a8-cad9-47ae-a3f9-53053154edcb
-  T-install-s1:
-    template: pstage
+  T-install-term:
+    template: terminal
     parent: T-install
-    role: code
-    head: Once, on your machine
-    text: "$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n$ pkit\
-      \ --version"
     x: 128
     y: 576
+    html: <html v="1"><div><span style="color:#A8A8A8"># once, on your machine</span></div><div><span
+      style="color:#8D8D8D">$ </span><span style="color:#42BE65">uv</span><span style="color:#F4F4F4">
+      tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest</span></div><div><span style="color:#8D8D8D">$
+      </span><span style="color:#42BE65">pkit</span><span style="color:#F4F4F4"> --version</span></div><div><br></div><div><span
+      style="color:#A8A8A8"># in each project</span></div><div><span style="color:#8D8D8D">$ </span><span
+      style="color:#42BE65">cd</span><span style="color:#F4F4F4"> your-project</span></div><div><span
+      style="color:#8D8D8D">$ </span><span style="color:#42BE65">pkit</span><span style="color:#F4F4F4">
+      init</span></div></html>
     override:
       root:
         width: 1440
-        height: 320
-      box:
+        height: 394
+      bg:
         width: 1440
-        height: 320
-        color: '@role_code_bg'
-        border_color: '@role_code'
-        border_width: 4
-      head:
-        x: 120
-        width: 1288
-        height: 64
+        height: 394
       text:
-        x: 120
-        y: 100
-        width: 1288
-        height: 183
-    icon: step-laptop
+        width: 1360
+        height: 322
+        font_size: 32
     mural_ids:
-      root: 73c0e571-3348-478b-ac68-fc464642d54c
-      box: ff97a386-b2ac-40cf-981d-67e508cd910f
-      head: 5a97cd43-6dd7-4b9a-b79d-dd31cb173290
-      text: 2c8dbacb-fe5d-459e-aad5-3263916bea13
-      icon: ed77cb0f-d71d-44c5-a06e-e65b0b9376ee
-  T-install-l1:
-    template: link
+      root: d71cfd10-f161-4248-a2ea-15ef2764db03
+      bg: 27a9657c-dd64-4cc3-91f5-a1b4e2ae167b
+      text: ca7eb974-314b-4e79-b5dd-7f018054c739
+  T-install-hl:
+    template: highlight
     parent: T-install
-    x: 800
-    y: 896
-    x1: 48.0
-    y1: 8
-    x2: 48.0
-    y2: 88
-    tone: role_code
-    override:
-      root:
-        width: 96
-        height: 96
-      arrow:
-        border_width: 6
-    mural_ids:
-      root: 3af0598d-7c98-4e9a-8ae7-a1457f1e16a7
-      arrow: af653c6a-31c4-4cf4-beca-cffc50bcc51a
-  T-install-s2:
-    template: pstage
-    parent: T-install
-    role: code
-    head: In each project
-    text: '$ cd your-project
-
-      $ pkit init'
     x: 128
-    y: 992
+    y: 1018
+    icon: step-lock-important
+    head: Don't want pkit in your repository?
+    body: 'pkit stays in your clone only, hidden by git''s own exclude file: nothing of it is committed,
+      and your agent still uses all of it.'
     override:
       root:
         width: 1440
-        height: 230
-      box:
+      bg:
         width: 1440
-        height: 230
-        color: '@role_code_bg'
-        border_color: '@role_code'
-        border_width: 4
       head:
-        x: 120
-        width: 1288
-        height: 64
-      text:
-        x: 120
-        y: 100
-        width: 1288
-        height: 93
-    icon: step-folder
+        width: 1260
+      body:
+        width: 1260
     mural_ids:
-      root: 9f888265-ca94-493c-8da7-621c192a1d79
-      box: 83e9854a-951a-4d7a-87e3-c747e22a1869
-      head: 182a2b51-f18c-42c1-ae61-a3c5e43b3e90
-      text: 25845f38-fe83-4940-8b13-c94c7a16d561
-      icon: 4ec4d96a-fa45-498d-a180-23f2a4845345
-  T-install-s3:
-    template: pstage
-    parent: T-install
-    role: code
-    head: Or keep pkit out of git
-    text: '$ pkit visibility private
-
-      pkit stays in your clone only; nothing of it is committed'
-    x: 128
-    y: 1270
+      root: d96284b6-3a8a-4caa-a4f9-fdb856af0fc3
+      bg: 949709f6-88f9-4f0e-838c-176ed6709aeb
+      bar: 263b0658-45d9-467a-a041-701ffcdee1ff
+      head: fe5f0ca1-26ab-468b-b7af-e33120ce844a
+      body: f661938e-de98-4fde-b149-6a28002f0529
+      icon: 04176a25-a806-4fd7-8988-ad3812f3114f
+  T-install-hl-cmd:
+    template: terminal
+    parent: T-install-hl
+    x: 140
+    y: 116
+    html: <html v="1"><div><span style="color:#8D8D8D">$ </span><span style="color:#42BE65">pkit</span><span
+      style="color:#F4F4F4"> visibility private</span></div></html>
     override:
       root:
-        width: 1440
-        height: 230
-      box:
-        width: 1440
-        height: 230
-        color: '@role_code_bg'
-        border_color: '@role_code'
-        border_width: 4
-      head:
-        x: 120
-        width: 1288
-        height: 64
+        width: 1260
+        height: 118
+      bg:
+        width: 1260
+        height: 118
       text:
-        x: 120
-        y: 100
-        width: 1288
-        height: 93
-    icon: step-lock
+        width: 1180
+        height: 46
+        font_size: 32
     mural_ids:
-      root: aef48d24-8bb6-4ae3-92c5-02a352be4287
-      box: 0c5fab83-6174-456d-befb-baebe7549f63
-      head: 148fc438-32ba-48cc-bb5d-5e17a87db9c1
-      text: b61eda99-251f-4841-af24-df9f7232982f
-      icon: 63a48181-0bfc-46c2-9ea5-ab02e158cb76
+      root: d1a4f4a8-f915-46e7-bbba-4eb1b6eaa47d
+      bg: 1ca51296-851d-406f-b992-9deb1df055fe
+      text: ba7b334a-9b6e-4170-93bb-ae8630c8e16b
   T-install-tr1:
     template: tree_tag
     parent: T-install
@@ -2689,17 +2733,17 @@ instances:
     ink: text_primary
     override:
       root:
-        width: 339
+        width: 334
         height: 64
       bg:
-        width: 339
+        width: 334
         height: 64
       text:
-        width: 299
+        width: 294
     mural_ids:
-      root: 6e41a0ba-bffe-4ed8-ac74-d32c57aa4628
-      bg: e9ebbce9-3e26-4562-8bef-ecc9a6920cad
-      text: 25ec1b38-5ee2-427d-9f94-96238892f9f8
+      root: 326defb3-9e7b-4936-8b89-84f03c56cba8
+      bg: dc583591-a0ba-4ff4-b3d7-e2df9a2f50b4
+      text: cc9ef60f-b361-4c4d-82ab-c59f4aac55a1
   T-install-tr2:
     template: tree_bar
     parent: T-install
@@ -2725,21 +2769,21 @@ instances:
     ink: text_primary
     override:
       root:
-        width: 178
+        width: 174
         height: 64
       bg:
-        width: 178
+        width: 174
         height: 64
       text:
-        width: 138
+        width: 134
     mural_ids:
-      root: cec4f76f-8e4c-42de-8ba9-0e9b5387c335
-      bg: 970ef29a-5ca9-4164-92f9-55c98bfc68fc
-      text: 75e9eb6d-8a82-4d19-8baa-ecd7de18474f
+      root: 96e1454a-12ac-476a-bdee-a999a686a61a
+      bg: dfd9d5eb-cf5b-4297-b83a-ee939df811eb
+      text: 20f21924-0263-42aa-97a2-36c506c2fada
   T-install-tr4:
     template: tree_note
     parent: T-install
-    x: 1890
+    x: 1886
     y: 652
     text: the methodology
     override:
@@ -2749,8 +2793,8 @@ instances:
       text:
         width: 325
     mural_ids:
-      root: c90bb07d-31b2-4519-aa78-280559823863
-      text: 77b787e8-4192-4a38-b02d-2a861ddc1f72
+      root: cd05d2bd-9faa-47d5-aace-0df4f1c18135
+      text: 1bbf5dc6-614b-4ead-9fc6-a6ff5b9a3818
   T-install-tr5:
     template: tree_bar
     parent: T-install
@@ -2776,59 +2820,59 @@ instances:
     ink: text_primary
     override:
       root:
-        width: 270
+        width: 275
         height: 64
       bg:
-        width: 270
+        width: 275
         height: 64
       text:
-        width: 230
+        width: 235
     mural_ids:
-      root: e9c233c0-f801-4b99-8a9a-136548cb4311
-      bg: c801967e-180c-43f2-befc-6dca9f2c39e4
-      text: 32d51517-d141-4136-9ca1-1007c7a68853
+      root: 4b78d2fb-1cdf-44ac-9557-89b105338965
+      bg: e16ed1dc-c08f-4936-b47c-ed676882c5d9
+      text: c15355d1-47d5-4fab-95fc-5488959779ca
   T-install-tr7:
     template: tree_tag
     parent: T-install
-    x: 2030
+    x: 2035
     y: 728
     text: core/
     bg: role_code_bg
     ink: role_code
     override:
       root:
-        width: 155
+        width: 161
         height: 64
       bg:
-        width: 155
+        width: 161
         height: 64
       text:
-        width: 115
+        width: 121
     mural_ids:
-      root: fe488790-0b4c-48bb-88f6-ce047fd3460d
-      bg: 78675215-40e6-496b-8a50-65f466f90789
-      text: b6899cfb-4a72-4871-a7f4-7a93c00e8373
+      root: 6fe68fba-a25c-478a-84a8-feb5de403167
+      bg: bdef41d7-0fca-47e8-ac5e-57779e692bea
+      text: c7b46101-0585-4c0c-b935-2506eadd83b5
   T-install-tr8:
     template: tree_tag
     parent: T-install
-    x: 2201
+    x: 2212
     y: 728
     text: project/
     bg: role_people_bg
     ink: role_people
     override:
       root:
-        width: 224
+        width: 229
         height: 64
       bg:
-        width: 224
+        width: 229
         height: 64
       text:
-        width: 184
+        width: 189
     mural_ids:
-      root: 740bb9b3-7b7b-4525-b811-22588f12dc75
-      bg: a33446f7-c97e-4ed1-8df5-ae17814156b0
-      text: aa2783ba-059d-42da-b107-4e7288ce70f9
+      root: 38e93f35-10c7-4787-b633-9775ad9cb8dd
+      bg: 78480727-5764-4821-9298-3befe584a7dd
+      text: 4da076eb-7125-4d8e-9527-5f451087de2c
   T-install-tr9:
     template: tree_bar
     parent: T-install
@@ -2854,59 +2898,59 @@ instances:
     ink: text_primary
     override:
       root:
-        width: 178
+        width: 184
         height: 64
       bg:
-        width: 178
+        width: 184
         height: 64
       text:
-        width: 138
+        width: 144
     mural_ids:
-      root: 79030ce1-a1cf-4962-8518-3dba1c53f834
-      bg: ff1c7361-0571-4167-9a9f-b78819ab85da
-      text: 5888a940-a1f3-410e-8932-938fca370027
+      root: 8261ee64-7dff-4a4d-84db-89c186e6d370
+      bg: 2c8ff51a-75bb-4a47-97f1-32a26c5b24cf
+      text: d4a07583-0207-4d9f-8059-095374b6f2b7
   T-install-tr11:
     template: tree_tag
     parent: T-install
-    x: 1938
+    x: 1944
     y: 804
     text: core.md
     bg: role_code_bg
     ink: role_code
     override:
       root:
-        width: 201
+        width: 206
         height: 64
       bg:
-        width: 201
+        width: 206
         height: 64
       text:
-        width: 161
+        width: 166
     mural_ids:
-      root: da0c0ff3-a5a7-4276-bdf8-8b8a7762d123
-      bg: a04f6421-8bf3-4450-9995-229d264f049d
-      text: a3c8cf48-9db0-4872-b0be-4b03ef5f2258
+      root: 44ce0589-36df-4b1c-ad03-a7e6ffd0214d
+      bg: 5451cd30-ef0c-46aa-bbe2-802aa6ca9029
+      text: 0911165b-a4a8-49e5-abb5-68e576b31918
   T-install-tr12:
     template: tree_tag
     parent: T-install
-    x: 2155
+    x: 2166
     y: 804
     text: project.md
     bg: role_people_bg
     ink: role_people
     override:
       root:
-        width: 270
+        width: 275
         height: 64
       bg:
-        width: 270
+        width: 275
         height: 64
       text:
-        width: 230
+        width: 235
     mural_ids:
-      root: dc61d3e0-ce59-45fd-bae4-792bf0f21847
-      bg: 4bbcbe84-3dff-4e52-888f-2fe17a0ca583
-      text: 40943039-7aae-416f-8a4c-c278ed1e0521
+      root: 3cb167b5-4955-4dc0-b5bf-dbaa9a8de4f0
+      bg: 2ad7fa5b-ac02-49c9-89ae-5761b4223c14
+      text: c4f1aa5c-0840-498a-b314-af92b566a85d
   T-install-tr13:
     template: tree_bar
     parent: T-install
@@ -2932,59 +2976,59 @@ instances:
     ink: text_primary
     override:
       root:
-        width: 408
+        width: 383
         height: 64
       bg:
-        width: 408
+        width: 383
         height: 64
       text:
-        width: 368
+        width: 343
     mural_ids:
-      root: 033bb52b-0653-4178-980d-3bd5889385e1
-      bg: 70e38609-9a23-4cbc-811f-1f139111fd4b
-      text: 08b4b114-4fa4-4353-ad6c-76480275a086
+      root: 12f31e76-9370-4fe3-8c36-621c0f2f5f8d
+      bg: 482f06c8-6974-4e68-8146-3e2ba4cb806b
+      text: 7f23a54e-39a8-415e-914c-110c9411b379
   T-install-tr15:
     template: tree_tag
     parent: T-install
-    x: 2168
+    x: 2143
     y: 880
     text: core/
     bg: role_code_bg
     ink: role_code
     override:
       root:
-        width: 155
+        width: 161
         height: 64
       bg:
-        width: 155
+        width: 161
         height: 64
       text:
-        width: 115
+        width: 121
     mural_ids:
-      root: b8ee130f-1ea5-4ede-8311-9f3c7afd1ed7
-      bg: 872d66da-d1fc-4761-b847-352335c7297a
-      text: f35b8145-26bc-459d-bd78-6b4213394ded
+      root: 3251c8c8-8499-4e48-b0a6-757acba9dc8a
+      bg: 9c2e3e15-8194-424d-93e0-40f60285bcbb
+      text: 7090b0d4-6005-4853-ba0c-48e72d0dd60c
   T-install-tr16:
     template: tree_tag
     parent: T-install
-    x: 2339
+    x: 2320
     y: 880
     text: project/
     bg: role_people_bg
     ink: role_people
     override:
       root:
-        width: 224
+        width: 229
         height: 64
       bg:
-        width: 224
+        width: 229
         height: 64
       text:
-        width: 184
+        width: 189
     mural_ids:
-      root: 9392bf87-ea49-4571-884b-c6b24647f199
-      bg: 974ca9a3-0118-4a79-b5f2-c25423383e05
-      text: 571b8ebe-3c8a-4bad-adb8-706a7b36f5f3
+      root: 13aeb95a-a755-42dd-9906-c47e5873d8a9
+      bg: 26ab827c-54d2-4ec6-aa83-509c8f7a58d3
+      text: db2f95fe-cdda-498a-9ad7-7d2996fb4afa
   T-install-tr17:
     template: tree_bar
     parent: T-install
@@ -3010,21 +3054,21 @@ instances:
     ink: role_code
     override:
       root:
-        width: 224
+        width: 229
         height: 64
       bg:
-        width: 224
+        width: 229
         height: 64
       text:
-        width: 184
+        width: 189
     mural_ids:
-      root: 69d1b0a5-11af-4462-8c0b-a550b205e7d4
-      bg: 313aad10-5ab9-4a2c-95ae-2adb900d6475
-      text: 986eb5d9-938c-4f2b-8b70-d677578847ad
+      root: b17af3ae-f07b-4bb1-8848-82cd833a1b06
+      bg: 76618468-cbca-413a-bf9b-b1d484bfdebd
+      text: bb910ae9-275d-48ea-a6f9-417fed488f86
   T-install-tr19:
     template: tree_note
     parent: T-install
-    x: 1992
+    x: 1997
     y: 956
     text: what the tools read
     override:
@@ -3034,8 +3078,8 @@ instances:
       text:
         width: 401
     mural_ids:
-      root: 5df39720-2e26-4893-af25-95cf04de039f
-      text: e9d452b6-6235-41c6-b0a1-40278e372a7f
+      root: aaeec1f4-e1d5-4061-9a72-e73d5fbc1768
+      text: d8b32471-c8a5-4b24-8eb9-b5f6aa17c476
   T-install-tr20:
     template: tree_bar
     parent: T-install
@@ -3061,21 +3105,21 @@ instances:
     ink: role_code
     override:
       root:
-        width: 339
+        width: 344
         height: 64
       bg:
-        width: 339
+        width: 344
         height: 64
       text:
-        width: 299
+        width: 304
     mural_ids:
-      root: 518442a6-4b5d-4a78-a36f-9c4e60012f61
-      bg: 3fc62e15-add1-40e5-8365-eb18a7d2b4e4
-      text: 9f0d48b2-4a5d-4aa8-beec-55434a8ca6ca
+      root: eef465f7-7452-4332-ba48-91febeeb55a9
+      bg: 2cc612e6-d760-4db2-a7b8-6f27a14bfa49
+      text: b72eaec0-f646-46f7-8916-cb96307dfc71
   T-install-tr22:
     template: tree_note
     parent: T-install
-    x: 2107
+    x: 2112
     y: 1032
     text: the add-ons you install
     override:
@@ -3085,8 +3129,8 @@ instances:
       text:
         width: 477
     mural_ids:
-      root: 4a7a6e31-3149-4dbb-9bb7-ae16c7570211
-      text: 613d2ae7-0ed8-42c7-882f-03d1198201e3
+      root: e5b64224-3011-4ee3-84fa-392c68c7809c
+      text: 57505b88-c731-458d-a562-e67bbe5899b1
   T-install-tr23:
     template: tree_bar
     parent: T-install
@@ -3112,21 +3156,21 @@ instances:
     ink: role_code
     override:
       root:
-        width: 339
+        width: 344
         height: 64
       bg:
-        width: 339
+        width: 344
         height: 64
       text:
-        width: 299
+        width: 304
     mural_ids:
-      root: 94362bb8-e068-4ef3-bc0e-09ed149fbdd3
-      bg: a9efdef5-275d-46ee-acc8-3995c4f4d94f
-      text: 29701ee9-7456-4b94-a324-4340f9b7ebc0
+      root: 1a2dd832-8c3f-49da-8aa8-45fc576b9a0c
+      bg: b830caa2-efe0-42bd-84b4-2eca5c6b3d7e
+      text: ae164b09-5fbd-415f-98d0-e8dbcf26a63c
   T-install-tr25:
     template: tree_note
     parent: T-install
-    x: 2107
+    x: 2112
     y: 1108
     text: what is installed, at which version
     override:
@@ -3136,8 +3180,8 @@ instances:
       text:
         width: 705
     mural_ids:
-      root: 33a24da6-55b1-4801-bd60-b1b3f124ea7d
-      text: 082946ac-6aac-46c6-9d49-17ecb9a69268
+      root: 9b2a0bdc-66c5-4f4a-b53a-b7602e0825c2
+      text: 6afa1371-51ac-4bd1-8fa1-6946d49ac4c2
   T-install-tr26:
     template: tree_bar
     parent: T-install
@@ -3163,21 +3207,21 @@ instances:
     ink: role_code
     override:
       root:
-        width: 224
+        width: 220
         height: 64
       bg:
-        width: 224
+        width: 220
         height: 64
       text:
-        width: 184
+        width: 180
     mural_ids:
-      root: 750e2e99-f5cc-4f46-a300-bc6a44dd375c
-      bg: 845bd10b-fe12-437b-9d3b-26a9b6b82df1
-      text: 26c69c1b-b9e8-48d7-8271-615e5cbd8ef5
+      root: 84f13a0b-d5e4-4e27-bce7-75d1cb7db023
+      bg: b1faac4f-edc6-4414-a6a8-e32ce717364e
+      text: 37a99b30-1d13-409c-8ebb-91b01a92e613
   T-install-tr28:
     template: tree_note
     parent: T-install
-    x: 1936
+    x: 1932
     y: 1184
     text: skills and agents for Claude Code
     override:
@@ -3187,8 +3231,8 @@ instances:
       text:
         width: 667
     mural_ids:
-      root: 5a62f6f8-7689-4e32-86c7-dc0dfaea3a37
-      text: e9e3ddb0-3d93-4e31-a022-d765035d25f3
+      root: f6e8970b-3981-426d-a41b-be20443c78be
+      text: f4b3075e-82b0-4adc-a90c-339801080fa7
   T-install-tr29:
     template: tree_bar
     parent: T-install
@@ -3214,21 +3258,21 @@ instances:
     ink: role_people
     override:
       root:
-        width: 247
+        width: 294
         height: 64
       bg:
-        width: 247
+        width: 294
         height: 64
       text:
-        width: 207
+        width: 254
     mural_ids:
-      root: 65836ee8-7f93-4cc9-8a35-2afd49a1c3ba
-      bg: 13f30043-67e2-458a-b719-52039b8d1e2c
-      text: c78b462d-f8f0-4ed1-9c14-9a65e4d948b9
+      root: 8c83c8d2-655e-4f4c-b6e9-f747f5355fdf
+      bg: 9c9b0e47-b681-4b87-830c-4cd5965b3438
+      text: a2123b1e-b622-4249-843f-bdbbae5806c6
   T-install-tr31:
     template: tree_note
     parent: T-install
-    x: 1959
+    x: 2006
     y: 1260
     text: loads the rules into every session
     override:
@@ -3238,8 +3282,8 @@ instances:
       text:
         width: 686
     mural_ids:
-      root: c1b3b247-69cd-4314-8d5b-19f1ed5fc4d2
-      text: f7333021-bb95-4ad5-846b-7462816d7379
+      root: 5e4a880f-7733-4f29-aafb-42cd016a9e5a
+      text: 848e4723-5ab0-46a4-8c51-56cf44705729
   T-install-tr32:
     template: tree_bar
     parent: T-install
@@ -3265,21 +3309,21 @@ instances:
     ink: role_people
     override:
       root:
-        width: 178
+        width: 184
         height: 64
       bg:
-        width: 178
+        width: 184
         height: 64
       text:
-        width: 138
+        width: 144
     mural_ids:
-      root: bea299ec-7424-4f10-a88a-a12ff62f4ccb
-      bg: 602e9fab-fbe6-4d1c-b628-c1da2d02708e
-      text: a9d85d6b-9959-4fe4-beb2-aa60ec6f02ad
+      root: e1f7ae1c-fbf2-4dee-938a-0dbb8b0d1347
+      bg: c625bf1e-32c0-4ee6-9af3-09cbace55f17
+      text: 9fa2fa78-5f38-4b0c-b430-15357cefb04c
   T-install-tr34:
     template: tree_note
     parent: T-install
-    x: 1890
+    x: 1896
     y: 1336
     text: your code, untouched
     override:
@@ -3289,8 +3333,8 @@ instances:
       text:
         width: 420
     mural_ids:
-      root: 8e61fcc1-3bd4-4ba7-921d-1ee5508972ee
-      text: 785bc014-ea58-4566-b85a-8fc228175294
+      root: ae84dd92-932e-436b-9a67-a5754a5269da
+      text: 94cc69f0-748e-4c7e-a66d-8951c2a93843
   T-install-tr35:
     template: tree_bar
     parent: T-install
@@ -3331,38 +3375,38 @@ instances:
     ink: role_code
     override:
       root:
-        width: 776
+        width: 730
         height: 64
       bg:
-        width: 776
+        width: 730
         height: 64
       text:
-        width: 736
+        width: 690
     mural_ids:
-      root: c46db189-cba4-4551-a7c7-a3c92fcf8115
-      bg: 0e7e9910-e42c-4436-a6a0-01d81411bc88
-      text: 616670f9-2550-4a84-9f2e-100eb42bef8d
+      root: 89ea914b-dcad-4922-98b3-ae022785e70d
+      bg: 866caaaa-d30d-430b-b4d4-4dec6f4c6e44
+      text: 2b05fbe0-52c5-41fe-b1bc-6cb44bea6c61
   T-install-tr38:
     template: tree_tag
     parent: T-install
-    x: 2432
+    x: 2386
     y: 1428
     text: 'yours: never replaced'
     bg: role_people_bg
     ink: role_people
     override:
       root:
-        width: 523
+        width: 507
         height: 64
       bg:
-        width: 523
+        width: 507
         height: 64
       text:
-        width: 483
+        width: 467
     mural_ids:
-      root: d8d47dad-1b8c-4f93-8a24-b818bb67433f
-      bg: 2e552636-f052-4b22-bde1-f23f8173e146
-      text: 66a9651f-8497-4c97-9ec4-490b878637b6
+      root: 3a3cb56d-d2a3-44c5-8869-3cbea4c4fcb6
+      bg: 22422ef0-8baf-4323-b492-d13ee5587cca
+      text: 082220a8-3eb0-4ced-9eb1-365b9d363500
   T-part-P1:
     template: section
     part: '2'
