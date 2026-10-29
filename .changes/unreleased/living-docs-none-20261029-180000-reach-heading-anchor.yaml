@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  The README's anchor on the CLI reference's `rule-sets reach` entry follows
+  the entry's heading, which now names `[<path>...]` (#2273). Its text is
+  unchanged.
