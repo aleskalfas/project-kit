@@ -98,6 +98,11 @@ jobs:
           fi
           exec uv run --project "$decider" --frozen python "$decider/scripts/short_check.py"
 
+      # The full run runs the suite in eight workers on the runner's four cores
+      # (#2309). Its slow tests spend over half their time waiting on the
+      # processes they start, so four workers, `-n auto`'s count here, kept
+      # about two cores busy. A local run keeps `-n auto`. The suite's parallel
+      # pass ends by printing its 30 slowest tests, in this step's log.
       - name: Run the check aggregator
         if: github.event_name != 'pull_request' || steps.form.outputs.mode != 'short'
         env:
@@ -117,6 +122,8 @@ jobs:
           # the job's summary which form ran, so this step says it (ADR-067).
           PKIT_FORM_MODE: ${{ steps.form.outputs.mode }}
           PKIT_FORM_OUTCOME: ${{ steps.form.outcome }}
+          # The suite's workers, read by the aggregator's test step.
+          PKIT_TEST_WORKERS: "8"
         run: |
           if [ -z "$PKIT_FORM_MODE" ]; then
             printf '### `checks`: the full run\n\nThe step that decides the short check gave no answer (it ended in `%s`), so the run is full (ADR-067).\n' "$PKIT_FORM_OUTCOME" >> "$GITHUB_STEP_SUMMARY"

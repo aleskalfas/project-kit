@@ -105,8 +105,10 @@ run() {
 
 # The test step (#1182). The suite runs in parallel workers (pytest-xdist):
 # `-n auto`, or as many as $PKIT_TEST_WORKERS names (`0` runs it in this one
-# process). The tests marked `serial` cannot share the machine with other
-# workers; they run after the parallel pass, in one process, in the same step.
+# process). CI's full run names eight (#2309). The parallel pass ends by
+# printing its 30 slowest tests (`--durations=30`), in every run. The tests
+# marked `serial` cannot share the machine with other workers; they run after
+# the parallel pass, in one process, in the same step.
 #
 # At most two full suites run at once on a machine. The step first takes one of
 # two slots under the user's cache directory, and a run that finds both taken
@@ -178,7 +180,7 @@ free_test_slot() {
 run_tests() {
   local failed=0
   take_test_slot
-  uv run pytest -q -n "${PKIT_TEST_WORKERS:-auto}" -m "not serial" || failed=1
+  uv run pytest -q -n "${PKIT_TEST_WORKERS:-auto}" --durations=30 -m "not serial" || failed=1
   echo
   echo "-- the tests marked serial, in one process"
   # Exit 5 is pytest's "no tests collected": no test is marked serial.
