@@ -3,11 +3,12 @@ kind: minor
 custom:
   category: Added
 body: >
-  The core rules gain rule 24, in "Before changing files": an agent keeps the
-  accepted rules that rule sets bind on the files its change commits. Before
-  committing it runs `pkit rule-sets altered`, which lists them for every file
-  the change adds, edits or brings under a rule, and follows each rule it
-  lists as binding at the head; `pkit rule-sets reach` with the files is an
-  optional look before writing. An empty answer asks nothing. These are the
-  rules the rule-set reviewer judges the change against, and the rule adds no
-  rule of its own. No existing rule is renumbered.
+  The core rules gain rule 24, in "Before changing files": an agent follows
+  the accepted rules that rule sets bind on what its change owns. Before its
+  last commit it runs `pkit rule-sets altered` once and follows each rule it
+  lists as binding, at the head for a file the change adds, edits or brings
+  under a rule and at the base for one it removes; `pkit rule-sets reach` with
+  the files is an optional look before writing. Where `altered` lists none,
+  the rule asks nothing more. These are the rules the rule-set reviewer judges
+  the change against, and the rule adds none of its own. No existing rule is
+  renumbered.

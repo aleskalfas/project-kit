@@ -137,10 +137,10 @@ rules:
         anchors: {record: ["COR-065#7"]}
   RS-OPS-024:
     status: proposed
-    origin: {why: "A project's rules about its files are kept in ordinary rule sets, which bind on the files their scopes select, so a session keeps the rules that bind on what its change commits, read from the answer the rule-set reviewer judges the change by, and the rule adds no rule of its own (decided on project-kit#2260, added by project-kit#2274)."}
+    origin: {why: "A rule a project chooses to bind on its own files sits in an ordinary rule set and binds whoever writes them, so a session follows the rules the rule-set reviewer judges its change by, and this rule adds none (project-kit#2274)."}
     pkit:
       friction:
-        anchors: {record: ["COR-051#4", "COR-051#7", COR-057]}
+        anchors: {record: ["COR-051#4", "COR-051#7", "COR-057#1", "COR-057#2"]}
 ---
 
 *Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync edits neither (core rule 1). The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
@@ -255,9 +255,9 @@ How a session relates to repos other than the one it is rooted in.
 
 **When you change the system, read first the accepted records its files lead to.** The records are where the system is decided, and the files carry those decisions out. Run `pkit refs records-for` once, with every file your change will commit, and read each record it lists as tied to them directly, at the points it names. Where it reaches a file only through another artefact, read that artefact, the narrowest first, and follow the records it rests on that bear on your change. An empty answer is no sign that no record governs a file. What the lookup reads, and why: the decisions README, "Finding the records a path leads to" ([project-kit#2165](https://github.com/aleskalfas/project-kit/issues/2165)).
 
-### RS-OPS-024 — Keep the rule sets that bind on what you write
+### RS-OPS-024 — Follow the rule sets' rules on what your change owns
 
-**Keep the accepted rules that rule sets bind on the files your change commits.** Before writing, you may run `pkit rule-sets reach` with those files to see the rules on each one that exists. Before committing, run `pkit rule-sets altered`, which lists them for every file the change adds, edits or brings under a rule, and follow each rule it lists as binding at the head, in what your change owns (COR-057 point 2). An empty answer asks nothing. These are the rules the rule-set reviewer judges your change against, and this rule adds none (COR-051 points 4 and 7) ([project-kit#2274](https://github.com/aleskalfas/project-kit/issues/2274)).
+**Follow the accepted rules that rule sets bind on what your change owns (COR-057 point 2).** Before writing, you may run `pkit rule-sets reach` with your files to see the rules on each one that exists. Before your last commit, run `pkit rule-sets altered` once, and follow each rule it lists as binding: at the head for a file the change adds, edits or brings under a rule, and at the base for one it removes. Where it lists none, this rule asks nothing more. These are the rules the rule-set reviewer judges your change against, and this rule adds none (COR-051 points 4 and 7, COR-057 point 1, [project-kit#2274](https://github.com/aleskalfas/project-kit/issues/2274)).
 
 ## Where rationale lives
 
