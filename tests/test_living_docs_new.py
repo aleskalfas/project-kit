@@ -33,15 +33,24 @@ capability installed (the fixture of `test_living_docs_spaces.py`):
   definition.
 
 Each dry run writes nothing.
+
+The command's `main` runs in the test's own process, off a terminal, and every
+`pkit` it calls is answered by the backbone's CLI in this process too
+(`tests/in_process.py`). Two tests keep a real process, each marked with why:
+the space form's and the page form's end-to-end tests. There the `pkit` the
+script calls is the real CLI under this interpreter (`pkit_on_path`), so no test
+reaches `uv` or the network.
 """
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import re
 import subprocess
 import sys
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +60,7 @@ from click.testing import CliRunner
 from project_kit.cli import main
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.in_process import InProcessPkit, load, route_pkit, run_main
 from tests.test_living_docs_spaces import (
     CONFIG,
     DEFINITIONS,
@@ -65,66 +75,6 @@ from tests.test_living_docs_spaces import (
 
 NEW = LD / "scripts" / "new.py"
 
-#: Runs a stamp in-process with one of its readings made to fail, as the command
-#: would meet it, and prints how it ended. A capability's `_lib` is imported only in
-#: a process of its own, never beside another capability's.
-PROBE = """
-import subprocess
-import sys
-from pathlib import Path
-
-sys.path.insert(0, sys.argv[1])
-from _lib import stamp
-from _lib.binding import Unreadable, read_binding
-
-case, root, calls = sys.argv[2], Path.cwd(), []
-
-
-def flaky(error):
-    def reach(at):
-        calls.append(at)
-        if error is not None and len(calls) > (0 if case == "unread-before" else 1):
-            raise error
-        return read_binding(at)
-
-    return reach
-
-
-def fail(_root):
-    raise stamp.NotRecorded("the backbone could not write it")
-
-
-def answered(code):
-    def run(argv, **kwargs):
-        print(" ".join(argv))
-        return subprocess.CompletedProcess(argv, code)
-
-    return run
-
-
-page = stamp.PageRequest("docs/new.md", "user", "signpost", "user", "New")
-apart = stamp.Separation()
-try:
-    if case in ("asked", "declined"):
-        stamp.separate_roots(
-            root, "user", apart, rerun="pkit living-docs new space user",
-            run=answered(0 if case == "asked" else 1), interactive=lambda: True,
-        )
-    elif case in ("unread-before", "unread-after"):
-        stamp.stamp_page(root, page, reach=flaky(Unreadable("no answer")))
-    elif case == "interrupted":
-        stamp.stamp_space(root, stamp.SpaceRequest("user"), reach=flaky(KeyboardInterrupt()))
-    elif case == "record-fails":
-        stamp.stamp_space(
-            root, stamp.SpaceRequest("user"), record=fail, is_recorded=lambda _root: False
-        )
-except stamp.Refused as exc:
-    print(f"refused: {exc}")
-except KeyboardInterrupt:
-    print("interrupted")
-else:
-    print("stamped")
-"""
 LOCATIONS = f"{LD.as_posix()}/project/docs-locations.yaml"
 
 #: The top-level README as a place outside the roots that gives the page type, as a
@@ -139,7 +89,7 @@ UNDEFINED = {
 
 
 @pytest.fixture
-def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
+def project(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """An adopter with living-docs installed, two separate roots, one page per
     space's entry, a decision record, and both spaces' definitions — clean."""
     repo = make_adopter_repo(capabilities=("living-docs",))
@@ -165,39 +115,99 @@ def fresh(project: AdopterRepo) -> AdopterRepo:
     return project
 
 
-def new(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit living-docs new …`, run as the backbone runs it, off a terminal."""
-    return subprocess.run(
-        [sys.executable, str(repo.root / NEW), *args],
-        cwd=repo.root,
-        stdin=subprocess.DEVNULL,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def new(
+    repo: AdopterRepo, *args: str, in_a_process: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """`pkit living-docs new …`, as the backbone runs it, off a terminal: its `main` in
+    this process from the repository's root, standard input no terminal, every `pkit` it
+    calls answered here too. `in_a_process` runs the adopter's copy of the script as a
+    process of its own instead, its standard input empty, for a test marked `process`."""
+    if in_a_process:
+        return subprocess.run(
+            [sys.executable, str(repo.root / NEW), *args],
+            cwd=repo.root,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    script, backbone = load("living-docs", "new.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone)
+        patched.setattr(sys, "stdin", io.StringIO())
+        return run_main(script, *args, cwd=repo.root)
 
 
 def page(
-    repo: AdopterRepo, file: str, *args: str, dry_run: bool = False
+    repo: AdopterRepo, file: str, *args: str, dry_run: bool = False, in_a_process: bool = False
 ) -> subprocess.CompletedProcess[str]:
     """A page stamp with the space, reader, kind and title a test does not care about."""
     defaults = {"--space": "user", "--kind": "signpost", "--reader": "user", "--title": "Guide"}
     given = dict(zip(args[::2], args[1::2], strict=True))
     flags = [part for key, value in {**defaults, **given}.items() for part in (key, value)]
-    return new(repo, "page", file, *flags, *(["--dry-run"] if dry_run else []))
+    dry = ["--dry-run"] if dry_run else []
+    return new(repo, "page", file, *flags, *dry, in_a_process=in_a_process)
 
 
 def probe(repo: AdopterRepo, case: str) -> str:
-    """How the stamp ended in `case` of `PROBE`."""
-    completed = subprocess.run(
-        [sys.executable, "-c", PROBE, str(repo.root / LD / "scripts"), case],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert completed.returncode == 0, completed.stderr
-    return completed.stdout.strip()
+    """How a stamp ended in `case`, with one of its readings made to fail as the command
+    would meet it: the stamp's own functions called in this process, from the repository's
+    root, every `pkit` they call answered here too. What the stamp prints, and how it
+    ended, are the lines returned."""
+    stamp, binding, backbone = load("living-docs", "stamp", "binding", "backbone")
+    root = repo.root
+    calls: list[Path] = []
+
+    def flaky(error: BaseException | None) -> Callable[[Path], Any]:
+        def reach(at: Path) -> Any:
+            calls.append(at)
+            if error is not None and len(calls) > (0 if case == "unread-before" else 1):
+                raise error
+            return binding.read_binding(at)
+
+        return reach
+
+    def fail(_root: Path) -> None:
+        raise stamp.NotRecorded("the backbone could not write it")
+
+    def answered(code: int) -> Callable[..., subprocess.CompletedProcess[str]]:
+        def run(argv: list[str], **_options: Any) -> subprocess.CompletedProcess[str]:
+            print(" ".join(argv))
+            return subprocess.CompletedProcess(argv, code)
+
+        return run
+
+    page = stamp.PageRequest("docs/new.md", "user", "signpost", "user", "New")
+    out = io.StringIO()
+    with pytest.MonkeyPatch.context() as patched, contextlib.redirect_stdout(out):
+        route_pkit(patched, backbone)
+        try:
+            if case in ("asked", "declined"):
+                stamp.separate_roots(
+                    root,
+                    "user",
+                    stamp.Separation(),
+                    rerun="pkit living-docs new space user",
+                    run=answered(0 if case == "asked" else 1),
+                    interactive=lambda: True,
+                )
+            elif case in ("unread-before", "unread-after"):
+                stamp.stamp_page(root, page, reach=flaky(binding.Unreadable("no answer")))
+            elif case == "interrupted":
+                stamp.stamp_space(
+                    root, stamp.SpaceRequest("user"), reach=flaky(KeyboardInterrupt())
+                )
+            elif case == "record-fails":
+                stamp.stamp_space(
+                    root, stamp.SpaceRequest("user"), record=fail, is_recorded=lambda _root: False
+                )
+        except stamp.Refused as exc:
+            print(f"refused: {exc}")
+        except KeyboardInterrupt:
+            print("interrupted")
+        else:
+            print("stamped")
+    return out.getvalue().strip()
 
 
 def refused(completed: subprocess.CompletedProcess[str]) -> str:
@@ -273,13 +283,16 @@ def test_a_page_is_stamped_into_each_root_and_an_assigned_place(project: Adopter
     assert errors(run(project)) == []
 
 
+@pytest.mark.process(
+    "the page form's end-to-end test: the command as a process of its own, its exit code "
+    "and the notes a person reads, and the pkit it starts"
+)
 def test_the_stamp_lists_the_template_placeholders_left_and_never_a_title_of_its_own(
-    project: AdopterRepo,
+    project: AdopterRepo, pkit_on_path: Path
 ) -> None:
-    out = stamped(page(project, "docs/maps.md", "--title", "Map<K, V> reference"))
-    assert "\n# Map<K, V> reference\n" in (project.root / "docs/maps.md").read_text(
-        encoding="utf-8"
-    )
+    title = "Map<K, V> reference"
+    out = stamped(page(project, "docs/maps.md", "--title", title, in_a_process=True))
+    assert f"\n# {title}\n" in (project.root / "docs/maps.md").read_text(encoding="utf-8")
     listed = [line.strip() for line in out.splitlines() if line.startswith("  docs/maps.md:")]
     assert listed == [
         "docs/maps.md:10: <One sentence: what this folder is for, for this reader.>",
@@ -582,7 +595,7 @@ def test_a_space_the_project_adds_is_declared_by_its_entry(fresh: AdopterRepo) -
         "types": ["living-docs:page"],
     }
     stamped(page(fresh, "api/endpoints.md", "--space", "api", "--kind", "reference"))
-    reach = subprocess.run(
+    reach = InProcessPkit()(
         ["pkit", "rule-sets", "reach", "--json"],
         cwd=fresh.root,
         capture_output=True,
@@ -738,8 +751,14 @@ def _internal_root(repo: AdopterRepo) -> Any:
     return YAML(typ="safe").load((repo.root / CONFIG).read_text(encoding="utf-8"))["docs"]
 
 
-def test_roots_that_are_one_folder_are_set_apart_before_the_space(shared: AdopterRepo) -> None:
-    out = stamped(new(shared, "space", "user", "--yes"))
+@pytest.mark.process(
+    "the space form's end-to-end test: the stamp's own line and the output of the pkit "
+    "config set it starts share one standard output, in order, across two processes"
+)
+def test_roots_that_are_one_folder_are_set_apart_before_the_space(
+    shared: AdopterRepo, pkit_on_path: Path
+) -> None:
+    out = stamped(new(shared, "space", "user", "--yes", in_a_process=True))
     assert out.startswith(f"{WHY}\nset docs.internal = tech-docs  (.pkit/project/config.yaml)\n")
     assert _internal_root(shared) == {"user": "docs/", "internal": "tech-docs"}
     assert f"stamped {DEFINITIONS}/user.md: the definition of space 'user'" in out
@@ -904,7 +923,7 @@ def test_a_space_and_a_page_so_created_pass_validation_once_filled(fresh: Adopte
     assert validate_friction(fresh.root).errors == ()
     result = CliRunner().invoke(main, ["--color", "never", "validate", "--only", "rule-sets"])
     assert result.exit_code == 0, result.output
-    reach = subprocess.run(
+    reach = InProcessPkit()(
         ["pkit", "rule-sets", "reach", "--json"],
         cwd=fresh.root,
         capture_output=True,
