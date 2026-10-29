@@ -40,6 +40,10 @@ suite in one process. The two passes by hand:
 A plain `uv run pytest -q` still runs everything in one process, the `serial`
 tests included.
 
+**The parallel pass ends by printing its 30 slowest tests** (`--durations=30`),
+in every run: in a local run's output, and in CI's log of the step that runs the
+aggregator.
+
 **A test that cannot share the machine with other workers** is marked
 `@pytest.mark.serial`. Make it worker-safe instead when you can — whatever it
 writes under `tmp_path`, every change to the environment or the working

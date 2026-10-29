@@ -27,6 +27,8 @@ The test step (#1182):
   `PKIT_TEST_WORKERS` names, and then the tests marked `serial` in one
   process; a serial pass with nothing marked passes, a failing one fails the
   step;
+- the parallel pass prints its 30 slowest tests, whatever the count of
+  workers (#2309);
 - at most two full suites run at once on a machine: a third waits, says so and
   names the two it waits for, and takes a slot once one frees — when a run
   ends, killed included;
@@ -108,6 +110,9 @@ esac
 """
 
 WAIT_SECONDS = 20
+
+#: The parallel pass as a local run, which names no count of workers, hands it to `uv`.
+PARALLEL_PASS = "pytest -q -n auto --durations=30 -m not serial"
 
 
 class Checkout:
@@ -204,7 +209,7 @@ def test_the_type_check_runs_after_the_lint_and_format_and_before_the_tests(
         "ruff check .",
         "ruff format --check .",
         "python scripts/pyright_ratchet.py",
-        "pytest -q -n auto -m not serial",
+        PARALLEL_PASS,
     ]
     positions = [steps.index(step) for step in order]
     assert positions == sorted(positions)
@@ -288,16 +293,22 @@ def test_the_contents_lists_run_after_the_console_fences_and_a_stale_one_fails_t
     assert contents < steps.index("pkit migrations check-diff")
 
 
-@pytest.mark.parametrize(("workers", "expected"), [(None, "-n auto"), ("3", "-n 3"), ("0", "-n 0")])
-def test_the_suite_runs_in_parallel_workers_then_the_serial_tests_in_one_process(
+@pytest.mark.parametrize(
+    ("workers", "expected"),
+    [(None, "-n auto"), ("8", "-n 8"), ("3", "-n 3"), ("0", "-n 0")],
+    ids=["local", "ci", "three", "one-process"],
+)
+def test_the_suite_runs_in_parallel_workers_printing_its_slowest_then_the_serial_tests(
     checkout: Checkout, workers: str | None, expected: str
 ) -> None:
+    """The parallel pass prints its 30 slowest tests in every run, CI's eight workers and
+    a local run's `-n auto` alike; the serial pass prints none (#2309)."""
     env = {} if workers is None else {"PKIT_TEST_WORKERS": workers}
     done = checkout.check(**env)
 
     assert done.returncode == 0, done.stdout + done.stderr
     assert checkout.log.read_text().splitlines() == [
-        f"-q {expected} -m not serial",
+        f"-q {expected} --durations=30 -m not serial",
         "-q -m serial",
     ]
     assert "-- tests: ok" in done.stdout
@@ -383,10 +394,10 @@ def test_the_short_check_runs_every_line_but_the_suite_and_the_tests_marked_answ
     assert full.returncode == 0, full.stdout + full.stderr
     assert done.returncode == 0, done.stdout + done.stderr
     steps = checkout.steps.read_text().splitlines()
-    suite = {"pytest -q -n auto -m not serial", "pytest -q -m serial"}
+    suite = {PARALLEL_PASS, "pytest -q -m serial"}
     # The full run's test step also takes a slot, through `python -`.
     assert steps == [
-        "pytest -q -m answers" if step == "pytest -q -n auto -m not serial" else step
+        "pytest -q -m answers" if step == PARALLEL_PASS else step
         for step in full_steps
         if step != "pytest -q -m serial" and not step.startswith("python - ")
     ]
