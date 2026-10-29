@@ -265,11 +265,64 @@ slides:
         - comment
     font_size: 26
   limit: ''
-  minutes: 2
+  minutes: 1.5
   notes: 'pkit init writes pkit''s files into .pkit/, merges your AI tool''s settings without overwriting them,
     and installs the skills and agents where Claude Code reads them. Today that is Claude Code. In a newcomer''s
     trial run, the setup committed 689 files for a 4-file project. What sits in the agent''s context: one rules
     file, and one line per skill and agent.'
+- id: fits
+  part: P0
+  title: How pkit fits together
+  message: 'Decisions are the source: everything else in pkit carries them out, and is checked against them.'
+  problem: ''
+  does: []
+  show: 'This week: pkit wrote this order down as a decision of its own, COR-065'
+  visual:
+    kind: pyramid
+    levels:
+    - head: Decisions
+      text: The why, accepted by you.
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: Working rules · schemas · processes
+      text: The exact what, read by every session and tool.
+      fill: '#6929C4FF'
+      ink: '@text_on_color'
+    - head: Skills · agents · permissions
+      text: How agents act, in which role, with what rights.
+      fill: '#BE95FFFF'
+      ink: '@text_primary'
+    - head: pkit's commands and checks
+      text: Carry out what is decided, and check every change.
+      fill: '#D4BBFFFF'
+      ink: '@text_primary'
+    - head: Your code and documents
+      text: The work itself, tied to what it depends on.
+      fill: '#E8DAFFFF'
+      ink: '@text_primary'
+    side:
+    - head: Scratchpad notes
+      text: They explore a question before it is decided.
+      arrow: left
+      at: 0
+      h: 240
+    - head: Carried out
+      text: Each layer carries out the decisions above it.
+      arrow: down
+      at: 300
+      h: 260
+    - head: Checked
+      text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when you
+        accept a new one.
+      arrow: up
+      at: 620
+      h: 312
+  limit: ''
+  minutes: 1.5
+  notes: 'Where no decision exists yet, what was built stands, until a change makes that choice; then the decision
+    comes first. A layer that disagrees with a decision falls short and is fixed, or a new decision is written
+    and you accept it. Most layers are written by hand, so they can lag; what is tied to a decision is flagged
+    when the decision changes. The next slides take the layers from the top.'
 - id: decisions
   part: P1
   title: Decision records
@@ -407,7 +460,7 @@ slides:
     code: "$ pkit validate\n  warning  agents/code-reviewer.md:42\n    → '[software-engineering:DEC-002] D4'\n \
       \     names point D4, which DEC-002\n      does not hold\n  16 validators ran; 0 errors\n"
   limit: 'It checks structure, not meaning: a record can be valid and still wrong.'
-  minutes: 1.5
+  minutes: 1
   notes: 61 warnings like this one had piled up, because each check started as a warning. Cleared this week; each
     kind will fail from now on.
 - id: schemas
@@ -604,7 +657,7 @@ slides:
       head: Reviewers, then merge
       text: Reviewers check each result; on your yes, the agent merges it.
   limit: 'GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual.'
-  minutes: 3.5
+  minutes: 3
   notes: 'Underneath: a structure (EPIC, Feature, Task), a lifecycle with gates, merging with reviewers, planning
     a batch of work in one approval, fixers after a merge, a board. Parallel agents in separate clones also exist,
     still experimental (the last slide).'

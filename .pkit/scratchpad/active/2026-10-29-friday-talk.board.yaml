@@ -2292,7 +2292,7 @@ instances:
     lead: Your AI agent works fast, and forgets everything your project decided.
     rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
     n: 1
-    total: 14
+    total: 15
     override:
       rests:
         text: 'The question: how do you make it work your project''s way, without a heavy framework?'
@@ -2658,7 +2658,7 @@ instances:
       either pkit's or yours.
     rests: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
     n: 2
-    total: 14
+    total: 15
     override:
       rests:
         text: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
@@ -2742,6 +2742,375 @@ instances:
     mural_ids:
       root: 275fcb49-4798-4bb9-8b63-f88ad5929b5e
       img: 666e806f-25e3-4973-b61f-8324a2b96837
+  T-fits:
+    template: slide
+    title: How pkit fits together
+    lead: 'Decisions are the source: everything else in pkit carries them out, and is checked against
+      them.'
+    rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
+    n: 3
+    total: 15
+    override:
+      rests:
+        text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
+    mural_ids:
+      root: 7ae40ea5-ae16-473c-b558-0f20b19211de
+      bg: b5fd1752-824c-40dc-a0f9-1534a6a28900
+      title: 7c6b01cd-32c9-4d55-8756-ea02cdfe5388
+      lead: d3eddb56-2c9a-4704-93a9-d5ed8f1c7fbf
+      rests: 472a5c77-9905-4170-a869-2b22212bd771
+      num: ea3c5f8c-fc25-43d1-a188-bbe7149eea05
+  T-fits-s1:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Decisions
+    text: The why, accepted by you.
+    x: 800
+    y: 576
+    override:
+      root:
+        width: 760
+        height: 172
+      box:
+        width: 760
+        height: 172
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+      head:
+        x: 32
+        y: 22
+        width: 696
+        height: 64
+        align: center
+        ink: '@text_on_color'
+      text:
+        x: 32
+        y: 92
+        width: 696
+        height: 62
+        align: center
+        ink: '@text_on_color'
+      dot:
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+    mural_ids:
+      root: 87b6b869-f0f7-4091-901a-ae81455cee34
+      box: f2370a34-68f0-4e0d-a166-f034bfa6cc5e
+      dot: 6e347311-b734-4100-b46c-50648680d19a
+      head: ea8a7831-96b1-4860-8d63-c73773930b7c
+      text: dd97c748-50bb-4c10-9b75-2094e48c6654
+  T-fits-s2:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Working rules · schemas · processes
+    text: The exact what, read by every session and tool.
+    x: 650
+    y: 766
+    override:
+      root:
+        width: 1060
+        height: 172
+      box:
+        width: 1060
+        height: 172
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+      head:
+        x: 32
+        y: 22
+        width: 996
+        height: 64
+        align: center
+        ink: '@text_on_color'
+      text:
+        x: 32
+        y: 92
+        width: 996
+        height: 62
+        align: center
+        ink: '@text_on_color'
+      dot:
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+    mural_ids:
+      root: d1f48eec-b19d-4598-bf7b-8d5cb1c97b5e
+      box: be6b9634-a871-4cd2-a0df-ad88d2bb4322
+      dot: af765b44-b8d8-4412-87ae-9c4a511b9ed0
+      head: ac9079f1-c6d0-4687-9f07-517e030dd514
+      text: 66abd493-a8b7-449e-aed1-565a6722af11
+  T-fits-s3:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Skills · agents · permissions
+    text: How agents act, in which role, with what rights.
+    x: 500
+    y: 956
+    override:
+      root:
+        width: 1360
+        height: 172
+      box:
+        width: 1360
+        height: 172
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+      head:
+        x: 32
+        y: 22
+        width: 1296
+        height: 64
+        align: center
+        ink: '@text_primary'
+      text:
+        x: 32
+        y: 92
+        width: 1296
+        height: 62
+        align: center
+        ink: '@text_primary'
+      dot:
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+    mural_ids:
+      root: cd9c306f-254a-4ab5-b721-7cab51c009a5
+      box: 93371638-de2d-4b31-9afb-138e9e2f53a2
+      dot: dcf5b34c-ddee-4dc8-9b33-c5606e2d58da
+      head: 895942ec-3b01-4e2c-baee-7d4a552a2de4
+      text: ea7c5bb0-dbc3-437b-8abc-38acccfc0de1
+  T-fits-s4:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: pkit's commands and checks
+    text: Carry out what is decided, and check every change.
+    x: 350
+    y: 1146
+    override:
+      root:
+        width: 1660
+        height: 172
+      box:
+        width: 1660
+        height: 172
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+      head:
+        x: 32
+        y: 22
+        width: 1596
+        height: 64
+        align: center
+        ink: '@text_primary'
+      text:
+        x: 32
+        y: 92
+        width: 1596
+        height: 62
+        align: center
+        ink: '@text_primary'
+      dot:
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+    mural_ids:
+      root: 7d4f49bb-5696-4743-a8d2-c45f19abfc45
+      box: 2251d07b-367b-4bc7-a45c-26a7b0d3fb6f
+      dot: 19720d86-6f21-41a1-a7af-4a609036ce77
+      head: f81cf2c3-1fc8-4a0d-aaea-dca7a2c5f9ab
+      text: fde4d64f-8451-45ac-b74e-78fe7285fc1b
+  T-fits-s5:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Your code and documents
+    text: The work itself, tied to what it depends on.
+    x: 200
+    y: 1336
+    override:
+      root:
+        width: 1960
+        height: 172
+      box:
+        width: 1960
+        height: 172
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+      head:
+        x: 32
+        y: 22
+        width: 1896
+        height: 64
+        align: center
+        ink: '@text_primary'
+      text:
+        x: 32
+        y: 92
+        width: 1896
+        height: 62
+        align: center
+        ink: '@text_primary'
+      dot:
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+    mural_ids:
+      root: 16c7b973-3463-42d4-8c33-1ccbbd4dd24f
+      box: d512668f-ae57-4432-ac2e-36358cc18e19
+      dot: 74120842-ca4f-4656-a9cd-7a0c39a08c1f
+      head: a05e148e-fe67-4191-8e7c-3dc5836af6a3
+      text: 08b263d6-2d5b-4b4b-98aa-5936f52f26e8
+  T-fits-s50:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Scratchpad notes
+    text: They explore a question before it is decided.
+    x: 2352
+    y: 576
+    override:
+      root:
+        width: 720
+        height: 240
+      box:
+        width: 720
+        height: 240
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 616
+        height: 64
+      text:
+        y: 100
+        width: 656
+        height: 103
+    mural_ids:
+      root: bfb12a7b-906e-4b43-b1e0-353e50994fa8
+      box: 2166b544-652a-4265-ab03-106ce9fce299
+      dot: 1f1bb49a-43b4-4ee8-87ea-d455914f630e
+      head: 2d418a77-554c-4a5d-94d8-6017322332e0
+      text: 6637e7cf-bb80-4055-8518-e370256d7eeb
+  T-fits-l101:
+    template: link
+    parent: T-fits
+    x: 1576
+    y: 576
+    x1: 760
+    y1: 86.0
+    x2: 8
+    y2: 86.0
+    tone: role_code
+    override:
+      root:
+        width: 768
+        height: 172
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 1fccf1e9-08b0-471c-b112-1da86c0831d6
+      arrow: 3b4fe8a8-7b08-438b-a86f-64d43a2b02a3
+  T-fits-s51:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Carried out
+    text: Each layer carries out the decisions above it.
+    x: 2352
+    y: 876
+    override:
+      root:
+        width: 720
+        height: 260
+      box:
+        width: 720
+        height: 260
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 616
+        height: 64
+      text:
+        y: 100
+        width: 656
+        height: 123
+    mural_ids:
+      root: 26ab10b1-b11a-4a19-a1ae-9028960d6b3a
+      box: 87648629-ddfd-4841-a703-27ad40264aba
+      dot: 07685e1c-eb9b-419a-8a6c-6c4f37510e7c
+      head: 45364987-9d00-42fd-b67f-156a995b3c90
+      text: 8f3bb1fd-4b69-4bad-bb92-05ede6fba305
+  T-fits-l102:
+    template: link
+    parent: T-fits
+    x: 2240
+    y: 876
+    x1: 48.0
+    y1: 8
+    x2: 48.0
+    y2: 252
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 260
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 52096782-988c-4455-8bc4-1bef5305faea
+      arrow: fdcde770-c9c7-4af2-bdcd-9582f504d3ac
+  T-fits-s52:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Checked
+    text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when
+      you accept a new one.
+    x: 2352
+    y: 1196
+    override:
+      root:
+        width: 720
+        height: 312
+      box:
+        width: 720
+        height: 312
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 616
+        height: 64
+      text:
+        y: 100
+        width: 656
+        height: 175
+    mural_ids:
+      root: 58dbc611-ef09-411a-9310-82f9858876ac
+      box: 2ef3b496-0e50-4751-8e76-aec4e0dadd74
+      dot: d1609fec-f8ca-4efe-aafe-eabbd5ad4e21
+      head: 8fd28044-3046-4116-852e-642a89d4edd5
+      text: 5e311427-6122-47a1-8ff9-c0d9f53566f6
+  T-fits-l103:
+    template: link
+    parent: T-fits
+    x: 2240
+    y: 1196
+    x1: 48.0
+    y1: 304
+    x2: 48.0
+    y2: 8
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 312
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: b7b7d91b-b64e-4be3-bda7-696e9605b2b1
+      arrow: a976283b-4373-44b9-8983-e55193829183
   T-part-P1:
     template: section
     part: '2'
@@ -2761,8 +3130,8 @@ instances:
       builds on it.
     rests: 'This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted,
       then built'
-    n: 3
-    total: 14
+    n: 4
+    total: 15
     override:
       rests:
         text: 'This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted,
@@ -2987,8 +3356,8 @@ instances:
     lead: Records, docs and code cite each other; one command checks every citation, on every change.
     rests: 'This week: two pull requests each added a record numbered DEC-062; a check caught it before
       merge'
-    n: 4
-    total: 14
+    n: 5
+    total: 15
     override:
       rests:
         text: 'This week: two pull requests each added a record numbered DEC-062; a check caught it before
@@ -3105,8 +3474,8 @@ instances:
     lead: 'Rules precise enough for a program are data the tools read, and a staged process is data too:
       every move is checked and logged.'
     rests: 'This week: who may move an issue back, and how strictly, is two settings in workflow.yaml'
-    n: 5
-    total: 14
+    n: 6
+    total: 15
     override:
       rests:
         text: 'This week: who may move an issue back, and how strictly, is two settings in workflow.yaml'
@@ -3410,8 +3779,8 @@ instances:
     title: What every session is told
     lead: Every session loads the same working rules, each pointing to where its reason is written.
     rests: 'One of them: retry once a step that failed for an outside cause, then stop'
-    n: 6
-    total: 14
+    n: 7
+    total: 15
     override:
       rests:
         text: 'One of them: retry once a step that failed for an outside cause, then stop'
@@ -3523,8 +3892,8 @@ instances:
     lead: A skill carries the judgement; the command it pairs with does the part that must come out the
       same every time.
     rests: A record once filed by hand got the wrong number; since then agents must use the skill
-    n: 7
-    total: 14
+    n: 8
+    total: 15
     override:
       rests:
         text: A record once filed by hand got the wrong number; since then agents must use the skill
@@ -3610,8 +3979,8 @@ instances:
     lead: 'No agent judges its own work: separate reviewers each catch one kind of failure.'
     rests: 'This week: the critic changed two designs; reviewers caught two doc claims that were no longer
       true'
-    n: 8
-    total: 14
+    n: 9
+    total: 15
     override:
       rests:
         text: 'This week: the critic changed two designs; reviewers caught two doc claims that were no
@@ -3762,8 +4131,8 @@ instances:
     lead: What agents may do is your project's written rules, not the tool's guesses.
     rests: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent
       said no'
-    n: 9
-    total: 14
+    n: 10
+    total: 15
     override:
       rests:
         text: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that
@@ -3851,8 +4220,8 @@ instances:
     lead: When code changes, the documents that depend on it are named, not found later by accident.
     rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it
       wasn''t'
-    n: 10
-    total: 14
+    n: 11
+    total: 15
     override:
       rests:
         text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed
@@ -3981,8 +4350,8 @@ instances:
     title: project-management
     lead: You talk to one agent; it plans the work and runs builders in parallel.
     rests: 'This week, in one evening: six builders, four pull requests merged'
-    n: 11
-    total: 14
+    n: 12
+    total: 15
     override:
       rests:
         text: 'This week, in one evening: six builders, four pull requests merged'
@@ -4272,8 +4641,8 @@ instances:
       to wire.
     rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
       before merge'
-    n: 12
-    total: 14
+    n: 13
+    total: 15
     override:
       rests:
         text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
@@ -4484,8 +4853,8 @@ instances:
       run, still being shaped.
     rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until
       you decide'
-    n: 13
-    total: 14
+    n: 14
+    total: 15
     override:
       rests:
         text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes
@@ -4743,8 +5112,8 @@ instances:
     title: Questions?
     lead: Everything shown is in project-kit's own repository, built with pkit itself.
     rests: github.com/aleskalfas/project-kit
-    n: 14
-    total: 14
+    n: 15
+    total: 15
     override:
       rests:
         text: github.com/aleskalfas/project-kit
@@ -4803,6 +5172,7 @@ layouts:
   - T-part-P0
   - T-opening
   - T-install
+  - T-fits
   origin:
   - -4246
   - 1241

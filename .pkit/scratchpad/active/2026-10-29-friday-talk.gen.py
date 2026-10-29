@@ -494,8 +494,10 @@ def pyramid(pid, y, v):
             apex_right = cx + top_w / 2
             ax = round(apex_right + 16)
             aw = round(tx - ax - 8)
-            out[f"{pid}-l{li}"] = {"template": "link", "parent": pid, "x": ax, "y": sy, "x1": aw - 8, "y1": sh / 2, "x2": 8, "y2": sh / 2,
-                                   "tone": "role_code", "override": {"root": {"width": aw, "height": sh}, "arrow": {"border_width": 6}}}
+            # no taller than the apex, so the arrow's frame stays clear of the layer below it
+            ah = min(sh, PYR_H)
+            out[f"{pid}-l{li}"] = {"template": "link", "parent": pid, "x": ax, "y": sy, "x1": aw - 8, "y1": ah / 2, "x2": 8, "y2": ah / 2,
+                                   "tone": "role_code", "override": {"root": {"width": aw, "height": ah}, "arrow": {"border_width": 6}}}
         else:
             y1, y2 = (8, sh - 8) if arrow == "down" else (sh - 8, 8)
             out[f"{pid}-l{li}"] = {"template": "link", "parent": pid, "x": sx, "y": sy, "x1": LINK_W / 2, "y1": y1, "x2": LINK_W / 2, "y2": y2,
