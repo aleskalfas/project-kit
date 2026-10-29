@@ -24,10 +24,10 @@ parts:
   summary: Why pkit exists, how to install it, and how its parts fit together.
 - id: P1
   title: What the agent knows
-  summary: Your decisions, the data the tools read, and what every session is told.
+  summary: Where ideas start, your decisions, what every session is told, and the data the tools read.
 - id: P2
   title: How the agent works
-  summary: Procedures, roles, permissions, and documents that stay true.
+  summary: Procedures, roles, permissions, the checks, and documents that stay true.
 - id: P3
   title: What you install
   summary: 'Capabilities: optional add-ons for your discipline, and how they connect.'
@@ -355,6 +355,51 @@ slides:
     only pkit''s own entries; your agents, skills and settings stay. In a newcomer''s
     trial run, the setup committed 689 files for a 4-file project. What sits in the agent''s context: one rules
     file, and one line per skill and agent.'
+- id: ideas
+  part: P1
+  title: Where ideas start
+  message: In conversation, and in a scratchpad note when a question needs longer. The note ends by producing
+    records, or by being dropped.
+  problem: ''
+  does: []
+  show: 'In project-kit: 28 notes done, each listing what it produced'
+  visual:
+    kind: ideas
+    font_size: 26
+    conversation:
+      icon: row-chat
+      head: A conversation
+      text: You and the agent talk a question through.
+    note:
+      icon: row-doc
+      head: A scratchpad note
+      text: 'When a question needs longer: its forces, its options, what was tried.'
+      terminal: |-
+        .pkit/scratchpad/active/
+          2026-10-29-friday-talk.md
+        # this talk is one
+    done:
+      head: Done
+      text: It lists what it produced.
+      text_h: 50
+      terminal: |-
+        done/2026-07-03-private-company-content-distribution.md
+        started: 2026-07-03
+        retired: 2026-07-07
+        produced:
+          - COR-041
+          - ADR-040
+    dropped:
+      tone: code
+      head: Dropped
+      text: Kept, with why it did not pan out, so nobody walks that path again unaware.
+  limit: 'A note retires only when someone retires it: 14 of the 33 active have been open since May or June.'
+  minutes: 1
+  notes: 'This talk is itself a scratchpad note: it started as a conversation and needed longer. The folder is the
+    note''s state (COR-012): pkit new scratchpad <slug> starts one in active/, pkit scratchpad done <slug>
+    --produced <ref> moves it to done/ and lists what it produced, pkit scratchpad drop moves it to dropped/.
+    The example produced the two records you will see again under the release guide, COR-041 and ADR-040.
+    None has been dropped in project-kit yet. Next: what a record is.'
 - id: decisions
   part: P1
   title: Decision records
@@ -462,101 +507,28 @@ slides:
     backwards. In project-kit the tie was written when the guide became such a document. Before changing a file,
     the agent runs this lookup, one of the working rules every session is told. A choice made in a chat is gone the
     next session; a record is found.'
-- id: checked
+- id: sessions
   part: P1
-  title: Checked every time
-  message: An agent follows the ties without doubting them, so every tie is checked on every change.
-  problem: ''
-  does: []
-  show: In project-kit, this check runs before every push and on every pull request
+  title: What every session is told
+  message: Every session loads the same working rules, each pointing to where its reason is written.
+  problem: 'Each session starts knowing none of your working rules: you repeat them, or it breaks them.'
+  does:
+  - pkit's working rules, loaded into every session
+  - Your own rules sit beside them; updates never touch yours
+  show: 'One of them: retry once a step that failed for an outside cause, then stop'
   visual:
-    kind: ties
-    center:
-    - head: The release guide
-      path: .pkit/release/README.md
-    - head: Use case UC-008
-      path: UC-008-release-backbone.md
-      height: 144
-    left_head: The code they describe
-    right_head: The guide's records
-    left:
-    - label: release.py
-    - label: changesets.py
-    - label: versioning.py
-    - label: .changie.yaml
-    - label: release-pr.yml
-    - label: release-tag.yml
-    - label: latest_tag.py
-      broken: true
-      to: [0, 1]
-      note: renamed to last_tag.py
-    right:
-    - label: COR-010  Lifecycle
-      tone: pkit
-    - label: COR-030  Dependencies
-      tone: pkit
-    - label: COR-041  External sources
-      tone: pkit
-    - label: PRJ-002  Versioning
-      tone: yours
-    - label: PRJ-004  Distribution
-      tone: yours
-    - label: ADR-040  Fetch at the pin
-      tone: architecture
-    terminal:
-    - - - '$ '
-        - prompt
-      - - git
-        - command
-      - - ' mv scripts/latest_tag.py scripts/last_tag.py'
-        - args
-    - - - '$ '
-        - prompt
-      - - pkit
-        - command
-      - - ' friction check'
-        - args
-    - - - FINDINGS
-        - output
-    - - - '  .pkit/release/README.md'
-        - args
-    - - - '    '
-        - output
-      - - dead-anchor
-        - del
-      - - '  path scripts/latest_tag.py'
-        - args
-    - - - '      matches no file; the diff removed or'
-        - output
-    - - - '      moved its target'
-        - output
-    - - - '  tech-docs/analysis/…/UC-008-release-backbone.md'
-        - args
-    - - - '    '
-        - output
-      - - dead-anchor
-        - del
-      - - '  path scripts/latest_tag.py'
-        - args
-    - - - 'Result: '
-        - output
-      - - failed
-        - del
-      - - '   (2 dead anchors)'
-        - output
-    - - - '# the change fails until both ties follow the file'
-        - comment
-    font_size: 24
-  limit: 'It checks structure, not meaning: a record can be valid and still wrong.'
-  minutes: 1
-  notes: 'The release guide from the slide before, with the ties its front matter declares: the seven files it
-    describes and the six records it carries out. Someone renames scripts/latest_tag.py in a refactor. Two
-    documents still name the old file: the guide, and a use case nobody renaming a script would think of.
-    Without the check nothing warns: pkit refs records-for scripts/last_tag.py finds no records, so the next
-    agent to change the file reads none of the guide''s six, nor the use case''s seven. The change check fails
-    the rename and names both documents; the fix is to move the ties with the file. Checked on 29 October in a
-    throwaway copy of the repository. A tie that is already dead on main is reported by the whole-repository
-    check, pkit friction check --all.'
+    kind: code
+    code: '# CLAUDE.md
+
+      @.pkit/rules/core.md
+
+      @.pkit/rules/project.md
+
+      '
+  limit: Every session carries every rule today, about 2,500 words, relevant or not.
+  minutes: 1.5
+  notes: 'Being reworked now: permanent numbers, a size budget, and each capability its own rules, loaded where
+    it is installed.'
 - id: schemas
   part: P1
   title: Rules and processes as data
@@ -592,28 +564,6 @@ slides:
   notes: 'The YAML is the rule; a JSON Schema checks its shape. 37 of them: the engine''s rules, a project''s settings,
     kinds of document, how capabilities plug in, permissions. Two uses today, project-management''s issue lifecycle
     among them. A new staged process is a definition, not new machinery.'
-- id: sessions
-  part: P1
-  title: What every session is told
-  message: Every session loads the same working rules, each pointing to where its reason is written.
-  problem: 'Each session starts knowing none of your working rules: you repeat them, or it breaks them.'
-  does:
-  - pkit's working rules, loaded into every session
-  - Your own rules sit beside them; updates never touch yours
-  show: 'One of them: retry once a step that failed for an outside cause, then stop'
-  visual:
-    kind: code
-    code: '# CLAUDE.md
-
-      @.pkit/rules/core.md
-
-      @.pkit/rules/project.md
-
-      '
-  limit: Every session carries every rule today, about 2,500 words, relevant or not.
-  minutes: 1.5
-  notes: 'Being reworked now: permanent numbers, a size budget, and each capability its own rules, loaded where
-    it is installed.'
 - id: skills
   part: P2
   title: Skills and the commands they pair with
@@ -706,6 +656,101 @@ slides:
   minutes: 2
   notes: Fewer prompts is mostly the tool's job now. pkit adds fixed rules, limits per role, and steering onto the
     checked path.
+- id: checked
+  part: P2
+  title: Checked every time
+  message: An agent follows the ties between files without doubting them, so every tie is checked on every change.
+  problem: ''
+  does: []
+  show: In project-kit, this check runs before every push and on every pull request
+  visual:
+    kind: ties
+    center:
+    - head: The release guide
+      path: .pkit/release/README.md
+    - head: Use case UC-008
+      path: UC-008-release-backbone.md
+      height: 144
+    left_head: The code they describe
+    right_head: The guide's records
+    left:
+    - label: release.py
+    - label: changesets.py
+    - label: versioning.py
+    - label: .changie.yaml
+    - label: release-pr.yml
+    - label: release-tag.yml
+    - label: latest_tag.py
+      broken: true
+      to: [0, 1]
+      note: renamed to last_tag.py
+    right:
+    - label: COR-010  Lifecycle
+      tone: pkit
+    - label: COR-030  Dependencies
+      tone: pkit
+    - label: COR-041  External sources
+      tone: pkit
+    - label: PRJ-002  Versioning
+      tone: yours
+    - label: PRJ-004  Distribution
+      tone: yours
+    - label: ADR-040  Fetch at the pin
+      tone: architecture
+    terminal:
+    - - - '$ '
+        - prompt
+      - - git
+        - command
+      - - ' mv scripts/latest_tag.py scripts/last_tag.py'
+        - args
+    - - - '$ '
+        - prompt
+      - - pkit
+        - command
+      - - ' friction check'
+        - args
+    - - - FINDINGS
+        - output
+    - - - '  .pkit/release/README.md'
+        - args
+    - - - '    '
+        - output
+      - - dead-anchor
+        - del
+      - - '  path scripts/latest_tag.py'
+        - args
+    - - - '      matches no file; the diff removed or'
+        - output
+    - - - '      moved its target'
+        - output
+    - - - '  tech-docs/analysis/…/UC-008-release-backbone.md'
+        - args
+    - - - '    '
+        - output
+      - - dead-anchor
+        - del
+      - - '  path scripts/latest_tag.py'
+        - args
+    - - - 'Result: '
+        - output
+      - - failed
+        - del
+      - - '   (2 dead anchors)'
+        - output
+    - - - '# the change fails until both ties follow the file'
+        - comment
+    font_size: 24
+  limit: It checks that every tie leads somewhere, not that the document is still right.
+  minutes: 1
+  notes: 'The release guide from "Decided once, found later", with the ties its front matter declares: the seven files it
+    describes and the six records it carries out. Someone renames scripts/latest_tag.py in a refactor. Two
+    documents still name the old file: the guide, and a use case nobody renaming a script would think of.
+    Without the check nothing warns: pkit refs records-for scripts/last_tag.py finds no records, so the next
+    agent to change the file reads none of the guide''s six, nor the use case''s seven. The change check fails
+    the rename and names both documents; the fix is to move the ties with the file. Checked on 29 October in a
+    throwaway copy of the repository. A tie that is already dead on main is reported by the whole-repository
+    check, pkit friction check --all.'
 - id: docs
   part: P2
   title: Docs that know when they're wrong
@@ -721,7 +766,7 @@ slides:
     code: "# trial run: the greeting in cli.py changed\n$ pkit friction check\n  ACT-cli-user     depends on cli.py\n\
       \  UC-001           depends on cli.py\n  docs/usage.md    depends on cli.py\n3 documents to answer for\n"
   limit: Only documents that declare what they depend on are covered; the rest go stale as before.
-  minutes: 3
+  minutes: 2
   notes: Probably pkit's most distinctive idea. 50 deferred answers in project-kit today, all visible.
 - id: pm
   part: P3

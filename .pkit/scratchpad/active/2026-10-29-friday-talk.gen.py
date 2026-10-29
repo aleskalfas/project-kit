@@ -610,6 +610,67 @@ TIES_TONES = {"code": ("role_neutral_bg", "role_neutral"), "pkit": ("role_code_b
               "yours": ("role_people_bg", "role_people"), "architecture": ("role_architecture_bg", "role_architecture")}
 
 
+def ideas(pid, y, v):
+    """Where ideas start, as a flow that branches: a conversation, a scratchpad note, and the note's two
+    ends, done (with what it produced) and dropped. A box per step; a step's picture is a terminal image
+    inside its box. The diagram is one instance of a template made for this slide."""
+    W = SPAN16
+    fs = v.get("font_size", 26)
+    cw, nw = 640, 960
+    cx, nx = 0, cw + 120
+    ex = nx + nw + 160
+    ew = W - ex
+    st = {k: v[k] for k in ("conversation", "note", "done", "dropped")}
+    pics = {k: terminal_png(f"{pid}-{k}".removeprefix("T-"), s["terminal"], (nw if k == "note" else ew) - 80, fs)
+            for k, s in st.items() if s.get("terminal")}
+
+    def height(k, s):
+        top = 136 if s.get("icon") else 32
+        text_h = s.get("text_h", 100)
+        pic = pics.get(k)
+        return top + 72 + text_h + (24 + pic[1] if pic else 0) + 40
+
+    hs = {k: height(k, s) for k, s in st.items()}
+    H = hs["done"] + 40 + hs["dropped"]
+    tops = {"conversation": (H - hs["conversation"]) / 2, "note": (H - hs["note"]) / 2, "done": 0, "dropped": hs["done"] + 40}
+    xs = {"conversation": (cx, cw), "note": (nx, nw), "done": (ex, ew), "dropped": (ex, ew)}
+    parts = {}
+    for k, s in st.items():
+        x, w = xs[k]
+        top, h = round(tops[k]), hs[k]
+        bg, line = TIES_TONES[s.get("tone", "pkit")]
+        parts[f"{k}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": top, "width": w, "height": h,
+                            "color": f"@{bg}", "border_color": f"@{line}", "border_width": 2, "ink": "@text_primary"}
+        hy = top + (136 if s.get("icon") else 32)
+        if s.get("icon"):
+            parts[f"{k}icon"] = {"type": "image", "file": f"{ICONS_DIR}/{s['icon']}.png", "x": x + 40, "y": top + 40, "width": 72, "height": 72}
+        parts[f"{k}head"] = {"type": "text", "text": md(s["head"]), "style": "@style.tile_heading", "ink": "@text_primary",
+                             "x": x + 40, "y": hy, "width": w - 80, "height": 64}
+        parts[f"{k}text"] = {"type": "text", "text": md(s["text"]), "style": "@style.body", "ink": "@text_primary",
+                             "x": x + 40, "y": hy + 72, "width": w - 80, "height": s.get("text_h", 100)}
+        if k in pics:
+            file, ph = pics[k]
+            parts[f"{k}pic"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": x + 40, "y": hy + 72 + s.get("text_h", 100) + 24,
+                                "width": w - 80, "height": ph}
+
+    def arrow(key, p1, p2):
+        parts[key] = {"type": "arrow", "points": [[round(p1[0]), round(p1[1])], [round(p2[0]), round(p2[1])]], "arrow_type": "straight",
+                      "tip": "end", "color": "@text_secondary", "border_width": 4, "border_style": "solid"}
+
+    mid = H / 2
+    ntop, nh = tops["note"], hs["note"]
+    arrow("a1", (cw + 16, mid), (nx - 16, mid))
+    arrow("a2", (nx + nw + 16, ntop + nh * 0.3), (ex - 16, hs["done"] / 2))
+    arrow("a3", (nx + nw + 16, ntop + nh * 0.7), (ex - 16, tops["dropped"] + hs["dropped"] / 2))
+    name = f"ideas_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "Where ideas start, drawn for one slide by the slide generator: a conversation, a scratchpad note, and its two ends.",
+        "root": {**CLEAR_AREA, "width": W, "height": H},
+        "parts": parts,
+    }
+    return {f"{pid}-ideas": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
 def ties(pid, y, v):
     """Documents' ties: the files they describe on the left, the documents in the middle, the records the
     first carries out on the right, a line for each tie, a broken one red and dashed. A left item ties to
@@ -927,6 +988,8 @@ def build_slide(s, n, total):
             add(compare(pid, y, v["left"], v["right"]))
         elif kind == "kinds":
             add(kinds(pid, y, v))
+        elif kind == "ideas":
+            add(ideas(pid, y, v))
         elif kind == "ties":
             add(ties(pid, y, v))
         elif kind == "story":
