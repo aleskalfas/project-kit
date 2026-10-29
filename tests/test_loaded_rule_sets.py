@@ -4,9 +4,9 @@ A loaded set (`loaded: true`) keeps operational rules. Its accepted rules bind o
 the work of the sessions that load a file generated from it, never on an artefact.
 These tests hold:
 
-- **the backbone's set**, `OPS`: core's 22 rules, each accepted and keeping its
-  number, every accepted rule with an origin, and `.pkit/rules/core.md` generated
-  from it, its accepted rules alone;
+- **the backbone's set**, `OPS`: core's rules, numbered in rising order from 1,
+  each with an origin, the 22 of #2260 accepted, and `.pkit/rules/core.md`
+  generated from its accepted rules;
 - **the projection** (`loaded_rule_sets.project`): accepted rules only, under
   `N. Title (RS-<SET>-NNN)`, the prose and the groups kept, no front matter, no
   retired or proposed rule, nothing added;
@@ -101,23 +101,26 @@ def findings(adopter: AdopterRepo, kind: Kind) -> list[rs.RuleSetFinding]:
 # --- the backbone's set, `OPS` -------------------------------------------------------
 
 
-#: Core's rules as #2260 converted them, each keeping its number (COR-068 point 6).
-CORE_S_22 = [f"RS-OPS-{n:03d}" for n in range(1, 23)]
-
-
-def test_ops_holds_core_s_22_rules_each_accepted_with_an_origin() -> None:
-    """Core's 22 rules keep their numbers, accepted. A rule added since takes a number
-    of its own, and once accepted carries a complete origin as they do."""
+def test_ops_numbers_core_s_rules_in_order_each_with_an_origin() -> None:
+    """Each rule keeps its number as its id, so the ids rise and none is reused. The
+    22 rules #2260 brought in are accepted and run from 1 with no gap; a rule added
+    since may be proposed on the branch of the change that proposes it (COR-066
+    point 1), so another branch's proposal may hold a number this one leaves out.
+    An accepted rule carries a complete origin; a proposed one, the drafter's words
+    the person reads before they accept it."""
     ops = the_set(REPO, "OPS")
     assert ops.path == ".pkit/rule-sets/ops.md"
     assert (ops.component, ops.citation, ops.loaded) == ("backbone", "backbone:OPS", True)
     ids = [rule.id for rule in ops.rules]
-    assert len(ids) == len(set(ids))
-    assert set(CORE_S_22) <= set(ids)
+    numbers = [int(rule_id.removeprefix("RS-OPS-")) for rule_id in ids]
+    assert ids[:22] == [f"RS-OPS-{n:03d}" for n in range(1, 23)]
+    assert numbers == sorted(set(numbers))
+    for rule in ops.rules[:22]:
+        assert rule.status == "accepted", rule.id
     for rule in ops.rules:
-        if rule.id in CORE_S_22:
-            assert rule.status == "accepted", rule.id
+        assert rule.status in ("accepted", "proposed"), rule.id
         origin = rule.origin or {}
+        assert origin, rule.id
         if rule.status == "accepted":
             assert "decision" in origin or {"date", "by", "why"} <= set(origin), rule.id
         # COR-068 point 6: a core record, or the decider's words; never an ADR or a PRJ.
@@ -134,7 +137,6 @@ def test_each_ops_rule_is_anchored_to_core_records_or_says_why_it_is_not() -> No
     }
     origins = {rule.id: rule.origin or {} for rule in the_set(REPO, "OPS").rules}
     assert sorted(artefacts) == sorted(origins)
-    assert set(CORE_S_22) <= set(artefacts)
     for rule_id, artefact in artefacts.items():
         anchors, reason = dict(artefact.anchors), artefact.unanchored_because
         assert bool(anchors) != bool(reason), rule_id
@@ -142,7 +144,8 @@ def test_each_ops_rule_is_anchored_to_core_records_or_says_why_it_is_not() -> No
         records = anchors.get("record", ())
         assert all(record.startswith("COR-") for record in records), rule_id
         decided = origins[rule_id].get("decision")
-        assert decided is None or decided in records, rule_id
+        # The origin's record is anchored, whole or at the point the rule rests on.
+        assert decided is None or decided in {r.split("#", 1)[0] for r in records}, rule_id
 
 
 def test_ops_and_core_md_are_clean_in_the_methodology_s_source() -> None:
@@ -157,9 +160,8 @@ def test_core_md_is_the_projection_of_ops() -> None:
 
 def test_each_rule_of_core_md_names_its_number_title_and_id() -> None:
     headings = re.findall(r"^### (\d+)\. (.+) \((RS-OPS-\d{3})\)$", CORE_RULES.read_text(), re.M)
-    accepted = [rule.id for rule in the_set(REPO, "OPS").rules if rule.status == "accepted"]
-    assert [rule_id for _n, _title, rule_id in headings] == accepted
-    assert set(CORE_S_22) <= set(accepted)
+    accepted = [int(r.id[-3:]) for r in the_set(REPO, "OPS").rules if r.status == "accepted"]
+    assert [int(n) for n, _title, _id in headings] == accepted
     assert all(rule_id == f"RS-OPS-{int(n):03d}" for n, _title, rule_id in headings)
     assert ("19", "A session changes only its own repository", "RS-OPS-019") in headings
 
@@ -578,7 +580,8 @@ def test_a_missing_or_retired_rule_is_a_warning_naming_it(adopter: AdopterRepo) 
 
 
 def test_a_range_past_the_highest_rule_is_one_warning(adopter: AdopterRepo) -> None:
-    # The range opens at the set's highest rule, so it holds that one alone.
+    # The range opens at the set's highest rule, so it holds that one alone, whether or
+    # not a lower number is held by another branch's proposal.
     highest = max(int(rule.id.removeprefix("RS-OPS-")) for rule in the_set(REPO, "OPS").rules)
     adopter.write(
         {"docs/guide.md": f"Core rules {highest}-40 say so, and core rules 30 and 31.\n"}
