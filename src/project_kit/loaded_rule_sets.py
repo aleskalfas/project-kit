@@ -265,6 +265,8 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
     - the tree has no ownership module, so where a set is authored cannot be told
     - no loaded set is authored here: none at all, or only sets that arrive by sync,
       whose files the next sync brings (COR-068 point 3)
+    - a loaded file of a set authored here is a link, which the check reads as no
+      loaded file (`_stale`), so the generator writes through none
 
     A set that arrives by sync beside one authored here is left, and listed. The file
     is written with `\\n` line breaks, and only where its text differs. `write=False`
@@ -277,8 +279,8 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
     if unreadable:
         raise GenerateRefusal(
             f"the rule-set file {unreadable[0].path} {unreadable[0].problem}, so it cannot "
-            f"be told whether it is a loaded set; nothing was written. `pkit validate` "
-            f"reports it."
+            f"be told whether it is a loaded set, though it may be unrelated to any; "
+            f"nothing was written. `pkit validate` reports it."
         )
     sets = loaded_sets(discovery)
     for rule_set in sets:
@@ -311,6 +313,14 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
             f"generates nor edits a loaded file it receives; the next sync brings it "
             f"(COR-068 point 3)."
         )
+    for rule_set in authored:
+        loaded_file = loaded_file_of(rule_set)
+        if loaded_file is not None and (target_root / loaded_file).is_symlink():
+            raise GenerateRefusal(
+                f"the loaded file of {rule_set.citation}, {loaded_file}, is a link, which "
+                f"validation reads as no loaded file; nothing was written. Replace the link "
+                f"with a file, or remove it, and run `{GENERATE_COMMAND}` again."
+            )
     written: list[Generated] = []
     for rule_set in authored:
         loaded_file = loaded_file_of(rule_set)

@@ -18,6 +18,9 @@ shipped sets out of what it compares:
 
 A test of what the shipped sets change, such as a fresh install's counts, reads
 them with `shipped_rules`, so it follows the set as it grows.
+
+The dormant-pass tests that take the folder out cover a state no installed project
+reaches since ADR-073, since every install carries it.
 """
 
 from __future__ import annotations

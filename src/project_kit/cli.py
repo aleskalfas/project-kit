@@ -2521,9 +2521,11 @@ def rule_sets_generate_command() -> None:
     sections, and none of the set's data. Says for each file whether it
     changed. Writes no other file, and validates, syncs or merges nothing.
     Refuses, writing nothing, where every loaded set here arrives by sync —
-    the next sync brings its file — and where a set cannot be read or its
-    rules and sections do not join (`pkit validate` names the fix). Exit 0
-    when written or already in step; 1 on a refusal.
+    the next sync brings its file — where a rule-set file cannot be read or a
+    set's rules and sections do not join (`pkit validate` names the fix), and
+    where a loaded file is a link. Exit 0 when written or already in step; 1
+    on a refusal, so 1 where every loaded set arrives by sync, as in a
+    project that receives only the backbone's.
     """
     from project_kit import loaded_rule_sets
 

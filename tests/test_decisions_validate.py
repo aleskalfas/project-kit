@@ -13,7 +13,7 @@ from project_kit import decisions_validate, lifecycle_ownership
 from project_kit.cli import main
 from project_kit.validators import Finding, Severity
 from tests.adopter_repo import MakeAdopterRepo
-from tests.shipped_rule_sets import without_shipped_rule_sets
+from tests.shipped_rule_sets import shipped_rules, without_shipped_rule_sets
 
 
 def _write_record(
@@ -984,3 +984,19 @@ def test_cli_in_an_adopter_with_no_record_of_its_own_says_so(
     assert result.exit_code == 0, result.output
     assert "Validated 0 decision record(s)" not in result.output
     assert "No decision record of the project's own found to validate." in result.output
+
+
+def test_cli_in_a_fresh_install_counts_the_rules_it_receives(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """What an adopter sees after a real install: no record of its own, and the rules
+    of the backbone's rule sets, which it receives and which are counted (ADR-073)."""
+    adopter = make_adopter_repo(fresh=True)
+    result = CliRunner().invoke(main, ["decisions", "validate"])
+    assert result.exit_code == 0, result.output
+    rules = len(shipped_rules(adopter.root))
+    assert rules > 0
+    assert (
+        f"Validated 0 decision record(s) and {rules} rule(s). No id collisions found."
+        in result.output
+    )

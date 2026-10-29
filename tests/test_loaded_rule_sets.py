@@ -156,7 +156,10 @@ def test_core_md_carries_no_data_and_no_h1() -> None:
     assert "origin:" not in text and "status: accepted" not in text
     assert not re.search(r"^# ", text, re.M)
     assert text.startswith("*Operational rules and tool hygiene")
-    assert "`pkit rule-sets generate`; edit the set, not the loaded file." in text
+    assert (
+        "where the set is authored, by `pkit rule-sets generate`. A project that receives "
+        "them by sync edits neither (core rule 1)."
+    ) in text
 
 
 # --- the projection ----------------------------------------------------------------
@@ -259,6 +262,32 @@ def test_generate_refuses_an_unreadable_rule_set_file(adopter: AdopterRepo) -> N
     result = CliRunner().invoke(main, ["rule-sets", "generate"])
     assert result.exit_code == 1
     assert f"the rule-set file {PROJECT_SETS}/broken.md has no front matter" in result.output
+
+
+def test_generate_says_an_unreadable_file_may_be_no_loaded_set(adopter: AdopterRepo) -> None:
+    adopter.write({f"{PROJECT_SETS}/broken.md": "no front matter\n"})
+    result = CliRunner().invoke(main, ["rule-sets", "generate"])
+    assert "though it may be unrelated to any" in result.output
+
+
+def test_generate_refuses_a_linked_loaded_file(adopter: AdopterRepo) -> None:
+    """The check reads a link as no loaded file, so the generator writes through none."""
+    project_set(adopter, loaded_text("OWN", accepted("RS-OWN-001")))
+    elsewhere = adopter.root / "elsewhere.md"
+    elsewhere.write_text("not the project's rules\n", encoding="utf-8")
+    loaded = adopter.root / PROJECT_LOADED
+    loaded.unlink(missing_ok=True)
+    loaded.symlink_to(elsewhere)
+    result = CliRunner().invoke(main, ["rule-sets", "generate"])
+    assert result.exit_code == 1
+    assert f"{PROJECT_LOADED}, is a link" in result.output
+    assert elsewhere.read_text(encoding="utf-8") == "not the project's rules\n"
+    assert loaded.is_symlink()
+
+
+def test_generate_s_help_says_it_exits_1_where_every_set_arrives_by_sync() -> None:
+    result = CliRunner().invoke(main, ["rule-sets", "generate", "--help"])
+    assert "1 where every loaded set arrives by sync" in " ".join(result.output.split())
 
 
 def test_generate_writes_core_md_where_the_set_is_authored(tmp_path: Path) -> None:
@@ -430,16 +459,54 @@ def cited(text: str, *, markdown: bool = True, loaded: Iterable[str] = ("OPS",))
         ("per core.md rule 13", [("core", 13)]),
         ("per `.pkit/rules/core.md` rule 7", [("core", 7)]),
         ("(COR-010 / rules/core.md #7)", [("core", 7)]),
+        ("(COR-010 / rules/core.md#7)", [("core", 7)]),
         ("(rules/core.md 14-15)", [("core", 14), ("core", 15)]),
         ("core rules 3, 5 and 13", [("core", 3), ("core", 5), ("core", 13)]),
         ("core rules 14-15", [("core", 14), ("core", 15)]),
         ("the core rule\n  2 says", [("core", 2)]),
+        ("core rules\n3 and 5", [("core", 3), ("core", 5)]),
         ("project rule 4", [("project", 4)]),
         ("Project rules 1 to 3", [("project", 1), ("project", 2), ("project", 3)]),
     ],
 )
 def test_the_forms_by_layer_and_number(text: str, expected: list[tuple[str, int]]) -> None:
-    assert [(layer, number) for layer, number, _r, _c in cited(text)] == expected
+    named = [
+        (c.layer, number)
+        for c in refs.operational_rule_citations(text, loaded_sets={"OPS"}, markdown=True)
+        for number in c.numbers
+    ]
+    assert named == expected
+
+
+def test_a_range_is_one_citation() -> None:
+    (citation,) = refs.operational_rule_citations(
+        "core rules 14-15", loaded_sets={"OPS"}, markdown=True
+    )
+    assert (citation.number, citation.through) == (14, 15)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # After the path, a number on the next line is not the path's.
+        ("see `.pkit/rules/core.md`\n7 more", []),
+        ("see rules/core.md 3,\n4", [("core", 3)]),
+        # A number that opens a line as a list item numbers the list, not a rule.
+        ("the core rules\n3. Cite them", []),
+        ("core rules 3,\n4. Next item", [("core", 3)]),
+        ("core rules 3 and\n4. Next item", [("core", 3)]),
+        ("see rules/core.md\n3. Next item", []),
+    ],
+)
+def test_numbers_on_another_line_that_are_not_rules(
+    text: str, expected: list[tuple[str, int]]
+) -> None:
+    named = [
+        (c.layer, number)
+        for c in refs.operational_rule_citations(text, loaded_sets={"OPS"}, markdown=True)
+        for number in c.numbers
+    ]
+    assert named == expected
 
 
 def test_the_forms_by_id() -> None:
@@ -496,6 +563,17 @@ def test_a_missing_or_retired_rule_is_a_warning_naming_it(adopter: AdopterRepo) 
     assert "warning  docs/guide.md:1" in result.output
 
 
+def test_a_range_past_the_highest_rule_is_one_warning(adopter: AdopterRepo) -> None:
+    adopter.write({"docs/guide.md": "Core rules 20-40 say so, and core rules 30 and 31.\n"})
+    messages = [u.message for u in refs.unheld_operational_rules(adopter.root)]
+    ranged = [m for m in messages if "'Core rules 20-40" in m]
+    assert len(ranged) == 1, messages
+    assert "cites core rules 23 to 40, past the highest rule backbone:OPS" in ranged[0]
+    assert "core rule 22" in ranged[0]
+    # A list names each number, so each missing one is its own warning.
+    assert sum("core rules 30 and 31" in m for m in messages) == 2
+
+
 def test_a_layer_with_no_loaded_set_is_not_judged(adopter: AdopterRepo) -> None:
     adopter.write({"docs/guide.md": "project rule 99 of a plain project.md\n"})
     assert refs.unheld_operational_rules(adopter.root) == []
@@ -512,6 +590,9 @@ def test_the_files_left_out(adopter: AdopterRepo) -> None:
             ".pkit/project/friction/answers/20261028T000000Z-0000aaaa.yaml": f"# {unheld}",
             ".pkit/decisions/project/PRJ-001-old.md": (
                 f"---\nid: PRJ-001\ntitle: Old\nstatus: superseded\n---\n\n{unheld}"
+            ),
+            ".pkit/decisions/project/PRJ-003-quoted.md": (
+                f'---\nid: PRJ-003\ntitle: Quoted\nstatus: "superseded"\n---\n\n{unheld}'
             ),
             ".pkit/decisions/project/PRJ-002-new.md": (
                 f"---\nid: PRJ-002\ntitle: New\nstatus: accepted\n---\n\n{unheld}"

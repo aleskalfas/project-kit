@@ -79,7 +79,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - .pkit/adapters/claude-code/deploy-agents.sh
-      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, COR-068, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6"]
+      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, COR-068, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-073]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/agents/README.md#provider-precedence
@@ -1330,10 +1330,10 @@ Each installed component's validators follow (a capability's or an adapter's —
 **Citations of operational rules** ([COR-068](../decisions/core/COR-068-loaded-rule-sets.md) point 6; [ADR-073](../../tech-docs/architecture/decisions/ADR-073-generated-operational-rules.md) point 8). The `refs` member reads each citation of a rule of a loaded set, and warns of one that names a rule the set lacks, or a superseded or withdrawn one, naming its successor. A warning, since it is read from prose (COR-055).
 
 - **The forms it reads,** with any case of the first letter:
-  - by layer and number: `core rule N`, `core.md rule N`, `rules/core.md #N`, `rules/core.md N` and `rules/core.md rule N`; a list after the plural, as in `core rules 3, 5 and 13`; and a range, as in `core rules 14-15`. `core` names the backbone's loaded set, `OPS`, so `core rule 19` is `backbone:RS-OPS-019`.
+  - by layer and number: `core rule N`, `core.md rule N`, `rules/core.md #N` or `rules/core.md#N`, `rules/core.md N` and `rules/core.md rule N`, the number on the path's line; a list after the plural, as in `core rules 3, 5 and 13`; and a range, as in `core rules 14-15`. `core` names the backbone's loaded set, `OPS`, so `core rule 19` is `backbone:RS-OPS-019`. A range that runs past the set's highest rule is one warning, naming the range.
   - the same with `project`, for the project's own loaded set. A project whose `project.md` is a plain file has none, and its citations are read and judged nowhere.
   - by id: `backbone:RS-OPS-0NN`, `[backbone:RS-OPS-0NN]` and `RS-OPS-0NN`, and any loaded set's rule likewise.
-- **What it never reads:** a bare `rule N`, which may name an item of any numbered list.
+- **What it never reads:** a bare `rule N`, which may name an item of any numbered list, nor a number that opens a line as a list item, as `3.` does, after the plural or in a list.
 - **The files it reads:** the text files of the working tree's one listing. In Markdown it skips fenced code. It leaves out:
   - the project's tests, which may cite a missing rule on purpose: a file beneath a `tests` folder, and a `test_*.py`
   - a synced copy, by the tree's own predicate (`is_synced_copy`), so in a project that receives the set only the project's own citations are read
@@ -1846,6 +1846,7 @@ Which accepted rules bind on an artefact ([COR-051](../decisions/core/COR-051-ru
   - every loaded set here arrives by sync: a project neither generates nor edits a loaded file it receives, and the next sync brings it
   - a rule-set file of the backbone or the project cannot be read, or a loaded set's rules and sections do not join, or it is a capability's or a second of its owner's: `pkit validate` names the fix
   - no loaded set is found, or the tree has no ownership module to tell where a set is authored
+  - a loaded file it would write is a link, which validation reads as no loaded file
 - **No `--dry-run`:** it writes only generated files, and validation fails on a hand edit of one (`validate`, the `rule-sets` member).
 
 ## Connections commands
