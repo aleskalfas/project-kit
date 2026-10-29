@@ -24,7 +24,8 @@ software-analysis DEC-001 points 5 and 8; project-management DEC-056 points 1, 3
 
 The adopter's copy of project-management's validator runs under this interpreter,
 and the `pkit` it reads through is the real CLI (`pkit_on_path`), so no test
-reaches `uv` or the network.
+reaches `uv` or the network. Its two tests keep a process, each marked with why:
+they are the validator's end-to-end tests (#2325).
 """
 
 from __future__ import annotations
@@ -218,6 +219,10 @@ def _checked(repo: AdopterRepo) -> dict[str, Any]:
     return json.loads(completed.stdout)
 
 
+@pytest.mark.process(
+    "project-management's fixers validator end to end: its own process reads this "
+    "capability's declaration and the deployed agent through the backbone"
+)
 def test_every_entry_passes_the_point_s_checks(project: AdopterRepo) -> None:
     document = _checked(project)
     assert document["findings"] == []
@@ -226,6 +231,10 @@ def test_every_entry_passes_the_point_s_checks(project: AdopterRepo) -> None:
     ]
 
 
+@pytest.mark.process(
+    "the fixers validator's second end-to-end test, its failing case: project-management "
+    "reads `pkit` through a runner of its own, which `tests/in_process.py` does not route"
+)
 def test_an_agent_that_holds_edit_starts_no_fixer(project: AdopterRepo) -> None:
     deployed = project.root / DEPLOYED_REL
     text = deployed.read_text(encoding="utf-8")

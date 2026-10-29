@@ -37,16 +37,20 @@ analysis never rewritten to match broken code:
   consent flag (#1148); its storyboard's three scenarios; the references; and
   the deployed copy. That those commands write nothing without a person is
   `test_handed_over_writers.py`'s.
+
+`propose` and the check run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2325). One test keeps a process:
+the stop, `propose`'s end-to-end test.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import re
 import shlex
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -71,9 +75,11 @@ from tests.analysis_repo import (
     load,
     load_lib,
     prepare,
+    run_in_process,
     run_script,
     seed,
 )
+from tests.in_process import InProcessPkit, Runner
 
 PROPOSE = SA / "scripts" / "propose.py"
 AGENT_DIR = CAPABILITY / "agents" / "analysis-resolver"
@@ -366,8 +372,12 @@ def flagged(
     return installed(make_adopter_repo, monkeypatch, then=_flag)
 
 
-def _propose(repo: AdopterRepo, artefact: str, *args: str) -> dict[str, Any]:
-    completed = run_script(repo, PROPOSE, artefact, *args, "--json")
+def _propose(
+    repo: AdopterRepo, artefact: str, *args: str, pkit: Runner | None = None
+) -> dict[str, Any]:
+    """`pkit analysis propose <artefact> … --json`, in the test's own process
+    (`run_in_process`): its `pkit` calls answered by `pkit` where given."""
+    completed = run_in_process(repo, PROPOSE, artefact, *args, "--json", pkit=pkit)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -384,6 +394,10 @@ def _explained_state(repo: AdopterRepo, artefact: str) -> str:
     return json.loads(result.output)["state"]
 
 
+@pytest.mark.process(
+    "propose's end-to-end test: the agent's helper as the dispatcher starts it, its document "
+    "and the lines a person reads, read through the `pkit` it starts"
+)
 def test_the_stop_ambiguous_writes_nothing_and_asks_a_person(flagged: AdopterRepo) -> None:
     """Code the use case quotes is gone, and nothing says whether that was meant: the
     agent's helper answers ambiguous with the question, and nothing is written."""
@@ -393,7 +407,9 @@ def test_the_stop_ambiguous_writes_nothing_and_asks_a_person(flagged: AdopterRep
     before = _analysis(flagged)
     assert _explained_state(flagged, "UC-001") == "stale"
 
-    document = _propose(flagged, "UC-001")
+    completed = run_script(flagged, PROPOSE, "UC-001", "--json")
+    assert completed.returncode == 0, completed.stderr
+    document = json.loads(completed.stdout)
     assert document["verdict"] == "ambiguous"
     assert document["rule"] == "ground-gone"
     (anchor,) = document["anchors"]
@@ -448,7 +464,7 @@ def test_a_quote_is_given_with_its_source_and_a_commit_s_is_checked(flagged: Ado
         f"refactor: tidy the runner\n\n{said}",
         {RUN: "def execute(fast=False):\n    print('run')\n"},
     )
-    lone = run_script(flagged, PROPOSE, "UC-001", "--intended", said, "--json")
+    lone = run_in_process(flagged, PROPOSE, "UC-001", "--intended", said, "--json")
     assert lone.returncode == 2 and "--intended and --intended-from go together" in lone.stderr
 
     def checked(quote: str, source: str) -> Any:
@@ -463,7 +479,7 @@ def test_a_quote_is_given_with_its_source_and_a_commit_s_is_checked(flagged: Ado
     assert checked(said, "https://example.org/pr/212")["read"]["intended"]["verified"] is None
     # Shown, never enforced: an unchecked or failed quote decides as any quote does.
     assert checked("run_suite is dropped on purpose.", sha)["verdict"] == "analysis-stale"
-    human = run_script(
+    human = run_in_process(
         flagged, PROPOSE, "UC-001", "--intended", "Dropped.", "--intended-from", sha[:12]
     )
     assert f"intended: 'Dropped.' — {sha[:12]}, NOT found in its message" in human.stdout
@@ -540,7 +556,7 @@ def test_a_regressed_step_a_record_decides_takes_its_box(flagged: AdopterRepo) -
     assert waiting["answer"]["commands"] == []
     which = waiting["answer"]["which"]
     assert "PRJ-001#1" in which and "PRJ-002" not in which  # proposed: no ground for a box
-    human = run_script(flagged, PROPOSE, "UC-001", *bug)
+    human = run_in_process(flagged, PROPOSE, "UC-001", *bug)
     assert "  no command yet: the use case anchors accepted records" in human.stdout
 
     boxed = _propose(flagged, "UC-001", *bug, "--box", "1", "--decided-by", "PRJ-001#1")
@@ -559,7 +575,7 @@ def test_a_regressed_step_a_record_decides_takes_its_box(flagged: AdopterRepo) -
     # The person does what comes first, then records the answer: the box and its entry
     # pass the check, which fails the entry alone, and the friction is answered.
     def shortfall_findings() -> list[Any]:
-        completed = run_script(flagged, VALIDATE, "--json")
+        completed = run_in_process(flagged, VALIDATE, "--json")
         return [
             f
             for f in json.loads(completed.stdout)["findings"]
@@ -600,7 +616,7 @@ def test_a_box_that_cannot_stand_is_a_usage_error(
 ) -> None:
     """A box stands on a use case's step, on an accepted record it anchors as written."""
     _resting_on_records(flagged)
-    refused = run_script(
+    refused = run_in_process(
         flagged, PROPOSE, artefact, "--unintended", "A bug.", "--unintended-from", "Sam", *args
     )
     assert refused.returncode == 2, refused.stdout
@@ -777,49 +793,33 @@ def test_an_upstream_artefact_changed_is_read_never_regressed(flagged: AdopterRe
 
 
 def test_an_artefact_that_cannot_be_explained_is_refused(flagged: AdopterRepo) -> None:
-    completed = run_script(flagged, PROPOSE, "UC-404", "--json")
+    completed = run_in_process(flagged, PROPOSE, "UC-404", "--json")
     assert completed.returncode == 1
     assert completed.stdout == ""
     assert completed.stderr.startswith("cannot propose: ")
 
 
-#: A `pkit` answering `friction explain` as another backbone would: the real answer
-#: with its `schema_version` set to `$EXPLAIN_VERSION` (JSON), or taken out when that
-#: is empty — a backbone from before the key — and its `state` set to `$EXPLAIN_STATE`
-#: when that is given.
-_ANOTHER_PKIT = """#!{python}
-import json, os, subprocess, sys
-done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
-                      capture_output=True, text=True)
-out = done.stdout
-if sys.argv[1:3] == ["friction", "explain"] and done.returncode == 0:
-    document = json.loads(out)
-    version = os.environ["EXPLAIN_VERSION"]
-    if version:
-        document["schema_version"] = json.loads(version)
-    else:
-        del document["schema_version"]
-    if os.environ.get("EXPLAIN_STATE"):
-        document["state"] = os.environ["EXPLAIN_STATE"]
-    out = json.dumps(document)
-sys.stdout.write(out)
-sys.stderr.write(done.stderr)
-sys.exit(done.returncode)
-"""
+def _another_backbone(version: str, state: str = "") -> Runner:
+    """A `pkit` answering `friction explain` as another backbone would: the in-process
+    `pkit`'s answer with its `schema_version` set to `version` (JSON), or taken out when
+    that is empty — a backbone from before the key — and its `state` set to `state` when
+    that is given."""
+    pkit = InProcessPkit()
 
+    def another(args: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        done = pkit(args, **options)
+        if list(args[1:3]) != ["friction", "explain"] or done.returncode != 0:
+            return done
+        document = json.loads(done.stdout)
+        if version:
+            document["schema_version"] = json.loads(version)
+        else:
+            del document["schema_version"]
+        if state:
+            document["state"] = state
+        return subprocess.CompletedProcess(done.args, 0, json.dumps(document), done.stderr)
 
-def _another_backbone(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str, state: str = ""
-) -> None:
-    """Put `_ANOTHER_PKIT` first on PATH, answering `explain` at `version`, in `state`
-    when one is given."""
-    other = tmp_path / "another-backbone"
-    other.mkdir()
-    (other / "pkit").write_text(_ANOTHER_PKIT.format(python=sys.executable), encoding="utf-8")
-    (other / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{other}{os.pathsep}{os.environ['PATH']}")
-    monkeypatch.setenv("EXPLAIN_VERSION", version)
-    monkeypatch.setenv("EXPLAIN_STATE", state)
+    return another
 
 
 @pytest.mark.parametrize(
@@ -830,15 +830,15 @@ def _another_backbone(
     ],
 )
 def test_an_artefact_the_checks_did_not_judge_is_refused(
-    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, state: str, said: str
+    flagged: AdopterRepo, state: str, said: str
 ) -> None:
     """As an `unreachable` one is: an `unresolved` artefact, or one in a state this
     capability does not read, is never proposed for — not even `holds` for code its
     other anchors show moved, which would answer for the anchor nobody read."""
     flagged.rename(RUN, "src/runner.py", "refactor: name the runner module for what it does")
     assert _propose(flagged, "UC-001")["verdict"] == "holds"
-    _another_backbone(tmp_path, monkeypatch, "1", state)
-    completed = run_script(flagged, PROPOSE, "UC-001", "--json")
+    other = _another_backbone("1", state)
+    completed = run_in_process(flagged, PROPOSE, "UC-001", "--json", pkit=other)
     assert completed.returncode == 1
     assert completed.stdout == ""
     assert completed.stderr.startswith("cannot propose: ")
@@ -847,12 +847,10 @@ def test_an_artefact_the_checks_did_not_judge_is_refused(
 
 
 @pytest.mark.parametrize("version", ["2", "null", '"1"'])
-def test_an_explanation_of_another_version_is_refused(
-    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, version: str
-) -> None:
+def test_an_explanation_of_another_version_is_refused(flagged: AdopterRepo, version: str) -> None:
     """A version this capability does not read is refused, never read as the one it knows."""
-    _another_backbone(tmp_path, monkeypatch, version)
-    completed = run_script(flagged, PROPOSE, "UC-001", "--json")
+    other = _another_backbone(version)
+    completed = run_in_process(flagged, PROPOSE, "UC-001", "--json", pkit=other)
     assert completed.returncode == 1
     assert completed.stdout == ""
     shown = repr(json.loads(version))
@@ -862,13 +860,10 @@ def test_an_explanation_of_another_version_is_refused(
     )
 
 
-def test_an_explanation_without_a_version_reads_as_the_first(
-    flagged: AdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_an_explanation_without_a_version_reads_as_the_first(flagged: AdopterRepo) -> None:
     """A backbone from before the key answers version 1: the same proposal."""
     expected = _propose(flagged, "UC-001")
-    _another_backbone(tmp_path, monkeypatch, "")
-    assert _propose(flagged, "UC-001") == expected
+    assert _propose(flagged, "UC-001", pkit=_another_backbone("")) == expected
 
 
 @pytest.mark.parametrize("namespace", ["analysis", "software-analysis"])
