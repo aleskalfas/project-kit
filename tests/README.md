@@ -153,6 +153,12 @@ the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
 What is left is mostly the backbone's own reading of the analysis, which each
 stamp and each check asks for.
 
+The numbering, renumbering and requirement modules are converted too (#2324),
+`test_software_analysis_numbers.py` among them. Their 214 tests took 1 549 s on
+the clock, `-n 3`, against 1 923 s before, on a machine other runs shared
+(2026-10-29). What is left is mostly `git`: one test spent 43 s of its 53 s
+waiting on 182 `git` processes.
+
 A software-analysis test stamps, links and writes the overview in its own
 process, through `tests/analysis_repo.py` (#2319). A script a test runs through
 `run_script`, such as the number check, still runs as a process until its
