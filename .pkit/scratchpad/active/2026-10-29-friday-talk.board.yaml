@@ -2963,8 +2963,8 @@ instances:
     template: stage
     parent: T-fits
     role: neutral
-    head: Scratchpad notes
-    text: They explore a question before it is decided.
+    head: Where ideas start
+    text: In conversation, and in a scratchpad note when one needs longer.
     x: 2352
     y: 576
     override:

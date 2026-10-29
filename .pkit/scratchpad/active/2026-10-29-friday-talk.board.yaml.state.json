@@ -30675,7 +30675,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-fits-s50",
-    "text": "Scratchpad notes",
+    "text": "Where ideas start",
     "title": "tpl:stage#head",
     "width": 616,
     "x": 72,
@@ -30686,7 +30686,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-fits-s50",
-    "text": "Scratchpad notes",
+    "text": "Where ideas start",
     "title": "tpl:stage#head",
     "width": 616,
     "x": 72,
@@ -30720,7 +30720,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303176320
   },
   "T-fits-s50.text": {
    "board": {
@@ -30730,7 +30730,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-fits-s50",
-    "text": "They explore a question before it is decided.",
+    "text": "In conversation, and in a scratchpad note when one needs longer.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -30741,7 +30741,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-fits-s50",
-    "text": "They explore a question before it is decided.",
+    "text": "In conversation, and in a scratchpad note when one needs longer.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -30775,7 +30775,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303176426
   },
   "T-fits-s51": {
    "board": {

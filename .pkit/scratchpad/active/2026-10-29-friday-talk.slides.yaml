@@ -301,8 +301,8 @@ slides:
       fill: '#E8DAFFFF'
       ink: '@text_primary'
     side:
-    - head: Scratchpad notes
-      text: They explore a question before it is decided.
+    - head: Where ideas start
+      text: In conversation, and in a scratchpad note when one needs longer.
       arrow: left
       at: 0
       h: 240
@@ -319,7 +319,8 @@ slides:
       h: 312
   limit: ''
   minutes: 1.5
-  notes: 'Where no decision exists yet, what was built stands, until a change makes that choice; then the decision
+  notes: 'A conversation ends. What it decides goes into a decision, what it leaves open into a scratchpad note.
+    Where no decision exists yet, what was built stands, until a change makes that choice; then the decision
     comes first. A layer that disagrees with a decision falls short and is fixed, or a new decision is written
     and you accept it. Most layers are written by hand, so they can lag; what is tied to a decision is flagged
     when the decision changes. The next slides take the layers from the top.'
