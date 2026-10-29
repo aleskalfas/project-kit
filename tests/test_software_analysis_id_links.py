@@ -17,6 +17,9 @@ Held to software-analysis DEC-001 point 14:
   the append-only comparison read an id's link as the id, so the format rule still holds;
 - **an id is no mention of a term** — `core` in `core:UC-021` takes no term's link, and a
   term's id counts as no use of it.
+
+The validator, the links and the stamp run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2326).
 """
 
 from __future__ import annotations
@@ -41,7 +44,7 @@ from tests.analysis_repo import (
     link,
     load_lib,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
 )
 
@@ -193,7 +196,8 @@ def _body(repo: AdopterRepo, rel: str) -> str:
 
 
 def _errors(repo: AdopterRepo) -> list[tuple[str, str]]:
-    completed = run_script(repo, VALIDATE, "--json")
+    """The validator's errors, `--json` alone, in the test's own process."""
+    completed = run_in_process(repo, VALIDATE, "--json")
     assert completed.returncode in (0, 1), completed.stderr
     return [
         (f["location"], f["message"])
