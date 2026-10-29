@@ -101,86 +101,116 @@ slides:
   show: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
   visual:
     kind: install
-    terminal: '# once, on your machine
-
-      $ uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
-
-      $ pkit --version
-
-
-      # in each project
-
-      $ cd your-project
-
-      $ pkit init'
+    terminal: "# once, on your machine\n$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n\
+      $ pkit --version\n\n# in each project\n$ cd your-project\n$ pkit init"
     highlight:
       icon: step-lock-important
       head: Don't want pkit in your repository?
       command: $ pkit visibility private
       body: 'pkit stays in your clone only, hidden by git''s own exclude file: nothing of it is committed, and your
         agent still uses all of it.'
-    tree:
-    - - 0
-      - - - your-project/
-          - plain
-      - ''
-    - - 1
-      - - - .pkit/
-          - plain
-      - the methodology
-    - - 2
-      - - - decisions/
-          - plain
-        - - core/
-          - pkit
-        - - project/
-          - yours
-      - ''
-    - - 2
-      - - - rules/
-          - plain
-        - - core.md
-          - pkit
-        - - project.md
-          - yours
-      - ''
-    - - 2
-      - - - skills/  agents/
-          - plain
-        - - core/
-          - pkit
-        - - project/
-          - yours
-      - ''
-    - - 2
-      - - - schemas/
-          - pkit
-      - what the tools read
-    - - 2
-      - - - capabilities/
-          - pkit
-      - the add-ons you install
-    - - 2
-      - - - manifest.yaml
-          - pkit
-      - what is installed, at which version
-    - - 1
-      - - - .claude/
-          - pkit
-      - skills and agents for Claude Code
-    - - 1
-      - - - CLAUDE.md
-          - yours
-      - loads the rules into every session
-    - - 1
-      - - - src/ …
-          - yours
-      - your code, untouched
-    legend:
-    - - 'pkit''s: replaced by each upgrade'
-      - pkit
-    - - 'yours: never replaced'
-      - yours
+    listing:
+    - - - '$ '
+        - prompt
+      - - tree
+        - command
+      - - ' your-project'
+        - args
+    - - - your-project/
+        - plain
+    - - - '├── '
+        - branch
+      - - .pkit/
+        - plain
+      - - '                 # the methodology'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - decisions/
+        - plain
+    - - - '│   │   ├── '
+        - branch
+      - - core/
+        - pkit
+      - - '          # pkit''s'
+        - comment
+    - - - '│   │   └── '
+        - branch
+      - - project/
+        - yours
+      - - '       # yours'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - rules/
+        - plain
+    - - - '│   │   ├── '
+        - branch
+      - - core.md
+        - pkit
+      - - '        # pkit''s'
+        - comment
+    - - - '│   │   └── '
+        - branch
+      - - project.md
+        - yours
+      - - '     # yours'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - skills/ agents/
+        - plain
+      - - '    # core/ pkit''s, project/ yours'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - schemas/
+        - pkit
+      - - '           # what the tools read'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - capabilities/
+        - pkit
+      - - '      # the add-ons you install'
+        - comment
+    - - - '│   └── '
+        - branch
+      - - manifest.yaml
+        - pkit
+      - - '      # what is installed, which version'
+        - comment
+    - - - '├── '
+        - branch
+      - - .claude/
+        - pkit
+      - - '               # skills, agents for Claude Code'
+        - comment
+    - - - '├── '
+        - branch
+      - - CLAUDE.md
+        - yours
+      - - '              # loads the rules each session'
+        - comment
+    - - - '└── '
+        - branch
+      - - src/
+        - yours
+      - - '                   # your code, untouched'
+        - comment
+    - []
+    - - - '# '
+        - comment
+      - - purple
+        - pkit
+      - - ': pkit''s, replaced by each upgrade'
+        - comment
+    - - - '# '
+        - comment
+      - - blue
+        - yours
+      - - ': yours, never replaced'
+        - comment
   limit: ''
   minutes: 2
   notes: 'pkit init writes pkit''s files into .pkit/, merges your AI tool''s settings without overwriting them,

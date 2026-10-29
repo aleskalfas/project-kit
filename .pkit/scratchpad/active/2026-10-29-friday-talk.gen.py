@@ -311,30 +311,44 @@ def vlink(pid, i, x, y, h):
     }
 
 
-# The deck's one style for a terminal: a dark panel, the prompt and comments grey, the command
-# green, its arguments near white, output light grey. Colours travel as spans in Mural's html.
-TERM = {"prompt": "#8D8D8D", "command": "#42BE65", "args": "#F4F4F4", "comment": "#A8A8A8", "output": "#C6C6C6"}
+# The deck's one style for a terminal: a light panel in a monospace font, the prompt and comments
+# grey, the command green, its arguments near black, output dark grey; in a listing, what is pkit's
+# purple and what is yours blue. Colours travel as spans in Mural's html.
+TERM = {"prompt": "#6F6F6F", "command": "#198038", "args": "#161616", "comment": "#6F6F6F", "output": "#393939",
+        "branch": "#A8A8A8", "pkit": "#6929C4", "yours": "#0043CE", "plain": "#161616"}
 TERM_LINE = 46
+TERM_FONT = "ibm-plex-mono"
 
 
-def terminal_html(text):
+def _span(colour, s):
     import html as htmllib
 
-    def span(colour, s):
-        return f'<span style="color:{colour}">{htmllib.escape(s, quote=False)}</span>'
+    s = htmllib.escape(s, quote=False).replace("  ", "&nbsp; ")
+    return f'<span style="color:{colour}">{s}</span>'
 
+
+def terminal_html(content):
+    """Text (each line coloured by its kind) or a list of lines, each a list of [text, role]."""
     divs = []
-    for line in text.split("\n"):
-        if not line.strip():
-            divs.append("<div><br></div>")
-        elif line.lstrip().startswith("#"):
-            divs.append("<div>" + span(TERM["comment"], line) + "</div>")
-        elif line.startswith("$ "):
-            cmd, _, rest = line[2:].partition(" ")
-            divs.append("<div>" + span(TERM["prompt"], "$ ") + span(TERM["command"], cmd) + (span(TERM["args"], " " + rest) if rest else "") + "</div>")
-        else:
-            divs.append("<div>" + span(TERM["output"], line) + "</div>")
+    if isinstance(content, str):
+        for line in content.split("\n"):
+            if not line.strip():
+                divs.append("<div><br></div>")
+            elif line.lstrip().startswith("#"):
+                divs.append("<div>" + _span(TERM["comment"], line) + "</div>")
+            elif line.startswith("$ "):
+                cmd, _, rest = line[2:].partition(" ")
+                divs.append("<div>" + _span(TERM["prompt"], "$ ") + _span(TERM["command"], cmd) + (_span(TERM["args"], " " + rest) if rest else "") + "</div>")
+            else:
+                divs.append("<div>" + _span(TERM["output"], line) + "</div>")
+    else:
+        for segs in content:
+            divs.append("<div>" + ("".join(_span(TERM[role], text) for text, role in segs) or "<br>") + "</div>")
     return '<html v="1">' + "".join(divs) + "</html>"
+
+
+def term_lines(content):
+    return content.rstrip("\n").count("\n") + 1 if isinstance(content, str) else len(content)
 
 
 TERMINAL_TEMPLATE = {
@@ -342,20 +356,78 @@ TERMINAL_TEMPLATE = {
     "root": {**CLEAR_AREA, "width": 1440, "height": 400},
     "parts": {
         "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 1440, "height": 400,
-               "color": "#262626FF", "border_color": "#262626FF", "border_width": 1, "ink": "@text_primary"},
-        "text": {"type": "text", "html": "{html}", "style": "@style.body", "x": 40, "y": 36, "width": 1360, "height": 328},
+               "color": "#F4F4F4FF", "border_color": "#E0E0E0FF", "border_width": 2, "ink": "@text_primary"},
+        "text": {"type": "text", "html": "{html}", "style": "@style.body", "font": TERM_FONT, "x": 40, "y": 36, "width": 1360, "height": 328},
     },
 }
 
 
-def terminal(pid, x, y, w, text, key="term", font_size=32):
-    lines = text.rstrip("\n").count("\n") + 1
-    h = 72 + lines * TERM_LINE
+ICONS_DIR = "2026-10-29-friday-talk-icons"
+MAP_DIR = None  # set in main: the folder the map lives in
+
+
+def term_segments(content):
+    """Each line as [text, role] segments, coloured as the deck's terminal colours them."""
+    if not isinstance(content, str):
+        return [[(s[0], s[1]) for s in line] for line in content]
+    out = []
+    continued = False
+    for line in content.split("\n"):
+        if continued:
+            out.append([(line, "args")])
+        elif not line.strip():
+            out.append([])
+        elif line.lstrip().startswith("#"):
+            out.append([(line, "comment")])
+        elif line.startswith("$ "):
+            cmd, _, rest = line[2:].partition(" ")
+            out.append([("$ ", "prompt"), (cmd, "command")] + ([(" " + rest, "args")] if rest else []))
+        else:
+            out.append([(line, "output")])
+        continued = line.rstrip().endswith("\\")
+    return out
+
+
+def terminal_png(name, content, w, font_size=30):
+    """Render a terminal panel to a PNG beside the map: a light panel, IBM Plex Mono, the deck's
+    syntax colours. Mural has no monospace font, so a terminal is an image. Returns the file and its height."""
+    import html as htmllib
+    import subprocess
+    from pathlib import Path
+
+    lines = term_segments(content)
+    line_h = round(font_size * 1.53)
+    h = 72 + len(lines) * line_h
+    texts = []
+    for i, segs in enumerate(lines):
+        y = 36 + (i + 1) * line_h - round(line_h * 0.3)
+        spans = "".join(f'<tspan fill="{TERM[role]}">{htmllib.escape(text, quote=False)}</tspan>' for text, role in segs)
+        texts.append(f'<text x="40" y="{y}" xml:space="preserve">{spans}</text>')
+    svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">'
+           f'<rect x="1" y="1" width="{w - 2}" height="{h - 2}" fill="#F4F4F4" stroke="#E0E0E0" stroke-width="2"/>'
+           f'<g font-family="IBM Plex Mono" font-size="{font_size}">' + "".join(texts) + "</g></svg>")
+    folder = Path(MAP_DIR) / ICONS_DIR
+    svg_path = folder / f"term-{name}.svg"
+    png_path = folder / f"term-{name}.png"
+    svg_path.write_text(svg, encoding="utf-8")
+    subprocess.run(["rsvg-convert", "-w", str(2 * w), "-h", str(2 * h), "-o", str(png_path), str(svg_path)], check=True)
+    svg_path.unlink()
+    return f"term-{name}", h
+
+
+TERM_IMAGE_TEMPLATE = {
+    "note": "The deck's terminal, rendered as an image (Mural has no monospace font): the file is term-<name>.png beside the map; made by the slide generator.",
+    "root": {**CLEAR_AREA, "width": 1440, "height": 400},
+    "parts": {"img": {"type": "image", "file": ICONS_DIR + "/{file}.png", "x": 0, "y": 0, "width": 1440, "height": 400}},
+}
+
+
+def terminal(pid, x, y, w, text, key="term", font_size=30):
+    file, h = terminal_png(f"{pid}-{key}".removeprefix("T-"), text, w, font_size)
     return {
         f"{pid}-{key}": {
-            "template": "terminal", "parent": pid, "x": x, "y": y, "html": terminal_html(text),
-            "override": {"root": {"width": w, "height": h}, "bg": {"width": w, "height": h},
-                         "text": {"width": w - 80, "height": h - 72, "font_size": font_size}},
+            "template": "term_image", "parent": pid, "x": x, "y": y, "file": file,
+            "override": {"root": {"width": w, "height": h}, "img": {"width": w, "height": h}},
         }
     }, h
 
@@ -414,7 +486,10 @@ def install(pid, y, v):
             else:
                 yy += GAP
     left_h = yy - y
-    d, right_h = tree(pid, MARGIN + SPAN8 + GUT, y, [(r[0], [tuple(t) for t in r[1]], r[2]) for r in v["tree"]], [tuple(t) for t in v.get("legend") or []])
+    if v.get("listing"):
+        d, right_h = terminal(pid, MARGIN + SPAN8 + GUT, y, SPAN8, v["listing"], key="listing")
+    else:
+        d, right_h = tree(pid, MARGIN + SPAN8 + GUT, y, [(r[0], [tuple(t) for t in r[1]], r[2]) for r in v["tree"]], [tuple(t) for t in v.get("legend") or []])
     out.update(d)
     return out, max(left_h, right_h)
 
@@ -596,6 +671,10 @@ def build_slide(s, n, total):
 
 
 def main(slides_path, board_path):
+    global MAP_DIR
+    from pathlib import Path
+
+    MAP_DIR = str(Path(board_path).resolve().parent)
     sl = yaml.safe_load(open(slides_path))
     board = yaml.safe_load(open(board_path))
     # Keep what a push recorded: each instance's board ids and each row's frozen origin, so a
@@ -610,6 +689,7 @@ def main(slides_path, board_path):
     board["templates"]["pstage"] = pstage_template(board["templates"]["stage"])
     board["templates"].update(TREE_TEMPLATES)
     board["templates"]["terminal"] = TERMINAL_TEMPLATE
+    board["templates"]["term_image"] = TERM_IMAGE_TEMPLATE
     board["templates"]["highlight"] = HIGHLIGHT_TEMPLATE
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     talk = sl["talk"]
