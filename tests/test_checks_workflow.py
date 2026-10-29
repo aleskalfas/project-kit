@@ -134,8 +134,22 @@ def test_the_two_forms_exclude_each_other_and_only_a_pull_request_runs_the_short
     )
     assert full["run"].splitlines()[-1] == "./scripts/check.sh"
     assert short["run"] == "./scripts/check.sh --short"
-    form = {"PKIT_FORM_MODE", "PKIT_FORM_OUTCOME"}
-    assert {k: v for k, v in full["env"].items() if k not in form} == short["env"]
+    # The full run's own: how the deciding step ended, and where the suite keeps its
+    # temporary folders, which the short check, running no suite, never reads.
+    full_only = {"PKIT_FORM_MODE", "PKIT_FORM_OUTCOME", "PYTEST_ADDOPTS"}
+    assert {k: v for k, v in full["env"].items() if k not in full_only} == short["env"]
+
+
+def test_the_full_run_keeps_the_suites_temporary_folders_in_memory(workflow) -> None:
+    """The full run puts the suite's temporary folders on the runner's RAM disk and
+    keeps only a failed test's folder (#2355); the step's name, the form's mark, and
+    what it runs stay as they were."""
+    full = _step(workflow["jobs"]["checks"], short_check.FULL_STEP)
+    assert full["name"] == short_check.FULL_STEP
+    assert full["env"]["PYTEST_ADDOPTS"] == (
+        "--basetemp=/dev/shm/pkit-pytest -o tmp_path_retention_policy=failed"
+    )
+    assert full["run"].splitlines()[-1] == "./scripts/check.sh"
 
 
 # The deciding step's shell, run for real against a stub `uv` that logs what it ran

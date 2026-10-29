@@ -44,6 +44,13 @@ tests included.
 in every run: in a local run's output, and in CI's log of the step that runs the
 aggregator.
 
+**CI's full run keeps the suite's temporary folders in memory** (#2355): its
+`PYTEST_ADDOPTS` puts pytest's base folder on the runner's RAM disk
+(`/dev/shm`), where the git commits most slow tests make are cheaper to write,
+and removes a passed test's folder when the test ends (`tmp_path_retention_policy
+= failed`), so the disk holds only what runs and what failed. A local run keeps
+pytest's own folders.
+
 **A test that cannot share the machine with other workers** is marked
 `@pytest.mark.serial`. Make it worker-safe instead when you can — whatever it
 writes under `tmp_path`, every change to the environment or the working

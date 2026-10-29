@@ -117,6 +117,10 @@ jobs:
           # the job's summary which form ran, so this step says it (ADR-067).
           PKIT_FORM_MODE: ${{ steps.form.outputs.mode }}
           PKIT_FORM_OUTCOME: ${{ steps.form.outcome }}
+          # The suite's temporary folders live on the runner's RAM disk, where
+          # the git commits most slow tests make are cheaper to write; a passed
+          # test's folder is removed when it ends, a failed one's kept (#2355).
+          PYTEST_ADDOPTS: "--basetemp=/dev/shm/pkit-pytest -o tmp_path_retention_policy=failed"
         run: |
           if [ -z "$PKIT_FORM_MODE" ]; then
             printf '### `checks`: the full run\n\nThe step that decides the short check gave no answer (it ended in `%s`), so the run is full (ADR-067).\n' "$PKIT_FORM_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
