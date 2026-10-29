@@ -11,7 +11,8 @@ lines replaced, compared whole. The status tests commit real history, since
 `record-status` runs the whole-repository check at HEAD. The property-style test
 puts seeded random documents — both forms, block and flow style, awkward texts —
 through random writes, each read back by the answer reader and passed through
-validation.
+validation. Three seeds take the round trip through the repository, and the rest
+the answer files' pure layer, which starts no process (#2309).
 """
 
 from __future__ import annotations
@@ -19,11 +20,10 @@ from __future__ import annotations
 import copy
 import json
 import random
-import shutil
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 import pytest
 from click.testing import CliRunner, Result
@@ -36,7 +36,7 @@ from project_kit import friction_repository as fr
 from project_kit import friction_write as fw
 from project_kit.cli import main
 from project_kit.document_parts import split_front_matter
-from project_kit.friction_discovery import Anchor, discover_artefacts
+from project_kit.friction_discovery import Anchor, discover_artefacts, parse_artefacts
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import (
@@ -965,70 +965,151 @@ def _sorted_deferrals(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(entries, key=lambda e: (e["anchor"]["kind"], e["anchor"]["value"]))
 
 
-# Slow by design: 40 random documents, each answered four times, read back and validated.
-def test_written_answers_read_back_identically_and_validate(repo: AdopterRepo) -> None:
-    """Each random document's answers are taken into an answer file of the change's own,
-    then written four times at random: the artefact's file stays byte for byte, the
-    answer file reads back as the model, and validation passes."""
-    for seed in range(40):
-        shutil.rmtree(repo.root / af.FOLDER, ignore_errors=True)  # each seed answers anew
+class _RandomWrite(NamedTuple):
+    """One random write: the writer's command and its arguments, the entry's `revalidated`
+    it leaves (the model), and the clock after it."""
+
+    command: str
+    arguments: dict[str, Any]
+    revalidated: dict[str, Any]
+    now: datetime
+
+
+def _random_write(
+    rng: random.Random,
+    context: str,
+    anchors: Mapping[str, Sequence[str]],
+    revalidated: dict[str, Any],
+    now: datetime,
+) -> _RandomWrite:
+    """A deferral of one carried anchor, or a revalidation keeping some of the deferrals,
+    each text an awkward one ending in `context`; `revalidated` is the model before it."""
+    if rng.random() < 0.5:
+        kind, value = rng.choice([(k, v) for k, values in anchors.items() for v in values])
+        reason = f"{rng.choice(AWKWARD)} {context}"
+        entries = [
+            e
+            for e in revalidated.get("deferred", [])
+            if (e["anchor"]["kind"], e["anchor"]["value"]) != (kind, value)
+        ]
+        entry = {"anchor": {"kind": kind, "value": value}, "reason": reason.strip()}
+        return _RandomWrite(
+            "defer",
+            {"anchor": f"{kind}:{value}", "reason": reason},
+            {**revalidated, "deferred": _sorted_deferrals([*entries, entry])},
+            now,
+        )
+    outcome = rng.choice(("updated", "unchanged"))
+    because = f"{rng.choice(AWKWARD)} {context}" if outcome == "unchanged" else None
+    keep = [e for e in revalidated.get("deferred", []) if rng.random() < 0.5]
+    now += timedelta(minutes=1)
+    model: dict[str, Any] = {"at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "outcome": outcome}
+    if because is not None:
+        model["unchanged-because"] = because.strip()
+    if keep:
+        model["deferred"] = _sorted_deferrals(keep)
+    arguments = {
+        "outcome": outcome,
+        "because": because,
+        "keep": [f"{e['anchor']['kind']}:{e['anchor']['value']}" for e in keep],
+        "now": now,
+    }
+    return _RandomWrite("revalidate", arguments, model, now)
+
+
+#: The random-writes test's seeds: 40 random documents, each answered four times.
+SEEDS = range(40)
+
+#: The seeds that take the round trip through the repository (#2309). Between them they hold
+#: a document and a collection entry, block and flow style, a block with a revalidation and
+#: one without, and deferrals and revalidations, each revalidation keeping a deferral. Every
+#: other seed takes the answer files' pure layer, which starts no process.
+ROUND_TRIP_SEEDS = (7, 10, 14)
+
+
+# Some seconds a seed: its writes start about a hundred git processes, in the writers and in
+# validation, which read the repository.
+@pytest.mark.parametrize("seed", ROUND_TRIP_SEEDS)
+def test_written_answers_read_back_identically_and_validate(repo: AdopterRepo, seed: int) -> None:
+    """The round trip through the repository: a random document's answers are taken into an
+    answer file of the change's own, then written four times at random by the writers. The
+    artefact's file stays byte for byte, the answer file reads back as the model, and
+    validation passes."""
+    rng = random.Random(seed)
+    text, reference, carrier_keys = _random_document(rng)
+    _put(repo, text, "docs/doc.md")
+    location = "docs/doc.md" if not carrier_keys else reference
+    anchors = _block(repo, location)["anchors"]
+    revalidated: dict[str, Any] = copy.deepcopy(_own_entry(repo, location).get("revalidated") or {})
+    written = _read(repo, "docs/doc.md")
+    now = NOW
+    for step in range(4):
+        write = _random_write(rng, f"{seed}-{step}", anchors, revalidated, now)
+        if write.command == "defer":
+            plan = fw.plan_defer(repo.root, reference, **write.arguments)
+        else:
+            plan = fw.plan_revalidate(repo.root, reference, **write.arguments)
+        revalidated, now = write.revalidated, write.now
+        fw.write(plan)
+
+        context = f"seed {seed}, step {step}:\n{text}\n---->\n{plan.after}"
+        assert _read(repo, "docs/doc.md") == written, context
+        assert _own_entry(repo, location).get("revalidated") == revalidated, context
+        assert _validation_errors(repo) == [], context
+        if "deferred" in revalidated and plan.command == "defer":
+            last = revalidated["deferred"][-1]
+            repeat = fw.plan_defer(
+                repo.root,
+                reference,
+                anchor=f"{last['anchor']['kind']}:{last['anchor']['value']}",
+                reason=last["reason"],
+            )
+            assert not repeat.changes, context
+
+
+def test_written_answers_read_back_identically_and_validate_in_the_pure_layer(
+    repo: AdopterRepo,
+) -> None:
+    """Every other seed, through the answer files' pure layer, which starts no process: the
+    document is read as discovery reads it, and each of the four writes is the change's own
+    answer file as the writers write it (`answer_file_text`). That file reads back as the
+    model, departs in nothing from the answer files' schema, and every answer in it is live.
+    The artefact's file is the repository's to keep: the round trip checks it."""
+    schema, why = af.load_schema(repo.root)
+    assert schema is not None, why
+    (place,) = discover_artefacts(repo.root).places
+    name = "20261005T100000Z-00000000.yaml"
+    for seed in (s for s in SEEDS if s not in ROUND_TRIP_SEEDS):
         rng = random.Random(seed)
         text, reference, carrier_keys = _random_document(rng)
-        _put(repo, text, "docs/doc.md")
         location = "docs/doc.md" if not carrier_keys else reference
-        anchors = _block(repo, location)["anchors"]
-        revalidated: dict[str, Any] = copy.deepcopy(
-            _own_entry(repo, location).get("revalidated") or {}
-        )
-        written = _read(repo, "docs/doc.md")
+        artefacts, _why = parse_artefacts("docs/doc.md", place, text)
+        (artefact,) = [a for a in artefacts if a.location == location]
+        block = cast(Mapping[str, Any], artefact.friction)
+        declared = {Anchor(k, v) for k, values in artefact.anchors.items() for v in values}
+        # The block's answers, taken into the change's own answer file before the first write.
+        revalidated: dict[str, Any] = copy.deepcopy(block["revalidated"])
         now = NOW
         for step in range(4):
-            carried = [(k, v) for k, values in anchors.items() for v in values]
-            if rng.random() < 0.5:
-                kind, value = rng.choice(carried)
-                reason = f"{rng.choice(AWKWARD)} {seed}-{step}"
-                plan = fw.plan_defer(repo.root, reference, anchor=f"{kind}:{value}", reason=reason)
-                entries = [
-                    e
-                    for e in revalidated.get("deferred", [])
-                    if (e["anchor"]["kind"], e["anchor"]["value"]) != (kind, value)
-                ]
-                entry = {"anchor": {"kind": kind, "value": value}, "reason": reason.strip()}
-                revalidated = {**revalidated, "deferred": _sorted_deferrals([*entries, entry])}
-            else:
-                outcome = rng.choice(("updated", "unchanged"))
-                because = f"{rng.choice(AWKWARD)} {seed}-{step}" if outcome == "unchanged" else None
-                existing = revalidated.get("deferred", [])
-                keep = [e for e in existing if rng.random() < 0.5]
-                now += timedelta(minutes=1)
-                plan = fw.plan_revalidate(
-                    repo.root,
-                    reference,
-                    outcome=outcome,
-                    because=because,
-                    keep=[f"{e['anchor']['kind']}:{e['anchor']['value']}" for e in keep],
-                    now=now,
-                )
-                revalidated = {"at": now.strftime("%Y-%m-%dT%H:%M:%SZ"), "outcome": outcome}
-                if because is not None:
-                    revalidated["unchanged-because"] = because.strip()
-                if keep:
-                    revalidated["deferred"] = _sorted_deferrals(keep)
-            fw.write(plan)
+            write = _random_write(rng, f"{seed}-{step}", block["anchors"], revalidated, now)
+            revalidated, now = write.revalidated, write.now
+            entry = {
+                af.ARTEFACT_KEY: location,
+                af.REVALIDATED_KEY: fw.ordered_revalidation(revalidated),
+            }
+            after, _first, _last = fw.answer_file_text([entry], 0)
+            found = af.read_answer_file(name, after.encode("utf-8"))
 
-            context = f"seed {seed}, step {step}:\n{text}\n---->\n{plan.after}"
-            assert _read(repo, "docs/doc.md") == written, context
-            assert _own_entry(repo, location).get("revalidated") == revalidated, context
-            assert _validation_errors(repo) == [], context
-            if "deferred" in revalidated and plan.command == "defer":
-                last = revalidated["deferred"][-1]
-                repeat = fw.plan_defer(
-                    repo.root,
-                    reference,
-                    anchor=f"{last['anchor']['kind']}:{last['anchor']['value']}",
-                    reason=last["reason"],
-                )
-                assert not repeat.changes, context
+            context = f"seed {seed}, step {step}:\n{text}\n---->\n{after}"
+            assert found.document == {af.ANSWERS_KEY: [entry]}, context
+            assert af.shape_findings(found, schema) == [], context
+            judged = af.liveness(found.entries, {name}, lambda _reader, _named: True)
+            assert judged.revalidations == (found.entries if "at" in revalidated else ()), context
+            assert [d.anchor for _e, d in judged.deferrals] == [
+                Anchor(e["anchor"]["kind"], e["anchor"]["value"])
+                for e in revalidated.get("deferred", [])
+            ], context
+            assert {d.anchor for _e, d in judged.deferrals} <= declared, context
 
 
 # --- the read-back reads the container against the wiring (#1058) ------------
