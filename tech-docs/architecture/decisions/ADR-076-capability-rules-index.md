@@ -1,7 +1,7 @@
 ---
 id: ADR-076
 title: Claude Code reaches a capability's rules file through an index CLAUDE.md includes
-status: proposed
+status: accepted
 date: 2026-10-29
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
