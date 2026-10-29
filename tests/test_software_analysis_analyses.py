@@ -51,6 +51,7 @@ from tests.analysis_repo import (
     installed,
     load_lib,
     new,
+    prepare,
     prepare_seeded,
     run_in_process,
     stamped,
@@ -90,17 +91,25 @@ def seeded(
     return installed(make_adopter_repo, monkeypatch, then=prepare_seeded)
 
 
+def _two(repo: AdopterRepo) -> None:
+    """`prepare`, then two analyses, the core's and billing's, which builds on it, each
+    with an actor and a use case stamped and filled."""
+    prepare(repo)
+    repo.write({SETTINGS: listing(CORE, BILLING)})
+    stamped(repo, "actor", "tester", "--analysis", "core", "--path", "src/**")
+    stamped(repo, "use-case", "run-suite", "--actor", "ACT-tester", "--analysis", "core")
+    stamped(repo, "actor", "clerk", "--analysis", "billing", "--path", "src/**")
+    stamped(repo, "use-case", "invoice", "--actor", "ACT-clerk", "--analysis", "billing")
+    fill(repo)
+
+
 @pytest.fixture
-def two(project: AdopterRepo) -> AdopterRepo:
-    """Two analyses, the core's and billing's, which builds on it, each with an actor
-    and a use case stamped and filled."""
-    project.write({SETTINGS: listing(CORE, BILLING)})
-    stamped(project, "actor", "tester", "--analysis", "core", "--path", "src/**")
-    stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--analysis", "core")
-    stamped(project, "actor", "clerk", "--analysis", "billing", "--path", "src/**")
-    stamped(project, "use-case", "invoice", "--actor", "ACT-clerk", "--analysis", "billing")
-    fill(project)
-    return project
+def two(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    """`_two`, stamped once per session in the test's own process: a copy of its
+    template."""
+    return installed(make_adopter_repo, monkeypatch, then=_two)
 
 
 def check(repo: AdopterRepo, *args: str) -> dict[str, Any]:
