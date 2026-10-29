@@ -2456,7 +2456,8 @@ instances:
   T-install:
     template: slide
     title: Install pkit
-    lead: 'One command installs pkit, and from then on every file has exactly one owner: pkit or you.'
+    lead: Install the tool once, then add pkit to each project with one command. Every file it adds is
+      either pkit's or yours.
     rests: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
     n: 2
     total: 14
@@ -2470,76 +2471,73 @@ instances:
       lead: 1d232d21-7416-4d29-81f5-2589778080ae
       rests: a586af72-6265-4445-844e-29cd672e822a
       num: f78307a8-cad9-47ae-a3f9-53053154edcb
-  T-install-problem:
-    template: callout
+  T-install-code-left:
+    template: code
     parent: T-install
-    title: The problem
-    body: A methodology copied by hand is frozen the day it is copied, and editing the copy blocks every
-      update.
+    code: "# once, on your machine\n$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n\
+      $ pkit --version\n\n# in each project\n$ cd your-project\n$ pkit init"
     x: 128
     y: 576
+    override:
+      root:
+        height: 592
+      bg:
+        height: 592
+      text:
+        height: 528
     mural_ids:
-      root: 05544065-c6c5-4c4d-aa7c-cf6825181444
-      bg: 2bc75315-4410-480f-869e-0bfdfdc37fe0
-      bar: d9623acf-c97d-4985-ab87-597706dcbca2
-      title: 3c42464f-8a90-4e33-8adc-2488125d02f5
-      body: 30df6061-3bd9-41b2-94ff-2e3fd0beecd7
-  T-install-cmp1:
-    template: compare
+      root: 16e0b144-f0e9-4444-ab5a-15aadb1d0083
+      bg: 7fa7c389-e109-4f8c-9a80-b3380d47f40c
+      text: d53b5170-dfc9-4653-aa84-29eff66cd9bd
+  T-install-code-right:
+    template: code
     parent: T-install
-    space: tech
-    space_label: pkit's files
-    heading: Replaced on every upgrade
-    k1: Where
-    v1: .pkit/decisions/core, .pkit/skills/core, …
-    k2: Rule
-    v2: 'Never edit them: add your own beside them'
-    x: 128
-    y: 800
-    mural_ids:
-      root: d9e65563-e3ce-4423-a93b-5fb04ed42850
-      spacetag: 9f8b7c66-825a-4ef1-a28d-a87ec5cc24ea
-      d1: 1d22cc9b-6fb0-4bed-bd6d-bc082891f6ea
-      d2: d90cc1c4-80da-41d8-aa68-8901b69099d7
-      heading: f3fb9ec1-89a6-4a13-8638-165fce48e80e
-      k1: e7669322-3639-4abc-b529-eede69468cc0
-      v1: f6765f4a-7dc0-4ddc-b5ab-814c54ea8e7d
-      k2: 36bbc780-f458-4871-8e45-35b080617746
-      v2: 90decc7c-2a8f-4d4a-8e0b-4c9c054c390f
-  T-install-cmp2:
-    template: compare
-    parent: T-install
-    space: user
-    space_label: Your files
-    heading: Never replaced by an upgrade
-    k1: Where
-    v1: every project/ folder, your configuration
-    k2: Rule
-    v2: Yours to change, kept across every upgrade
+    code: 'your-project/
+
+      ├── .pkit/ — the methodology
+
+      │   ├── decisions/ — core/ pkit''s · project/ yours
+
+      │   ├── rules/ — core.md pkit''s · project.md yours
+
+      │   ├── skills/, agents/ — core/ pkit''s · project/ yours
+
+      │   ├── schemas/ — what the tools read
+
+      │   ├── capabilities/ — the add-ons you install
+
+      │   └── manifest.yaml — what is installed, at which version
+
+      ├── .claude/ — skills and agents, deployed for Claude Code
+
+      ├── CLAUDE.md — loads the rules into every session
+
+      └── src/ … — your code, untouched'
     x: 1632
-    y: 800
+    y: 576
+    override:
+      root:
+        height: 592
+      bg:
+        height: 592
+      text:
+        height: 528
     mural_ids:
-      root: 5d506cc7-f922-43e2-85fa-1ab5e42ca6bd
-      spacetag: e2ab96e5-3fbd-4753-8c10-3285a37ec8af
-      d1: 3fbf2bc8-af0d-46c4-b230-f3c39fe54903
-      d2: 15d1d8bc-f5f4-472d-aa89-99aecb8e33e9
-      heading: 31d46431-fddf-478a-806f-13dcf5aba846
-      k1: 683346f0-9b26-471d-909c-843b4fe02c02
-      v1: 03a403e0-c668-4065-92d5-c7191755c317
-      k2: c999c44c-4691-4734-bcb2-b9d2152be63f
-      v2: dbb6f348-e632-45f5-9ef1-8f17d2e82f73
+      root: 52dc29ec-e2b8-4a82-a839-792dbebcd4f7
+      bg: 468b33bd-a71a-4dcd-97ba-570cdfc54e2a
+      text: 5d534819-6733-4bef-ac98-6729989854a0
   T-install-limit:
     template: notice
     parent: T-install
     text: 'Limit: Not light on disk: with four capabilities, a 4-file project''s first commit held 689
       files.'
     x: 128
-    y: 1424
+    y: 1216
     mural_ids:
-      root: 25bce55a-acba-4266-883e-6c5bd54bccac
-      bg: b51290d5-d1b1-4981-9e39-60868cd1bd9a
-      bar: 251839d5-05bc-41fa-9e46-b7ce8e651056
-      text: 9443e954-066f-4cb8-856f-77d7cb80daab
+      root: f570eabc-3b1d-4053-81be-95aa8bda10e2
+      bg: 59a7d0c5-b7fe-41fc-919f-f8f47894ba9c
+      bar: e8e43b68-5a97-42c9-89c9-3488f8080e96
+      text: ded9aa59-f461-4c75-a2bd-648a93922dfc
   T-part-P1:
     template: section
     part: '2'

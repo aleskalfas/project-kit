@@ -94,28 +94,36 @@ slides:
 - id: install
   part: P0
   title: Install pkit
-  message: 'One command installs pkit, and from then on every file has exactly one owner: pkit or you.'
-  problem: A methodology copied by hand is frozen the day it is copied, and editing the copy blocks every update.
+  message: Install the tool once, then add pkit to each project with one command. Every file it adds is either pkit's
+    or yours.
+  problem: ''
   does: []
   show: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
   visual:
-    kind: compare
-    left:
-      space: tech
-      space_label: pkit's files
-      heading: Replaced on every upgrade
-      k1: Where
-      v1: .pkit/decisions/core, .pkit/skills/core, …
-      k2: Rule
-      v2: 'Never edit them: add your own beside them'
-    right:
-      space: user
-      space_label: Your files
-      heading: Never replaced by an upgrade
-      k1: Where
-      v1: every project/ folder, your configuration
-      k2: Rule
-      v2: Yours to change, kept across every upgrade
+    kind: code2
+    left: "# once, on your machine\n$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n\
+      $ pkit --version\n\n# in each project\n$ cd your-project\n$ pkit init"
+    right: 'your-project/
+
+      ├── .pkit/ — the methodology
+
+      │   ├── decisions/ — core/ pkit''s · project/ yours
+
+      │   ├── rules/ — core.md pkit''s · project.md yours
+
+      │   ├── skills/, agents/ — core/ pkit''s · project/ yours
+
+      │   ├── schemas/ — what the tools read
+
+      │   ├── capabilities/ — the add-ons you install
+
+      │   └── manifest.yaml — what is installed, at which version
+
+      ├── .claude/ — skills and agents, deployed for Claude Code
+
+      ├── CLAUDE.md — loads the rules into every session
+
+      └── src/ … — your code, untouched'
   limit: 'Not light on disk: with four capabilities, a 4-file project''s first commit held 689 files.'
   minutes: 2
   notes: 'pkit init writes pkit''s files into .pkit/, merges your AI tool''s settings without overwriting them,

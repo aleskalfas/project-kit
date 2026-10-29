@@ -283,11 +283,11 @@ def actors(pid, y, items):
     return out, ACTOR_H
 
 
-def code(pid, y, text, x=MARGIN + SPAN8 + GUT, h=None):
+def code(pid, y, text, x=MARGIN + SPAN8 + GUT, h=None, key="code"):
     lines = text.rstrip("\n").count("\n") + 1
     hh = h or max(304, 64 + lines * 48)
     return {
-        f"{pid}-code": {
+        f"{pid}-{key}": {
             "template": "code", "parent": pid, "code": text.rstrip("\n"), "x": x, "y": y,
             "override": {"root": {"height": hh}, "bg": {"height": hh}, "text": {"height": hh - 64}},
         }
@@ -347,6 +347,14 @@ def build_slide(s, n, total):
                 add(cards(pid, y, v["cards"]))
         elif kind == "compare":
             add(compare(pid, y, v["left"], v["right"]))
+        elif kind == "code2":
+            lines = max(v["left"].rstrip("\n").count("\n"), v["right"].rstrip("\n").count("\n")) + 1
+            hh = max(304, 64 + lines * 48)
+            d1, _ = code(pid, y, v["left"], x=MARGIN, h=hh, key="code-left")
+            d2, _ = code(pid, y, v["right"], h=hh, key="code-right")
+            parts.update(d1)
+            parts.update(d2)
+            y += hh + GAP
         elif kind == "pairs":
             add(pairs(pid, y, v["pairs"], v.get("style", "plain"), bool(v.get("icons"))))
         elif kind == "fanout":
