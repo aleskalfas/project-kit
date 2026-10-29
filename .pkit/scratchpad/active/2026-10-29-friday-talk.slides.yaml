@@ -56,7 +56,7 @@ slides:
         role: code
         icon: row-write
         head: Capture each decision, with why
-        text: you accept it, and every session can read it · Part 1
+        text: you accept it, and every session can read it · Part 2
     - left:
         role: neutral
         icon: row-question
@@ -66,7 +66,7 @@ slides:
         role: code
         icon: row-conventions
         head: Write your conventions down
-        text: every session loads them, and agents follow them · Parts 1, 3
+        text: every session loads them, and agents follow them · Parts 2, 4
     - left:
         role: neutral
         icon: row-doc
@@ -76,7 +76,7 @@ slides:
         role: code
         icon: row-link
         head: Tie each doc to what it depends on
-        text: each change rechecks the docs it affects · Part 2
+        text: each change rechecks the docs it affects · Part 3
     - left:
         role: neutral
         icon: row-unguarded
@@ -86,7 +86,7 @@ slides:
         role: code
         icon: row-shield
         head: Write down what it may do
-        text: decided once by your project, the same in every session · Part 2
+        text: decided once by your project, the same in every session · Part 3
   limit: ''
   minutes: 1.5
   notes: 'pkit is installed into a repository, so an AI agent works the way the project decided. project-kit is built with

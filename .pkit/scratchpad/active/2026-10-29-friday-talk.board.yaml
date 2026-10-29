@@ -3341,7 +3341,7 @@ instances:
     parent: T-opening
     role: code
     head: Capture each decision, with why
-    text: you accept it, and every session can read it · Part 1
+    text: you accept it, and every session can read it · Part 2
     x: 1648
     y: 576
     override:
@@ -3428,7 +3428,7 @@ instances:
     parent: T-opening
     role: code
     head: Write your conventions down
-    text: every session loads them, and agents follow them · Parts 1, 3
+    text: every session loads them, and agents follow them · Parts 2, 4
     x: 1648
     y: 816
     override:
@@ -3515,7 +3515,7 @@ instances:
     parent: T-opening
     role: code
     head: Tie each doc to what it depends on
-    text: each change rechecks the docs it affects · Part 2
+    text: each change rechecks the docs it affects · Part 3
     x: 1648
     y: 1056
     override:
@@ -3602,7 +3602,7 @@ instances:
     parent: T-opening
     role: code
     head: Write down what it may do
-    text: decided once by your project, the same in every session · Part 2
+    text: decided once by your project, the same in every session · Part 3
     x: 1648
     y: 1296
     override:
