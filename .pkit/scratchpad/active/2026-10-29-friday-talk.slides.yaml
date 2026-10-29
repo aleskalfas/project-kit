@@ -91,6 +91,65 @@ slides:
   minutes: 1.5
   notes: 'pkit is installed into a repository, so an AI agent works the way the project decided. project-kit is
     built with pkit itself: every example in this talk is from this week.'
+- id: fits
+  part: P0
+  title: How pkit fits together
+  message: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
+  problem: ''
+  does: []
+  show: 'This week: pkit wrote this order down as a decision of its own, COR-065'
+  visual:
+    kind: pyramid
+    center: 1280
+    top_w: 720
+    step: 280
+    levels:
+    - head: Decisions
+      text: The why, accepted by you.
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: Working rules · schemas · processes
+      text: The exact what, read by every session and tool.
+      fill: '#6929C4FF'
+      ink: '@text_on_color'
+    - head: Skills · agents · permissions
+      text: How agents act, in which role, with what rights.
+      fill: '#BE95FFFF'
+      ink: '@text_primary'
+    - head: pkit's commands and checks
+      text: Carry out what is decided, and check every change.
+      fill: '#D4BBFFFF'
+      ink: '@text_primary'
+    - head: Your code and documents
+      text: The work itself, tied to what it depends on.
+      fill: '#E8DAFFFF'
+      ink: '@text_primary'
+    side:
+    - head: Where ideas start
+      text: In conversation, and in a scratchpad note when one needs longer.
+      role: code
+      arrow: right
+      at: 0
+      h: 300
+      w: 600
+    - head: Carried out
+      text: Each layer carries out the decisions above it.
+      arrow: down
+      at: 0
+      h: 440
+    - head: Checked
+      text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when you
+        accept a new one.
+      arrow: up
+      at: 492
+      h: 440
+  limit: ''
+  minutes: 1.5
+  notes: 'A conversation ends. What it decides goes into a decision, what it leaves open into a scratchpad note.
+    Where no decision exists yet, what was built stands, until a change makes that choice; then the decision
+    comes first. A layer that disagrees with a decision falls short and is fixed, or a new decision is written
+    and you accept it. Most layers are written by hand, so they can lag; what is tied to a decision is flagged
+    when the decision changes. After the install, the slides take the layers from the top.'
 - id: install
   part: P0
   title: Install pkit
@@ -270,60 +329,6 @@ slides:
     and installs the skills and agents where Claude Code reads them. Today that is Claude Code. In a newcomer''s
     trial run, the setup committed 689 files for a 4-file project. What sits in the agent''s context: one rules
     file, and one line per skill and agent.'
-- id: fits
-  part: P0
-  title: How pkit fits together
-  message: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
-  problem: ''
-  does: []
-  show: 'This week: pkit wrote this order down as a decision of its own, COR-065'
-  visual:
-    kind: pyramid
-    levels:
-    - head: Decisions
-      text: The why, accepted by you.
-      fill: '#491D8BFF'
-      ink: '@text_on_color'
-    - head: Working rules · schemas · processes
-      text: The exact what, read by every session and tool.
-      fill: '#6929C4FF'
-      ink: '@text_on_color'
-    - head: Skills · agents · permissions
-      text: How agents act, in which role, with what rights.
-      fill: '#BE95FFFF'
-      ink: '@text_primary'
-    - head: pkit's commands and checks
-      text: Carry out what is decided, and check every change.
-      fill: '#D4BBFFFF'
-      ink: '@text_primary'
-    - head: Your code and documents
-      text: The work itself, tied to what it depends on.
-      fill: '#E8DAFFFF'
-      ink: '@text_primary'
-    side:
-    - head: Where ideas start
-      text: In conversation, and in a scratchpad note when one needs longer.
-      arrow: left
-      at: 0
-      h: 240
-    - head: Carried out
-      text: Each layer carries out the decisions above it.
-      arrow: down
-      at: 300
-      h: 260
-    - head: Checked
-      text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when you
-        accept a new one.
-      arrow: up
-      at: 620
-      h: 312
-  limit: ''
-  minutes: 1.5
-  notes: 'A conversation ends. What it decides goes into a decision, what it leaves open into a scratchpad note.
-    Where no decision exists yet, what was built stands, until a change makes that choice; then the decision
-    comes first. A layer that disagrees with a decision falls short and is fixed, or a new decision is written
-    and you accept it. Most layers are written by hand, so they can lag; what is tied to a decision is flagged
-    when the decision changes. The next slides take the layers from the top.'
 - id: decisions
   part: P1
   title: Decision records

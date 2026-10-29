@@ -28639,11 +28639,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 3,
+    "outline": 2,
     "show_title": false,
     "title": "T-fits",
     "width": 3200,
-    "x": 6554,
+    "x": 2954,
     "y": 1241
    },
    "fields": {
@@ -28651,14 +28651,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 3,
+    "outline": 2,
     "show_title": false,
     "title": "T-fits",
     "width": 3200,
-    "x": 6554,
+    "x": 2954,
     "y": 1241
    },
-   "mural_id": "7ae40ea5-ae16-473c-b558-0f20b19211de",
+   "mural_id": "8814f870-062d-4d36-9614-50fddec3b789",
    "tracked": [
     "title",
     "text",
@@ -28686,7 +28686,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302559697
+   "updatedOn": 1793303476580
   },
   "T-fits-l101": {
    "board": {
@@ -28699,8 +28699,8 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-l101",
-    "width": 768,
-    "x": 1576,
+    "width": 168,
+    "x": 736,
     "y": 576
    },
    "fields": {
@@ -28711,11 +28711,11 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-l101",
-    "width": 768,
-    "x": 1576,
+    "width": 168,
+    "x": 736,
     "y": 576
    },
-   "mural_id": "1fccf1e9-08b0-471c-b112-1da86c0831d6",
+   "mural_id": "53c619da-c183-442e-a13d-c5ae49956b8d",
    "tracked": [
     "title",
     "text",
@@ -28743,7 +28743,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302560756
+   "updatedOn": 1793303477864
   },
   "T-fits-l101.arrow": {
    "board": {
@@ -28754,11 +28754,11 @@
     "parent": "T-fits-l101",
     "points": [
      [
-      760,
+      8,
       86
      ],
      [
-      8,
+      160,
       86
      ]
     ],
@@ -28774,18 +28774,18 @@
     "parent": "T-fits-l101",
     "points": [
      [
-      760,
+      8,
       86
      ],
      [
-      8,
+      160,
       86
      ]
     ],
     "tip": "end",
     "title": "tpl:link#arrow"
    },
-   "mural_id": "3b4fe8a8-7b08-438b-a86f-64d43a2b02a3",
+   "mural_id": "d749e7a8-ef67-46a4-92f9-144253dd2584",
    "tracked": [
     "title",
     "text",
@@ -28813,7 +28813,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302563753
+   "updatedOn": 1793303483921
   },
   "T-fits-l102": {
    "board": {
@@ -28822,27 +28822,27 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 260,
+    "height": 440,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-l102",
     "width": 96,
     "x": 2240,
-    "y": 876
+    "y": 576
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 260,
+    "height": 440,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-l102",
     "width": 96,
     "x": 2240,
-    "y": 876
+    "y": 576
    },
-   "mural_id": "52096782-988c-4455-8bc4-1bef5305faea",
+   "mural_id": "6e6e6c57-d5d6-4101-bf25-f4eff8c71985",
    "tracked": [
     "title",
     "text",
@@ -28870,7 +28870,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302561069
+   "updatedOn": 1793303478135
   },
   "T-fits-l102.arrow": {
    "board": {
@@ -28886,7 +28886,7 @@
      ],
      [
       48,
-      252
+      432
      ]
     ],
     "text": "",
@@ -28906,13 +28906,13 @@
      ],
      [
       48,
-      252
+      432
      ]
     ],
     "tip": "end",
     "title": "tpl:link#arrow"
    },
-   "mural_id": "fdcde770-c9c7-4af2-bdcd-9582f504d3ac",
+   "mural_id": "e3427b59-9ca3-4451-aa9f-b3671a98fc5e",
    "tracked": [
     "title",
     "text",
@@ -28940,7 +28940,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302563818
+   "updatedOn": 1793303483994
   },
   "T-fits-l103": {
    "board": {
@@ -28949,27 +28949,27 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 312,
+    "height": 440,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-l103",
     "width": 96,
     "x": 2240,
-    "y": 1196
+    "y": 1068
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 312,
+    "height": 440,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-l103",
     "width": 96,
     "x": 2240,
-    "y": 1196
+    "y": 1068
    },
-   "mural_id": "b7b7d91b-b64e-4be3-bda7-696e9605b2b1",
+   "mural_id": "589356b6-09a4-45b6-a891-88d395849e6f",
    "tracked": [
     "title",
     "text",
@@ -28997,7 +28997,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302561255
+   "updatedOn": 1793303478291
   },
   "T-fits-l103.arrow": {
    "board": {
@@ -29009,7 +29009,7 @@
     "points": [
      [
       48,
-      304
+      432
      ],
      [
       48,
@@ -29029,7 +29029,7 @@
     "points": [
      [
       48,
-      304
+      432
      ],
      [
       48,
@@ -29039,7 +29039,7 @@
     "tip": "end",
     "title": "tpl:link#arrow"
    },
-   "mural_id": "a976283b-4373-44b9-8983-e55193829183",
+   "mural_id": "d75b91c7-1e7c-4839-8c17-321bac5a5d79",
    "tracked": [
     "title",
     "text",
@@ -29067,7 +29067,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302564058
+   "updatedOn": 1793303484225
   },
   "T-fits-s1": {
    "board": {
@@ -29080,8 +29080,8 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s1",
-    "width": 760,
-    "x": 800,
+    "width": 720,
+    "x": 920,
     "y": 576
    },
    "fields": {
@@ -29092,11 +29092,11 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s1",
-    "width": 760,
-    "x": 800,
+    "width": 720,
+    "x": 920,
     "y": 576
    },
-   "mural_id": "87b6b869-f0f7-4091-901a-ae81455cee34",
+   "mural_id": "79cf2150-d185-4882-8e19-71a6b27bf196",
    "tracked": [
     "title",
     "text",
@@ -29124,7 +29124,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302561209
+   "updatedOn": 1793303477730
   },
   "T-fits-s1.box": {
    "board": {
@@ -29137,7 +29137,7 @@
     "parent": "T-fits-s1",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 760,
+    "width": 720,
     "x": 0,
     "y": 0
    },
@@ -29150,11 +29150,11 @@
     "parent": "T-fits-s1",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 760,
+    "width": 720,
     "x": 0,
     "y": 0
    },
-   "mural_id": "f2370a34-68f0-4e0d-a166-f034bfa6cc5e",
+   "mural_id": "22a53e4f-3c66-4d66-b3d3-709539f75790",
    "tracked": [
     "title",
     "text",
@@ -29182,7 +29182,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s1.dot": {
    "board": {
@@ -29212,7 +29212,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "6e347311-b734-4100-b46c-50648680d19a",
+   "mural_id": "9a489932-651f-4644-a7e8-c4fb62667d99",
    "tracked": [
     "title",
     "text",
@@ -29240,7 +29240,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s1.head": {
    "board": {
@@ -29252,7 +29252,7 @@
     "parent": "T-fits-s1",
     "text": "Decisions",
     "title": "tpl:stage#head",
-    "width": 696,
+    "width": 656,
     "x": 32,
     "y": 22
    },
@@ -29264,11 +29264,11 @@
     "parent": "T-fits-s1",
     "text": "Decisions",
     "title": "tpl:stage#head",
-    "width": 696,
+    "width": 656,
     "x": 32,
     "y": 22
    },
-   "mural_id": "ea8a7831-96b1-4860-8d63-c73773930b7c",
+   "mural_id": "da19d2b9-83cb-4293-b570-975f6507ca08",
    "tracked": [
     "title",
     "text",
@@ -29296,7 +29296,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s1.text": {
    "board": {
@@ -29308,7 +29308,7 @@
     "parent": "T-fits-s1",
     "text": "The why, accepted by you.",
     "title": "tpl:stage#text",
-    "width": 696,
+    "width": 656,
     "x": 32,
     "y": 92
    },
@@ -29320,11 +29320,11 @@
     "parent": "T-fits-s1",
     "text": "The why, accepted by you.",
     "title": "tpl:stage#text",
-    "width": 696,
+    "width": 656,
     "x": 32,
     "y": 92
    },
-   "mural_id": "dd97c748-50bb-4c10-9b75-2094e48c6654",
+   "mural_id": "595e89dc-f3cd-4d8c-9d4e-49ce4686fe4c",
    "tracked": [
     "title",
     "text",
@@ -29352,7 +29352,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s2": {
    "board": {
@@ -29365,8 +29365,8 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s2",
-    "width": 1060,
-    "x": 650,
+    "width": 1000,
+    "x": 780,
     "y": 766
    },
    "fields": {
@@ -29377,11 +29377,11 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s2",
-    "width": 1060,
-    "x": 650,
+    "width": 1000,
+    "x": 780,
     "y": 766
    },
-   "mural_id": "d1f48eec-b19d-4598-bf7b-8d5cb1c97b5e",
+   "mural_id": "8f76e784-72b2-462c-959a-e8cf9ebf9b2f",
    "tracked": [
     "title",
     "text",
@@ -29409,7 +29409,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302560434
+   "updatedOn": 1793303477616
   },
   "T-fits-s2.box": {
    "board": {
@@ -29422,7 +29422,7 @@
     "parent": "T-fits-s2",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1060,
+    "width": 1000,
     "x": 0,
     "y": 0
    },
@@ -29435,11 +29435,11 @@
     "parent": "T-fits-s2",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1060,
+    "width": 1000,
     "x": 0,
     "y": 0
    },
-   "mural_id": "be6b9634-a871-4cd2-a0df-ad88d2bb4322",
+   "mural_id": "312602f7-2d6e-4b9f-8a62-6d59a2f5ba38",
    "tracked": [
     "title",
     "text",
@@ -29467,7 +29467,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s2.dot": {
    "board": {
@@ -29497,7 +29497,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "af765b44-b8d8-4412-87ae-9c4a511b9ed0",
+   "mural_id": "755298b0-6990-40e1-9289-30390c931ab7",
    "tracked": [
     "title",
     "text",
@@ -29525,7 +29525,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s2.head": {
    "board": {
@@ -29537,7 +29537,7 @@
     "parent": "T-fits-s2",
     "text": "Working rules \u00b7 schemas \u00b7 processes",
     "title": "tpl:stage#head",
-    "width": 996,
+    "width": 936,
     "x": 32,
     "y": 22
    },
@@ -29549,11 +29549,11 @@
     "parent": "T-fits-s2",
     "text": "Working rules \u00b7 schemas \u00b7 processes",
     "title": "tpl:stage#head",
-    "width": 996,
+    "width": 936,
     "x": 32,
     "y": 22
    },
-   "mural_id": "ac9079f1-c6d0-4687-9f07-517e030dd514",
+   "mural_id": "102e345b-402a-4641-a719-627eafcaa3dc",
    "tracked": [
     "title",
     "text",
@@ -29581,7 +29581,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s2.text": {
    "board": {
@@ -29593,7 +29593,7 @@
     "parent": "T-fits-s2",
     "text": "The exact what, read by every session and tool.",
     "title": "tpl:stage#text",
-    "width": 996,
+    "width": 936,
     "x": 32,
     "y": 92
    },
@@ -29605,11 +29605,11 @@
     "parent": "T-fits-s2",
     "text": "The exact what, read by every session and tool.",
     "title": "tpl:stage#text",
-    "width": 996,
+    "width": 936,
     "x": 32,
     "y": 92
    },
-   "mural_id": "66abd493-a8b7-449e-aed1-565a6722af11",
+   "mural_id": "43ac95b6-617e-4ebd-af9f-362e4d6ed863",
    "tracked": [
     "title",
     "text",
@@ -29637,7 +29637,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s3": {
    "board": {
@@ -29650,8 +29650,8 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s3",
-    "width": 1360,
-    "x": 500,
+    "width": 1280,
+    "x": 640,
     "y": 956
    },
    "fields": {
@@ -29662,11 +29662,11 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s3",
-    "width": 1360,
-    "x": 500,
+    "width": 1280,
+    "x": 640,
     "y": 956
    },
-   "mural_id": "cd9c306f-254a-4ab5-b721-7cab51c009a5",
+   "mural_id": "76d5834a-b42f-4bea-8062-2ce720abaf09",
    "tracked": [
     "title",
     "text",
@@ -29694,7 +29694,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302560610
+   "updatedOn": 1793303477662
   },
   "T-fits-s3.box": {
    "board": {
@@ -29707,7 +29707,7 @@
     "parent": "T-fits-s3",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1360,
+    "width": 1280,
     "x": 0,
     "y": 0
    },
@@ -29720,11 +29720,11 @@
     "parent": "T-fits-s3",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1360,
+    "width": 1280,
     "x": 0,
     "y": 0
    },
-   "mural_id": "93371638-de2d-4b31-9afb-138e9e2f53a2",
+   "mural_id": "f2f5deb8-2eea-424e-83e4-c9dfdb491485",
    "tracked": [
     "title",
     "text",
@@ -29752,7 +29752,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s3.dot": {
    "board": {
@@ -29782,7 +29782,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "dcf5b34c-ddee-4dc8-9b33-c5606e2d58da",
+   "mural_id": "8e9fb31f-d9c0-4d6f-aaba-be5c896cd3e7",
    "tracked": [
     "title",
     "text",
@@ -29810,7 +29810,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s3.head": {
    "board": {
@@ -29822,7 +29822,7 @@
     "parent": "T-fits-s3",
     "text": "Skills \u00b7 agents \u00b7 permissions",
     "title": "tpl:stage#head",
-    "width": 1296,
+    "width": 1216,
     "x": 32,
     "y": 22
    },
@@ -29834,11 +29834,11 @@
     "parent": "T-fits-s3",
     "text": "Skills \u00b7 agents \u00b7 permissions",
     "title": "tpl:stage#head",
-    "width": 1296,
+    "width": 1216,
     "x": 32,
     "y": 22
    },
-   "mural_id": "895942ec-3b01-4e2c-baee-7d4a552a2de4",
+   "mural_id": "317b6767-9b0e-4c19-a9f0-84ac0ae07241",
    "tracked": [
     "title",
     "text",
@@ -29866,7 +29866,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s3.text": {
    "board": {
@@ -29878,7 +29878,7 @@
     "parent": "T-fits-s3",
     "text": "How agents act, in which role, with what rights.",
     "title": "tpl:stage#text",
-    "width": 1296,
+    "width": 1216,
     "x": 32,
     "y": 92
    },
@@ -29890,11 +29890,11 @@
     "parent": "T-fits-s3",
     "text": "How agents act, in which role, with what rights.",
     "title": "tpl:stage#text",
-    "width": 1296,
+    "width": 1216,
     "x": 32,
     "y": 92
    },
-   "mural_id": "ea7c5bb0-dbc3-437b-8abc-38acccfc0de1",
+   "mural_id": "4d6c9f7a-6c42-43d7-932b-26663272e2bd",
    "tracked": [
     "title",
     "text",
@@ -29922,7 +29922,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s4": {
    "board": {
@@ -29935,8 +29935,8 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s4",
-    "width": 1660,
-    "x": 350,
+    "width": 1560,
+    "x": 500,
     "y": 1146
    },
    "fields": {
@@ -29947,11 +29947,11 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s4",
-    "width": 1660,
-    "x": 350,
+    "width": 1560,
+    "x": 500,
     "y": 1146
    },
-   "mural_id": "7d4f49bb-5696-4743-a8d2-c45f19abfc45",
+   "mural_id": "a0cf2d14-855f-457f-808d-026cb5524458",
    "tracked": [
     "title",
     "text",
@@ -29979,7 +29979,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302560568
+   "updatedOn": 1793303477505
   },
   "T-fits-s4.box": {
    "board": {
@@ -29992,7 +29992,7 @@
     "parent": "T-fits-s4",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1660,
+    "width": 1560,
     "x": 0,
     "y": 0
    },
@@ -30005,11 +30005,11 @@
     "parent": "T-fits-s4",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1660,
+    "width": 1560,
     "x": 0,
     "y": 0
    },
-   "mural_id": "2251d07b-367b-4bc7-a45c-26a7b0d3fb6f",
+   "mural_id": "bff357b1-39b0-4b43-823f-377344257a51",
    "tracked": [
     "title",
     "text",
@@ -30037,7 +30037,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s4.dot": {
    "board": {
@@ -30067,7 +30067,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "19720d86-6f21-41a1-a7af-4a609036ce77",
+   "mural_id": "81f188ba-e2d1-4ae0-bf45-64025e9d22bd",
    "tracked": [
     "title",
     "text",
@@ -30095,7 +30095,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s4.head": {
    "board": {
@@ -30107,7 +30107,7 @@
     "parent": "T-fits-s4",
     "text": "pkit's commands and checks",
     "title": "tpl:stage#head",
-    "width": 1596,
+    "width": 1496,
     "x": 32,
     "y": 22
    },
@@ -30119,11 +30119,11 @@
     "parent": "T-fits-s4",
     "text": "pkit's commands and checks",
     "title": "tpl:stage#head",
-    "width": 1596,
+    "width": 1496,
     "x": 32,
     "y": 22
    },
-   "mural_id": "f81cf2c3-1fc8-4a0d-aaea-dca7a2c5f9ab",
+   "mural_id": "a1076371-7e88-4dbc-8643-3821d38fa227",
    "tracked": [
     "title",
     "text",
@@ -30151,7 +30151,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s4.text": {
    "board": {
@@ -30163,7 +30163,7 @@
     "parent": "T-fits-s4",
     "text": "Carry out what is decided, and check every change.",
     "title": "tpl:stage#text",
-    "width": 1596,
+    "width": 1496,
     "x": 32,
     "y": 92
    },
@@ -30175,11 +30175,11 @@
     "parent": "T-fits-s4",
     "text": "Carry out what is decided, and check every change.",
     "title": "tpl:stage#text",
-    "width": 1596,
+    "width": 1496,
     "x": 32,
     "y": 92
    },
-   "mural_id": "fde4d64f-8451-45ac-b74e-78fe7285fc1b",
+   "mural_id": "3bf98c20-de11-474a-a6ed-54947209d67b",
    "tracked": [
     "title",
     "text",
@@ -30207,7 +30207,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s5": {
    "board": {
@@ -30220,8 +30220,8 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s5",
-    "width": 1960,
-    "x": 200,
+    "width": 1840,
+    "x": 360,
     "y": 1336
    },
    "fields": {
@@ -30232,11 +30232,11 @@
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s5",
-    "width": 1960,
-    "x": 200,
+    "width": 1840,
+    "x": 360,
     "y": 1336
    },
-   "mural_id": "16c7b973-3463-42d4-8c33-1ccbbd4dd24f",
+   "mural_id": "76ef6568-c0fc-4b0a-b5a9-44226d205e0f",
    "tracked": [
     "title",
     "text",
@@ -30264,7 +30264,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302560701
+   "updatedOn": 1793303477789
   },
   "T-fits-s5.box": {
    "board": {
@@ -30277,7 +30277,7 @@
     "parent": "T-fits-s5",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1960,
+    "width": 1840,
     "x": 0,
     "y": 0
    },
@@ -30290,11 +30290,11 @@
     "parent": "T-fits-s5",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 1960,
+    "width": 1840,
     "x": 0,
     "y": 0
    },
-   "mural_id": "d512668f-ae57-4432-ac2e-36358cc18e19",
+   "mural_id": "ca0bbe55-601b-4c05-b686-6abc839d0730",
    "tracked": [
     "title",
     "text",
@@ -30322,7 +30322,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s5.dot": {
    "board": {
@@ -30352,7 +30352,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "74120842-ca4f-4656-a9cd-7a0c39a08c1f",
+   "mural_id": "1032ca40-7a93-4860-b13e-ffb4618ecd10",
    "tracked": [
     "title",
     "text",
@@ -30380,7 +30380,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s5.head": {
    "board": {
@@ -30392,7 +30392,7 @@
     "parent": "T-fits-s5",
     "text": "Your code and documents",
     "title": "tpl:stage#head",
-    "width": 1896,
+    "width": 1776,
     "x": 32,
     "y": 22
    },
@@ -30404,11 +30404,11 @@
     "parent": "T-fits-s5",
     "text": "Your code and documents",
     "title": "tpl:stage#head",
-    "width": 1896,
+    "width": 1776,
     "x": 32,
     "y": 22
    },
-   "mural_id": "a05e148e-fe67-4191-8e7c-3dc5836af6a3",
+   "mural_id": "ac018162-ed6c-457b-937f-832fb3727948",
    "tracked": [
     "title",
     "text",
@@ -30436,7 +30436,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s5.text": {
    "board": {
@@ -30448,7 +30448,7 @@
     "parent": "T-fits-s5",
     "text": "The work itself, tied to what it depends on.",
     "title": "tpl:stage#text",
-    "width": 1896,
+    "width": 1776,
     "x": 32,
     "y": 92
    },
@@ -30460,11 +30460,11 @@
     "parent": "T-fits-s5",
     "text": "The work itself, tied to what it depends on.",
     "title": "tpl:stage#text",
-    "width": 1896,
+    "width": 1776,
     "x": 32,
     "y": 92
    },
-   "mural_id": "08b263d6-2d5b-4b4b-98aa-5936f52f26e8",
+   "mural_id": "b0509baa-e3ba-4856-b4ca-76e588b3147b",
    "tracked": [
     "title",
     "text",
@@ -30492,7 +30492,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s50": {
    "board": {
@@ -30501,27 +30501,27 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 240,
+    "height": 300,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s50",
-    "width": 720,
-    "x": 2352,
+    "width": 600,
+    "x": 128,
     "y": 576
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 240,
+    "height": 300,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s50",
-    "width": 720,
-    "x": 2352,
+    "width": 600,
+    "x": 128,
     "y": 576
    },
-   "mural_id": "bfb12a7b-906e-4b43-b1e0-353e50994fa8",
+   "mural_id": "53e9fe81-739a-47e3-9fad-4f4f052b31e7",
    "tracked": [
     "title",
     "text",
@@ -30549,37 +30549,37 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302560707
+   "updatedOn": 1793303556471
   },
   "T-fits-s50.box": {
    "board": {
-    "border_color": "#525252FF",
+    "border_color": "#6929C4FF",
     "border_style": "solid",
-    "border_width": 2,
-    "color": "#F4F4F4FF",
-    "height": 240,
+    "border_width": 4,
+    "color": "#F6F2FFFF",
+    "height": 300,
     "ink": "#161616FF",
     "parent": "T-fits-s50",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 720,
+    "width": 600,
     "x": 0,
     "y": 0
    },
    "fields": {
-    "border_color": "#525252FF",
-    "border_width": 2,
-    "color": "#F4F4F4FF",
-    "height": 240,
+    "border_color": "#6929C4FF",
+    "border_width": 4,
+    "color": "#F6F2FFFF",
+    "height": 300,
     "ink": "#161616FF",
     "parent": "T-fits-s50",
     "text": "",
     "title": "tpl:stage#box",
-    "width": 720,
+    "width": 600,
     "x": 0,
     "y": 0
    },
-   "mural_id": "2166b544-652a-4265-ab03-106ce9fce299",
+   "mural_id": "15186e63-393f-4d85-b4c3-62a243fcebed",
    "tracked": [
     "title",
     "text",
@@ -30607,14 +30607,14 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303557166
   },
   "T-fits-s50.dot": {
    "board": {
-    "border_color": "#525252FF",
+    "border_color": "#6929C4FF",
     "border_style": "solid",
     "border_width": 1,
-    "color": "#525252FF",
+    "color": "#6929C4FF",
     "height": 24,
     "ink": "#161616FF",
     "parent": "T-fits-s50",
@@ -30625,9 +30625,9 @@
     "y": 44
    },
    "fields": {
-    "border_color": "#525252FF",
+    "border_color": "#6929C4FF",
     "border_width": 1,
-    "color": "#525252FF",
+    "color": "#6929C4FF",
     "height": 24,
     "ink": "#161616FF",
     "parent": "T-fits-s50",
@@ -30637,7 +30637,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "1f1bb49a-43b4-4ee8-87ea-d455914f630e",
+   "mural_id": "de0efdaa-5e01-4658-bd66-7feea513a0b4",
    "tracked": [
     "title",
     "text",
@@ -30665,7 +30665,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303557166
   },
   "T-fits-s50.head": {
    "board": {
@@ -30677,7 +30677,7 @@
     "parent": "T-fits-s50",
     "text": "Where ideas start",
     "title": "tpl:stage#head",
-    "width": 616,
+    "width": 496,
     "x": 72,
     "y": 28
    },
@@ -30688,11 +30688,11 @@
     "parent": "T-fits-s50",
     "text": "Where ideas start",
     "title": "tpl:stage#head",
-    "width": 616,
+    "width": 496,
     "x": 72,
     "y": 28
    },
-   "mural_id": "2d418a77-554c-4a5d-94d8-6017322332e0",
+   "mural_id": "fd36b732-1e21-47a5-a31e-427feec0dc14",
    "tracked": [
     "title",
     "text",
@@ -30720,7 +30720,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303176320
+   "updatedOn": 1793303557911
   },
   "T-fits-s50.text": {
    "board": {
@@ -30732,7 +30732,7 @@
     "parent": "T-fits-s50",
     "text": "In conversation, and in a scratchpad note when one needs longer.",
     "title": "tpl:stage#text",
-    "width": 656,
+    "width": 536,
     "x": 32,
     "y": 100
    },
@@ -30743,11 +30743,11 @@
     "parent": "T-fits-s50",
     "text": "In conversation, and in a scratchpad note when one needs longer.",
     "title": "tpl:stage#text",
-    "width": 656,
+    "width": 536,
     "x": 32,
     "y": 100
    },
-   "mural_id": "6637e7cf-bb80-4055-8518-e370256d7eeb",
+   "mural_id": "b8c8016a-a047-420e-9eca-6d179ed19520",
    "tracked": [
     "title",
     "text",
@@ -30775,7 +30775,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303176426
+   "updatedOn": 1793303557911
   },
   "T-fits-s51": {
    "board": {
@@ -30784,27 +30784,27 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 260,
+    "height": 440,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s51",
     "width": 720,
     "x": 2352,
-    "y": 876
+    "y": 576
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 260,
+    "height": 440,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s51",
     "width": 720,
     "x": 2352,
-    "y": 876
+    "y": 576
    },
-   "mural_id": "26ab10b1-b11a-4a19-a1ae-9028960d6b3a",
+   "mural_id": "aac382b8-53d8-4161-bfe5-3d11ee5533cf",
    "tracked": [
     "title",
     "text",
@@ -30832,7 +30832,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302560840
+   "updatedOn": 1793303478061
   },
   "T-fits-s51.box": {
    "board": {
@@ -30840,7 +30840,7 @@
     "border_style": "solid",
     "border_width": 2,
     "color": "#F4F4F4FF",
-    "height": 260,
+    "height": 440,
     "ink": "#161616FF",
     "parent": "T-fits-s51",
     "text": "",
@@ -30853,7 +30853,7 @@
     "border_color": "#525252FF",
     "border_width": 2,
     "color": "#F4F4F4FF",
-    "height": 260,
+    "height": 440,
     "ink": "#161616FF",
     "parent": "T-fits-s51",
     "text": "",
@@ -30862,7 +30862,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "87648629-ddfd-4841-a703-27ad40264aba",
+   "mural_id": "8294e49c-5bb0-45c7-b801-a59e9364a34b",
    "tracked": [
     "title",
     "text",
@@ -30890,7 +30890,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s51.dot": {
    "board": {
@@ -30920,7 +30920,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "07685e1c-eb9b-419a-8a6c-6c4f37510e7c",
+   "mural_id": "c4958c77-7508-4ec8-837d-190db17ba451",
    "tracked": [
     "title",
     "text",
@@ -30948,7 +30948,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s51.head": {
    "board": {
@@ -30975,7 +30975,7 @@
     "x": 72,
     "y": 28
    },
-   "mural_id": "45364987-9d00-42fd-b67f-156a995b3c90",
+   "mural_id": "fcf6a428-3fc1-4785-bfba-cb2ea07df6c3",
    "tracked": [
     "title",
     "text",
@@ -31003,7 +31003,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s51.text": {
    "board": {
@@ -31030,7 +31030,7 @@
     "x": 32,
     "y": 100
    },
-   "mural_id": "8f3bb1fd-4b69-4bad-bb92-05ede6fba305",
+   "mural_id": "f1f0f56d-9efc-4f71-a9a8-646f6554fc6b",
    "tracked": [
     "title",
     "text",
@@ -31058,7 +31058,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s52": {
    "board": {
@@ -31067,27 +31067,27 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 312,
+    "height": 440,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s52",
     "width": 720,
     "x": 2352,
-    "y": 1196
+    "y": 1068
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 312,
+    "height": 440,
     "parent": "T-fits",
     "show_title": false,
     "title": "T-fits-s52",
     "width": 720,
     "x": 2352,
-    "y": 1196
+    "y": 1068
    },
-   "mural_id": "58dbc611-ef09-411a-9310-82f9858876ac",
+   "mural_id": "c0921055-d548-4e32-9dd5-f5fb348a8145",
    "tracked": [
     "title",
     "text",
@@ -31115,7 +31115,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302561157
+   "updatedOn": 1793303478400
   },
   "T-fits-s52.box": {
    "board": {
@@ -31123,7 +31123,7 @@
     "border_style": "solid",
     "border_width": 2,
     "color": "#F4F4F4FF",
-    "height": 312,
+    "height": 440,
     "ink": "#161616FF",
     "parent": "T-fits-s52",
     "text": "",
@@ -31136,7 +31136,7 @@
     "border_color": "#525252FF",
     "border_width": 2,
     "color": "#F4F4F4FF",
-    "height": 312,
+    "height": 440,
     "ink": "#161616FF",
     "parent": "T-fits-s52",
     "text": "",
@@ -31145,7 +31145,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "2ef3b496-0e50-4751-8e76-aec4e0dadd74",
+   "mural_id": "a218efda-da64-425b-aaaa-7cb3b93ac1df",
    "tracked": [
     "title",
     "text",
@@ -31173,7 +31173,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s52.dot": {
    "board": {
@@ -31203,7 +31203,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "d1609fec-f8ca-4efe-aafe-eabbd5ad4e21",
+   "mural_id": "05bc3b78-e392-48b7-8fe5-752f84887707",
    "tracked": [
     "title",
     "text",
@@ -31231,7 +31231,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits-s52.head": {
    "board": {
@@ -31258,7 +31258,7 @@
     "x": 72,
     "y": 28
    },
-   "mural_id": "8fd28044-3046-4116-852e-642a89d4edd5",
+   "mural_id": "ddea5b58-5948-43a1-b938-8d15e47b0ce5",
    "tracked": [
     "title",
     "text",
@@ -31286,7 +31286,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits-s52.text": {
    "board": {
@@ -31313,7 +31313,7 @@
     "x": 32,
     "y": 100
    },
-   "mural_id": "5e311427-6122-47a1-8ff9-c0d9f53566f6",
+   "mural_id": "4b160d20-6a59-4585-8b69-1d29de604fa9",
    "tracked": [
     "title",
     "text",
@@ -31341,7 +31341,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits.bg": {
    "board": {
@@ -31370,7 +31370,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "b5fd1752-824c-40dc-a0f9-1534a6a28900",
+   "mural_id": "9a588c89-9e60-49ee-bb15-e830a4cc55a2",
    "tracked": [
     "title",
     "text",
@@ -31398,7 +31398,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562030
+   "updatedOn": 1793303480709
   },
   "T-fits.lead": {
    "board": {
@@ -31425,7 +31425,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "d3eddb56-2c9a-4704-93a9-d5ed8f1c7fbf",
+   "mural_id": "df1a8201-b218-439f-bcc0-feec5519644f",
    "tracked": [
     "title",
     "text",
@@ -31453,7 +31453,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302884247
+   "updatedOn": 1793303481928
   },
   "T-fits.num": {
    "board": {
@@ -31463,7 +31463,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-fits",
-    "text": "3 / 15",
+    "text": "2 / 15",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -31475,13 +31475,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-fits",
-    "text": "3 / 15",
+    "text": "2 / 15",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "ea3c5f8c-fc25-43d1-a188-bbe7149eea05",
+   "mural_id": "841de5f5-be26-4a8a-a47c-d01e2a3b0bd0",
    "tracked": [
     "title",
     "text",
@@ -31509,7 +31509,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits.rests": {
    "board": {
@@ -31536,7 +31536,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "472a5c77-9905-4170-a869-2b22212bd771",
+   "mural_id": "0f1c1aa0-8117-4458-8982-f7cada246391",
    "tracked": [
     "title",
     "text",
@@ -31564,7 +31564,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-fits.title": {
    "board": {
@@ -31591,7 +31591,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "7c6b01cd-32c9-4d55-8756-ea02cdfe5388",
+   "mural_id": "359d67d4-bab5-44e9-a1e2-3ed284c7a66c",
    "tracked": [
     "title",
     "text",
@@ -31619,7 +31619,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302562908
+   "updatedOn": 1793303481928
   },
   "T-install": {
    "board": {
@@ -31629,11 +31629,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 2,
+    "outline": 3,
     "show_title": false,
     "title": "T-install",
     "width": 3200,
-    "x": 2954,
+    "x": 6554,
     "y": 1241
    },
    "fields": {
@@ -31641,14 +31641,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 2,
+    "outline": 3,
     "show_title": false,
     "title": "T-install",
     "width": 3200,
-    "x": 2954,
+    "x": 6554,
     "y": 1241
    },
-   "mural_id": "1f71e8f8-6237-4c7c-a333-dff7caf946f8",
+   "mural_id": "d51867d5-1a34-4b8e-97ef-8882b20450ef",
    "tracked": [
     "title",
     "text",
@@ -31676,7 +31676,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231749971
+   "updatedOn": 1793303476792
   },
   "T-install-hl": {
    "board": {
@@ -31705,7 +31705,7 @@
     "x": 128,
     "y": 1016
    },
-   "mural_id": "fdbbaf48-6e9e-4240-820c-8047eb7af12d",
+   "mural_id": "42bcfbee-b244-4bd6-a699-cd17c66d31fe",
    "tracked": [
     "title",
     "text",
@@ -31733,7 +31733,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300532207
+   "updatedOn": 1793303479129
   },
   "T-install-hl-cmd": {
    "board": {
@@ -31762,7 +31762,7 @@
     "x": 140,
     "y": 116
    },
-   "mural_id": "157d8c3d-f079-4c78-95c6-c4a0cf3be7fb",
+   "mural_id": "354e5447-e39e-485e-817b-38abce1c5450",
    "tracked": [
     "title",
     "text",
@@ -31790,7 +31790,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300535241
+   "updatedOn": 1793303479904
   },
   "T-install-hl-cmd.img": {
    "board": {
@@ -31810,7 +31810,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "6fd6d9b7-0522-4236-b240-6b12bdaddd02",
+   "mural_id": "61c98fa4-3631-4e9f-8fbb-69dcebd231d7",
    "tracked": [
     "title",
     "text",
@@ -31838,7 +31838,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300539949
+   "updatedOn": 1793303482940
   },
   "T-install-hl.bar": {
    "board": {
@@ -31868,7 +31868,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "94af9a68-5cf2-4332-b578-88e32d25d4e6",
+   "mural_id": "87a9d33c-2632-49da-a168-3f4600bbe16d",
    "tracked": [
     "title",
     "text",
@@ -31896,7 +31896,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300535984
+   "updatedOn": 1793303480709
   },
   "T-install-hl.bg": {
    "board": {
@@ -31926,7 +31926,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "415745ab-708a-4053-93bd-2c29e4132c06",
+   "mural_id": "cc91b341-787c-4522-baa7-9ff81610682e",
    "tracked": [
     "title",
     "text",
@@ -31954,7 +31954,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300535984
+   "updatedOn": 1793303480709
   },
   "T-install-hl.body": {
    "board": {
@@ -31981,7 +31981,7 @@
     "x": 140,
     "y": 256
    },
-   "mural_id": "8ce21811-99bd-4fe5-abd7-470e8190c586",
+   "mural_id": "c00ae6ec-5573-4255-89a7-366830e73e0c",
    "tracked": [
     "title",
     "text",
@@ -32009,7 +32009,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300538671
+   "updatedOn": 1793303481928
   },
   "T-install-hl.head": {
    "board": {
@@ -32036,7 +32036,7 @@
     "x": 140,
     "y": 36
    },
-   "mural_id": "88e0503c-b21c-4e1b-b1a0-2e984a312153",
+   "mural_id": "9b2c9a57-69e8-4be6-8370-e101231e623e",
    "tracked": [
     "title",
     "text",
@@ -32064,7 +32064,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300538671
+   "updatedOn": 1793303481928
   },
   "T-install-hl.icon": {
    "board": {
@@ -32084,7 +32084,7 @@
     "x": 44,
     "y": 28
    },
-   "mural_id": "3149fecb-53a1-43c7-8103-672fb8065b82",
+   "mural_id": "28466bc3-c4a4-4b97-859d-05b20c0058b8",
    "tracked": [
     "title",
     "text",
@@ -32112,7 +32112,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300539902
+   "updatedOn": 1793303482895
   },
   "T-install-listing": {
    "board": {
@@ -32141,7 +32141,7 @@
     "x": 1632,
     "y": 576
    },
-   "mural_id": "275fcb49-4798-4bb9-8b63-f88ad5929b5e",
+   "mural_id": "73ac8285-82e7-4c27-be32-c3ad144f1b83",
    "tracked": [
     "title",
     "text",
@@ -32169,7 +32169,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300532251
+   "updatedOn": 1793303479072
   },
   "T-install-listing.img": {
    "board": {
@@ -32189,7 +32189,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "666e806f-25e3-4973-b61f-8324a2b96837",
+   "mural_id": "2ae2915a-b1ae-4389-bd2e-914dbdbf3991",
    "tracked": [
     "title",
     "text",
@@ -32217,7 +32217,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300540266
+   "updatedOn": 1793303483008
   },
   "T-install-term": {
    "board": {
@@ -32246,7 +32246,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "39691309-f972-421d-bf22-16e5dd4f579c",
+   "mural_id": "cf477cc8-11bf-4a4a-84ce-22b43e281a53",
    "tracked": [
     "title",
     "text",
@@ -32274,7 +32274,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300532149
+   "updatedOn": 1793303478434
   },
   "T-install-term.img": {
    "board": {
@@ -32294,7 +32294,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "ce52a340-54a2-451c-98b4-0d00777874c2",
+   "mural_id": "440f4ed5-bbbf-41c4-acad-1861222306a3",
    "tracked": [
     "title",
     "text",
@@ -32322,7 +32322,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793300539909
+   "updatedOn": 1793303482869
   },
   "T-install.bg": {
    "board": {
@@ -32351,7 +32351,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "a2e53075-1092-45b3-ad1a-26ab139db221",
+   "mural_id": "feba0e21-f382-46fa-b774-156645218755",
    "tracked": [
     "title",
     "text",
@@ -32379,7 +32379,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793303480709
   },
   "T-install.lead": {
    "board": {
@@ -32406,7 +32406,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "1d232d21-7416-4d29-81f5-2589778080ae",
+   "mural_id": "31715e56-01f3-4d09-8d8d-feef0e24bc92",
    "tracked": [
     "title",
     "text",
@@ -32434,7 +32434,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793285260900
+   "updatedOn": 1793303481928
   },
   "T-install.num": {
    "board": {
@@ -32444,7 +32444,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "2 / 15",
+    "text": "3 / 15",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -32456,13 +32456,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "2 / 15",
+    "text": "3 / 15",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "f78307a8-cad9-47ae-a3f9-53053154edcb",
+   "mural_id": "942f6ea8-5ce7-4789-bd73-6e44db4476de",
    "tracked": [
     "title",
     "text",
@@ -32490,7 +32490,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793302563964
+   "updatedOn": 1793303481928
   },
   "T-install.rests": {
    "board": {
@@ -32517,7 +32517,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "a586af72-6265-4445-844e-29cd672e822a",
+   "mural_id": "352fdce7-908c-43d1-94a7-162c479a2787",
    "tracked": [
     "title",
     "text",
@@ -32545,7 +32545,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793303481928
   },
   "T-install.title": {
    "board": {
@@ -32572,7 +32572,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "5f068928-984a-4dc7-b107-b7c7a95837d4",
+   "mural_id": "95c761bf-40bf-469a-89fe-7805141cefe8",
    "tracked": [
     "title",
     "text",
@@ -32600,7 +32600,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793303481928
   },
   "T-opening": {
    "board": {

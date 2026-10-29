@@ -2651,24 +2651,392 @@ instances:
       head: 155ff7ac-745a-483b-92c1-b29954a2778d
       text: 98d61cef-aee8-4f6d-9129-130c026173c4
       icon: a4cd1f1b-df9f-4c34-8ebe-276c0c7ad4a4
+  T-fits:
+    template: slide
+    title: How pkit fits together
+    lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
+    rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
+    n: 2
+    total: 15
+    override:
+      rests:
+        text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
+    mural_ids:
+      root: 8814f870-062d-4d36-9614-50fddec3b789
+      bg: 9a588c89-9e60-49ee-bb15-e830a4cc55a2
+      title: 359d67d4-bab5-44e9-a1e2-3ed284c7a66c
+      lead: df1a8201-b218-439f-bcc0-feec5519644f
+      rests: 0f1c1aa0-8117-4458-8982-f7cada246391
+      num: 841de5f5-be26-4a8a-a47c-d01e2a3b0bd0
+  T-fits-s1:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Decisions
+    text: The why, accepted by you.
+    x: 920
+    y: 576
+    override:
+      root:
+        width: 720
+        height: 172
+      box:
+        width: 720
+        height: 172
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+      head:
+        x: 32
+        y: 22
+        width: 656
+        height: 64
+        align: center
+        ink: '@text_on_color'
+      text:
+        x: 32
+        y: 92
+        width: 656
+        height: 62
+        align: center
+        ink: '@text_on_color'
+      dot:
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+    mural_ids:
+      root: 79cf2150-d185-4882-8e19-71a6b27bf196
+      box: 22a53e4f-3c66-4d66-b3d3-709539f75790
+      dot: 9a489932-651f-4644-a7e8-c4fb62667d99
+      head: da19d2b9-83cb-4293-b570-975f6507ca08
+      text: 595e89dc-f3cd-4d8c-9d4e-49ce4686fe4c
+  T-fits-s2:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Working rules · schemas · processes
+    text: The exact what, read by every session and tool.
+    x: 780
+    y: 766
+    override:
+      root:
+        width: 1000
+        height: 172
+      box:
+        width: 1000
+        height: 172
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+      head:
+        x: 32
+        y: 22
+        width: 936
+        height: 64
+        align: center
+        ink: '@text_on_color'
+      text:
+        x: 32
+        y: 92
+        width: 936
+        height: 62
+        align: center
+        ink: '@text_on_color'
+      dot:
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+    mural_ids:
+      root: 8f76e784-72b2-462c-959a-e8cf9ebf9b2f
+      box: 312602f7-2d6e-4b9f-8a62-6d59a2f5ba38
+      dot: 755298b0-6990-40e1-9289-30390c931ab7
+      head: 102e345b-402a-4641-a719-627eafcaa3dc
+      text: 43ac95b6-617e-4ebd-af9f-362e4d6ed863
+  T-fits-s3:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Skills · agents · permissions
+    text: How agents act, in which role, with what rights.
+    x: 640
+    y: 956
+    override:
+      root:
+        width: 1280
+        height: 172
+      box:
+        width: 1280
+        height: 172
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+      head:
+        x: 32
+        y: 22
+        width: 1216
+        height: 64
+        align: center
+        ink: '@text_primary'
+      text:
+        x: 32
+        y: 92
+        width: 1216
+        height: 62
+        align: center
+        ink: '@text_primary'
+      dot:
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+    mural_ids:
+      root: 76d5834a-b42f-4bea-8062-2ce720abaf09
+      box: f2f5deb8-2eea-424e-83e4-c9dfdb491485
+      dot: 8e9fb31f-d9c0-4d6f-aaba-be5c896cd3e7
+      head: 317b6767-9b0e-4c19-a9f0-84ac0ae07241
+      text: 4d6c9f7a-6c42-43d7-932b-26663272e2bd
+  T-fits-s4:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: pkit's commands and checks
+    text: Carry out what is decided, and check every change.
+    x: 500
+    y: 1146
+    override:
+      root:
+        width: 1560
+        height: 172
+      box:
+        width: 1560
+        height: 172
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+      head:
+        x: 32
+        y: 22
+        width: 1496
+        height: 64
+        align: center
+        ink: '@text_primary'
+      text:
+        x: 32
+        y: 92
+        width: 1496
+        height: 62
+        align: center
+        ink: '@text_primary'
+      dot:
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+    mural_ids:
+      root: a0cf2d14-855f-457f-808d-026cb5524458
+      box: bff357b1-39b0-4b43-823f-377344257a51
+      dot: 81f188ba-e2d1-4ae0-bf45-64025e9d22bd
+      head: a1076371-7e88-4dbc-8643-3821d38fa227
+      text: 3bf98c20-de11-474a-a6ed-54947209d67b
+  T-fits-s5:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Your code and documents
+    text: The work itself, tied to what it depends on.
+    x: 360
+    y: 1336
+    override:
+      root:
+        width: 1840
+        height: 172
+      box:
+        width: 1840
+        height: 172
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+      head:
+        x: 32
+        y: 22
+        width: 1776
+        height: 64
+        align: center
+        ink: '@text_primary'
+      text:
+        x: 32
+        y: 92
+        width: 1776
+        height: 62
+        align: center
+        ink: '@text_primary'
+      dot:
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+    mural_ids:
+      root: 76ef6568-c0fc-4b0a-b5a9-44226d205e0f
+      box: ca0bbe55-601b-4c05-b686-6abc839d0730
+      dot: 1032ca40-7a93-4860-b13e-ffb4618ecd10
+      head: ac018162-ed6c-457b-937f-832fb3727948
+      text: b0509baa-e3ba-4856-b4ca-76e588b3147b
+  T-fits-s50:
+    template: stage
+    parent: T-fits
+    role: code
+    head: Where ideas start
+    text: In conversation, and in a scratchpad note when one needs longer.
+    x: 128
+    y: 576
+    override:
+      root:
+        width: 600
+        height: 300
+      box:
+        width: 600
+        height: 300
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 4
+      head:
+        width: 496
+        height: 64
+      text:
+        y: 100
+        width: 536
+        height: 163
+    mural_ids:
+      root: 53e9fe81-739a-47e3-9fad-4f4f052b31e7
+      box: 15186e63-393f-4d85-b4c3-62a243fcebed
+      dot: de0efdaa-5e01-4658-bd66-7feea513a0b4
+      head: fd36b732-1e21-47a5-a31e-427feec0dc14
+      text: b8c8016a-a047-420e-9eca-6d179ed19520
+  T-fits-l101:
+    template: link
+    parent: T-fits
+    x: 736
+    y: 576
+    x1: 8
+    y1: 86.0
+    x2: 160
+    y2: 86.0
+    tone: role_code
+    override:
+      root:
+        width: 168
+        height: 172
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 53c619da-c183-442e-a13d-c5ae49956b8d
+      arrow: d749e7a8-ef67-46a4-92f9-144253dd2584
+  T-fits-s51:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Carried out
+    text: Each layer carries out the decisions above it.
+    x: 2352
+    y: 576
+    override:
+      root:
+        width: 720
+        height: 440
+      box:
+        width: 720
+        height: 440
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 616
+        height: 64
+      text:
+        y: 100
+        width: 656
+        height: 303
+    mural_ids:
+      root: aac382b8-53d8-4161-bfe5-3d11ee5533cf
+      box: 8294e49c-5bb0-45c7-b801-a59e9364a34b
+      dot: c4958c77-7508-4ec8-837d-190db17ba451
+      head: fcf6a428-3fc1-4785-bfba-cb2ea07df6c3
+      text: f1f0f56d-9efc-4f71-a9a8-646f6554fc6b
+  T-fits-l102:
+    template: link
+    parent: T-fits
+    x: 2240
+    y: 576
+    x1: 48.0
+    y1: 8
+    x2: 48.0
+    y2: 432
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 440
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 6e6e6c57-d5d6-4101-bf25-f4eff8c71985
+      arrow: e3427b59-9ca3-4451-aa9f-b3671a98fc5e
+  T-fits-s52:
+    template: stage
+    parent: T-fits
+    role: neutral
+    head: Checked
+    text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when
+      you accept a new one.
+    x: 2352
+    y: 1068
+    override:
+      root:
+        width: 720
+        height: 440
+      box:
+        width: 720
+        height: 440
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral'
+        border_width: 2
+      head:
+        width: 616
+        height: 64
+      text:
+        y: 100
+        width: 656
+        height: 303
+    mural_ids:
+      root: c0921055-d548-4e32-9dd5-f5fb348a8145
+      box: a218efda-da64-425b-aaaa-7cb3b93ac1df
+      dot: 05bc3b78-e392-48b7-8fe5-752f84887707
+      head: ddea5b58-5948-43a1-b938-8d15e47b0ce5
+      text: 4b160d20-6a59-4585-8b69-1d29de604fa9
+  T-fits-l103:
+    template: link
+    parent: T-fits
+    x: 2240
+    y: 1068
+    x1: 48.0
+    y1: 432
+    x2: 48.0
+    y2: 8
+    tone: role_code
+    override:
+      root:
+        width: 96
+        height: 440
+      arrow:
+        border_width: 6
+    mural_ids:
+      root: 589356b6-09a4-45b6-a891-88d395849e6f
+      arrow: d75b91c7-1e7c-4839-8c17-321bac5a5d79
   T-install:
     template: slide
     title: Install pkit
     lead: Install the tool once, then add pkit to each project with one command. Every file it adds is
       either pkit's or yours.
     rests: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
-    n: 2
+    n: 3
     total: 15
     override:
       rests:
         text: pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later
     mural_ids:
-      root: 1f71e8f8-6237-4c7c-a333-dff7caf946f8
-      bg: a2e53075-1092-45b3-ad1a-26ab139db221
-      title: 5f068928-984a-4dc7-b107-b7c7a95837d4
-      lead: 1d232d21-7416-4d29-81f5-2589778080ae
-      rests: a586af72-6265-4445-844e-29cd672e822a
-      num: f78307a8-cad9-47ae-a3f9-53053154edcb
+      root: d51867d5-1a34-4b8e-97ef-8882b20450ef
+      bg: feba0e21-f382-46fa-b774-156645218755
+      title: 95c761bf-40bf-469a-89fe-7805141cefe8
+      lead: 31715e56-01f3-4d09-8d8d-feef0e24bc92
+      rests: 352fdce7-908c-43d1-94a7-162c479a2787
+      num: 942f6ea8-5ce7-4789-bd73-6e44db4476de
   T-install-term:
     template: term_image
     parent: T-install
@@ -2683,8 +3051,8 @@ instances:
         width: 1440
         height: 392
     mural_ids:
-      root: 39691309-f972-421d-bf22-16e5dd4f579c
-      img: ce52a340-54a2-451c-98b4-0d00777874c2
+      root: cf477cc8-11bf-4a4a-84ce-22b43e281a53
+      img: 440f4ed5-bbbf-41c4-acad-1861222306a3
   T-install-hl:
     template: highlight
     parent: T-install
@@ -2704,12 +3072,12 @@ instances:
       body:
         width: 1260
     mural_ids:
-      root: fdbbaf48-6e9e-4240-820c-8047eb7af12d
-      bg: 415745ab-708a-4053-93bd-2c29e4132c06
-      bar: 94af9a68-5cf2-4332-b578-88e32d25d4e6
-      head: 88e0503c-b21c-4e1b-b1a0-2e984a312153
-      body: 8ce21811-99bd-4fe5-abd7-470e8190c586
-      icon: 3149fecb-53a1-43c7-8103-672fb8065b82
+      root: 42bcfbee-b244-4bd6-a699-cd17c66d31fe
+      bg: cc91b341-787c-4522-baa7-9ff81610682e
+      bar: 87a9d33c-2632-49da-a168-3f4600bbe16d
+      head: 9b2c9a57-69e8-4be6-8370-e101231e623e
+      body: c00ae6ec-5573-4255-89a7-366830e73e0c
+      icon: 28466bc3-c4a4-4b97-859d-05b20c0058b8
   T-install-hl-cmd:
     template: term_image
     parent: T-install-hl
@@ -2724,8 +3092,8 @@ instances:
         width: 1260
         height: 118
     mural_ids:
-      root: 157d8c3d-f079-4c78-95c6-c4a0cf3be7fb
-      img: 6fd6d9b7-0522-4236-b240-6b12bdaddd02
+      root: 354e5447-e39e-485e-817b-38abce1c5450
+      img: 61c98fa4-3631-4e9f-8fbb-69dcebd231d7
   T-install-listing:
     template: term_image
     parent: T-install
@@ -2740,376 +3108,8 @@ instances:
         width: 1440
         height: 992
     mural_ids:
-      root: 275fcb49-4798-4bb9-8b63-f88ad5929b5e
-      img: 666e806f-25e3-4973-b61f-8324a2b96837
-  T-fits:
-    template: slide
-    title: How pkit fits together
-    lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
-    rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
-    n: 3
-    total: 15
-    override:
-      rests:
-        text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
-    mural_ids:
-      root: 7ae40ea5-ae16-473c-b558-0f20b19211de
-      bg: b5fd1752-824c-40dc-a0f9-1534a6a28900
-      title: 7c6b01cd-32c9-4d55-8756-ea02cdfe5388
-      lead: d3eddb56-2c9a-4704-93a9-d5ed8f1c7fbf
-      rests: 472a5c77-9905-4170-a869-2b22212bd771
-      num: ea3c5f8c-fc25-43d1-a188-bbe7149eea05
-  T-fits-s1:
-    template: stage
-    parent: T-fits
-    role: neutral
-    head: Decisions
-    text: The why, accepted by you.
-    x: 800
-    y: 576
-    override:
-      root:
-        width: 760
-        height: 172
-      box:
-        width: 760
-        height: 172
-        color: '#491D8BFF'
-        border_color: '#491D8BFF'
-      head:
-        x: 32
-        y: 22
-        width: 696
-        height: 64
-        align: center
-        ink: '@text_on_color'
-      text:
-        x: 32
-        y: 92
-        width: 696
-        height: 62
-        align: center
-        ink: '@text_on_color'
-      dot:
-        color: '#491D8BFF'
-        border_color: '#491D8BFF'
-    mural_ids:
-      root: 87b6b869-f0f7-4091-901a-ae81455cee34
-      box: f2370a34-68f0-4e0d-a166-f034bfa6cc5e
-      dot: 6e347311-b734-4100-b46c-50648680d19a
-      head: ea8a7831-96b1-4860-8d63-c73773930b7c
-      text: dd97c748-50bb-4c10-9b75-2094e48c6654
-  T-fits-s2:
-    template: stage
-    parent: T-fits
-    role: neutral
-    head: Working rules · schemas · processes
-    text: The exact what, read by every session and tool.
-    x: 650
-    y: 766
-    override:
-      root:
-        width: 1060
-        height: 172
-      box:
-        width: 1060
-        height: 172
-        color: '#6929C4FF'
-        border_color: '#6929C4FF'
-      head:
-        x: 32
-        y: 22
-        width: 996
-        height: 64
-        align: center
-        ink: '@text_on_color'
-      text:
-        x: 32
-        y: 92
-        width: 996
-        height: 62
-        align: center
-        ink: '@text_on_color'
-      dot:
-        color: '#6929C4FF'
-        border_color: '#6929C4FF'
-    mural_ids:
-      root: d1f48eec-b19d-4598-bf7b-8d5cb1c97b5e
-      box: be6b9634-a871-4cd2-a0df-ad88d2bb4322
-      dot: af765b44-b8d8-4412-87ae-9c4a511b9ed0
-      head: ac9079f1-c6d0-4687-9f07-517e030dd514
-      text: 66abd493-a8b7-449e-aed1-565a6722af11
-  T-fits-s3:
-    template: stage
-    parent: T-fits
-    role: neutral
-    head: Skills · agents · permissions
-    text: How agents act, in which role, with what rights.
-    x: 500
-    y: 956
-    override:
-      root:
-        width: 1360
-        height: 172
-      box:
-        width: 1360
-        height: 172
-        color: '#BE95FFFF'
-        border_color: '#BE95FFFF'
-      head:
-        x: 32
-        y: 22
-        width: 1296
-        height: 64
-        align: center
-        ink: '@text_primary'
-      text:
-        x: 32
-        y: 92
-        width: 1296
-        height: 62
-        align: center
-        ink: '@text_primary'
-      dot:
-        color: '#BE95FFFF'
-        border_color: '#BE95FFFF'
-    mural_ids:
-      root: cd9c306f-254a-4ab5-b721-7cab51c009a5
-      box: 93371638-de2d-4b31-9afb-138e9e2f53a2
-      dot: dcf5b34c-ddee-4dc8-9b33-c5606e2d58da
-      head: 895942ec-3b01-4e2c-baee-7d4a552a2de4
-      text: ea7c5bb0-dbc3-437b-8abc-38acccfc0de1
-  T-fits-s4:
-    template: stage
-    parent: T-fits
-    role: neutral
-    head: pkit's commands and checks
-    text: Carry out what is decided, and check every change.
-    x: 350
-    y: 1146
-    override:
-      root:
-        width: 1660
-        height: 172
-      box:
-        width: 1660
-        height: 172
-        color: '#D4BBFFFF'
-        border_color: '#D4BBFFFF'
-      head:
-        x: 32
-        y: 22
-        width: 1596
-        height: 64
-        align: center
-        ink: '@text_primary'
-      text:
-        x: 32
-        y: 92
-        width: 1596
-        height: 62
-        align: center
-        ink: '@text_primary'
-      dot:
-        color: '#D4BBFFFF'
-        border_color: '#D4BBFFFF'
-    mural_ids:
-      root: 7d4f49bb-5696-4743-a8d2-c45f19abfc45
-      box: 2251d07b-367b-4bc7-a45c-26a7b0d3fb6f
-      dot: 19720d86-6f21-41a1-a7af-4a609036ce77
-      head: f81cf2c3-1fc8-4a0d-aaea-dca7a2c5f9ab
-      text: fde4d64f-8451-45ac-b74e-78fe7285fc1b
-  T-fits-s5:
-    template: stage
-    parent: T-fits
-    role: neutral
-    head: Your code and documents
-    text: The work itself, tied to what it depends on.
-    x: 200
-    y: 1336
-    override:
-      root:
-        width: 1960
-        height: 172
-      box:
-        width: 1960
-        height: 172
-        color: '#E8DAFFFF'
-        border_color: '#E8DAFFFF'
-      head:
-        x: 32
-        y: 22
-        width: 1896
-        height: 64
-        align: center
-        ink: '@text_primary'
-      text:
-        x: 32
-        y: 92
-        width: 1896
-        height: 62
-        align: center
-        ink: '@text_primary'
-      dot:
-        color: '#E8DAFFFF'
-        border_color: '#E8DAFFFF'
-    mural_ids:
-      root: 16c7b973-3463-42d4-8c33-1ccbbd4dd24f
-      box: d512668f-ae57-4432-ac2e-36358cc18e19
-      dot: 74120842-ca4f-4656-a9cd-7a0c39a08c1f
-      head: a05e148e-fe67-4191-8e7c-3dc5836af6a3
-      text: 08b263d6-2d5b-4b4b-98aa-5936f52f26e8
-  T-fits-s50:
-    template: stage
-    parent: T-fits
-    role: neutral
-    head: Where ideas start
-    text: In conversation, and in a scratchpad note when one needs longer.
-    x: 2352
-    y: 576
-    override:
-      root:
-        width: 720
-        height: 240
-      box:
-        width: 720
-        height: 240
-        color: '@role_neutral_bg'
-        border_color: '@role_neutral'
-        border_width: 2
-      head:
-        width: 616
-        height: 64
-      text:
-        y: 100
-        width: 656
-        height: 103
-    mural_ids:
-      root: bfb12a7b-906e-4b43-b1e0-353e50994fa8
-      box: 2166b544-652a-4265-ab03-106ce9fce299
-      dot: 1f1bb49a-43b4-4ee8-87ea-d455914f630e
-      head: 2d418a77-554c-4a5d-94d8-6017322332e0
-      text: 6637e7cf-bb80-4055-8518-e370256d7eeb
-  T-fits-l101:
-    template: link
-    parent: T-fits
-    x: 1576
-    y: 576
-    x1: 760
-    y1: 86.0
-    x2: 8
-    y2: 86.0
-    tone: role_code
-    override:
-      root:
-        width: 768
-        height: 172
-      arrow:
-        border_width: 6
-    mural_ids:
-      root: 1fccf1e9-08b0-471c-b112-1da86c0831d6
-      arrow: 3b4fe8a8-7b08-438b-a86f-64d43a2b02a3
-  T-fits-s51:
-    template: stage
-    parent: T-fits
-    role: neutral
-    head: Carried out
-    text: Each layer carries out the decisions above it.
-    x: 2352
-    y: 876
-    override:
-      root:
-        width: 720
-        height: 260
-      box:
-        width: 720
-        height: 260
-        color: '@role_neutral_bg'
-        border_color: '@role_neutral'
-        border_width: 2
-      head:
-        width: 616
-        height: 64
-      text:
-        y: 100
-        width: 656
-        height: 123
-    mural_ids:
-      root: 26ab10b1-b11a-4a19-a1ae-9028960d6b3a
-      box: 87648629-ddfd-4841-a703-27ad40264aba
-      dot: 07685e1c-eb9b-419a-8a6c-6c4f37510e7c
-      head: 45364987-9d00-42fd-b67f-156a995b3c90
-      text: 8f3bb1fd-4b69-4bad-bb92-05ede6fba305
-  T-fits-l102:
-    template: link
-    parent: T-fits
-    x: 2240
-    y: 876
-    x1: 48.0
-    y1: 8
-    x2: 48.0
-    y2: 252
-    tone: role_code
-    override:
-      root:
-        width: 96
-        height: 260
-      arrow:
-        border_width: 6
-    mural_ids:
-      root: 52096782-988c-4455-8bc4-1bef5305faea
-      arrow: fdcde770-c9c7-4af2-bdcd-9582f504d3ac
-  T-fits-s52:
-    template: stage
-    parent: T-fits
-    role: neutral
-    head: Checked
-    text: Where a layer and a decision disagree, the layer is checked first; a decision changes only when
-      you accept a new one.
-    x: 2352
-    y: 1196
-    override:
-      root:
-        width: 720
-        height: 312
-      box:
-        width: 720
-        height: 312
-        color: '@role_neutral_bg'
-        border_color: '@role_neutral'
-        border_width: 2
-      head:
-        width: 616
-        height: 64
-      text:
-        y: 100
-        width: 656
-        height: 175
-    mural_ids:
-      root: 58dbc611-ef09-411a-9310-82f9858876ac
-      box: 2ef3b496-0e50-4751-8e76-aec4e0dadd74
-      dot: d1609fec-f8ca-4efe-aafe-eabbd5ad4e21
-      head: 8fd28044-3046-4116-852e-642a89d4edd5
-      text: 5e311427-6122-47a1-8ff9-c0d9f53566f6
-  T-fits-l103:
-    template: link
-    parent: T-fits
-    x: 2240
-    y: 1196
-    x1: 48.0
-    y1: 304
-    x2: 48.0
-    y2: 8
-    tone: role_code
-    override:
-      root:
-        width: 96
-        height: 312
-      arrow:
-        border_width: 6
-    mural_ids:
-      root: b7b7d91b-b64e-4be3-bda7-696e9605b2b1
-      arrow: a976283b-4373-44b9-8983-e55193829183
+      root: 73ac8285-82e7-4c27-be32-c3ad144f1b83
+      img: 2ae2915a-b1ae-4389-bd2e-914dbdbf3991
   T-part-P1:
     template: section
     part: '2'
@@ -5170,8 +5170,8 @@ layouts:
 - row:
   - T-part-P0
   - T-opening
-  - T-install
   - T-fits
+  - T-install
   origin:
   - -4246
   - 1241

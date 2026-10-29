@@ -477,20 +477,31 @@ def pyramid(pid, y, v):
         val["override"]["text"] = {"x": 32, "y": 92, "width": w - 64, "height": PYR_H - 110, "align": "center", "ink": lv["ink"]}
         out[k] = val
     h = len(levels) * PYR_H + (len(levels) - 1) * PYR_GAP
-    # the relations: a box per relation, an arrow beside it (down, up), or into the apex (left)
+    # the relations: a box per relation, on the right with an arrow beside it (down, up) or into the
+    # apex (left), or on the left with an arrow into the apex (right); a box of role code is tinted purple
     sx = v.get("side_x", 2240)
     sw = MARGIN + SPAN16 - sx
     li = 100
     for j, sd in enumerate(v["side"]):
         sy = y + sd["at"]
         sh = sd.get("h", 240)
-        tx, tw = sx + LINK_W + 16, sw - LINK_W - 16
-        k, val = stage(pid, 50 + j, tx, sy, tw, "neutral", sd["head"], sd.get("text", ""), sh)
-        k, val = styled((k, val), PAIR_STYLES["tinted"]["left"])
+        arrow = sd.get("arrow", "down")
+        role = sd.get("role", "neutral")
+        if arrow == "right":
+            tx, tw = MARGIN, sd.get("w", 600)
+        else:
+            tx, tw = sx + LINK_W + 16, sw - LINK_W - 16
+        k, val = stage(pid, 50 + j, tx, sy, tw, role, sd["head"], sd.get("text", ""), sh)
+        k, val = styled((k, val), PAIR_STYLES["tinted"]["right" if role == "code" else "left"])
         out[k] = val
         li += 1
-        arrow = sd.get("arrow", "down")
-        if arrow == "left":
+        if arrow == "right":
+            ax = round(tx + tw + 8)
+            aw = round(cx - top_w / 2 - 16 - ax)
+            ah = min(sh, PYR_H)
+            out[f"{pid}-l{li}"] = {"template": "link", "parent": pid, "x": ax, "y": sy, "x1": 8, "y1": ah / 2, "x2": aw - 8, "y2": ah / 2,
+                                   "tone": "role_code", "override": {"root": {"width": aw, "height": ah}, "arrow": {"border_width": 6}}}
+        elif arrow == "left":
             apex_right = cx + top_w / 2
             ax = round(apex_right + 16)
             aw = round(tx - ax - 8)
