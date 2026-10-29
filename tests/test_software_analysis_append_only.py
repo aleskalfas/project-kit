@@ -8,6 +8,10 @@ pass. The check reads the base as the number check does (COR-054), so a shallow
 clone that lacks it fails rather than passing. It is `check-numbers`' second
 check, never run by `pkit analysis validate` (COR-055 point 2), and binds where the
 append-only rule, RS-SAN-002, binds, with a preview as the structure check's (#1370).
+
+The number check and the check run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2324). The number check's end-to-end
+process tests are `test_software_analysis_numbers.py`'s.
 """
 
 from __future__ import annotations
@@ -35,7 +39,7 @@ from tests.analysis_repo import (
     installed,
     load_lib,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
     with_status,
 )
@@ -96,8 +100,9 @@ def branched(
 
 
 def numbers(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis check-numbers …`, run as the dispatcher runs it."""
-    return run_script(repo, NUMBERS, *args)
+    """`pkit analysis check-numbers …`, run as the dispatcher runs it, in the test's own
+    process (`run_in_process`)."""
+    return run_in_process(repo, NUMBERS, *args)
 
 
 def document(completed: subprocess.CompletedProcess[str]) -> dict[str, Any]:
@@ -279,7 +284,7 @@ def test_validate_does_not_run_it(branched: AdopterRepo) -> None:
     """A renumbered step is `check-numbers`' alone: the validator answers about the working
     tree, and reads no base (COR-055 point 2)."""
     rewrite(branched, SWAPPED, VARIANTS)
-    validated = json.loads(run_script(branched, VALIDATE, "--json").stdout)
+    validated = json.loads(run_in_process(branched, VALIDATE, "--json").stdout)
     assert not [s for s in validated["summary"] if s.startswith("steps")]
     assert not [f for f in validated["findings"] if "now stands as step" in f["message"]]
     assert numbers(branched, "--base", MAIN).returncode == 1
