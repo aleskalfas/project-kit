@@ -65,29 +65,32 @@ def test_rule_20_keeps_its_number_and_title():
 
 def test_rule_20_names_the_delegate_and_its_bounds():
     """A person may name a delegate to decide the answers no change owes (COR-064): named
-    in the default branch's configuration, never on its own draft, and a reviewer checks
-    every such answer, whoever decided it."""
+    in the default branch's configuration. The rule names where the delegate is named and
+    what a session does with neither the person nor the delegate. The delegate's own bounds,
+    never on its own draft, and a reviewer checking every such answer, whoever decided it,
+    are the agents README's, which the rule cites."""
     rule = _rule_20()
-    assert "or the project's delegate decided it." in rule
-    assert "the agent the default branch's configuration names (`friction.delegate`)" in rule
-    assert "it never decides an answer it drafted (COR-064)" in rule
-    assert "The reviewer checks these answers too, whoever decided them." in rule
-    assert "If you can ask neither the person nor the delegate, return the commands" in rule
+    assert "or the delegate the default branch's configuration names (`friction.delegate`)" in rule
+    assert "where you can ask neither, return the commands and run none" in rule
+    assert '(COR-064; the agents README, "Friction writers")' in rule
+    writers = _friction_writers()
+    assert "**Whose drafts.** Only an answer another agent drafted." in writers
+    assert "checks every such answer and reason a change writes, whoever decided it" in writers
 
 
 @pytest.mark.parametrize(
     "words",
     [
-        "asks of a change you are making, without asking first.",
-        "Commit what the writers write with your change, a new answer file among it"
-        " (COR-062 point 1).",
-        "make that revalidation's reason judge their combined state (COR-062 point 7).",
-        "Name an open follow-up in the reason of each deferral, or `deferred` revisit"
-        " entry, you write.",
-        "told the sentences and what is left out of date, until which follow-up, as"
-        " information, not a gate",
-        "Any other answer, on an artefact or for a link's target your change was not asked about,",
-        'Details: the agents README, "Friction writers".',
+        "Write the answers `pkit friction check` asks of your change, without asking the"
+        " person to accept them,",
+        "commit them with it, a new answer file among them (COR-062 point 1).",
+        "make its reason judge their combined state (COR-062 point 7).",
+        "Name an open follow-up in each deferral or `deferred` revisit entry,",
+        "is told these sentences and what is left out of date, until which follow-up, as"
+        " information.",
+        "Write any other answer, on an artefact or a link's target, or a reason for having no"
+        " anchors, only once the person accepted it word for word,",
+        '(COR-064; the agents README, "Friction writers")',
     ],
 )
 def test_rule_20_names_revisit_entries(words):

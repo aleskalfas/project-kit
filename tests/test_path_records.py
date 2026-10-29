@@ -503,8 +503,8 @@ def _rule_22() -> str:
     text = CORE_RULES.read_text(encoding="utf-8")
     section = text.split(f"\n{SECTION}\n", 1)[1].split("\n## ", 1)[0]
     headings = [line for line in section.splitlines() if line.startswith("### ")]
-    assert headings == [RULE_22_HEADING], "rule 22 is not the one rule of its section"
-    return section.split(f"{RULE_22_HEADING}\n", 1)[1].strip()
+    assert RULE_22_HEADING in headings, "rule 22 is not in its section"
+    return section.split(f"{RULE_22_HEADING}\n", 1)[1].split("\n### ", 1)[0].strip()
 
 
 def test_rule_22_tells_an_agent_to_run_the_lookup_before_changing_files() -> None:
@@ -513,21 +513,23 @@ def test_rule_22_tells_an_agent_to_run_the_lookup_before_changing_files() -> Non
         "**When you change the system, read first the accepted records its files lead to.**"
     )
     assert "`pkit refs records-for`" in rule
-    assert "tied to them directly" in rule
-    assert "read that artefact" in rule
+    assert "ties to them directly" in rule
+    assert "read each artefact it reaches them through" in rule
 
 
 def test_rule_22_cites_the_readme_that_holds_its_rationale_and_the_issue() -> None:
     rule = _rule_22()
     assert '"Finding the records a path leads to"' in rule
-    assert "https://github.com/aleskalfas/project-kit/issues/2165" in rule
+    assert "project-kit#2165" in rule
     assert README_SECTION in DECISIONS_README.read_text(encoding="utf-8")
 
 
-def test_rule_22_stands_after_rule_21_and_before_the_rationale() -> None:
+def test_rule_22_stands_after_rule_21_and_before_where_the_rules_came_from() -> None:
     text = CORE_RULES.read_text(encoding="utf-8")
     assert (
-        text.index("\n### 21. ") < text.index(f"\n{SECTION}\n") < text.index("\n## Where rationale")
+        text.index("\n### 21. ")
+        < text.index(f"\n{SECTION}\n")
+        < text.index("\n## Where these rules came from")
     )
 
 
