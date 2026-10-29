@@ -2774,19 +2774,38 @@ instances:
       lead: 7149c3c4-4f84-46fa-a0d5-d5f62d01131c
       rests: d6213079-b91e-4828-9684-a5f57186b621
       num: 1f65654b-a2da-4642-b428-6d5f4d13c2a6
-  T-decisions-problem:
-    template: callout
+  T-decisions-term:
+    template: term_image
     parent: T-decisions
-    title: The problem
-    body: A choice made in a chat is gone the next session, and the agent makes it again, differently.
     x: 128
     y: 576
+    file: term-decisions-term
+    override:
+      root:
+        width: 1440
+        height: 472
+      img:
+        width: 1440
+        height: 472
     mural_ids:
-      root: cb82f4f3-aa40-41c4-acb3-1c809233fc2e
-      bg: 39a12845-24a5-4ff3-968e-0b37adf4afbf
-      bar: d70eafea-85cb-45aa-a59e-fc87ecd7bf3c
-      title: 9baa9009-923f-4dcf-b67b-91f253ae5806
-      body: eaadb9f3-6c0b-41e1-a856-bb997cdeb871
+      root: 6d526ff1-11f4-4637-8839-519484e275a9
+      img: 6c4d3ee9-8c55-48ee-bb4c-e1e78ceb99e2
+  T-decisions-listing:
+    template: term_image
+    parent: T-decisions
+    x: 1632
+    y: 576
+    file: term-decisions-listing
+    override:
+      root:
+        width: 1440
+        height: 512
+      img:
+        width: 1440
+        height: 512
+    mural_ids:
+      root: 5160361b-d8f0-4669-b412-279deb758a54
+      img: 980852ee-80d6-416c-a0d8-b61af02e1e75
   T-decisions-s1:
     template: stage
     parent: T-decisions
@@ -2794,7 +2813,7 @@ instances:
     head: A choice comes up
     text: The agent meets a choice later work will depend on.
     x: 128
-    y: 800
+    y: 1136
     override:
       root:
         width: 664
@@ -2810,16 +2829,16 @@ instances:
         width: 600
         height: 135
     mural_ids:
-      root: 6528d24f-c72a-48aa-b65a-238a60b8e140
-      box: 8465f8e7-f1ab-4d22-87ad-01413a0cdbc8
-      dot: e4ba1d1f-0586-40f6-85c4-eecd64cd838f
-      head: bd2714a9-333d-42b3-9362-4bfd3c7eb900
-      text: 825865a3-ab5e-433f-b703-02cc387fa3ad
+      root: b5aac6cd-ea37-484f-94dc-efc0c6b7ee01
+      box: b74d9bac-6a54-4091-8fe9-32502b8fa6db
+      dot: bde802e4-7dd5-4363-8dbd-ea91a7a0a5e3
+      head: c849e18e-b955-4b9c-aecb-587ddca1ace6
+      text: 374f98ea-a817-4f96-b602-f245c2f5ec1a
   T-decisions-l1:
     template: link
     parent: T-decisions
     x: 792
-    y: 800
+    y: 1136
     x1: 16
     y1: 136.0
     x2: 80
@@ -2830,8 +2849,8 @@ instances:
         width: 96
         height: 272
     mural_ids:
-      root: 565f1abb-5b10-487a-b2d7-f0582ed057d8
-      arrow: 6ae8c444-93d6-47d8-b4ca-79870ff5aff0
+      root: 525ba9ff-7a55-4f7a-998e-7da592040dac
+      arrow: e799eea5-afe5-4944-bd06-0cdc33e24966
   T-decisions-s2:
     template: stage
     parent: T-decisions
@@ -2839,7 +2858,7 @@ instances:
     head: A record is drafted
     text: 'Context, the decision, why, what follows. Status: proposed.'
     x: 888
-    y: 800
+    y: 1136
     override:
       root:
         width: 664
@@ -2855,16 +2874,16 @@ instances:
         width: 600
         height: 135
     mural_ids:
-      root: b474612e-f6ba-44ed-8c7b-c1a1a89488d6
-      box: b7a51517-497d-4374-90d5-468728ba9144
-      dot: eb18fae6-daad-4b74-a7fa-441bc45ada4d
-      head: 090f187d-7c74-4300-b28b-6b4e607a0dd9
-      text: bf19def4-3086-4413-84d3-13052f3bf271
+      root: 9fba5b4e-cc12-47a4-bced-1ddb2662a123
+      box: 5502150d-f1e0-4b8f-a7de-b7ab6b077caa
+      dot: 1f87b9e8-65e4-4b88-b67e-639394932bcc
+      head: e3fa71f7-2f2b-49b4-b59f-5f633229a964
+      text: 8f776141-0bf2-48ab-bc03-62a9db630ec0
   T-decisions-l2:
     template: link
     parent: T-decisions
     x: 1552
-    y: 800
+    y: 1136
     x1: 16
     y1: 136.0
     x2: 80
@@ -2875,8 +2894,8 @@ instances:
         width: 96
         height: 272
     mural_ids:
-      root: 7207c6b4-bd2f-4315-a13d-d69a91160fef
-      arrow: 02603508-d602-45dc-a361-058654cd208b
+      root: 43d33529-cfde-4e0f-86a0-93544561cebf
+      arrow: 99d4b472-1e90-442e-82f9-2c5fc2425c9f
   T-decisions-s3:
     template: stage
     parent: T-decisions
@@ -2884,7 +2903,7 @@ instances:
     head: You accept it
     text: In the pull request, before anything is built on it.
     x: 1648
-    y: 800
+    y: 1136
     override:
       root:
         width: 664
@@ -2900,16 +2919,16 @@ instances:
         width: 600
         height: 135
     mural_ids:
-      root: 4c7ce746-8ac6-40d1-8e9f-0d74f7dba98a
-      box: e82ea2c1-6b07-4141-840e-7b36f600658d
-      dot: 966a5888-df6d-4553-b07a-5e7ebfe37600
-      head: e642c3f6-ad8f-41e9-9a48-0fb3f3c97f00
-      text: b1f5b824-ea0d-40c0-b572-36f195867e1e
+      root: 1f6927e0-ce02-4327-8a61-02b452120b31
+      box: a1723ebe-f888-4fb4-8dd0-e0d7400d67d9
+      dot: bb46b9e1-edb5-48ca-b31f-17b292829caa
+      head: 1bd649f5-6aaf-4470-a20d-56e2b5609cf5
+      text: 21cafdb8-f08d-475c-b0c7-c5347d3d4e12
   T-decisions-l3:
     template: link
     parent: T-decisions
     x: 2312
-    y: 800
+    y: 1136
     x1: 16
     y1: 136.0
     x2: 80
@@ -2920,8 +2939,8 @@ instances:
         width: 96
         height: 272
     mural_ids:
-      root: 3783fa43-a6d3-4066-a4be-bad1f840cd51
-      arrow: 407a3b34-a860-4b12-9cad-30a38515998d
+      root: 2c8bccf6-9662-4905-b322-f6fbb7152f4b
+      arrow: 617be70a-0780-47bf-a263-954fbd21576c
   T-decisions-s4:
     template: stage
     parent: T-decisions
@@ -2929,7 +2948,7 @@ instances:
     head: The work follows it
     text: Code and docs built on it cite the record.
     x: 2408
-    y: 800
+    y: 1136
     override:
       root:
         width: 664
@@ -2945,80 +2964,23 @@ instances:
         width: 600
         height: 135
     mural_ids:
-      root: 9f13add3-a57f-44bd-9144-863a88ad994f
-      box: 89aebe63-8930-4002-a631-349cb7c6d632
-      dot: c2c60093-8174-450a-a4bf-97e1c7d486e0
-      head: 5b8f1913-5314-481f-9eb4-5823774bd21c
-      text: 6f96f585-396f-4c72-8b6d-8b57703913b0
-  T-decisions-d1:
-    template: step
-    parent: T-decisions
-    ident: '1'
-    text: 'One record per choice: context, decision, why, what follows'
-    x: 128
-    y: 1120
-    override:
-      root:
-        width: 939
-      bg:
-        width: 939
-      text:
-        width: 875
-    mural_ids:
-      root: 83fab73f-69f2-4183-a472-135d23713aff
-      bg: 1b0ebd24-88aa-4cfe-b04e-cd2884846c1d
-      tag: 6fceeefe-c2c0-40fd-be51-3a1cdacc2a60
-      text: d0106969-a164-4e41-bc89-a4c836e4d3f2
-  T-decisions-d2:
-    template: step
-    parent: T-decisions
-    ident: '2'
-    text: Proposed in the change that needs it, accepted by you before it merges
-    x: 1131
-    y: 1120
-    override:
-      root:
-        width: 939
-      bg:
-        width: 939
-      text:
-        width: 875
-    mural_ids:
-      root: 6099cdfe-94a2-42be-b267-3bd73b9a73d6
-      bg: 1ed52e04-1c5b-43ef-a4fc-7fbcda236b44
-      tag: 947866cc-81c0-47ed-902e-cd4af6d321dc
-      text: 42f5052d-a481-491e-9720-ab4e19165367
-  T-decisions-d3:
-    template: step
-    parent: T-decisions
-    ident: '3'
-    text: Numbered points that keep their numbers, so other files can cite them
-    x: 2133
-    y: 1120
-    override:
-      root:
-        width: 939
-      bg:
-        width: 939
-      text:
-        width: 875
-    mural_ids:
-      root: 551c86e7-60c5-44ae-8f7c-3d250afcbf22
-      bg: ec464a9c-16bc-4358-9efa-b806d07375d7
-      tag: f978a454-a7f0-47fe-8751-5d4bcd5c0f50
-      text: d2c7a65d-ef1f-4f67-9a89-e94949e9a2f4
+      root: b5c36f57-fe78-4324-842d-ec98e5abaaa0
+      box: 3411a2d2-a083-4f3f-8651-f9d10e37bbf9
+      dot: 4bbd309e-30b8-4f12-ab22-c918812bbc34
+      head: b2e41baa-1c00-45ee-af00-dbba460d8096
+      text: 3ebd249e-6d8e-4732-86b4-d2f9fe57818c
   T-decisions-limit:
     template: notice
     parent: T-decisions
     text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that bind later
       work.'
     x: 128
-    y: 1478.0
+    y: 1456
     mural_ids:
-      root: 8c121177-a5b1-411f-aa22-40da25234526
-      bg: 60149fb0-8cc3-4e66-b6a9-a35159afd511
-      bar: 7525aedd-c233-4b7b-aa93-e151101f8ed8
-      text: cc5ea58f-9ac7-4afb-8f37-72cae825e181
+      root: a7e7c450-93e2-4df6-ba29-68458bc64cf0
+      bg: 2821c7f3-e72a-4448-8c5d-e19ca22e6606
+      bar: 5c37b242-2bba-480f-8730-947468292f47
+      text: 2bdb8fca-102c-420a-8731-a75e68efcf3c
   T-checked:
     template: slide
     title: Checked every time

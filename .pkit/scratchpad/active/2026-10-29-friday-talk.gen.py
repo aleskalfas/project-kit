@@ -636,6 +636,8 @@ def build_slide(s, n, total):
             add(compare(pid, y, v["left"], v["right"]))
         elif kind == "install":
             add(install(pid, y, v))
+            if v.get("stages"):
+                add(flow(pid, y, v["stages"]))
         elif kind == "code2":
             lines = max(v["left"].rstrip("\n").count("\n"), v["right"].rstrip("\n").count("\n")) + 1
             hh = max(304, 64 + lines * 48)

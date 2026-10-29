@@ -275,14 +275,105 @@ slides:
   title: Decision records
   message: Choices that later work depends on are written down, with why, and you accept each before work builds
     on it.
-  problem: A choice made in a chat is gone the next session, and the agent makes it again, differently.
-  does:
-  - 'One record per choice: context, decision, why, what follows'
-  - Proposed in the change that needs it, accepted by you before it merges
-  - Numbered points that keep their numbers, so other files can cite them
+  problem: ''
+  does: []
   show: 'This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted, then built'
   visual:
-    kind: flow
+    kind: install
+    terminal:
+    - - - '$ '
+        - prompt
+      - - tree
+        - command
+      - - ' .pkit/decisions docs/architecture/decisions'
+        - args
+    - - - .pkit/decisions/
+        - plain
+    - - - '├── '
+        - branch
+      - - core/
+        - pkit
+      - - '                               # pkit''s principles, 66 records'
+        - comment
+    - - - '│   └── '
+        - branch
+      - - COR-001-content-mechanisms.md
+        - pkit
+    - - - '└── '
+        - branch
+      - - project/
+        - yours
+      - - '                            # how your project works'
+        - comment
+    - - - '    └── '
+        - branch
+      - - PRJ-002-version-bump-policy.md
+        - yours
+    - - - docs/architecture/decisions/
+        - yours
+      - - '            # what you built, and why'
+        - comment
+    - - - '└── '
+        - branch
+      - - ADR-001-project-root-resolution.md
+        - yours
+    - []
+    - - - '# each add-on keeps its own: '
+        - comment
+      - - .pkit/capabilities/
+        - plain
+      - - <name>
+        - args
+      - - /decisions/
+        - plain
+      - - ' DEC-…'
+        - pkit
+    listing:
+    - - - '$ '
+        - prompt
+      - - cat
+        - command
+      - - ' .pkit/decisions/project/PRJ-002-…md'
+        - args
+    - - - '---'
+        - output
+    - - - 'id: '
+        - output
+      - - PRJ-002
+        - args
+    - - - 'title: '
+        - output
+      - - Version-bump policy
+        - args
+    - - - 'status: '
+        - output
+      - - accepted
+        - command
+      - - '        # proposed, until you accept it'
+        - comment
+    - - - '---'
+        - output
+    - - - '## Context'
+        - args
+      - - '              # why the choice came up'
+        - comment
+    - - - '## Decision'
+        - args
+      - - '             # what is decided'
+        - comment
+    - - - '### 1. …'
+        - args
+      - - '                # numbered points, kept for good'
+        - comment
+    - - - '## Rationale'
+        - args
+      - - '            # why, and what was rejected'
+        - comment
+    - - - '## Implications'
+        - args
+      - - '         # what follows for code and docs'
+        - comment
+    font_size: 26
     stages:
     - role: agents
       head: A choice comes up
@@ -299,7 +390,8 @@ slides:
   limit: 'Writing and reviewing a record takes time: worth it only for choices that bind later work.'
   minutes: 2.5
   notes: 'Core, project, capability and architecture records share one shape. Only accepted records may be built
-    on. Unfinished ideas live in scratchpad notes, which may contradict and be dropped: this talk is one.'
+    on. Unfinished ideas live in scratchpad notes, which may contradict and be dropped: this talk is one. The problem:
+    a choice made in a chat is gone the next session, and the agent makes it again, differently.'
 - id: checked
   part: P1
   title: Checked every time
