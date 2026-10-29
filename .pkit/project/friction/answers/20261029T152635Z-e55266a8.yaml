@@ -1,0 +1,16 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/requirements/quality/REQ-023-refused-stamp-writes-nothing.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+    revalidated:
+      at: 2026-10-29T15:26:35Z
+      outcome: unchanged
+      unchanged-because: The tests now run the command and the stamp in their own process, and still snapshot the project before each refusal and find it unchanged after, before the write and after it, for a write bringing a validation error, a failed recording and an interruption, so the verification still holds
+  - artefact: tech-docs/analysis/living-docs/requirements/constraints/REQ-025-never-fetch-source.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+    revalidated:
+      at: 2026-10-29T15:26:45Z
+      outcome: unchanged
+      unchanged-because: The test that runs the resolver offline, from an empty uv cache and apart from the project, still starts it as a process through its own shebang, marked as a kept process test, and finds its result, so the verification still holds
