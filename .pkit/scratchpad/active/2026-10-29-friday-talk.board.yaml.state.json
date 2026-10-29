@@ -42682,7 +42682,7 @@
     "font_size": 120,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P1",
-    "text": "What the agent knows",
+    "text": "From idea to rule",
     "title": "tpl:section#title",
     "width": 2944,
     "x": 128,
@@ -42693,7 +42693,7 @@
     "font_size": 120,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P1",
-    "text": "What the agent knows",
+    "text": "From idea to rule",
     "title": "tpl:section#title",
     "width": 2944,
     "x": 128,
@@ -42727,7 +42727,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793313143777
   },
   "T-part-P2": {
    "board": {

@@ -4093,7 +4093,7 @@ instances:
   T-part-P1:
     template: section
     part: '2'
-    title: What the agent knows
+    title: From idea to rule
     summary: Where ideas start, your decisions, what every session is told, and the data the tools read.
     mural_ids:
       root: 7f14984f-94fe-444f-b8ce-d300d207ae60

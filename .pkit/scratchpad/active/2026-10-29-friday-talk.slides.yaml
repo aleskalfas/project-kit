@@ -23,7 +23,7 @@ parts:
   title: pkit at a glance
   summary: Why pkit exists, how to install it, and how its parts fit together.
 - id: P1
-  title: What the agent knows
+  title: From idea to rule
   summary: Where ideas start, your decisions, what every session is told, and the data the tools read.
 - id: P2
   title: How the agent works
