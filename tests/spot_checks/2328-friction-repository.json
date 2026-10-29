@@ -6,10 +6,10 @@
     "replace": "        if anchors_of(artefact):\n            continue"
   },
   {
-    "id": "fr-placed-file-read-under-its-own-name",
+    "id": "fr-placed-file-links-read-as-content",
     "file": "src/project_kit/friction_repository.py",
-    "find": "            return self.placed_in(rel, entry)",
-    "replace": "            return self.placed_in(_path, entry)"
+    "find": "        key = (entry[1], self.head.aside_of(path))",
+    "replace": "        key = (entry[1], NOTHING_SET_ASIDE)"
   },
   {
     "id": "fr-shallow-history-never-said",
