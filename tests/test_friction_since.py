@@ -1,7 +1,8 @@
 """Tests for `pkit friction since` (#1689, #1728, #2031; COR-062 point 3; ADR-068 point 5;
 project-management DEC-055 point 3).
 
-Every test stands up a real adopter repository: a page on `main`, a branch
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`): a page on `main`, a branch
 whose head was authorised, and later commits on that branch — answers given
 again in answer files of the change's own, merges of `main`, other edits — so
 the command reads real commits and git's own merges. Version 2 of its document
@@ -26,7 +27,7 @@ from project_kit import default_branch as db
 from project_kit import friction_since as fs
 from project_kit.cli import main
 from project_kit.friction_git import FrictionCheckError
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, friction_config
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -69,8 +70,10 @@ def _answers(at: str, *read: str, because: str = "the CLI is as described") -> s
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    """The page on `main`, committed on the install the template committed
+    (`commit_install`)."""
+    adopter = committed_adopter
     adopter.git("config", "core.autocrlf", "false")
     adopter.write({CONFIG: friction_config(), **SOURCE, PAGE: _page()})
     adopter.commit("start", files=None)
