@@ -32121,7 +32121,7 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 992,
+    "height": 1032,
     "parent": "T-install",
     "show_title": false,
     "title": "T-install-listing",
@@ -32133,7 +32133,7 @@
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 992,
+    "height": 1032,
     "parent": "T-install",
     "show_title": false,
     "title": "T-install-listing",
@@ -32141,7 +32141,7 @@
     "x": 1632,
     "y": 576
    },
-   "mural_id": "73ac8285-82e7-4c27-be32-c3ad144f1b83",
+   "mural_id": "5e7cf31c-dbdc-4061-991c-f9d6a0d5bb24",
    "tracked": [
     "title",
     "text",
@@ -32169,11 +32169,11 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303479072
+   "updatedOn": 1793304055491
   },
   "T-install-listing.img": {
    "board": {
-    "height": 992,
+    "height": 1032,
     "parent": "T-install-listing",
     "title": "tpl:term_image#img",
     "width": 1440,
@@ -32181,15 +32181,15 @@
     "y": 0
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-install-listing.png@72c8f9b2ff45d5ab",
-    "height": 992,
+    "file": "2026-10-29-friday-talk-icons/term-install-listing.png@e2bdecc58a662cf6",
+    "height": 1032,
     "parent": "T-install-listing",
     "title": "tpl:term_image#img",
     "width": 1440,
     "x": 0,
     "y": 0
    },
-   "mural_id": "2ae2915a-b1ae-4389-bd2e-914dbdbf3991",
+   "mural_id": "86d9aec9-852c-4773-b9d9-28a020e70e70",
    "tracked": [
     "title",
     "text",
@@ -32217,7 +32217,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303483008
+   "updatedOn": 1793304057004
   },
   "T-install-term": {
    "board": {

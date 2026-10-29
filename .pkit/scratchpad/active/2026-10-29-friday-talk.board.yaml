@@ -3103,13 +3103,13 @@ instances:
     override:
       root:
         width: 1440
-        height: 992
+        height: 1032
       img:
         width: 1440
-        height: 992
+        height: 1032
     mural_ids:
-      root: 73ac8285-82e7-4c27-be32-c3ad144f1b83
-      img: 2ae2915a-b1ae-4389-bd2e-914dbdbf3991
+      root: 5e7cf31c-dbdc-4061-991c-f9d6a0d5bb24
+      img: 86d9aec9-852c-4773-b9d9-28a020e70e70
   T-part-P1:
     template: section
     part: '2'

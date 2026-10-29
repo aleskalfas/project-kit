@@ -291,7 +291,33 @@ slides:
         - branch
       - - .claude/
         - plain
-      - - '                      # agents, skills, your settings'
+      - - '                      # your Claude Code setup'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'agents/  skills/'
+        - plain
+      - - '          # '
+        - comment
+      - - pkit's
+        - pkit
+      - - ' beside '
+        - comment
+      - - yours
+        - yours
+    - - - '│   └── '
+        - branch
+      - - settings.json
+        - plain
+      - - '             # '
+        - comment
+      - - yours
+        - yours
+      - - ', '
+        - comment
+      - - pkit's
+        - pkit
+      - - ' merged in'
         - comment
     - - - '├── '
         - branch
@@ -311,7 +337,6 @@ slides:
         - yours
       - - '                          # your code, untouched'
         - comment
-    - []
     - - - '# '
         - comment
       - - purple
@@ -326,7 +351,8 @@ slides:
   limit: ''
   minutes: 1.5
   notes: 'pkit init writes pkit''s files into .pkit/, merges your AI tool''s settings without overwriting them,
-    and installs the skills and agents where Claude Code reads them. Today that is Claude Code. In a newcomer''s
+    and installs the skills and agents where Claude Code reads them. Today that is Claude Code. A sync refreshes
+    only pkit''s own entries; your agents, skills and settings stay. In a newcomer''s
     trial run, the setup committed 689 files for a 4-file project. What sits in the agent''s context: one rules
     file, and one line per skill and agent.'
 - id: decisions
