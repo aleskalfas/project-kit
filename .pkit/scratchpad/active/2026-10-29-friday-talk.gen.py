@@ -335,8 +335,16 @@ def build_slide(s, n, total):
         if kind in ("flow", "lifecycle"):
             st = v.get("stages") or [{"role": "neutral", "head": h, "text": ""} for h in v["states"]]
             add(flow(pid, y, st))
-            if s.get("does"):
+            if v.get("code"):
+                d1, h1 = steps(pid, y, s["does"], x0=MARGIN, width=SPAN8, per_row=2) if s.get("does") else ({}, 0)
+                d2, h2 = code(pid, y, v["code"])
+                parts.update(d1)
+                parts.update(d2)
+                y += max(h1, h2) + GAP
+            elif s.get("does"):
                 add(steps(pid, y, s["does"]))
+            if v.get("cards"):
+                add(cards(pid, y, v["cards"]))
         elif kind == "compare":
             add(compare(pid, y, v["left"], v["right"]))
         elif kind == "pairs":
