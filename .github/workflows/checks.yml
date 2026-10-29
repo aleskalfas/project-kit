@@ -99,8 +99,8 @@ jobs:
           exec uv run --project "$decider" --frozen python "$decider/scripts/short_check.py"
 
       # The full run runs the suite in eight workers on the runner's four cores
-      # (#2309). Its slow tests spend over half their time waiting on the
-      # processes they start, so four workers, `-n auto`'s count here, kept
+      # (#2309). The suite's slow tests spend over half their time waiting on
+      # the processes they start, so four workers, `-n auto`'s count here, kept
       # about two cores busy. A local run keeps `-n auto`. The suite's parallel
       # pass ends by printing its 30 slowest tests, in this step's log.
       - name: Run the check aggregator

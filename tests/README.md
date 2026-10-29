@@ -42,8 +42,8 @@ tests included.
 
 **CI's full run sets `PKIT_TEST_WORKERS=8`, twice its runner's four cores**
 (#2309). The slow tests spend over half their time waiting on the processes they
-start, so four workers kept about two cores busy. More workers than cores
-shortens the run without changing a test. A local run keeps `-n auto`.
+start, so four workers kept about two cores busy. Running more workers than
+cores shortens the run without changing a test. A local run keeps `-n auto`.
 
 **The parallel pass ends by printing its 30 slowest tests** (`--durations=30`),
 in every run: in a local run's output, and in CI's log of the step that runs the
