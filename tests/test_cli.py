@@ -6,6 +6,7 @@ the bash dispatcher's other commands and grows this test file alongside.
 
 from __future__ import annotations
 
+import ast
 import json
 import subprocess
 import sys
@@ -133,6 +134,42 @@ def test_every_stand_in_names_a_module_or_function_that_exists() -> None:
             assert callable(target), name
         else:
             assert type(target).__name__ == "module", name
+
+
+def test_a_name_only_type_checkers_see_is_used_in_annotations_alone() -> None:
+    """A name imported for type checkers, with no stand-in beside it, is unbound
+    when the CLI runs: used outside an annotation, it fails only once a command
+    reaches it, so each such name stays in annotations."""
+    tree = ast.parse(Path(cli.__file__).read_text(encoding="utf-8"))
+    for_type_checkers = {
+        alias.asname or alias.name
+        for node in tree.body
+        if isinstance(node, ast.If) and ast.unparse(node.test) == "TYPE_CHECKING"
+        for statement in node.body
+        if isinstance(statement, ast.ImportFrom)
+        for alias in statement.names
+    }
+    unbound = for_type_checkers - set(vars(cli))
+    assert {"Changeset", "ReleasePlan", "CommentedMap"} <= unbound
+    in_annotations: set[int] = set()
+    for node in ast.walk(tree):
+        annotations: list[ast.expr | None] = []
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            arguments = node.args
+            every = [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]
+            every += [arg for arg in (arguments.vararg, arguments.kwarg) if arg is not None]
+            annotations = [arg.annotation for arg in every] + [node.returns]
+        elif isinstance(node, ast.AnnAssign):
+            annotations = [node.annotation]
+        for annotation in annotations:
+            if annotation is not None:
+                in_annotations.update(id(sub) for sub in ast.walk(annotation))
+    used_at_run_time = sorted(
+        f"{node.id} (line {node.lineno})"
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Name) and node.id in unbound and id(node) not in in_annotations
+    )
+    assert used_at_run_time == []
 
 
 def test_a_stand_in_calls_and_reads_through_to_what_it_stands_in_for() -> None:
