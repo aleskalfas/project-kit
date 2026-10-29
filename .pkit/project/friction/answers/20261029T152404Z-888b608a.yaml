@@ -1,0 +1,37 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-005-reading-writes-nothing.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+    revalidated:
+      at: 2026-10-29T15:24:04Z
+      outcome: unchanged
+      unchanged-because: test_health_is_report_only_never_moves_never_writes still builds the health report over the fixture tree and finds only the candidates script's sentinel new, with its predicates now run in the test's own process and no bytecode written, so a test still finds that pkit process health writes nothing
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+    revalidated:
+      at: 2026-10-29T15:24:50Z
+      outcome: unchanged
+      unchanged-because: "Two changes answered it apart: one had the parallel pass print its slowest tests, and one added to tests/README.md the rule for which tests keep a process. Judged together with this change, which edits only that README's slowest-modules table and its note, it holds as main words it. It points at the README for writing tests and running the suite, and states nothing these changes move."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
