@@ -1,0 +1,175 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+    revalidated:
+      at: 2026-10-28T22:27:14Z
+      outcome: unchanged
+      unchanged-because: DEC-006 has a Task's completed close bring each ancestor behind up to In Progress, from Todo or Backlog too, before the closure cascade, and move-issue reads a close as completed as finished work. The term's definition, each issue above brought forward where it is behind and offered for closing once no child is open, covers that close as it covers a merge.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-checkbox
+    read:
+      - moved-61ba93f3d79f.yaml
+    revalidated:
+      at: 2026-10-28T22:27:17Z
+      outcome: unchanged
+      unchanged-because: DEC-007 adds a Task's close as completed without a pull request to the closes its hard stop applies on, and to the closes the validate-body error names. A checkbox still must be ticked before the issue closes, as the definition says.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-owner
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      at: 2026-10-28T22:27:20Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 9 names a Task's close as completed without a pull request among the ends at which the owner releases the Task. The term says what an owner is and lists no release, so it stands.
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T22:27:23Z
+      outcome: unchanged
+      unchanged-because: DEC-035 point 4 and DEC-059 point 9 add a Task's close as completed without a pull request to the closes that release its owner. The view says a close clears the owner, naming no kind of close, so it holds for this close too.
+  - artefact: tech-docs/analysis/project-management/domain-model/010-issues-and-their-hierarchy.md
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T22:28:33Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/domain-model/040-reviews-and-the-merge.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+    revalidated:
+      at: 2026-10-28T22:27:30Z
+      outcome: unchanged
+      unchanged-because: DEC-007's added closure path, a Task's close as completed without a pull request, has no pull request and no merge. The merge gate's reading of the checkboxes of each issue a pull request closes, which the view describes, stands.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      at: 2026-10-28T22:27:33Z
+      outcome: unchanged
+      unchanged-because: DEC-026 has close-issue close completed work that no pull request carried too, outside the seven commands. The worker agent builds each Task up to its merge through those commands, which the change leaves as they were.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T183638Z-abcc0940.yaml
+    revalidated:
+      at: 2026-10-28T22:27:36Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 9 adds a Task's close as completed without a pull request to the ends at which the owner releases the Task. Setting up the topology, and its refusal of an owner written as a label, do not turn on how a Task ends.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+    revalidated:
+      at: 2026-10-28T22:27:39Z
+      outcome: unchanged
+      unchanged-because: DEC-026 places a Task's close as completed without a pull request with close-issue, and DEC-035 point 4 and DEC-059 point 9 release the owner at it. The worker takes a Task and builds it up to its merge, a path that close is no step of.
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-012
+          reason: "DEC-012 gains a line naming DEC-062, which overturns the scope note that has the board carry state where the map is silent. Under DEC-062 the board's Status is the source of an open Task's position where the map binds state there, and DEC-051 point 6 has a seat skip, with a warning, a Task whose position there is undetermined, and take nothing where that board cannot be read. This use case has a variant for neither. #2271 builds that read and adds them."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+    revalidated:
+      at: 2026-10-28T22:27:42Z
+      outcome: unchanged
+      unchanged-because: DEC-035 point 4 and DEC-059 point 9 add a Task's close as completed without a pull request to the closes that release the owner, and DEC-026 places it with close-issue. Leaving a Task to its owner, and taking it over, do not turn on how the Task ends.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      at: 2026-10-28T22:27:46Z
+      outcome: unchanged
+      unchanged-because: The changes to DEC-026, DEC-035 point 4 and DEC-059 point 9 add a Task's close as completed without a pull request, made by close-issue, to the closes that release the owner. Taking a seat up again, and finding a Task taken over or lapsed, do not turn on how a Task ends.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+    revalidated:
+      at: 2026-10-28T22:27:49Z
+      outcome: unchanged
+      unchanged-because: DEC-026 gives close-issue the close of completed work that no pull request carried, and DEC-035 point 4 releases the owner at that close too. Each piece's Task is still landed through its pull request, as step 2 says, and handed over as before.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+    revalidated:
+      at: 2026-10-28T22:27:52Z
+      outcome: unchanged
+      unchanged-because: DEC-026 gives close-issue the close of completed work that no pull request carried, outside the seven commands. The lead starts the Task, a helper builds it and the lead lands it through its pull request, none of which that close touches.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-28T22:27:55Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 9 adds a Task's close as completed without a pull request to the ends at which the owner releases the Task. An ownership still names its seat, which is what the use case reads, and the measure counts pull requests and merges.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+    revalidated:
+      at: 2026-10-28T22:27:58Z
+      outcome: unchanged
+      unchanged-because: DEC-059 point 9 adds a Task's close as completed without a pull request to the ends at which the owner releases the Task. The journey sets a topology up and compares topologies by their pull requests and merges, which that close does not touch.

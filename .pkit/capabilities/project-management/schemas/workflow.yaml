@@ -45,7 +45,7 @@ source:
 
 process:
   id: issue-lifecycle
-  version: 6
+  version: 7
   # A subject id is an issue number — or, for a closure-fold member that is a
   # native sub-issue in another repository, `owner/repo#<n>` (`cascade-members`
   # gives it; `cascade-membership` and `detect-state` accept it).
@@ -57,7 +57,8 @@ process:
     - id: done
       display_name: Done
       meaning: |
-        Issue closed (merged via PR, or closed as won't-do).
+        Issue closed (merged via PR, closed as completed without one, or
+        closed as won't-do).
       applies_to:
         - "[issue-types:epic]"
         - "[issue-types:feature]"
@@ -241,12 +242,13 @@ process:
         - "[issue-types:epic]"
         - "[issue-types:feature]"
         - "[issue-types:umbrella]"
+        - "[issue-types:task]"
       severity: "[validation-severity:hard-reject]"
       gate:
         kind: deterministic
         predicate:
           run: gate-checkboxes-ticked
-      why: Closure-cascade eligibility path for parents; checkboxes must be ticked.
+      why: Closure-cascade eligibility path for parents, or a Task completed without a pull request; checkboxes must be ticked.
       hint: pkit project-management close-issue <issue-number>
       notes: |
         Closure-cascade eligibility path for parents — every child closed,
@@ -254,6 +256,12 @@ process:
         authorises closure for this level. Owned by `close-issue` (not part
         of the seven-command palette per DEC-026; closure is its own
         concern).
+
+        For a Task, the close as completed of work that was not a pull
+        request (DEC-006, `manual-completed`): `close-issue --mode=completed
+        --result "<where the result lives>"`, on the user's authorisation,
+        once every checkbox is ticked. The close comment names where the
+        work's result lives.
 
     # The move back (DEC-006, "Moving back from In Progress"): a person stops
     # work nobody is doing. Not a forward move, so no ancestor moves with it.
@@ -325,11 +333,13 @@ process:
         kind: deterministic
         predicate:
           run: gate-checkboxes-ticked
-      why: Won't-do close from Backlog; all checkboxes must be ticked or removed first.
+      why: Won't-do close from Backlog, all checkboxes ticked or removed first; or a Task completed without a pull request, every checkbox ticked.
       hint: pkit project-management close-issue <issue-number>
       notes: |
         Won't-do close from Backlog. All checkboxes must be ticked or
-        removed first (per MET-006). Owned by `close-issue`.
+        removed first (per MET-006). Owned by `close-issue`. A Task closes
+        from here as completed without a pull request too, every checkbox
+        ticked, as from In Progress above.
 
     - from: todo
       to: done
@@ -348,11 +358,12 @@ process:
         kind: deterministic
         predicate:
           run: gate-checkboxes-ticked
-      why: Won't-do close from Todo; same checkbox rule as Backlog → Done.
+      why: Won't-do close from Todo, or a Task completed without a pull request; same checkbox rule as Backlog → Done.
       hint: pkit project-management close-issue <issue-number>
       notes: |
         Won't-do close from Todo. Same checkbox rule as Backlog → Done.
-        Owned by `close-issue`.
+        Owned by `close-issue`. A Task closes from here as completed without
+        a pull request too, as from Backlog.
 
     # PR sub-lifecycle per DEC-026 — no issue-state transition; the
     # wrapper drives a PR-state change only (self-loops on the same state).
@@ -451,9 +462,11 @@ cascade:
       ancestor moves only through transitions declared above: one in todo
       goes todo → backlog, then backlog → in-progress, each journaled, where
       a journal is kept, with the moved issue's move as its reason. No
-      todo → in-progress is declared for the cascade. A move to done from
-      todo or backlog — a won't-do close — moves no ancestor forward; the
-      closure cascade still runs. The forward cascade is scoped to
+      todo → in-progress is declared for the cascade. A won't-do close from
+      todo or backlog moves no ancestor forward; the closure cascade still
+      runs. A Task's completed close (`manual-completed`) is progress from
+      todo or backlog too, so it brings each ancestor behind up to
+      in-progress, before the closure cascade. The forward cascade is scoped to
       todo → backlog → in-progress only; containers do not forward-cascade
       into review or done. When an issue enters review, or done from
       in-progress or review, each ancestor behind is brought to at most
@@ -501,6 +514,21 @@ closure_triggers:
       body). `Closes #N` auto-closes the marked descendant on merge into
       the integration branch; the owning root closes via a separate
       final `integration/<slug>` → main PR with `Closes #<owning>`.
+
+  - id: manual-completed
+    target_state: done
+    applies_to:
+      - "[issue-types:task]"
+    mechanism: |
+      A Task whose work was not a pull request (an audit, an
+      investigation, a decision walked with the user). User authorises
+      the close once every checkbox is ticked (per MET-006, not
+      skippable). Agent posts a close comment naming where the work's
+      result lives (an issue, a record, a comment) and closes the Task as
+      completed, from Todo, Backlog or In Progress; a Task in Review has
+      a PR open and closes through its merge. Completed work is progress,
+      so the forward cascade then brings each ancestor behind up to
+      In Progress, and the closure cascade runs as for a PR-merge closure.
 
   - id: manual-wont-do
     target_state: done
