@@ -33,12 +33,16 @@ runs the real checks over it:
 11. a misspelt kind, with the nearest kind named, leaves the documentation
     check answering.
 
-The capability's scripts are pointed at this interpreter in the adopter copy
-— but for the one test that runs the resolver through its own `uv` shebang —
-and the `pkit` they read through is the real CLI under this interpreter
-(`pkit_on_path`). The library is reached through a small driver run in a
-subprocess, as the validator's own tests do: `_lib` is every capability's
-library name, so it is never imported here.
+The capability's scripts run in the test's own process: the validator's, the
+filler's and the resolver's `main`, every `pkit` they read through answered by
+the backbone's CLI in this process too, and the resolver the backbone's checks
+start, started in this process through the runner's one lookup
+(`tests/in_process.py`). The library is loaded with its `_lib` kept apart.
+Three tests keep a real process, each marked with why: the source kind end to
+end, a sources folder that cannot be read, and the resolver run through its own
+`uv` shebang. There the capability's scripts are pointed at this interpreter in
+the adopter copy, but for the one the `uv` shebang runs, and the `pkit` they
+read through is the real CLI under this interpreter (`pkit_on_path`).
 """
 
 from __future__ import annotations
@@ -62,6 +66,8 @@ from project_kit import rule_sets as rs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import T1, document
+from tests.in_process import QUERY_ENVIRONMENT, load, route_pkit, run_main, start_in_process
+from tests.test_living_docs_points import filled
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -132,7 +138,19 @@ def _adopter(make_adopter_repo: MakeAdopterRepo, mode: str = "enforcing") -> Ado
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
+def repo(
+    make_adopter_repo: MakeAdopterRepo,
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
+) -> AdopterRepo:
+    """The adopter. A test marked `process` keeps the processes: the resolver the
+    backbone's checks start, and each script the test runs with `in_a_process`, read
+    through the real CLI under this interpreter (`pkit_on_path`). Any other test has
+    the backbone's runner start the resolver in this process (`start_in_process`)."""
+    if request.node.get_closest_marker("process") is None:
+        start_in_process(monkeypatch)
+    else:
+        request.getfixturevalue("pkit_on_path")
     return _adopter(make_adopter_repo)
 
 
@@ -147,25 +165,51 @@ def _states(repo: AdopterRepo) -> dict[str, fr.ArtefactState]:
 def _run(
     root: Path, *args: str, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
-    """A capability script of the adopter copy, run from its root."""
+    """A capability script of the adopter copy, run from its root as a process of its
+    own, for a test marked `process`."""
     script, *rest = args
     return subprocess.run(
         [str(root / script), *rest], cwd=root, capture_output=True, text=True, env=env, check=False
     )
 
 
+def _resolver(
+    root: Path, *args: str, in_a_process: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """The resolver with `args`, its `main` run in this process from `root`, or, with
+    `in_a_process`, the adopter's copy run as a process of its own."""
+    if in_a_process:
+        return _run(root, str(RESOLVER), *args)
+    (resolver,) = load("living-docs", RESOLVER.name)
+    return run_main(resolver, *args, cwd=root)
+
+
 def _resolve(root: Path, value: str) -> list[str]:
-    """The resolver's answer for `value`, run as the backbone runs it."""
-    completed = _run(root, str(RESOLVER), "--json", "--", value)
+    """The resolver's answer for `value`, with the arguments the backbone gives it."""
+    completed = _resolver(root, "--json", "--", value)
     assert completed.returncode == 0, completed.stderr
     answer = json.loads(completed.stdout)
     assert set(answer) == {"paths"}
     return answer["paths"]
 
 
-def _validate(root: Path) -> dict[str, Any]:
+def _validator(
+    root: Path, *args: str, in_a_process: bool = False
+) -> subprocess.CompletedProcess[str]:
+    """The validator with `args`, its `main` run in this process from `root` in the
+    environment the backbone gives a query, every `pkit` it reads through answered here
+    too; or, with `in_a_process`, the adopter's copy run as a process of its own."""
+    if in_a_process:
+        return _run(root, str(SCRIPTS / "validate.py"), *args)
+    validate, backbone = load("living-docs", "validate.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone)
+        return run_main(validate, *args, cwd=root, env=QUERY_ENVIRONMENT)
+
+
+def _validate(root: Path, *, in_a_process: bool = False) -> dict[str, Any]:
     """The validator's findings document, as `pkit validate` reads it."""
-    completed = _run(root, str(SCRIPTS / "validate.py"), "--json")
+    completed = _validator(root, "--json", in_a_process=in_a_process)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -185,8 +229,12 @@ def _findings(document: dict[str, Any], severity: str) -> list[tuple[str, str]]:
     ]
 
 
-def _fill_doc_check(root: Path) -> subprocess.CompletedProcess[str]:
-    return _run(root, str(SCRIPTS / "fill-doc-check.py"), "--json")
+def _fill_doc_check(root: Path, *, in_a_process: bool = False) -> subprocess.CompletedProcess[str]:
+    """The documentation-check filler with `--json`, as the backbone runs it: in this
+    process (`filled`), or, with `in_a_process`, the adopter's copy as a process."""
+    if in_a_process:
+        return _run(root, str(SCRIPTS / "fill-doc-check.py"), "--json")
+    return filled(root)
 
 
 # --- 1. the source changed: the page is asked, and an answer clears it ----------------------
@@ -195,13 +243,20 @@ def _fill_doc_check(root: Path) -> subprocess.CompletedProcess[str]:
 @pytest.mark.parametrize(
     "answer",
     [
-        ("--outcome", "updated"),
+        pytest.param(
+            ("--outcome", "updated"),
+            marks=pytest.mark.process(
+                "the source kind's end-to-end test: both checks start resolve-source as a "
+                "query process, pkit friction check exits 1 and the filler runs as a process"
+            ),
+        ),
         ("--outcome", "unchanged", "--because", "grouping by kind of change is still the rule"),
     ],
 )
 def test_a_new_version_recorded_stales_the_page_until_it_is_answered(
-    repo: AdopterRepo, answer: tuple[str, ...]
+    repo: AdopterRepo, answer: tuple[str, ...], request: pytest.FixtureRequest
 ) -> None:
+    in_a_process = request.node.get_closest_marker("process") is not None
     repo.commit("read Keep a Changelog 1.2.0", {KEEP: KEEP_A_CHANGELOG.replace("1.1.0", "1.2.0")})
 
     asked = fc.run_change_check(repo.root, "main")
@@ -216,7 +271,7 @@ def test_a_new_version_recorded_stales_the_page_until_it_is_answered(
     [stale] = _of_anchor(whole.findings)
     assert stale.kind is fr.RepositoryFindingKind.STALE
 
-    owed = _fill_doc_check(repo.root)
+    owed = _fill_doc_check(repo.root, in_a_process=in_a_process)
     assert owed.returncode == 0, owed.stderr
     [obligation] = json.loads(owed.stdout)["value"]
     assert (obligation["reason"], obligation["document"]) == ("page-stale", PAGE)
@@ -451,6 +506,10 @@ def test_a_hidden_entry_is_left_alone_and_a_file_of_another_suffix_is_reported(
 # --- 6. a folder that cannot be read is no answer ----------------------------------------
 
 
+@pytest.mark.process(
+    "the failure path end to end: the resolver's exit 1 is the no-answer contract the "
+    "backbone reads across a process, and the filler's exit 1 is read the same way"
+)
 @pytest.mark.skipif(
     hasattr(os, "geteuid") and os.geteuid() == 0, reason="root reads a folder of mode 000"
 )
@@ -458,7 +517,7 @@ def test_a_sources_folder_that_cannot_be_read_leaves_the_page_unjudged(repo: Ado
     folder = repo.root / SOURCES
     folder.chmod(0o000)
     try:
-        unread = _run(repo.root, str(RESOLVER), "--json", "--", "keep-a-changelog")
+        unread = _resolver(repo.root, "--json", "--", "keep-a-changelog", in_a_process=True)
         assert (unread.returncode, unread.stdout) == (1, "")
         assert "where sources are kept cannot be read" in unread.stderr
 
@@ -472,53 +531,35 @@ def test_a_sources_folder_that_cannot_be_read_leaves_the_page_unjudged(repo: Ado
         assert refused.exit_code != 0
         assert f"{PAGE} cannot be judged" in " ".join(refused.output.split())
 
-        owed = _fill_doc_check(repo.root)
+        owed = _fill_doc_check(repo.root, in_a_process=True)
         assert (owed.returncode, owed.stdout) == (1, ""), owed.stderr
         assert f"friction on {PAGE} (unresolved) was not judged" in owed.stderr
         assert "an anchor's resolver gave no answer" in owed.stderr
 
-        [(location, message)] = _findings(_validate(repo.root), "error")
+        [(location, message)] = _findings(_validate(repo.root, in_a_process=True), "error")
         assert location == SOURCES
         assert message.startswith("the captured sources cannot be read")
     finally:
         folder.chmod(0o755)
 
 
-#: Runs `answer` with `os.scandir` refusing to list the sources folder, as a folder
-#: without read permission does.
-SCANDIR_REFUSED = """
-import os, sys
-from pathlib import Path
+def test_answer_raises_unreadable_when_the_folder_cannot_be_listed(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`answer` with `os.scandir` refusing to list the sources folder, as a folder
+    without read permission does."""
+    (source_layout,) = load("living-docs", "source_layout")
+    listing = os.scandir
 
-sys.path.insert(0, sys.argv[1])
-from _lib import source_layout
+    def refused(path: Any) -> Any:
+        if Path(path).name == "sources":
+            raise PermissionError(13, "Permission denied", str(path))
+        return listing(path)
 
-listing = os.scandir
-
-def refused(path):
-    if Path(path).name == "sources":
-        raise PermissionError(13, "Permission denied", str(path))
-    return listing(path)
-
-os.scandir = refused
-try:
-    source_layout.answer(Path.cwd(), "keep-a-changelog")
-except source_layout.Unreadable as exc:
-    print(f"unreadable: {exc}")
-"""
-
-
-def test_answer_raises_unreadable_when_the_folder_cannot_be_listed(repo: AdopterRepo) -> None:
-    completed = subprocess.run(
-        [sys.executable, "-c", SCANDIR_REFUSED, str(repo.root / SCRIPTS)],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert completed.returncode == 0, completed.stderr
-    assert completed.stdout.startswith("unreadable: ")
-    assert completed.stdout.rstrip().endswith(f"{SOURCES}: Permission denied")
+    monkeypatch.setattr(os, "scandir", refused)
+    with pytest.raises(source_layout.Unreadable) as unreadable:
+        source_layout.answer(repo.root, "keep-a-changelog")
+    assert str(unreadable.value).rstrip().endswith(f"{SOURCES}: Permission denied")
 
 
 # --- 7. the resolver ---------------------------------------------------------------------
@@ -554,20 +595,20 @@ def test_without_the_project_tier_every_name_answers_no_file(repo: AdopterRepo) 
 
 
 def test_the_resolver_says_in_words_what_a_name_resolves_to(repo: AdopterRepo) -> None:
-    found = _run(repo.root, str(RESOLVER), "keep-a-changelog")
+    found = _resolver(repo.root, "keep-a-changelog")
     assert (found.returncode, found.stdout) == (0, f"{KEEP}\n")
-    missing = _run(repo.root, str(RESOLVER), "no-such")
+    missing = _resolver(repo.root, "no-such")
     assert (missing.returncode, missing.stdout) == (
         0,
         f"no source named 'no-such' is captured ({SOURCES}/no-such.yaml)\n",
     )
-    outside = _run(repo.root, str(RESOLVER), "--", "../x")
+    outside = _resolver(repo.root, "--", "../x")
     assert (outside.returncode, outside.stdout) == (
         0,
         "'../x' is not a source's name: a name is lower-case words of letters and digits "
         "joined by single hyphens, starting with a letter, at most 64 characters\n",
     )
-    assert _run(repo.root, str(RESOLVER)).returncode == 2
+    assert _resolver(repo.root).returncode == 2
 
 
 #: An adopter's own Python project, whose one dependency no cache holds or index serves.
@@ -580,6 +621,10 @@ dependencies = ["pkit-no-such-distribution==9.9.9"]
 """
 
 
+@pytest.mark.process(
+    "the resolver run through its own uv shebang, offline from an empty cache: only a "
+    "process started from the script's first line shows what uv provisions"
+)
 @pytest.mark.skipif(shutil.which("uv") is None, reason="uv runs the resolver's shebang")
 @pytest.mark.parametrize("project", [None, UNRESOLVABLE_PROJECT], ids=["no-project", "uv-project"])
 def test_the_resolver_runs_offline_from_an_empty_uv_cache_apart_from_the_project(
@@ -701,7 +746,7 @@ def test_the_validator_reports_what_names_nothing_and_what_nothing_names(
         f"sources (DEC-001 point 4): 2 captured in {SOURCES}/; 1 anchor(s) or citation(s) "
         "naming none, 1 captured source(s) nothing anchors or cites."
     )
-    human = _run(repo.root, str(SCRIPTS / "validate.py"))
+    human = _validator(repo.root)
     assert human.returncode == 0, human.stdout
 
 

@@ -20,36 +20,32 @@ never fails on one:
 - **where it binds**: a page RS-LDOC-001 does not bind on is not read.
 
 The findings document holds one report per page, and the human view lists each
-mention. The validator runs as the backbone runs it, with the real `pkit` on
-PATH, so no test reaches `uv` or the network.
+mention. The validator's `main` runs in the test's own process, with `--json`
+for the document and without it for the human view, and every `pkit` it reads
+through is answered in this process too (`tests/in_process.py`). The listing's
+process test is the spaces' tests' own.
 """
 
 from __future__ import annotations
 
-import subprocess
-import sys
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Any
 
 import pytest
 
 from tests import test_living_docs_spaces as spaces
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.test_living_docs_spaces import SCRIPT, errors, outside_every_space, run
+from tests.test_living_docs_spaces import errors, listing, outside_every_space, run
 
 GUIDE = "docs/guide.md"
 
 
 @pytest.fixture
-def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
+def project(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """The clean project of the spaces' tests: living-docs installed, two separate
     roots, a page per space's entry, a decision record and both spaces' definitions,
     whose scopes make RS-LDOC-001 bind on the user space's pages."""
     repo = make_adopter_repo(capabilities=("living-docs",))
-    script = repo.root / SCRIPT
-    body = script.read_text(encoding="utf-8").split("\n", 1)[1]
-    script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
     spaces.declare(repo)
     repo.write(
         {
@@ -84,15 +80,7 @@ def _mention_line(document: Mapping[str, Any]) -> str:
 
 def _listed(repo: AdopterRepo) -> list[str]:
     """The mentions the human view lists, each as `<line>: <kind> `<name>` → <anchor>`."""
-    completed = subprocess.run(
-        [sys.executable, str(repo.root / SCRIPT)],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert completed.returncode == 0, completed.stdout + completed.stderr
-    lines = completed.stdout.splitlines()
+    lines = listing(repo)
     heads = [i for i, line in enumerate(lines) if line.startswith("mention(s) a page")]
     if not heads:
         return []
