@@ -1,19 +1,20 @@
 """Tests for the whole-repository friction check, `pkit friction check --all` (Task #991, COR-050).
 
-Every test stands up a real adopter repository (`make_adopter_repo`) and lays
-down real history — dated commits by named authors, renames, a squash merge,
-merge commits, a shallow clone — before running the check at HEAD. The
-documents come from `tests.friction_documents`, each write taking its answers
-into answer files. A history only blocks can hold — a merge resolving a
-conflict in a block, a revert putting an `at` back, a time typed by hand — is
-laid down in blocks (`blocks_in_history`), then moved as an upgrade moves it
-(`_moved`): the checks read it as history, and judge as they did before the
-move (COR-062 points 6 and 11).
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`), and lays down real history — dated commits by
+named authors, renames, a squash merge, merge commits, a shallow clone — before
+running the check at HEAD. The documents come from `tests.friction_documents`,
+each write taking its answers into answer files. A history only blocks can hold
+— a merge resolving a conflict in a block, a revert putting an `at` back, a time
+typed by hand — is laid down in blocks (`blocks_in_history`), then moved as an
+upgrade moves it (`_moved`): the checks read it as history, and judge as they
+did before the move (COR-062 points 6 and 11).
 """
 
 from __future__ import annotations
 
 import json
+import textwrap
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -30,7 +31,7 @@ from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
 from project_kit.friction_git import BlobReader, TreeReader
-from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import register_kinds
 from tests.friction_documents import (
     ADR,
@@ -45,12 +46,14 @@ from tests.friction_documents import (
     adr,
     answer_file_names,
     blocks_in_history,
+    commit_install,
     document,
     friction_config,
     guide,
     move_answers,
     notes,
 )
+from tests.in_process import start_in_process
 from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_friction_anchor_kinds import ANSWERING
 from tests.test_friction_derived_links import LINKS_MOVED, declare_deriver, note, note_body
@@ -79,8 +82,8 @@ CLI = Anchor("path", "src/cli/**")
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    return Timeline(committed_adopter)
 
 
 def _run(timeline: Timeline, **kwargs: Any) -> fr.RepositoryCheck:
@@ -416,16 +419,25 @@ def test_collection_entries_have_their_own_points(timeline: Timeline) -> None:
 # --- derived links, read under HEAD's name across a rename (#1912, COR-050 point 5) -------
 
 
+def _as_main(body: str) -> str:
+    """A resolver's script `body` as the body of a `main`, so the runner's start runs it in
+    the test's own process (`start_in_process`)."""
+    return (
+        f'def main():\n{textwrap.indent(body, "    ")}\n\nif __name__ == "__main__":\n    main()\n'
+    )
+
+
 def test_a_placed_file_renamed_with_only_its_derived_links_moved_is_not_behind_a_deferral(
-    make_adopter_repo: MakeAdopterRepo,
+    committed_adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """An anchor of a registered kind on a file a place holds, deferred: `explain` lists no
     commit that renamed the file and moved only its derived links, since both versions are
     read under the derived links HEAD sets aside in the file. A word changed still counts."""
-    repo = make_adopter_repo()
+    started = start_in_process(monkeypatch)
+    repo = committed_adopter
     declare_deriver(repo.root)
     renamed = "notes/renamed.md"
-    resolver = ANSWERING.format({"paths": [renamed]})
+    resolver = _as_main(ANSWERING.format({"paths": [renamed]}))
     register_kinds(repo.root, "sources", kinds={"source": "resolve"}, script_body=resolver)
     anchors = {"path": ["src/cli/**"], "source": ["iso-8601"]}
     files = {CONFIG: friction_config(), **SOURCE, PLACED_NOTE: note()}
@@ -444,6 +456,7 @@ def test_a_placed_file_renamed_with_only_its_derived_links_moved_is_not_behind_a
     [behind] = [f for f in explained if f.finding.anchor == Anchor("source", "iso-8601")]
     assert behind.finding.kind is fr.RepositoryFindingKind.DEFERRED
     assert [c.commit.sha for c in behind.commits] == [edited]
+    assert started and all(script.name == "resolve.py" for script in started)
 
 
 # --- deferrals ---------------------------------------------------------------------------
@@ -1052,7 +1065,7 @@ def test_a_capability_surface_is_measured_repository_relative(
     """A capability's `friction.surface` names repository paths (the package
     schema), so its uncovered paths are the repository's — not paths under one
     of the capability's documentation locations."""
-    timeline = Timeline(make_adopter_repo(capabilities=("evidence",)))
+    timeline = Timeline(make_adopter_repo(capabilities=("evidence",), prepare=commit_install))
     package = ".pkit/capabilities/evidence/package.yaml"
     declared = (timeline.adopter.root / package).read_text(encoding="utf-8") + (
         "docs:\n  locations:\n    runs: {path: evidence}\nfriction:\n  surface: [src/core]\n"
@@ -1613,11 +1626,12 @@ def test_a_shallow_clone_that_cannot_reach_a_point_is_reported_not_guessed(
     assert "git fetch --unshallow" in result.findings[0].message
     assert "shallow clone" in fr.render_human(result, now=NOW)
 
-    # A depth of exactly four still records the root commit as the cut — the
-    # clone cannot tell a root from a cut, so it is reported the same way. One
-    # deeper than the history is not shallow: the same answer as the full clone.
+    # A depth of exactly five, the install's commit and the four after it, still
+    # records the root commit as the cut — the clone cannot tell a root from a cut,
+    # so it is reported the same way. One deeper than the history is not shallow:
+    # the same answer as the full clone.
     deep = tmp_path / "deep"
-    repo.git("clone", "-q", "--depth", "5", f"file://{repo.root}", str(deep))
+    repo.git("clone", "-q", "--depth", "6", f"file://{repo.root}", str(deep))
     deep_result = fr.run_repository_check(deep)
     assert deep_result.shallow is False
     assert _summary(deep_result)[0][0] == "stale"
@@ -1627,8 +1641,10 @@ def test_a_shallow_clone_that_cannot_reach_a_point_is_reported_not_guessed(
 
 
 def test_the_root_commit_is_read_whatever_log_showroot_says(
-    timeline: Timeline, tmp_path: Path
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
 ) -> None:
+    # The install is not committed apart, so the base is the root commit.
+    timeline = Timeline(make_adopter_repo())
     repo = timeline.adopter
     repo.git("config", "log.showRoot", "false")
     base = timeline.start({"docs/guide.md": guide()})

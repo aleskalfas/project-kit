@@ -66,6 +66,7 @@ from pathlib import Path
 from typing import Any
 
 from _lib import agents as agent_files
+from _lib import backbone
 
 try:  # ruamel is declared by every pm script's PEP 723 header.
     from ruamel.yaml import YAML
@@ -192,7 +193,7 @@ class Point:
         return tuple(dict.fromkeys(e.agent for e in self.entries))
 
 
-def read_point(run: Runner = subprocess.run) -> Point:
+def read_point(run: Runner = backbone.run) -> Point:
     """The point through `pkit connections resolve --json`. The command exits 1 on
     an unresolved point and still prints its document, so the document decides,
     never the exit code. No document at all raises Unreadable."""
@@ -257,7 +258,7 @@ def _inert(filler: Mapping[str, Any]) -> str:
     return f"{name}{f' ({how})' if how else ''}: {reason or 'no answer'} — fix: {fix}"
 
 
-def read_types(run: Runner = subprocess.run) -> dict[str, str]:
+def read_types(run: Runner = backbone.run) -> dict[str, str]:
     """Each declared type and the component that declares it: the type
     registries the backbone lists beside its one answer for each artefact's type
     (COR-056 point 6), read through `pkit friction artefacts --json`. Raises
