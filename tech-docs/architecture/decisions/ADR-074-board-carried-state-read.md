@@ -1,7 +1,7 @@
 ---
 id: ADR-074
 title: A board-carried state is read through the board read seam, and the command that reads it decides what each outcome means
-status: proposed
+status: accepted
 date: 2026-10-29
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
