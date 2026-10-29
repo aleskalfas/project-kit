@@ -1,0 +1,3 @@
+component: living-docs
+kind: none
+body: Every `pkit` call of the capability's scripts goes through one private function, `_lib/backbone.py`'s `_run`, so a test answers them in its own process. The calls, their arguments and the documents read are unchanged, and nothing an adopter sees moves.

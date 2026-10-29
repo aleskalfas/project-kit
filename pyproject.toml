@@ -304,4 +304,5 @@ addopts = "-ra --strict-markers"
 markers = [
     "serial: cannot share the machine with other test workers; runs after the parallel pass",
     "answers: reads the repository's own answers; the short check runs it too (ADR-067)",
+    "process(reason): keeps a real process of pkit or a capability script, and says why (tests/README.md)",
 ]

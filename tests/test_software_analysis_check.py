@@ -59,6 +59,7 @@ from tests.analysis_repo import (
     run_script,
     stamped,
 )
+from tests.in_process import QUERY_ENVIRONMENT, load, route_pkit, run_main
 
 
 @pytest.fixture
@@ -79,6 +80,19 @@ def seeded(
 def check(repo: AdopterRepo) -> dict[str, Any]:
     """The validator's findings document, run as the backbone runs it: `--json` alone."""
     completed = run_script(repo, VALIDATE, "--json")
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
+def checked(repo: AdopterRepo) -> dict[str, Any]:
+    """What `check` reads, from the validator's `main` run in this process with `--json`
+    alone, from the repository's root (`tests/in_process.py`). Its `pkit` calls go through
+    its one private function, `backbone._run`, unchanged, whose default runner the
+    backbone's CLI answers in this process."""
+    validate, backbone = load("software-analysis", "validate.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone)
+        completed = run_main(validate, "--json", cwd=repo.root, env=QUERY_ENVIRONMENT)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -654,7 +668,7 @@ def test_a_heading_other_than_the_id_and_title_is_reported(seeded: AdopterRepo) 
         "a use case opens with `# UC-002 — Read the report`, so what a reader of its front "
         "matter sees is what the page shows — write the heading, or change `title`"
     )
-    assert errors(check(seeded)) == [
+    assert errors(checked(seeded)) == [
         (
             rel,
             "its heading, `# UC-002 — Read report`, is not its id and its front matter's "
@@ -664,10 +678,10 @@ def test_a_heading_other_than_the_id_and_title_is_reported(seeded: AdopterRepo) 
     # A heading inside fenced code is no heading.
     fenced = renamed.replace("# UC-002 — Read report", "```\n# UC-002 — Read the report\n```")
     seeded.write({rel: fenced})
-    assert errors(check(seeded)) == [(rel, f"has no heading: {wanted}")]
+    assert errors(checked(seeded)) == [(rel, f"has no heading: {wanted}")]
     # Closing hashes are no part of the heading's text.
     seeded.write({rel: renamed.replace("# UC-002 — Read report", "# UC-002 — Read the report #")})
-    assert errors(check(seeded)) == []
+    assert errors(checked(seeded)) == []
 
 
 def test_an_actor_s_heading_is_its_id_and_name(seeded: AdopterRepo) -> None:
@@ -682,7 +696,7 @@ def test_an_actor_s_heading_is_its_id_and_name(seeded: AdopterRepo) -> None:
         "an actor opens with `# ACT-tester — Test author`, so what a reader of its front "
         "matter sees is what the page shows — write the heading, or change `name`"
     )
-    assert errors(check(seeded)) == [
+    assert errors(checked(seeded)) == [
         (
             tester,
             "its heading, `# ACT-tester — Tester`, is not its id and its front matter's name: "
@@ -690,7 +704,7 @@ def test_an_actor_s_heading_is_its_id_and_name(seeded: AdopterRepo) -> None:
         )
     ]
     seeded.write({tester: text.replace("# ACT-tester — Tester\n", "")})
-    assert errors(check(seeded)) == [
+    assert errors(checked(seeded)) == [
         (
             tester,
             "has no heading: an actor opens with `# ACT-tester — Tester`, so what a reader of "
@@ -1019,7 +1033,7 @@ def test_a_requirement_s_id_file_name_and_heading_agree(
     its id, its kind and its title (DEC-002 point 2, #1693). The heading is the heading
     check's whatever the format rule binds, so the structure never reports it twice."""
     project.write({**accepting_san(project), QUICK: requirement()})
-    assert errors(check(project)) == []
+    assert errors(checked(project)) == []
     title = "Show a run's result quickly"
     wanted = f"`# REQ-004 · Quality · {title}`"
     why = (
@@ -1028,7 +1042,7 @@ def test_a_requirement_s_id_file_name_and_heading_agree(
     )
     # A heading written as a use case's, with no kind.
     project.write({QUICK: requirement(heading=f"# REQ-004 — {title}")})
-    assert errors(check(project)) == [
+    assert errors(checked(project)) == [
         (
             QUICK,
             f"its heading, `# REQ-004 — {title}`, is not its id, its kind and its front "
@@ -1037,7 +1051,7 @@ def test_a_requirement_s_id_file_name_and_heading_agree(
     ]
     # No heading at all: one finding, the heading check's.
     project.write({QUICK: requirement(heading="")})
-    assert errors(check(project)) == [
+    assert errors(checked(project)) == [
         (QUICK, f"has no heading: a quality requirement opens with {wanted}, {why}")
     ]
     # The file moved to another kind's place, its heading still naming the first kind.
@@ -1045,7 +1059,7 @@ def test_a_requirement_s_id_file_name_and_heading_agree(
     project.write(
         {QUICK: None, moved: requirement("constraint", heading=f"# REQ-004 · Quality · {title}")}
     )
-    assert errors(check(project)) == [
+    assert errors(checked(project)) == [
         (
             moved,
             f"its heading, `# REQ-004 · Quality · {title}`, is not its id, its kind and its "
@@ -1056,7 +1070,7 @@ def test_a_requirement_s_id_file_name_and_heading_agree(
     # A file's name that carries no number, or another than its id.
     unnumbered = f"{QUALITY}/quick-result.md"
     project.write({moved: None, unnumbered: requirement()})
-    assert errors(check(project)) == [
+    assert errors(checked(project)) == [
         (
             unnumbered,
             "its name is quick-result.md, which carries no number: a requirement's file is "
@@ -1067,7 +1081,7 @@ def test_a_requirement_s_id_file_name_and_heading_agree(
     ]
     other = f"{QUALITY}/REQ-005-quick-result.md"
     project.write({unnumbered: None, other: requirement()})
-    assert errors(check(project)) == [
+    assert errors(checked(project)) == [
         (
             other,
             "its name carries REQ-005, its front matter REQ-004: the stamp counts both as "

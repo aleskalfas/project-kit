@@ -64,6 +64,67 @@ opened (a read-only cache directory, a sandbox that does not allow it), the step
 says so and runs without the limit. `tests/test_check_script.py` pins both the
 passes and the slots.
 
+**A test calls the code in its own process.** A process of `pkit` or of a
+capability script costs a third of a second to a second, and most tests check
+what the code answers, not that a process ran it (#2313). So a test keeps a real
+process only where the process is the point. The rule below says which tests do,
+and how a test is converted.
+
+The rule: which tests keep a real process, and how one is converted (#2314,
+choice 2).
+
+1. Per command, one or two end-to-end tests keep a real process. So do one test
+   per output mode, and one per registered validator, filler or resolver, run
+   through `pkit`'s runner.
+2. A converted test enters where the process test entered. That is the script's
+   `main(argv)` in the test's own process, or a public function where the
+   assertion is on its result, and never a private helper alone.
+3. Convert a test rather than delete it. Delete only an exact duplicate, and name
+   the test that keeps its assertion.
+4. A template is built by the real code in the test's own process, never written
+   by hand.
+5. Each slice proves its conversion with a planted-bug spot-check against its old
+   tests and its new ones.
+
+**A kept process test is marked with its reason**:
+`@pytest.mark.process("<why the process is the point>")`. A guard, the autouse
+fixture `process_starts`, counts each process of `pkit` or a capability script
+the test starts, and fails a test that starts one without the mark. It counts
+from the start itself, so the count is the same on every run. It does not count
+what an adopter template's build starts, nor what a test of the runner asks of
+`run_command` itself.
+
+**The guard holds every module but those in its baseline**,
+`tests/process_guard_baseline.txt`, the modules no slice of #2313 has converted
+yet. A slice takes its modules out, and no module is ever added. So a new module
+is held from its first test.
+
+**What a converted test calls** lives in `tests/in_process.py`:
+
+- `load(capability, *names)` loads a capability's scripts, such as `validate.py`,
+  and its `_lib` modules in the test's own process. Each capability's `_lib` is
+  kept apart in `sys.modules`. `run_main(script, *args, cwd=...)` runs a
+  script's `main` as its process ran.
+- `route_pkit(monkeypatch, backbone)` answers every `pkit` call of a capability
+  with the backbone's CLI in the test's own process. Each capability makes every
+  call through one private function, `_lib.backbone._run`, looked up when called,
+  and the route replaces only that function. The argument lists and the
+  documents are unchanged (ADR-057 point 1).
+- `InProcessPkit`, the in-process `pkit`, answers as a process does. It gives a
+  `CompletedProcess` with its exit code and standard error apart, from the
+  working directory given, in the environment the runner gives a query. An
+  exception is exit 1 with its traceback, a keyword it does not model is
+  refused, and the backbone's caches are cleared before each call.
+- `start_in_process(monkeypatch)` starts in the test's own process each command
+  the backbone's runner starts for a component, such as a validator. The
+  runner's one lookup still resolves the command, so a broken registration still
+  fails.
+
+**The spot-check** is `uv run python scripts/spot_check.py BUGS --base REF TEST...`.
+It plants each bug the JSON file BUGS lists, one at a time, and runs the tests as
+REF holds them and as they are now. It exits 1 when the new tests miss a bug the
+old tests caught. The bugs of #2315 are in `tests/spot_checks/`.
+
 **The slowest modules**, by the time their tests take together, setup
 included, in one parallel pass (`uv run pytest -q -n 4 -m "not serial"
 --junitxml=...`, 2026-10-01, on a 12-core Mac other runs were sharing; the pass
@@ -74,18 +135,21 @@ summed 1 879 s of test time and took 529 s on the clock):
 | `test_software_analysis.py` | 45 | 233 | 5.2 | 20.7 |
 | `test_software_analysis_numbers.py` | 15 | 116 | 7.7 | 21.8 |
 | `test_software_analysis_check.py` | 27 | 98 | 3.6 | 21.1 |
-| `test_living_docs_spaces.py` | 51 | 92 | 1.8 | 6.7 |
 | `test_software_analysis_resolver.py` | 53 | 89 | 1.7 | 18.7 |
 | `test_friction_check.py` | 76 | 63 | 0.8 | 1.8 |
 | `test_process_cascade_engine.py` | 33 | 60 | 1.8 | 5.9 |
 | `test_default_branch.py` | 66 | 53 | 0.8 | 27.9 |
 
-A software-analysis test runs the capability's scripts as the backbone does — a
-stamp, the check, the number check — each a process that starts several `pkit`
-processes of its own, from a third of a second to a second each; living-docs'
-tests run its validator the same way. What their tests share is built once
-("Built once, copied for each test", below); what is left is each test's own
-runs. A test that stays slow says why in a comment above it.
+`test_living_docs_spaces.py` has left the table. #2315 converted it, and its 180
+tests took 23 s on the clock in a pass of their own, `-n 4`, against 127 s before
+(2026-10-29).
+
+A software-analysis test still runs the capability's scripts as the backbone
+does — a stamp, the check, the number check — each a process that starts several
+`pkit` processes of its own. Its slice of #2313 converts them, as three of the
+check's tests are already converted. What its tests share is built once ("Built
+once, copied for each test", below). A test that stays slow says why in a comment
+above it.
 
 ## Type checking
 
