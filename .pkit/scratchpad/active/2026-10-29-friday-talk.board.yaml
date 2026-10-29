@@ -2000,8 +2000,8 @@ templates:
         width: 576
         height: 300
   ties_T-checked:
-    note: 'One document''s ties, drawn for one slide by the slide generator: the files it describes, the
-      records it carries out, a line per tie.'
+    note: 'Documents'' ties, drawn for one slide by the slide generator: the files they describe, the
+      records they carry out, a line per tie.'
     root:
       type: area
       title: '{id}'
@@ -2010,11 +2010,11 @@ templates:
       border_color: '#FFFFFF00'
       border_width: 1
       width: 1960
-      height: 588
+      height: 640
     parts:
       lhead:
         type: text
-        text: The code it describes
+        text: The code they describe
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -2023,7 +2023,7 @@ templates:
         height: 56
       rhead:
         type: text
-        text: The records it carries out
+        text: The guide's records
         style: '@style.key'
         ink: '@text_primary'
         x: 1400
@@ -2035,7 +2035,7 @@ templates:
         shape: rectangle
         text: ''
         x: 600
-        y: 242
+        y: 88
         width: 600
         height: 176
         color: '@background'
@@ -2048,7 +2048,7 @@ templates:
         style: '@style.key'
         ink: '@text_primary'
         x: 632
-        y: 274
+        y: 120
         width: 536
         height: 56
       cpath:
@@ -2056,7 +2056,36 @@ templates:
         text: .pkit/release/README.md
         style: '@style.body'
         x: 632
-        y: 338
+        y: 180
+        width: 536
+        height: 50
+      c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 600
+        y: 444
+        width: 600
+        height: 144
+        color: '@background'
+        border_color: '@text_primary'
+        border_width: 4
+        ink: '@text_primary'
+      c1head:
+        type: text
+        text: Use case UC-008
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 632
+        y: 460
+        width: 536
+        height: 56
+      c1path:
+        type: text
+        text: UC-008-release-backbone.md
+        style: '@style.body'
+        x: 632
+        y: 520
         width: 536
         height: 50
       l0box:
@@ -2086,7 +2115,7 @@ templates:
         - - 380
           - 102
         - - 600
-          - 262
+          - 108
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2119,7 +2148,7 @@ templates:
         - - 380
           - 178
         - - 600
-          - 285
+          - 131
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2152,7 +2181,7 @@ templates:
         - - 380
           - 254
         - - 600
-          - 307
+          - 153
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2185,7 +2214,7 @@ templates:
         - - 380
           - 330
         - - 600
-          - 330
+          - 176
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2218,7 +2247,7 @@ templates:
         - - 380
           - 406
         - - 600
-          - 353
+          - 199
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2251,7 +2280,7 @@ templates:
         - - 380
           - 482
         - - 600
-          - 375
+          - 221
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2265,31 +2294,52 @@ templates:
         y: 528
         width: 380
         height: 60
-        color: '@role_neutral_bg'
-        border_color: '@role_neutral'
-        border_width: 2
+        color: '@background'
+        border_color: '@text_error'
+        border_width: 4
         ink: '@text_primary'
       l6text:
         type: text
         text: latest_tag.py
         style: '@style.body'
-        ink: '@text_primary'
+        ink: '@text_error'
         x: 20
         y: 534
         width: 340
         height: 50
+      l6note:
+        type: text
+        text: renamed to last_tag.py
+        style: '@style.caption'
+        ink: '@text_error'
+        x: 0
+        y: 596
+        width: 540
+        height: 40
       l6tie:
         type: arrow
         points:
         - - 380
           - 558
         - - 600
-          - 398
+          - 244
         arrow_type: straight
         tip: none
-        color: '@border_strong'
+        color: '@text_error'
         border_width: 4
-        border_style: solid
+        border_style: dashed
+      l6tie1:
+        type: arrow
+        points:
+        - - 380
+          - 558
+        - - 600
+          - 516
+        arrow_type: straight
+        tip: none
+        color: '@text_error'
+        border_width: 4
+        border_style: dashed
       r0box:
         type: shape
         shape: rectangle
@@ -2317,7 +2367,7 @@ templates:
         - - 1400
           - 140
         - - 1200
-          - 262
+          - 108
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2350,7 +2400,7 @@ templates:
         - - 1400
           - 216
         - - 1200
-          - 289
+          - 135
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2383,7 +2433,7 @@ templates:
         - - 1400
           - 292
         - - 1200
-          - 316
+          - 162
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2397,15 +2447,15 @@ templates:
         y: 338
         width: 560
         height: 60
-        color: '@background'
-        border_color: '@text_error'
-        border_width: 4
+        color: '@role_people_bg'
+        border_color: '@role_people'
+        border_width: 2
         ink: '@text_primary'
       r3text:
         type: text
-        text: PRJ-020  no such record
+        text: PRJ-002  Versioning
         style: '@style.body'
-        ink: '@text_error'
+        ink: '@text_primary'
         x: 1420
         y: 344
         width: 520
@@ -2416,12 +2466,12 @@ templates:
         - - 1400
           - 368
         - - 1200
-          - 344
+          - 190
         arrow_type: straight
         tip: none
-        color: '@text_error'
+        color: '@border_strong'
         border_width: 4
-        border_style: dashed
+        border_style: solid
       r4box:
         type: shape
         shape: rectangle
@@ -2449,7 +2499,7 @@ templates:
         - - 1400
           - 444
         - - 1200
-          - 371
+          - 217
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -2482,7 +2532,7 @@ templates:
         - - 1400
           - 520
         - - 1200
-          - 398
+          - 244
         arrow_type: straight
         tip: none
         color: '@border_strong'
@@ -4194,78 +4244,83 @@ instances:
     x: 128
     y: 576
     mural_ids:
-      root: d44b7fd5-1184-4ca8-834a-22c44f85d5c0
-      cbox: 2c98650e-7d43-42ed-93cc-ef05927f14c7
-      l0box: cf26094e-7e4a-4606-a100-56d661402333
-      l1box: f06060a4-c39a-486a-bdf2-4b2af767badb
-      l2box: 53374115-0e82-44d0-9575-47f7a67f93d9
-      l3box: fe97d61d-1ed7-4705-8ecb-ae4e3527ed24
-      l4box: f32cf247-b0e5-41b8-8515-6b919c745858
-      l5box: dce60bd7-a72c-44f7-8ef2-28575d438800
-      l6box: be80389e-8c96-4cff-a6d2-07ccc43464b6
-      r0box: 8434bd76-db8d-4929-851a-d2145c7b191a
-      r1box: 7b3b5400-5eac-4733-91d9-d31668a8ede3
-      r2box: 1013b7e6-569f-4fe1-8f64-ce107e2ed50a
-      r3box: cbc98936-8c6a-4d2c-b6e8-94914e869fb8
-      r4box: 28942868-ecab-44d6-802e-12e64e4ff1d4
-      r5box: ac8be5bd-b07c-471d-a8fb-9446effbd35e
-      lhead: f220e941-df6a-4d66-8099-fe783b82cc00
-      rhead: ca6fb1b8-0d4b-4cd9-bea0-7c4595d05b15
-      chead: 60be03e0-fe37-4708-b0bd-9ab4cee7af30
-      cpath: 213a7680-e505-4e2b-83d7-11f0b9c8c9e5
-      l0text: 3eb3f148-f709-46bc-8534-449053b93e4f
-      l1text: 248094ea-1237-4044-bb41-be19edf71192
-      l2text: 5f79a687-8f7c-401f-a104-2013ac04ed8b
-      l3text: 2224d83c-dbbe-4dcc-a50b-e4ec1e0c20fe
-      l4text: 9e6ebe00-0cff-43dd-a266-6ccba3c1bafd
-      l5text: 82df83e4-90fb-4d72-b371-bb8c6de7e994
-      l6text: 505ec3bd-da18-4993-a5f4-a3c286870549
-      r0text: a25112ba-e41b-4de0-a47f-cd76cabc8fe0
-      r1text: 931253c5-9578-4d85-b114-e2565dad7c97
-      r2text: 370742d9-056b-4910-9fcd-9b288d9a07ac
-      r3text: 824c7c69-35fc-496f-82f7-163df068e8f6
-      r4text: fa2f7a80-409e-4e75-8885-a1cac2e57519
-      r5text: 3eb09f4e-9af8-4ae7-9ea9-b091c698fff3
-      l0tie: 76a1eec0-7e03-4a70-aac6-63fdfb8b14f2
-      l1tie: 611c1b2c-a958-4119-ac65-7f016e99a684
-      l2tie: a8b90d87-40d1-447b-b296-c39a332eba52
-      l3tie: 2d2d8bae-e6e4-4438-869b-b8e00a7de59f
-      l4tie: 68a367eb-0ddd-4ca5-b95e-68c200b0321d
-      l5tie: 9be06904-c554-43bd-b5be-26e4c27780b9
-      l6tie: 64202f39-5a56-42dd-b81d-c600c28e2b5a
-      r0tie: 2c55e443-43b9-4b9f-afed-1440b19d4480
-      r1tie: d78f3b1f-369b-4753-b05a-b1b51c48c19f
-      r2tie: 68928158-6eae-414d-a09d-89216db6c865
-      r3tie: a1fd816e-3050-41f2-a34e-de2ee7382fc1
-      r4tie: 14931b3e-2fde-47c9-9efa-bacf2694947a
-      r5tie: 93624570-372c-48a4-9814-d6b4625bf8eb
+      root: 901fdf6b-bf8c-42f3-87a5-d2ba149451a5
+      cbox: 0a42bdc9-cf50-463a-b1bf-b379c9636119
+      c1box: 30fcffb3-f0fe-4bc0-ad3b-8350ceb85782
+      l0box: 01ef025b-9cb8-4b5a-b9e5-cdfa61d63ac7
+      l1box: 2a9e5904-de07-4726-b02f-abae5a889a0a
+      l2box: fbf994a3-b53c-4719-90ad-d154d8fe1971
+      l3box: 2b0db175-dec6-4f3a-8719-7a2015ba20bd
+      l4box: 39892bb9-88e3-40ca-b8e0-a491a245578c
+      l5box: e1f43fbe-d754-4ee6-8a90-d9bce4c8ab9d
+      l6box: 631c879d-7ed1-484a-a89a-79fd34becc0b
+      r0box: 9f0e730f-9d8f-4295-9edd-3d8345457517
+      r1box: 5aeb4fce-56df-440f-884e-b0385df8fce5
+      r2box: 180abb7d-3cf0-4da1-9047-874e65d99d19
+      r3box: d0a6f09f-56ba-49b5-abf2-1974903bc1d0
+      r4box: 3f8a4f89-7260-45d0-85df-884bef3829a9
+      r5box: 77692345-7c9b-48a6-92b2-ad9aaaa53eff
+      lhead: 689b2f2f-f0fa-4f1d-b8f5-c162f45e90b2
+      rhead: 028862a7-a7d4-4c81-b275-7bf5b766ff02
+      chead: ff9d54fb-66bc-4b29-a73b-9ed8bfa92c8d
+      cpath: 2aa777cc-0377-4a65-af48-fb9f82f03cf5
+      c1head: f1a8eb1c-af3b-428a-be89-d4dbe71dbe3a
+      c1path: b00ef381-9eed-4fe3-a7d6-af79dea57209
+      l0text: 8a3b79c8-bd6a-4309-a1ae-56d00a9e5072
+      l1text: 5549846e-8c95-446b-ae13-95077e5242cf
+      l2text: 1203b62a-6789-47ca-bdd8-5333e90cedc1
+      l3text: 822c7e53-bd99-4dfa-8c4c-28d6977ecd68
+      l4text: 616657e0-5369-4365-a334-8d5f208693a0
+      l5text: 99f0b7bf-fde7-4620-9167-cbe28d60b342
+      l6text: 833ca5c2-7c98-40b7-8a83-cd4b13049559
+      l6note: a227bbe6-3f25-43a4-8da0-c0b54dd4929b
+      r0text: 15356e45-ead4-416c-ae2e-ccd5ebbe5557
+      r1text: 3b13ebc7-cc96-4d19-95da-d77983193739
+      r2text: 4427928f-3cde-4136-8616-1f053be92146
+      r3text: 41eb754c-9bcb-48d6-81fd-b2bcdd8f997f
+      r4text: 8beb8657-6d0f-4165-a523-6aaab9e25b75
+      r5text: c1ca61c0-8251-454f-b72d-08cc765a85f0
+      l0tie: 83c6573d-c0bb-47ec-afa1-49929143670f
+      l1tie: 99bf0ce0-295e-4aa5-8f17-cf11973cb250
+      l2tie: a2844fe6-a4a9-402c-a94d-f91a2aad74ba
+      l3tie: cc8045f0-c0eb-4c15-978c-ae4a92fcd0b9
+      l4tie: 2b6b1851-1174-447b-a285-3b9d517bc74e
+      l5tie: d4ee2f8d-3663-45bb-96bc-153c849b532f
+      l6tie: f6f06f21-1b5d-454b-852d-62e50e7c90d0
+      l6tie1: 005866a9-376b-491c-949f-fc255f37c770
+      r0tie: e5661500-e160-45b5-9e3f-ba329537a95b
+      r1tie: 9c93e8ee-0d40-4ace-ac04-d84965d9fbd6
+      r2tie: 4f5d1dff-9c72-40cd-8275-910312288301
+      r3tie: 7dd9457c-612c-4fd6-83a8-078e58b0427d
+      r4tie: 9d65278f-06bd-4331-ae5c-36ab6c9ba97c
+      r5tie: 3bfbe2cb-eed0-4b9b-91b7-c81aa8b7f92f
   T-checked-check:
     template: term_image
     parent: T-checked
     x: 2152
-    y: 796
+    y: 737
     file: term-checked-check
     override:
       root:
         width: 920
-        height: 368
+        height: 479
       img:
         width: 920
-        height: 368
+        height: 479
     mural_ids:
-      root: 0524318b-3161-474e-a140-2793392ad33e
-      img: 594fa9ce-e841-4cd9-a229-d84a7eb39190
+      root: c0a61e8f-3f43-49dc-b38b-133c4da4e34c
+      img: cec2385e-be19-49c3-9b6b-aa95f3bfd128
   T-checked-limit:
     template: notice
     parent: T-checked
     text: 'Limit: It checks structure, not meaning: a record can be valid and still wrong.'
     x: 128
-    y: 1212
+    y: 1264
     mural_ids:
-      root: 7419b0ef-4a95-44a0-8818-d1a5128dff1b
-      bg: 5cca2cb3-b6b4-4b70-a65a-4fa99527fc8e
-      bar: 23987b0c-9e30-495a-bebc-0ca8d647f20d
-      text: f49e4518-e479-4053-b720-2cb7d6c1ffea
+      root: 01e9ae8e-0b7a-4a38-93b7-ad3b77fcf8b1
+      bg: b3ec13b8-6a74-4a0b-863f-d9db2d3ec77f
+      bar: 67dfa990-0cb0-478b-8559-64a91de7fb9f
+      text: 343060ab-c120-425b-99d4-71f3ed845110
   T-schemas:
     template: slide
     title: Rules and processes as data

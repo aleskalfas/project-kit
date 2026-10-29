@@ -472,10 +472,13 @@ slides:
   visual:
     kind: ties
     center:
-      head: The release guide
+    - head: The release guide
       path: .pkit/release/README.md
-    left_head: The code it describes
-    right_head: The records it carries out
+    - head: Use case UC-008
+      path: UC-008-release-backbone.md
+      height: 144
+    left_head: The code they describe
+    right_head: The guide's records
     left:
     - label: release.py
     - label: changesets.py
@@ -484,6 +487,9 @@ slides:
     - label: release-pr.yml
     - label: release-tag.yml
     - label: latest_tag.py
+      broken: true
+      to: [0, 1]
+      note: renamed to last_tag.py
     right:
     - label: COR-010  Lifecycle
       tone: pkit
@@ -491,14 +497,19 @@ slides:
       tone: pkit
     - label: COR-041  External sources
       tone: pkit
-    - label: 'PRJ-020  no such record'
+    - label: PRJ-002  Versioning
       tone: yours
-      broken: true
     - label: PRJ-004  Distribution
       tone: yours
     - label: ADR-040  Fetch at the pin
       tone: architecture
     terminal:
+    - - - '$ '
+        - prompt
+      - - git
+        - command
+      - - ' mv scripts/latest_tag.py scripts/last_tag.py'
+        - args
     - - - '$ '
         - prompt
       - - pkit
@@ -513,25 +524,39 @@ slides:
         - output
       - - dead-anchor
         - del
-      - - '  record PRJ-020'
+      - - '  path scripts/latest_tag.py'
         - args
-    - - - '      names no record; the anchor was added'
+    - - - '      matches no file; the diff removed or'
         - output
-    - - - '      in this diff'
+    - - - '      moved its target'
         - output
+    - - - '  tech-docs/analysis/…/UC-008-release-backbone.md'
+        - args
+    - - - '    '
+        - output
+      - - dead-anchor
+        - del
+      - - '  path scripts/latest_tag.py'
+        - args
     - - - 'Result: '
         - output
       - - failed
         - del
-    - - - '# the pull request''s checks fail until it is fixed'
+      - - '   (2 dead anchors)'
+        - output
+    - - - '# the change fails until both ties follow the file'
         - comment
     font_size: 24
   limit: 'It checks structure, not meaning: a record can be valid and still wrong.'
   minutes: 1
-  notes: 'The release guide from the slide before, with every tie its front matter declares: the seven files it
-    describes and the six records it carries out. A typo turns PRJ-002 into PRJ-020, and the change check names
-    it before anything merges. Thirteen ties on one ordinary page: nobody keeps them right by hand. The check
-    reads the change, so a tie that was wrong before it is the whole-tree checks'' to find.'
+  notes: 'The release guide from the slide before, with the ties its front matter declares: the seven files it
+    describes and the six records it carries out. Someone renames scripts/latest_tag.py in a refactor. Two
+    documents still name the old file: the guide, and a use case nobody renaming a script would think of.
+    Without the check nothing warns: pkit refs records-for scripts/last_tag.py finds no records, so the next
+    agent to change the file reads none of the guide''s six, nor the use case''s seven. The change check fails
+    the rename and names both documents; the fix is to move the ties with the file. Checked on 29 October in a
+    throwaway copy of the repository. A tie that is already dead on main is reported by the whole-repository
+    check, pkit friction check --all.'
 - id: schemas
   part: P1
   title: Rules and processes as data

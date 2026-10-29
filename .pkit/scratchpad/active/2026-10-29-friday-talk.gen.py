@@ -611,24 +611,37 @@ TIES_TONES = {"code": ("role_neutral_bg", "role_neutral"), "pkit": ("role_code_b
 
 
 def ties(pid, y, v):
-    """One document's ties: the files it describes on the left, the records it carries out on the right, a
-    line for each tie, a broken one red and dashed. The diagram is one instance of a template made for this
-    slide; the check's output stands beside it."""
-    left, right, c = v["left"], v["right"], v["center"]
+    """Documents' ties: the files they describe on the left, the documents in the middle, the records the
+    first carries out on the right, a line for each tie, a broken one red and dashed. A left item ties to
+    the documents its `to` lists (the first by default); a `note` stands under it. The diagram is one
+    instance of a template made for this slide; the check's output stands beside it."""
+    left, right, docs = v["left"], v["right"], v["center"]
     W, lw, cw, rw = 1960, 380, 600, 560
     lx, cx, rx = 0, 600, 1960 - 560
     n = max(len(left), len(right))
     body = n * TIES_ROW - (TIES_ROW - TIES_NODE_H)
-    H = TIES_HEAD_H + body
-    cy = TIES_HEAD_H + body / 2 - TIES_CENTER_H / 2
+    H = TIES_HEAD_H + body + (52 if any(it.get("note") for it in left) else 0)
+    # the documents: one in the middle; two, the first at the top and the last at the foot
+    heights = [d.get("height", TIES_CENTER_H) for d in docs]
+    if len(docs) == 1:
+        tops = [TIES_HEAD_H + body / 2 - heights[0] / 2]
+    else:
+        tops = [TIES_HEAD_H + 16, TIES_HEAD_H + body - heights[1]]
     parts = {
         "lhead": {"type": "text", "text": md(v["left_head"]), "style": "@style.key", "ink": "@text_primary", "x": lx, "y": 0, "width": lw + 200, "height": 56},
         "rhead": {"type": "text", "text": md(v["right_head"]), "style": "@style.key", "ink": "@text_primary", "x": rx, "y": 0, "width": rw, "height": 56},
-        "cbox": {"type": "shape", "shape": "rectangle", "text": "", "x": cx, "y": round(cy), "width": cw, "height": TIES_CENTER_H,
-                 "color": "@background", "border_color": "@text_primary", "border_width": 4, "ink": "@text_primary"},
-        "chead": {"type": "text", "text": md(c["head"]), "style": "@style.key", "ink": "@text_primary", "x": cx + 32, "y": round(cy + 32), "width": cw - 64, "height": 56},
-        "cpath": {"type": "text", "text": md(c["path"]), "style": "@style.body", "x": cx + 32, "y": round(cy + 96), "width": cw - 64, "height": 50},
     }
+    for k, (d, top, h) in enumerate(zip(docs, tops, heights)):
+        p = "c" if k == 0 else f"c{k}"
+        parts[f"{p}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": cx, "y": round(top), "width": cw, "height": h,
+                            "color": "@background", "border_color": "@text_primary", "border_width": 4, "ink": "@text_primary"}
+        parts[f"{p}head"] = {"type": "text", "text": md(d["head"]), "style": "@style.key", "ink": "@text_primary", "x": cx + 32, "y": round(top + h / 2 - 56), "width": cw - 64, "height": 56}
+        parts[f"{p}path"] = {"type": "text", "text": md(d["path"]), "style": "@style.body", "x": cx + 32, "y": round(top + h / 2 + 4), "width": cw - 64, "height": 50}
+
+    def end(k, i, count):
+        # where a tie meets document k's edge: spread along it, the i-th of count
+        top, h = tops[k], heights[k]
+        return top + h / 2 if count == 1 else top + 20 + i * (h - 40) / (count - 1)
 
     def column(items, side, x, w):
         off = (n - len(items)) * TIES_ROW / 2
@@ -641,18 +654,21 @@ def ties(pid, y, v):
                                      "border_width": 4 if broken else 2, "ink": "@text_primary"}
             parts[f"{side}{i}text"] = {"type": "text", "text": md(it["label"]), "style": "@style.body", "ink": "@text_error" if broken else "@text_primary",
                                       "x": x + 20, "y": round(ny + 6), "width": w - 40, "height": 50}
-            # the tie: from the node's inner edge to the guide's edge, spread along it
-            ey = cy + 20 + i * (TIES_CENTER_H - 40) / max(len(items) - 1, 1)
-            x1, x2 = (x + w, cx) if side == "l" else (x, cx + cw)
-            parts[f"{side}{i}tie"] = {"type": "arrow", "points": [[x1, round(ny + TIES_NODE_H / 2)], [x2, round(ey)]], "arrow_type": "straight", "tip": "none",
-                                     "color": "@text_error" if broken else "@border_strong", "border_width": 4,
-                                     "border_style": "dashed" if broken else "solid"}
+            if it.get("note"):
+                parts[f"{side}{i}note"] = {"type": "text", "text": md(it["note"]), "style": "@style.caption", "ink": "@text_error",
+                                          "x": x, "y": round(ny + TIES_NODE_H + 8), "width": w + 160, "height": 40}
+            for k in it.get("to", [0]):
+                ey = end(k, i, len(items)) if k == 0 else end(k, 0, 1)
+                x1, x2 = (x + w, cx) if side == "l" else (x, cx + cw)
+                parts[f"{side}{i}tie" + (str(k) if k else "")] = {
+                    "type": "arrow", "points": [[x1, round(ny + TIES_NODE_H / 2)], [x2, round(ey)]], "arrow_type": "straight", "tip": "none",
+                    "color": "@text_error" if broken else "@border_strong", "border_width": 4, "border_style": "dashed" if broken else "solid"}
 
     column(left, "l", lx, lw)
     column(right, "r", rx, rw)
     name = f"ties_{pid}"
     EXTRA_TEMPLATES[name] = {
-        "note": "One document's ties, drawn for one slide by the slide generator: the files it describes, the records it carries out, a line per tie.",
+        "note": "Documents' ties, drawn for one slide by the slide generator: the files they describe, the records they carry out, a line per tie.",
         "root": {**CLEAR_AREA, "width": W, "height": H},
         "parts": parts,
     }
