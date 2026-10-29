@@ -457,6 +457,38 @@ def highlight(pid, x, y, w, v):
     return out, 380
 
 
+KIND_H, KIND_GAP = 192, 24
+KIND_TEMPLATE = {
+    "note": "A kind of record: a tinted row in its owner's colour with a filled tag (its prefix), a head, a line of text and a path; made by the slide generator.",
+    "root": {**CLEAR_AREA, "width": 1440, "height": KIND_H},
+    "parts": {
+        "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 1440, "height": KIND_H,
+               "color": "@{bg}", "border_color": "@{tone}", "border_width": 2, "ink": "@text_primary"},
+        "tag": {"type": "shape", "shape": "rectangle", "text": "", "x": 32, "y": 28, "width": 136, "height": 64,
+                "color": "@{tone}", "border_color": "@{tone}", "border_width": 1, "ink": "@text_on_color"},
+        "tagtext": {"type": "text", "text": "{tag}", "style": "@style.key", "ink": "@text_on_color", "x": 32, "y": 30, "width": 136, "height": 60, "align": "center"},
+        "head": {"type": "text", "text": "{head}", "style": "@style.key", "ink": "@text_primary", "x": 200, "y": 24, "width": 1208, "height": 60},
+        "text": {"type": "text", "text": "{text}", "style": "@style.body", "x": 200, "y": 86, "width": 1208, "height": 50},
+        "path": {"type": "text", "text": "{path}", "style": "@style.caption", "ink": "@text_secondary", "x": 200, "y": 138, "width": 1208, "height": 40},
+    },
+}
+KIND_TONES = {"pkit": ("role_code_bg", "role_code"), "yours": ("role_people_bg", "role_people")}
+
+
+def kinds(pid, x, y, w, items):
+    """The kinds of a thing as rows, each tinted in its owner's colour (pkit's purple, yours blue)."""
+    out = {}
+    for i, it in enumerate(items):
+        bg, tone = KIND_TONES[it.get("owner", "pkit")]
+        out[f"{pid}-k{i + 1}"] = {
+            "template": "kind", "parent": pid, "x": x, "y": round(y + i * (KIND_H + KIND_GAP)),
+            "tag": it["tag"], "head": md(it["head"]), "text": md(it["text"]), "path": md(it["path"]), "bg": bg, "tone": tone,
+            "override": {"root": {"width": w}, "bg": {"width": w}, "head": {"width": w - 232}, "text": {"width": w - 232}, "path": {"width": w - 232}},
+        }
+    n = len(items)
+    return out, n * KIND_H + (n - 1) * KIND_GAP
+
+
 PYR_H, PYR_GAP = 172, 18
 
 
@@ -544,6 +576,10 @@ def install(pid, y, v):
                 yy += 96
             else:
                 yy += GAP
+    if v.get("kinds"):
+        d, kh = kinds(pid, MARGIN, yy, w, v["kinds"])
+        out.update(d)
+        yy += kh
     left_h = yy - y
     if v.get("listing"):
         d, right_h = terminal(pid, MARGIN + SPAN8 + GUT, y, SPAN8, v["listing"], key="listing", font_size=v.get("font_size", 30))
@@ -681,6 +717,8 @@ def build_slide(s, n, total):
         if kind in ("flow", "lifecycle"):
             st = v.get("stages") or [{"role": "neutral", "head": h, "text": ""} for h in v["states"]]
             add(flow(pid, y, st))
+            if v.get("terminal"):
+                add(terminal(pid, MARGIN, y, SPAN16, v["terminal"], font_size=v.get("font_size", 30)))
             if v.get("code"):
                 d1, h1 = steps(pid, y, s["does"], x0=MARGIN, width=SPAN8, per_row=2) if s.get("does") else ({}, 0)
                 d2, h2 = code(pid, y, v["code"])
@@ -754,6 +792,7 @@ def main(slides_path, board_path):
     board["templates"]["terminal"] = TERMINAL_TEMPLATE
     board["templates"]["term_image"] = TERM_IMAGE_TEMPLATE
     board["templates"]["highlight"] = HIGHLIGHT_TEMPLATE
+    board["templates"]["kind"] = KIND_TEMPLATE
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     talk = sl["talk"]
     content = [s for s in sl["slides"]]
