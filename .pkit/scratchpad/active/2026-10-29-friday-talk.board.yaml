@@ -3301,8 +3301,8 @@ instances:
     text: How the method works, the same in every project.
     path: core/COR-065-records-and-projection.md
     why: 'Apart from yours: each upgrade replaces them, so you never edit them.'
-    bg: role_neutral_bg
-    tone: role_neutral
+    bg: role_code_bg
+    tone: role_code
     override:
       root:
         width: 896
@@ -7196,8 +7196,6 @@ objects:
     color: '#393939FF'
     border_color: '#C6C6C6FF'
     border_width: 1
-    border_style: solid
-    ink: '#000000FF'
   LIB.theme.label.background_inverse:
     mural_id: 71fde021-0a5c-4d9d-9bd2-b8fc98172bdd
     type: text
@@ -7212,9 +7210,6 @@ objects:
     height: 90
     font_size: 24
     ink: '#161616FF'
-    color: '#FFFFFF00'
-    align: left
-    font: proxima-nova
   LIB.theme.swatch.text_inverse:
     mural_id: 0d2b9d53-81a2-44ec-9b25-f1a81f99e2e1
     type: shape
@@ -7229,8 +7224,6 @@ objects:
     color: '#FFFFFFFF'
     border_color: '#C6C6C6FF'
     border_width: 1
-    border_style: solid
-    ink: '#000000FF'
   LIB.theme.label.text_inverse:
     mural_id: aa1b8981-2447-4f77-9a82-bea2930815d5
     type: text
@@ -7245,9 +7238,6 @@ objects:
     height: 90
     font_size: 24
     ink: '#161616FF'
-    color: '#FFFFFF00'
-    align: left
-    font: proxima-nova
   LIB.theme.swatch.accent_inverse:
     mural_id: 5e293bb0-fcbf-4eaa-9d12-cb40ae8f875c
     type: shape
@@ -7262,8 +7252,6 @@ objects:
     color: '#78A9FFFF'
     border_color: '#C6C6C6FF'
     border_width: 1
-    border_style: solid
-    ink: '#000000FF'
   LIB.theme.label.accent_inverse:
     mural_id: 6442f296-1e25-4d96-9ad3-5c2e4de0276c
     type: text
@@ -7278,9 +7266,6 @@ objects:
     height: 90
     font_size: 24
     ink: '#161616FF'
-    color: '#FFFFFF00'
-    align: left
-    font: proxima-nova
   LIB.label.L15:
     mural_id: 98ebab56-d5cc-46bc-90ee-070a8676f653
     type: text
@@ -7607,8 +7592,6 @@ objects:
     color: '#0E6027FF'
     border_color: '#C6C6C6FF'
     border_width: 1
-    border_style: solid
-    ink: '#000000FF'
   LIB.theme.label.role_architecture:
     mural_id: b37c91a0-8a5a-4b24-a5c9-7741c76e4d3d
     type: text
@@ -7623,9 +7606,6 @@ objects:
     height: 90
     font_size: 24
     ink: '#161616FF'
-    color: '#FFFFFF00'
-    align: left
-    font: proxima-nova
   LIB.theme.swatch.role_architecture_bg:
     mural_id: be1e70c3-f370-44c3-8838-7e355aaf4e54
     type: shape
@@ -7640,8 +7620,6 @@ objects:
     color: '#DEFBE6FF'
     border_color: '#C6C6C6FF'
     border_width: 1
-    border_style: solid
-    ink: '#000000FF'
   LIB.theme.label.role_architecture_bg:
     mural_id: dee88d9e-3c82-4252-855d-f771438ea0b2
     type: text
@@ -7656,6 +7634,3 @@ objects:
     height: 90
     font_size: 24
     ink: '#161616FF'
-    color: '#FFFFFF00'
-    align: left
-    font: proxima-nova

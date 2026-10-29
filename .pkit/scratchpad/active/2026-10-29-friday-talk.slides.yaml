@@ -370,7 +370,7 @@ slides:
       path: .pkit/decisions/
       kinds:
       - tag: COR
-        tone: core
+        tone: pkit
         head: pkit's principles
         text: How the method works, the same in every project.
         path: core/COR-065-records-and-projection.md

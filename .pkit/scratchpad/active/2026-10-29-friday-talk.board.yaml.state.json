@@ -25220,10 +25220,10 @@
   },
   "T-decisions-col1.bg": {
    "board": {
-    "border_color": "#525252FF",
+    "border_color": "#6929C4FF",
     "border_style": "solid",
     "border_width": 2,
-    "color": "#F4F4F4FF",
+    "color": "#F6F2FFFF",
     "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col1",
@@ -25234,9 +25234,9 @@
     "y": 0
    },
    "fields": {
-    "border_color": "#525252FF",
+    "border_color": "#6929C4FF",
     "border_width": 2,
-    "color": "#F4F4F4FF",
+    "color": "#F6F2FFFF",
     "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col1",
@@ -25274,7 +25274,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306623541
+   "updatedOn": 1793306893364
   },
   "T-decisions-col1.head": {
    "board": {
@@ -25337,7 +25337,7 @@
     "color": "#FFFFFF00",
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#525252FF",
+    "ink": "#6929C4FF",
     "parent": "T-decisions-col1",
     "text": "core/COR-065-records-and-projection.md",
     "title": "tpl:kind#path",
@@ -25348,7 +25348,7 @@
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#525252FF",
+    "ink": "#6929C4FF",
     "parent": "T-decisions-col1",
     "text": "core/COR-065-records-and-projection.md",
     "title": "tpl:kind#path",
@@ -25384,14 +25384,14 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306624333
+   "updatedOn": 1793306924288
   },
   "T-decisions-col1.tag": {
    "board": {
-    "border_color": "#525252FF",
+    "border_color": "#6929C4FF",
     "border_style": "solid",
     "border_width": 1,
-    "color": "#525252FF",
+    "color": "#6929C4FF",
     "height": 88,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col1",
@@ -25402,9 +25402,9 @@
     "y": 40
    },
    "fields": {
-    "border_color": "#525252FF",
+    "border_color": "#6929C4FF",
     "border_width": 1,
-    "color": "#525252FF",
+    "color": "#6929C4FF",
     "height": 88,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col1",
@@ -25442,7 +25442,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793306623541
+   "updatedOn": 1793306893447
   },
   "T-decisions-col1.tagtext": {
    "board": {
