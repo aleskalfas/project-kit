@@ -30,6 +30,7 @@ from project_kit import rule_sets as rs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import HANGING, RESOLVING, register_kinds
+from tests.shipped_rule_sets import own, shipped_rules, without_shipped_rule_sets
 
 REPO = Path(__file__).resolve().parents[1]
 CONFIG = ".pkit/project/config.yaml"
@@ -122,21 +123,22 @@ def test_a_valid_rule_set_is_clean_and_parsed(adopter: AdopterRepo) -> None:
     result = validate(adopter)
 
     assert result.findings == (), [f"{f.where}: {f.message}" for f in result.findings]
-    (rule_set,) = result.discovery.rule_sets
+    (rule_set,) = own(result.discovery.rule_sets)
     assert (rule_set.path, rule_set.name, rule_set.major) == (f"{PROJECT_SETS}/cmn.md", "CMN", 1)
     assert rule_set.component is None and rule_set.citation == "CMN"
     first = rule_set.rule("RS-CMN-001")
     assert first is not None and first.section.startswith("## RS-CMN-001 — Rule RS-CMN-001")
     assert first.offers == ("cause-location",)
+    shipped = len(shipped_rules(adopter.root))  # the backbone's set, each rule accepted
     assert rs.summary_lines(result) == [
-        "1 rule set(s), 6 rule(s) (1 proposed, 3 accepted, 1 superseded, 1 withdrawn); "
-        "0 error(s), 0 report(s)."
+        f"2 rule set(s), {6 + shipped} rule(s) (1 proposed, {3 + shipped} accepted, "
+        "1 superseded, 1 withdrawn); 0 error(s), 0 report(s)."
     ]
 
 
 def test_a_rule_without_status_is_proposed_and_binds_nothing(adopter: AdopterRepo) -> None:
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn())
-    rule = validate(adopter).discovery.rule_sets[0].rule("RS-CMN-002")
+    rule = own(validate(adopter).discovery.rule_sets)[0].rule("RS-CMN-002")
     assert rule is not None
     assert (rule.status, rule.binds) == ("proposed", False)
     # A proposed rule needs no origin; only an accepted one does.
@@ -144,6 +146,7 @@ def test_a_rule_without_status_is_proposed_and_binds_nothing(adopter: AdopterRep
 
 
 def test_nothing_to_check_without_rule_sets(adopter: AdopterRepo) -> None:
+    without_shipped_rule_sets(adopter)
     result = validate(adopter)
     assert result.is_dormant and result.findings == ()
     assert rs.summary_lines(result) == ["no rule sets found."]
@@ -183,6 +186,7 @@ def test_the_location_rule_binds_by_folder_never_by_a_field(
     assert owners == {
         ".pkit/capabilities/evidence/rule-sets/ev.md": ("evidence", "evidence:EV"),
         ".pkit/rule-sets/base.md": ("backbone", "backbone:BASE"),
+        ".pkit/rule-sets/ops.md": ("backbone", "backbone:OPS"),  # the one the backbone ships
         "analysis/rule-sets/ana.md": (None, "ANA"),
         f"{PROJECT_SETS}/cmn.md": (None, "CMN"),
     }
@@ -194,7 +198,7 @@ def test_the_project_folder_follows_the_internal_documentation_root(adopter: Ado
     adopter.write({CONFIG: "name: adopter\ndocs:\n  internal: tech-docs\n"})
     write_set(adopter, "tech-docs/rule-sets/cmn.md", cmn())
     write_set(adopter, f"{PROJECT_SETS}/ignored.md", cmn(**{"rule-set": "IGN"}))
-    assert [s.path for s in rs.discover_rule_sets(adopter.root).rule_sets] == [
+    assert [s.path for s in own(rs.discover_rule_sets(adopter.root).rule_sets)] == [
         "tech-docs/rule-sets/cmn.md"
     ]
 
@@ -203,6 +207,7 @@ def test_a_rule_set_left_behind_by_a_hand_edit_of_the_root_fails_validation(
     adopter: AdopterRepo,
 ) -> None:
     # The root changed by hand: nothing declared the old folder.
+    without_shipped_rule_sets(adopter)  # so no set is found but the two left behind
     adopter.write({CONFIG: "name: adopter\ndocs:\n  internal: tech-docs\n"})
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn())
     write_set(adopter, f"{PROJECT_SETS}/nested/deep.md", cmn(**{"rule-set": "DEEP"}))
@@ -250,7 +255,7 @@ def test_a_left_behind_file_is_reported_beside_the_sets_that_are_found(
     assert [(f.location, f.kind) for f in result.errors] == [
         ("handbook/rule-sets/old.md", Kind.UNFOUND)
     ]
-    assert [s.path for s in result.discovery.rule_sets] == ["tech-docs/rule-sets/cmn.md"]
+    assert [s.path for s in own(result.discovery.rule_sets)] == ["tech-docs/rule-sets/cmn.md"]
 
 
 def test_nothing_is_left_behind_that_does_not_read_as_a_set(
@@ -404,7 +409,7 @@ def test_both_readers_find_the_same_sections(adopter: AdopterRepo) -> None:
     example = "```markdown\n## RS-CMN-042 — an example, not a rule\n```\n\nMore of RS-CMN-001.\n"
     text = rule_set_text(cmn()).replace(statement, f"{statement}\n{example}")
     adopter.write({path: f"{text}\n## RS-CMN-007-draft — opens like an id, is not one\n"})
-    (rule_set,) = rs.discover_rule_sets(adopter.root).rule_sets
+    (rule_set,) = own(rs.discover_rule_sets(adopter.root).rule_sets)
     artefacts = {a.id: a.body for a in fd.discover_artefacts(adopter.root).artefacts}
 
     written = set(re.findall(rs.RULE_ID_PATTERN, rule_set.body))
@@ -446,7 +451,7 @@ def test_malformed_duplicate_and_foreign_set_ids(adopter: AdopterRepo) -> None:
     duplicate = only(result, Kind.DUPLICATE_ID)
     assert "written 2 times" in duplicate.message and "never reused" in duplicate.message
     # The first value is the one read: RS-CMN-002 stays proposed.
-    rule = result.discovery.rule_sets[0].rule("RS-CMN-002")
+    rule = own(result.discovery.rule_sets)[0].rule("RS-CMN-002")
     assert rule is not None and rule.status == "proposed"
 
 
@@ -1040,7 +1045,7 @@ def test_rule_entries_are_discovered_by_the_friction_pass_as_artefacts(
     )
     discovery = fd.discover_artefacts(adopter.root)
 
-    by_id = {a.id: a for a in discovery.artefacts}
+    by_id = {a.id: a for a in own(discovery.artefacts)}
     assert list(by_id) == ["RS-EV-001", *cmn()["rules"]]  # the set's own keys are not entries
     first = by_id["RS-CMN-001"]
     assert (first.kind, first.location) == (
@@ -1053,7 +1058,7 @@ def test_rule_entries_are_discovered_by_the_friction_pass_as_artefacts(
     assert first.rule_set is not None and first.rule_set.component is None
     # A method rule is also reachable the way it is cited.
     assert by_id["RS-EV-001"].identifiers == frozenset({"RS-EV-001", "evidence:RS-EV-001"})
-    assert {p.pattern for p in discovery.places} == {
+    assert {p.pattern for p in own(discovery.places)} == {
         PROJECT_SETS,
         ".pkit/capabilities/evidence/rule-sets",
     }
@@ -1067,7 +1072,7 @@ def test_a_crlf_rule_set_is_discovered_and_validated_as_its_lf_twin(adopter: Ado
 
     def reading() -> tuple[object, ...]:
         rule_result = validate(adopter)
-        (rule_set,) = rule_result.discovery.rule_sets
+        (rule_set,) = own(rule_result.discovery.rule_sets)
         friction = fv.validate_friction(adopter.root)
         return (
             rule_result.findings,
@@ -1105,7 +1110,7 @@ def test_other_collection_files_are_read_as_before(adopter: AdopterRepo) -> None
     adopter.write(
         {CONFIG: "name: adopter\nfriction:\n  places: [notes]\n", "notes/rules.md": collection}
     )
-    (artefact,) = fd.discover_artefacts(adopter.root).artefacts
+    (artefact,) = own(fd.discover_artefacts(adopter.root).artefacts)
     assert (artefact.id, artefact.rule_set) == ("RS-CMN-001", None)
 
 
@@ -1286,7 +1291,7 @@ def test_decisions_validate_reports_a_rule_id_colliding_across_rule_sets(
     (issue,) = [i for i in report.issues if i.location.startswith("rules ::")]
     assert issue.location == "rules :: RS-CMN-002"
     assert f"{PROJECT_SETS}/a.md, {PROJECT_SETS}/b.md" in issue.message
-    assert report.rules_checked == 7
+    assert report.rules_checked == 7 + len(shipped_rules(adopter.root))
 
     result = CliRunner().invoke(main, ["decisions", "validate"])
     assert result.exit_code != 0
@@ -1297,7 +1302,8 @@ def test_decisions_validate_counts_rules_when_the_space_is_clean(adopter: Adopte
     write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn())
     result = CliRunner().invoke(main, ["decisions", "validate"])
     assert result.exit_code == 0, result.output
-    assert "and 6 rule(s). No id collisions found." in result.output
+    counted = 6 + len(shipped_rules(adopter.root))  # the backbone's rules beside the project's
+    assert f"and {counted} rule(s). No id collisions found." in result.output
 
 
 # --- `pkit validate`, determinism, the shipped schema --------------------------------
@@ -1319,7 +1325,8 @@ def test_validate_command_prints_the_rule_sets_section_and_fails_on_errors(
     assert result.exit_code == 1, result.output
     out = result.output
     section = out.split("\n  rule-sets\n")[1]
-    assert section.lstrip().startswith("1 rule set(s), 6 rule(s)")
+    shipped = len(shipped_rules(adopter.root))  # the backbone's set, beside the project's
+    assert section.lstrip().startswith(f"2 rule set(s), {6 + shipped} rule(s)")
     assert "1 error(s), 1 report(s)." in section
     assert f"error    {PROJECT_SETS}/cmn.md#RS-CMN-005" in section
     assert f"report   {PROJECT_SETS}/cmn.md#RS-CMN-001:/origin/source" in section
@@ -1327,9 +1334,16 @@ def test_validate_command_prints_the_rule_sets_section_and_fails_on_errors(
 
 
 def test_validate_command_is_quiet_on_a_fresh_install(adopter: AdopterRepo) -> None:
+    """A fresh install holds the backbone's rule sets alone, each rule accepted, and they
+    pass (COR-068; ADR-073 point 1)."""
+    rules = len(shipped_rules(adopter.root))
+    assert rules > 0
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert result.exit_code == 0, result.output
-    assert "\n  rule-sets\n    no rule sets found." in result.output
+    assert (
+        f"\n  rule-sets\n    1 rule set(s), {rules} rule(s) ({rules} accepted); "
+        "0 error(s), 0 report(s).\n"
+    ) in result.output
 
 
 def test_findings_are_deterministic(adopter: AdopterRepo) -> None:

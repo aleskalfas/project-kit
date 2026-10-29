@@ -31,6 +31,7 @@ from tests.friction_documents import (
     document,
     friction_config,
 )
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 GUIDE = "docs/guide.md"
 CLI = Anchor("path", "src/cli/**")
@@ -712,6 +713,7 @@ def test_no_anchor_stands_on_an_answer_file(timeline: Timeline) -> None:
 
 
 def test_no_place_reads_a_file_in_the_answer_folder(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {f"{FOLDER}/notes.md": document("notes", anchors={"path": ["src/**"]})},
         friction_config(places=("docs", ".pkit/project")),

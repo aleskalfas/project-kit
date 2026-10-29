@@ -51,6 +51,7 @@ from tests.friction_documents import (
     move_answers,
     notes,
 )
+from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_friction_anchor_kinds import ANSWERING
 from tests.test_friction_derived_links import LINKS_MOVED, declare_deriver, note, note_body
 from tests.test_friction_derived_links import NOTE as PLACED_NOTE
@@ -966,6 +967,7 @@ def test_an_over_broad_anchor_is_warned_about(timeline: Timeline) -> None:
 
 
 def test_the_two_measures(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {
             "docs/guide.md": guide(),
@@ -992,6 +994,7 @@ def test_an_artefact_accepted_unanchored_is_listed_apart_and_never_counted(
     """COR-050 points 1 and 8: an artefact whose block gives the reason a person accepted
     it with no anchors is listed apart, with its reason; only the forgotten ones count.
     An excluded one is in neither list (point 7)."""
+    without_shipped_rule_sets(timeline.adopter)
     sponsor = "No code embodies the sponsor: it funds the project."
     timeline.start(
         {
@@ -1033,6 +1036,7 @@ def test_an_artefact_accepted_unanchored_is_listed_apart_and_never_counted(
 
 
 def test_the_measures_are_reported_while_nothing_is_anchored_yet(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {"docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n"}, friction_config(surface=["src"])
     )
@@ -1080,6 +1084,7 @@ def test_an_artefact_under_an_excluded_path_is_left_out_of_the_measures(
     """COR-050 point 7: an excluded artefact is neither listed nor counted as
     unanchored, and never judged stale or deferred — while what it declares is
     still checked, since a dead anchor is never silence."""
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {
             "docs/guide.md": guide(),
@@ -1430,6 +1435,7 @@ def test_exit_zero_in_enforcing_mode(timeline: Timeline) -> None:
 
 
 def test_dormant_without_places(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {"docs/guide.md": guide()}, json.dumps({"friction": {"mode": "enforcing"}}) + "\n"
     )
@@ -1465,6 +1471,7 @@ def test_unparsable_front_matter_is_reported(timeline: Timeline) -> None:
 
 
 def test_json_document_shape(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start({"docs/guide.md": guide()}, friction_config(mode="enforcing"))
     changed = timeline.commit("change the CLI", {"src/cli/main.py": "print('j')\n"}, author=ALICE)
     result = _cli("--json")

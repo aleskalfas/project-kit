@@ -26,6 +26,7 @@ from project_kit.manifest import (
     write_component_manifest,
 )
 from tests.adopter_repo import GitRepo, MakeAdopterRepo
+from tests.shipped_rule_sets import own
 
 # The version an installed fixture records: the real source kit's.
 _PROJECTS_VERSION = read_kit_version(install_mod.find_source_kit())
@@ -2872,7 +2873,7 @@ def test_project_set_names_taken_passes_over_the_components_own_file(kit_target:
     config = project_config_path(kit_target)
     config.parent.mkdir(parents=True, exist_ok=True)
     config.write_text("friction:\n  places: [lab/analysis/rule-sets]\n", encoding="utf-8")
-    assert [s.path for s in rule_sets.discover_rule_sets(kit_target).rule_sets] == [
+    assert [s.path for s in own(rule_sets.discover_rule_sets(kit_target).rule_sets)] == [
         "lab/analysis/rule-sets/san.md"
     ]
     assert rule_sets.project_set_names_taken(kit_target, "analysis", cap_dir) == ()

@@ -13,6 +13,7 @@ from project_kit import decisions_validate, lifecycle_ownership
 from project_kit.cli import main
 from project_kit.validators import Finding, Severity
 from tests.adopter_repo import MakeAdopterRepo
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 
 def _write_record(
@@ -978,7 +979,7 @@ def test_cli_in_an_adopter_with_no_record_of_its_own_says_so(
 ) -> None:
     """The synced core copies are not the project's to validate, so a project with no
     record of its own is told it has none, not that no record was found."""
-    make_adopter_repo()
+    without_shipped_rule_sets(make_adopter_repo())  # their rules would be counted
     result = CliRunner().invoke(main, ["decisions", "validate"])
     assert result.exit_code == 0, result.output
     assert "Validated 0 decision record(s)" not in result.output

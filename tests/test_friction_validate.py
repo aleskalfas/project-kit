@@ -38,6 +38,7 @@ from tests.friction_documents import (
     listed_record,
     pointed_record,
 )
+from tests.shipped_rule_sets import own, shipped_rules, without_shipped_rule_sets
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -131,7 +132,7 @@ def test_document_with_valid_block_is_discovered_and_read_whole(adopter: Adopter
 
     assert _kinds(result) == [fv.FrictionFindingKind.ANSWERS_NOT_MOVED]
     assert not result.is_dormant
-    (artefact,) = result.discovery.artefacts
+    (artefact,) = own(result.discovery.artefacts)
     assert artefact.kind is fd.ArtefactKind.DOCUMENT
     assert artefact.id == "guide"
     assert artefact.path == "docs/guide.md"
@@ -152,7 +153,7 @@ def test_collection_entries_are_artefacts_and_the_malformed_one_is_reported(
     adopter.write({CONFIG: _config(["docs"]), "docs/rules.md": COLLECTION})
     result = fv.validate_friction(adopter.root)
 
-    first, second = result.discovery.artefacts
+    first, second = own(result.discovery.artefacts)
     assert (first.kind, first.id, first.location) == (
         fd.ArtefactKind.ENTRY,
         "RS-CMN-001",
@@ -182,7 +183,7 @@ def test_front_matter_outside_declared_places_is_never_read(adopter: AdopterRepo
         }
     )
     result = fv.validate_friction(adopter.root)
-    assert [a.path for a in result.discovery.artefacts] == ["docs/guide.md"]
+    assert [a.path for a in own(result.discovery.artefacts)] == ["docs/guide.md"]
     assert result.errors == ()
 
 
@@ -196,7 +197,7 @@ def test_plain_yaml_in_a_place_is_not_a_document(adopter: AdopterRepo) -> None:
         }
     )
     result = fv.validate_friction(adopter.root)
-    assert [a.path for a in result.discovery.artefacts] == ["docs/guide.md"]
+    assert [a.path for a in own(result.discovery.artefacts)] == ["docs/guide.md"]
     assert result.errors == ()
 
 
@@ -209,8 +210,11 @@ def test_glob_places_and_duplicate_matches_read_each_file_once(adopter: AdopterR
         }
     )
     result = fv.validate_friction(adopter.root)
-    assert [a.path for a in result.discovery.artefacts] == ["docs/deep/other.md", "docs/guide.md"]
-    assert all(a.place.pattern == "docs/**/*.md" for a in result.discovery.artefacts)
+    assert [a.path for a in own(result.discovery.artefacts)] == [
+        "docs/deep/other.md",
+        "docs/guide.md",
+    ]
+    assert all(a.place.pattern == "docs/**/*.md" for a in own(result.discovery.artefacts))
 
 
 def test_a_place_ending_in_double_star_means_every_markdown_file_beneath(
@@ -225,7 +229,10 @@ def test_a_place_ending_in_double_star_means_every_markdown_file_beneath(
         }
     )
     result = fv.validate_friction(adopter.root)
-    assert [a.path for a in result.discovery.artefacts] == ["docs/deep/other.md", "docs/guide.md"]
+    assert [a.path for a in own(result.discovery.artefacts)] == [
+        "docs/deep/other.md",
+        "docs/guide.md",
+    ]
     assert result.errors == ()
 
 
@@ -273,7 +280,7 @@ def test_capability_places_are_read_in_the_package_schema_shape(
     )
     result = fv.validate_friction(adopter.root)
 
-    places = result.discovery.places
+    places = own(result.discovery.places)
     assert [(p.pattern, p.declaration.value, p.declaration.pointer) for p in places] == [
         ("tech-docs/evidence/**/*.md", "**/*.md", "/friction/places/0"),
         ("handbook/guides/*.md", "*.md", "/friction/places/1"),
@@ -281,7 +288,7 @@ def test_capability_places_are_read_in_the_package_schema_shape(
     ]
     assert {p.source for p in places} == {"capability:evidence"}
     assert {p.declaration.file for p in places} == {EVIDENCE_PACKAGE}
-    assert [a.id for a in result.discovery.artefacts] == ["run", "guide", "note"]
+    assert [a.id for a in own(result.discovery.artefacts)] == ["run", "guide", "note"]
     assert result.errors == ()
 
 
@@ -312,9 +319,9 @@ def test_a_capability_place_in_another_shape_is_a_finding_and_is_not_walked(
     adopter.write({"docs/evidence/run.md": _document("run", anchors={"path": ["src/**"]})})
     result = fv.validate_friction(adopter.root)
 
-    (place,) = result.discovery.places
+    (place,) = own(result.discovery.places)
     assert place.pattern == "docs/evidence/**/*.md"
-    assert [a.id for a in result.discovery.artefacts] == ["run"]
+    assert [a.id for a in own(result.discovery.artefacts)] == ["run"]
     assert {f.kind for f in result.errors} == {fv.FrictionFindingKind.MALFORMED_PLACE}
     assert {f.location for f in result.errors} == {EVIDENCE_PACKAGE}
     reasons = {f.pointer: f.message.split(", so friction discovery")[0] for f in result.errors}
@@ -352,6 +359,7 @@ def test_a_malformed_capability_place_fails_validate_even_while_dormant(
     """Nothing is walked, so the pass is dormant — yet the declaration it could not
     read is an error, and the count line says a place was not walked."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     _evidence_declares(adopter, "friction:\n  places: {path: notes}\n")
     result = fv.validate_friction(adopter.root)
 
@@ -377,6 +385,7 @@ def test_a_capability_place_leaving_the_repository_through_a_link_is_a_finding(
     """A place whose location, or whose own path, is a link out of the repository
     is reported where it is declared — and nothing beyond the link is read."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     outside = adopter.root.parent / f"{adopter.root.name}-outside"  # beside the repository
     outside.mkdir()
     (outside / "stray.md").write_text(_document("stray", anchors={"path": ["a"]}))
@@ -438,11 +447,11 @@ def test_a_capability_place_lies_inside_the_recorded_location_when_one_is_record
     docs_roots.record_location(adopter.root, "evidence", "legacy", "records/notes")
     result = fv.validate_friction(adopter.root)
 
-    assert [p.pattern for p in result.discovery.places] == [
+    assert [p.pattern for p in own(result.discovery.places)] == [
         "records/runs/**/*.md",
         "records/notes/*.md",
     ]
-    assert [a.id for a in result.discovery.artefacts] == ["recorded", "note"]
+    assert [a.id for a in own(result.discovery.artefacts)] == ["recorded", "note"]
     assert result.errors == ()
 
 
@@ -502,6 +511,7 @@ def test_a_synced_copy_declared_as_a_place_is_refused_even_while_dormant(
     adopter by sync: declared as a place it is an error at its declaration, and
     it is not walked — so the pass is dormant, and the error stands."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     manifest = read_backbone_manifest(adopter.root)
     assert manifest is not None
     (evidence,) = [c for c in manifest.components if c.name == "evidence"]
@@ -567,7 +577,7 @@ def test_a_place_in_the_methodology_source_is_not_a_synced_copy(
     result = fv.validate_friction(adopter.root)
 
     assert result.discovery.synced == ()
-    assert [a.id for a in result.discovery.artefacts] == ["cli", "evidence"]
+    assert [a.id for a in own(result.discovery.artefacts)] == ["cli", "evidence"]
     assert result.errors == (), [f.message for f in result.errors]
 
 
@@ -578,16 +588,20 @@ def test_a_glob_matching_a_synced_copy_and_the_project_s_own_file_refuses_only_t
     other shipped file are synced copies, reported at the declaration and not
     walked; the `project/` tier inside it is the adopter's, and is walked."""
     adopter = make_adopter_repo(capabilities=("evidence",))
-    own = ".pkit/capabilities/evidence/project/notes.md"
+    project_file = ".pkit/capabilities/evidence/project/notes.md"
     place = ".pkit/capabilities/evidence/**/*.md"
     adopter.write(
-        {CONFIG: _config([place]), EVIDENCE_README: _anchored("copied"), own: _anchored("own")}
+        {
+            CONFIG: _config([place]),
+            EVIDENCE_README: _anchored("copied"),
+            project_file: _anchored("own"),
+        }
     )
     result = fv.validate_friction(adopter.root)
 
-    assert [a.path for a in result.discovery.artefacts] == [own]
+    assert [a.path for a in own(result.discovery.artefacts)] == [project_file]
     synced = [m.path for m in result.discovery.synced]
-    assert EVIDENCE_README in synced and own not in synced
+    assert EVIDENCE_README in synced and project_file not in synced
     assert len(synced) > 3  # the message names three and counts the rest
     (finding,) = result.errors
     assert (finding.kind, finding.location, finding.pointer) == (
@@ -615,7 +629,7 @@ def test_without_the_tree_s_ownership_module_the_synced_check_is_reported_skippe
     adopter.write({CONFIG: _config([place]), place: _anchored("cli")})
     result = fv.validate_friction(adopter.root)
 
-    assert [a.id for a in result.discovery.artefacts] == ["cli"]
+    assert [a.id for a in own(result.discovery.artefacts)] == ["cli"]
     assert result.errors == (), [f.message for f in result.errors]
     unavailable = fv.FrictionFindingKind.OWNERSHIP_UNAVAILABLE
     (report,) = [f for f in result.reports if f.kind is unavailable]
@@ -655,6 +669,7 @@ def test_a_capability_surface_entry_in_another_shape_is_a_finding(
     """An entry that is not a path is an error at its entry, never dropped
     silently; the entries that are paths are still read."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     _evidence_declares(adopter, "friction:\n  surface: ['src/**', {path: lib}, 42, '']\n")
     result = fv.validate_friction(adopter.root)
 
@@ -683,6 +698,7 @@ def test_a_capability_surface_that_is_not_a_list_fails_validate_even_while_dorma
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     _evidence_declares(adopter, "friction:\n  surface: src/**\n")
     result = fv.validate_friction(adopter.root)
 
@@ -725,6 +741,7 @@ def test_a_held_document_is_walked_by_no_place_and_neither_measure_counts_it(
     walk and kept with its owner and that place, never an artefact — so the
     whole-repository check counts it neither as unanchored nor anywhere else."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     _evidence_declares(adopter, HELD_RUNS)
     adopter.write(
         {
@@ -736,8 +753,8 @@ def test_a_held_document_is_walked_by_no_place_and_neither_measure_counts_it(
     result = fv.validate_friction(adopter.root)
     discovery = result.discovery
 
-    assert [a.path for a in discovery.artefacts] == ["docs/plain.md"]
-    assert [f.path for f in discovery.files] == ["docs/plain.md"]
+    assert [a.path for a in own(discovery.artefacts)] == ["docs/plain.md"]
+    assert [f.path for f in own(discovery.files)] == ["docs/plain.md"]
     (folder,) = discovery.held_folders
     assert (folder.pattern, folder.component, folder.skipped) == (
         "docs/evidence/records",
@@ -765,6 +782,7 @@ def test_a_friction_block_anywhere_in_a_held_document_fails_validation_even_whil
     an entry's, a rule's under `rules` — located at the block, whether any place
     is declared or not."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     _evidence_declares(adopter, HELD_RUNS)
     entries = "docs/evidence/records/entries.md"
     rules = "docs/evidence/records/rules.md"
@@ -810,6 +828,7 @@ def test_a_held_document_whose_front_matter_does_not_parse_fails_validation(
     the search, so it is an error of its own — dormant or not — and the document
     lists why it is unreadable."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     _evidence_declares(adopter, HELD_RUNS)
     adopter.write({RECORD: "---\ndate: [2026\npkit:\n  friction: {}\n---\n"})
     result = fv.validate_friction(adopter.root)
@@ -858,7 +877,7 @@ def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
     result = fv.validate_friction(adopter.root)
 
     assert (result.discovery.held_folders, result.discovery.held) == ((), ())
-    assert [a.path for a in result.discovery.artefacts] == [RECORD]
+    assert [a.path for a in own(result.discovery.artefacts)] == [RECORD]
     assert {f.kind for f in result.errors} == {fv.FrictionFindingKind.MALFORMED_HELD}
     reasons = {f.pointer: f.message.split(", so friction discovery")[0] for f in result.errors}
     assert reasons == {
@@ -906,6 +925,7 @@ def test_a_held_folder_leaving_the_repository_through_a_link_is_a_finding(
     and is reported where it is declared, as a place would be — the document
     names why it is skipped."""
     adopter = make_adopter_repo(capabilities=("evidence",))
+    without_shipped_rule_sets(adopter)
     outside = adopter.root.parent / f"{adopter.root.name}-outside"  # beside the repository
     (outside / "records").mkdir(parents=True)
     (outside / "records" / "run.md").write_text("---\ndate: '2026-10-01'\n---\n")
@@ -1064,7 +1084,7 @@ def test_an_empty_unanchored_because_is_a_malformed_block(adopter: AdopterRepo) 
     (finding,) = result.errors
     assert finding.kind is fv.FrictionFindingKind.MALFORMED_BLOCK
     assert finding.pointer == "/pkit/friction/unanchored-because"
-    (artefact,) = result.discovery.artefacts
+    (artefact,) = own(result.discovery.artefacts)
     assert artefact.unanchored_because is None  # no reason: counted as forgotten
 
 
@@ -1243,7 +1263,7 @@ def test_nothing_outside_the_repository_is_walked_or_read(adopter: AdopterRepo) 
     )
     result = fv.validate_friction(adopter.root)
 
-    assert [a.path for a in result.discovery.artefacts] == ["docs/guide.md"]
+    assert [a.path for a in own(result.discovery.artefacts)] == ["docs/guide.md"]
     assert result.errors == ()
 
 
@@ -1267,6 +1287,7 @@ def test_unparsable_front_matter_as_the_only_file_in_a_place_keeps_the_pass_awak
     adopter: AdopterRepo,
 ) -> None:
     """A YAML typo in the only container-carrying file must not switch the check off."""
+    without_shipped_rule_sets(adopter)
     adopter.write(
         {
             CONFIG: _config(["docs"]),
@@ -1501,6 +1522,7 @@ def test_validate_resolves_the_wiring_once_for_every_member_that_reads_it(
 
 
 def test_dormant_when_no_places_are_declared(adopter: AdopterRepo) -> None:
+    without_shipped_rule_sets(adopter)
     adopter.write({"docs/guide.md": "---\npkit:\n  frictoin: 1\n---\n"})
     result = fv.validate_friction(adopter.root)
 
@@ -1510,6 +1532,7 @@ def test_dormant_when_no_places_are_declared(adopter: AdopterRepo) -> None:
 
 
 def test_dormant_when_no_artefact_carries_the_container(adopter: AdopterRepo) -> None:
+    without_shipped_rule_sets(adopter)
     adopter.write(
         {
             CONFIG: _config(["docs"]),
@@ -1548,7 +1571,7 @@ def test_results_are_deterministic_across_runs(adopter: AdopterRepo) -> None:
     second = fv.validate_friction(adopter.root)
 
     assert first.findings == second.findings
-    assert [a.location for a in first.discovery.artefacts] == [
+    assert [a.location for a in own(first.discovery.artefacts)] == [
         "docs/rules.md#RS-CMN-001",
         "docs/rules.md#RS-CMN-002",
         "docs/y.md",
@@ -1569,6 +1592,7 @@ def test_results_are_deterministic_across_runs(adopter: AdopterRepo) -> None:
 def test_validate_command_prints_the_friction_section_and_fails_on_errors(
     adopter: AdopterRepo,
 ) -> None:
+    without_shipped_rule_sets(adopter)
     adopter.write({CONFIG: _config(["docs"]), "docs/rules.md": COLLECTION})
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
 
@@ -1602,11 +1626,21 @@ def test_validate_command_reports_settings_findings_once_under_configuration(
     assert fv.validate_friction(adopter.root).errors == ()
 
 
-def test_validate_command_is_dormant_and_passes_on_a_fresh_install(adopter: AdopterRepo) -> None:
+def test_validate_command_passes_on_a_fresh_install_awake_on_the_shipped_rules(
+    adopter: AdopterRepo,
+) -> None:
+    """A fresh install declares no place, yet it receives the backbone's rule sets, whose
+    folder is a place declared to hold rule sets and whose rules carry the container
+    (COR-068; ADR-073 point 1): the pass is awake on them alone, and passes."""
+    rules = len(shipped_rules(adopter.root))
+    assert rules > 0
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert result.exit_code == 0, result.output
-    assert "friction" in result.output
-    assert "no places declared; dormant." in result.output
+    friction = result.output.split("\n  friction\n")[1].split("\n  rule-sets\n")[0]
+    assert friction.strip() == (
+        f"1 place(s), {rules} artefact(s), {rules} carrying the `pkit` container; "
+        "mode warning; 0 error(s), 0 report(s)."
+    )
     assert "All checks passed." in result.output
 
 
