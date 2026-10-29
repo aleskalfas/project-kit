@@ -24,6 +24,7 @@ pkit:
         - COR-047
         - COR-051
         - COR-058
+        - COR-068
         - PRJ-011
       artefact:
         - TERM-system
@@ -306,25 +307,29 @@ The acceptance gate is the condition that work builds only on what is already ac
 
 Defined in [TERM-operational-rule](../glossary.md#term-operational-rule--operational-rule).
 
-**Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). So a repository keeps its own instructions in a file of its own (COR-014).
+**Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). So a repository keeps its own instructions in a file of its own (COR-014). A citation by number names another [rule](../glossary.md#term-rule--rule) when the rules are renumbered, and nothing says so ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)). So the [system](../glossary.md#term-system--system)'s rules are kept as a loaded [rule set](../glossary.md#term-rule-set--rule-set), with a permanent id for each (COR-068).
 
-An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include. It is cited by its number in its file, such as core rule 8, and carries no id, origin or status.
+An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include. It is cited by its number in its file, such as core rule 8.
+- **The system's rules:** each is a rule of the [backbone](../glossary.md#term-backbone--backbone)'s loaded set `OPS`, so core rule 8 is `backbone:RS-OPS-008`. The file a session loads is generated from the set ([COR-068 point 3](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+- **A repository's own rules:** a plain file, loaded as it stands, until the repository keeps them as a loaded set of its own ([COR-068 point 7](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#7-a-projects-rules-not-yet-in-a-set)).
 
 **Attributes:**
 
-- its number in its file
+- its number in its file, which is its id's number in a loaded set
 - its statement, mostly with a pointer to where its reasons are
+- in a loaded set, a rule's id, origin and status ([COR-068 point 6](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#6-ids-origins-and-citations))
 
 **Relations:**
 
 - The harness's include loads it into each session.
-- It shares only the word with a [rule](../glossary.md#term-rule--rule): it has none of a rule's id, origin or status ([COR-051 point 1](../../../../.pkit/decisions/core/COR-051-rule-sets.md#1-what-a-rule-is)).
+- In a loaded set, it binds on the work of each session that loads it, never on a document ([COR-068 point 2](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#2-where-its-accepted-rules-bind)).
 
-**States:** None.
+**States:** In a loaded set, those of a rule. Only an accepted one is in the file a session loads (COR-068 point 3). In a plain file, none.
 
 **Always true:**
 
-- An operational rule that fits any repository is in the file the [system](../glossary.md#term-system--system) ships. One that fits only one repository is in that repository's own file (COR-014).
+- An operational rule that fits any repository is in the file the system ships. One that fits only one repository is in that repository's own file (COR-014).
+- A citation such as core rule 19 names the same rule for as long as the set stands (COR-068 point 6).
 
 ## Methodology
 
