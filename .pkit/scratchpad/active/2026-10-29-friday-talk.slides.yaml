@@ -20,8 +20,8 @@ talk:
   length_minutes: 30
 parts:
 - id: P0
-  title: Why pkit?
-  summary: What goes wrong when an AI agent builds with you, and how to start.
+  title: pkit at a glance
+  summary: Why pkit exists, how to install it, and how its parts fit together.
 - id: P1
   title: What the agent knows
   summary: Your decisions, the data the tools read, and what every session is told.

@@ -35865,7 +35865,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P0",
-    "text": "What goes wrong when an AI agent builds with you, and how to start.",
+    "text": "Why pkit exists, how to install it, and how its parts fit together.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -35876,7 +35876,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P0",
-    "text": "What goes wrong when an AI agent builds with you, and how to start.",
+    "text": "Why pkit exists, how to install it, and how its parts fit together.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -35910,7 +35910,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793303304653
   },
   "T-part-P0.title": {
    "board": {
@@ -35920,7 +35920,7 @@
     "font_size": 120,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P0",
-    "text": "Why pkit?",
+    "text": "pkit at a glance",
     "title": "tpl:section#title",
     "width": 2944,
     "x": 128,
@@ -35931,7 +35931,7 @@
     "font_size": 120,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P0",
-    "text": "Why pkit?",
+    "text": "pkit at a glance",
     "title": "tpl:section#title",
     "width": 2944,
     "x": 128,
@@ -35965,7 +35965,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793303304661
   },
   "T-part-P1": {
    "board": {

@@ -2277,8 +2277,8 @@ instances:
   T-part-P0:
     template: section
     part: '1'
-    title: Why pkit?
-    summary: What goes wrong when an AI agent builds with you, and how to start.
+    title: pkit at a glance
+    summary: Why pkit exists, how to install it, and how its parts fit together.
     mural_ids:
       root: 9f82d856-d6b6-4128-bdf5-b624aa4ca48b
       bg: 7ebfee27-2d72-4434-8f74-8b332037bfa0
