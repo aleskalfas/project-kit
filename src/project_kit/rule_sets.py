@@ -963,6 +963,9 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
         findings.extend(_check_part_findings(rule_set, catalogue))
         findings.extend(_loaded_set_findings(rule_set, discovery))
     findings.extend(_cycle_findings(catalogue))
+    from project_kit import loaded_rule_sets  # it reads this module's model
+
+    findings.extend(loaded_rule_sets.staleness_findings(target_root, discovery))
     findings.extend(_conflict_findings(reach(fd.shared_discovery(target_root), discovery)))
     return RuleSetValidation(discovery=discovery, findings=tuple(findings))
 
