@@ -1,7 +1,7 @@
 ---
 id: COR-069
 title: Each rules file a session loads stays within a word budget
-status: proposed
+status: accepted
 date: 2026-10-29
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
