@@ -42,7 +42,8 @@ def _loaded_by(statements: str, cwd: Path, tmp_path: Path) -> set[str]:
         "import json, pathlib, sys\n"
         f"pathlib.Path({str(loaded)!r}).write_text(json.dumps(sorted(sys.modules)))\n"
     )
-    subprocess.run([sys.executable, "-c", probe], cwd=cwd, check=True, capture_output=True)
+    ran = subprocess.run([sys.executable, "-c", probe], cwd=cwd, capture_output=True, text=True)
+    assert ran.returncode == 0, ran.stderr
     return {name for name in json.loads(loaded.read_text()) if name.startswith("project_kit")}
 
 
