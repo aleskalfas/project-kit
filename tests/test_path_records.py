@@ -494,18 +494,23 @@ SECTION = "## Before changing files"
 README_SECTION = "## Finding the records a path leads to"
 
 
+RULE_22_HEADING = "### 22. Read the records a change's files lead to first (RS-OPS-022)"
+
+
 def _rule_22() -> str:
+    """Rule 22's statement, read from under its heading in the loaded file a session
+    loads, which is generated from the backbone's loaded set `OPS` (COR-068)."""
     text = CORE_RULES.read_text(encoding="utf-8")
     section = text.split(f"\n{SECTION}\n", 1)[1].split("\n## ", 1)[0]
-    paragraphs = [p.strip() for p in section.split("\n\n") if p.strip().startswith("22. ")]
-    assert len(paragraphs) == 1, "rule 22 is not the one numbered rule of its section"
-    return paragraphs[0]
+    headings = [line for line in section.splitlines() if line.startswith("### ")]
+    assert headings == [RULE_22_HEADING], "rule 22 is not the one rule of its section"
+    return section.split(f"{RULE_22_HEADING}\n", 1)[1].strip()
 
 
 def test_rule_22_tells_an_agent_to_run_the_lookup_before_changing_files() -> None:
     rule = _rule_22()
     assert rule.startswith(
-        "22. **When you change the system, read first the accepted records its files lead to.**"
+        "**When you change the system, read first the accepted records its files lead to.**"
     )
     assert "`pkit refs records-for`" in rule
     assert "tied to them directly" in rule
@@ -521,7 +526,9 @@ def test_rule_22_cites_the_readme_that_holds_its_rationale_and_the_issue() -> No
 
 def test_rule_22_stands_after_rule_21_and_before_the_rationale() -> None:
     text = CORE_RULES.read_text(encoding="utf-8")
-    assert text.index("\n21. ") < text.index(f"\n{SECTION}\n") < text.index("\n## Where rationale")
+    assert (
+        text.index("\n### 21. ") < text.index(f"\n{SECTION}\n") < text.index("\n## Where rationale")
+    )
 
 
 def test_the_rules_readme_lists_the_section() -> None:
