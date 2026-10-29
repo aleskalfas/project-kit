@@ -135,7 +135,6 @@ test_pm_bootstrap_gate_coverage.py
 test_pm_bootstrap_gate_integration.py
 test_pm_carriage_flag_guard.py
 test_pm_check_doc_mapping.py
-test_pm_check_doc_mapping_fixtures.py
 test_pm_check_mesh.py
 test_pm_checkbox_gate.py
 test_pm_ci_checks.py
@@ -168,7 +167,6 @@ test_pm_criterion_doc_impact.py
 test_pm_criterion_ops.py
 test_pm_decision_ids.py
 test_pm_decline_use_case_task.py
-test_pm_doc_check_point.py
 test_pm_done_work.py
 test_pm_done_work_agent_gate.py
 test_pm_done_work_journal.py
@@ -181,8 +179,6 @@ test_pm_edit_pr.py
 test_pm_engine_said.py
 test_pm_fixer_answer.py
 test_pm_fixer_contract.py
-test_pm_fixers.py
-test_pm_friction_answers.py
 test_pm_friction_answers_never_input.py
 test_pm_gh_helper.py
 test_pm_gh_run_calls.py
@@ -250,7 +246,6 @@ test_pm_review_mode.py
 test_pm_review_opt_outs_lib.py
 test_pm_review_pr.py
 test_pm_review_work.py
-test_pm_ruled_artefacts.py
 test_pm_script_smoke.py
 test_pm_scripts_smoke.py
 test_pm_seats.py

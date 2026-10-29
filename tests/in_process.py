@@ -165,9 +165,47 @@ def _living_docs(original: Callable[..., Any], pkit: Runner) -> Callable[..., An
     return pkit
 
 
+#: What project-management adds to the environment of its calls: routing off, which the
+#: in-process `pkit` never does.
+_UNROUTED = {"PKIT_NO_ROUTE": "1"}
+
+#: The decoding project-management names for some calls, the one the in-process `pkit` gives.
+_DECODED = (("utf-8", "replace"), (None, None))
+
+
+def _project_management(original: Callable[..., Any], pkit: Runner) -> Callable[..., Any]:
+    """project-management's `_run(argv, **options)`, `subprocess.run`'s signature: the
+    in-process `pkit` in its place, with three keywords its calls give besides the ones it
+    models. Their bound, `timeout`, is not used, as nothing bounds a call in this process.
+    An `env` that is the caller's environment with routing off is the one the in-process
+    `pkit` runs in, and UTF-8 with `replace` is the decoding it gives. Any other `env` or
+    decoding is refused, as a keyword it does not model is."""
+
+    def run(
+        argv: Sequence[str],
+        *,
+        timeout: float | None = None,
+        env: Mapping[str, str] | None = None,
+        encoding: str | None = None,
+        errors: str | None = None,
+        **options: Any,
+    ) -> subprocess.CompletedProcess[Any]:
+        if env is not None and dict(env) != {**os.environ, **_UNROUTED}:
+            raise TypeError(
+                "the in-process `pkit` runs in the caller's environment with routing off, "
+                "not one that adds more: run this call as a process, marked"
+            )
+        if (encoding, errors) not in _DECODED:
+            raise TypeError(f"the in-process `pkit` decodes as UTF-8, not {encoding}/{errors}")
+        return pkit(argv, **options)
+
+    return run
+
+
 #: How each capability's one private function is replaced, by the capability's name.
 ROUTES: Mapping[str, Callable[[Callable[..., Any], Runner], Callable[..., Any]]] = {
     "living-docs": _living_docs,
+    "project-management": _project_management,
     "software-analysis": _software_analysis,
 }
 
