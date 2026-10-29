@@ -891,7 +891,7 @@ What else holds a Task back:
 - **An assignee of another account,** since `start-work` refuses such a Task and points to `handoff-issue`
 - **Another instance's claim,** folded as the clash guard folds it, and an owner that cannot be read
 - **The scope of the seat,** in a project with a topology. A Task falls in the scope where it matches each part the scope names: its workstream and its type
-- **An axis the map binds to the board,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
+- **Priority or workstream, where the map binds it to the board,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
 
 **Where the board carries the state.** Where the substrate map binds `state` to the board, each Task's state is its card's Status ([project-management:DEC-062-axes-chosen-in-the-map] point 5). `next-task` reads only the cards of the open issues it listed, found by each issue's node id, and never reads them in part. A Task with no card, a card with no Status, or a Status naming no open state is skipped with a warning naming which. A board that cannot be read takes nothing and exits 3, as milestones that cannot be read do ([project-management:DEC-051-axis-carriage-activation] point 6).
 
