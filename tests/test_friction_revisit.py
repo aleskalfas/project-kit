@@ -3,7 +3,8 @@
 A fixture capability, `linker`, declares one place, `reqs`, and on it a link:
 its sources list their targets in the own field `verified-by`, and a change to
 `statement` or `threshold` asks for a revisit of each. Every test stands up a
-real adopter repository (`make_adopter_repo`), commits a base state on `main`,
+real adopter repository, its install committed once per session
+(`committed_adopter`), commits a base state on `main`,
 branches `feature` off it and makes real commits before running the change
 check against `main`. The tests cover the declaration and its validation, the
 change check's findings and answers, validation's findings on the entries and
@@ -33,7 +34,7 @@ from project_kit.manifest import (
     read_backbone_manifest,
     write_backbone_manifest,
 )
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import (
     CONFIG,
     SOURCE,
@@ -130,8 +131,8 @@ def entry(outcome: str, reason: str, value: str = TEST_FILE, kind: str = "path")
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    adopter = committed_adopter
     declare_linker(adopter.root)
     return adopter
 
@@ -847,8 +848,8 @@ def obligation(
 
 
 @pytest.fixture
-def obligations(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
+def obligations(committed_adopter: AdopterRepo) -> AdopterRepo:
+    adopter = committed_adopter
     declare_linker(adopter.root, ALL_BUT_PLACES)
     return adopter
 
