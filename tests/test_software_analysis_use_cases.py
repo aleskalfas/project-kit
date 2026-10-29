@@ -16,18 +16,21 @@ which declares `reads: [settled]`.
   empty before the first commit; no answer where a settled use case cannot be
   read.
 
-The capability's scripts are pointed at this interpreter in the adopter copy,
-and the `pkit` they read through is the real CLI under this interpreter
-(`pkit_on_path`), so no test reaches `uv` or the network.
+The filler runs in the test's own process (`tests/in_process.py`, #2326): on its
+own, its `pkit` answered by a stand-in there, and through the backbone, started by
+the runner's reverse seam, its `pkit` answered by the backbone's CLI there. One test
+keeps a process: `pkit connections resolve` starting the filler as the point's
+filler. Its script is pointed at this interpreter in the adopter copy, and the
+`pkit` it reads through is the real CLI under this interpreter (`pkit_on_path`),
+so no test reaches `uv` or the network.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -38,13 +41,13 @@ from project_kit.cli import main
 from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
-    CAPABILITY,
     SA,
     USE_CASES,
     installed,
     prepare_seeded,
     stamped,
 )
+from tests.in_process import load, route_pkit, run_main, start_in_process
 
 FILL = SA / "scripts" / "fill-use-cases.py"
 POINT = "pkit::work-tracking:use-cases"
@@ -126,20 +129,7 @@ def _answer(document: Any, code: int = 0) -> dict[str, Any]:
     return {"stdout": stdout, "exit": code}
 
 
-#: A `pkit` that answers from `answers.json` beside it, by its first argument, and a
-#: `git` that answers nothing; each writes the command it was run with to `calls.log`.
-_PKIT = """#!{python}
-import json
-import sys
-from pathlib import Path
-
-here = Path(__file__).parent
-with (here / "calls.log").open("a", encoding="utf-8") as log:
-    log.write(json.dumps(["pkit", *sys.argv[1:]]) + "\\n")
-answer = json.loads((here / "answers.json").read_text(encoding="utf-8"))[sys.argv[1]]
-sys.stdout.write(answer["stdout"])
-sys.exit(answer["exit"])
-"""
+#: A `git` that answers nothing, and writes that it was run to `calls.log` beside it.
 _GIT = """#!/bin/sh
 echo '["git"]' >> "$(dirname "$0")/calls.log"
 exit 1
@@ -150,24 +140,31 @@ def _fill(
     tmp_path: Path, repository: Mapping[str, Any], friction: Mapping[str, Any] | None = None
 ) -> tuple[subprocess.CompletedProcess[str], list[list[str]]]:
     """The shipped filler run as the backbone runs it — `--json` alone, from the
-    project root — with `repository` and `friction` what `pkit repository …` and
-    `pkit friction …` answer: its ending, and every command it ran."""
+    project root — in the test's own process (`tests/in_process.py`, `run_main`), with
+    `repository` and `friction` what `pkit repository …` and `pkit friction …` answer:
+    its ending, and every command it ran. Its `pkit` calls go through its one private
+    function, `backbone._run`, unchanged, to a stand-in that answers by the command's
+    first argument. The only program on PATH is a `git` that answers nothing. Each of
+    the two writes the command it was given to one log, in order."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    for name, text in (("pkit", _PKIT.format(python=sys.executable)), ("git", _GIT)):
-        (bin_dir / name).write_text(text, encoding="utf-8")
-        (bin_dir / name).chmod(0o755)
-    answers = {"repository": repository, "friction": friction or _answer("", 1)}
-    (bin_dir / "answers.json").write_text(json.dumps(answers), encoding="utf-8")
-    completed = subprocess.run(
-        [sys.executable, str(CAPABILITY / "scripts" / "fill-use-cases.py"), "--json"],
-        cwd=tmp_path,
-        env={**os.environ, "PATH": str(bin_dir)},
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    (bin_dir / "git").write_text(_GIT, encoding="utf-8")
+    (bin_dir / "git").chmod(0o755)
     log = bin_dir / "calls.log"
+    log.touch()
+    answers = {"repository": repository, "friction": friction or _answer("", 1)}
+
+    def pkit(args: Sequence[str], **_options: Any) -> subprocess.CompletedProcess[str]:
+        argv = [str(word) for word in args]
+        with log.open("a", encoding="utf-8") as calls:
+            calls.write(json.dumps(["pkit", *argv[1:]]) + "\n")
+        answer = answers[argv[1]]
+        return subprocess.CompletedProcess(argv, answer["exit"], answer["stdout"], "")
+
+    filler, backbone = load("software-analysis", "fill-use-cases.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone, pkit)
+        completed = run_main(filler, "--json", cwd=tmp_path, env={"PATH": str(bin_dir)})
     calls = [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
     return completed, calls
 
@@ -325,7 +322,10 @@ def _held(resolved: Mapping[str, Any]) -> list[tuple[str, str]]:
     return [(entry["id"], entry["status"]) for entry in resolved["value"]]
 
 
-def test_the_point_holds_what_the_default_branch_holds(tracked: AdopterRepo) -> None:
+def test_the_point_holds_what_the_default_branch_holds(
+    tracked: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start_in_process(monkeypatch)
     head = tracked.commit("the analysis")
     resolved = _resolve()
     assert resolved["outcome"] == "resolved" and resolved["origin"] == "software-analysis"
@@ -366,7 +366,10 @@ def test_the_point_holds_what_the_default_branch_holds(tracked: AdopterRepo) -> 
     ]
 
 
-def test_a_settled_use_case_that_cannot_be_read_is_no_answer(tracked: AdopterRepo) -> None:
+def test_a_settled_use_case_that_cannot_be_read_is_no_answer(
+    tracked: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    start_in_process(monkeypatch)
     broken = f"{USE_CASES}/UC-002-read-report.md"
     tracked.write({broken: "---\nid: [unclosed\n---\n\n# UC-002\n"})
     tracked.commit("the analysis, one use case broken")
@@ -382,6 +385,10 @@ def test_a_settled_use_case_that_cannot_be_read_is_no_answer(tracked: AdopterRep
     assert "0 error(s), 1 warning(s)" in result.output
 
 
+@pytest.mark.process(
+    "the filler's end-to-end test: pkit connections resolve starts fill-use-cases as the "
+    "point's filler, a process through its first line, and reads its answer"
+)
 def test_empty_before_the_first_commit(
     make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

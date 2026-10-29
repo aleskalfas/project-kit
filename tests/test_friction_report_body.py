@@ -5,7 +5,9 @@ check (COR-050 point 6), `pkit friction check --all --json`, as one Markdown
 body, and counts the findings that need an answer. It is a function of that
 document, so the tests call it over a document the real backbone wrote for a
 real history, or one shaped like it where the backbone cannot be made to report
-a kind; the command itself runs as a subprocess, as the workflow runs it.
+a kind. The history is laid on an install committed once per session
+(`committed_adopter`). The command runs its `main` in the test's own process,
+and as a process, as the workflow runs it, in one test.
 
 Held to: stale debt with what changed and since when; deferrals listed with
 their reason and never counted; revalidations answered apart listed and counted
@@ -19,6 +21,8 @@ a document it cannot fully read.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import re
 import subprocess
@@ -31,7 +35,7 @@ import pytest
 from scripts import friction_report_body as report
 
 from project_kit import friction_repository as fr
-from tests.adopter_repo import HISTORY_EPOCH, Author, MakeAdopterRepo
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author
 from tests.friction_documents import T1, T2, Timeline, document, friction_config, guide
 from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_answer_files import GUIDE, answer_path, answers, bare_guide
@@ -51,7 +55,7 @@ LATER = "2026-11-01T00:00:00Z"
 
 
 def _run(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
-    """The script as the workflow runs it."""
+    """The script as the workflow runs it: a process."""
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args],
         input=stdin,
@@ -60,6 +64,25 @@ def _run(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[st
         encoding="utf-8",
         check=False,
     )
+
+
+def _main(*args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+    """The script's `main(argv)` in the test's own process, as `_run` runs its process:
+    `stdin` its standard input, its standard output and standard error read apart, and
+    its exit code what `main` returned."""
+    given = io.TextIOWrapper(io.BytesIO((stdin or "").encode("utf-8")), encoding="utf-8")
+    printed = io.BytesIO()
+    out = io.TextIOWrapper(printed, encoding="utf-8", newline="", write_through=True)
+    err = io.StringIO()
+    saved = sys.stdin
+    sys.stdin = given
+    try:
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = report.main(list(args))
+    finally:
+        sys.stdin = saved
+    text = printed.getvalue().decode("utf-8")
+    return subprocess.CompletedProcess([str(SCRIPT), *args], code, text, err.getvalue())
 
 
 def _notes(**overrides: Any) -> str:
@@ -138,8 +161,8 @@ def _section(body: str, title: str) -> str:
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    return Timeline(committed_adopter)
 
 
 # --- what needs an answer, and what the body says ------------------------------------------
@@ -404,9 +427,9 @@ def test_a_path_that_is_no_utf8_is_set_escaped() -> None:
     body.encode("utf-8")  # nothing left that cannot be written
 
     text = json.dumps(document_)
-    plain = _run("-", stdin=text)
+    plain = _main("-", stdin=text)
     assert plain.returncode == 0 and plain.stdout == body, plain.stderr
-    as_json = _run("-", "--json", stdin=text)
+    as_json = _main("-", "--json", stdin=text)
     assert as_json.returncode == 0 and json.loads(as_json.stdout)["body"] == body
 
 
@@ -533,6 +556,7 @@ def test_one_entry_larger_than_the_budget_is_left_out_whole() -> None:
 # --- the command ---------------------------------------------------------------------------
 
 
+@pytest.mark.process("the script as the workflow runs it: its arguments, exit code and output")
 def test_the_command_prints_the_body_or_the_publication(tmp_path: Path) -> None:
     document_ = _document(findings=[_stale(1)])
     path = tmp_path / "friction.json"
@@ -573,7 +597,7 @@ def test_a_document_it_cannot_fully_read_is_refused_and_nothing_is_rendered(
 ) -> None:
     path = tmp_path / "friction.json"
     path.write_text(text, encoding="utf-8")
-    proc = _run(str(path), "--json")
+    proc = _main(str(path), "--json")
     assert proc.returncode == 1 and proc.stdout == ""
     assert says in proc.stderr and "nothing to render" in proc.stderr
 
@@ -585,12 +609,12 @@ def test_a_document_without_its_version_reads_as_version_1(tmp_path: Path) -> No
     unversioned = {key: value for key, value in versioned.items() if key != "schema_version"}
     path = tmp_path / "friction.json"
     path.write_text(json.dumps(unversioned), encoding="utf-8")
-    proc = _run(str(path), "--json")
+    proc = _main(str(path), "--json")
     assert proc.returncode == 0, proc.stderr
     assert json.loads(proc.stdout) == report.publication(versioned)
 
 
 def test_a_file_that_is_not_there_is_refused(tmp_path: Path) -> None:
-    proc = _run(str(tmp_path / "missing.json"))
+    proc = _main(str(tmp_path / "missing.json"))
     assert proc.returncode == 1 and proc.stdout == ""
     assert "cannot be read" in proc.stderr and "nothing to render" in proc.stderr

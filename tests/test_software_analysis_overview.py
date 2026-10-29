@@ -23,6 +23,10 @@ Held to software-analysis DEC-003 point 8:
 - **keeping none** — `overview: false` in the settings;
 - **each area's goal** — data in the settings: an area without one is a warning,
   and a goal no area takes an error.
+
+The validator, the overview, the diagrams' query and the stamp run in the test's own
+process, their `pkit` calls answered there too (`tests/in_process.py`, #2326). One test
+keeps a process: the overview command's exit code and the line it prints.
 """
 
 from __future__ import annotations
@@ -57,6 +61,7 @@ from tests.analysis_repo import (
     load_lib,
     new,
     prepare,
+    run_in_process,
     run_script,
     seed,
     stamped,
@@ -105,7 +110,8 @@ def seeded(
 
 
 def _check(repo: AdopterRepo) -> dict[str, Any]:
-    completed = run_script(repo, VALIDATE, "--json")
+    """The validator's findings document, `--json` alone, in the test's own process."""
+    completed = run_in_process(repo, VALIDATE, "--json")
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -160,7 +166,7 @@ def _headings(text: str) -> list[str]:
 
 def _fence(repo: AdopterRepo, subject: str) -> str:
     """The query's own output for `subject`, as a fence."""
-    completed = run_script(repo, DIAGRAM, subject)
+    completed = run_in_process(repo, DIAGRAM, subject)
     assert completed.returncode == 0, completed.stderr
     return completed.stdout.strip("\n")
 
@@ -169,7 +175,7 @@ def _shows_no_other_diagram(repo: AdopterRepo, text: str, *drawn: str) -> None:
     """The page holds no Mermaid fence but a journey's flow. The query draws each diagram
     of `drawn`, such as the use-case diagram, the requirement map or the chain of use
     cases, and the page shows none of them."""
-    printed = run_script(repo, DIAGRAM, "--json")
+    printed = run_in_process(repo, DIAGRAM, "--json")
     assert printed.returncode == 0, printed.stderr
     others = {d["id"]: d for d in json.loads(printed.stdout)["diagrams"]}
     assert set(drawn) <= set(others), sorted(others)
@@ -195,6 +201,10 @@ def _ends_reference(text: str, command: str = "pkit analysis diagram") -> None:
 # --- what it shows, and who writes it ----------------------------------------------------------
 
 
+@pytest.mark.process(
+    "the overview command's end-to-end test: its exit code and the line it prints, from a "
+    "process of its own, and the pkit it starts"
+)
 def test_the_stamp_writes_the_overview_and_the_check_holds_it_fresh(seeded: AdopterRepo) -> None:
     """The seed's stamps wrote the overview: each artefact linked, a journey's flow the
     query's own output, the other diagrams left to the query, and its fingerprint fresh.
@@ -276,7 +286,7 @@ def test_a_missing_overview_warns_and_one_it_cannot_judge_is_said(seeded: Adopte
     seeded.write({OVERVIEW_FILE: text, f"{USE_CASES}/UC-009-broken.md": "---\nid: [\n---\n"})
     (said,) = _about(_check(seeded), "report", OVERVIEW_FILE)
     assert said.startswith("whether it is fresh is not checked")
-    refused = run_script(seeded, OVERVIEW)
+    refused = run_in_process(seeded, OVERVIEW)
     assert refused.returncode == 1
     assert "the overview of the analysis is not written" in refused.stderr
     assert _read(seeded) == text
@@ -296,7 +306,7 @@ def test_keeping_none(project: AdopterRepo) -> None:
     assert _about(document, "warning", OVERVIEW_FILE) == []
     # Nothing shows a goal, so none is asked for.
     assert _about(document, "warning", f"{USE_CASES}/010-run") == []
-    refused = run_script(project, OVERVIEW)
+    refused = run_in_process(project, OVERVIEW)
     assert refused.returncode == 1
     assert "`overview: false`" in refused.stderr and "keeps no overview" in refused.stderr
     project.write({OVERVIEW_FILE: "# Overview of the analysis\n"})
@@ -337,7 +347,7 @@ def test_an_analysis_with_areas_reads_as_its_story_then_reference(project: Adopt
     project.write(
         {run: _read(project, run).replace("status: active\n", f"status: active\n{shortfall}", 1)}
     )
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     text = _read(project)
     assert _headings(text) == [
         "# Overview of the analysis",
@@ -443,7 +453,7 @@ def test_the_opening_shows_what_the_component_is_for_and_what_the_analysis_is(
     )
     (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
     assert stale.startswith("it is stale")
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     assert _opening(_read(project)) == f"[{PURPOSE_TITLE}](../../../{PURPOSE_REL}).\n\n{what_it_is}"
     document = _check(project)
     assert _about(document, "error", SETTINGS) == _about(document, "error", OVERVIEW_FILE) == []
@@ -451,7 +461,7 @@ def test_the_opening_shows_what_the_component_is_for_and_what_the_analysis_is(
     project.write({PURPOSE_REL: _record(title="The runner is for teams.")})
     (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
     assert stale.startswith("it is stale")
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     assert _opening(_read(project)).startswith(
         f"[The runner is for teams.](../../../{PURPOSE_REL})\n"
     )
@@ -485,7 +495,7 @@ def test_a_purpose_naming_no_accepted_record_fails_and_the_page_says_so(
     (missing,) = _about(_check(project), "error", f"{SETTINGS}:/purpose")
     assert missing.startswith("`PRJ-009` names no record the repository holds")
     project.write({SETTINGS: HEAD + "purpose: PRJ-009\n"})
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     assert _opening(_read(project)).startswith(
         "`PRJ-009` is named as the record of what the system is for, and the repository holds "
         "no record of that id."
@@ -535,7 +545,7 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
     project.write({SETTINGS: HEAD + "areas:\n  010-run: Run the suites.\n"})
     (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
     assert stale.startswith("it is stale")
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     assert "### 010-run\n\nRun the suites.\n" in _read(project)
     assert "030-share" not in _read(project)
 
@@ -582,7 +592,7 @@ def test_each_area_shows_its_concepts_from_the_links_to_the_terms(project: Adopt
         }
     )
     link(project)
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     views = {"010": "- [010 — Suites](../domain-model/010-suites.md)"}
     views["020"] = "- [020 — Results](../domain-model/020-results.md)"
     text = _read(project)
@@ -606,7 +616,7 @@ def test_each_area_shows_its_concepts_from_the_links_to_the_terms(project: Adopt
     link(project)
     (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
     assert stale.startswith("it is stale")
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     assert f"Read the results.\n\n**Its concepts:**\n\n{views['010']}\n{views['020']}\n\n" in _read(
         project
     )
@@ -635,7 +645,7 @@ def test_an_area_builds_on_the_areas_its_use_cases_producers_lie_in(project: Ado
     _after(project, f"{USE_CASES}/020-read/UC-002-read.md", "[UC-001]")
     _after(project, f"{USE_CASES}/020-read/UC-005-reread.md", "[UC-002, environment]")
     _after(project, f"{USE_CASES}/030-share/UC-003-share.md", "[UC-005, UC-004]", "[UC-001]")
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     areas = _section(_read(project), "## Areas")
     builds = re.findall(r"(?m)^### (\S+)$|^\*\*Builds on:\*\* (.*)$", areas)
     assert [(a or b) for a, b in builds] == [
@@ -649,7 +659,7 @@ def test_an_area_builds_on_the_areas_its_use_cases_producers_lie_in(project: Ado
     _after(project, f"{USE_CASES}/040-keep/UC-004-keep.md", "[UC-004]")
     (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
     assert stale.startswith("it is stale")
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     assert (
         "### 040-keep\n\nNo goal is written for this area yet.\n\n**Builds on:** no other area."
         in (_read(project))
@@ -666,7 +676,7 @@ def test_an_area_s_requirements_are_read_from_their_folder(project: AdopterRepo)
         stamped(project, "quality-requirement", slug, "--area", area, "--actor", "ACT-tester")
     stamped(project, "constraint", "local", "--actor", "ACT-tester")
     fill(project)
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     text = _read(project)
     req = "../requirements"
     assert _section(text, "### 010-run") == (
@@ -716,7 +726,7 @@ def test_one_table_shows_who_takes_part_and_the_areas_each_acts_in(
     fill(project)
     auditor = actor_at("ACT-auditor")
     project.write({auditor: re.sub(r"(?m)^summary: .*\n", "", _read(project, auditor), count=1)})
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     actors = "../use-case-model/actors"
     assert _section(_read(project), "### Who takes part") == (
         "| Actor | Who they are | Areas they act in |\n| --- | --- | --- |\n"
@@ -745,7 +755,7 @@ def test_one_table_shows_who_takes_part_and_the_areas_each_acts_in(
             )
         }
     )
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     rows = _section(_read(project), "### Who takes part").split("\n")
     assert rows[2].endswith("|  | [010-review](#010-review) |")
     assert (
@@ -810,7 +820,7 @@ def test_several_analyses_each_keep_their_own(project: AdopterRepo) -> None:
     # The line names the query as it is run for each analysis, and it runs.
     for component, page in (("core", core), ("billing", billing)):
         _ends_reference(_read(project, page), f"pkit analysis diagram --analysis {component}")
-        drawn = run_script(project, DIAGRAM, "--analysis", component)
+        drawn = run_in_process(project, DIAGRAM, "--analysis", component)
         assert drawn.returncode == 0, drawn.stderr
 
 
@@ -834,7 +844,7 @@ def test_each_view_is_listed_by_its_number_and_title(project: AdopterRepo) -> No
     assert hint is not None
     project.write({view: text.replace(hint.group(0), "A shop must know what each order asks.\n")})
     assert _about(_check(project), "error", OVERVIEW_FILE) == []
-    again = run_script(project, OVERVIEW)
+    again = run_in_process(project, OVERVIEW)
     assert (again.returncode, again.stdout) == (0, f"fresh already: {OVERVIEW_FILE}\n")
 
 
@@ -912,7 +922,7 @@ def test_an_actor_of_another_analysis_is_listed_as_the_glossarys_head_names_it(
     project.write(
         {use_case: _read(project, use_case).replace("  - ACT-clerk\n", "  - core:ACT-pilot\n", 1)}
     )
-    assert run_script(project, OVERVIEW).returncode == 0
+    assert run_in_process(project, OVERVIEW).returncode == 0
     rows = _section(_read(project, billing), "### Who takes part").split("\n")[2:]
     assert rows[1:] == [
         "| core:ACT-pilot | An actor of the analysis of core. | [the use cases](#use-cases) |",

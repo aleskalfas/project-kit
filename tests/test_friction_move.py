@@ -3,8 +3,11 @@ migration that writes it (COR-062 points 3, 6 and 11; ADR-068 points 1 and 7; #1
 
 `pkit friction move-plan --json` plans the move and writes nothing. The migration
 `2.0.0/002-move-answers-to-files.sh` writes the plan's bytes. Each test stands up a
-real adopter repository with block answers, committed, so the checks read them.
-Validation fails an answer left in a block, and names the move (#2031).
+real adopter repository with block answers, committed on the install the template
+committed (`committed_adopter`), so the checks read them. Validation fails an answer
+left in a block, and names the move (#2031). A test of the migration runs it as an
+upgrade does, a shell script. One of them has it start the real `pkit`; the others
+give it a `pkit` that prints the plan the real code made in the test's own process.
 """
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit.cli import main
 from project_kit.friction_validate import validate_friction
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -90,8 +93,8 @@ GUIDE_MOVED = (
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    adopter = committed_adopter
     adopter.write(
         {
             CONFIG: friction_config(),
@@ -129,6 +132,19 @@ def _run(root: Path, path: str | None = None) -> subprocess.CompletedProcess[str
         text=True,
         check=False,
     )
+
+
+def _printing(plan: fm.MovePlan, tmp_path_factory: pytest.TempPathFactory) -> str:
+    """A `PATH` whose `pkit` prints `plan` as `pkit friction move-plan --json` prints it,
+    the plan made by the real code in this process, so the migration runs on it without a
+    process of `pkit`."""
+    bin_dir = tmp_path_factory.mktemp("bin")
+    plan_file = bin_dir / "plan.json"
+    plan_file.write_text(fm.render_json(plan), encoding="utf-8")
+    fake = bin_dir / "pkit"
+    fake.write_text(f"#!/bin/sh\ncat '{plan_file}'\n", encoding="utf-8")
+    fake.chmod(0o755)
+    return f"{bin_dir}{os.pathsep}{os.environ['PATH']}"
 
 
 def _points(repo: AdopterRepo) -> dict[str, Any]:
@@ -282,6 +298,10 @@ def test_the_command_prints_the_plan(repo: AdopterRepo) -> None:
 # --- the migration --------------------------------------------------------------------------
 
 
+@pytest.mark.process(
+    "the migration's end-to-end test, as an upgrade runs it: a shell script that starts "
+    "`pkit friction move-plan --json` and writes the bytes it prints"
+)
 def test_the_migration_writes_the_plan_and_a_second_run_writes_nothing(
     repo: AdopterRepo, pkit_on_path: Path
 ) -> None:
@@ -308,13 +328,13 @@ def test_the_migration_writes_the_plan_and_a_second_run_writes_nothing(
 
 
 def test_the_migration_never_writes_over_an_answer_file(
-    repo: AdopterRepo, pkit_on_path: Path
+    repo: AdopterRepo, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
     planned = fm.plan_move(repo.root)
     taken = repo.root / planned.files[0].answers[0].path
     taken.parent.mkdir(parents=True)
     taken.write_text("answers: []\n", encoding="utf-8")
-    result = _run(repo.root)
+    result = _run(repo.root, _printing(fm.plan_move(repo.root), tmp_path_factory))
     assert result.returncode == 0, result.stderr
     assert "never written over" in result.stdout
     assert taken.read_text(encoding="utf-8") == "answers: []\n"
@@ -323,13 +343,13 @@ def test_the_migration_never_writes_over_an_answer_file(
 
 
 def test_the_migration_finishes_a_move_an_earlier_run_left_halfway(
-    repo: AdopterRepo, pkit_on_path: Path
+    repo: AdopterRepo, tmp_path_factory: pytest.TempPathFactory
 ) -> None:
     planned = fm.plan_move(repo.root)
     answer = planned.files[0].answers[0]
     (repo.root / answer.path).parent.mkdir(parents=True)
     (repo.root / answer.path).write_text(answer.text, encoding="utf-8")
-    result = _run(repo.root)
+    result = _run(repo.root, _printing(fm.plan_move(repo.root), tmp_path_factory))
     assert result.returncode == 0, result.stderr
     assert (repo.root / GUIDE).read_bytes() == planned.files[0].text.encode("utf-8")
 
@@ -344,12 +364,7 @@ def test_an_unreadable_file_is_reported_and_the_rest_of_the_run_kept(
     if os.geteuid() == 0:
         pytest.skip("root reads a file whatever its mode")
     planned = fm.plan_move(repo.root)
-    bin_dir = tmp_path_factory.mktemp("bin")
-    plan_file = bin_dir / "plan.json"
-    plan_file.write_text(fm.render_json(planned), encoding="utf-8")
-    fake = bin_dir / "pkit"
-    fake.write_text(f"#!/bin/sh\ncat '{plan_file}'\n", encoding="utf-8")
-    fake.chmod(0o755)
+    path = _printing(planned, tmp_path_factory)
     guide_file, terms_file = planned.files
     locked = repo.root / terms_file.path
     if unreadable == "answer":
@@ -358,7 +373,7 @@ def test_an_unreadable_file_is_reported_and_the_rest_of_the_run_kept(
         locked.write_text("answers: []\n", encoding="utf-8")
     locked.chmod(0)
     try:
-        result = _run(repo.root, f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+        result = _run(repo.root, path)
     finally:
         locked.chmod(0o644)
     assert result.returncode == 0, result.stderr
