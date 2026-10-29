@@ -52,5 +52,11 @@
     "file": ".pkit/capabilities/software-analysis/scripts/validate.py",
     "find": "    outcome = check.check(backbone.project_root(), preview=args.preview)\n",
     "replace": "    outcome = check.check(backbone.project_root(), preview=False)\n"
+  },
+  {
+    "id": "pm-fixer-holding-edit-passes",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/fixers.py",
+    "find": "CHANGING_TOOLS = frozenset({\"Edit\", \"MultiEdit\", \"NotebookEdit\"})\n",
+    "replace": "CHANGING_TOOLS = frozenset({\"MultiEdit\", \"NotebookEdit\"})\n"
   }
 ]

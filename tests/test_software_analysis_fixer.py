@@ -24,8 +24,9 @@ software-analysis DEC-001 points 5 and 8; project-management DEC-056 points 1, 3
 
 The adopter's copy of project-management's validator runs under this interpreter,
 and the `pkit` it reads through is the real CLI (`pkit_on_path`), so no test
-reaches `uv` or the network. Its two tests keep a process, each marked with why:
-they are the validator's end-to-end tests (#2325).
+reaches `uv` or the network. One test keeps a process, marked with why: the
+validator's end-to-end test. The other runs its `main` in the test's own process,
+its `pkit` calls answered there too (`tests/in_process.py`, #2325).
 """
 
 from __future__ import annotations
@@ -45,6 +46,7 @@ from ruamel.yaml import YAML
 
 from tests import fixer_lines
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.analysis_repo import run_in_process
 
 REPO = Path(__file__).resolve().parent.parent
 SA = REPO / ".pkit" / "capabilities" / "software-analysis"
@@ -206,7 +208,7 @@ def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRe
 
 
 def _checked(repo: AdopterRepo) -> dict[str, Any]:
-    """project-management's fixers validator, its findings document."""
+    """project-management's fixers validator, its findings document, run as a process."""
     completed = subprocess.run(
         [sys.executable, str(repo.root / CHECK_REL), "--json"],
         cwd=repo.root,
@@ -215,6 +217,14 @@ def _checked(repo: AdopterRepo) -> dict[str, Any]:
         text=True,
         check=False,
     )
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
+def _checked_here(repo: AdopterRepo) -> dict[str, Any]:
+    """The same document, the validator's `main` run in the test's own process, its `pkit`
+    calls answered there too (`run_in_process`)."""
+    completed = run_in_process(repo, CHECK_REL, "--json")
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -231,10 +241,6 @@ def test_every_entry_passes_the_point_s_checks(project: AdopterRepo) -> None:
     ]
 
 
-@pytest.mark.process(
-    "the fixers validator's second end-to-end test, its failing case: project-management "
-    "reads `pkit` through a runner of its own, which `tests/in_process.py` does not route"
-)
 def test_an_agent_that_holds_edit_starts_no_fixer(project: AdopterRepo) -> None:
     deployed = project.root / DEPLOYED_REL
     text = deployed.read_text(encoding="utf-8")
@@ -242,7 +248,7 @@ def test_an_agent_that_holds_edit_starts_no_fixer(project: AdopterRepo) -> None:
         text.replace("tools: [Read, Glob, Grep, Bash, Write]", "tools: [Read, Edit, Write]", 1),
         encoding="utf-8",
     )
-    document = _checked(project)
+    document = _checked_here(project)
     assert document["summary"] == [
         f"{POINT}: 8 type(s) for 1 agent(s); 0 pass the checks, 0 granted"
     ]
