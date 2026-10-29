@@ -350,7 +350,8 @@ def test_a_broken_registration_still_fails(
     repo = make_adopter_repo(capabilities=("living-docs",))
     package = repo.root / ".pkit" / "capabilities" / "living-docs" / "package.yaml"
     text = package.read_text(encoding="utf-8")
-    package.write_text(text.replace("script: scripts/validate.py", "script: scripts/new.py"))
+    wrong = text.replace("script: scripts/validate.py", "script: scripts/new.py")
+    package.write_text(wrong, encoding="utf-8")
     started = start_in_process(monkeypatch)
     result = CliRunner().invoke(
         main, ["--color", "never", "validate", "--only", "living-docs:spaces"]

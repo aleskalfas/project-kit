@@ -96,7 +96,10 @@ class InProcessPkit:
       would answer wrongly fails at once.
     - The backbone's process-wide caches are cleared before each call (`reset_caches`).
 
-    `calls` holds each argument list it was given, in order."""
+    A call uses the process's directory, environment and standard streams, so it is not
+    safe beside another in a thread. A script that reads in threads, as `fill-doc-check`
+    does, has its readings called one by one, or stood in for. `calls` holds each
+    argument list it was given, in order."""
 
     def __init__(self) -> None:
         self.calls: list[list[str]] = []
