@@ -1948,8 +1948,14 @@ def _fake_git(
     import subprocess
 
     seen: list[list[str]] = []
+    real_run = subprocess.run
 
     def fake_run(argv, **kwargs):
+        # Only git is faked: any other command, such as `pkit repository base`, which
+        # project-management's one pkit start looks `subprocess.run` up for when it
+        # runs (#2322), runs as it would without this fake.
+        if not argv or argv[0] != "git":
+            return real_run(argv, **kwargs)
         seen.append(list(argv))
         if argv[:2] == ["git", "symbolic-ref"]:
             return subprocess.CompletedProcess(
@@ -1967,6 +1973,10 @@ def _fake_git(
             return subprocess.CompletedProcess(argv, 1, stdout="", stderr=branch_d_stderr)
         return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
+    # The settled branch is the backbone's answer, read through pm's one start
+    # of a `pkit` call, which this global stub of `subprocess.run` would answer
+    # too; the clean-up's subject is git, so the branch is stood in here.
+    monkeypatch.setattr(dw.pr_merge.default_branch, "name", lambda config: "main")
     monkeypatch.setattr(dw.subprocess, "run", fake_run)
     return seen
 
