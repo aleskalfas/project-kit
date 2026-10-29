@@ -10,7 +10,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### 2. The acceptance gate (RS-OPS-002)
 
-**The acceptance gate.** Act only on accepted decisions and rules: a proposed one binds nothing, so no code, document or record may rest on it. A person accepts a proposal within the change that proposes it, and an agent writes `accepted` only once that person has. Until then the work resting on it waits and the change does not land, and a change built on it lands no earlier. Before the merge is authorised, the person sees each record and rule the change makes accepted, shown by the component that carries out merges or, without one, by the change's author (COR-066 points 1 and 3).
+**The acceptance gate.** Act only on accepted decisions and rules: a proposed one binds nothing, so no code, document or record may rest on it. A person accepts a proposal within the change that proposes it, and an agent writes `accepted` only once that person has. Until then the work resting on it waits and the change does not land, and a change built on it lands no earlier than the change that proposes it. Before the change is authorised to reach the default branch, the person who authorises it sees each record and rule the change makes accepted, shown by the component that carries out merges or, without one, by the change's author; an edit made after the acceptance is accepted only through that list (COR-066 points 1 and 3).
 
 ### 3. Author core-shipped artifacts through the paired skill or `pkit new` (RS-OPS-003)
 
@@ -22,7 +22,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### 5. Migrations are idempotent and safe over any state (RS-OPS-005)
 
-**Migrations are idempotent, and a backbone migration is safe over any state.** A migration you write must detect state already migrated and exit cleanly. A backbone migration must also act only on a positive sign that its change is needed, and never delete by a path's name or position alone; if it adds a missing default, say so in the release's notes (COR-010; the lifecycle README, "Script contract").
+**Migrations are idempotent, and a backbone migration is safe over any state.** A migration you write must detect state already migrated and exit cleanly. A backbone migration must also act only on a positive sign that its change is needed, and never delete by a path's name or position alone. A missing default it adds counts as such a sign, so if it adds one, say in the release's notes that a replay may restore a default the project removed (COR-010; the lifecycle README, "Script contract").
 
 ### 6. Settings-file changes go through the merge primitive (RS-OPS-006)
 
@@ -64,7 +64,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### 15. Work with the permission layer, not around it (RS-OPS-015)
 
-**Work with the permission layer, not around it.** Issue the narrowest action it can vet: one simple command rather than a compound, and the harness's own read, search and write tools for inspection. Extract a recurring or non-trivial diagnostic into a committed command (COR-007), and never compose a command to slip a gated mutation past the check (the adapter's README; Claude Code's "Prompt-free command shape under the sandbox").
+**Work with the permission layer, not around it.** Issue the narrowest action it can vet: one simple command rather than a compound, and the harness's own read, search and write tools for inspection. Extract a recurring or non-trivial diagnostic into a committed command (COR-007), and never compose a command to slip a gated mutation past the check (project-kit#82; the adapter's README; Claude Code's "Prompt-free command shape under the sandbox").
 
 ### 16. Intermediate files stay in the agent workspace (RS-OPS-016)
 
@@ -90,7 +90,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### 20. A reviewer checks the answers a change owes (RS-OPS-020)
 
-**A reviewer checks the answers your change owes, and a person, or the delegate they named, decides any other answer on an artefact.** Write the answers `pkit friction check` asks of your change, without asking the person to accept them, and commit them with it, a new answer file among them (COR-062 point 1). Where the check flags a revalidation of yours as replacing others answered apart, make its reason judge their combined state (COR-062 point 7). A reviewer other than you checks them, from the check's own list, never a list you composed (COR-050 point 3). Name an open follow-up in each deferral or `deferred` revisit entry, and say in one sentence what changed in each artefact you revalidated as `updated`, in the pull request or, on a direct commit, to the person you work for. The person who authorises the merge is told these sentences and what is left out of date, until which follow-up, as information. Committing straight to the default branch, have the reviewer, where the project chose one, check before you commit, and tell the person you work for. Write any other answer, on an artefact or a link's target, or a reason for having no anchors, only once the person accepted it word for word, or the delegate the default branch's configuration names (`friction.delegate`) decided it; where you can ask neither, return the commands and run none (COR-064; the agents README, "Friction writers").
+**A reviewer checks the answers your change owes, and a person, or the delegate they named, decides any other answer on an artefact.** Write the answers `pkit friction check` asks of your change, without asking the person to accept them, and commit them with it, a new answer file among them (COR-062 point 1). Where the check flags a revalidation of yours as replacing others answered apart, make its reason judge their combined state (COR-062 point 7). A reviewer other than you checks them, from the check's own list, never a list you composed (COR-050 point 3). Name an open follow-up in each deferral or `deferred` revisit entry, and say in one sentence what changed in each artefact you revalidated as `updated`, in the pull request or, on a direct commit, to the person you work for. The person who authorises the merge is told these sentences and what is left out of date, until which follow-up, as information. Committing straight to the default branch, have the reviewer, where the project chose one, check before you commit, and tell the person you work for before the commit. Write any other answer, on an artefact or a link's target, or every reason for having no anchors, only once a person accepted it word for word, or the delegate the default branch's configuration names (`friction.delegate`) decided it. The reviewer checks these too, whoever decided them, and blocks the merge, or the direct commit, on an answer or an `updated` sentence that does not hold. Where you can ask neither the person nor the delegate, return the commands and run none (COR-064; the agents README, "Friction writers").
 
 ## When a step fails
 

@@ -66,12 +66,20 @@ def test_rule_20_keeps_its_number_and_title():
 def test_rule_20_names_the_delegate_and_its_bounds():
     """A person may name a delegate to decide the answers no change owes (COR-064): named
     in the default branch's configuration. The rule names where the delegate is named and
-    what a session does with neither the person nor the delegate. The delegate's own bounds,
-    never on its own draft, and a reviewer checking every such answer, whoever decided it,
-    are the agents README's, which the rule cites."""
+    what a session does with neither the person nor the delegate, and that a reviewer checks
+    every such answer, whoever decided it, blocking the merge or the direct commit on one that
+    does not hold (COR-064 point 4). The delegate's own bound, never on its own draft, is the
+    agents README's, which the rule cites."""
     rule = _rule_20()
     assert "or the delegate the default branch's configuration names (`friction.delegate`)" in rule
-    assert "where you can ask neither, return the commands and run none" in rule
+    assert (
+        "The reviewer checks these too, whoever decided them, and blocks the merge, or the"
+        " direct commit, on an answer or an `updated` sentence that does not hold." in rule
+    )
+    assert (
+        "Where you can ask neither the person nor the delegate, return the commands and run"
+        " none" in rule
+    )
     assert '(COR-064; the agents README, "Friction writers")' in rule
     writers = _friction_writers()
     assert "**Whose drafts.** Only an answer another agent drafted." in writers
@@ -88,8 +96,8 @@ def test_rule_20_names_the_delegate_and_its_bounds():
         "Name an open follow-up in each deferral or `deferred` revisit entry,",
         "is told these sentences and what is left out of date, until which follow-up, as"
         " information.",
-        "Write any other answer, on an artefact or a link's target, or a reason for having no"
-        " anchors, only once the person accepted it word for word,",
+        "Write any other answer, on an artefact or a link's target, or every reason for having"
+        " no anchors, only once a person accepted it word for word,",
         '(COR-064; the agents README, "Friction writers")',
     ],
 )
