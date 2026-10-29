@@ -16,8 +16,9 @@ it does not, so a caller makes the same call in both modes.
 
 from __future__ import annotations
 
-import subprocess
 import sys
+
+from _lib import backbone
 
 #: The issue lifecycle's process address: `<capability>:<process-id>`.
 PROCESS_ADDRESS = "project-management:issue-lifecycle"
@@ -109,7 +110,7 @@ def journal_move(
     if reason:
         argv += ["--reason", reason]
     try:
-        proc = subprocess.run(
+        proc = backbone.run(
             argv,
             capture_output=True,
             text=True,
