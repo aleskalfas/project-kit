@@ -358,34 +358,69 @@ slides:
 - id: decisions
   part: P1
   title: Decision records
-  message: One shape for every lasting choice, and whose choice it is decides where it lives.
+  message: A decision record keeps one choice and why it was made. There are four kinds, by whose choice it is.
   problem: ''
   does: []
   show: 'This week: COR-065 overturned a sentence of COR-006, by a new record, not an edit'
   visual:
-    kind: install
+    kind: kinds
     kinds:
     - tag: COR
       owner: pkit
-      head: pkit's principles · 39 in June, 67 now
-      text: How the method works. Each upgrade replaces them.
-      path: .pkit/decisions/core/COR-065-records-and-projection.md
-    - tag: PRJ
-      owner: yours
-      head: How your team works · 11 in project-kit
-      text: Process, tooling, conventions. pkit never writes them.
-      path: .pkit/decisions/project/PRJ-002-version-bump-policy.md
-    - tag: ADR
-      owner: yours
-      head: How your system is built · 74 in project-kit
-      text: Structure, technologies, boundaries, kept beside your code.
-      path: docs/architecture/decisions/ADR-001-project-root-resolution.md
+      head: pkit's principles
+      text: How the method works, in every project.
+      path: .pkit/decisions/core/
+      num: 67
+      numcap: up from 39 in June
     - tag: DEC
       owner: pkit
-      head: How an add-on works · 83 across them
-      text: Each capability brings its own; its upgrades replace them.
-      path: .pkit/capabilities/project-management/decisions/DEC-006-….md
-    listing:
+      head: An add-on's principles
+      text: How each add-on works, shipped with it.
+      path: .pkit/capabilities/<name>/decisions/
+      num: 83
+      numcap: across pkit's add-ons
+    - tag: PRJ
+      owner: yours
+      head: Your way of working
+      text: Process, tooling, conventions.
+      path: .pkit/decisions/project/
+      num: 11
+      numcap: in project-kit
+    - tag: ADR
+      owner: yours
+      head: Your architecture
+      text: Structure, technologies, boundaries.
+      path: docs/architecture/decisions/
+      num: 74
+      numcap: in project-kit
+  limit: 'Writing and reviewing a record takes time: worth it only for choices that bind later work.'
+  minutes: 1.5
+  notes: 'pkit''s own and its add-ons'' records are replaced by each upgrade; yours are never touched. pkit''s
+    principles change by a new record you can read, never by a quiet edit: this week COR-065 overturned a sentence
+    of COR-006. project-kit is pkit''s own source, so its counts are one project''s. Every kind has one shape,
+    which the next slide shows. Unfinished ideas live in scratchpad notes, which may contradict and be dropped:
+    this talk is one.'
+- id: found
+  part: P1
+  title: Decided once, found later
+  message: You accept a choice before work builds on it, and a later session finds it before changing what it
+    governs.
+  problem: ''
+  does: []
+  show: 'This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted, then built'
+  visual:
+    kind: flow
+    stages:
+    - role: agents
+      head: The agent drafts it
+      text: 'A choice later work will depend on comes up. Status: proposed.'
+    - role: people
+      head: You accept it
+      text: In the pull request, before it merges and before anything is built on it.
+    - role: agents
+      head: A later session finds it
+      text: Before changing a file, the agent looks up the records behind it.
+    panel_left:
     - - - '$ '
         - prompt
       - - cat
@@ -430,37 +465,9 @@ slides:
         - args
       - - '         # what follows for code and docs'
         - comment
-    font_size: 26
-  limit: 'Writing and reviewing a record takes time: worth it only for choices that bind later work.'
-  minutes: 1.5
-  notes: 'Every kind shares one shape: front matter, then Context, Decision, Rationale, Implications, the decision
-    in numbered points kept for good, so code and docs can cite one point. pkit''s principles change by a new
-    record you can read, never by a quiet edit: this week COR-065 overturned a sentence of COR-006. Each upgrade
-    replaces core/; your project/ is never touched. project-kit is pkit''s own source, so its counts are one project''s.
-    Unfinished ideas live in scratchpad notes, which may contradict and be dropped: this talk is one.'
-- id: found
-  part: P1
-  title: Decided once, found later
-  message: You accept a choice before work builds on it, and a later session finds it before changing what it
-    governs.
-  problem: ''
-  does: []
-  show: 'This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted, then built'
-  visual:
-    kind: flow
-    stages:
-    - role: agents
-      head: The agent drafts it
-      text: 'A choice later work will depend on comes up. Status: proposed.'
-    - role: people
-      head: You accept it
-      text: In the pull request, before it merges and before anything is built on it.
-    - role: agents
-      head: A later session finds it
-      text: Before changing a file, the agent looks up the records behind it.
-    terminal: |-
+    panel_right: |-
       $ pkit refs records-for .pkit/capabilities/project-management/schemas/workflow.yaml
-      .pkit/capabilities/project-management/schemas/workflow.yaml: 0 records tied directly, 5 artefacts anchoring it
+      …/schemas/workflow.yaml: 0 records tied directly, 5 artefacts anchoring it
         Through the artefacts that anchor it, the narrowest first:
           …/glossary.md#TERM-issue-lifecycle, by …/workflow.yaml, rests on 2 records:
             project-management:DEC-006; project-management:DEC-033
@@ -468,7 +475,7 @@ slides:
             project-management:DEC-006; project-management:DEC-014; …
         …
       # before it changes workflow.yaml, the agent reads DEC-006
-    font_size: 28
+    font_size: 26
   limit: Only records tied to a file are found, directly or through a document that depends on it.
   minutes: 1
   notes: 'Accepting is yours: a check can refuse to merge a record still proposed, and whoever authorises a merge

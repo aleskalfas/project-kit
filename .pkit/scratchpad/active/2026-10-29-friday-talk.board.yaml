@@ -1833,8 +1833,8 @@ templates:
         width: 1440
         height: 400
   kind:
-    note: 'A kind of record: a tinted row in its owner''s colour with a filled tag (its prefix), a head,
-      a line of text and a path; made by the slide generator.'
+    note: 'A kind of a thing as a tall column in its owner''s colour: a filled tag (its prefix), a head,
+      a line of text, where it lives, and a big count with its caption; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1842,8 +1842,8 @@ templates:
       color: '#FFFFFF00'
       border_color: '#FFFFFF00'
       border_width: 1
-      width: 1440
-      height: 192
+      width: 688
+      height: 672
     parts:
       bg:
         type: shape
@@ -1851,8 +1851,8 @@ templates:
         text: ''
         x: 0
         y: 0
-        width: 1440
-        height: 192
+        width: 688
+        height: 672
         color: '@{bg}'
         border_color: '@{tone}'
         border_width: 2
@@ -1861,10 +1861,10 @@ templates:
         type: shape
         shape: rectangle
         text: ''
-        x: 32
-        y: 28
-        width: 136
-        height: 64
+        x: 40
+        y: 40
+        width: 180
+        height: 88
         color: '@{tone}'
         border_color: '@{tone}'
         border_width: 1
@@ -1872,39 +1872,56 @@ templates:
       tagtext:
         type: text
         text: '{tag}'
-        style: '@style.key'
+        style: '@style.heading'
         ink: '@text_on_color'
-        x: 32
-        y: 30
-        width: 136
-        height: 60
+        x: 40
+        y: 44
+        width: 180
+        height: 80
         align: center
       head:
         type: text
         text: '{head}'
-        style: '@style.key'
+        style: '@style.tile_heading'
         ink: '@text_primary'
-        x: 200
-        y: 24
-        width: 1208
-        height: 60
+        x: 40
+        y: 164
+        width: 608
+        height: 64
       text:
         type: text
         text: '{text}'
         style: '@style.body'
-        x: 200
-        y: 86
-        width: 1208
-        height: 50
+        x: 40
+        y: 240
+        width: 608
+        height: 100
       path:
         type: text
         text: '{path}'
-        style: '@style.caption'
-        ink: '@text_secondary'
-        x: 200
-        y: 138
-        width: 1208
-        height: 40
+        style: '@style.body'
+        ink: '@{tone}'
+        x: 40
+        y: 352
+        width: 608
+        height: 100
+      num:
+        type: text
+        text: '{num}'
+        style: '@style.title'
+        ink: '@{tone}'
+        x: 40
+        y: 452
+        width: 608
+        height: 140
+      numcap:
+        type: text
+        text: '{numcap}'
+        style: '@style.body'
+        x: 40
+        y: 592
+        width: 608
+        height: 56
 instances:
   L01:
     template: slide
@@ -3198,7 +3215,8 @@ instances:
   T-decisions:
     template: slide
     title: Decision records
-    lead: One shape for every lasting choice, and whose choice it is decides where it lives.
+    lead: A decision record keeps one choice and why it was made. There are four kinds, by whose choice
+      it is.
     rests: 'This week: COR-065 overturned a sentence of COR-006, by a new record, not an edit'
     n: 4
     total: 16
@@ -3212,154 +3230,170 @@ instances:
       lead: 7149c3c4-4f84-46fa-a0d5-d5f62d01131c
       rests: d6213079-b91e-4828-9684-a5f57186b621
       num: 1f65654b-a2da-4642-b428-6d5f4d13c2a6
-  T-decisions-k1:
+  T-decisions-col1:
     template: kind
     parent: T-decisions
     x: 128
     y: 576
     tag: COR
-    head: pkit's principles · 39 in June, 67 now
-    text: How the method works. Each upgrade replaces them.
-    path: .pkit/decisions/core/COR-065-records-and-projection.md
+    head: pkit's principles
+    text: How the method works, in every project.
+    path: .pkit/decisions/core/
+    num: '67'
+    numcap: up from 39 in June
     bg: role_code_bg
     tone: role_code
     override:
       root:
-        width: 1440
+        width: 688
       bg:
-        width: 1440
+        width: 688
       head:
-        width: 1208
+        width: 608
       text:
-        width: 1208
+        width: 608
       path:
-        width: 1208
+        width: 608
+      num:
+        width: 608
+      numcap:
+        width: 608
     mural_ids:
-      root: b9776c4c-0f41-4951-9abc-ff7438af8082
-      bg: a923933d-542e-43c5-a320-6a8541912149
-      tag: 6d5c3c0c-2812-4fa9-8ee6-253bf87553f7
-      tagtext: dfa40041-cbbb-4372-9dd1-f406b1439593
-      head: d6651cde-c776-47ff-89ca-37b92183f734
-      text: 6f053720-e0f0-40e8-8aaf-0896cbd17f31
-      path: 0a268841-f4fe-42ab-ab54-82e2b689aa14
-  T-decisions-k2:
+      root: 157ddd0e-5f15-423a-bda6-c26c339be802
+      bg: 8ce4903a-bdd8-45b5-b21f-ff1b9cd695a2
+      tag: 09a88701-ab86-4d3d-b049-09d6634fafde
+      tagtext: cea0cd5b-a032-4c1a-9216-c94b64ba0a49
+      head: f4b8086d-38c5-4f4a-b57f-cfb41e58c798
+      text: 942f71d4-ea6e-4559-b11b-2fa18c38e8c2
+      path: ecbeadb8-fbb1-4d50-8cc4-c3e074ad9b31
+      num: 1314ef53-c9f2-439d-b975-c1618c2e088a
+      numcap: d4161c01-da5a-45d6-9330-cdacc42d702a
+  T-decisions-col2:
     template: kind
     parent: T-decisions
-    x: 128
-    y: 792
-    tag: PRJ
-    head: How your team works · 11 in project-kit
-    text: Process, tooling, conventions. pkit never writes them.
-    path: .pkit/decisions/project/PRJ-002-version-bump-policy.md
-    bg: role_people_bg
-    tone: role_people
-    override:
-      root:
-        width: 1440
-      bg:
-        width: 1440
-      head:
-        width: 1208
-      text:
-        width: 1208
-      path:
-        width: 1208
-    mural_ids:
-      root: 44f0b0f0-d3f2-4978-8f18-93f0a7736e48
-      bg: 5047af7f-234e-46b0-969e-f202326bd557
-      tag: cc1cf316-2655-4def-95a2-69c3efcef63a
-      tagtext: 5bc00c06-c8f6-4c83-8343-bdc9cb7a6990
-      head: 413289a1-b59a-4f04-8ecd-ad9c41b7fe30
-      text: 48e68eed-1dae-4d26-b106-acaa2b744384
-      path: 74abea66-3c4f-40cc-8046-76be8f7e6b45
-  T-decisions-k3:
-    template: kind
-    parent: T-decisions
-    x: 128
-    y: 1008
-    tag: ADR
-    head: How your system is built · 74 in project-kit
-    text: Structure, technologies, boundaries, kept beside your code.
-    path: docs/architecture/decisions/ADR-001-project-root-resolution.md
-    bg: role_people_bg
-    tone: role_people
-    override:
-      root:
-        width: 1440
-      bg:
-        width: 1440
-      head:
-        width: 1208
-      text:
-        width: 1208
-      path:
-        width: 1208
-    mural_ids:
-      root: 524d3664-c1b5-444a-b50d-45984a692fa6
-      bg: 0a315249-cd15-4dcd-bc48-4fc9c48ee0c0
-      tag: 622d6fad-2ecf-4720-935e-756e66eee8a7
-      tagtext: 19ba1241-376f-439a-8d16-bcd46193c2df
-      head: 55e01628-c20c-4038-818f-08d83ed68d85
-      text: c04977c0-7a5c-406f-851e-8c14b7d491de
-      path: 85e2559f-9daa-45cc-b636-ac2fe8f36156
-  T-decisions-k4:
-    template: kind
-    parent: T-decisions
-    x: 128
-    y: 1224
+    x: 880
+    y: 576
     tag: DEC
-    head: How an add-on works · 83 across them
-    text: Each capability brings its own; its upgrades replace them.
-    path: .pkit/capabilities/project-management/decisions/DEC-006-….md
+    head: An add-on's principles
+    text: How each add-on works, shipped with it.
+    path: .pkit/capabilities/<name>/decisions/
+    num: '83'
+    numcap: across pkit's add-ons
     bg: role_code_bg
     tone: role_code
     override:
       root:
-        width: 1440
+        width: 688
       bg:
-        width: 1440
+        width: 688
       head:
-        width: 1208
+        width: 608
       text:
-        width: 1208
+        width: 608
       path:
-        width: 1208
+        width: 608
+      num:
+        width: 608
+      numcap:
+        width: 608
     mural_ids:
-      root: 09d0e441-2766-4a67-8e98-a6330fa2a60e
-      bg: b4c1b27a-63bb-4493-ab83-e1134e4e31e3
-      tag: 6b2e8b71-c2ab-4b9e-aa06-fcc3c82dff38
-      tagtext: 421a6f98-1bb5-4f82-a2dc-7e5e70c0352c
-      head: cb4f0b3b-4548-41d5-8474-a2e46f6b66e3
-      text: 28e86ae5-6371-470b-8057-493983314ba6
-      path: 77155565-97de-4669-a80e-34f45e81dd91
-  T-decisions-listing:
-    template: term_image
+      root: 79f16599-5e91-47da-b573-8916e60cc640
+      bg: cfff1aa8-95f1-4895-ae96-a029b2708e16
+      tag: 357bd08f-f20d-457b-9faa-7103979c85be
+      tagtext: cd54a02e-0037-4306-ab71-7dce772907c1
+      head: 2717119e-a2ed-4dea-b319-77f221e7058c
+      text: c965d2e3-1886-4226-92e5-2284bfbb7a9b
+      path: 9a46fe82-31ff-4bc1-ac3c-4f1740efdbdc
+      num: 10260169-b33a-4a3b-9cd6-ae0c70a89dfb
+      numcap: 6640c2b9-4e67-4085-b5ed-46117ccd7198
+  T-decisions-col3:
+    template: kind
     parent: T-decisions
     x: 1632
     y: 576
-    file: term-decisions-listing
+    tag: PRJ
+    head: Your way of working
+    text: Process, tooling, conventions.
+    path: .pkit/decisions/project/
+    num: '11'
+    numcap: in project-kit
+    bg: role_people_bg
+    tone: role_people
     override:
       root:
-        width: 1440
-        height: 512
-      img:
-        width: 1440
-        height: 512
+        width: 688
+      bg:
+        width: 688
+      head:
+        width: 608
+      text:
+        width: 608
+      path:
+        width: 608
+      num:
+        width: 608
+      numcap:
+        width: 608
     mural_ids:
-      root: 5160361b-d8f0-4669-b412-279deb758a54
-      img: 980852ee-80d6-416c-a0d8-b61af02e1e75
+      root: 9ad8f0a6-2355-43f5-b4a0-244369afcea6
+      bg: 1335dc70-2f2c-434f-9fbc-e7c3235fbfbd
+      tag: ef995c99-8c91-4935-b0a1-cd90be672431
+      tagtext: ff151018-b159-4f6c-8733-b37124bd7553
+      head: e5fa6fd0-4209-44a0-8017-ba68df4f756d
+      text: 276cd265-88ef-4b80-ace0-914e4eb98d92
+      path: 7f064c5a-a319-4334-937b-bc94e92c5ae8
+      num: 59c59dce-ad83-4614-92ad-3158f78cc1b6
+      numcap: 0489d19b-fbf5-4690-819c-f38b07d0a6e5
+  T-decisions-col4:
+    template: kind
+    parent: T-decisions
+    x: 2384
+    y: 576
+    tag: ADR
+    head: Your architecture
+    text: Structure, technologies, boundaries.
+    path: docs/architecture/decisions/
+    num: '74'
+    numcap: in project-kit
+    bg: role_people_bg
+    tone: role_people
+    override:
+      root:
+        width: 688
+      bg:
+        width: 688
+      head:
+        width: 608
+      text:
+        width: 608
+      path:
+        width: 608
+      num:
+        width: 608
+      numcap:
+        width: 608
+    mural_ids:
+      root: cadd0f44-6718-4a8f-830f-cac494afff53
+      bg: c008ff17-f61e-4136-896e-ac6fc953600c
+      tag: a4462f9a-1186-4004-99a1-ea5836e8efac
+      tagtext: 1be5bfcb-f3c4-46cd-98e3-5f6e00514022
+      head: 40ec1aae-a998-4c82-af9d-b5212bb2fac9
+      text: 82068b4a-0d86-4bc8-bdc0-6aa65ddb3038
+      path: 6e62ca7d-92e7-44c1-851b-e8cad8c77a4f
+      num: 218bcbd9-e50f-4479-97dd-141e1372573d
+      numcap: 94dd900c-561c-4bf0-9059-d5c151a7392c
   T-decisions-limit:
     template: notice
     parent: T-decisions
     text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that bind later
       work.'
     x: 128
-    y: 1464
+    y: 1296
     mural_ids:
-      root: 7bb842ad-ce8d-43b3-be0a-888a361cccd9
-      bg: 5261d97c-a2c5-4064-b6b8-9a69711203c4
-      bar: f37614b7-d2f6-4bb8-917b-bfe397de9d1b
-      text: d569c83b-2303-430d-ac23-b71b76cb093c
+      root: 22d00a42-e94e-40bf-bd26-c663442d4103
+      bg: 5e382345-6ee3-474d-9b89-c1382f0f340b
+      bar: ec4fe15f-bf81-4645-8871-0efa72661095
+      text: 654c6181-461f-4f1e-a17b-17c101693987
   T-found:
     template: slide
     title: Decided once, found later
@@ -3498,34 +3532,50 @@ instances:
       dot: 175e2bad-973f-4a7c-a3fd-8c55468009d2
       head: 5317deda-d976-4a1f-8519-5db977f9cc04
       text: 995a2ec9-3df9-4135-af89-76c51440278b
-  T-found-term:
+  T-found-left:
     template: term_image
     parent: T-found
     x: 128
     y: 896
-    file: term-found-term
+    file: term-found-left
     override:
       root:
-        width: 2944
-        height: 459
+        width: 1440
+        height: 512
       img:
-        width: 2944
-        height: 459
+        width: 1440
+        height: 512
     mural_ids:
-      root: c5634a2b-193a-477c-a440-7d93fa45f6a9
-      img: bdfca650-95f4-45a6-b194-7320a0ca2c17
+      root: 90e99a86-152a-4919-8627-0689ec879ce8
+      img: a89d78cd-b187-49ad-8506-2f88a763d5f4
+  T-found-right:
+    template: term_image
+    parent: T-found
+    x: 1632
+    y: 896
+    file: term-found-right
+    override:
+      root:
+        width: 1440
+        height: 432
+      img:
+        width: 1440
+        height: 432
+    mural_ids:
+      root: 559f8600-8d0c-48e2-9442-d2c71152d13a
+      img: db1130ce-b3af-4a7c-8f55-aad7ebe48502
   T-found-limit:
     template: notice
     parent: T-found
     text: 'Limit: Only records tied to a file are found, directly or through a document that depends on
       it.'
     x: 128
-    y: 1403
+    y: 1456
     mural_ids:
-      root: 571ddcd6-dc4a-4025-8b1b-b21cd9cc3ea0
-      bg: 90b5eabc-a780-43cd-b9f5-2eb32ceab195
-      bar: 5ecb8e56-a886-4087-a5d3-bffdcccd7536
-      text: 0af47d27-bd3b-4dca-ac48-fa3422ee0f95
+      root: 0a4baf7d-fdf5-4f63-bd2b-321ae4751616
+      bg: 364d42ec-7b4d-47f4-855e-0a417f5ee230
+      bar: 01dbc7e4-710e-4961-96fd-1aa41e9cf263
+      text: 7ba180a5-095f-4073-b963-76c3f9271c70
   T-checked:
     template: slide
     title: Checked every time
