@@ -429,12 +429,16 @@ slides:
         +     record: [PRJ-002]
     - role: people
       head: You accept it
-      text: In the pull request, before it merges.
+      text: You see the record and its tie in the pull request, before it merges.
       terminal: |-
-        # the pull request's change to PRJ-002
-          title: Version-bump policy
+        # the pull request, before it merges:
+          .pkit/decisions/project/PRJ-002-….md
         - status: proposed
         + status: accepted
+
+          .pkit/release/README.md
+            anchors:
+        +     record: [PRJ-002]
     - role: agents
       head: A later session finds it
       text: Before changing a file, the agent looks up its records.

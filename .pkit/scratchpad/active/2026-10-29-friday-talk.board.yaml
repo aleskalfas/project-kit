@@ -3588,17 +3588,17 @@ instances:
     parent: T-found
     role: people
     head: You accept it
-    text: In the pull request, before it merges.
+    text: You see the record and its tie in the pull request, before it merges.
     file: term-found-step2
     x: 1141
     y: 576
     override:
       root:
         width: 917
-        height: 468
+        height: 616
       box:
         width: 917
-        height: 468
+        height: 616
       head:
         width: 813
         height: 64
@@ -3610,14 +3610,14 @@ instances:
         x: 32
         y: 216
         width: 853
-        height: 220
+        height: 368
     mural_ids:
-      root: b8b8ddf6-defd-494e-88aa-374d5b1c299b
-      box: ed9eb364-e82d-4d59-bec0-1ec6647a3594
-      dot: e248af00-f4f6-462a-8eb3-13adbf915514
-      head: eb5a46af-7d88-475f-83ec-048f3b489764
-      text: ffaae0bf-2caa-4811-aada-4fcc9ded5057
-      img: f9dd3fc7-1070-4c3a-89d2-a4c62d0505ca
+      root: 1db28b76-f603-4473-898b-10ca8ba4e42d
+      box: b38eea7e-f933-4adb-87c5-8c191b41caa4
+      dot: 31fb796e-586f-41ed-86c1-a0dcc11c4ec8
+      head: 364ffb69-6428-45da-9c89-0264f5007c2c
+      text: 107b728b-612b-4869-b22f-17817dc8f1e8
+      img: a1879928-b20d-4ab5-8087-9c8b46c78560
   T-found-l2:
     template: link
     parent: T-found

@@ -32528,7 +32528,7 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 468,
+    "height": 616,
     "parent": "T-found",
     "show_title": false,
     "title": "T-found-card2",
@@ -32540,7 +32540,7 @@
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 468,
+    "height": 616,
     "parent": "T-found",
     "show_title": false,
     "title": "T-found-card2",
@@ -32548,7 +32548,7 @@
     "x": 1141,
     "y": 576
    },
-   "mural_id": "b8b8ddf6-defd-494e-88aa-374d5b1c299b",
+   "mural_id": "1db28b76-f603-4473-898b-10ca8ba4e42d",
    "tracked": [
     "title",
     "text",
@@ -32576,7 +32576,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793308364438
+   "updatedOn": 1793308616997
   },
   "T-found-card2.box": {
    "board": {
@@ -32584,7 +32584,7 @@
     "border_style": "solid",
     "border_width": 2,
     "color": "#FFFFFFFF",
-    "height": 468,
+    "height": 616,
     "ink": "#161616FF",
     "parent": "T-found-card2",
     "text": "",
@@ -32597,7 +32597,7 @@
     "border_color": "#0043CEFF",
     "border_width": 2,
     "color": "#FFFFFFFF",
-    "height": 468,
+    "height": 616,
     "ink": "#161616FF",
     "parent": "T-found-card2",
     "text": "",
@@ -32606,7 +32606,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "ed9eb364-e82d-4d59-bec0-1ec6647a3594",
+   "mural_id": "b38eea7e-f933-4adb-87c5-8c191b41caa4",
    "tracked": [
     "title",
     "text",
@@ -32634,7 +32634,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793308365652
+   "updatedOn": 1793308617769
   },
   "T-found-card2.dot": {
    "board": {
@@ -32664,7 +32664,7 @@
     "x": 32,
     "y": 44
    },
-   "mural_id": "e248af00-f4f6-462a-8eb3-13adbf915514",
+   "mural_id": "31fb796e-586f-41ed-86c1-a0dcc11c4ec8",
    "tracked": [
     "title",
     "text",
@@ -32692,7 +32692,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793308365652
+   "updatedOn": 1793308617769
   },
   "T-found-card2.head": {
    "board": {
@@ -32719,7 +32719,7 @@
     "x": 72,
     "y": 28
    },
-   "mural_id": "eb5a46af-7d88-475f-83ec-048f3b489764",
+   "mural_id": "364ffb69-6428-45da-9c89-0264f5007c2c",
    "tracked": [
     "title",
     "text",
@@ -32747,11 +32747,11 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793308366431
+   "updatedOn": 1793308618511
   },
   "T-found-card2.img": {
    "board": {
-    "height": 220,
+    "height": 368,
     "parent": "T-found-card2",
     "title": "tpl:step_card#img",
     "width": 853,
@@ -32759,15 +32759,15 @@
     "y": 216
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-found-step2.png@20652b6df0a5c7ab",
-    "height": 220,
+    "file": "2026-10-29-friday-talk-icons/term-found-step2.png@a85a3dcdb2079a8a",
+    "height": 368,
     "parent": "T-found-card2",
     "title": "tpl:step_card#img",
     "width": 853,
     "x": 32,
     "y": 216
    },
-   "mural_id": "f9dd3fc7-1070-4c3a-89d2-a4c62d0505ca",
+   "mural_id": "a1879928-b20d-4ab5-8087-9c8b46c78560",
    "tracked": [
     "title",
     "text",
@@ -32795,7 +32795,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793308367171
+   "updatedOn": 1793308619421
   },
   "T-found-card2.text": {
    "board": {
@@ -32805,7 +32805,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-found-card2",
-    "text": "In the pull request, before it merges.",
+    "text": "You see the record and its tie in the pull request, before it merges.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -32816,13 +32816,13 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-found-card2",
-    "text": "In the pull request, before it merges.",
+    "text": "You see the record and its tie in the pull request, before it merges.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
     "y": 100
    },
-   "mural_id": "ffaae0bf-2caa-4811-aada-4fcc9ded5057",
+   "mural_id": "107b728b-612b-4869-b22f-17817dc8f1e8",
    "tracked": [
     "title",
     "text",
@@ -32850,7 +32850,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793308366431
+   "updatedOn": 1793308618511
   },
   "T-found-card3": {
    "board": {
