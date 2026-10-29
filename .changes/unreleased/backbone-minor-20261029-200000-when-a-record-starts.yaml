@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The core rules gain rule 23, `RS-OPS-023`, under "Before changing files": a
+  change that makes a choice later work will build on starts with its record,
+  drafted before the work and accepted by a person before work rests on it
+  (COR-065 point 3). Such a choice is a library, an interface or format others
+  use, a convention, a boundary between parts, or a change to what an accepted
+  record decides. A choice that binds nothing beyond its own change needs no
+  record, and neither does a change that only carries out an accepted record.
+  An agent now meets the rule at every session start, not only when a person
+  asks for a record. No existing rule is renumbered, and the set `OPS` moves
+  to its next major, as a new accepted rule does.
