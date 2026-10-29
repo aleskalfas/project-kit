@@ -1,7 +1,7 @@
 ---
 id: ADR-073
 title: The rules file is generated from the backbone's loaded rule set, and validation keeps the two in step
-status: proposed
+status: accepted
 date: 2026-10-28
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
