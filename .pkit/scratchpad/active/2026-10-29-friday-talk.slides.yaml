@@ -114,7 +114,7 @@ slides:
         - prompt
       - - tree
         - command
-      - - ' your-project'
+      - - ' -a -L 2 your-project'
         - args
     - - - your-project/
         - plain
@@ -122,95 +122,148 @@ slides:
         - branch
       - - .pkit/
         - plain
-      - - '                 # the methodology'
+      - - '                        # the methodology'
         - comment
     - - - '│   ├── '
         - branch
-      - - decisions/
-        - plain
-    - - - '│   │   ├── '
+      - - adapters/
+        - pkit
+      - - '                 # the bridge to your AI tool'
+        - comment
+    - - - '│   ├── '
         - branch
+      - - 'agents/ '
+        - plain
       - - core/
         - pkit
-      - - '          # pkit''s'
-        - comment
-    - - - '│   │   └── '
-        - branch
+      - - ' '
+        - plain
       - - project/
         - yours
-      - - '       # yours'
+    - - - '│   ├── '
+        - branch
+      - - cli/
+        - pkit
+      - - '                      # the command''s reference'
         - comment
     - - - '│   ├── '
         - branch
-      - - rules/
+      - - 'decisions/ '
         - plain
-    - - - '│   │   ├── '
+      - - core/
+        - pkit
+      - - ' '
+        - plain
+      - - project/
+        - yours
+    - - - '│   ├── '
         - branch
+      - - lifecycle/
+        - pkit
+      - - '                # install, sync, upgrade'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - migrations/
+        - pkit
+      - - '               # carry you across versions'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'permissions/ '
+        - plain
+      - - project/
+        - yours
+      - - '     # what agents may do'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - process/
+        - pkit
+      - - '                  # staged processes, as data'
+        - comment
+    - - - '│   ├── '
+        - branch
+      - - 'rules/ '
+        - plain
       - - core.md
         - pkit
-      - - '        # pkit''s'
-        - comment
-    - - - '│   │   └── '
-        - branch
+      - - ' '
+        - plain
       - - project.md
         - yours
-      - - '     # yours'
-        - comment
-    - - - '│   ├── '
-        - branch
-      - - skills/ agents/
-        - plain
-      - - '    # core/ pkit''s, project/ yours'
+      - - ' # yours to add'
         - comment
     - - - '│   ├── '
         - branch
       - - schemas/
         - pkit
-      - - '           # what the tools read'
+      - - '                  # what the tools read'
         - comment
     - - - '│   ├── '
         - branch
-      - - capabilities/
-        - pkit
-      - - '      # the add-ons you install'
+      - - scratchpad/
+        - yours
+      - - '               # your unfinished ideas'
         - comment
-    - - - '│   └── '
+    - - - '│   ├── '
+        - branch
+      - - 'skills/ '
+        - plain
+      - - core/
+        - pkit
+      - - ' '
+        - plain
+      - - project/
+        - yours
+    - - - '│   ├── '
         - branch
       - - manifest.yaml
         - pkit
-      - - '      # what is installed, which version'
+      - - '             # what is installed, which version'
+        - comment
+    - - - '│   └── '
+        - branch
+      - - .gitignore
+        - pkit
+      - - '                # pkit''s runtime files'
         - comment
     - - - '├── '
         - branch
       - - .claude/
-        - pkit
-      - - '               # skills, agents for Claude Code'
+        - plain
+      - - '                      # agents, skills, your settings'
+        - comment
+    - - - '├── '
+        - branch
+      - - .agent-workspace/
+        - plain
+      - - '             # agents'' scratch, not committed'
         - comment
     - - - '├── '
         - branch
       - - CLAUDE.md
         - yours
-      - - '              # loads the rules each session'
+      - - '                     # loads the rules each session'
         - comment
     - - - '└── '
         - branch
       - - src/
         - yours
-      - - '                   # your code, untouched'
+      - - '                          # your code, untouched'
         - comment
     - []
     - - - '# '
         - comment
       - - purple
         - pkit
-      - - ': pkit''s, replaced by each upgrade'
-        - comment
-    - - - '# '
+      - - ': pkit''s, replaced by each upgrade · '
         - comment
       - - blue
         - yours
-      - - ': yours, never replaced'
+      - - ': yours'
         - comment
+    font_size: 26
   limit: ''
   minutes: 2
   notes: 'pkit init writes pkit''s files into .pkit/, merges your AI tool''s settings without overwriting them,

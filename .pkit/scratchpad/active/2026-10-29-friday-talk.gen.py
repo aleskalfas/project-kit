@@ -464,7 +464,7 @@ def install(pid, y, v):
     hs = []
     yy = y
     if v.get("terminal"):
-        d, th = terminal(pid, MARGIN, y, w, v["terminal"])
+        d, th = terminal(pid, MARGIN, y, w, v["terminal"], font_size=v.get("font_size", 30))
         out.update(d)
         yy = y + th
     if v.get("highlight"):
@@ -487,7 +487,7 @@ def install(pid, y, v):
                 yy += GAP
     left_h = yy - y
     if v.get("listing"):
-        d, right_h = terminal(pid, MARGIN + SPAN8 + GUT, y, SPAN8, v["listing"], key="listing")
+        d, right_h = terminal(pid, MARGIN + SPAN8 + GUT, y, SPAN8, v["listing"], key="listing", font_size=v.get("font_size", 30))
     else:
         d, right_h = tree(pid, MARGIN + SPAN8 + GUT, y, [(r[0], [tuple(t) for t in r[1]], r[2]) for r in v["tree"]], [tuple(t) for t in v.get("legend") or []])
     out.update(d)
