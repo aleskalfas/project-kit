@@ -106,10 +106,13 @@ is held from its first test.
   kept apart in `sys.modules`. `run_main(script, *args, cwd=...)` runs a
   script's `main` as its process ran.
 - `route_pkit(monkeypatch, backbone)` answers every `pkit` call of a capability
-  with the backbone's CLI in the test's own process. Each capability makes every
-  call through one private function, `_lib.backbone._run`, looked up when called,
-  and the route replaces only that function. The argument lists and the
-  documents are unchanged (ADR-057 point 1).
+  with the backbone's CLI in the test's own process. Each capability makes its
+  calls through one private function, `_lib.backbone._run`, looked up when
+  called, and the route replaces only that function. The argument lists and the
+  documents are unchanged (ADR-057 point 1). project-management's streaming
+  starts (`agent_runs`, `merge_queue`) and its top-level scripts' calls do not
+  go through it, and its route takes the keywords its calls pass (`timeout`, an
+  `env` with routing off), which the in-process `pkit` itself refuses.
 - `InProcessPkit`, the in-process `pkit`, answers as a process does. It gives a
   `CompletedProcess` with its exit code and standard error apart, from the
   working directory given, in the environment the runner gives a query. An
