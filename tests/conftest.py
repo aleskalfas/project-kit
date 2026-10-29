@@ -30,7 +30,7 @@ from tests.adopter_repo import (
     refusing_global_config,
     stub_adapter_primitives,
 )
-from tests.friction_documents import settled_commit, settled_write
+from tests.friction_documents import commit_install, settled_commit, settled_write
 
 #: What a run of the command runner sets in the environment of what it runs.
 RUN_VARIABLES = (command_runner.DEADLINE_ENV, command_runner.STRAYS_ENV, run_cache.CACHE_ENV)
@@ -237,6 +237,15 @@ def adopter_repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """An adopter repository at `tmp_path` with the backbone installed and the
     scripted history laid down (`adopter_repo.history` holds the SHAs)."""
     return make_adopter_repo(history=True)
+
+
+@pytest.fixture
+def committed_adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+    """An adopter repository at `tmp_path` with the backbone installed and the install
+    committed on `main`, one commit dated `INSTALLED_AT` (`friction_documents.commit_install`).
+    Its template is built once per session and copied for each test, so a test that
+    commits a base commits only its own files, not the whole installed `.pkit/` (#2320)."""
+    return make_adopter_repo(prepare=commit_install)
 
 
 @pytest.fixture
