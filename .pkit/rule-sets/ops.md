@@ -1,7 +1,7 @@
 ---
 rule-set: OPS
 loaded: true
-version: 1.0.0
+version: 2.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -136,8 +136,8 @@ rules:
       friction:
         anchors: {record: ["COR-065#7"]}
   RS-OPS-024:
-    status: proposed
-    origin: {why: "A rule a project chooses to bind on its own files sits in an ordinary rule set and binds whoever writes them, so a session follows the rules the rule-set reviewer judges its change by, and this rule adds none (project-kit#2274)."}
+    status: accepted
+    origin: {date: 2026-10-29, by: "Aleš Kalfas", why: "A rule a project chooses to bind on its own files sits in an ordinary rule set and binds whoever writes them, so a session follows the rules the rule-set reviewer judges its change by, and this rule adds none (project-kit#2274)."}
     pkit:
       friction:
         anchors: {record: ["COR-051#4", "COR-051#7", "COR-057#1", "COR-057#2"]}

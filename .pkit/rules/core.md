@@ -110,6 +110,10 @@ How a session relates to repos other than the one it is rooted in.
 
 **When you change the system, read first the accepted records its files lead to.** The records are where the system is decided, and the files carry those decisions out. Run `pkit refs records-for` once, with every file your change will commit, and read each record it lists as tied to them directly, at the points it names. Where it reaches a file only through another artefact, read that artefact, the narrowest first, and follow the records it rests on that bear on your change. An empty answer is no sign that no record governs a file. What the lookup reads, and why: the decisions README, "Finding the records a path leads to" ([project-kit#2165](https://github.com/aleskalfas/project-kit/issues/2165)).
 
+### 24. Follow the rule sets' rules on what your change owns (RS-OPS-024)
+
+**Follow the accepted rules that rule sets bind on what your change owns (COR-057 point 2).** Before writing, you may run `pkit rule-sets reach` with your files to see the rules on each one that exists. Before your last commit, run `pkit rule-sets altered` once, and follow each rule it lists as binding: at the head for a file the change adds, edits or brings under a rule, and at the base for one it removes. Where it lists none, this rule asks nothing more. These are the rules the rule-set reviewer judges your change against, and this rule adds none (COR-051 points 4 and 7, COR-057 point 1, [project-kit#2274](https://github.com/aleskalfas/project-kit/issues/2274)).
+
 ## Where rationale lives
 
 Each rule cites the record or doc that owns its "why", or, where none does, the issue that decided it. The umbrella references:
