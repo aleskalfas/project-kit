@@ -3272,7 +3272,7 @@ instances:
     lead: Your AI agent works fast, and forgets everything your project decided.
     rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
     n: 1
-    total: 17
+    total: 16
     override:
       rests:
         text: 'The question: how do you make it work your project''s way, without a heavy framework?'
@@ -3637,7 +3637,7 @@ instances:
     lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
     rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
     n: 2
-    total: 17
+    total: 16
     override:
       rests:
         text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
@@ -4007,7 +4007,7 @@ instances:
     rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
       later.
     n: 3
-    total: 17
+    total: 16
     override:
       rests:
         text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
@@ -4096,7 +4096,7 @@ instances:
     template: section
     part: '2'
     title: From idea to rule
-    summary: Where ideas start, your decisions, what every session is told, and the data the tools read.
+    summary: Where ideas start, your decisions, and what every session is told.
     mural_ids:
       root: 7f14984f-94fe-444f-b8ce-d300d207ae60
       bg: 016e7298-0ccf-43d8-8893-e94aa50442ce
@@ -4111,7 +4111,7 @@ instances:
       records, issues or docs.
     rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
-    total: 17
+    total: 16
     override:
       rests:
         text: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
@@ -4174,7 +4174,7 @@ instances:
     rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
       one'
     n: 5
-    total: 17
+    total: 16
     override:
       rests:
         text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
@@ -4398,7 +4398,7 @@ instances:
     rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
       merged with its code.'
     n: 6
-    total: 17
+    total: 16
     override:
       rests:
         text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
@@ -4568,7 +4568,7 @@ instances:
     rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
       generated from the rules.'
     n: 7
-    total: 17
+    total: 16
     override:
       rests:
         text: 'This week: each rule got a permanent id and a status. The file every session loads is now
@@ -4727,312 +4727,6 @@ instances:
       bg: b0935e86-0ca4-4f1f-b60d-d806fcd1dd55
       bar: f2213a49-12d8-4e9f-9220-2e2037336669
       text: a1a454d6-ab69-451a-85f8-f2694907f945
-  T-schemas:
-    template: slide
-    title: Rules and processes as data
-    lead: 'Rules precise enough for a program are data the tools read, and a staged process is data too:
-      every move is checked and logged.'
-    rests: 'This week: who may move an issue back, and how strictly, is two settings in workflow.yaml'
-    n: 8
-    total: 17
-    override:
-      rests:
-        text: 'This week: who may move an issue back, and how strictly, is two settings in workflow.yaml'
-    mural_ids:
-      root: 54132bb4-5305-4bff-9bcc-0a946e74e23b
-      bg: e51cbe64-1f54-452d-96da-fb3894fc4453
-      title: 5b775ec2-8566-4ae1-abd5-a5131271d311
-      lead: 638a6633-a155-453d-a307-9f9f35d5387d
-      rests: acca9041-dd14-4452-824a-80b2b03a2d21
-      num: e21acbf3-970b-49d8-81d0-22ea46918aee
-  T-schemas-problem:
-    template: callout
-    parent: T-schemas
-    title: The problem
-    body: A rule only in prose is applied differently by each script; a rule only in code is invisible.
-    x: 128
-    y: 576
-    mural_ids:
-      root: 94996edf-7a40-4d20-9324-fb28b022e798
-      bg: 4d996b02-17d1-477b-883c-89ba032ccc2e
-      bar: d6b43e33-83aa-442e-b121-1f7925d1f829
-      title: 7886911b-831f-4b2a-b260-c3a0d4e5d6f4
-      body: d0550595-e335-4b29-b578-640857457934
-  T-schemas-s1:
-    template: stage
-    parent: T-schemas
-    role: agents
-    head: Todo
-    text: Filed, not yet scheduled.
-    x: 128
-    y: 800
-    override:
-      root:
-        width: 512
-        height: 272
-      box:
-        width: 512
-        height: 272
-      head:
-        width: 408
-        height: 64
-      text:
-        y: 100
-        width: 448
-        height: 135
-    mural_ids:
-      root: a5b943ca-b4f7-448e-b172-19667e87525f
-      box: 40bef53d-e5e9-44a1-ac78-fb3d2ceb241e
-      dot: 565a1c79-0415-4d50-b479-1ae14ac7e7e7
-      head: b3b73e9a-e245-410d-9a1c-765efb4f4b96
-      text: d64f1e5a-abf1-4bf9-836e-f71105501150
-  T-schemas-l1:
-    template: link
-    parent: T-schemas
-    x: 640
-    y: 800
-    x1: 16
-    y1: 136.0
-    x2: 80
-    y2: 136.0
-    tone: text_secondary
-    override:
-      root:
-        width: 96
-        height: 272
-    mural_ids:
-      root: f17d060d-e888-4b10-9690-87ad3051bee4
-      arrow: 775d67ab-5a84-4590-9f41-c1506072df52
-  T-schemas-s2:
-    template: stage
-    parent: T-schemas
-    role: people
-    head: Backlog
-    text: You scheduled it into a milestone.
-    x: 736
-    y: 800
-    override:
-      root:
-        width: 512
-        height: 272
-      box:
-        width: 512
-        height: 272
-      head:
-        width: 408
-        height: 64
-      text:
-        y: 100
-        width: 448
-        height: 135
-    mural_ids:
-      root: 2ec5d2bc-ac9b-47c9-93bc-e61b6a5d7e6b
-      box: a863a586-dd5d-40aa-8999-3a3752ab987f
-      dot: 0963cb4c-7b96-4c7a-a057-c53efcbc68c6
-      head: 8e2a4d70-737b-4614-98bb-bf01c5b5b5d1
-      text: 5338abe4-01fa-4f6d-a216-9c90e51e811a
-  T-schemas-l2:
-    template: link
-    parent: T-schemas
-    x: 1248
-    y: 800
-    x1: 16
-    y1: 136.0
-    x2: 80
-    y2: 136.0
-    tone: text_secondary
-    override:
-      root:
-        width: 96
-        height: 272
-    mural_ids:
-      root: c8353367-17cf-444e-ad62-4a1ccb926d07
-      arrow: 7e7cd73f-735f-4c79-8601-5031b9f17801
-  T-schemas-s3:
-    template: stage
-    parent: T-schemas
-    role: agents
-    head: In Progress
-    text: Someone is working on it.
-    x: 1344
-    y: 800
-    override:
-      root:
-        width: 512
-        height: 272
-      box:
-        width: 512
-        height: 272
-      head:
-        width: 408
-        height: 64
-      text:
-        y: 100
-        width: 448
-        height: 135
-    mural_ids:
-      root: b8ac40f8-ac90-4ebd-859c-07561d0e7dfe
-      box: b4dd0e44-7cfb-49b1-b0a4-3d3d606a3eee
-      dot: 4ffe8ba4-0446-4d5d-a24e-c66040662bab
-      head: 8765a9cf-aaef-4d9b-8e22-b493726dcc42
-      text: a9668a27-255c-46a9-a315-fff9501be6d8
-  T-schemas-l3:
-    template: link
-    parent: T-schemas
-    x: 1856
-    y: 800
-    x1: 16
-    y1: 136.0
-    x2: 80
-    y2: 136.0
-    tone: text_secondary
-    override:
-      root:
-        width: 96
-        height: 272
-    mural_ids:
-      root: 989c75e9-35bd-407c-b9e8-f3d5cc16086a
-      arrow: ac112c68-570b-42c3-8d3d-2e61ce8b47da
-  T-schemas-s4:
-    template: stage
-    parent: T-schemas
-    role: checks
-    head: Review
-    text: A pull request is open and checked.
-    x: 1952
-    y: 800
-    override:
-      root:
-        width: 512
-        height: 272
-      box:
-        width: 512
-        height: 272
-      head:
-        width: 408
-        height: 64
-      text:
-        y: 100
-        width: 448
-        height: 135
-    mural_ids:
-      root: 550a91a0-cb02-49b8-88b1-983dd20ed2a5
-      box: 25b0199d-f36b-4d60-b11a-c2b8d1ccd14d
-      dot: 2f7c2bc3-0f3a-440c-879f-28a709b67b0c
-      head: 336cde67-dc24-4c88-b224-20831eb7d8ad
-      text: aaf3e705-1eec-46ae-a6af-df97ef680958
-  T-schemas-l4:
-    template: link
-    parent: T-schemas
-    x: 2464
-    y: 800
-    x1: 16
-    y1: 136.0
-    x2: 80
-    y2: 136.0
-    tone: text_secondary
-    override:
-      root:
-        width: 96
-        height: 272
-    mural_ids:
-      root: 99bbbaa0-157a-4c28-b89f-9349381050b0
-      arrow: c32f49b6-dea5-4e44-b55a-3e970877b969
-  T-schemas-s5:
-    template: stage
-    parent: T-schemas
-    role: people
-    head: Done
-    text: Merged on your yes, or closed by you.
-    x: 2560
-    y: 800
-    override:
-      root:
-        width: 512
-        height: 272
-      box:
-        width: 512
-        height: 272
-      head:
-        width: 408
-        height: 64
-      text:
-        y: 100
-        width: 448
-        height: 135
-    mural_ids:
-      root: 1055b405-5d33-47d6-bde6-0c731975c50f
-      box: e0613d7e-392d-47a7-aaa3-db0f344ada37
-      dot: 500188b6-ba47-45ff-aeb6-06b1d4e3fb36
-      head: 157790f3-f150-4a1c-8114-e9ae3ef7888c
-      text: d86065e4-3ec9-4d55-b8b5-056840c351f0
-  T-schemas-d1:
-    template: step
-    parent: T-schemas
-    ident: '1'
-    text: A decision says why; the data says exactly what
-    x: 128
-    y: 1120
-    override:
-      root:
-        width: 688
-      bg:
-        width: 688
-      text:
-        width: 624
-    mural_ids:
-      root: de08f25f-088d-42b9-b838-bbfddac6f2fc
-      bg: af6cf45e-eda7-4b68-a27a-c01bf144f695
-      tag: 546ffdc9-9c9f-4a10-95a7-fb01000ead61
-      text: 1a45cf9e-6cb9-48d3-af45-c9f0343f3eeb
-  T-schemas-d2:
-    template: step
-    parent: T-schemas
-    ident: '2'
-    text: Every move is checked, and logged with why
-    x: 880
-    y: 1120
-    override:
-      root:
-        width: 688
-      bg:
-        width: 688
-      text:
-        width: 624
-    mural_ids:
-      root: f33eb1dd-4de0-4a93-b6a8-98a141b806ae
-      bg: 79d28ec6-1dcd-4b6d-9116-48128fd2998a
-      tag: 34bcf783-df7b-4ae0-b391-2751fffb1b20
-      text: e321b288-4687-4234-a861-67acd6de2603
-  T-schemas-code:
-    template: code
-    parent: T-schemas
-    code: "# workflow.yaml (project-management)\n- from: in-progress\n  to: backlog\n  authorisation:\
-      \ user\n  severity: hard-reject"
-    x: 1632
-    y: 1120
-    override:
-      root:
-        height: 304
-      bg:
-        height: 304
-      text:
-        height: 240
-    mural_ids:
-      root: 23c575fa-1b5c-4496-a78c-2ae0230c32d3
-      bg: 8dca864c-50c6-4d3a-83cf-95b40cd6afe5
-      text: c1d5b110-bb6a-4042-8330-8387b2c523d2
-  T-schemas-limit:
-    template: notice
-    parent: T-schemas
-    text: 'Limit: Two processes run on it so far; whether it fits a third kind of work is untested.'
-    x: 128
-    y: 1478.0
-    mural_ids:
-      root: 8db97823-296d-409c-b6c9-cbb4b1a4983e
-      bg: a02861e6-af43-4a97-bd5c-2907cf901a90
-      bar: 9692f4e3-33da-46e5-a5a7-f5acfaebee0b
-      text: 6506adb7-5236-445a-a265-b85a153df447
   T-part-P2:
     template: section
     part: '3'
@@ -5051,8 +4745,8 @@ instances:
     lead: A skill carries the judgement; the command it pairs with does the part that must come out the
       same every time.
     rests: A record once filed by hand got the wrong number; since then agents must use the skill
-    n: 9
-    total: 17
+    n: 8
+    total: 16
     override:
       rests:
         text: A record once filed by hand got the wrong number; since then agents must use the skill
@@ -5138,8 +4832,8 @@ instances:
     lead: 'No agent judges its own work: separate reviewers each catch one kind of failure.'
     rests: 'This week: the critic changed two designs; reviewers caught two doc claims that were no longer
       true'
-    n: 10
-    total: 17
+    n: 9
+    total: 16
     override:
       rests:
         text: 'This week: the critic changed two designs; reviewers caught two doc claims that were no
@@ -5290,8 +4984,8 @@ instances:
     lead: What agents may do is your project's written rules, not the tool's guesses.
     rests: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent
       said no'
-    n: 11
-    total: 17
+    n: 10
+    total: 16
     override:
       rests:
         text: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that
@@ -5379,8 +5073,8 @@ instances:
     lead: An agent follows the ties between files without doubting them, so every tie is checked on every
       change.
     rests: In project-kit, this check runs before every push and on every pull request
-    n: 12
-    total: 17
+    n: 11
+    total: 16
     override:
       rests:
         text: In project-kit, this check runs before every push and on every pull request
@@ -5480,8 +5174,8 @@ instances:
     lead: When code changes, the documents that depend on it are named, not found later by accident.
     rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it
       wasn''t'
-    n: 13
-    total: 17
+    n: 12
+    total: 16
     override:
       rests:
         text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed
@@ -5610,8 +5304,8 @@ instances:
     title: project-management
     lead: You talk to one agent; it plans the work and runs builders in parallel.
     rests: 'This week, in one evening: six builders, four pull requests merged'
-    n: 14
-    total: 17
+    n: 13
+    total: 16
     override:
       rests:
         text: 'This week, in one evening: six builders, four pull requests merged'
@@ -5901,8 +5595,8 @@ instances:
       to wire.
     rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
       before merge'
-    n: 15
-    total: 17
+    n: 14
+    total: 16
     override:
       rests:
         text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
@@ -6113,8 +5807,8 @@ instances:
       run, still being shaped.
     rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until
       you decide'
-    n: 16
-    total: 17
+    n: 15
+    total: 16
     override:
       rests:
         text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes
@@ -6372,8 +6066,8 @@ instances:
     title: Questions?
     lead: Everything shown is in project-kit's own repository, built with pkit itself.
     rests: github.com/aleskalfas/project-kit
-    n: 17
-    total: 17
+    n: 16
+    total: 16
     override:
       rests:
         text: github.com/aleskalfas/project-kit
@@ -6443,7 +6137,6 @@ layouts:
   - T-decisions
   - T-found
   - T-sessions
-  - T-schemas
   origin:
   - -4246
   - 3941
