@@ -400,7 +400,7 @@ Both documentation roots start as `docs/`, and no install changes them. The firs
 - reference-graph consistency (`pkit refs validate`)
 - permission-gated mutations
 
-The friction check stays dormant until you declare where your documents live. Installing `project-management` adds a real merge gate on pull requests.
+The friction check asks nothing of your documents until you declare where they live. Installing `project-management` adds a real merge gate on pull requests.
 
 ## Go deeper
 

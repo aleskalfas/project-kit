@@ -26,12 +26,14 @@ pkit:
         - src/project_kit/install.py
         - .pkit/adapters/README.md
         - .pkit/rules/core.md
+        - .pkit/rule-sets/ops.md
         - .pkit/rules/README.md
       record:
         - COR-001
         - COR-002
         - COR-005
         - COR-014
+        - COR-068#3
         - ADR-059
         - ADR-034#1
       artefact:
@@ -85,7 +87,7 @@ pkit:
 - **1a.** The adopter installs the [system](../../../glossary.md#term-system--system) with `pkit init`, or upgrades it with `pkit upgrade`. Each checks the repository as step 2 says, writes the [methodology](../../../glossary.md#term-methodology--methodology)'s files and runs the same deploy primitives. The path goes on at step 5.
 - **1b.** The operator passes `--dry-run`. The system runs every refusal, names each script it would run with `would run`, and runs none of them ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)). The use case ends.
 - **3a.** The [project](../../../glossary.md#term-project--project) is not the methodology's [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. [Sync](../../../glossary.md#term-sync--sync) stops before it writes, under `--dry-run` too, names the remedy, and the use case ends ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)).
-- **4a.** The project is the methodology's source repository, where `.pkit/rules/core.md` is the methodology's own source. Sync copies nothing into the repository, and the path goes on at step 5 ([UC-014](../010-develop/UC-014-develop-methodology.md) and [ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
+- **4a.** The project is the methodology's source repository. There `.pkit/rules/core.md` is generated from the set `.pkit/rule-sets/ops.md`, which is the methodology's own source ([COR-068 point 3](../../../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)). Sync copies nothing into the repository, and the path goes on at step 5 ([UC-014](../010-develop/UC-014-develop-methodology.md) and [ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
 - **5a.** An [adapter](../../../glossary.md#term-adapter--adapter)'s script exits with an error. The system stops with `adapter primitive <script> exited with status <n>. See the output above for details.`, and the use case ends (`.pkit/adapters/README.md`).
 - **6a.** The instruction file is missing. The adapter's script creates it with both includes. Claude Code's adapter writes a `CLAUDE.md` with a heading, an opening paragraph and both includes, and prints `created    CLAUDE.md (minimal host with @-includes)`. The path goes on at step 7.
 - **6b.** The instruction file does not include the methodology's [operational rules](../../../glossary.md#term-operational-rule--operational-rule), so the adapter's script adds both includes and removes nothing ([COR-002](../../../../../../.pkit/decisions/core/COR-002-merge-delivery.md)). Claude Code's adapter puts them right after the first level-one heading of `CLAUDE.md`, and prints `insert`. Where `CLAUDE.md` has no such heading, it puts a heading and both includes above the text, and prints `prepend`. The path goes on at step 7.

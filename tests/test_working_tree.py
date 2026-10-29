@@ -20,6 +20,7 @@ from project_kit import friction_validate as fv
 from project_kit import validators
 from project_kit import working_tree as wt
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.shipped_rule_sets import own
 
 CONFIG = ".pkit/project/config.yaml"
 
@@ -75,7 +76,7 @@ def test_validation_and_the_change_check_find_the_same_artefacts(adopter: Adopte
     checked = fd.discover_artefacts(adopter.root, tree=fc.WorkingTree(adopter.root))
 
     locations = [a.location for a in validated.artefacts]
-    assert locations == ["docs/crlf.md", "docs/guide.md"]
+    assert own(locations) == ["docs/crlf.md", "docs/guide.md"]
     assert [a.location for a in checked.artefacts] == locations
     assert [a.place.pattern for a in checked.artefacts] == [
         a.place.pattern for a in validated.artefacts

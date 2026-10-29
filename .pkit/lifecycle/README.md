@@ -940,7 +940,8 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A release that l
 - **What the test cannot tell apart,** and the upgrade's copy writes over until #1600:
   - a project's own `lifecycle` area that holds a file named `ownership.py`
   - a project's own area under a name core shipped before v1.134.0, in a project still at a release before core shipped that name
-- **No release adds a core area or a core adapter** until #1600 builds the full check. A test holds the areas a release propagates, the adapters it ships, and the core area's `ownership.py` to what they are today.
+  - a project's own area at `.pkit/rule-sets/`, made at a release before the one that first ships the core `rule-sets` area
+- **No release adds a core area or a core adapter** until #1600 builds the full check, but `rule-sets`, where the backbone keeps its method rule sets. Every Markdown file there but its `README.md` is read as a rule set the backbone ships, so a project has no use for an area of that name. The exception is no precedent. A test holds the areas a release propagates, `rule-sets` among them, the adapters it ships, and the core area's `ownership.py` to what they are today.
 
 ### The dependency gates
 

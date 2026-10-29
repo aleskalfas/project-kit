@@ -79,6 +79,9 @@ NOT_PLACES: dict[str, str] = {
     ".pkit/capabilities/project-management/migrations/README.md": (
         "maintainer-facing: the capability's migration scripts"
     ),
+    ".pkit/rule-sets/README.md": (
+        "the folder's signpost; the rules README is the page that describes the set"
+    ),
 }
 
 # The trees of the code-to-doc mapping's retired rules (#1010), which the
