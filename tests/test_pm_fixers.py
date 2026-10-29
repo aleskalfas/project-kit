@@ -134,7 +134,7 @@ def test_the_companion_schema_refuses_a_bad_entry(entry: dict[str, str]) -> None
 
 def test_the_config_schema_takes_the_grant_list_and_refuses_another_shape() -> None:
     schema = _schema("config.schema.json")
-    base = {"schema_version": 1, "workstreams": []}
+    base = {"schema_version": 2, "workstreams": []}
     assert schema.is_valid({**base, "fixers": {}})
     assert schema.is_valid(
         {**base, "fixers": {FIXER: {"granted": [PAGE], "refused": ["handbook"]}}}

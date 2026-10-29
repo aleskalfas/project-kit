@@ -96,7 +96,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How an issue's owner moves
-  accDescr: An issue has no owner until an instance starts the issue, or files the issue from a seat other than the planning agent's. Where two instances take the issue at the same instant, the lower number keeps the issue. A hand-over moves the issue to another instance. A close, a move back from In Progress, or a new assignee clears the owner. In a project with a topology, an ownership that lapses, or whose seat is released, stops counting.
+  accDescr: An issue has no owner until an instance starts the issue, or files the issue from a seat other than the planning agent's. Where two instances take the issue at the same instant, the lower number keeps the issue. A hand-over moves the issue to another instance. A close, a move back from In Progress, or a new assignee clears the owner. In a project with a topology, an ownership that lapses, or whose seat is released, stops counting. An ownership whose build waits does not lapse.
   none[No owner] --> taken([Started by an instance, or filed by one])
   taken --> owned[Owned by that instance]
   owned --> clash([Taken by another instance at the same instant])
@@ -254,6 +254,7 @@ An instance is a clone of a [project](../../core/glossary.md#term-project--proje
 - An instance holds at most one seat (DEC-059 point 4).
 - An instance may be the [owner](../glossary.md#term-owner--owner) of issues ([DEC-035 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)).
 - A helper agent that a lead agent starts acts as the lead's instance (DEC-059 point 6).
+- A builder agent that the build command starts for a worker agent's [Task](../glossary.md#term-task--task) acts as no instance. The worker agent makes each write as the worker agent's seat (DEC-059 point 6).
 
 **States:** A clone becomes an instance once the clone sets a number, or, in a project with a topology, once the clone takes a seat. The clone stops being an instance when the number is cleared, or when the clone's seat is released (DEC-035 point 1 and DEC-059 point 6).
 
@@ -282,7 +283,7 @@ The owner of an [issue](../glossary.md#term-issue--issue) is the [instance](../g
 - An issue has at most one owner once a clash is resolved ([DEC-035 point 6](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#6-the-clash-guard-catches-and-resolves-it-does-not-lock)).
 - An instance that files work owns all of that work, the parents and the Tasks under the parents ([DEC-035 point 3](../../../../.pkit/capabilities/project-management/decisions/DEC-035-instance-ownership.md#3-a-clone-claims-at-creation-for-the-whole-tree)). The planning agent files with no owner, so the planning agent's work joins the ready Tasks that every seat shares ([DEC-059 point 7](../../../../.pkit/capabilities/project-management/decisions/DEC-059-topology-of-seats.md#7-work-reaches-agents-through-one-shared-pool)). Where the topology declares [pools](../glossary.md#term-pool--pool), that work joins the pool of each [Task](../glossary.md#term-task--task)'s [Milestone](../glossary.md#term-milestone--milestone) ([DEC-061 point 4](../../../../.pkit/capabilities/project-management/decisions/DEC-061-pools-of-workers.md#4-a-task-is-in-the-pool-of-its-milestone)).
 
-**States:** An issue has no owner until an instance files the issue or starts the issue, and a hand-over moves the owner to another instance. A close, a move back from In Progress, or a new assignee clears the owner (DEC-035 points 3 to 5). In a project with a topology, an ownership of a Task In Progress lapses once the work stops renewing the ownership. Any ownership stops counting once the ownership's seat is released (DEC-059 point 9).
+**States:** An issue has no owner until an instance files the issue or starts the issue, and a hand-over moves the owner to another instance. A close, a move back from In Progress, or a new assignee clears the owner (DEC-035 points 3 to 5). In a project with a topology, an ownership of a Task In Progress lapses once nothing renews the ownership, unless the ownership's build waits. Any ownership stops counting once the ownership's seat is released (DEC-059 point 9).
 
 **Always true:**
 

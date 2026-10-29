@@ -169,9 +169,10 @@ def test_detect_current_state_reads_a_label_bound_state(pi, monkeypatch) -> None
 
 
 def test_detect_current_state_ignores_a_stale_kit_label_under_a_board(pi, monkeypatch) -> None:
-    """Under a configured board the kit's `state:*` labels are NOT the substrate,
-    so a stale one must not be trusted: a false skip means the promotion silently
-    does not happen. The board field itself is deliberately NOT read here."""
+    """Where the map binds state to the board, the kit's `state:*` labels are NOT
+    the substrate, so a stale one must not be trusted: a false skip means the
+    promotion silently does not happen. The board's Status is read by move-issue,
+    which the caller runs next, not here."""
     called: list = []
 
     def fake_gh_run(args, config, **kwargs):  # pragma: no cover - must not run
@@ -179,7 +180,8 @@ def test_detect_current_state_ignores_a_stale_kit_label_under_a_board(pi, monkey
         raise AssertionError("no gh call may be made for a board-carried state")
 
     monkeypatch.setattr(pi, "gh_run", fake_gh_run)
-    assert pi._detect_current_state(42, {"has_projects_v2_board": True}, None) is None
+    on_board = pi.axis_labels.SubstrateMap(axes={"state": {"board": True}})
+    assert pi._detect_current_state(42, {"has_projects_v2_board": True}, on_board) is None
     assert called == []
 
 

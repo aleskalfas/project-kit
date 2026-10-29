@@ -747,3 +747,82 @@ def test_without_pools_the_listing_reads_no_milestone(root: Path) -> None:
     repo = _repo()
     assert _list(root, repo) == 0
     assert not any("milestones" in " ".join(argv) for argv in repo.calls)
+
+
+# ---- where the board carries the state (DEC-051 point 6, DEC-062 point 5) -------
+
+
+def _state_on_board(root: Path, monkeypatch: pytest.MonkeyPatch, statuses) -> list[list[str]]:
+    """Bind the state to the board in the project's map, and stand in for the one
+    listing read of the listed issues' cards: `statuses` maps an issue to its
+    card's Status, None standing for a board that cannot be read. Returns the
+    node ids each read was asked for."""
+    from ruamel.yaml import YAML
+
+    (root / "project" / "substrate-map.yaml").write_text(
+        "schema_version: 1\naxes:\n  type:\n    kit-label: true\n  state:\n    board: true\n",
+        encoding="utf-8",
+    )
+    workflow = YAML(typ="safe").load(
+        (SCRIPTS.parent / "schemas" / "workflow.yaml").read_text(encoding="utf-8")
+    )
+    reads: list[list[str]] = []
+
+    def read(_config, _workflow, issue_node_ids, **_kw):
+        asked = list(issue_node_ids)
+        reads.append(asked)
+        if statuses is None:
+            return None, "missing required scopes [read:project]"
+        options = {f"I_{number}": status for number, status in statuses.items()}
+        options = {node_id: options[node_id] for node_id in asked if node_id in options}
+        listed = LIST.board_status.ListedStatuses("board #4", workflow, options, frozenset(asked))
+        return listed, ""
+
+    monkeypatch.setattr(LIST.board_status, "read_listed", read)
+    return reads
+
+
+def test_a_task_in_review_is_read_from_its_cards_status(
+    root: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The labels are not read: the card of #50 says Review, so it is a Task in
+    Review a released seat left, and #51's card says Backlog, so it is not. #52
+    has no card, and is said to be in no state the listing reads."""
+    repo = _repo(worker_1=("you", "k7"))
+    _task(repo, 50, "Add the dispatcher", state="backlog", claims=(("worker-1", "k7"),))
+    _task(repo, 51, "Not yet", state="review", claims=(("worker-1", "k7"),))
+    _task(repo, 52, "No card", state="review", claims=(("worker-1", "k7"),))
+    repo.prs = {60: "feat/50-add-the-dispatcher"}
+    assert _force(root, repo, "worker-1", yes=True) == 0
+    reads = _state_on_board(root, monkeypatch, {50: "Review", 51: "Backlog"})
+    capsys.readouterr()
+
+    assert _list(root, repo) == 0
+
+    captured = capsys.readouterr()
+    left = captured.out[captured.out.index(LEFT_HEADING) :].splitlines()
+    assert left == [
+        LEFT_HEADING,
+        "  seat worker-1, clone k7 of @you:",
+        "    #50 Add the dispatcher: pull request #60",
+    ]
+    assert "warn: #52 is in no state this listing reads: #52 has no card on board #4" in (
+        captured.err
+    )
+    assert len(reads) == 1 and {"I_50", "I_51", "I_52"} <= set(reads[0])
+
+
+def test_a_board_that_cannot_be_read_names_no_task_by_its_state(
+    root: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    repo = _repo(worker_1=("you", "k7"))
+    _task(repo, 50, "Add the dispatcher", claims=(("worker-1", "k7"),))
+    assert _force(root, repo, "worker-1", yes=True) == 0
+    _state_on_board(root, monkeypatch, None)
+    capsys.readouterr()
+
+    assert _list(root, repo) == 3
+
+    captured = capsys.readouterr()
+    assert LEFT_HEADING not in captured.out
+    assert "the board's Status could not be read (missing required scopes" in captured.err

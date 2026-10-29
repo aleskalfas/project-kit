@@ -515,8 +515,9 @@ class IssueRecord:
     """An issue and its native parent, from one read of its record.
 
     ``issue`` holds the fields the pm scripts read off ``gh issue view --json``,
-    in that shape: ``title``, ``body``, ``labels`` (``{"name": …}`` objects),
-    ``state`` (``OPEN`` / ``CLOSED``) and ``milestone``. ``parent`` is the issue's
+    in that shape: ``id`` (the issue's node id, by which its card on a board is
+    found), ``title``, ``body``, ``labels`` (``{"name": …}`` objects), ``state``
+    (``OPEN`` / ``CLOSED``) and ``milestone``. ``parent`` is the issue's
     native parent, ``None`` when it has none (or when the instance's issue record
     does not carry the field); its ``repository`` is relative to the issue's own.
     """
@@ -598,6 +599,7 @@ def read_issue_record(
         for label in record.get("labels") or []
     ]
     issue = {
+        "id": str(record.get("node_id") or ""),
         "title": str(record.get("title") or ""),
         "body": str(record.get("body") or ""),
         "labels": labels,

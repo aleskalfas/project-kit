@@ -148,17 +148,22 @@ def test_substrate_map_binding_type_elsewhere_yields_nothing(issue_types) -> Non
     behaviour change during extraction.
     """
 
-    class _Map:
-        pass
-
     import _lib.axis_labels as axis_labels
 
-    original = axis_labels.axis_title_prefix_remap
-    axis_labels.axis_title_prefix_remap = lambda axis, m: None
-    try:
-        assert infer_structural_type("[EPIC] x", issue_types, substrate_map=_Map()) is None
-    finally:
-        axis_labels.axis_title_prefix_remap = original
+    bound = axis_labels.SubstrateMap(axes={"type": {"label": {"remap": {"bug": "kind/bug"}}}})
+    assert infer_structural_type("[EPIC] x", issue_types, substrate_map=bound) is None
+
+
+def test_substrate_map_binding_type_to_the_kit_labels_reads_as_no_map(issue_types) -> None:
+    """A map binding `type` with `kit-label: true` reads the kit's vocabulary, as
+    with no map (project-management DEC-062 point 4)."""
+    import _lib.axis_labels as axis_labels
+
+    kit = axis_labels.SubstrateMap(axes={"type": {"kit-label": True}})
+    assert infer_structural_type("[EPIC] x", issue_types, substrate_map=kit) == "epic"
+    assert infer_structural_type("[EPIC] x", issue_types, substrate_map=kit) == (
+        infer_structural_type("[EPIC] x", issue_types)
+    )
 
 
 # ---- robustness to unexpected schema values (#917) -------------------------

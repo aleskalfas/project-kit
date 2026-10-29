@@ -289,18 +289,14 @@ def _compare(
         # Label drift — only methodology-mandated classes, and only where the
         # kit's OWN `<axis>:*` labels are the substrate.
         #
-        # The predicate is the CARRIAGE accessor's `expects_kit_labels`, not the
-        # seam's same-named one. The seam's is `substrate_map is None` — a pure
-        # map-presence question that cannot see the board. Under greenfield WITH a
-        # board, priority and workstream live on board fields, so the kit's
-        # `priority:*` vocabulary means nothing to either peer; comparing it there
-        # is how a leftover kit label from before the board became a recurring
-        # drift warning that neither side can act on. The previous code skipped
-        # that case by reading the flag inline. Carriage answers it correctly for
-        # all four shapes — greenfield/board, greenfield/no-board, bound, and
-        # absent-from-a-present-map — which is exactly the drift this accessor
-        # exists to prevent, so this comparison asks it rather than keeping a
-        # second opinion.
+        # The predicate is the CARRIAGE accessor's `expects_kit_labels`: where a
+        # map binds the axis to the board, the adopter's labels or nothing, the
+        # kit's `priority:*` vocabulary means nothing to either peer, and
+        # comparing it there would make a leftover kit label a recurring drift
+        # warning neither side can act on. Carriage answers it for every shape —
+        # no map, a `kit-label` binding, any other binding, and absent from a
+        # present map — so this comparison asks it rather than keeping a second
+        # opinion.
         for axis in ("type", "priority", "workstream"):
             if not axis_carriage.expects_kit_labels(axis, config, substrate_map):
                 continue

@@ -1,0 +1,240 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T233109Z-431c3965.yaml
+    revalidated:
+      at: 2026-10-29T00:31:35Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-owner
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-10-29T00:31:31Z
+      outcome: unchanged
+      unchanged-because: The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. This change keeps the claim of a build that waits (DEC-059 point 9), which a release frees. The term says what an owner is and lists no release, and the owner, the clash guard and a seat's holder, as the entry tells them apart, hold under all of them.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T183638Z-abcc0940.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-10-29T00:31:39Z
+      outcome: unchanged
+      unchanged-because: The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. This change says how a worker builds, that a builder acts as no instance, and that a waiting build keeps its claim (DEC-059 points 2, 6 and 9). Setting up the topology, a seat's number and name, and the refusal of an owner written as a label do not turn on any of them.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-10-29T00:31:44Z
+      outcome: unchanged
+      unchanged-because: "The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. The base's DEC-062 has the substrate map choose each axis's carriage, which leaves the values an issue takes as they were. This change adds a builder that acts as no instance, and a waiting build's claim that does not lapse. Leaving a Task to its owner, the clash guard and taking a Task over hold under all of them: a released or lapsed claim is still no claim the guard refuses on."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-10-29T00:31:48Z
+      outcome: unchanged
+      unchanged-because: "The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. They are further ways a dead session's Task is freed. The variants for a dead session's lapsed claim hold for a Task whose build does not wait; a dead session whose build waits keeps its claim, which is deferred to #2287, as its deferral says."
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#9
+          reason: "DEC-059 point 9 now keeps the claim of a build that waits on a question or its hand-back, so a dead seat session whose build waits keeps its claim, which the use case's variants do not name. #2287's slice 2 builds the wait and adds the variant."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-10-29T00:31:52Z
+      outcome: unchanged
+      unchanged-because: The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. The base's DEC-062 has the substrate map choose each axis's carriage, which leaves the values an issue takes as they were. This change adds the worker's builder, which acts as no instance (DEC-059 point 6). The lead starts a Task of its scope, a helper acting as the lead's instance builds it and the lead lands it through its pull request, under all of them.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+    revalidated:
+      at: 2026-10-29T00:31:56Z
+      outcome: unchanged
+      unchanged-because: The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. The base's DEC-062 has the substrate map choose each axis's carriage, which leaves the values an issue takes as they were. A close as completed only adds a way to Done, and leaves an owned Task's state, In Progress or Review, as step 2 reads it. This change adds a builder that owns and signs nothing. The listing signed by each owner shows the same instances under all of them.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-091-measure-topologies.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-10-29T00:32:00Z
+      outcome: unchanged
+      unchanged-because: The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. This change adds a waiting build's claim that does not lapse. An ownership still names its seat, which is what the use case reads, and the measure's events hold under all of them.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T040414Z-bea9746a.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T233109Z-431c3965.yaml
+    revalidated:
+      at: 2026-10-29T00:32:04Z
+      outcome: unchanged
+      unchanged-because: The base's DEC-062 has the substrate map choose each axis's carriage, which leaves the values an issue takes as they were. The base's lines in DEC-006 and DEC-012 on where state is kept, its completed close and REQ-042 naming it among the tested closes, and its move back, leave the plan as it was. This change refines a worker's procedure (DEC-029). Planning an intent, its values, its slicing and its gate hold under all of them.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-10-29T00:32:09Z
+      outcome: unchanged
+      unchanged-because: "The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. The base's DEC-062 has the substrate map choose each axis's carriage, which leaves the values an issue takes as they were. A Task moved back returns to Backlog for the next worker, and the worker's path to its merge is no stop for a completed close. This change's worker path through the build command and a waiting build's claim are deferred to #2287, as its deferrals say."
+      deferred:
+        - anchor:
+            kind: record
+            value: project-management:DEC-029
+          reason: "DEC-029 now has the worker build each Task through the build command, which step 7 does not yet walk. #2287's slice 6 builds the worker's loop and rewrites the use case's path."
+        - anchor:
+            kind: record
+            value: project-management:DEC-059#9
+          reason: "DEC-059 point 9 now keeps the claim of a build that waits on a question or its hand-back, which the use case's lapse variants do not name. #2287's slice 2 builds the wait and rewrites them."
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T222714Z-39971455.yaml
+    revalidated:
+      at: 2026-10-29T00:32:13Z
+      outcome: unchanged
+      unchanged-because: The base adds a Task's close as completed without a pull request to the closes that release the owner (DEC-035 point 4, DEC-059 point 9), and the move back from In Progress, which releases it too. This change has a worker build through the build command. The journey sets a topology up and compares topologies by their pull requests and merges, which none of them changes.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+    revalidated:
+      at: 2026-10-29T00:32:17Z
+      outcome: unchanged
+      unchanged-because: "Judged with the base's answers: the README is updated for the completed close of a Task without a pull request, the comment a seat posts naming its seat, and the move back from In Progress; DEC-062 and DEC-051 point 6 refine where an axis and an issue's state are kept, which #2271 builds. This change adds DEC-063, the build command, not built: the README describes the commands and the worker's loop as built today, and its seat sections are rewritten by #2287."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-063 now has a worker build each Task through the build command, and DEC-055 point 3 has the landing command read answer files. #2287 builds the first and rewrites the README's seat sections; #1779 builds the second and rewrites the README's landing."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
