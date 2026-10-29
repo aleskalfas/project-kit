@@ -351,7 +351,6 @@ test_software_analysis.py
 test_software_analysis_after.py
 test_software_analysis_analyses.py
 test_software_analysis_append_only.py
-test_software_analysis_check.py
 test_software_analysis_connections.py
 test_software_analysis_diagrams.py
 test_software_analysis_fixer.py
