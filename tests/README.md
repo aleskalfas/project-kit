@@ -144,6 +144,13 @@ summed 1 879 s of test time and took 529 s on the clock):
 tests took 23 s on the clock in a pass of their own, `-n 4`, against 127 s before
 (2026-10-29).
 
+`test_friction_check.py`'s row predates #2320, which commits the install of the
+friction modules once per session (`committed_adopter`). Its 148 tests and the
+164 of four other friction modules took 359 s on the clock, against 564 s before.
+Both passes ran only these modules, `-n 3`, on 2026-10-29, on a Mac other builders
+were sharing. Each of its tests still runs the change check, which reads git for its
+base.
+
 A software-analysis test still runs the capability's scripts as the backbone
 does — a stamp, the check, the number check — each a process that starts several
 `pkit` processes of its own. Its slice of #2313 converts them, as three of the
