@@ -105,10 +105,10 @@ run() {
 
 # The test step (#1182). The suite runs in parallel workers (pytest-xdist):
 # `-n auto`, or as many as $PKIT_TEST_WORKERS names (`0` runs it in this one
-# process). CI's full run names eight (#2309). The parallel pass ends by
-# printing its 30 slowest tests (`--durations=30`), in every run. The tests
-# marked `serial` cannot share the machine with other workers; they run after
-# the parallel pass, in one process, in the same step.
+# process). The parallel pass ends by printing its 30 slowest tests
+# (`--durations=30`), in every run. The tests marked `serial` cannot share the
+# machine with other workers; they run after the parallel pass, in one process,
+# in the same step.
 #
 # At most two full suites run at once on a machine. The step first takes one of
 # two slots under the user's cache directory, and a run that finds both taken
