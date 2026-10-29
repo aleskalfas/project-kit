@@ -4,9 +4,10 @@
 whole-repository check, so every test holds them to it: the debt is exactly
 the check's stale and deferred findings, oldest first; an explanation's
 findings are exactly the check's for that artefact, each with the commits
-behind it and what clears it. Every test stands up a real adopter repository
-and lays down dated history (`Timeline`); the read-only test compares every
-byte of the repository, `.git` included, before and after each command.
+behind it and what clears it. Every test stands up a real adopter repository,
+its install committed once per session (`committed_adopter`), and lays down
+dated history (`Timeline`); the read-only test compares every byte of the
+repository, `.git` included, before and after each command.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
-from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo, MakeAdopterRepo
 from tests.friction_documents import (
     CONFIG,
     T1,
@@ -53,8 +54,8 @@ CORE = Anchor("path", "src/core/**")
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    return Timeline(committed_adopter)
 
 
 def _cli(*args: str) -> Result:

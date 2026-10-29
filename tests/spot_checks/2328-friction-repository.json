@@ -1,0 +1,50 @@
+[
+  {
+    "id": "fr-excluded-artefact-in-the-measures",
+    "file": "src/project_kit/friction_repository.py",
+    "find": "        if artefact.excluded or anchors_of(artefact):\n            continue",
+    "replace": "        if anchors_of(artefact):\n            continue"
+  },
+  {
+    "id": "fr-placed-file-read-under-its-own-name",
+    "file": "src/project_kit/friction_repository.py",
+    "find": "            return self.placed_in(rel, entry)",
+    "replace": "            return self.placed_in(_path, entry)"
+  },
+  {
+    "id": "fr-shallow-history-never-said",
+    "file": "src/project_kit/friction_repository.py",
+    "find": "        shallow=bool(history.shallow),\n        artefact_reports=tuple(reports),",
+    "replace": "        shallow=False,\n        artefact_reports=tuple(reports),"
+  },
+  {
+    "id": "frep-debt-newest-first",
+    "file": "src/project_kit/friction_report.py",
+    "find": "    entries.sort(key=lambda entry: entry.origin.date)",
+    "replace": "    entries.sort(key=lambda entry: entry.origin.date, reverse=True)"
+  },
+  {
+    "id": "frep-explain-offers-no-deferral",
+    "file": "src/project_kit/friction_report.py",
+    "find": "        answers = (*revalidate, Answer(\"deferred\", defer))",
+    "replace": "        answers = revalidate"
+  },
+  {
+    "id": "frb-main-prints-the-other-form",
+    "file": "scripts/friction_report_body.py",
+    "find": "    text = json.dumps(made, indent=2) + \"\\n\" if args.json else made[\"body\"]",
+    "replace": "    text = json.dumps(made, indent=2) + \"\\n\" if not args.json else made[\"body\"]"
+  },
+  {
+    "id": "frb-answered-apart-needs-an-answer",
+    "file": "scripts/friction_report_body.py",
+    "find": "NO_ANSWER_NEEDED = frozenset({DEFERRED, LEFT_OUT, ANSWERED_APART})",
+    "replace": "NO_ANSWER_NEEDED = frozenset({DEFERRED, LEFT_OUT})"
+  },
+  {
+    "id": "fc-placed-file-links-not-set-aside",
+    "file": "src/project_kit/friction_check.py",
+    "find": "    aside = later.aside_of(rel)\n    if later.placed_content(rel, aside)",
+    "replace": "    aside = NOTHING_SET_ASIDE\n    if later.placed_content(rel, aside)"
+  }
+]
