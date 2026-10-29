@@ -990,7 +990,7 @@ def test_cli_in_a_fresh_install_counts_the_rules_it_receives(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     """What an adopter sees after a real install: no record of its own, and the rules
-    of the backbone's rule sets, which it receives and which are counted (ADR-073)."""
+    of the backbone's rule sets, which it receives and which are counted (ADR-075)."""
     adopter = make_adopter_repo(fresh=True)
     result = CliRunner().invoke(main, ["decisions", "validate"])
     assert result.exit_code == 0, result.output

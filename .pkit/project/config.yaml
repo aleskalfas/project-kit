@@ -139,6 +139,6 @@ friction:
     - CHANGELOG.md
     - uv.lock
     # history once released: the changesets a release consumes, read as written, so
-    # no citation in one is judged against today's rules (ADR-073 point 8)
+    # no citation in one is judged against today's rules (ADR-075 point 8)
     - .changes/
   delegate: project-manager

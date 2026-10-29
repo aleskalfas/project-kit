@@ -969,7 +969,7 @@ def _classify_path(path: str) -> tuple[Tier, str | None] | None:
         ".pkit/schemas/",
         ".pkit/cli/",
         ".pkit/migrations/",
-        ".pkit/rule-sets/",  # the backbone's method rule sets, `OPS` among them (ADR-073 point 9)
+        ".pkit/rule-sets/",  # the backbone's method rule sets, `OPS` among them (ADR-075 point 9)
         ".pkit/workflow/",  # legacy: the workflow area was retired in COR-027;
         # deletions of leftover content trigger backbone migrations.
     )

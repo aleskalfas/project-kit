@@ -1,31 +1,31 @@
-"""Loaded rule sets and their loaded files (COR-068; ADR-073 points 2 to 5).
+"""Loaded rule sets and their loaded files (COR-068; ADR-075 points 2 to 5).
 
 A *loaded* rule set (`loaded: true`) keeps operational rules: its accepted rules
 bind on the work of the agent sessions that load a file generated from it, never
 on an artefact (COR-068 points 1 and 2). This module is the one home of that file:
 
 - **Where it goes** (`loaded_file_of`), by the set's owner, never by a key in the
-  set (ADR-073 point 2): the backbone's set at `.pkit/rules/core.md`
+  set (ADR-075 point 2): the backbone's set at `.pkit/rules/core.md`
   (`BACKBONE_LOADED_FILE`), a project's own at `.pkit/rules/project.md`
   (`PROJECT_LOADED_FILE`), the paths the harness's include reads. A capability's
   loaded set has none: validation refuses it (COR-068 point 4).
-- **What it holds** (`project`), the one projection of a set into its file (ADR-073
+- **What it holds** (`project`), the one projection of a set into its file (ADR-075
   point 3): the set's body with each accepted rule's section under the heading
   `N. Title (RS-<SET>-NNN)`, at the level the set writes it, and each proposed,
   superseded or withdrawn rule's section left out. The prose before the first
   section, the group headings and the prose under them carry over as the set writes
   them. No front matter, and no text the set does not hold.
-- **Writing it** (`generate`), what `pkit rule-sets generate` runs (ADR-073 point 4):
+- **Writing it** (`generate`), what `pkit rule-sets generate` runs (ADR-075 point 4):
   the loaded file of each loaded set the repository authors, refusing before it
   writes anything where none is authored here but one arrives by sync, or a set
   cannot be read or does not join.
 - **Checking it** (`staleness_findings`), the part of validation's `rule-sets` member
-  that fails a loaded file out of step with its set (ADR-073 point 5): byte for
+  that fails a loaded file out of step with its set (ADR-075 point 5): byte for
   byte once line endings are read as `\\n`, only where the set is authored, by the
   tree's own predicate (`is_synced_copy`).
 
 The generator and the check both call `project`, so a file the generator writes
-always passes the check (ADR-073, "Why one function for the generator and the
+always passes the check (ADR-075, "Why one function for the generator and the
 check"). The set's body is read through the one reading of a document's parts
 (`document_parts.Body`, ADR-057 point 2).
 """
@@ -44,11 +44,11 @@ from project_kit import rule_sets as rs
 from project_kit.line_breaks import universal_newlines
 
 #: The backbone's loaded set's loaded file: the path the harness's include reads
-#: (ADR-073 point 2).
+#: (ADR-075 point 2).
 BACKBONE_LOADED_FILE = PurePosixPath(".pkit/rules/core.md")
 
 #: A project's own loaded set's loaded file, the path the project's include reads
-#: (ADR-073 point 6).
+#: (ADR-075 point 6).
 PROJECT_LOADED_FILE = PurePosixPath(".pkit/rules/project.md")
 
 #: The command that writes a loaded file, as the findings and messages name it.
@@ -79,7 +79,7 @@ def heading_title(heading: str, rule_id: str) -> str:
 
 
 def project(rule_set: rs.RuleSet) -> str:
-    """The loaded file of `rule_set`, as text with `\\n` line breaks (ADR-073 point 3).
+    """The loaded file of `rule_set`, as text with `\\n` line breaks (ADR-075 point 3).
 
     The set's body, read once (`document_parts.Body`). Each section headed by one of
     the set's rules — from its heading to the next heading of the same or a higher
@@ -156,14 +156,14 @@ def loaded_sets(discovery: rs.RuleSetDiscovery) -> tuple[rs.RuleSet, ...]:
 def synced_copy_test(target_root: Path) -> Callable[[str], bool] | None:
     """Whether a set's file arrives here by sync: the tree's own predicate
     (`is_synced_copy`), keyed on origin and on the repository, never on the path
-    (ADR-073 point 5). None for a tree without the ownership module."""
+    (ADR-075 point 5). None for a tree without the ownership module."""
     ownership = lifecycle_ownership.load_ownership(target_root)
     if ownership is None:
         return None
     return lambda rel: bool(ownership.is_synced_copy(target_root, rel))
 
 
-# --- the check (ADR-073 point 5) ------------------------------------------------------
+# --- the check (ADR-075 point 5) ------------------------------------------------------
 
 
 def staleness_findings(
@@ -224,7 +224,7 @@ def _stale(path: Path, expected: str) -> str | None:
     return None if actual == expected else "the file differs from"
 
 
-# --- the generator (ADR-073 point 4) --------------------------------------------------
+# --- the generator (ADR-075 point 4) --------------------------------------------------
 
 
 class GenerateRefusal(click.ClickException):

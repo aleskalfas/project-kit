@@ -11,7 +11,7 @@ pkit:
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - src/project_kit/install.py
         - src/project_kit/loaded_rule_sets.py
-      record: [COR-001, COR-014, "COR-051#6", "COR-064#1", "COR-064#2", COR-068, ADR-073]
+      record: [COR-001, COR-014, "COR-051#6", "COR-064#1", "COR-064#2", COR-068, ADR-075]
       artefact: [".pkit/schemas/README.md#rule-set-files"]
 ---
 

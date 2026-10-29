@@ -229,7 +229,7 @@ def parse_pin(text: Any) -> Pin | None:
 #: (COR-051 point 2): beside the rules, never among a rule's own fields.
 CHECKS_KEY = "checks"
 
-#: The front-matter key that makes a set a loaded one (COR-068 point 1; ADR-073 point
+#: The front-matter key that makes a set a loaded one (COR-068 point 1; ADR-075 point
 #: 6): `loaded: true`. A loaded set's accepted rules bind on the work of the sessions
 #: that load the file generated from it, never on an artefact.
 LOADED_KEY = "loaded"
@@ -847,7 +847,7 @@ class RuleSetFindingKind(Enum):
     UNKNOWN_CHECK = "unknown-check"  # a backbone check or registered command that is not there
     PIN_CONFLICT = "pin-conflict"  # routes to one artefact pinning one set at different majors
     FILL_CONFLICT = "fill-conflict"  # the most specific sets bring different fills for a point
-    # A loaded set (COR-068; ADR-073 points 5 and 6).
+    # A loaded set (COR-068; ADR-075 points 5 and 6).
     INHERITS_LOADED = "inherits-loaded"  # a set inheriting a loaded set, which none inherits
     SECOND_LOADED = "second-loaded-set"  # a second loaded set of one component, or the project
     CAPABILITY_LOADED = "capability-loaded-set"  # a capability's set marked loaded
@@ -1451,7 +1451,7 @@ def _successor_findings(rule_set: RuleSet, catalogue: _Catalogue) -> Iterable[Ru
 def _loaded_set_findings(
     rule_set: RuleSet, discovery: RuleSetDiscovery
 ) -> Iterable[RuleSetFinding]:
-    """What a loaded set gets wrong beyond its file's shape (COR-068; ADR-073 point 6).
+    """What a loaded set gets wrong beyond its file's shape (COR-068; ADR-075 point 6).
 
     - a capability's set marked loaded: how its loaded file would reach the sessions is
       decided with the first capability that ships one, so until then its accepted rules
@@ -1499,7 +1499,7 @@ def _loaded_set_findings(
                 RuleSetFindingKind.LOADED_HEADING,
                 f"the body of a loaded rule set holds the top-level heading {heading.title!r}; "
                 f"the file generated from it is included into a host that owns the H1, so the "
-                f"set opens with prose or a second-level heading (ADR-073 point 6; core rule "
+                f"set opens with prose or a second-level heading (ADR-075 point 6; core rule "
                 f"13). Remove the heading, or make it a second-level one.",
             )
 
@@ -2399,7 +2399,7 @@ class _Walk:
             found: list[_Edge] = []
             for index, pin in rule_set.pins:
                 inherited, _problem = resolve_pin(self.rule_sets, pin)
-                # A loaded set is never a parent on a route (ADR-073 point 7): its rules
+                # A loaded set is never a parent on a route (ADR-075 point 7): its rules
                 # bind on sessions' work, never on an artefact, whatever validation finds.
                 if inherited is not None and not inherited.loaded:
                     behind = PinCheck(rule_set, index, pin, inherited).behind
@@ -2465,7 +2465,7 @@ class _Routes:
     def __init__(self, walk: _Walk, selecting: frozenset[str]) -> None:
         self.walk = walk
         self.selecting = selecting
-        # A loaded set starts no route (ADR-073 point 7), even one that validation
+        # A loaded set starts no route (ADR-075 point 7), even one that validation
         # refuses for a scope: no loaded rule binds on an artefact (COR-068 point 2).
         self.starts = tuple(
             s

@@ -2371,7 +2371,7 @@ def rule_sets_group() -> None:
     migration to read rather than walk routes or judge pins itself (ADR-057
     points 1 and 2): `reach` and `altered` read only and run no query.
     `generate` writes the file a session loads from a loaded set authored here
-    (ADR-073 point 4). Validation of rule-set files is `pkit validate`'s
+    (ADR-075 point 4). Validation of rule-set files is `pkit validate`'s
     `rule-sets` member.
     """
 
@@ -2516,7 +2516,7 @@ def rule_sets_generate_command() -> None:
     A loaded rule set (`loaded: true`) keeps operational rules; the file a
     session loads is generated from it: the backbone's set at
     `.pkit/rules/core.md`, a project's own at `.pkit/rules/project.md`
-    (ADR-073 points 2 and 4). The file holds each accepted rule under the
+    (ADR-075 points 2 and 4). The file holds each accepted rule under the
     heading `N. Title (RS-<SET>-NNN)` with its statement, under the set's
     sections, and none of the set's data. Says for each file whether it
     changed. Writes no other file, and validates, syncs or merges nothing.

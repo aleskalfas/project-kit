@@ -161,7 +161,7 @@ AGENT_POLICY = "agent-policy"
 # A citation of a point its record does not hold (COR-058 point 1): read from prose, so
 # reported and never failed, by the member and by `pkit refs validate` alike.
 POINT_CITATION = "point-citation"
-# A citation of an operational rule that is missing or retired (COR-068 point 6; ADR-073
+# A citation of an operational rule that is missing or retired (COR-068 point 6; ADR-075
 # point 8): read from prose too, so a warning.
 OPERATIONAL_CITATION = "operational-rule-citation"
 
@@ -2481,7 +2481,7 @@ def _cites_loaded_set(
     discovery: rule_sets.RuleSetDiscovery, resolution: rule_sets.CitationResolution
 ) -> bool:
     """Whether a rule citation names a loaded set's rule: that citation is judged by the
-    check of operational-rule citations alone, so none is reported twice (ADR-073 point 8)."""
+    check of operational-rule citations alone, so none is reported twice (ADR-075 point 8)."""
     reference = resolution.reference
     if reference is None:
         return False
@@ -2543,7 +2543,7 @@ def _validate_point_citations(artifacts: list[Artifact], target_root: Path) -> l
     return issues
 
 
-# --- citations of operational rules (COR-068 point 6; ADR-073 point 8) ---------------
+# --- citations of operational rules (COR-068 point 6; ADR-075 point 8) ---------------
 #
 # An operational rule of a loaded set is cited by its layer and number, `core rule 19`,
 # or by its id, `backbone:RS-OPS-019` or `RS-OPS-019`. The forms, with any case of the
@@ -2716,7 +2716,7 @@ def unheld_operational_rules(target_root: Path) -> list[UnheldOperationalRule]:
 
     The citations are read from the text files of the working tree's one listing, but the
     project's tests (a file beneath a `tests` folder, or a `test_*.py`). Left out (COR-068
-    point 6; ADR-073 point 8):
+    point 6; ADR-075 point 8):
 
     - a synced copy, by the tree's own predicate (`is_synced_copy`), so where a set
       arrives by sync only the project's own citations of its rules are read
@@ -2880,7 +2880,7 @@ def _retired_operational(
 
 def _validate_operational_citations(target_root: Path) -> list[Issue]:
     """Each citation of a missing or retired operational rule, at `<file>:<line>`
-    (`unheld_operational_rules`). Read from prose, so a warning (ADR-073 point 8)."""
+    (`unheld_operational_rules`). Read from prose, so a warning (ADR-075 point 8)."""
     return [
         Issue(location=f"{unheld.path}:{unheld.citation.line}", diagnosis=unheld.message)
         for unheld in unheld_operational_rules(target_root)

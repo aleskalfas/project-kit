@@ -71,7 +71,7 @@
   },
   "$defs": {
     "loaded": {
-      "title": "What a loaded set refuses (COR-068 point 1; ADR-073 point 6)",
+      "title": "What a loaded set refuses (COR-068 point 1; ADR-075 point 6)",
       "description": "A loaded set binds on the work of the sessions that load it, not on artefacts, so it takes none of the parts that say where rules bind: no scope, no inheritance, no part a check enforces, and no extension point offered or filled.",
       "properties": {
         "scope": {

@@ -1335,7 +1335,7 @@ def test_validate_command_prints_the_rule_sets_section_and_fails_on_errors(
 
 def test_validate_command_is_quiet_on_a_fresh_install(adopter: AdopterRepo) -> None:
     """A fresh install holds the backbone's rule sets alone, each rule accepted, and they
-    pass (COR-068; ADR-073 point 1)."""
+    pass (COR-068; ADR-075 point 1)."""
     rules = len(shipped_rules(adopter.root))
     assert rules > 0
     result = CliRunner().invoke(main, ["validate", "--no-refs"])

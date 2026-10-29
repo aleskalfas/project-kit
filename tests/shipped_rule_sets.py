@@ -1,4 +1,4 @@
-"""The rule sets the backbone ships, which every adopter receives (COR-068; ADR-073 point 1).
+"""The rule sets the backbone ships, which every adopter receives (COR-068; ADR-075 point 1).
 
 Every adopter holds `.pkit/rule-sets/`, where the backbone keeps its method rule
 sets, the loaded set `OPS` among them. The folder is a place declared to hold
@@ -20,7 +20,7 @@ A test of what the shipped sets change, such as a fresh install's counts, reads
 them with `shipped_rules`, so it follows the set as it grows.
 
 The dormant-pass tests that take the folder out cover a state no installed project
-reaches since ADR-073, since every install carries it.
+reaches since ADR-075, since every install carries it.
 """
 
 from __future__ import annotations

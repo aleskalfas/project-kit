@@ -1,4 +1,4 @@
-"""Loaded rule sets (COR-068; ADR-073, #2260).
+"""Loaded rule sets (COR-068; ADR-075, #2260).
 
 A loaded set (`loaded: true`) keeps operational rules. Its accepted rules bind on
 the work of the sessions that load a file generated from it, never on an artefact.
@@ -422,7 +422,7 @@ def test_an_h1_in_a_loaded_set_s_body_is_refused(adopter: AdopterRepo) -> None:
 
 def test_the_reach_walk_routes_through_no_loaded_set(adopter: AdopterRepo) -> None:
     """Even a loaded set validation refuses for a scope, and a set validation refuses
-    for inheriting one, bind nothing of it on an artefact (ADR-073 point 7)."""
+    for inheriting one, bind nothing of it on an artefact (ADR-075 point 7)."""
     project_set(adopter, loaded_text("OWN", accepted("RS-OWN-001"), scope=["docs/**"]))
     adopter.write(
         {

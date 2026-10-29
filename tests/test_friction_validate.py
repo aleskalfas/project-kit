@@ -1631,7 +1631,7 @@ def test_validate_command_passes_on_a_fresh_install_awake_on_the_shipped_rules(
 ) -> None:
     """A fresh install declares no place, yet it receives the backbone's rule sets, whose
     folder is a place declared to hold rule sets and whose rules carry the container
-    (COR-068; ADR-073 point 1): the pass is awake on them alone, and passes."""
+    (COR-068; ADR-075 point 1): the pass is awake on them alone, and passes."""
     rules = len(shipped_rules(adopter.root))
     assert rules > 0
     result = CliRunner().invoke(main, ["validate", "--no-refs"])

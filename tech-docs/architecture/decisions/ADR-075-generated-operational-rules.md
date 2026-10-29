@@ -1,5 +1,5 @@
 ---
-id: ADR-073
+id: ADR-075
 title: The rules file is generated from the backbone's loaded rule set, and validation keeps the two in step
 status: accepted
 date: 2026-10-28

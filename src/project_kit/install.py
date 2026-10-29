@@ -136,7 +136,7 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     # here: capability source is bundled (a distribution medium) but installed
     # on demand, not auto-propagated to every adopter (ADR-033 §3).
     "migrations",
-    # The backbone's method rule sets, its loaded set `OPS` among them (ADR-073 point 1):
+    # The backbone's method rule sets, its loaded set `OPS` among them (ADR-075 point 1):
     # the location rule reads every Markdown file of `.pkit/rule-sets/` as a set the
     # backbone ships. The one area added past the hold below, as its exception names
     # (ADR-065 point 13).

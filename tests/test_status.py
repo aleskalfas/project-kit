@@ -449,7 +449,7 @@ def test_status_reports_the_shipped_rule_sets_alone_on_a_fresh_install(
     installed_target: Path,
 ) -> None:
     """A fresh install holds the backbone's rule sets alone, which pin nothing (COR-068;
-    ADR-073 point 1)."""
+    ADR-075 point 1)."""
     rules = len(shipped_rules(installed_target))
     assert rules > 0
     result = CliRunner().invoke(status, [])
