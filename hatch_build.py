@@ -130,6 +130,7 @@ FILTERED_TREES: tuple[str, ...] = (
     "process",
     "lifecycle",
     "migrations",
+    "rule-sets",
 )
 
 # Adopter-tier directories whose EXISTENCE the installer reads. `install.py`

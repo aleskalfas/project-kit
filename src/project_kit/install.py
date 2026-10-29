@@ -136,15 +136,21 @@ PROPAGATED_AREAS: tuple[str, ...] = (
     # here: capability source is bundled (a distribution medium) but installed
     # on demand, not auto-propagated to every adopter (ADR-033 §3).
     "migrations",
+    # The backbone's method rule sets, its loaded set `OPS` among them (ADR-073 point 1):
+    # the location rule reads every Markdown file of `.pkit/rule-sets/` as a set the
+    # backbone ships. The one area added past the hold below, as its exception names
+    # (ADR-065 point 13).
+    "rule-sets",
 )
 
 # The one core area a project's own area can share a name with today, and the
 # file that tells the core one apart (ADR-065 point 13). `lifecycle` first
 # shipped in v1.149.0, with `ownership.py` in the same commit, and the core area
-# has held that file since. Every other area above has shipped since v1.134.0.
-# No release adds a core area or a core adapter until #1600 builds the full
-# check: `tests/test_area_name_clash.py` holds the set of areas above, and of the
-# adapters the bundle ships, to today's.
+# has held that file since. Every other area above but `rule-sets` has shipped
+# since v1.134.0. No release adds another core area or a core adapter until #1600
+# builds the full check: `tests/test_area_name_clash.py` holds the set of areas
+# above, and of the adapters the bundle ships, to today's. `rule-sets` is the one
+# exception the hold names (ADR-065 point 13).
 LIFECYCLE_AREA = OWNERSHIP_MODULE.parent.name
 LIFECYCLE_MARK = OWNERSHIP_MODULE.name
 
