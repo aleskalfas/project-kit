@@ -1,26 +1,376 @@
-# The talk's slides as data (structure agreed 29 October; see building-blocks.md,
-# "The slides' structure"). One entry per slide, in the talk's order.
+# The Friday talk's slides as data. One entry per slide, in the talk's order
+# (see 2026-10-29-friday-talk.md, "The talk's order" and "The slides' structure").
+# A generator (2026-10-29-friday-talk.gen.py) turns these entries into instances
+# of the board's library templates in 2026-10-29-friday-talk.board.yaml.
+# Fields: title, message (the slide's lead), problem, does (2-4), show (the
+# week's evidence, the slide's small bottom line), visual (drawn from library
+# components), limit, minutes, notes (spoken, not on the slide).
+#
+# Vocabulary, one word per thing: you (never "the person" or "the user"); merge
+# (never "land"); depends on (never "rests on" or "anchored"); capability (an
+# optional add-on, defined on the install slide); the project-manager agent;
+# builder (defined on the agents slide); "rules" always qualified.
 
 talk:
-  title: "pkit: building with AI, the way your project decides"
+  project: "project-kit (pkit)"
+  title: "Building with AI, the way your project decides"
+  author: "Aleš Kalfas"
+  date: "30 October 2026"
+  version: "pkit 1.149"
   length_minutes: 45
 
+parts:
+  - id: P0
+    title: "Why pkit?"
+    summary: "What goes wrong when an AI agent builds with you, and how to start."
+  - id: P1
+    title: "What the agent knows"
+    summary: "Your decisions, the data the tools read, and what every session is told."
+  - id: P2
+    title: "How the agent works"
+    summary: "Procedures, roles, permissions, and documents that stay true."
+  - id: P3
+    title: "What you install"
+    summary: "Capabilities: optional add-ons for your discipline, and how they connect."
+  - id: P4
+    title: "Over time"
+    summary: "How pkit improves without breaking your work, and what comes next."
+
 slides:
-  - id: docs-that-know
-    block: 11
-    title: "Docs that know when they're wrong"
-    message: "When the code changes, the docs it makes wrong are named, not discovered."
-    problem: "Documentation rots silently, and you find out when someone acts on it."
+
+  - id: opening
+    part: P0
+    title: "Why pkit?"
+    message: "Your AI agent works fast, and forgets everything your project decided."
+    problem: ""
     does:
-      - "Each document declares what it rests on: code, decisions, other documents"
-      - "When one changes, the change must answer for each document it affects: updated, still accurate (why), or fixed later (when)"
-      - "A reviewer checks the answers; `pkit friction debt` shows what is out of date"
-    show: "This week: the docs reviewer caught a false 'still accurate' on REQ-042 after the move back"
+      - "It forgets a decision, and makes it again, differently"
+      - "It writes in its own habits, not your conventions"
+      - "It changes the code and leaves the docs saying something false"
+      - "It asks you twenty times, or not at all"
+    show: "The question: how do you make it work your project's way, without a heavy framework?"
     visual:
-      kind: diagram
-      shows: "code changes → the document resting on it is flagged → the change answers → a reviewer checks"
-      source: mermaid
-    limit: "It only covers what is anchored; an honest answer depends on the reviewer."
-    minutes: 3.5
+      kind: cards
+      cards:
+        - {ident: "1", space: tech, space_label: "Part 1", heading: "What the agent knows", body: "Your decisions, written down, and what every session is told."}
+        - {ident: "2", space: tech, space_label: "Part 2", heading: "How the agent works", body: "Procedures, roles and permissions, and docs that stay true."}
+        - {ident: "3", space: user, space_label: "Part 3", heading: "What you install", body: "Optional add-ons (capabilities): project-management and software-engineering."}
+        - {ident: "4", space: user, space_label: "Part 4", heading: "Over time", body: "Upgrades that keep your work, and what comes next."}
+    limit: ""
+    minutes: 2
     notes: >-
-      See block 9 in building-blocks.md (anchors and answers).
+      pkit is installed into a repository, so an AI agent works the way the project decided.
+      project-kit is built with pkit itself: every example in this talk is from this week.
+
+  - id: install
+    part: P0
+    title: "Install pkit"
+    message: "One command installs pkit, and from then on every file has exactly one owner: pkit or you."
+    problem: "A methodology copied by hand is frozen the day it is copied, and editing the copy blocks every update."
+    does: []
+    show: "pkit status shows how pkit is wired in a project; optional add-ons (capabilities) come later"
+    visual:
+      kind: compare
+      left: {space: tech, space_label: "pkit's files", heading: "Replaced on every upgrade", k1: "Where", v1: ".pkit/decisions/core, .pkit/skills/core, …", k2: "Rule", v2: "Never edit them: add your own beside them"}
+      right: {space: user, space_label: "Your files", heading: "Never replaced by an upgrade", k1: "Where", v1: "every project/ folder, your configuration", k2: "Rule", v2: "Yours to change, kept across every upgrade"}
+    limit: "Not light on disk: with four capabilities, a 4-file project's first commit held 689 files."
+    minutes: 3
+    notes: >-
+      pkit init writes pkit's files into .pkit/, merges your AI tool's settings without overwriting them,
+      and installs the skills and agents where Claude Code reads them. Today that is Claude Code.
+      In a newcomer's trial run, the setup committed 689 files for a 4-file project.
+      What sits in the agent's context: one rules file, and one line per skill and agent.
+
+  - id: decisions
+    part: P1
+    title: "Decision records"
+    message: "Choices that later work depends on are written down, with why, and you accept each before work builds on it."
+    problem: "A choice made in a chat is gone the next session, and the agent makes it again, differently."
+    does:
+      - "One record per choice: context, decision, why, what follows"
+      - "Proposed in the change that needs it, accepted by you before it merges"
+      - "Numbered points that keep their numbers, so other files can cite them"
+    show: "This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted, then built"
+    visual:
+      kind: flow
+      stages:
+        - {role: agents, head: "A choice comes up", text: "The agent meets a choice later work will depend on."}
+        - {role: agents, head: "A record is drafted", text: "Context, the decision, why, what follows. Status: proposed."}
+        - {role: people, head: "You accept it", text: "In the pull request, before anything is built on it."}
+        - {role: code, head: "The work follows it", text: "Code and docs built on it cite the record."}
+    limit: "Writing and reviewing a record takes time: worth it only for choices that bind later work."
+    minutes: 3.5
+    notes: "Core, project, capability and architecture records share one shape. Only accepted records may be built on."
+
+  - id: checked
+    part: P1
+    title: "Checked every time"
+    message: "Records, docs and code cite each other; one command checks every citation, on every change."
+    problem: "A person notices a dead link; an agent follows it."
+    does:
+      - "Every kind of file has a declared shape"
+      - "Every citation is written so a program can follow it"
+      - "pkit and each capability add checks; pkit validate runs them all"
+    show: "This week: two pull requests each added a record numbered DEC-062; a check caught it before merge"
+    visual:
+      kind: code
+      code: |
+        $ pkit validate
+          warning  agents/code-reviewer.md:42
+            → '[software-engineering:DEC-002] D4'
+              names point D4, which DEC-002
+              does not hold
+          16 validators ran; 0 errors
+    limit: "It checks structure, not meaning: a record can be valid and still wrong."
+    minutes: 2
+    notes: "61 warnings like this one had piled up, because each check started as a warning. Cleared this week; each kind will fail from now on."
+
+  - id: schemas
+    part: P1
+    title: "Schemas: what the tools read"
+    message: "Rules precise enough for a program are written as data, and the tools read them at run time."
+    problem: "A rule only in prose is applied differently by each script; a rule only in code is invisible."
+    does:
+      - "A decision says why; the data says exactly what"
+      - "Changing who may make a move is one line, not three scripts"
+    show: "This week: who may move an issue back, and how strictly, is two settings in workflow.yaml"
+    visual:
+      kind: code
+      code: |
+        # workflow.yaml (project-management)
+        - from: in-progress
+          to: backlog
+          authorisation: user
+          severity: hard-reject
+    limit: ""
+    minutes: 1.5
+    notes: "The YAML is the rule; a JSON Schema checks its shape. 37 of them: the engine's rules, a project's settings, kinds of document, how capabilities plug in, permissions."
+
+  - id: processes
+    part: P1
+    title: "Processes as data"
+    message: "A staged process is data too: every move is checked, and each item keeps a log of its moves."
+    problem: ""
+    does:
+      - "A capability declares its states and the moves between them"
+      - "Each move is checked: may this item move now?"
+      - "Each item keeps a log of every move and why"
+      - "Only you may schedule work, close it, or send it back"
+    show: "The issue lifecycle runs on it: every move this week is in a log"
+    visual:
+      kind: lifecycle
+      stages:
+        - {role: agents, head: "Todo", text: "Filed, not yet scheduled."}
+        - {role: people, head: "Backlog", text: "You scheduled it into a milestone."}
+        - {role: agents, head: "In Progress", text: "Someone is working on it."}
+        - {role: checks, head: "Review", text: "A pull request is open and checked."}
+        - {role: people, head: "Done", text: "Merged on your yes, or closed by you."}
+    limit: "Two processes run on it so far; whether it fits a third kind of work is untested."
+    minutes: 1.5
+    notes: "Two uses today, project-management's issue lifecycle among them. A new staged process is a definition, not new machinery."
+
+  - id: sessions
+    part: P1
+    title: "What every session is told"
+    message: "Every session loads the same working rules, each pointing to where its reason is written."
+    problem: "Each session starts knowing none of your working rules: you repeat them, or it breaks them."
+    does:
+      - "pkit's working rules, loaded into every session"
+      - "Your own rules sit beside them; updates never touch yours"
+    show: "One of them: retry once a step that failed for an outside cause, then stop"
+    visual:
+      kind: code
+      code: |
+        # CLAUDE.md
+        @.pkit/rules/core.md
+        @.pkit/rules/project.md
+    limit: "Every session carries every rule today, about 2,500 words, relevant or not."
+    minutes: 2
+    notes: "Being reworked now: permanent numbers, a size budget, and each capability its own rules, loaded where it is installed."
+
+  - id: scratchpad
+    part: P1
+    title: "Scratchpad notes"
+    message: "Unfinished ideas go into scratchpad notes: desk papers you can explore, contradict and drop."
+    problem: ""
+    does: []
+    show: "This talk is a scratchpad note"
+    visual:
+      kind: compare
+      left: {space: user, space_label: "Scratchpad note", heading: "Thinking", k1: "Allowed", v1: "Explore, contradict, change your mind", k2: "Ends", v2: "Done, with what it produced, or dropped"}
+      right: {space: tech, space_label: "Decision record", heading: "Decided", k1: "Allowed", v1: "One choice, accepted by you", k2: "Ends", v2: "Replaced by a later record, never edited away"}
+    limit: ""
+    minutes: 1
+    notes: "Branches are parallel universes of the same desk; the machinery is there when an idea becomes real."
+
+  - id: skills
+    part: P2
+    title: "Skills and the commands they pair with"
+    message: "A skill carries the judgement; the command it pairs with does the part that must come out the same every time."
+    problem: "Asked to add a record, an agent improvises a number, a layout and a level of care, different each time."
+    does:
+      - "A written procedure an agent follows for one kind of task"
+      - "Only its short description is in every session; the rest loads on use"
+    show: "A record once filed by hand got the wrong number; since then agents must use the skill"
+    visual:
+      kind: compare
+      left: {space: user, space_label: "Skill", heading: "The judgement", k1: "Example", v1: "decision-author", k2: "Carries", v2: "which kind of record, what it must argue, how to word it"}
+      right: {space: tech, space_label: "Command", heading: "The mechanics", k1: "Example", v1: "pkit new decision", k2: "Carries", v2: "the next number, the file's layout"}
+    limit: "Nothing checks that the skill was used: the command stamps the file either way."
+    minutes: 2.5
+    notes: "Skills and commands turn decisions into one kind of task, done the same way every time."
+
+  - id: agents
+    part: P2
+    title: "Agents: roles with limits"
+    message: "No agent judges its own work: separate reviewers each catch one kind of failure."
+    problem: "One agent doing everything judges its own work, and agrees with itself."
+    does:
+      - "Each role gets only the tools it needs"
+      - "The critic opposes a draft before you see it"
+      - "Reviewers check every change before it merges"
+    show: "This week: the critic changed two designs; reviewers caught two doc claims that were no longer true"
+    visual:
+      kind: actors
+      actors:
+        - {role: people, icon: people, name: "You: decide"}
+        - {role: agents, icon: agents, name: "Builder: writes"}
+        - {role: checks, icon: checks, name: "Critic: reads only"}
+        - {role: checks, icon: checks, name: "Reviewers: can block"}
+    limit: "Every review round costs several agent runs."
+    minutes: 3
+    notes: "A builder is the agent that writes code. Each capability brings its own agents. An agent's behaviour is designed as scenarios first (storyboards)."
+
+  - id: permissions
+    part: P2
+    title: "Permissions you write down"
+    message: "What agents may do is your project's written rules, not the tool's guesses."
+    problem: "The AI tool decides action by action: nobody can see its rules, and every role is treated the same."
+    does:
+      - "Always refused, whatever is granted: rm -rf, sudo, force-push"
+      - "Some raw commands refused, so agents use the ones that check"
+      - "A scratch folder agents never have to ask about"
+    show: "This week: a builder's rm -rf was refused; it asked another agent to run it, and that agent said no"
+    visual:
+      kind: compare
+      left: {space: user, space_label: "The tool's auto mode", heading: "A guess per action", k1: "Who decides", v1: "the model, each time", k2: "Visible", v2: "no"}
+      right: {space: tech, space_label: "pkit's permissions", heading: "Rules you write down", k1: "Who decides", v1: "your project, once", k2: "Visible", v2: "yes: pkit permissions explain"}
+    limit: "The rules stop ordinary commands, not a determined workaround; the OS sandbox is off on macOS."
+    minutes: 2.5
+    notes: "Fewer prompts is mostly the tool's job now. pkit adds fixed rules, limits per role, and steering onto the checked path."
+
+  - id: docs
+    part: P2
+    title: "Docs that know when they're wrong"
+    message: "When code changes, the documents that depend on it are named, not found later by accident."
+    problem: "Documentation goes stale silently, and you find out when someone acts on it."
+    does:
+      - "Each document declares what it depends on"
+      - "The change says, per document: updated, still true, or fixed later"
+      - "A reviewer checks the answers; what is out of date is counted"
+    show: "This week: a builder marked a requirement 'still accurate'; the docs reviewer showed it wasn't"
+    visual:
+      kind: code
+      code: |
+        # trial run: the greeting in cli.py changed
+        $ pkit friction check
+          ACT-cli-user     depends on cli.py
+          UC-001           depends on cli.py
+          docs/usage.md    depends on cli.py
+        3 documents to answer for
+    limit: "Only documents that declare what they depend on are covered; the rest go stale as before."
+    minutes: 3.5
+    notes: "Probably pkit's most distinctive idea. 50 deferred answers in project-kit today, all visible."
+
+  - id: pm
+    part: P3
+    title: "project-management"
+    message: "You talk to one agent; it plans the work and runs builders in parallel."
+    problem: ""
+    does: []
+    show: "This week, in one evening: six builders, four pull requests merged"
+    visual:
+      kind: fanout
+      left:
+        - {role: people, head: "You", text: "Describe the work, approve the plan, say yes to each merge."}
+        - {role: agents, head: "Project-manager agent", text: "Files and plans the work, then starts one builder per task, each in its own copy of the repository."}
+      middle:
+        - {icon: agents, head: "Builder: task A"}
+        - {icon: agents, head: "Builder: task B"}
+        - {icon: agents, head: "Builder: task C"}
+      right: {role: checks, head: "Reviewers, then merge", text: "Reviewers check each result; on your yes, the agent merges it."}
+    limit: "GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual."
+    minutes: 5
+    notes: >-
+      Underneath: a structure (EPIC, Feature, Task), a lifecycle with gates, merging with reviewers,
+      planning a batch of work in one approval, fixers after a merge, a board.
+      Parallel agents in separate clones also exist, still experimental (the last slide).
+
+  - id: se
+    part: P3
+    title: "software-engineering"
+    message: "The builder follows your conventions; its three reviewers join every code merge with nothing to wire."
+    problem: "An AI writes in its default style, and the code is merged on a glance, or reviewed by its author."
+    does:
+      - "The builder reads your conventions first, then follows them"
+      - "Code, security, docs reviewers: each blocks only on what it can prove"
+    show: "This week: the code reviewer blocked code that couldn't find organisation-owned boards; fixed before merge"
+    visual:
+      kind: flow
+      stages:
+        - {role: code, head: "software-engineering", text: "Brings the builder and three reviewers."}
+        - {role: neutral, head: "A slot", text: "\"Which reviewers a merge needs\": software-engineering fills it."}
+        - {role: agents, head: "project-management", text: "Requires them on every code change, without naming who."}
+    limit: "With no conventions written down, the builder falls back on generic habits."
+    minutes: 3
+    notes: "Capabilities never name each other: one fills a slot another defines. Swap one for another that fills the same slot, and nothing connected notices."
+
+  - id: current
+    part: P4
+    title: "Stay current"
+    message: "Improvements arrive by one command, and your files survive every upgrade, by design."
+    problem: "A methodology you can't update goes stale; one that updates by overwriting destroys your work."
+    does:
+      - "pkit upgrade replaces only pkit's files"
+      - "pkit pin holds a version until you choose"
+      - "pkit report sends what hurts you upstream"
+    show: "Coming in 2.0: a migration that keeps each project's current setup, so nothing changes until you decide"
+    visual:
+      kind: flow
+      stages:
+        - {role: code, head: "pkit improves", text: "A release with its changelog."}
+        - {role: people, head: "You upgrade", text: "One command, when you choose."}
+        - {role: checks, head: "Migrations repair", text: "Renames and moves brought across, safe to re-run."}
+        - {role: people, head: "You report back", text: "Updates come down, reports go up."}
+    limit: "A migration is only as good as its author."
+    minutes: 2
+    notes: "One version for pkit's core, one per capability."
+
+  - id: next
+    part: P4
+    title: "What's next"
+    message: "Three things that run today, and are still being shaped."
+    problem: ""
+    does: []
+    show: "All three run in project-kit today, and each will still change"
+    visual:
+      kind: cards
+      cards:
+        - {ident: "A", space: tech, space_label: "software-analysis", heading: "What the software must do", body: "Actors, use cases and requirements, kept true as the code changes."}
+        - {ident: "B", space: user, space_label: "living-docs", heading: "Docs by audience", body: "Every page depends on what makes it true, and agents fix it after a merge."}
+        - {ident: "C", space: tech, space_label: "parallel agents", heading: "Agents in separate clones", body: "A planner and workers, each taking only the work its pool allows."}
+    limit: ""
+    minutes: 2
+    notes: "Experimental: say so."
+
+  - id: questions
+    part: P4
+    title: "Questions?"
+    message: "Everything shown is in project-kit's own repository, built with pkit itself."
+    problem: ""
+    does: []
+    show: "github.com/aleskalfas/project-kit"
+    visual: {kind: none}
+    limit: ""
+    minutes: 5
+    notes: ""

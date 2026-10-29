@@ -423,7 +423,7 @@ To admit: a rule is advice, and how often agents follow it is not measured; the 
   - a project can see the rules its tools apply, and the checks hold them to their shape
   - the rule and the code that applies it can change apart: a new state or title format is a data change
 - **Weight:** nothing in a session's context; an agent reads a schema when its task needs it (the project manager reads the eight it uses).
-- **Evidence (this session):** the move back added two lines to `workflow.yaml` and the commands picked them up; the critic of the Icebox found that a sixth state would touch every place that hard-codes five, which is exactly where a rule was not yet data.
+- **Evidence (this session):** the move back is two transitions in `workflow.yaml`, whose settings (who may make the move, how strictly it is refused) the commands read, beside its own checking code in `move-issue`; the critic of the Icebox found that a sixth state would touch every place that hard-codes five, which is exactly where a rule was not yet data.
 - **Weak spot:**
   - not everything is data yet: some code still hard-codes what a schema declares (the order of states)
   - a YAML rule with no prose beside it can be applied without anyone knowing why; the decision must stay linked
