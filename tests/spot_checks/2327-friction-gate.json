@@ -1,0 +1,8 @@
+[
+  {
+    "id": "fc-mode-not-read-from-the-head",
+    "file": "src/project_kit/friction_check.py",
+    "find": "        mode=settings.mode_or_default,\n        mode_as_written=settings.mode,\n        dormant=False,",
+    "replace": "        mode=ENFORCING,\n        mode_as_written=settings.mode,\n        dormant=False,"
+  }
+]
