@@ -57,7 +57,14 @@ from typing import TYPE_CHECKING, Any, Literal
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agent_policy, agents_overlay, connections, record_points, rule_sets
+from project_kit import (
+    agent_policy,
+    agents_overlay,
+    connections,
+    lifecycle_ownership,
+    record_points,
+    rule_sets,
+)
 from project_kit.backbone_schemas import ADDRESS_WORD_PATTERN
 from project_kit.line_breaks import universal_newlines
 from project_kit.package_validate import POINT_SEPARATOR, ROLE_QUALIFIER
@@ -154,9 +161,12 @@ AGENT_POLICY = "agent-policy"
 # A citation of a point its record does not hold (COR-058 point 1): read from prose, so
 # reported and never failed, by the member and by `pkit refs validate` alike.
 POINT_CITATION = "point-citation"
+# A citation of an operational rule that is missing or retired (COR-068 point 6; ADR-075
+# point 8): read from prose too, so a warning.
+OPERATIONAL_CITATION = "operational-rule-citation"
 
 #: The kinds of finding that warn and never fail `pkit refs validate`.
-WARNING_KINDS = frozenset({POINT_CITATION})
+WARNING_KINDS = frozenset({POINT_CITATION, OPERATIONAL_CITATION})
 
 
 @dataclass(frozen=True)
@@ -282,6 +292,7 @@ def check_corpus(
     issues.extend(_kind(_validate_rule_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_address_citations(artifacts, target_root), CITATION))
     issues.extend(_kind(_validate_point_citations(artifacts, target_root), POINT_CITATION))
+    issues.extend(_kind(_validate_operational_citations(target_root), OPERATIONAL_CITATION))
     issues.extend(_kind(_validate_composes(artifacts, target_root), COMPOSES))
     issues.extend(_kind(_validate_agent_policy(artifacts, target_root), AGENT_POLICY))
     return issues
@@ -2455,7 +2466,7 @@ def _validate_rule_citations(artifacts: list[Artifact], target_root: Path) -> li
     issues: list[Issue] = []
     for art, citation in cited:
         resolution = rule_sets.resolve_citation(discovery, citation)
-        if resolution.resolved:
+        if resolution.resolved or _cites_loaded_set(discovery, resolution):
             continue
         issues.append(
             Issue(
@@ -2464,6 +2475,17 @@ def _validate_rule_citations(artifacts: list[Artifact], target_root: Path) -> li
             )
         )
     return issues
+
+
+def _cites_loaded_set(
+    discovery: rule_sets.RuleSetDiscovery, resolution: rule_sets.CitationResolution
+) -> bool:
+    """Whether a rule citation names a loaded set's rule: that citation is judged by the
+    check of operational-rule citations alone, so none is reported twice (ADR-075 point 8)."""
+    reference = resolution.reference
+    if reference is None:
+        return False
+    return any(s.loaded for s in discovery.sets_named(reference.set_name))
 
 
 def _validate_address_citations(artifacts: list[Artifact], target_root: Path) -> list[Issue]:
@@ -2519,6 +2541,350 @@ def _validate_point_citations(artifacts: list[Artifact], target_root: Path) -> l
                 for unheld in reader.unheld(point_citations(text, capability=art.capability))
             )
     return issues
+
+
+# --- citations of operational rules (COR-068 point 6; ADR-075 point 8) ---------------
+#
+# An operational rule of a loaded set is cited by its layer and number, `core rule 19`,
+# or by its id, `backbone:RS-OPS-019` or `RS-OPS-019`. The forms, with any case of the
+# first letter: `core rule N`, `core.md rule N`, `rules/core.md #N` (or `#N` with no
+# space), `rules/core.md N` (and `rules/core.md rule N`), a list after the plural
+# (`core rules 3, 5 and 13`) and a range (`core rules 14-15`); the same with `project`
+# for a project's own loaded set. After the path, the numbers stay on its line. A number
+# that opens a line as a list item (`3. `) is read neither after the plural nor in a
+# list. A bare `rule N` is never read, since it may name an item of any numbered list, a
+# record's points among them.
+
+# White space within a line, and white space that runs onto the next line, past a
+# quote's, a comment's or a list's marker there.
+_OPS_INLINE = r"[ \t]+"
+_OPS_BREAK = r"[ \t]*\n[ \t]*(?:>|#|//|\*)?[ \t]*"
+_OPS_GAP = rf"(?:{_OPS_INLINE}(?:\n[ \t]*(?:>|#|//|\*)?[ \t]*)?|{_OPS_BREAK})"
+# Before a number of a list: white space within the line, or onto the next line where
+# the number does not open that line as a list item (`3. `), which numbers the list's
+# own items, not rules.
+_OPS_TO_NUMBER = rf"(?:{_OPS_INLINE}|{_OPS_BREAK}(?!\d+\.(?:\s|\Z)))"
+_OPS_NUMBER = r"\d+(?![\w])"
+_OPS_RANGE = r"[ \t]*(?:-|\u2013|to)[ \t]*"
+_OPS_JOIN = rf"(?:,{_OPS_TO_NUMBER}|,?{_OPS_GAP}(?:and|or){_OPS_TO_NUMBER}|{_OPS_RANGE})"
+_OPS_LIST = rf"{_OPS_NUMBER}(?:{_OPS_JOIN}{_OPS_NUMBER})*"
+# After the path, the number and the list stay on the path's line.
+_OPS_INLINE_JOIN = rf"(?:,{_OPS_INLINE}|,?{_OPS_INLINE}(?:and|or){_OPS_INLINE}|{_OPS_RANGE})"
+_OPS_INLINE_LIST = rf"{_OPS_NUMBER}(?:{_OPS_INLINE_JOIN}{_OPS_NUMBER})*"
+OPERATIONAL_CITATION_RE = re.compile(
+    rf"(?<![\w/.-])(?P<layer>[Cc]ore|[Pp]roject)(?:\.md`?)?{_OPS_GAP}"
+    rf"(?:rules{_OPS_TO_NUMBER}(?P<listed>{_OPS_LIST})|rule{_OPS_GAP}(?P<one>{_OPS_NUMBER}))"
+    rf"|(?<![\w-])rules/(?P<file>core|project)\.md`?"
+    rf"(?:{_OPS_INLINE}(?:rules?{_OPS_INLINE})?#?|#)(?P<filed>{_OPS_INLINE_LIST})"
+)
+_OPS_LISTED = re.compile(r"(?P<number>\d+)(?:[ \t]*(?:-|\u2013|to)[ \t]*(?P<through>\d+))?")
+_OPS_RULE_ID = re.compile(
+    rf"(?<![\w:-])(?:\[?(?P<component>{rule_sets.COMPONENT_PATTERN}):)?"
+    rf"(?P<rule>RS-(?P<set>{rule_sets.SET_NAME_PATTERN})-{rule_sets.RULE_NUMBER_PATTERN})"
+    rf"(?![\w-])"
+)
+_MARKDOWN_SUFFIXES = (".md", ".markdown")
+#: A path segment that holds a project's tests, which may cite a missing rule on purpose.
+_TESTS_SEGMENTS = frozenset({"tests", "test"})
+
+
+@dataclass(frozen=True)
+class OperationalCitation:
+    """A citation of one operational rule, as `operational_rule_citations` finds it.
+
+    - `line`: the line of the text it starts on, counted from 1.
+    - `text`: the citation as written, its white space folded.
+    - `layer`: `core` or `project`, for a citation by layer and number; `None` for one by
+      id.
+    - `number`: the rule's number, for a citation by layer and number; for a range, its
+      first number.
+    - `through`: for a range, its last number, so a range is one citation, however
+      many rules it spans; `None` otherwise.
+    - `rule`: the rule's id as written, for a citation by id, with `component` written in
+      front of it, if any.
+    """
+
+    line: int
+    text: str
+    layer: str | None = None
+    number: int | None = None
+    through: int | None = None
+    rule: str | None = None
+    component: str | None = None
+
+    @property
+    def numbers(self) -> range:
+        """The numbers the citation names: its number, or its range's."""
+        if self.number is None:
+            return range(0)
+        return range(self.number, (self.through or self.number) + 1)
+
+
+def operational_rule_citations(
+    text: str, *, loaded_sets: Collection[str], markdown: bool
+) -> list[OperationalCitation]:
+    """Every citation of an operational rule in `text`, in order.
+
+    By layer and number, in each form above, a list giving one citation for each number
+    or range it names, a range one citation for all its numbers (`through`); and by id,
+    for a rule of a set named in `loaded_sets`. In Markdown, fenced code is skipped,
+    every line kept where it was. Each number or range of one citation is given once.
+    """
+    if markdown:
+        text = _without_fenced_code(text)
+    found: list[tuple[int, OperationalCitation]] = []
+    for match in OPERATIONAL_CITATION_RE.finditer(text):
+        line = text.count("\n", 0, match.start()) + 1
+        written = " ".join(match.group(0).replace("\n", " ").split())
+        layer = (match["layer"] or match["file"]).lower()
+        listed = (
+            [(int(match["one"]), None)]
+            if match["one"] is not None
+            else _listed(match["listed"] or match["filed"])
+        )
+        found.extend(
+            (
+                match.start(),
+                OperationalCitation(line, written, layer=layer, number=number, through=through),
+            )
+            for number, through in dict.fromkeys(listed)
+        )
+    if loaded_sets:
+        for match in _OPS_RULE_ID.finditer(text):
+            if match["set"] not in loaded_sets:
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            found.append(
+                (
+                    match.start(),
+                    OperationalCitation(
+                        line,
+                        match.group(0).lstrip("["),
+                        rule=match["rule"],
+                        component=match["component"],
+                    ),
+                )
+            )
+    return [citation for _start, citation in sorted(found, key=lambda pair: pair[0])]
+
+
+def _listed(listed: str) -> list[tuple[int, int | None]]:
+    """What a list names, each a number with no `through`, or a range's first and last
+    numbers: `3, 5 and 13`, `14-15`. A range written backwards names its two numbers."""
+    named: list[tuple[int, int | None]] = []
+    for match in _OPS_LISTED.finditer(listed):
+        first = int(match["number"])
+        last = int(match["through"]) if match["through"] else first
+        if last > first:
+            named.append((first, last))
+        elif last == first:
+            named.append((first, None))
+        else:
+            named.extend([(first, None), (last, None)])
+    return named
+
+
+def _without_fenced_code(text: str) -> str:
+    """`text` with each line of fenced code blanked, every line kept where it was."""
+    lines = text.split("\n")
+    fence: str | None = None
+    for index, line in enumerate(lines):
+        opened = _FENCE.match(line)
+        if opened is not None:
+            marker = opened.group(1)
+            if fence is None:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence):
+                fence = None
+            lines[index] = ""
+        elif fence is not None:
+            lines[index] = ""
+    return "\n".join(lines)
+
+
+@dataclass(frozen=True)
+class UnheldOperationalRule:
+    """A citation of an operational rule its loaded set lacks, or holds retired."""
+
+    path: str
+    citation: OperationalCitation
+    message: str
+
+
+def unheld_operational_rules(target_root: Path) -> list[UnheldOperationalRule]:
+    """Each citation of an operational rule that is missing, superseded or withdrawn.
+
+    The citations are read from the text files of the working tree's one listing, but the
+    project's tests (a file beneath a `tests` folder, or a `test_*.py`). Left out (COR-068
+    point 6; ADR-075 point 8):
+
+    - a synced copy, by the tree's own predicate (`is_synced_copy`), so where a set
+      arrives by sync only the project's own citations of its rules are read
+    - a superseded decision record, whose body stays as it was written
+    - an answer file (`answer_files.is_answer_file`)
+    - what the project leaves out of anchoring (`friction.exclude`, COR-050 point 7)
+    - in a loaded set's own file, the ids of its own rules: the file defines them, in
+      its front matter and its headings, and cites none of them
+
+    A citation by layer and number names the first loaded set of that layer: the
+    backbone's for `core`, the project's for `project`. A layer with none is not judged,
+    as a project's plain file of rules is not (COR-068 point 7).
+    """
+    from project_kit import answer_files, decisions_validate
+    from project_kit import friction_discovery as fd
+    from project_kit.working_tree import working_tree
+
+    discovery = rule_sets.discover_rule_sets(target_root)
+    loaded = {s.name: s for s in discovery.rule_sets if s.loaded and s.name is not None}
+    if not loaded:
+        return []
+    defines = {s.path: s.name for s in loaded.values()}
+    by_layer: dict[str, rule_sets.RuleSet] = {}
+    for rule_set in discovery.rule_sets:
+        if not rule_set.loaded:
+            continue
+        if rule_set.component == fd.BACKBONE_COMPONENT:
+            by_layer.setdefault("core", rule_set)
+        elif rule_set.component is None:
+            by_layer.setdefault("project", rule_set)
+    settings = fd.read_friction_settings(target_root)
+    superseded = _superseded_records(target_root, decisions_validate)
+    tree = working_tree(target_root)
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    found: list[UnheldOperationalRule] = []
+    for rel in tree.files():
+        path = PurePosixPath(rel)
+        if _TESTS_SEGMENTS & set(path.parts[:-1]) or (
+            path.name.startswith("test_") and path.suffix == ".py"
+        ):
+            continue
+        if rel in superseded or answer_files.is_answer_file(rel) or settings.excluded(rel):
+            continue
+        try:
+            raw = tree.read_file(rel)
+        except OSError:
+            continue
+        if raw is None or b"\0" in raw or (b"rule" not in raw and b"RS-" not in raw):
+            continue
+        try:
+            text = universal_newlines(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            continue
+        citations = operational_rule_citations(
+            text, loaded_sets=loaded.keys(), markdown=path.suffix in _MARKDOWN_SUFFIXES
+        )
+        if not citations:
+            continue
+        if ownership is not None and ownership.is_synced_copy(target_root, rel):
+            continue
+        own = defines.get(rel)
+        for citation in citations:
+            if own is not None and rule_sets.rule_set_name_of(citation.rule or "") == own:
+                continue
+            found.extend(
+                UnheldOperationalRule(rel, citation, message)
+                for message in _unheld_operational(citation, by_layer, discovery)
+            )
+    return found
+
+
+def _superseded_records(target_root: Path, decisions_validate: Any) -> frozenset[str]:
+    """The paths, relative to the root, of every superseded decision record, its status
+    read from its front matter as YAML, so a quoted `"superseded"` counts too."""
+    from project_kit import document_parts
+
+    found: set[str] = set()
+    for record in decisions_validate.discover_decision_records(target_root):
+        try:
+            text = record.path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        front_matter, _body, _problem = document_parts.parse_front_matter(text)
+        if front_matter is not None and front_matter.get("status") == "superseded":
+            found.add(_relative_to(record.path, target_root))
+    return frozenset(found)
+
+
+def _unheld_operational(
+    citation: OperationalCitation,
+    by_layer: Mapping[str, rule_sets.RuleSet],
+    discovery: rule_sets.RuleSetDiscovery,
+) -> list[str]:
+    """Why a citation names no rule in force, one message for each rule it names that is
+    missing or retired; none when every one is in force, or it names a layer with no
+    loaded set. A range that runs past the set's highest number gives one message for
+    the numbers past it, naming the range, rather than one for each."""
+    if citation.layer is None:
+        reference = rule_sets.RuleReference(rule=citation.rule or "", component=citation.component)
+        rule_set, rule, problem = rule_sets.locate_rule(discovery, reference)
+        if problem is not None or rule_set is None or rule is None:
+            return [
+                f"{citation.text!r} cites a rule that does not resolve: {problem} "
+                f"(COR-068 point 6)."
+            ]
+        retired = _retired_operational(citation, citation.text, rule_set, rule)
+        return [retired] if retired is not None else []
+    rule_set = by_layer.get(citation.layer)
+    if rule_set is None or rule_set.name is None or citation.number is None:
+        return []
+    highest = max((_rule_number(r.id) for r in rule_set.rules), default=0)
+    messages: list[str] = []
+    past = [number for number in citation.numbers if number > highest]
+    for number in citation.numbers:
+        if number > highest and citation.through is not None:
+            continue
+        rule_id = f"RS-{rule_set.name}-{number:03d}"
+        cited = f"{citation.layer} rule {number}"
+        rule = rule_set.rule(rule_id)
+        if rule is None:
+            messages.append(
+                f"{citation.text!r} cites {cited}, which {rule_set.citation} "
+                f"({rule_set.path}) does not hold: a citation by layer and number names the "
+                f"rule of that id, {rule_set.cite(rule_id)} (COR-068 point 6)."
+            )
+            continue
+        retired = _retired_operational(citation, cited, rule_set, rule)
+        if retired is not None:
+            messages.append(retired)
+    if past and citation.through is not None:
+        messages.append(
+            f"{citation.text!r} cites {citation.layer} rules {past[0]} to {past[-1]}, past "
+            f"the highest rule {rule_set.citation} ({rule_set.path}) holds, "
+            f"{citation.layer} rule {highest}: a citation by layer and number names the "
+            f"rule of that id (COR-068 point 6)."
+        )
+    return messages
+
+
+def _rule_number(rule_id: str) -> int:
+    """A rule's number, without its leading zeros: `RS-OPS-019` is 19."""
+    return int(rule_id.rsplit("-", 1)[1])
+
+
+def _retired_operational(
+    citation: OperationalCitation,
+    cited: str,
+    rule_set: rule_sets.RuleSet,
+    rule: rule_sets.Rule,
+) -> str | None:
+    """Why a cited rule binds nothing, or None when it is in force."""
+    if not rule.is_retired:
+        return None
+    successor = rule.successor
+    instead = f"; its successor is {rule_set.cite(successor.rule)}" if successor else ""
+    return (
+        f"{citation.text!r} cites {cited}, {rule_set.cite(rule.id)}, which is {rule.status}"
+        f"{instead}, so it binds nothing (COR-068 point 6)."
+    )
+
+
+def _validate_operational_citations(target_root: Path) -> list[Issue]:
+    """Each citation of a missing or retired operational rule, at `<file>:<line>`
+    (`unheld_operational_rules`). Read from prose, so a warning (ADR-075 point 8)."""
+    return [
+        Issue(location=f"{unheld.path}:{unheld.citation.line}", diagnosis=unheld.message)
+        for unheld in unheld_operational_rules(target_root)
+    ]
 
 
 def _validate_same_tier_collisions(providers: list[Provider]) -> list[Issue]:

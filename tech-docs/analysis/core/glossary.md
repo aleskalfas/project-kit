@@ -501,16 +501,20 @@ TERM-operational-rule:
   name: operational rule
   noun-forms: [operational rules]
   status: active
-  definition: "instruction every AI agent session loads through the harness's include, numbered in the system's file or the repository's own, with no id, origin or status"
+  definition: "instruction every AI agent session loads through the harness's include, numbered in the system's file or the repository's own"
   pkit:
     friction:
       anchors:
         path:
           - .pkit/rules/core.md
+          - .pkit/rule-sets/ops.md
           - .pkit/adapters/README.md
         record:
           - COR-014
           - COR-051#1
+          - COR-068#1
+          - COR-068#6
+          - COR-068#7
 TERM-overlay:
   name: overlay
   status: active
@@ -810,6 +814,7 @@ TERM-rule:
           - COR-051#3
           - COR-051#4
           - COR-051#5
+          - COR-068#1
 TERM-rule-set:
   name: rule set
   noun-forms: [rule sets]
@@ -824,6 +829,7 @@ TERM-rule-set:
           - COR-051#2
           - COR-051#6
           - COR-051#7
+          - COR-068#1
 TERM-sandbox:
   name: sandbox
   status: active
@@ -1557,8 +1563,8 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 **Distinctions:**
 
-- **Rule:** a statement in a [rule set](#term-rule-set--rule-set), with an id, an origin and a status ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). An operational rule shares only the word.
-- **Core rule and project rule:** the analysis's names for an operational rule of the [methodology](#term-methodology--methodology)'s file and of the project's, cited by number, as in *core rule 2*. Neither is a [rule](#term-rule--rule) of a rule set.
+- **Rule:** a statement in a [rule set](#term-rule-set--rule-set), with an id, an origin and a status ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). An operational rule in a loaded set is a [rule](#term-rule--rule) too, with an id, an origin and a status. It binds on what a session does, not on [artefacts](#term-artefact--artefact) ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
+- **Core rule and project rule:** the analysis's names for an operational rule of the [methodology](#term-methodology--methodology)'s file and of the project's, cited by number, as in *core rule 2*. A core rule is a rule of the [backbone](#term-backbone--backbone)'s loaded set `OPS`, so core rule 2 is `backbone:RS-OPS-002` (COR-068). A project rule is a rule of a loaded set only where the project keeps its rules as a loaded set.
 - **Core or project:** the methodology's file holds what fits any project, and the project's file holds what fits only that project ([COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md)).
 
 ## TERM-overlay — overlay
@@ -1847,7 +1853,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 **Distinctions:**
 
 - **Rule set:** the collection file that holds rules, each an [artefact](#term-artefact--artefact) of its own ([COR-051 point 2](../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
-- **Operational rule:** an instruction every AI agent session loads, with no id, origin or status. [COR-051 point 1](../../../.pkit/decisions/core/COR-051-rule-sets.md#1-what-a-rule-is) does not govern it.
+- **Operational rule:** an instruction every AI agent session loads. In a loaded set, it is a rule, with an id, an origin and a status. It binds on what a session does, never on an artefact ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Decision record:** chooses among alternatives and says why. A rule says what must hold, and its origin may cite the record ([COR-051 point 5](../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
 - **Proposed rule:** one that binds nothing until it is accepted. An accepted rule binds only on the artefacts that a [rule set](#term-rule-set--rule-set) of the [project](#term-project--project)'s own reaches (COR-051 points [4](../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate) and [7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 
@@ -1860,7 +1866,8 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Rule:** one entry of a rule set, an [artefact](#term-artefact--artefact) of its own ([COR-051 point 2](../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).
-- **Method rule set:** one that the [backbone](#term-backbone--backbone) or a [component](#term-component--component) ships. It takes no scope, so its rules bind only through a set of the [project](#term-project--project)'s own that inherits it (COR-051 points [6](../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners) and [7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **Method rule set:** one that the [backbone](#term-backbone--backbone) or a [component](#term-component--component) ships. It takes no scope. Unless it is a loaded set, its rules bind only through a set of the [project](#term-project--project)'s own that inherits it (COR-051 points [6](../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners) and [7](../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **Loaded rule set:** one whose rules bind on the work of the sessions that load a file generated from it, such as the backbone's `OPS`. It has no scope and no inheritance ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 - **Pin:** the major number an inheriting set names for each set it inherits, as in `WRITE@2`. No [rule](#term-rule--rule) binds through a pin behind its set until the project reviews the new major (COR-051 point 7).
 - **Version pin:** the [release](#term-release--release) a project's commands run at ([ADR-049 point 1](../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)). It is no rule set's pin.
 

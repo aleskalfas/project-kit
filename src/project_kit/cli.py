@@ -2488,12 +2488,14 @@ def friction_since_command(
 @main.group("rule-sets")
 def rule_sets_group() -> None:
     """Rule sets (COR-051): which accepted rules bind on each artefact, and on what a
-    change altered.
+    change altered; and the loaded file of a loaded set (COR-068).
 
     The reach walk's answer (COR-051 point 7), for a capability's script or a
     migration to read rather than walk routes or judge pins itself (ADR-057
-    points 1 and 2). Read-only; runs no query. Validation of rule-set files is
-    `pkit validate`'s `rule-sets` member.
+    points 1 and 2): `reach` and `altered` read only and run no query.
+    `generate` writes the file a session loads from a loaded set authored here
+    (ADR-075 point 4). Validation of rule-set files is `pkit validate`'s
+    `rule-sets` member.
     """
 
 
@@ -2628,6 +2630,33 @@ def rule_sets_altered_command(base_ref: str | None, head_rev: str | None, as_jso
         click.echo(rule_set_reading.render_json(document), nl=False)
     else:
         click.echo(rule_set_reading.render_altered_human(document), nl=False)
+
+
+@rule_sets_group.command("generate")
+def rule_sets_generate_command() -> None:
+    """Write the loaded file of each loaded rule set authored here (COR-068 point 3).
+
+    A loaded rule set (`loaded: true`) keeps operational rules; the file a
+    session loads is generated from it: the backbone's set at
+    `.pkit/rules/core.md`, a project's own at `.pkit/rules/project.md`
+    (ADR-075 points 2 and 4). The file holds each accepted rule under the
+    heading `N. Title (RS-<SET>-NNN)` with its statement, under the set's
+    sections, and none of the set's data. Says for each file whether it
+    changed. Writes no other file, and validates, syncs or merges nothing.
+    Refuses, writing nothing, where every loaded set here arrives by sync —
+    the next sync brings its file — where a rule-set file cannot be read or a
+    set's rules and sections do not join (`pkit validate` names the fix), and
+    where a loaded file is a link. Exit 0 when written or already in step; 1
+    on a refusal, so 1 where every loaded set arrives by sync, as in a
+    project that receives only the backbone's.
+    """
+    from project_kit import loaded_rule_sets
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    generation = loaded_rule_sets.generate(target_root)
+    click.echo(loaded_rule_sets.render(generation), nl=False)
 
 
 @main.group(invoke_without_command=True)

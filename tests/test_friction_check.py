@@ -41,6 +41,7 @@ from tests.friction_documents import (
     notes,
     pointed_record,
 )
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -1431,6 +1432,7 @@ def test_the_base_comes_from_the_environment(repo: AdopterRepo) -> None:
 
 
 def test_dormant_without_places(repo: AdopterRepo) -> None:
+    without_shipped_rule_sets(repo)
     _start(repo, {"docs/guide.md": guide()}, config=json.dumps({"friction": {"mode": "enforcing"}}))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('d')\n"})
     result = _cli("--base", "main")
@@ -1455,6 +1457,7 @@ def test_dormant_demands_no_repository(tmp_path: Path) -> None:
 
 
 def test_dormant_when_nothing_carries_the_container(repo: AdopterRepo) -> None:
+    without_shipped_rule_sets(repo)
     _start(
         repo,
         {"docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n"},
@@ -1467,6 +1470,7 @@ def test_dormant_when_nothing_carries_the_container(repo: AdopterRepo) -> None:
 
 
 def test_json_document_shape(repo: AdopterRepo) -> None:
+    without_shipped_rule_sets(repo)
     _start(repo, {"docs/guide.md": guide()}, config=friction_config(mode="enforcing"))
     repo.commit("change the CLI only", {"src/cli/main.py": "print('j')\n"})
     result = _cli("--base", "main", "--json")
@@ -2069,6 +2073,7 @@ def test_an_excluded_artefact_lists_what_it_wrote(repo: AdopterRepo) -> None:
 
 
 def test_a_dormant_document_carries_no_answers(repo: AdopterRepo) -> None:
+    without_shipped_rule_sets(repo)
     _start(repo, {"docs/guide.md": guide()}, config=json.dumps({"friction": {"mode": "warning"}}))
     repo.commit("reword", {"docs/guide.md": guide(because="reworded")})
     result = _cli("--base", "main", "--json")
@@ -2361,6 +2366,7 @@ def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_comm
     only at the commit named: run from a checkout on `main`, the document is the one a
     clean checkout at that commit gives — the folders are that commit's, its manifest's
     capabilities and their registrations too, never the running checkout's."""
+    without_shipped_rule_sets(repo)  # so the backbone's folder exists only at that commit
     _start(repo, {"docs/guide.md": guide()})
     register_kinds(repo.root, "kinds", kinds={"source": "resolve"}, contract=False)
     repo.write(

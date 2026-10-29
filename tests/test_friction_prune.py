@@ -24,6 +24,7 @@ from project_kit.cli import main
 from project_kit.friction_git import FrictionCheckError
 from tests.adopter_repo import GitRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, T2, Timeline, document, friction_config
+from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_answer_files import GUIDE, T1, T3, answer_path, answers, bare_guide, entry
 
 #: A second artefact, anchored to the engine, so one answer file can answer two.
@@ -153,6 +154,7 @@ def test_a_repository_with_no_commit_is_refused(make_adopter_repo: MakeAdopterRe
 
 def test_no_place_declared_is_refused(timeline: Timeline) -> None:
     """With no place, every answer would read as one on what is gone."""
+    without_shipped_rule_sets(timeline.adopter)
     _replaced(timeline)
     timeline.commit("no places", {CONFIG: friction_config(places=())})
     with pytest.raises(FrictionCheckError, match="no place is declared"):
