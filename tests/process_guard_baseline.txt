@@ -161,8 +161,6 @@ test_pm_close_issue_pr_merge.py
 test_pm_close_milestone.py
 test_pm_closing_issue_fetchers_lib.py
 test_pm_closure_cascade_binding.py
-test_pm_closure_cascade_foreign_child.py
-test_pm_closure_cascade_native_child.py
 test_pm_closure_cascade_parity.py
 test_pm_comment.py
 test_pm_comment_log.py
