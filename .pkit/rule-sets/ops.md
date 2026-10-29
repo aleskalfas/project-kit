@@ -47,7 +47,7 @@ rules:
         anchors: {record: [COR-010]}
   RS-OPS-008:
     status: accepted
-    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "A destructive operation cannot be undone, so each one waits for the person's own confirmation, given for that operation alone (since the first public release, be3de58b)."}
+    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "A destructive operation cannot be undone, so each one waits for the person's own confirmation, given for that operation alone (since the methodology's first release)."}
     pkit:
       friction:
         unanchored-because: "A rule about what an agent asks before an operation that cannot be undone; no record or file carries it out."
@@ -59,13 +59,13 @@ rules:
         anchors: {record: [COR-008]}
   RS-OPS-010:
     status: accepted
-    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "An adopter can depend on what a component exposes, so a change to it shows in the component's version, by the project's own bump policy (since the first public release, be3de58b)."}
+    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "An adopter can depend on what a component exposes, so a change to it shows in the component's version, by the project's own bump policy (since the methodology's first release)."}
     pkit:
       friction:
         anchors: {record: [COR-010]}
   RS-OPS-011:
     status: accepted
-    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "A session remembers what was, not what is, so it reads the wiring from the files before it relies on it (since the first public release, be3de58b)."}
+    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "A session remembers what was, not what is, so it reads the wiring from the files before it relies on it (since the methodology's first release)."}
     pkit:
       friction:
         unanchored-because: "A rule about how an agent learns the project's state before relying on it, which no core record decides."
@@ -77,7 +77,7 @@ rules:
         anchors: {record: [COR-013]}
   RS-OPS-013:
     status: accepted
-    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "An included file nests under the host's heading, so it brings no top-level heading of its own (since the first public release, be3de58b)."}
+    origin: {date: 2026-06-13, by: "Aleš Kalfas", why: "An included file nests under the host's heading, so it brings no top-level heading of its own (since the methodology's first release)."}
     pkit:
       friction:
         unanchored-because: "A rule about the form of a file a harness includes, which no core record decides."
@@ -134,10 +134,10 @@ rules:
     origin: {date: 2026-10-26, by: "Aleš Kalfas", why: "The records decide the system and the files carry them out, so an agent reads the records a change's files lead to before changing them (project-kit#2165)."}
     pkit:
       friction:
-        unanchored-because: "A rule about what an agent reads before it changes files, which no core record decides."
+        anchors: {record: ["COR-065#7"]}
 ---
 
-*Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md` by `pkit rule-sets generate`; edit the set, not the loaded file. The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
+*Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync edits neither (core rule 1). The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
 
 ## Hard rules
 
@@ -197,7 +197,7 @@ Operational practices that keep work consistent and recoverable.
 
 ### RS-OPS-013 — An included file has no H1
 
-**Files intended for `@<path>` include omit the H1 and start with prose or H2 sections** *(applies when using the Claude Code harness; other harnesses have different include mechanisms documented in their adapter README)*. The host file owns the H1; the included content nests under it. Place the `@<path>` line after the host's intro paragraph, not at line 1, so the included sections become natural sub-sections of the host. This file is the canonical example: no H1, opens with an italic preface, sections start at H2; CLAUDE.md includes it after its own intro.
+**Files intended for `@<path>` include omit the H1 and start with prose or H2 sections** *(applies when using the Claude Code harness; other harnesses have different include mechanisms documented in their adapter README)*. The host file owns the H1; the included content nests under it. Place the `@<path>` line after the host's intro paragraph, not at line 1, so the included sections become natural sub-sections of the host. The loaded file, `.pkit/rules/core.md`, is the canonical example: no H1, opens with an italic preface, sections start at H2; CLAUDE.md includes it after its own intro.
 
 ### RS-OPS-014 — Don't escalate past the permission model
 
@@ -259,6 +259,6 @@ Each rule cites the record or doc that owns its "why", or, where none does, the 
 - `.pkit/cli/README.md` — the CLI surface and per-command behaviour.
 - `.pkit/adapters/README.md` and per-adapter READMEs — harness translations.
 
-## Where this file came from
+## Where these rules came from
 
 The split between this file and `.pkit/rules/project.md` is governed by COR-014's universal-applicability principle: rules that apply to any adopting project ship here; rules tied to a specific project's tooling live in the project namespace. Capability-specific operational rules (e.g. work-tracker conventions) live in the capability's own documentation.

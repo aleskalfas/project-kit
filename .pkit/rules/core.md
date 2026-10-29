@@ -1,4 +1,4 @@
-*Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md` by `pkit rule-sets generate`; edit the set, not the loaded file. The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
+*Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync edits neither (core rule 1). The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
 
 ## Hard rules
 
@@ -58,7 +58,7 @@ Operational practices that keep work consistent and recoverable.
 
 ### 13. An included file has no H1 (RS-OPS-013)
 
-**Files intended for `@<path>` include omit the H1 and start with prose or H2 sections** *(applies when using the Claude Code harness; other harnesses have different include mechanisms documented in their adapter README)*. The host file owns the H1; the included content nests under it. Place the `@<path>` line after the host's intro paragraph, not at line 1, so the included sections become natural sub-sections of the host. This file is the canonical example: no H1, opens with an italic preface, sections start at H2; CLAUDE.md includes it after its own intro.
+**Files intended for `@<path>` include omit the H1 and start with prose or H2 sections** *(applies when using the Claude Code harness; other harnesses have different include mechanisms documented in their adapter README)*. The host file owns the H1; the included content nests under it. Place the `@<path>` line after the host's intro paragraph, not at line 1, so the included sections become natural sub-sections of the host. The loaded file, `.pkit/rules/core.md`, is the canonical example: no H1, opens with an italic preface, sections start at H2; CLAUDE.md includes it after its own intro.
 
 ### 14. Don't escalate past the permission model (RS-OPS-014)
 
@@ -120,6 +120,6 @@ Each rule cites the record or doc that owns its "why", or, where none does, the 
 - `.pkit/cli/README.md` — the CLI surface and per-command behaviour.
 - `.pkit/adapters/README.md` and per-adapter READMEs — harness translations.
 
-## Where this file came from
+## Where these rules came from
 
 The split between this file and `.pkit/rules/project.md` is governed by COR-014's universal-applicability principle: rules that apply to any adopting project ship here; rules tied to a specific project's tooling live in the project namespace. Capability-specific operational rules (e.g. work-tracker conventions) live in the capability's own documentation.
