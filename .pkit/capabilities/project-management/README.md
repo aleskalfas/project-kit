@@ -180,16 +180,20 @@ Before you bind state to your board, give its Status an option for each of the f
 
 The Status is read as [project-management:DEC-051-axis-carriage-activation] point 6 says, and four outcomes are reported apart, each with its own message:
 
-- the board cannot be read
+- the board cannot be read. Where the configuration names no board, the read says so and makes no call to GitHub
 - the issue has no card
 - its card has no Status
 - its Status names no open state, such as Done on an open issue
 
 None falls back to the labels or the milestone, so no command acts on a position it guessed. Each command says what such a read means to it, in its own section below.
 
+A command reads only the cards of the issues it acts on, each found by the issue's node id. That is one issue's card, each ancestor's card its forward cascade walks, or the cards of the issues it lists, read in batches. An archived card is still its issue's card, so it still places the issue. A listing read in part counts as a board that cannot be read, never as issues with no card.
+
 Where a present map leaves `state` out, or marks it `unsupported`, the state degrades. It is read from the issues themselves, and the capability writes no board Status for it. So the Status stays with the people who move it on the board.
 
-Upgrading to this version moves `schema_version` in `project/config.yaml` from 1 to 2 (DEC-062 point 6). Where the flag is set, it keeps priority and workstream on the board through the map, each `default:` kept, and leaves state out. With no map, it writes one, with `kit-label: true` on type. Its report names each binding it wrote, and each comment of the map that speaks of the board.
+Upgrading to this version moves `schema_version` in `project/config.yaml` from 1 to 2 (DEC-062 point 6). Where the flag is not set, only the version moves.
+
+Where the flag is set, the upgrade keeps priority and workstream on the board through the map, each `default:` kept, and leaves state out. Where the flag is set and there is no map, it writes one, with `kit-label: true` on type. Its report names each binding it wrote, and each comment of the map that speaks of the board.
 
 ### 3. Bootstrap
 
@@ -889,7 +893,7 @@ What else holds a Task back:
 - **The scope of the seat,** in a project with a topology. A Task falls in the scope where it matches each part the scope names: its workstream and its type
 - **An axis the map binds to the board,** which is not read. A Task whose priority only a board holds ranks last, and a scope's part on such an axis takes no Task
 
-**Where the board carries the state.** Where the substrate map binds `state` to the board, each Task's state is its card's Status ([project-management:DEC-062-axes-chosen-in-the-map] point 5). `next-task` reads every card's Status once, joined to the listing by each issue's node id, and never reads the board in part. A Task with no card, a card with no Status, or a Status naming no open state is skipped with a warning naming which. A board that cannot be read takes nothing and exits 3, as milestones that cannot be read do ([project-management:DEC-051-axis-carriage-activation] point 6).
+**Where the board carries the state.** Where the substrate map binds `state` to the board, each Task's state is its card's Status ([project-management:DEC-062-axes-chosen-in-the-map] point 5). `next-task` reads only the cards of the open issues it listed, found by each issue's node id, and never reads them in part. A Task with no card, a card with no Status, or a Status naming no open state is skipped with a warning naming which. A board that cannot be read takes nothing and exits 3, as milestones that cannot be read do ([project-management:DEC-051-axis-carriage-activation] point 6).
 
 **How dependencies are read.** Dependencies are prose ([project-management:DEC-005-linking-and-containment]), so `next-task` reads each `#N` that the `## Dependencies` section names. It skips what an HTML comment, a fenced code block or a code span holds. It skips a reference to another repository's issue (`owner/repo#N`), an issue named only by its address, and the Task itself. A number that is no open issue holds nothing back, whether it is closed, a pull request or not there.
 
@@ -1007,8 +1011,12 @@ Where a Projects v2 board is configured and the map carries the state off it, it
 
 - **`move-issue`** reads an open issue's position from its card, and refuses a move the Status does not place. It exits 3 where the board cannot be read, and 1 for no card, no Status, or a Status naming no open state
 - **The forward cascade** writes each ancestor's Status step by step, and stops at an ancestor its Status does not place
+- **A closed issue's card** says where its work stood before the close. Where the issue did not close as completed, that tells finished work from a won't-do close. A card that then places the issue nowhere is named, with what the board said, and no ancestor moves
 - **`start-work` and `review-work`** refuse at their early check in the same cases
 - **`create-issue`** gives the new card its first Status: Todo, or Backlog for an issue filed with a milestone
+- **A closed issue is Done whatever its card says,** so a close that leaves the card as it was needs nothing more. `sync-board` refuses here, so after `reopen-issue`, set the card's Status by hand
+
+**Where the Status is a projection.** The same writers write it after each move, and the issue's own state stays the source.
 
 - **A move writes the Status.** `move-issue`, and so `promote-issue`, `start-work`, `review-work` and `done-work`, set the card's Status to the issue's new state. A move that finds the issue already there writes it too, so the move to Done that `done-work` makes after a merge brings the card to Done. The forward cascade sets each ancestor's once, to the state the ancestor reached. `--dry-run` names the write and reads nothing.
 - **Filing writes the first one.** `create-issue` sets the Status of the card it adds: Todo, or Backlog for an issue filed with a milestone.
@@ -1070,6 +1078,8 @@ A Milestone with an open child is reported as not eligible, with the count of op
 The **rollforward target** is, first to last: `--target <M>`, an open Milestone by number or exact title; the Milestone's `Rollforward target: <M>` line, which DEC-016 puts under the `Close trigger:` line and which takes a number, `#<N>`, the `[#<N>](../milestone/<N>)` link or an exact title; else the next-numbered open Milestone of its category — the declared category whose `title_format` its title fits, and in it the lowest number above its own. With no candidate, or more than one, the command refuses before it writes anything and asks you to name the target with `--target`. `--dry-run` lists every move the close would make.
 
 **Within the pool.** Where the topology declares pools of workers, the next-numbered is sought only among the open milestones of the closing one's pool ([project-management:DEC-061-pools-of-workers] point 7). A milestone in no pool rolls only into one in no pool. A target that `--target` or the `Rollforward target:` line names in another pool is named, with its pool, in the close's consent prompt. A forced close names each Task in Backlog or In Progress it leaves in no pool.
+
+Where the substrate map binds the state to the board, that forced close reads the open Tasks' cards, and no others, in one listing read. A Task its card does not place is named as one whose position cannot be told, with why ([project-management:DEC-051-axis-carriage-activation] point 6). Where the board cannot be read, the close says so in place of the list.
 
 The audit line counts the children rolled forward and names the target — `…; 1 child issue(s) closed; 2 rolled forward to #7 Sprint 7: Polish).` The close is written before the moves, so when a move fails the command exits 4 and the closed Milestone still records where its open children go: re-run `close-milestone <n>` and it moves the children still on the Milestone to that target. A child already moved is no longer its child and is not moved again, and `edit-issue` finds the audit comment a failed attempt posted and does not post it again (the comment carries its day, so a re-run on a later day posts a dated one of its own). A closed Milestone without that record — closed by hand, or before rollforward existed — is left as it is.
 
