@@ -122,6 +122,12 @@ try:
     import provenance  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover
     from _lib import default_branch, provenance  # type: ignore[no-redef]
+# The one start of a `pkit` call, the package's first, so every module a run loads
+# shares it, whichever form loaded them.
+try:
+    from _lib import backbone
+except ImportError:  # pragma: no cover
+    import backbone  # type: ignore[no-redef]
 
 HEADING = "## Documentation this change affects"
 #: The heading an earlier run of these commands wrote the section under: read as
@@ -264,7 +270,7 @@ def _discovery_at(commit: str) -> Mapping[str, Any] | str:
     or why it could not be read."""
     command = f"`pkit friction artefacts --json --at {commit}`"
     try:
-        proc = subprocess.run(
+        proc = backbone.run(
             [*PKIT, *ARTEFACTS, commit],
             env={**os.environ, **UNROUTED},
             capture_output=True,
@@ -452,7 +458,7 @@ def _run_check(
     command = f"`{' '.join(argv)}`"
     own = {} if own_head is None else {OWN_HEAD: own_head}
     try:
-        proc = subprocess.run(
+        proc = backbone.run(
             argv,
             cwd=cwd,
             env={**os.environ, **UNROUTED, **own},
@@ -521,7 +527,7 @@ def covers(since: str, head: str, base: str) -> Coverage:
         return Coverage(problem=problem)
     command = f"`pkit friction since {since} --head {head} --base {base} --json`"
     try:
-        proc = subprocess.run(
+        proc = backbone.run(
             [*PKIT, *SINCE, since, "--head", head, "--base", base, "--json"],
             env={**os.environ, **UNROUTED},
             capture_output=True,
@@ -838,7 +844,7 @@ WHOLE = ("friction", "check", "--all", "--json")
 _FOLDERS: dict[str, str | None] = {}
 
 
-def answers_folder(root: Path, run: Any = subprocess.run) -> str | None:
+def answers_folder(root: Path, run: Any = backbone.run) -> str | None:
     """The folder the backbone keeps the friction answers in, repository-relative, as
     it gives it (`answers.folder` in `pkit friction check --all --json`, COR-062 point
     2), read at `root` once for a run, unrouted as the change check is. This capability
