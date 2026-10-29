@@ -48,8 +48,10 @@ def _other_manual() -> str:
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _start(timeline: Timeline, files: dict[str, str], *, mode: str = "warning") -> str:
