@@ -29,6 +29,7 @@ pkit:
         - COR-051#5
         - COR-051#6
         - COR-051#7
+        - COR-068#1
         - COR-017
         - ADR-056#2
         - ADR-057#2
@@ -78,6 +79,7 @@ pkit:
 - **2a.** A scope holds an empty list, names neither paths nor types, or names a type that no owner declares. [Validation](../../../glossary.md#term-validation--validation) fails on it, and the path rejoins at step 2.
 - **5a.** The set would inherit a set that does not exist under the address written, or the inheriting would close a cycle. Validation fails, naming the set, and the path rejoins at step 5.
 - **5b.** An inherited rule offers an extension point, and a rule of the set fills it. The filling rule names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **5c.** The set would inherit a loaded set, such as the [backbone](../../../glossary.md#term-backbone--backbone)'s `OPS`. A loaded set's rules bind on the work of the sessions that load it, not on [artefacts](../../../glossary.md#term-artefact--artefact), so no set inherits it. Validation fails, naming the pin, and the path rejoins at step 5 ([COR-068 point 1](../../../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#1-a-loaded-rule-set)).
 - **6a.** Validation fails on a rule or a set's name, naming each, and the path rejoins at step 3. It fails on each of these:
   - a rule's id that carries another set's name, or redefines an inherited id
   - a rule and a section that do not match
@@ -88,7 +90,7 @@ pkit:
   - a fill of an extension point that no inherited rule offers
   - a second fill of one extension point along the chain
   - a filling rule that anchors no rule it fills
-- **6e.** One [artefact](../../../glossary.md#term-artefact--artefact) is reached through two routes that pin one set at different majors, or through sets that bring different fills for one extension point. Validation fails on the artefact, naming both routes, and never chooses between them ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **6e.** One artefact is reached through two routes that pin one set at different majors, or through sets that bring different fills for one extension point. Validation fails on the artefact, naming both routes, and never chooses between them ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - **6f.** A pin names a major that its inherited set has passed. Validation's `versions` member fails on the inheriting set, naming the new major, and `pkit status` shows the pin with its fix. No rule binds through the pin until the project reviews the new major and updates it.
 - **6g.** A file in a `rule-sets` folder reads as a set that no location rule finds, such as one a root changed by hand left behind. Validation fails on it as `unfound-rule-set`, naming how to mend it ([COR-051 point 6](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners)).
 - **6h.** A part of a rule that the set declares under `checks` names a check that is not there. Validation reports it without failing, and that part goes back to whoever judges the rest of the rule ([COR-051 point 2](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#2-a-rule-set-is-a-collection-of-artefacts)).

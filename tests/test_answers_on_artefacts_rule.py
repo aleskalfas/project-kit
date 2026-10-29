@@ -14,7 +14,11 @@ agent reads at session start, and the README it points to, say so:
   of date, until which follow-up, not only "the deferrals";
 - **any other entry**: one for a target the change was not asked about stays a
   person's decision;
-- **the number**: the rule keeps its number, 20, under "Answers on artefacts".
+- **the number**: the rule keeps its number, 20, and its id, `RS-OPS-020`, under
+  "Answers on artefacts".
+
+The rule is read from the loaded file a session loads, `.pkit/rules/core.md`, which is
+generated from the backbone's loaded set `OPS` (COR-068).
 """
 
 from __future__ import annotations
@@ -28,13 +32,16 @@ CORE_RULES = REPO / ".pkit" / "rules" / "core.md"
 AGENTS_README = REPO / ".pkit" / "agents" / "README.md"
 
 
+RULE_20_HEADING = "### 20. A reviewer checks the answers a change owes (RS-OPS-020)"
+
+
 def _rule_20() -> str:
-    """Rule 20's paragraph, read from the section that holds it."""
+    """Rule 20's statement, read from under its heading in the section that holds it."""
     text = CORE_RULES.read_text(encoding="utf-8")
     section = text.split("\n## Answers on artefacts\n", 1)[1].split("\n## ", 1)[0]
-    paragraphs = [p.strip() for p in section.split("\n\n") if p.strip().startswith("20. ")]
-    assert len(paragraphs) == 1, "rule 20 is not the one numbered rule of its section"
-    return paragraphs[0]
+    headings = [line for line in section.splitlines() if line.startswith("### ")]
+    assert headings == [RULE_20_HEADING], "rule 20 is not the one rule of its section"
+    return section.split(f"{RULE_20_HEADING}\n", 1)[1].strip()
 
 
 def _friction_writers() -> str:
@@ -51,7 +58,7 @@ def _change_bullet() -> str:
 
 def test_rule_20_keeps_its_number_and_title():
     assert _rule_20().startswith(
-        "20. **A reviewer checks the answers your change owes, and a person, or the delegate"
+        "**A reviewer checks the answers your change owes, and a person, or the delegate"
         " they named, decides any other answer on an artefact.**"
     )
 
