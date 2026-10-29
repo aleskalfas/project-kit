@@ -119,7 +119,16 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_labels, bootstrap_gate, consent, issue_position, pools, session_guard
+from _lib import (
+    axis_labels,
+    board_status,
+    bootstrap_gate,
+    consent,
+    issue_position,
+    pools,
+    session_guard,
+)
+from _lib import lifecycle_inference as infer
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -359,7 +368,7 @@ def main() -> int:
             file=sys.stderr,
         )
         if declared is not None:
-            _report_left_in_no_pool(open_children, number, capability_root)
+            _report_left_in_no_pool(open_children, number, capability_root, config)
 
     closed_count = len(children) - len(open_children)
     left_open = len(plan.left) if plan is not None else len(open_children)
@@ -576,18 +585,44 @@ def _in_pools(
     return replace(target, other_pool=there if there is not None else NO_POOL)
 
 
-def _report_left_in_no_pool(open_children: list[dict], number: int, capability_root: Path) -> None:
+def _report_left_in_no_pool(
+    open_children: list[dict], number: int, capability_root: Path, config: dict
+) -> None:
     """Name each Task in Backlog or In Progress a forced close leaves on the
     closed Milestone, where it is in no pool, so no worker takes it of its own
-    choosing (DEC-061 point 7)."""
+    choosing (DEC-061 point 7).
+
+    Where the map binds the state to the board, each Task's state is its card's
+    Status: the Tasks' cards are read in one listing read, and a Task its card
+    does not place is named as one whose position cannot be told. A board that
+    cannot be read is said in place of the list (DEC-051 point 6)."""
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    left = [
-        child
-        for child in open_children
-        if child.get("type") == "task"
-        and issue_position.current_state(child, list(child.get("labels") or []), substrate_map)
-        in ("backlog", "in-progress")
-    ]
+    tasks = [child for child in open_children if child.get("type") == "task"]
+    listed = None
+    if infer.state_is_board_carried(substrate_map) and tasks:
+        workflow = _read_yaml(capability_root / "schemas" / "workflow.yaml", YAML(typ="safe"))
+        listed, failure = board_status.read_listed(
+            config, workflow, [str(child.get("id") or "") for child in tasks]
+        )
+        if listed is None:
+            print(
+                f"[warn] the closed milestone #{number} is in no pool, so the Tasks it leaves "
+                "in Backlog or In Progress are in no pool, and no seat takes them of its own "
+                "choosing (DEC-061 point 7). The board's Status could not be read "
+                f"({failure}), so which Tasks it leaves in no pool cannot be named.",
+                file=sys.stderr,
+            )
+            return
+    left: list[str] = []
+    for child in tasks:
+        status = listed.read(child.get("id")) if listed is not None else None
+        labels = list(child.get("labels") or [])
+        state = issue_position.current_state(child, labels, substrate_map, status)
+        if state == infer.UNDETERMINED and status is not None:
+            why = status.finding(int(child["number"]))
+            left.append(f"{_child_label(child)}: where it stands cannot be told, as {why}")
+        elif state in ("backlog", "in-progress"):
+            left.append(_child_label(child))
     if not left:
         return
     print(
@@ -595,8 +630,8 @@ def _report_left_in_no_pool(open_children: list[dict], number: int, capability_r
         "in no pool, and no seat takes them of its own choosing (DEC-061 point 7):",
         file=sys.stderr,
     )
-    for child in left:
-        print(f"    - {_child_label(child)}", file=sys.stderr)
+    for line in left:
+        print(f"    - {line}", file=sys.stderr)
 
 
 def _refuse_target(number: int, why: str) -> None:

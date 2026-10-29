@@ -64,11 +64,12 @@ Where the board carries the state
 ---------------------------------
 Where the substrate map binds the state to the board, a Task's state is its
 card's Status ([project-management:DEC-062-axes-chosen-in-the-map] point 5).
-``next-task`` reads every card's Status once (``board_status.read_snapshot``)
-and hands it over in :class:`Readers`, and each row is joined to its card by the
-issue's node id, which :data:`LIST_FIELDS` asks for. A Task whose card's Status
-does not place it is no candidate: :func:`unplaced` names each, with why, for
-``next-task`` to skip with a warning
+``next-task`` reads the cards of the open issues it listed, and no others, in one
+listing read (``board_status.read_listed``) keyed by the node ids
+:func:`node_ids` gives, and hands it over in :class:`Readers`. Each row is joined
+to its card by the issue's node id, which :data:`LIST_FIELDS` asks for. A Task
+whose card's Status does not place it is no candidate: :func:`unplaced` names
+each, with why, for ``next-task`` to skip with a warning
 ([project-management:DEC-051-axis-carriage-activation] point 6).
 
 The pools
@@ -149,12 +150,13 @@ class Candidate:
 @dataclass(frozen=True)
 class Readers:
     """The capability's schemas, as the pool reads a Task's type and axes, and,
-    where the board carries the state, every card's Status, read once."""
+    where the board carries the state, the Status of each listed issue's card,
+    read once."""
 
     issue_types: Mapping[str, Any]
     classification: Mapping[str, Any]
     substrate_map: axis_labels.SubstrateMap | None = None
-    statuses: board_status.Snapshot | None = None
+    statuses: board_status.ListedStatuses | None = None
 
     def state(self, row: Mapping[str, Any], labels: list[str]) -> tuple[str, str]:
         """``row``'s state, and, where its card's Status leaves it undetermined,
@@ -436,6 +438,19 @@ def _priorities(classification: Mapping[str, Any]) -> dict[str, int]:
     if not isinstance(values, list):
         return {}
     return {str(v): i for i, v in enumerate(values)}
+
+
+def node_ids(rows: Iterable[Any]) -> list[str]:
+    """The node ids of the open issues among ``rows``, as the listing returns
+    them: the cards a listing read reads where the board carries the state. A
+    closed issue is Done with no read of its card."""
+    return [
+        str(row["id"])
+        for row in rows
+        if isinstance(row, dict)
+        and row.get("id")
+        and str(row.get("state") or "").lower() != "closed"
+    ]
 
 
 def label_names(row: Mapping[str, Any]) -> list[str]:

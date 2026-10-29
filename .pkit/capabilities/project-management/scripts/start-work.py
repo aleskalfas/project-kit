@@ -440,7 +440,10 @@ def main() -> int:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels,assignees,state,body,milestone")
+    """The issue, with the fields the early check reads its card by
+    (`issue_position.ISSUE_FIELDS`)."""
+    fields = f"title,labels,assignees,state,body,milestone,{issue_position.ISSUE_FIELDS}"
+    return gh_get_issue(issue_number, config, fields=fields)
 
 
 def _claim_lost_message(

@@ -478,7 +478,10 @@ def _derive_pr_title(issue: dict, branch: str) -> str:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(issue_number, config, fields="title,labels,body,state,milestone")
+    """The issue, with the fields the early check reads its card by
+    (`issue_position.ISSUE_FIELDS`)."""
+    fields = f"title,labels,body,state,milestone,{issue_position.ISSUE_FIELDS}"
+    return gh_get_issue(issue_number, config, fields=fields)
 
 
 def _left_behind(

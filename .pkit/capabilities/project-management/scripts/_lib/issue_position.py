@@ -33,6 +33,11 @@ from typing import Any
 from _lib import axis_labels, board_fields, board_status
 from _lib import lifecycle_inference as infer
 
+#: The fields of the issue read that :func:`read_status` needs beside the state:
+#: the issue's node id, by which its card is found, and its url, whose owner owns
+#: the board.
+ISSUE_FIELDS = "id,url"
+
 
 def current_state(
     issue: dict[str, Any],
@@ -62,14 +67,16 @@ def read_status(
 ) -> infer.StatusRead | None:
     """The card's Status of open issue ``number``, where the map binds the state
     to the board; None where it does not, or where the issue is closed, which is
-    Done with no board read. ``issue`` is as `gh issue view` gives it, its `url`
-    naming the repository whose owner owns the board."""
+    Done with no board read. ``issue`` is as `gh issue view` gives it with
+    :data:`ISSUE_FIELDS` among its fields: its `id` finds its card, and its `url`
+    names the repository whose owner owns the board."""
     if not infer.state_is_board_carried(substrate_map):
         return None
     if str(issue.get("state", "")).lower() == "closed":
         return None
     owner = board_fields.url_owner(str(issue.get("url") or ""))
-    return board_status.StatusBoard(config, workflow, repository_owner=owner).read(number)
+    board = board_status.StatusBoard(config, workflow, repository_owner=owner)
+    return board.read(number, issue_node_id=str(issue.get("id") or ""))
 
 
 def unplaced_refusal(

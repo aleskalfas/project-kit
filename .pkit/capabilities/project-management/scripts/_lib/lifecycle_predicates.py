@@ -184,10 +184,7 @@ def _inferred_state(issue_number: int) -> _Position | dict[str, Any]:
             _workflow(capability_root),
             repository_owner=board_fields.url_owner(str(issue.get("url") or "")),
         )
-        node_id = issue.get("id")
-        status = board.read(
-            issue_number, issue_node_id=node_id if isinstance(node_id, str) else None
-        )
+        status = board.read(issue_number, issue_node_id=str(issue.get("id") or ""))
         if status.outcome == "unreadable":
             print(status.finding(issue_number), file=sys.stderr)
             return _indeterminate(f"the board's Status of #{issue_number} could not be read")
@@ -359,15 +356,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
         return _indeterminate("project-management capability not found")
     config = _config(capability_root)
     substrate_map = axis_labels.load_substrate_map(capability_root)
-    # Where the map binds state to the board, each child's position is its
-    # card's Status, read for every card at once and joined to the corpus by the
-    # issue's node id (DEC-051 point 6). A board that cannot be read leaves the
-    # answer indeterminate, never a guess from the labels.
-    snapshot = None
-    if infer.state_is_board_carried(substrate_map):
-        snapshot, failure = board_status.read_snapshot(config, _workflow(capability_root))
-        if snapshot is None:
-            return _indeterminate(f"the board's Status could not be read: {failure}")
+    on_board = infer.state_is_board_carried(substrate_map)
     # Corpus + completeness both come from the seam (ADR-035 §5). This walk still
     # filters by the TEXTUAL parent-ref itself, because it needs each row's state,
     # labels and milestone to infer position — which the child-set resolver does
@@ -375,8 +364,7 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
     # therefore invisible here; that gap is older than this change and is not the
     # close gate (this predicate informs forward-cascade reasoning).
     corpus = containment.fetch_issue_corpus(
-        config,
-        fields=_CORPUS_FIELDS_WITH_ID if snapshot is not None else _CORPUS_FIELDS,
+        config, fields=_CORPUS_FIELDS_WITH_ID if on_board else _CORPUS_FIELDS
     )
     if corpus is None:
         return _indeterminate("could not list issues (gh failure)")
@@ -385,18 +373,36 @@ def parent_has_active_descendant(parent_number: int) -> dict[str, Any]:
             f"the issue corpus was not enumerated to exhaustion "
             f"(ceiling {containment.CORPUS_CEILING}); descendant walk may be incomplete"
         )
-    children = corpus.rows
+    children = [
+        row
+        for row in corpus.rows
+        if body_parent_ref.named_issue(str(row.get("body") or "")) == parent_number
+    ]
+    # Where the map binds state to the board, each open child's position is its
+    # card's Status: the children's cards alone are read, in one listing read
+    # joined to the corpus by the issue's node id (DEC-051 point 6). A board that
+    # cannot be read leaves the answer indeterminate, never a guess from the labels.
+    listed = None
+    if on_board:
+        listed, failure = board_status.read_listed(
+            config,
+            _workflow(capability_root),
+            [
+                str(c.get("id") or "")
+                for c in children
+                if str(c.get("state", "")).lower() != "closed"
+            ],
+        )
+        if listed is None:
+            return _indeterminate(f"the board's Status could not be read: {failure}")
     active: list[int] = []
     for child in children:
-        body = str(child.get("body") or "")
-        if body_parent_ref.named_issue(body) != parent_number:
-            continue
         child_state = infer.infer_current_state(
             state=str(child.get("state", "")).lower(),
             milestone=child.get("milestone") or {},
             labels=_issue_labels(child),
             substrate_map=substrate_map,
-            status=snapshot.read(child.get("id")) if snapshot is not None else None,
+            status=listed.read(child.get("id")) if listed is not None else None,
         )
         if child_state == infer.UNDETERMINED:
             return _indeterminate(

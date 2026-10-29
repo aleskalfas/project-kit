@@ -752,10 +752,11 @@ def test_without_pools_the_listing_reads_no_milestone(root: Path) -> None:
 # ---- where the board carries the state (DEC-051 point 6, DEC-062 point 5) -------
 
 
-def _state_on_board(root: Path, monkeypatch: pytest.MonkeyPatch, statuses) -> list[int]:
+def _state_on_board(root: Path, monkeypatch: pytest.MonkeyPatch, statuses) -> list[list[str]]:
     """Bind the state to the board in the project's map, and stand in for the one
-    read of every card's Status: `statuses` maps an issue to its card's Status,
-    None standing for a board that cannot be read. Returns the reads made."""
+    listing read of the listed issues' cards: `statuses` maps an issue to its
+    card's Status, None standing for a board that cannot be read. Returns the
+    node ids each read was asked for."""
     from ruamel.yaml import YAML
 
     (root / "project" / "substrate-map.yaml").write_text(
@@ -765,16 +766,19 @@ def _state_on_board(root: Path, monkeypatch: pytest.MonkeyPatch, statuses) -> li
     workflow = YAML(typ="safe").load(
         (SCRIPTS.parent / "schemas" / "workflow.yaml").read_text(encoding="utf-8")
     )
-    reads: list[int] = []
+    reads: list[list[str]] = []
 
-    def read(_config, _workflow, **_kw):
-        reads.append(1)
+    def read(_config, _workflow, issue_node_ids, **_kw):
+        asked = list(issue_node_ids)
+        reads.append(asked)
         if statuses is None:
             return None, "missing required scopes [read:project]"
         options = {f"I_{number}": status for number, status in statuses.items()}
-        return LIST.board_status.Snapshot("board #4", workflow, options), ""
+        options = {node_id: options[node_id] for node_id in asked if node_id in options}
+        listed = LIST.board_status.ListedStatuses("board #4", workflow, options, frozenset(asked))
+        return listed, ""
 
-    monkeypatch.setattr(LIST.board_status, "read_snapshot", read)
+    monkeypatch.setattr(LIST.board_status, "read_listed", read)
     return reads
 
 
@@ -805,7 +809,7 @@ def test_a_task_in_review_is_read_from_its_cards_status(
     assert "warn: #52 is in no state this listing reads: #52 has no card on board #4" in (
         captured.err
     )
-    assert reads == [1]
+    assert len(reads) == 1 and {"I_50", "I_51", "I_52"} <= set(reads[0])
 
 
 def test_a_board_that_cannot_be_read_names_no_task_by_its_state(

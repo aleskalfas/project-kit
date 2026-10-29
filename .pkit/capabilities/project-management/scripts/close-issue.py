@@ -1668,9 +1668,10 @@ def _find_open_children(parent_num: int, config: dict) -> _OpenChildren:
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
-    return gh_get_issue(
-        issue_number, config, fields="title,body,state,labels,milestone,closedAt,url"
-    )
+    """The issue, with the fields its card is read by
+    (`issue_position.ISSUE_FIELDS`)."""
+    fields = f"title,body,state,labels,milestone,closedAt,{issue_position.ISSUE_FIELDS}"
+    return gh_get_issue(issue_number, config, fields=fields)
 
 
 def _closed_at(issue_number: int, config: dict) -> str:

@@ -99,12 +99,15 @@ class StatusRead:
     state its Status names; ``unreadable``, the board could not be read, with
     what was said in ``said``; ``no-card``; ``unset``; and ``not-open``, a
     Status naming no open state, the option in ``said``. ``board`` names the
-    board, as `board #4`."""
+    board, as `board #4`. ``named`` is True where an unreadable ``said`` names
+    the fault itself, as for no board configured or a board with no
+    single-select Status, and False where it is what `gh` said."""
 
     outcome: StatusOutcome
     state: str | None = None
     said: str = ""
     board: str = "the board"
+    named: bool = False
 
     def finding(self, number: int) -> str:
         """Why issue ``number``'s position is not read from the board, in one
@@ -130,6 +133,8 @@ class StatusRead:
 
     def remedy(self, number: int) -> str:
         """What lets the read place the issue, for the line under the finding."""
+        if self.outcome == "unreadable" and self.named:
+            return "fix what is named above, then run this again"
         if self.outcome == "unreadable":
             return "fix what `gh` said above, then run this again"
         if self.outcome == "no-card":

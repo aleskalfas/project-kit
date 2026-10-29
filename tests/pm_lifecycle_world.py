@@ -116,6 +116,8 @@ class Tracker:
     while every other field of theirs can."""
 
     def __init__(self) -> None:
+        #: This repository's `owner/name`, which each issue's url names.
+        self.repository = "acme/repo"
         self.issues: dict[int, dict[str, Any]] = {}
         self.comments: dict[int, list[dict[str, Any]]] = {}
         self.timeline: dict[int, list[dict[str, Any]]] = {}
@@ -225,6 +227,7 @@ class Tracker:
             return _done(argv, 1, stderr="gh: Not Found (HTTP 404)")
         record = {
             "id": 1000 + number,
+            "node_id": f"I_{number}",
             "number": number,
             "title": issue["title"],
             "body": issue["body"],
@@ -313,7 +316,7 @@ class Tracker:
             "milestone": issue["milestone"],
             "labels": [{"name": name} for name in issue["labels"]],
             "assignees": [{"login": login} for login in issue["assignees"]],
-            "url": f"https://github.com/acme/repo/issues/{number}",
+            "url": f"https://github.com/{self.repository}/issues/{number}",
             "comments": self.comments[number],
         }
         return _done(argv, stdout=json.dumps({f: record[f] for f in fields.split(",")}))

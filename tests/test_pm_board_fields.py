@@ -551,7 +551,13 @@ def test_read_items_names_the_issue_each_card_holds_by_its_node_id(bf) -> None:
 # --- one issue's card, and the option it holds (#2271) --------------------------
 
 
-def _item_value_payload(*cards: tuple[str, str, tuple[str, str] | None]) -> str:
+def _issue_node(
+    issue_id: str,
+    *cards: tuple[str, str, tuple[str, str] | None],
+    more: bool = False,
+) -> dict:
+    """One issue as `nodes(ids:)` gives it: its cards on every board, and
+    whether more cards follow the page."""
     nodes = [
         {
             "id": item_id,
@@ -560,7 +566,20 @@ def _item_value_payload(*cards: tuple[str, str, tuple[str, str] | None]) -> str:
         }
         for item_id, project_id, option in cards
     ]
-    return json.dumps({"data": {"node": {"projectItems": {"nodes": nodes}}}})
+    return {"id": issue_id, "projectItems": {"pageInfo": {"hasNextPage": more}, "nodes": nodes}}
+
+
+def _item_value_payload(*cards: tuple[str, str, tuple[str, str] | None]) -> str:
+    return json.dumps({"data": {"nodes": [_issue_node("I_1", *cards)]}})
+
+
+def _asked_ids(args: list[str]) -> list[str]:
+    """The issue node ids a read of the issues' cards asked for, in order."""
+    return [
+        args[i + 1].removeprefix("ids[]=")
+        for i, arg in enumerate(args[:-1])
+        if arg == "-f" and args[i + 1].startswith("ids[]=")
+    ]
 
 
 def test_read_item_value_reads_the_option_the_issues_card_holds(bf) -> None:
@@ -584,7 +603,7 @@ def test_read_item_value_reads_the_option_the_issues_card_holds(bf) -> None:
         "opt_ip",
         "In Progress",
     )
-    assert "field=Status" in calls[0]["args"] and "issue=I_1" in calls[0]["args"]
+    assert "field=Status" in calls[0]["args"] and _asked_ids(calls[0]["args"]) == ["I_1"]
 
 
 def test_read_item_value_keeps_no_card_unset_and_unread_apart(bf) -> None:
@@ -625,3 +644,142 @@ def test_read_item_value_refuses_a_payload_with_no_cards(bf) -> None:
         gh_call=_runner("{}"),
     )
     assert read.ok is False
+
+
+def test_an_archived_card_still_places_its_issue(bf) -> None:
+    """Both reads ask for the issue's archived cards, so an archived card is the
+    issue's card on the board, for one issue and for many (ADR-053 point 5)."""
+    calls: list = []
+    bf.read_item_value(
+        BOARD_CONFIG,
+        issue_node_id="I_1",
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(_item_value_payload(), calls=calls),
+    )
+    query = next(a for a in calls[0]["args"] if a.startswith("query="))
+    assert "includeArchived: true" in query
+    assert "items(first" not in query
+
+
+@pytest.mark.parametrize("read", ["one", "listing"])
+def test_cards_past_one_page_without_the_boards_card_are_a_failed_read(bf, read) -> None:
+    """An issue on more boards than one page holds, whose card on this board is
+    not among them, is never taken for an issue with no card."""
+    payload = json.dumps(
+        {"data": {"nodes": [_issue_node("I_1", ("PVTI_x", "PVT_9", None), more=True)]}}
+    )
+    if read == "one":
+        result = bf.read_item_value(
+            BOARD_CONFIG,
+            issue_node_id="I_1",
+            project_node_id="PVT_1",
+            field_name="Status",
+            gh_call=_runner(payload),
+        )
+    else:
+        result = bf.read_issue_cards(
+            BOARD_CONFIG,
+            issue_node_ids=["I_1"],
+            project_node_id="PVT_1",
+            field_name="Status",
+            gh_call=_runner(payload),
+        )
+    assert result.ok is False
+    assert result.error is not None and "more than 100 boards" in result.error
+
+
+def test_the_boards_card_on_a_first_page_with_more_to_follow_is_read(bf) -> None:
+    payload = json.dumps(
+        {"data": {"nodes": [_issue_node("I_1", ("PVTI_1", "PVT_1", ("o", "Todo")), more=True)]}}
+    )
+    read = bf.read_item_value(
+        BOARD_CONFIG,
+        issue_node_id="I_1",
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_runner(payload),
+    )
+    assert (read.ok, read.item_id, read.option_name) == (True, "PVTI_1", "Todo")
+
+
+# --- the listed issues' cards, in batches (#2271) --------------------------------
+
+
+def _cards_runner(calls: list, *, fail_batch: int | None = None, null: str | None = None):
+    """A fake `gh` answering each read of the issues' cards: issue `I_<n>` has a
+    card on `PVT_1` whose Status is `S<n>` where n is even, and none where it is
+    odd. `fail_batch` is the read, counted from 0, that fails, and `null` the id
+    GitHub resolves to no node."""
+
+    def run(args, config, *, fallback_owner=None, check=False):
+        calls.append(list(args))
+        if fail_batch is not None and len(calls) - 1 == fail_batch:
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="HTTP 502")
+        nodes = []
+        for issue_id in _asked_ids(args):
+            n = int(issue_id.removeprefix("I_"))
+            if issue_id == null:
+                nodes.append(None)
+            elif n % 2 == 0:
+                nodes.append(_issue_node(issue_id, (f"PVTI_{n}", "PVT_1", (f"o{n}", f"S{n}"))))
+            else:
+                nodes.append(_issue_node(issue_id))
+        stdout = json.dumps({"data": {"nodes": nodes}})
+        return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr="")
+
+    return run
+
+
+def test_the_listed_issues_cards_are_read_in_batches_of_a_hundred(bf) -> None:
+    calls: list = []
+    ids = [f"I_{n}" for n in range(1, 151)]
+
+    read = bf.read_issue_cards(
+        BOARD_CONFIG,
+        issue_node_ids=ids,
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_cards_runner(calls),
+    )
+
+    assert read.ok
+    assert [len(_asked_ids(args)) for args in calls] == [100, 50]
+    assert set(read.cards) == set(ids)
+    assert (read.cards["I_4"].item_id, read.cards["I_4"].option_name) == ("PVTI_4", "S4")
+    assert (read.cards["I_3"].ok, read.cards["I_3"].item_id) == (True, None)
+    query = next(a for a in calls[0] if a.startswith("query="))
+    assert "nodes(ids: $ids)" in query and "includeArchived: true" in query
+
+
+def test_a_listing_with_no_issues_reads_nothing(bf) -> None:
+    calls: list = []
+    read = bf.read_issue_cards(
+        BOARD_CONFIG,
+        issue_node_ids=[],
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_cards_runner(calls),
+    )
+    assert read.ok and dict(read.cards) == {} and calls == []
+
+
+@pytest.mark.parametrize(
+    ("fail_batch", "null", "says"),
+    [
+        (1, None, "HTTP 502"),
+        (None, "I_120", "no issue for the node id I_120"),
+    ],
+)
+def test_a_failed_batch_or_a_null_node_fails_the_whole_listing(bf, fail_batch, null, says) -> None:
+    """Whole or nothing: the issues of a failed batch are never taken for issues
+    with no card, and neither is an id GitHub resolves to no issue."""
+    read = bf.read_issue_cards(
+        BOARD_CONFIG,
+        issue_node_ids=[f"I_{n}" for n in range(1, 151)],
+        project_node_id="PVT_1",
+        field_name="Status",
+        gh_call=_cards_runner([], fail_batch=fail_batch, null=null),
+    )
+    assert read.ok is False and dict(read.cards) == {}
+    assert read.error is not None and says in read.error

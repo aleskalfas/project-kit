@@ -806,36 +806,40 @@ STATE_ON_BOARD = {
 }
 
 
-def _board_snapshot(nt, monkeypatch, statuses: dict[int, str | None] | None) -> list[int]:
-    """Stand in for the one read of every card's Status: `statuses` maps an issue
-    to the Status its card holds, None for no Status; an issue it leaves out has
-    no card. None stands for a board that cannot be read. Returns the reads made."""
-    reads: list[int] = []
+def _board_snapshot(nt, monkeypatch, statuses: dict[int, str | None] | None) -> list[list[str]]:
+    """Stand in for the one listing read of the listed issues' cards: `statuses`
+    maps an issue to the Status its card holds, None for no Status; an issue it
+    leaves out has no card. None stands for a board that cannot be read. Returns
+    the node ids each read was asked for."""
+    reads: list[list[str]] = []
 
-    def read(config, workflow, **_kw):
-        reads.append(1)
+    def read(config, workflow, issue_node_ids, **_kw):
+        asked = list(issue_node_ids)
+        reads.append(asked)
         if statuses is None:
             return None, "missing required scopes [read:project]"
         options = {f"I_{number}": status for number, status in statuses.items()}
-        return nt.board_status.Snapshot("board #4", workflow, options), ""
+        options = {node_id: options[node_id] for node_id in asked if node_id in options}
+        listed = nt.board_status.ListedStatuses("board #4", workflow, options, frozenset(asked))
+        return listed, ""
 
-    monkeypatch.setattr(nt.board_status, "read_snapshot", read)
+    monkeypatch.setattr(nt.board_status, "read_listed", read)
     return reads
 
 
 def test_the_state_is_read_from_each_cards_status(run, nt, monkeypatch, capsys) -> None:
     """The labels say Backlog for both, and are not read: the card of #10 says In
     Progress, which no clone takes over outside a topology, and #11's says
-    Backlog."""
+    Backlog. Only the cards of the issues listed are read."""
     pool = Pool()
     pool.add(10, priority="High")
     pool.add(11, priority="Low")
-    reads = _board_snapshot(nt, monkeypatch, {10: "In Progress", 11: "Backlog"})
+    reads = _board_snapshot(nt, monkeypatch, {10: "In Progress", 11: "Backlog", 99: "Todo"})
 
     rc, starts = run(pool, config=BOARD, axes=STATE_ON_BOARD)
 
     assert (rc, starts) == (0, [(11, False)])
-    assert reads == [1]
+    assert len(reads) == 1 and sorted(reads[0]) == ["I_10", "I_11"]
     assert "1 Task is ready for this clone" in capsys.readouterr().out
 
 

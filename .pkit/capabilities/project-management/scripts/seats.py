@@ -244,13 +244,16 @@ def list_seats(
             print(f"  #{number}  seat {key}")
     substrate_map = axis_labels.load_substrate_map(capability_root)
     # Where the map binds the state to the board, each Task's state is its card's
-    # Status, read for every card at once and joined to the listing by the
-    # issue's node id. A board that cannot be read is never read in part: no Task
-    # is then counted or named by its state (DEC-051 point 6).
+    # Status: the cards of the open issues listed, and no others, are read at
+    # once and joined to the listing by the issue's node id. A board that cannot
+    # be read is never read in part: no Task is then counted or named by its
+    # state (DEC-051 point 6).
     statuses = None
     if lifecycle_inference.state_is_board_carried(substrate_map):
-        statuses, failure = board_status.read_snapshot(
-            load_adopter_config(capability_root), read_schema(capability_root, "workflow.yaml")
+        statuses, failure = board_status.read_listed(
+            load_adopter_config(capability_root),
+            read_schema(capability_root, "workflow.yaml"),
+            task_pool.node_ids(listing.rows or ()),
         )
         if statuses is None:
             print(

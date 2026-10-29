@@ -202,13 +202,16 @@ def main() -> int:
         return 2
     substrate_map = axis_labels.load_substrate_map(capability_root)
     # Where the map binds the state to the board, each Task's state is its card's
-    # Status, read for every card at once and joined to the listing by the issue's
-    # node id. A board that cannot be read takes nothing, as Milestones that
-    # cannot be read do (DEC-051 point 6, DEC-061 point 8).
+    # Status: the cards of the open issues listed, and no others, are read at
+    # once and joined to the listing by the issue's node id. A board that cannot
+    # be read takes nothing, as Milestones that cannot be read do (DEC-051 point
+    # 6, DEC-061 point 8).
     statuses = None
     if axis_carriage.is_board_carried("state", config, substrate_map):
         workflow = _read_schema(capability_root, "workflow.yaml", yaml_loader)
-        statuses, failure = board_status.read_snapshot(config, workflow)
+        statuses, failure = board_status.read_listed(
+            config, workflow, task_pool.node_ids(listing.rows or ())
+        )
         if statuses is None:
             print(
                 f"[failed] next-task: the board's Status could not be read ({failure}), so "

@@ -273,6 +273,87 @@ def test_a_move_of_an_issue_its_status_does_not_place_is_refused(
     assert "never guessed from the labels or the milestone" in err
 
 
+def test_a_move_reads_and_writes_cards_by_the_node_ids_its_issue_reads_gave(
+    world: World, board: BoardTracker
+) -> None:
+    """The issue's node id is an input of the card's read, from the command's
+    own read of the issue, and of the ancestors' reads its cascade makes: no
+    issue is read again for it, so a failed issue read is never an unreadable
+    board."""
+    epic = _container(world, board, "[EPIC] An epic")
+    feature = _container(world, board, "[Feature] A feature", epic)
+    task = _task(world, board, "Backlog", parent=feature)
+    board.calls.clear()
+
+    assert world.move(task, "in-progress") == 0
+
+    assert board.status(epic) == "In Progress"
+    assert [argv for argv in board.board_calls() if argv[1:3] == ["issue", "view"]] == []
+
+
+def test_with_no_board_configured_a_move_refuses_and_calls_no_board(
+    world: World,
+    board: BoardTracker,
+    mi,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A map binding the state to the board under a configuration naming no
+    board makes no `gh` call for the state (ADR-053 point 3), and the refusal
+    names the missing board."""
+    task = _task(world, board, "Backlog")
+    read_yaml = mi._read_yaml
+
+    def read(path: Path, loader):
+        return {} if path.name == "config.yaml" else read_yaml(path, loader)
+
+    monkeypatch.setattr(mi, "_read_yaml", read)
+    monkeypatch.setattr(predicates, "_config", lambda _root: {})
+    board.calls.clear()
+
+    assert world.move(task, "in-progress") == 3
+
+    assert board.board_calls() == []
+    assert not [argv for argv in board.calls if argv[1:3] == ["repo", "view"]]
+    err = capsys.readouterr().err
+    assert "no Projects v2 board configured" in err
+    assert "#None" not in err
+    assert "fix what is named above" in err
+
+
+@pytest.mark.parametrize(
+    ("setup", "says"),
+    [
+        ("unreadable", "could not be read: HTTP 502: Bad Gateway"),
+        ("Done", "has the Status 'Done', which names no open state"),
+    ],
+)
+def test_a_closed_issue_whose_card_places_nothing_names_the_card_not_a_close_reason(
+    world: World,
+    board: BoardTracker,
+    capsys: pytest.CaptureFixture[str],
+    setup: str,
+    says: str,
+) -> None:
+    """Where the board carries the state, a closed issue's card says where the
+    work stood. A read of it that places nothing is named as such, with what the
+    board said, never as a close reason missing."""
+    feature = _container(world, board, "[Feature] A feature")
+    task = _task(world, board, "Done" if setup == "Done" else "Review", parent=feature)
+    world.tracker.close(task, None)
+    if setup == "unreadable":
+        board.fail_reads.add("card")
+
+    assert world.move(task, "done") == 0
+
+    captured = capsys.readouterr()
+    said = captured.out + captured.err
+    assert "the forward cascade moves no ancestor" in said
+    assert says in said
+    assert "no close reason is reported" not in said
+    assert board.status(feature) == "Todo"
+
+
 def test_a_closed_issue_moved_to_done_has_its_card_set_to_done(
     world: World, board: BoardTracker
 ) -> None:
@@ -364,7 +445,7 @@ def test_the_early_check_reads_the_status_and_refuses_an_unplaced_issue(
 
     task = _task(world, board, None)
     on_board = predicates.axis_labels.SubstrateMap(axes=STATE_ON_BOARD)
-    issue = {"state": "OPEN", "milestone": MILESTONE}
+    issue = {"state": "OPEN", "milestone": MILESTONE, "id": f"I_{task}"}
     workflow = predicates._workflow(CAPABILITY_ROOT)
 
     status = issue_position.read_status(task, issue, dict(BOARD_CONFIG), on_board, workflow)
@@ -386,3 +467,24 @@ def test_the_early_check_reads_no_board_where_the_map_carries_the_state_off_it(
     status = issue_position.read_status(1, {"state": "OPEN"}, dict(BOARD_CONFIG), None, {})
 
     assert status is None and board.board_calls() == []
+
+
+@pytest.mark.parametrize(
+    "script", ["start-work.py", "review-work.py", "close-issue.py", "move-issue.py"]
+)
+def test_each_command_reading_one_issues_card_reads_its_node_id_and_url(
+    script: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The issue's node id finds its card, so the board read asks only the
+    board; its url names the board's owner where `gh.default_owner` is unset,
+    so no repository is read for it."""
+    module = load_script(script, f"pm_{script.replace('-', '_')}_issue_fields")
+    asked: list[str] = []
+
+    def read(_number, _config, *, fields):
+        asked.append(fields)
+
+    monkeypatch.setattr(module, "gh_get_issue", read)
+    module._gh_get_issue(7, {})
+
+    assert {"id", "url"} <= set(asked[0].split(","))

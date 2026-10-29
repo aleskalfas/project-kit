@@ -49,7 +49,9 @@ Exports:
 
     ProjectLookup / BoardFieldsRead / ItemLookup — the three read results
     ItemValueRead                   — one issue's card, and the option it holds
+    IssueCardsRead                  — the listed issues' cards, each as an ItemValueRead
     FieldOptionsRead / ItemsRead / BoardItem — the workstream mutators' reads
+    NO_BOARD                        — why a read is refused with no board configured
     board_number(config)            — the configured board NUMBER, or None
     default_owner(config)           — `gh.default_owner`, or None
     board_owner(config, ...)        — the board's owner: `gh.default_owner`, else the repo's
@@ -58,7 +60,8 @@ Exports:
     resolve_project_node_id(...)    — the same, as a bare `str | None`
     read_fields(...)                — the board's live fields + their options
     resolve_item_id(...)            — the issue's card (item) id on that board
-    read_item_value(...)            — the issue's card and the option it holds in one field
+    read_issue_cards(...)           — the listed issues' cards, in batches of node ids
+    read_item_value(...)            — one issue's card and the option it holds in one field
     read_field_options(...)         — a single-select's options, with colour + description
     read_items(...)                 — every card, with the option it holds in one field
     read_items_with_option(...)     — the cards whose value is one option
@@ -68,10 +71,11 @@ Exports:
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -103,10 +107,19 @@ GhCall = Callable[..., "subprocess.CompletedProcess[str]"]
 # here; the others are named so a refusal can say which kind it found.
 SINGLE_SELECT_TYPE = "ProjectV2SingleSelectField"
 
-# Bound on the per-issue card lookup. An issue on more than this many boards is
-# not a case worth paginating for — the caller reports "not on the board" and the
-# adopter's remediation (add the card) is the same either way.
+# Bound on the cards of one issue a read asks for. An issue on more than this many
+# boards is not a case worth paginating for. The write's card lookup reports it as
+# not on the board, and the adopter's remediation (add the card) is the same
+# either way. A read of the card's value fails instead (:func:`read_issue_cards`),
+# so a card past the bound is never taken for no card.
 _MAX_PROJECT_ITEMS = 100
+
+#: Why a board read is refused where the configuration names no board, made
+#: with no call.
+NO_BOARD = (
+    "no Projects v2 board configured — project/config.yaml needs "
+    "`has_projects_v2_board: true` and `projects_v2_board_id: <number>`."
+)
 
 
 @dataclass(frozen=True)
@@ -234,13 +247,7 @@ def read_project_node_id(
     """
     number = board_number(config)
     if number is None:
-        return ProjectLookup(
-            ok=False,
-            error=(
-                "no Projects v2 board configured — project/config.yaml needs "
-                "`has_projects_v2_board: true` and `projects_v2_board_id: <number>`."
-            ),
-        )
+        return ProjectLookup(ok=False, error=NO_BOARD)
     args = ["gh", "project", "view", number, "--format", "json"]
     proc, error = _invoke(args, config, owner=owner, gh_call=gh_call)
     if proc is None:
@@ -295,13 +302,7 @@ def read_fields(
     """
     number = board_number(config)
     if number is None:
-        return BoardFieldsRead(
-            ok=False,
-            error=(
-                "no Projects v2 board configured — project/config.yaml needs "
-                "`has_projects_v2_board: true` and `projects_v2_board_id: <number>`."
-            ),
-        )
+        return BoardFieldsRead(ok=False, error=NO_BOARD)
     args = ["gh", "project", "field-list", number, "--format", "json"]
     proc, error = _invoke(args, config, owner=owner, gh_call=gh_call)
     if proc is None:
@@ -400,52 +401,91 @@ class ItemValueRead:
     error: str | None = None
 
 
-# The query of :func:`read_item_value`: the issue's cards, each with its board
-# and the single-select option it holds in one field.
-_ITEM_VALUE_QUERY = (
-    "query($issue: ID!, $field: String!) { node(id: $issue) { ... on Issue { "
+@dataclass(frozen=True)
+class IssueCardsRead:
+    """Outcome of reading the cards of listed issues on a board, and the option
+    each holds in one field.
+
+    Whole or nothing: ``ok=False`` is a listing that could not be read in full,
+    with what was said in ``error``, and carries no card. ``ok=True`` carries in
+    ``cards`` one :class:`ItemValueRead` for each issue node id asked for, by that
+    id, each with ``ok=True``: the issue's card on the board, or none."""
+
+    ok: bool
+    cards: Mapping[str, ItemValueRead] = dataclasses.field(default_factory=dict)
+    error: str | None = None
+
+
+# The most issue node ids one read of the issues' cards asks for: the most
+# GitHub's `nodes(ids:)` takes.
+_MAX_NODE_IDS = 100
+
+# The query of :func:`read_issue_cards`: each issue's cards, with their board and
+# the single-select option each holds in one field, an archived card included.
+_ISSUE_CARDS_QUERY = (
+    "query($ids: [ID!]!, $field: String!) { nodes(ids: $ids) { ... on Issue { id "
     f"projectItems(first: {_MAX_PROJECT_ITEMS}, includeArchived: true) "
-    "{ nodes { id project { id } fieldValueByName(name: $field) "
+    "{ pageInfo { hasNextPage } nodes { id project { id } fieldValueByName(name: $field) "
     "{ ... on ProjectV2ItemFieldSingleSelectValue { optionId name } } } } } } }"
 )
 
 
-def read_item_value(
+def read_issue_cards(
     config: dict[str, Any],
     *,
-    issue_node_id: str,
+    issue_node_ids: Iterable[str],
     project_node_id: str,
     field_name: str,
     gh_call: GhCall | None = None,
-) -> ItemValueRead:
-    """The issue's card on `project_node_id`, and the option it holds in the
-    single-select `field_name`, through one GraphQL read.
+) -> IssueCardsRead:
+    """The card on `project_node_id` of each issue whose node id is listed, and
+    the option it holds in the single-select `field_name`.
 
-    The one-issue sibling of :func:`read_items`, keyed on the issue's own node id
-    as :func:`resolve_item_id` is. Neutral: it reports what the board said, and
-    takes no view on it."""
-    args = [
-        "gh",
-        "api",
-        "graphql",
-        "-f",
-        f"query={_ITEM_VALUE_QUERY}",
-        "-F",
-        f"issue={issue_node_id}",
-        "-f",
-        f"field={field_name}",
-    ]
-    proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
-    if proc is None:
-        return ItemValueRead(ok=False, error=error)
-    payload = _parse_json(proc.stdout)
-    data = payload.get("data") if isinstance(payload, dict) else None
-    node = data.get("node") if isinstance(data, dict) else None
-    items = node.get("projectItems") if isinstance(node, dict) else None
+    One GraphQL read for each batch of up to a hundred ids, keyed on the issues'
+    own node ids, as :func:`resolve_item_id` is, so the read is bounded by what
+    is listed, not by the board. Each issue's own cards are read, an archived
+    card included, so an archived card is its issue's card. Whole or nothing: a
+    batch that fails, an id that resolves to no issue, or an issue whose cards
+    run past one page without its card on this board, fails the whole read.
+    Neutral: it reports what the board said, and takes no view on it."""
+    ids = list(dict.fromkeys(issue_node_ids))
+    cards: dict[str, ItemValueRead] = {}
+    for start in range(0, len(ids), _MAX_NODE_IDS):
+        batch = ids[start : start + _MAX_NODE_IDS]
+        args = ["gh", "api", "graphql", "-f", f"query={_ISSUE_CARDS_QUERY}"]
+        args += ["-f", f"field={field_name}"]
+        for issue_node_id in batch:
+            args += ["-f", f"ids[]={issue_node_id}"]
+        proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
+        if proc is None:
+            return IssueCardsRead(ok=False, error=error)
+        payload = _parse_json(proc.stdout)
+        data = payload.get("data") if isinstance(payload, dict) else None
+        nodes = data.get("nodes") if isinstance(data, dict) else None
+        if not isinstance(nodes, list) or len(nodes) != len(batch):
+            return IssueCardsRead(
+                ok=False, error="`gh api graphql` returned no cards for the issues' Status read."
+            )
+        for issue_node_id, node in zip(batch, nodes, strict=True):
+            card = _issue_card(node, issue_node_id, project_node_id)
+            if not card.ok:
+                return IssueCardsRead(ok=False, error=card.error)
+            cards[issue_node_id] = card
+    return IssueCardsRead(ok=True, cards=cards)
+
+
+def _issue_card(node: Any, issue_node_id: str, project_node_id: str) -> ItemValueRead:
+    """The card on `project_node_id` of the issue ``node`` gives, as
+    :func:`read_issue_cards` reads it: the card, no card, or a failed read."""
+    if not isinstance(node, dict) or node.get("id") != issue_node_id:
+        return ItemValueRead(
+            ok=False, error=f"`gh api graphql` returned no issue for the node id {issue_node_id}."
+        )
+    items = node.get("projectItems")
     nodes = items.get("nodes") if isinstance(items, dict) else None
     if not isinstance(nodes, list):
         return ItemValueRead(
-            ok=False, error="`gh api graphql` returned no cards for the issue's Status read."
+            ok=False, error=f"`gh api graphql` returned no cards for the issue {issue_node_id}."
         )
     for item in nodes:
         if not isinstance(item, dict):
@@ -466,7 +506,39 @@ def read_item_value(
             option_id=option if isinstance(option, str) and option else None,
             option_name=name if isinstance(name, str) and name else None,
         )
+    page = items.get("pageInfo") if isinstance(items, dict) else None
+    if isinstance(page, dict) and page.get("hasNextPage"):
+        return ItemValueRead(
+            ok=False,
+            error=(
+                f"the issue {issue_node_id} has cards on more than {_MAX_PROJECT_ITEMS} boards, "
+                "and its card on this one is not among those read."
+            ),
+        )
     return ItemValueRead(ok=True)
+
+
+def read_item_value(
+    config: dict[str, Any],
+    *,
+    issue_node_id: str,
+    project_node_id: str,
+    field_name: str,
+    gh_call: GhCall | None = None,
+) -> ItemValueRead:
+    """The issue's card on `project_node_id`, and the option it holds in the
+    single-select `field_name`: :func:`read_issue_cards` for one issue, so one
+    issue and many are read by one account of which card is an issue's."""
+    read = read_issue_cards(
+        config,
+        issue_node_ids=[issue_node_id],
+        project_node_id=project_node_id,
+        field_name=field_name,
+        gh_call=gh_call,
+    )
+    if not read.ok:
+        return ItemValueRead(ok=False, error=read.error)
+    return read.cards[issue_node_id]
 
 
 @dataclass(frozen=True)
