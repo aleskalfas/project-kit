@@ -160,6 +160,13 @@ the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
 What is left is mostly the backbone's own reading of the analysis, which each
 stamp and each check asks for.
 
+`test_software_analysis.py` and `test_software_analysis_resolver.py` are
+converted too (#2325), with ten other modules, and their rows stay. Their tests'
+time now goes to the stamps' and the checks' own reading of git. One pass ran
+both versions of the twelve modules side by side, `-n 3`, on 2026-10-29. The new
+took 3 481 test-seconds and the old 3 165, while tests that neither version
+changed differed by up to 81 s.
+
 A software-analysis test stamps, links and writes the overview in its own
 process, through `tests/analysis_repo.py` (#2319). A script a test runs through
 `run_script`, such as the number check, still runs as a process until its
