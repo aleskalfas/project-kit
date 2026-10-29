@@ -36887,7 +36887,7 @@
     "y": 412
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-ideas-note.png@dd1ebe7d90905f01",
+    "file": "2026-10-29-friday-talk-icons/term-ideas-note.png@5084aab6ffd1a3fa",
     "height": 232,
     "parent": "T-ideas-ideas",
     "title": "tpl:ideas_T-ideas#notepic",
@@ -36895,7 +36895,7 @@
     "x": 760,
     "y": 412
    },
-   "mural_id": "429f25c5-ec6b-49a2-830c-d88b2aa2fdd7",
+   "mural_id": "7e1b8f03-f61a-48f5-8bcc-5b3329962dc2",
    "tracked": [
     "title",
     "text",
@@ -36923,7 +36923,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793312907973
+   "updatedOn": 1793315476820
   },
   "T-ideas-ideas.notetext": {
    "board": {
@@ -55874,7 +55874,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-sessions-s3",
-    "text": "That is why, on the slide before, it looked up the release guide's records.",
+    "text": "Before it changes a file, it runs pkit refs records-for and reads what it lists.",
     "title": "tpl:stage#text",
     "width": 1416,
     "x": 32,
@@ -55886,7 +55886,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-sessions-s3",
-    "text": "That is why, on the slide before, it looked up the release guide's records.",
+    "text": "Before it changes a file, it runs pkit refs records-for and reads what it lists.",
     "title": "tpl:stage#text",
     "width": 1416,
     "x": 32,
@@ -55920,7 +55920,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793315138112
+   "updatedOn": 1793315477803
   },
   "T-sessions.bg": {
    "board": {
