@@ -85,11 +85,7 @@ test_latest_tag.py
 test_lifecycle_ownership.py
 test_living_docs_agent.py
 test_living_docs_config.py
-test_living_docs_mentions.py
-test_living_docs_new.py
-test_living_docs_points.py
 test_living_docs_skill.py
-test_living_docs_sources.py
 test_local_clean_up_parity.py
 test_manifest.py
 test_merge.py
