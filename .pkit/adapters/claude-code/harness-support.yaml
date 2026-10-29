@@ -47,3 +47,24 @@ requirements:
       (ADR-066 points 2 to 6). Those facts rest on Claude Code's documentation
       and its 2.1.302 release. The probe, `probe-confined-run.py`, has passed on
       no version yet, so the runner refuses every confined run.
+  unattended-working-run:
+    grade: at-cost
+    cost: >-
+      Holds on Linux with bubblewrap, and only where the run leaves Claude
+      Code's scrub of sign-in variables off. So a sign-in variable reaches
+      every command the run starts. With the scrub on, the harness forces its
+      own permission mode and widens the sandbox's writes. The sandbox also
+      writes npm's log folder in the home. macOS is not probed, so it has no
+      grade here.
+    # The versions the probe of ADR-073 point 11 ran on. The runner's working
+    # form is not built yet; once it is, this bound is its tested range, as
+    # the confined run's is.
+    harness_versions: ["2.1.303", "2.1.303"]
+    evidence: >-
+      The probe of ADR-073 point 11, on 29 October, on Linux with bubblewrap
+      0.12.0: runs of `claude -p` with no settings sources, inline settings,
+      `dontAsk` and the sandbox on. A producer agent built a probe Task, asked
+      a question, and built it on resume. Writes went to the run's folder
+      only, and a command with no agent ran under the same sandbox through
+      Claude Code's sandbox runtime. The adapter's README, "The probe of a
+      working run", lists each fact and how it was checked.
