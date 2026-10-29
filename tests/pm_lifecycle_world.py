@@ -17,6 +17,9 @@ A predicate answers in this process, but as its script would: where the
 capability's predicate code could not reach an answer, the script exits 2 and
 the engine reads no answer, so the harness hands the engine the same failure,
 with what the code said on standard error.
+
+A test whose fake `gh` is a script, rather than this tracker, answers it in this
+process too (`fake_gh_in_process`).
 """
 
 from __future__ import annotations
@@ -559,6 +562,42 @@ def answer_from_tracker(
     if answer.get(predicates.INDETERMINATE_KEY):
         return PredicateFailure("exited 2", diagnostic_tail(said.getvalue()))
     return answer
+
+
+def fake_gh_in_process(monkeypatch: pytest.MonkeyPatch, source: str) -> None:
+    """Answer every `gh` call `subprocess.run` makes in this process, by the fake `gh`
+    whose script is `source`: run as its process ran, `sys.argv` the call, with its
+    standard output and standard error captured apart, as text or bytes as the call
+    asks, and the code it exited with. The call's `check` is honoured. Every other
+    program runs as it did."""
+    code = compile(source, "gh", "exec")
+    real = subprocess.run
+
+    def run(args: Any, *rest: Any, **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+        argv = [str(arg) for arg in args] if not isinstance(args, str) else [args]
+        if Path(argv[0]).name != "gh":
+            return real(args, *rest, **kwargs)
+        out, err = io.StringIO(), io.StringIO()
+        returncode: Any = 0
+        saved = sys.argv
+        sys.argv = argv
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                exec(code, {"__name__": "__main__"})
+        except SystemExit as exc:
+            returncode = exc.code if isinstance(exc.code, int) else 1
+        finally:
+            sys.argv = saved
+        stdout: Any = out.getvalue()
+        stderr: Any = err.getvalue()
+        if not (kwargs.get("text") or kwargs.get("universal_newlines")):
+            stdout, stderr = stdout.encode(), stderr.encode()
+        done = subprocess.CompletedProcess(argv, returncode, stdout, stderr)
+        if kwargs.get("check"):
+            done.check_returncode()
+        return done
+
+    monkeypatch.setattr(subprocess, "run", run)
 
 
 def make_engine_repo(tmp_path: Path) -> Path:
