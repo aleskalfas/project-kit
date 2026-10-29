@@ -260,13 +260,18 @@ def test_every_backbone_is_routed_where_a_module_still_reaches_it(
 ) -> None:
     """A copy of `_lib/backbone.py` that `sys.modules` no longer lists, since the loader
     took it out, but that a module imported earlier still reaches, through its runners'
-    defaults, is routed too: otherwise that module starts a real `pkit` (#2322)."""
+    defaults, is routed too: otherwise that module starts a real `pkit` (#2322). Another
+    test may have left the copy listed, as a standalone import of `default_branch` does,
+    so the test takes each listing out for its own run, whatever ran before it (#2354)."""
     (fa,) = load("project-management", "friction_answers")
     copy = fa.default_branch.backbone
-    assert all(module is not copy for module in sys.modules.values())
+    for name in [name for name, module in sys.modules.items() if module is copy]:
+        monkeypatch.delitem(sys.modules, name)
     monkeypatch.setitem(sys.modules, "pm_friction_answers_reached", fa)
+    before = copy._run
     recorder = Recorder()
     route_every_backbone(monkeypatch, recorder)
+    assert copy._run is not before
     with pytest.raises(fa.default_branch.Unanswered):
         fa.default_branch.check_base("main")
     assert recorder.calls and recorder.calls[0][0][:4] == ["pkit", "repository", "base", "--json"]
