@@ -1,7 +1,7 @@
 ---
 rule-set: OPS
 loaded: true
-version: 1.1.0
+version: 1.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -137,7 +137,7 @@ rules:
         anchors: {record: ["COR-065#7"]}
   RS-OPS-024:
     status: proposed
-    origin: {why: "A project's rules about its files are kept in ordinary rule sets, which bind whoever writes a file they select, so a session reads the rules that bind on the files it writes before it writes them, and grouping rules by discipline names no agent (project-kit#2260, project-kit#2274)."}
+    origin: {why: "A project's rules about its files are kept in ordinary rule sets, which bind on the files their scopes select, so a session keeps the rules that bind on what its change commits, read from the answer the rule-set reviewer judges the change by, and the rule adds no rule of its own (decided on project-kit#2260, added by project-kit#2274)."}
     pkit:
       friction:
         anchors: {record: ["COR-051#4", "COR-051#7", COR-057]}
@@ -255,9 +255,9 @@ How a session relates to repos other than the one it is rooted in.
 
 **When you change the system, read first the accepted records its files lead to.** The records are where the system is decided, and the files carry those decisions out. Run `pkit refs records-for` once, with every file your change will commit, and read each record it lists as tied to them directly, at the points it names. Where it reaches a file only through another artefact, read that artefact, the narrowest first, and follow the records it rests on that bear on your change. An empty answer is no sign that no record governs a file. What the lookup reads, and why: the decisions README, "Finding the records a path leads to" ([project-kit#2165](https://github.com/aleskalfas/project-kit/issues/2165)).
 
-### RS-OPS-024 — Follow the rule sets that bind on the files you write
+### RS-OPS-024 — Keep the rule sets that bind on what you write
 
-**Before you write or check a file, read the accepted rules that bind on it, and follow them.** A project keeps its rules about files in rule sets, and an accepted rule binds whoever writes a file it selects, with no agent named (COR-051 points 4 and 7). Run `pkit rule-sets reach` once, with every file your change will write, and follow each rule it lists. Checking a change, judge it by the rules `pkit rule-sets altered` lists for it. No lookup is due for a file no rule set selects, such as every file of a project with no rule set of its own. The rules these commands give are those the rule-set reviewer judges the change against, so this rule asks you to follow no other (COR-057) ([project-kit#2260](https://github.com/aleskalfas/project-kit/issues/2260)).
+**Keep the accepted rules that rule sets bind on the files your change commits.** Before writing, you may run `pkit rule-sets reach` with those files to see the rules on each one that exists. Before committing, run `pkit rule-sets altered`, which lists them for every file the change adds, edits or brings under a rule, and follow each rule it lists as binding at the head, in what your change owns (COR-057 point 2). An empty answer asks nothing. These are the rules the rule-set reviewer judges your change against, and this rule adds none (COR-051 points 4 and 7) ([project-kit#2274](https://github.com/aleskalfas/project-kit/issues/2274)).
 
 ## Where rationale lives
 
