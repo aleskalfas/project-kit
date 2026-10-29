@@ -22,7 +22,7 @@ from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor, discover_artefacts
-from tests.adopter_repo import MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import (
     CONFIG,
     T1,
@@ -90,8 +90,10 @@ def answers(*entries: dict[str, Any]) -> str:
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _check(timeline: Timeline) -> fr.RepositoryCheck:

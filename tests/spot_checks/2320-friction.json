@@ -1,0 +1,44 @@
+[
+  {
+    "id": "fc-anchor-list-growth-unasked",
+    "file": "src/project_kit/friction_check.py",
+    "find": "if frozenset(anchors_of(artefact)) != earlier_anchors:",
+    "replace": "if frozenset(anchors_of(artefact)) < earlier_anchors:"
+  },
+  {
+    "id": "fc-unchanged-over-changed-content",
+    "file": "src/project_kit/friction_check.py",
+    "find": "        if rev.outcome == Answer.UNCHANGED.value:\n            if changed:",
+    "replace": "        if rev.outcome == Answer.UNCHANGED.value:\n            if changed and rev.because is None:"
+  },
+  {
+    "id": "fw-one-file-read-left-out",
+    "file": "src/project_kit/friction_write.py",
+    "find": "        if self.read:\n            entry[af.READ_KEY] = list(self.read)",
+    "replace": "        if len(self.read) > 1:\n            entry[af.READ_KEY] = list(self.read)"
+  },
+  {
+    "id": "fw-defer-drops-the-change-s-other-deferrals",
+    "file": "src/project_kit/friction_write.py",
+    "find": "[*others, *self._newly_read(revalidated, {anchor}), new_entry]",
+    "replace": "[*self._newly_read(revalidated, {anchor}), new_entry]"
+  },
+  {
+    "id": "fw-record-status-stale-without-since",
+    "file": "src/project_kit/friction_write.py",
+    "find": "if report.state is fr.ArtefactState.STALE and origins:",
+    "replace": "if report.state is fr.ArtefactState.DEFERRED and origins:"
+  },
+  {
+    "id": "af-head-holds-no-answer-file",
+    "file": "src/project_kit/answer_files.py",
+    "find": "        accept=(0, 128),\n    )\n    if listed.returncode != 0:\n        return frozenset()\n    return frozenset(\n        name_of(rel)",
+    "replace": "        accept=(0, 128),\n    )\n    if listed.returncode != 0 or rev == \"HEAD\":\n        return frozenset()\n    return frozenset(\n        name_of(rel)"
+  },
+  {
+    "id": "af-deferral-of-an-undeclared-anchor-stays-live",
+    "file": "src/project_kit/answer_files.py",
+    "find": "if (declared is None or d.anchor in declared) and not holder.replacers(e, deferral=d)",
+    "replace": "if not holder.replacers(e, deferral=d)"
+  }
+]

@@ -191,12 +191,13 @@ do when a change raises a count, and the only causes for raising the baseline.
 
 Most tests that need "a project with the kit installed" should not `git init`
 and call `install_kit` by hand. `tests/adopter_repo.py` provides one builder
-and `tests/conftest.py` exposes it as two fixtures:
+and `tests/conftest.py` exposes it as three fixtures:
 
 | Fixture | Gives you | Reach for it when |
 |---|---|---|
 | `make_adopter_repo` | A factory: `make_adopter_repo(capabilities=(), history=False, chdir=True, root=tmp_path, prepare=None, fresh=False)` returning an `AdopterRepo`, a copy of a template built once per session (below). | A test drives the CLI or the Python API against an installed adopter. `make_adopter_repo()` with no arguments is the bare shape — `git init`ed `tmp_path`, backbone installed, adapter shell primitives stubbed, cwd moved there, **no commits** — that the per-file `installed_target` / `kit_target` fixtures wrap. |
 | `adopter_repo` | `make_adopter_repo(history=True)`: the same adopter with the scripted history committed; `adopter_repo.history` holds the SHAs. | A test needs real git state — validators that read history, the friction engine (COR-050), anything tracing a front-matter field across commits. |
+| `committed_adopter` | `make_adopter_repo(prepare=commit_install)`: the bare shape, its install committed on `main` in one commit dated `INSTALLED_AT` (`tests/friction_documents.py`). | A test commits a base of its own, as the friction tests do. It then commits only its own files, never the whole installed `.pkit/` (#2320). |
 
 Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
 `build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly; it builds the
