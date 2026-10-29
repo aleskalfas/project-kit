@@ -2844,11 +2844,11 @@ instances:
         width: 448
         height: 135
     mural_ids:
-      text: 935c7a85-8126-417c-ac73-db384bc99771
-      root: 07ee3ec9-33d0-4f10-9dc1-6419367d59b7
-      box: ddfe1955-2a7a-4874-8fe9-07aa7f09b206
-      dot: d153d30d-1712-4671-abb6-5e98926b3588
-      head: b3d50a1a-1410-4875-a3b2-a1c0da5ae379
+      root: 3460cfb7-1528-4f59-bd3d-26d00e050c5f
+      box: 43852e25-962b-4aa6-9f42-c3ba2e29a44b
+      dot: 5cdbab54-2fb5-4ce9-ba10-bc1e4006bcf1
+      head: 6067ebd9-bba0-4b1a-877f-663a3281e4a6
+      text: 0481476d-6b3b-489a-8b4a-af1c39db8d09
   T-processes-l1:
     template: link
     parent: T-processes
@@ -2889,11 +2889,11 @@ instances:
         width: 448
         height: 135
     mural_ids:
-      text: e101b2f8-2224-4010-821c-39bf475ba011
-      root: a57323fb-07c4-4076-973a-288d5eb7a79b
-      box: 8bc9a845-3b08-49d4-9945-0f8f1896c79f
-      dot: d71aca69-c78d-449f-8e31-f9d8728e9523
-      head: 7194cd54-d982-4d31-a747-acacab5a9ae6
+      root: 3df745e1-0353-42d3-b654-d9745f2acf94
+      box: 54f6bdd8-a7a6-4185-b527-dfee5a3cc885
+      dot: 7ce7b3d6-823a-4bd6-82a7-97238a63f523
+      head: a9de6977-0378-449a-8704-fb08a01295e0
+      text: d9c20eba-dfa2-415b-ae67-0ee8666a941e
   T-processes-l2:
     template: link
     parent: T-processes
@@ -2934,11 +2934,11 @@ instances:
         width: 448
         height: 135
     mural_ids:
-      text: cb419f9d-574c-4035-8cba-edb80e481566
-      root: d382de9b-f1db-4c69-a025-a62c5fdf370d
-      box: 96fd521a-861b-45ff-a507-47f97b3ec267
-      dot: 36364ec6-56e0-445d-a4b1-05b6cb43a554
-      head: b612cc38-1e45-442e-aa3d-d439b12d922d
+      root: eec02dad-128c-4ae1-8962-a3f97ec48f74
+      box: abfd2607-51a8-4b2f-8adc-96e483aa8169
+      dot: 9d40153e-422b-447e-9aed-d2f141d65a8a
+      head: 830863b8-3e2e-4983-aa2d-be0230ce0f40
+      text: d010de1a-7fec-42a8-a4ad-502c856ca91e
   T-processes-l3:
     template: link
     parent: T-processes
@@ -2979,11 +2979,11 @@ instances:
         width: 448
         height: 135
     mural_ids:
-      text: 05a103ab-c218-4d30-9895-e1b26aa4ff2b
-      root: 53821b2d-efc7-43f8-abf1-5467ef91bc92
-      box: 6fc89b98-012a-4fd3-a230-2004ed6bd42a
-      dot: 24b3a8be-0310-4f00-92ef-c0e164f4cbdb
-      head: c5ede6a2-d5fd-4dc8-a589-942848ea5ac5
+      root: 0c7b47a4-d98a-408e-9000-5d8e488ac9db
+      box: 05dbd1a4-9a56-45ab-bd9a-6d5374cd44ae
+      dot: 7a3bc89b-d6ec-45b7-bdd9-b43ea4cb67a5
+      head: e5d50036-7166-4d0a-827f-7ce8349bbcb5
+      text: 4d33540b-bc0d-49a0-8156-a78a19eaaf94
   T-processes-l4:
     template: link
     parent: T-processes
@@ -3024,11 +3024,11 @@ instances:
         width: 448
         height: 135
     mural_ids:
-      text: 63d6535d-56c8-4af8-b743-757e763f3e8f
-      root: 4618b883-acf0-4901-a825-ad24c912e628
-      box: 36d35dd5-9504-4033-a00b-24f9b11959d2
-      dot: ab70df06-c33a-4f3a-a4b0-009214abe2ed
-      head: 0d990221-cb8d-4b86-a8a1-798d73c16bd4
+      root: 530fe483-eb6a-40a8-b4c5-f143158e6f34
+      box: 0b302b8c-f435-4439-9fb2-b97a26db0829
+      dot: e7dab43b-b0f5-4f7b-beee-3d383a81434c
+      head: 393e4a89-617f-4442-9ab7-7244dfc1d22a
+      text: fe71463b-ec81-431c-abfa-f23375652f90
   T-processes-d1:
     template: step
     parent: T-processes
@@ -4523,12 +4523,12 @@ instances:
       rests:
         text: All three run in project-kit today, and each will still change
     mural_ids:
-      rests: 24d6edb9-5cb8-4c90-8ce7-19724737f8c1
-      root: 68fca411-e206-462f-a47c-096969505e3c
-      bg: 9834f6d0-8bcd-41a6-af44-82d598de27b5
-      title: bc58ee42-538f-4717-ae28-cb9799ae2195
-      lead: dbec2b34-8a95-4555-9973-598244d71c94
-      num: ef00226a-79da-498e-913e-8b787e97bfaf
+      root: 0f466663-93d9-4d9b-9ffb-d678dd97b4dc
+      bg: b7e3e75b-1742-4ef4-b946-ba470920b6c8
+      title: e4820811-31e2-4714-93d0-4e474f4cffa8
+      lead: c17f8b7a-9f32-4e0d-92b8-183f5b5f2455
+      rests: 6d386d9b-9c81-4e16-b269-fe491e4a6451
+      num: d6166df6-b447-4070-880f-67e8affba82b
   T-next-c1:
     template: card
     parent: T-next
@@ -4549,12 +4549,12 @@ instances:
       body:
         width: 875
     mural_ids:
-      root: 9aac5eb3-bd6c-4db8-9ca0-27db49e9cc83
-      bg: f896d2f3-66df-4c62-934a-930300443b7b
-      idtag: fac80de2-27d7-409a-8ff7-b0d40e902285
-      spacetag: 066811d5-e1d7-41c9-9ff2-9f38db3865fb
-      heading: e751f094-b058-4fe4-aa0c-471b8b5485f3
-      body: 0a50c40f-95b4-40db-96ea-d939a7c6e4d7
+      root: c5411e95-9c79-4058-a748-f3c0739079d8
+      bg: 6736e8ec-dd4f-4829-af07-565450319dd0
+      idtag: 2cd69d6b-2ed7-4c36-bdeb-026a775d4894
+      spacetag: 77b4fccc-d52c-41e8-8627-9553adb2ca12
+      heading: 827b01f8-4324-4046-a35c-a7599b49e712
+      body: 05a158f6-ad21-4563-8139-7313994fc83a
   T-next-c2:
     template: card
     parent: T-next
@@ -4575,12 +4575,12 @@ instances:
       body:
         width: 875
     mural_ids:
-      root: cb4f143b-74be-4ec1-a347-712ea2835997
-      bg: bbddaeec-b8b2-4585-a29c-c296d736b037
-      idtag: d4373451-2a60-411d-99e3-8ceded875d17
-      spacetag: e79f450d-3ffb-4932-9d49-a92a0544d090
-      heading: 8d262013-31f3-4f83-8e54-a0506ef4b4b0
-      body: 45cf9108-2be7-4bbc-a773-780dd449fe20
+      root: 6613300c-00af-4a96-882c-af8b9fe11c58
+      bg: d2f957e4-1f9d-4059-b918-c51dc441ea79
+      idtag: 104e26de-5f5d-4d57-b2cb-0323e09a6f2a
+      spacetag: 1d507b25-dbc9-494e-9f70-3b6f6127d373
+      heading: 199b1b80-7eed-4ddc-a86f-392629de5b81
+      body: 0b41f1ac-23a4-497f-92ae-e9ef273e38f6
   T-next-c3:
     template: card
     parent: T-next
@@ -4601,12 +4601,12 @@ instances:
       body:
         width: 875
     mural_ids:
-      root: 843d0c44-8a4c-4f2f-a32f-3f13249a3ae0
-      bg: 02401266-bae5-43a3-9a0d-ceafefd6738f
-      idtag: 4030db23-52a8-4252-a8f0-ab5f19c16558
-      spacetag: adf6d617-b35b-4fb2-b129-e4df86d9f4a7
-      heading: 58139647-e36f-43b2-9357-0f21fce1b357
-      body: bfe4ff24-9f63-47df-8eab-df07c6627e75
+      root: 2e927693-a356-46bf-be6c-9362b8b00e55
+      bg: 01b475f0-f75a-450f-918a-57a7a8489c05
+      idtag: 5909cbd3-ebd3-4cbd-b8ef-ce23ab6d90bd
+      spacetag: a2934413-1fcb-42c2-b45d-23e24625b944
+      heading: 384e7ba2-1638-43fb-ad7a-4c812dd002b3
+      body: 0a08bdfb-d7c4-49a1-b617-514096c854f8
   T-questions:
     template: slide
     title: Questions?
@@ -4618,12 +4618,12 @@ instances:
       rests:
         text: github.com/aleskalfas/project-kit
     mural_ids:
-      rests: 8e07c676-6d0d-481a-b7e6-63429ea7dc44
-      root: ce1908f8-17ce-4bd1-93cb-49d0dc483e92
-      bg: a78deb65-1ce8-40cc-ba3f-5484b8bfa638
-      title: c78aece0-94bc-4bd7-bb17-88443caa0c8b
-      lead: 77f2ea77-7ec2-47a8-aa02-851d2ddf7f9c
-      num: 51f990d0-72bc-4bdc-bdea-75d703bfddad
+      root: 4e3c0236-68a4-4eb3-93d5-615ff89f1b9d
+      bg: b4f2478a-b621-49b2-a418-317e178184a5
+      title: 75b1e95c-ad7b-49f7-b3b5-3d5130f7fe74
+      lead: fd5c4eac-9197-4bf6-85eb-1445b3af1fcb
+      rests: e9e1eff5-2b4f-4a66-95b1-51b2b0bd650f
+      num: ce7b7c91-d50f-4c21-92f4-ea2af3d59d01
 library:
   frame: LIB
   groups:
