@@ -39,7 +39,6 @@ from project_kit.document_parts import split_front_matter
 from project_kit.friction_discovery import Anchor, discover_artefacts, parse_artefacts
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, MakeAdopterRepo
-from tests.shipped_rule_sets import own
 from tests.friction_documents import (
     CONFIG,
     SOURCE,
@@ -47,6 +46,7 @@ from tests.friction_documents import (
     own_answer_file,
     own_entry,
 )
+from tests.shipped_rule_sets import own
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
