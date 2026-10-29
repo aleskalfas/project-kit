@@ -140,7 +140,7 @@ rules:
     origin: {decision: COR-065}
     pkit:
       friction:
-        anchors: {record: ["COR-065#3"]}
+        anchors: {record: ["COR-065#3", "COR-064#6", "COR-066#1"]}
 ---
 
 *Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync edits neither (core rule 1). The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
@@ -257,7 +257,7 @@ How a session relates to repos other than the one it is rooted in.
 
 ### RS-OPS-023 — A choice later work builds on starts with its record
 
-**A change that makes a choice later work will build on starts with its record, drafted before the work and accepted by a person before work rests on it (COR-065 point 3).** Such a choice is a library, an interface or format others use, a convention, a boundary between parts, or a change to what an accepted record decides. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs no record, and neither does a change that only carries out an accepted record.
+**Before you make a choice that later work will build on, draft the record that decides it; a person accepts it before work rests on the choice (COR-065 point 3).** Such a choice is one others build on, such as a library, an interface or format, a convention or a boundary between parts, and so is a change to what an accepted record decides; an accepted rule whose origin states the choice serves as its record. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs none, nor does one an accepted record already makes; where you and the person disagree, the person decides.
 
 ## Where rationale lives
 
