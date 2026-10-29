@@ -148,10 +148,15 @@ other modules of the process engine and project-management's closure fold. Their
 288 tests took 43 s on the clock in a pass of their own, `-n 3`, against 207 s
 before (2026-10-29).
 
-A software-analysis test still runs the capability's scripts as the backbone
-does — a stamp, the check, the number check — each a process that starts several
-`pkit` processes of its own. Its slice of #2313 converts them, as three of the
-check's tests are already converted. What its tests share is built once ("Built
+`test_software_analysis_check.py` is converted (#2319): its 61 tests took 58 s on
+the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
+What is left is mostly the backbone's own reading of the analysis, which each
+stamp and each check asks for.
+
+A software-analysis test stamps, links and writes the overview in its own
+process, through `tests/analysis_repo.py` (#2319). A script a test runs through
+`run_script`, such as the number check, still runs as a process until its
+module's slice of #2313 converts it. What its tests share is built once ("Built
 once, copied for each test", below). A test that stays slow says why in a comment
 above it.
 
@@ -243,8 +248,8 @@ first.
 what the module's tests start from — a seed stamped, a history committed. It
 runs once per session, from the template's root, and what it leaves is in every
 copy. `tests/analysis_repo.py` is the worked example: stamping the
-software-analysis seed (`prepare_seeded`, the modules' `seeded` fixture) starts
-some two dozen `pkit` processes, ten seconds and more, which no copy pays again.
+software-analysis seed (`prepare_seeded`, the modules' `seeded` fixture) asks
+`pkit` some two dozen times, which no copy pays again.
 A `prepare` depends on nothing but the repository it is handed — nothing of the
 test that happens to ask first, which may be in any module — and its full name
 is the template's key, so a lambda or a nested function is refused. It runs in
