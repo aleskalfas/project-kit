@@ -16,6 +16,9 @@ and RS-SAN-009 with its declared check:
   closed list of labels reports.
 
 The chain diagram, drawn from `after`, is `test_software_analysis_diagrams.py`'s.
+
+The check, the stamp and the chain query run in the test's own process, their `pkit`
+calls answered there too (`tests/in_process.py`, #2324).
 """
 
 from __future__ import annotations
@@ -42,7 +45,7 @@ from tests.analysis_repo import (
     load_lib,
     new,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
     with_status,
 )
@@ -110,7 +113,8 @@ def _accepted(repo: AdopterRepo) -> None:
 
 
 def _validate(repo: AdopterRepo, *args: str) -> dict[str, Any]:
-    completed = run_script(repo, VALIDATE, "--json", *args)
+    """The validator's findings document, run in the test's own process (`run_in_process`)."""
+    completed = run_in_process(repo, VALIDATE, "--json", *args)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -326,7 +330,7 @@ def test_the_chain_query_draws_the_analysis_s_after(project: AdopterRepo) -> Non
     )
     _write(project, INSTALL, [["UC-003"]], ["**From UC-003:** a release is published."])
     _write(project, DEVELOP, [["UC-004", "environment"]], ["**From UC-004, or Environment:** x."])
-    completed = run_script(project, DIAGRAM, "chain")
+    completed = run_in_process(project, DIAGRAM, "chain")
     assert completed.returncode == 0, completed.stderr
     lines = completed.stdout.splitlines()
     assert lines[0] == "```mermaid" and lines[-1] == "```"
