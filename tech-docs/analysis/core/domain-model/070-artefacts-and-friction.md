@@ -478,7 +478,7 @@ A rule set is a collection file of rules that artefacts must satisfy. It has its
 
 - Each of its rules is an artefact of its own, whose answers to [friction](../glossary.md#term-friction--friction) lie in [answer](../glossary.md#term-answer--answer) files apart from the set (COR-051 point 2).
 - Its scope selects artefacts by path or by artefact type (COR-051 point 2).
-- A rule set the [backbone](../glossary.md#term-backbone--backbone) or a [component](../glossary.md#term-component--component) ships takes no scope. It binds only through a set of the project's own that inherits it (COR-051 points 6 and 7).
+- A rule set the [backbone](../glossary.md#term-backbone--backbone) or a [component](../glossary.md#term-component--component) ships takes no scope. Unless it is a loaded set, it binds only through a set of the project's own that inherits it (COR-051 points 6 and 7).
 - A loaded set binds on the work of the sessions that load a file generated from it, never on an artefact. It has no scope, and no set inherits it ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
 
 **States:** None.
