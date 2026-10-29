@@ -412,7 +412,7 @@ slides:
     stages:
     - role: agents
       head: The agent drafts it
-      text: A choice later work will depend on comes up.
+      text: It writes the record, and ties the release guide to it.
       terminal: |-
         $ cat .pkit/decisions/project/PRJ-002-….md
         id: PRJ-002
@@ -422,6 +422,11 @@ slides:
         ## Decision         # what is decided
         ## Rationale        # why, what was rejected
         ## Implications     # what follows
+
+        # .pkit/release/README.md, its front matter:
+          friction:
+            anchors:
+        +     record: [PRJ-002]
     - role: people
       head: You accept it
       text: In the pull request, before it merges.
@@ -442,15 +447,17 @@ slides:
           COR-010  Lifecycle of installed resources
           …
         # the agent reads these before changing it
-    font_size: 26
+    font_size: 24
   limit: Only records tied to a file are found, directly or through a document that depends on it.
   minutes: 1
   notes: 'One record, PRJ-002, through its life: drafted as proposed, accepted in the pull request by one line,
     and found by a later session behind the release guide, beside records of the other two kinds. Accepting is yours:
     a check can refuse to merge a record still proposed, and whoever authorises a merge sees every record it accepts.
-    Before changing a file, the agent runs this lookup, one of the working rules every session is told. It reads
-    what each file declares it depends on, the same declarations the docs slide shows later. A choice made in a chat
-    is gone the next session; a record is found.'
+    The agent ties the release guide to the record as it drafts it, since the guide carries the record out: a change
+    to PRJ-002 then asks whether the guide still holds, the docs slide shows how, and the lookup reads the same tie
+    backwards. In project-kit the tie was written when the guide became such a document. Before changing a file,
+    the agent runs this lookup, one of the working rules every session is told. A choice made in a chat is gone the
+    next session; a record is found.'
 - id: checked
   part: P1
   title: Checked every time

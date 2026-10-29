@@ -3536,17 +3536,17 @@ instances:
     parent: T-found
     role: agents
     head: The agent drafts it
-    text: A choice later work will depend on comes up.
+    text: It writes the record, and ties the release guide to it.
     file: term-found-step1
     x: 128
     y: 576
     override:
       root:
         width: 917
-        height: 640
+        height: 801
       box:
         width: 917
-        height: 640
+        height: 801
       head:
         width: 813
         height: 64
@@ -3558,31 +3558,31 @@ instances:
         x: 32
         y: 216
         width: 853
-        height: 392
+        height: 553
     mural_ids:
-      root: da315c99-528d-4b74-8d92-89aa6b1f6b71
-      box: f32cc4bb-593e-4e2b-807b-dfed54d3d312
-      dot: 14544d88-90bc-4730-ae07-b3448ec6e6f9
-      head: f855a35b-9720-4aa1-9909-4de6393eec7b
-      text: b5161279-d8ba-4998-a3a9-d42e7dd17b51
-      img: d2e25cf5-1b82-4450-9a14-fe966eec4b02
+      root: 9e8b8ddd-ae40-47fb-b019-828c86de0afb
+      box: 736578f0-b51f-43aa-9d7f-03076c350d26
+      dot: 95b9d383-619d-4145-ae60-1c5aef87684e
+      head: 5a7e0891-e79a-4340-b9d9-6849cb920b53
+      text: 7d364035-f230-4577-a1ad-cd07290fd189
+      img: 848e6b81-4e77-4326-9af2-7f5f69b4e41c
   T-found-l1:
     template: link
     parent: T-found
     x: 1045
     y: 576
     x1: 16
-    y1: 320.0
+    y1: 108.0
     x2: 80
-    y2: 320.0
+    y2: 108.0
     tone: text_secondary
     override:
       root:
         width: 96
-        height: 640
+        height: 216
     mural_ids:
-      root: a82c25b5-f883-4048-988d-a1f3f2ea5c19
-      arrow: fdb79b63-4941-4e70-a626-f5de0dd9dc72
+      root: 733a9ad0-fbfe-422d-b92c-9a4291bde22c
+      arrow: f74f7d11-89cf-4a8c-b592-da27cec54120
   T-found-card2:
     template: step_card
     parent: T-found
@@ -3595,10 +3595,10 @@ instances:
     override:
       root:
         width: 917
-        height: 640
+        height: 468
       box:
         width: 917
-        height: 640
+        height: 468
       head:
         width: 813
         height: 64
@@ -3610,31 +3610,31 @@ instances:
         x: 32
         y: 216
         width: 853
-        height: 232
+        height: 220
     mural_ids:
-      root: f3590b44-808e-4818-a705-8b90b915e298
-      box: b0fafdab-ca17-4ab2-857c-e12af30f3e46
-      dot: 6c643c39-573b-404e-bf87-7492aacad22c
-      head: e4759357-c9e4-4092-9c90-1fc5ea31800f
-      text: dea9b610-9ed7-4966-b3b9-82a68e294cb2
-      img: ee548477-9d2e-434c-a963-0d5ffbae5942
+      root: b8b8ddf6-defd-494e-88aa-374d5b1c299b
+      box: ed9eb364-e82d-4d59-bec0-1ec6647a3594
+      dot: e248af00-f4f6-462a-8eb3-13adbf915514
+      head: eb5a46af-7d88-475f-83ec-048f3b489764
+      text: ffaae0bf-2caa-4811-aada-4fcc9ded5057
+      img: f9dd3fc7-1070-4c3a-89d2-a4c62d0505ca
   T-found-l2:
     template: link
     parent: T-found
     x: 2058
     y: 576
     x1: 16
-    y1: 320.0
+    y1: 108.0
     x2: 80
-    y2: 320.0
+    y2: 108.0
     tone: text_secondary
     override:
       root:
         width: 96
-        height: 640
+        height: 216
     mural_ids:
-      root: 0e75cb7e-661d-4cd0-84a7-68bfe2a0793b
-      arrow: 01dab095-5221-4a6e-9c3c-57d2836e2031
+      root: bfa2e1e0-701e-4758-9459-412622a3551e
+      arrow: c2984b84-54f6-42a4-bdf9-114b7ccda8b4
   T-found-card3:
     template: step_card
     parent: T-found
@@ -3647,10 +3647,10 @@ instances:
     override:
       root:
         width: 917
-        height: 640
+        height: 616
       box:
         width: 917
-        height: 640
+        height: 616
       head:
         width: 813
         height: 64
@@ -3662,26 +3662,26 @@ instances:
         x: 32
         y: 216
         width: 853
-        height: 392
+        height: 368
     mural_ids:
-      root: 1b028e88-5e3b-4915-a40a-73b4cec85536
-      box: 0aef0e12-bcfd-4989-b135-9884ac562e67
-      dot: a17e747c-8511-4c2d-9d14-3cf458840300
-      head: c7931b94-df6d-446a-b266-a0d5df2c226b
-      text: 1d01112d-2b9b-48fd-9174-fd2a773ea454
-      img: c0a36491-add7-45c8-8845-4deecb31ee43
+      root: 44aa90e7-8b45-4f92-881a-6ad9332727eb
+      box: ca00d880-404d-4a55-b523-4c808c9f0ed3
+      dot: db5f985e-71c3-46eb-bf82-ef519651dfa0
+      head: a2c5ecb5-7b9e-47d4-b310-15a62064799f
+      text: abd3b1ad-02cf-4bfe-babc-54f48c370c1b
+      img: 29f9ee5d-6026-4c4b-8032-2648d87b964a
   T-found-limit:
     template: notice
     parent: T-found
     text: 'Limit: Only records tied to a file are found, directly or through a document that depends on
       it.'
     x: 128
-    y: 1264
+    y: 1425
     mural_ids:
-      root: 670bd892-636d-4a44-b8ef-877f7de34467
-      bg: fca86c38-4ca5-4ebb-8ec8-beb2b94e48e9
-      bar: e6915114-4b75-4f89-9c5d-90d0917726ce
-      text: dc91dee6-6ec3-42a0-9773-6616147762ab
+      root: cfef4830-6d98-4cf9-9ffb-7c9db057b0bb
+      bg: c9699be5-45e0-49d0-90c8-675fddc9157e
+      bar: c90e7435-07bb-419e-91d1-d8f9855165b8
+      text: e5275a36-0990-4b1c-bf3f-659c4a065b77
   T-checked:
     template: slide
     title: Checked every time

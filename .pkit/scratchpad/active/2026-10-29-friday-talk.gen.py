@@ -584,9 +584,9 @@ def story(pid, y, v):
     w = round((SPAN16 - (n - 1) * LINK_W) / n)
     fs = v.get("font_size", 26)
     pics = [terminal_png(f"{pid}-step{i}".removeprefix("T-"), s["terminal"], w - 64, fs) for i, s in enumerate(st, 1)]
-    h = CARD_IMG_Y + max(ph for _, ph in pics) + 32
     x = MARGIN
     for i, (s, (file, ph)) in enumerate(zip(st, pics), 1):
+        h = CARD_IMG_Y + ph + 32  # each card as tall as its picture; the arrows join them at their heads
         out[f"{pid}-card{i}"] = {
             "template": "step_card", "parent": pid, "role": s.get("role", "neutral"), "head": md(s["head"]), "text": md(s["text"]),
             "file": file, "x": x, "y": y,
@@ -598,10 +598,10 @@ def story(pid, y, v):
         }
         x += w
         if i < n:
-            k, val = link(pid, i, x, y, h)
+            k, val = link(pid, i, x, y, CARD_IMG_Y)
             out[k] = val
             x += LINK_W
-    return out, h
+    return out, CARD_IMG_Y + max(ph for _, ph in pics) + 32
 
 
 PYR_H, PYR_GAP = 172, 18
