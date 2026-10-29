@@ -1,7 +1,7 @@
 ---
 rule-set: OPS
 loaded: true
-budget: 2772
+budget: 2927
 version: 2.0.0
 rules:
   RS-OPS-001:
