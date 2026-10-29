@@ -17,6 +17,9 @@ Held to software-analysis DEC-004:
   section's parts (point 2), with a project's own labels in the opening or each section
   and never a heading;
 - **optional** — a project with no domain model fails nothing.
+
+The validator, the stamp and the links run in the test's own process, their `pkit` calls
+answered there too (`tests/in_process.py`, #2326).
 """
 
 from __future__ import annotations
@@ -46,7 +49,7 @@ from tests.analysis_repo import (
     load_lib,
     new,
     prepare,
-    run_script,
+    run_in_process,
     stamped,
 )
 
@@ -94,7 +97,8 @@ def bare(
 
 
 def _validate(repo: AdopterRepo, *args: str) -> dict[str, Any]:
-    completed = run_script(repo, VALIDATE, "--json", *args)
+    """The validator's findings document, in the test's own process."""
+    completed = run_in_process(repo, VALIDATE, "--json", *args)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 

@@ -13,7 +13,8 @@ extension point or a record is refused, each with its reason and the anchor to
 use, and validation fails every dead, ambiguous or refused part anchor. An
 anchor on a part of its own artefact is a cycle.
 
-The checks' tests stand up a real adopter repository, commit a base on `main`
+The checks' tests stand up a real adopter repository, its install committed once per
+session (`committed_adopter`), commit a base on `main`
 with the manual and a guide anchored to its section, revalidated there, branch
 `feature` off it and commit one change.
 """
@@ -56,8 +57,10 @@ ON_LEAD = {"artefact": ["docs/manual.md#"]}
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _start(timeline: Timeline, anchors: dict[str, list[str]] | None = None, **kept: Any) -> str:

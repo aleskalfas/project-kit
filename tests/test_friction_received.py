@@ -21,7 +21,7 @@ from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit import friction_write as fw
 from project_kit.friction_discovery import discover_artefacts
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, T1, friction_config, guide
 
 RULES = ".pkit/rule-sets/xs.md"
@@ -53,8 +53,9 @@ The statement of RS-XS-001.
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    """The base, committed on the install the template committed (`commit_install`)."""
+    adopter = committed_adopter
     adopter.write(
         {
             CONFIG: friction_config(mode="enforcing"),
