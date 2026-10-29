@@ -27,6 +27,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from _lib import backbone
+
 #: The document version this reading understands (the CLI reference, "Rule-set
 #: commands"); a later backbone that changes its meaning raises it.
 SCHEMA_VERSION = 1
@@ -57,7 +59,7 @@ class Binding:
         return rule in self.rules.get(path, frozenset())
 
 
-def read_binding(root: Path, run: Runner = subprocess.run) -> Binding:
+def read_binding(root: Path, run: Runner = backbone.run) -> Binding:
     """Where the rules bind in the project at `root`, at its working tree, through
     `pkit rule-sets reach --json`. Raises Unreadable when there is no answer to
     read: `pkit` absent, a backbone without the command, a configuration it cannot

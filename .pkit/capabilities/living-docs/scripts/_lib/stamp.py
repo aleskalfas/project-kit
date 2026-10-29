@@ -73,7 +73,7 @@ from typing import Any
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from _lib import formats, spaces
+from _lib import backbone, formats, spaces
 from _lib.artefacts import Unreadable, read_artefacts
 from _lib.binding import Binding, read_binding
 from _lib.declarations import (
@@ -196,7 +196,7 @@ def separate_roots(
     defines: bool = False,
     dry_run: bool = False,
     roots: Callable[[Path], Mapping[str, str]] | None = None,
-    run: Runner = subprocess.run,
+    run: Runner = backbone.run,
     interactive: Callable[[], bool] | None = None,
     say: Callable[[str], None] | None = None,
 ) -> Stamped | None:
@@ -890,7 +890,7 @@ def _refuse_new_errors(before: spaces.Outcome, after: spaces.Outcome, rel: str) 
 # --- recording the definitions location ----------------------------------------------------------
 
 
-def location_recorded(root: Path, run: Runner = subprocess.run) -> bool:
+def location_recorded(root: Path, run: Runner = backbone.run) -> bool:
     """Whether the definitions location is recorded already (COR-049 point 5), as `pkit
     docs record-location --dry-run` says, writing nothing; `False` when it cannot tell,
     so the stamp records, and a recording that fails refuses the stamp."""
@@ -901,7 +901,7 @@ def location_recorded(root: Path, run: Runner = subprocess.run) -> bool:
     return proc.returncode == 0 and (proc.stdout or "").strip().endswith("(recorded already)")
 
 
-def record_location(root: Path, run: Runner = subprocess.run) -> str | None:
+def record_location(root: Path, run: Runner = backbone.run) -> str | None:
     """Record the definitions location where it now lies, through `pkit docs
     record-location`, the backbone's one writer of it, which asks nothing: the value is
     the one already in use (COR-049 point 5). Returns what it printed when it recorded,
