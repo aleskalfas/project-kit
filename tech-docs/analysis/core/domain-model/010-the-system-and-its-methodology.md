@@ -322,7 +322,7 @@ An operational rule is an instruction that every session loads through the [harn
 **Relations:**
 
 - The harness's include loads it into each session.
-- In a loaded set, it binds on the work of each session that loads it, never on a document ([COR-068 point 2](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#2-where-its-accepted-rules-bind)).
+- In a loaded set, it binds on the work of each session that loads it, never on an [artefact](../glossary.md#term-artefact--artefact) ([COR-068 point 2](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#2-where-its-accepted-rules-bind)).
 
 **States:** In a loaded set, those of a rule. Only an accepted one is in the file a session loads (COR-068 point 3). In a plain file, none.
 

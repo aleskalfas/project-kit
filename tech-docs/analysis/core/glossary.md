@@ -1563,8 +1563,8 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 **Distinctions:**
 
-- **Rule:** a statement in a [rule set](#term-rule-set--rule-set), with an id, an origin and a status ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). An operational rule in a loaded set is a [rule](#term-rule--rule) too, with an id, an origin and a status. It binds on what a session does, not on documents ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
-- **Core rule and project rule:** the analysis's names for an operational rule of the [methodology](#term-methodology--methodology)'s file and of the project's, cited by number, as in *core rule 2*. A core rule is a rule of the [backbone](#term-backbone--backbone)'s loaded set `OPS`, so core rule 2 is `backbone:RS-OPS-002` (COR-068). A project rule is one only where the project keeps its rules as a loaded set.
+- **Rule:** a statement in a [rule set](#term-rule-set--rule-set), with an id, an origin and a status ([COR-051](../../../.pkit/decisions/core/COR-051-rule-sets.md)). An operational rule in a loaded set is a [rule](#term-rule--rule) too, with an id, an origin and a status. It binds on what a session does, not on [artefacts](#term-artefact--artefact) ([COR-068](../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)).
+- **Core rule and project rule:** the analysis's names for an operational rule of the [methodology](#term-methodology--methodology)'s file and of the project's, cited by number, as in *core rule 2*. A core rule is a rule of the [backbone](#term-backbone--backbone)'s loaded set `OPS`, so core rule 2 is `backbone:RS-OPS-002` (COR-068). A project rule is a rule of a loaded set only where the project keeps its rules as a loaded set.
 - **Core or project:** the methodology's file holds what fits any project, and the project's file holds what fits only that project ([COR-014](../../../.pkit/decisions/core/COR-014-universal-applicability.md)).
 
 ## TERM-overlay — overlay

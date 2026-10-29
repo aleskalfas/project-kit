@@ -657,7 +657,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-053 — Re-pin an inherited rule set once I have reviewed its new major](../use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md)
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
-- [REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships, but `rule-sets`](../requirements/constraints/010-develop/REQ-008-areas-held.md)
+- [REQ-008 · Constraint · Until #1600 is done, no change adds an area or an adapter a release ships, other than the `rule-sets` area, and none removes one](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 
 **Artefact type:** None.
 

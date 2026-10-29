@@ -423,7 +423,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md)
 - [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
 - [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
-- [REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships, but `rule-sets`](../requirements/constraints/010-develop/REQ-008-areas-held.md)
+- [REQ-008 · Constraint · Until #1600 is done, no change adds an area or an adapter a release ships, other than the `rule-sets` area, and none removes one](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
 - [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
 - [REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last](../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)
@@ -474,7 +474,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 **Propagation:**
 
 - [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
-- [REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships, but `rule-sets`](../requirements/constraints/010-develop/REQ-008-areas-held.md)
+- [REQ-008 · Constraint · Until #1600 is done, no change adds an area or an adapter a release ships, other than the `rule-sets` area, and none removes one](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 
 **Sync:**
 
