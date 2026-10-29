@@ -1,0 +1,169 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      at: 2026-10-28T18:08:10Z
+      outcome: updated
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      at: 2026-10-28T18:08:12Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
+  - artefact: tech-docs/analysis/project-management/domain-model/060-parallel-work.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T18:08:15Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      at: 2026-10-28T18:08:21Z
+      outcome: unchanged
+      unchanged-because: "The cascade's moves stand as the term defines them: forward only, each issue above brought level where it is behind, a parent offered for closing and never closed. The move back from In Progress moves no other issue, and the board Status a cascade now writes for each parent it moves is a projection outside the term."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      at: 2026-10-28T18:08:23Z
+      outcome: unchanged
+      unchanged-because: The definition names the five states in their order, a person holding the start, which is the scheduling, and the end. The move back from In Progress adds a way to Backlog or Todo that a person holds too. The board Status a move now writes, where the board does not carry the state, is the projection the entry already tells from the state, which wins.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-lead-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      at: 2026-10-28T18:08:26Z
+      outcome: unchanged
+      unchanged-because: Point 3 now adds only that an issue moved back from In Progress is unowned, and that a clone with no instance id moves back only an unowned issue. The actor states that the lead agent's instance owns the work it files, which point 3 still decides, so nothing it states changes.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      at: 2026-10-28T18:08:29Z
+      outcome: unchanged
+      unchanged-because: Point 3 now adds only that an issue moved back from In Progress is unowned, and that a clone with no instance id moves back only an unowned issue. The actor states no claim at filing and no release, so nothing it states changes.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      at: 2026-10-28T18:08:32Z
+      outcome: unchanged
+      unchanged-because: Point 3 now adds only that an issue moved back from In Progress is unowned, and that a clone with no instance id moves back only an unowned issue. The requirement keeps instances apart on an issue another of them owns, and neither addition gives an issue a second owner, so its statement and measure stand.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+    revalidated:
+      at: 2026-10-28T18:08:34Z
+      outcome: unchanged
+      unchanged-because: Point 3 now adds only that an issue moved back from In Progress is unowned, and that a clone with no instance id moves back only an unowned issue. Variant 1a states that the lead agent's instance owns each issue it files, which point 3 still decides, and the use case moves no issue back.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-084-take-next-task.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T18:08:40Z
+      outcome: unchanged
+      unchanged-because: Point 3 now adds that an issue moved back from In Progress is unowned. Point 4 adds the release on that move back, its refusal where the clone cannot release the owner, and that a Task its owner releases without a move back stays In Progress unowned. The claim at start in step 5 and the takeovers of variants 2a and 2b are decided as before, and the use case moves no Task back.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-085-leave-task-to-its-owner.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-28T18:08:43Z
+      outcome: unchanged
+      unchanged-because: "Points 3 and 4 now add the move back from In Progress, which releases the owner and is refused where the clone cannot release it. The use case leaves a Task to its owner: the refusal of variant 1a still comes, as the clash guard or as that move back's own refusal, and the takeovers of variants 3b and 3c are decided as before."
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+    revalidated:
+      at: 2026-10-28T18:08:45Z
+      outcome: unchanged
+      unchanged-because: Point 4 now adds the release on a move back from In Progress, its refusal where the clone cannot release the owner, and that a Task its owner releases without a move back stays In Progress unowned. The takeover by another instance while the session was dead, in variant 2a, is decided as before, and the use case moves no Task back.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-087-hand-over-to-next-scope.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T18:08:48Z
+      outcome: unchanged
+      unchanged-because: Point 3 now adds that an issue moved back from In Progress is unowned, and point 4 the release on that move back and its refusal where the clone cannot release the owner. The hand-over of variant 1a and the ownership at filing of variant 4a are decided as before, and the use case moves no Task back.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+    revalidated:
+      at: 2026-10-28T18:08:51Z
+      outcome: unchanged
+      unchanged-because: Point 3 now adds only that an issue moved back from In Progress is unowned, and that a clone with no instance id moves back only an unowned issue. The lead's instance still becomes the Task's owner at start and stays its owner while a helper builds it, and the use case moves no Task back.

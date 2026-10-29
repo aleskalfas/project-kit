@@ -11,7 +11,7 @@ reading of its position. Pinned here:
   per-state detector agrees with it: `detect_state(n, S).result` is
   `classify_state(n).state == S`;
 - one read: the classifier calls `_fetch_issue` exactly once;
-- the shipped definition: five states, one mode, one classifier, `version` 5;
+- the shipped definition: five states, one mode, one classifier, `version` 7;
 - a failed read: the script exits non-zero with `gh`'s own words on stderr, and
   through the real engine every state is indeterminate with that cause, shown
   once in the narrative;
@@ -224,7 +224,7 @@ def test_the_shipped_lifecycle_detects_with_one_classifier() -> None:
         "todo",
     ]
     assert detections == [{"mode": "classified", "predicate": {"run": "detect-state"}}] * 5
-    assert process["version"] == 5
+    assert process["version"] == 7
     assert workflow["schema_version"] == 4
 
     package = YAML(typ="safe").load((CAP_SRC / "package.yaml").read_text())

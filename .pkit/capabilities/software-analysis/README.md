@@ -41,7 +41,7 @@ The analysis describes the requirements: what your system must do, and for whom.
 - **Architecture views stay outside the analysis.** A view, one kept as a documentation page included, names an analysis artefact only by its id, and states none of its facts. A context view names your actors that way, and does not describe them again.
 - **What goes where.** A decision holds the choice and why it was made. A rule in a rule set says what must hold of an artefact. A requirement says what must hold of the system: a checkable obligation and, where it has them, its measure and what verifies it. So a decision names a requirement rather than restating its measure. The analysis artefact that states the requirement holds the measure.
 
-## Adopting it
+## Adopter setup
 
 Install it with `pkit capabilities install software-analysis`. Then:
 
@@ -1270,7 +1270,7 @@ In an analysis that builds on another, an actor of that analysis follows your ow
     - a filled *Rationale* or *Imposed by*
     - anchored code that already does it
     - a person's decision quoted in the artefact, with their name and the date
-  - Each artefact uses a concept of your domain only where a term defines it, and names it by that term's name. A term's definition is judged too, and no two terms define one concept. A name a term replaces, or a word of the writer's own for a defined concept, breaks the rule. Its *How* says what uses no concept, such as an actor's name, quoted words and code. A Mermaid diagram's labels are statements, and are judged. A domain-model view's section explains its term's concept in the term's own sense. The rule holds what the build order leaves in the analysis ("Adopting it", above) (`RS-SAN-008`).
+  - Each artefact uses a concept of your domain only where a term defines it, and names it by that term's name. A term's definition is judged too, and no two terms define one concept. A name a term replaces, or a word of the writer's own for a defined concept, breaks the rule. Its *How* says what uses no concept, such as an actor's name, quoted words and code. A Mermaid diagram's labels are statements, and are judged. A domain-model view's section explains its term's concept in the term's own sense. The rule holds what the build order leaves in the analysis ("Adopter setup", above) (`RS-SAN-008`).
   - Each precondition of a use case names its producers, the use cases that make it true. In a numbered area, the order binds where they may lie (the check of `after`, in [Checking](#checking-pkit-analysis-validate), above). What the environment gives alone is an assumption, stated once. Its *How* says what a check of `after` can hold, and seven limits a reviewer judges. `SAN` declares the capability's check of `after` under its `checks`, so a reviewer leaves that part to it ("Checking", above) (`RS-SAN-009`).
   - An analysis names another only where its component depends on that one's, and an optional one only as an option. Across analyses, an artefact anchors the records behind what it takes, never another analysis's artefacts (`RS-SAN-010`, `RS-SAN-005`).
   - A domain-model view names a concept that another view of its analysis explains only where that view's number is lower. A change that adds a section to a view owns the break where a view numbered at or below it already names that concept (`RS-SAN-011`).
@@ -1499,7 +1499,7 @@ The capability's skills, deployed by `pkit sync` with the others (in Claude Code
 
 | Skill | Paired with | Use it to |
 |---|---|---|
-| `analysis-author` — composite: `choose-templates`, `build-analysis`, `actor`, `term`, `view`, `use-case`, `journey`, `requirement`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | choose each kind's parts as you adopt the capability, and build the analysis in its order ("Adopting it", above). Write an actor, a term, a domain-model view, a use case, a journey, a requirement of each of the three kinds, or a revalidation record. Choose the slug, the area, the actor and the steps, a requirement's kind, and what the artefact anchors to, or why an actor, a term or a requirement stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
+| `analysis-author` — composite: `choose-templates`, `build-analysis`, `actor`, `term`, `view`, `use-case`, `journey`, `requirement`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | choose each kind's parts as you adopt the capability, and build the analysis in its order ("Adopter setup", above). Write an actor, a term, a domain-model view, a use case, a journey, a requirement of each of the three kinds, or a revalidation record. Choose the slug, the area, the actor and the steps, a requirement's kind, and what the artefact anchors to, or why an actor, a term or a requirement stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
 
 The command owns each file's correctness — its id, its place, the anchors the rule asks for — and the skill the choices behind it.
 

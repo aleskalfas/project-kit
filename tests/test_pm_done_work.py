@@ -2523,13 +2523,15 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
 
 # ---- an issue that never reached Review (#1162) -------------------------
 #
-# workflow.yaml declares a Task's move to done from Review — the merge's move —
-# and no In Progress → Done. A Task whose PR was opened without `review-work`
-# is still In Progress when done-work runs, so `move-issue --to done` after the
-# merge refused, and done-work warned about a state that did not exist while
-# the pr-merge close went on to set state:done. done-work now moves such an
-# issue to Review just before the merge, so each move it makes is a declared
-# one. The tests read the real schemas: the transition table decides.
+# workflow.yaml declares a Task's move to done from Review — the merge's move,
+# the one done-work makes. Its In Progress → Done is close-issue's, the close
+# of a Task completed without a pull request (#2282). A Task whose PR was
+# opened without `review-work` is still In Progress when done-work runs, so
+# `move-issue --to done` after the merge refused, and done-work warned about a
+# state that did not exist while the pr-merge close went on to set state:done.
+# done-work now moves such an issue to Review just before the merge, so the
+# merge's move is the declared one. The tests read the real schemas: the
+# transition table decides.
 
 
 _Issue = dict[str, Any]
@@ -2550,6 +2552,8 @@ def _task(state_label: str, *, state: str = "OPEN") -> _Issue:
 
 
 _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
+    # In Progress → Done is declared for a Task, as close-issue's completed
+    # close; the merge's own move is done-work's, from Review.
     (_task("state:in-progress"), ("in-progress", "review")),
     (_task("state:review"), None),
     (_task("state:review", state="CLOSED"), None),
@@ -2557,6 +2561,8 @@ _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
     ({**_task("state:in-progress"), "title": "no type prefix"}, None),
     # A container may move In Progress → Done directly; nothing leads in.
     ({**_task("state:in-progress"), "title": "[Feature] widgets"}, None),
+    # No single declared move leads a Backlog Task to the merge's move.
+    (_task("state:backlog"), None),
 ]
 
 
@@ -2570,6 +2576,7 @@ _LEAD_IN_CASES: list[tuple[_Issue | None, tuple[str, str] | None]] = [
         "unread",
         "untyped",
         "container-in-progress",
+        "task-in-backlog",
     ],
 )
 def test_the_lead_in_is_read_from_the_transition_table(
@@ -2583,7 +2590,20 @@ def test_the_lead_in_is_read_from_the_transition_table(
     if expected is None:
         assert lead_in is None
     else:
+        assert lead_in is not None
         assert (lead_in.from_state, lead_in.to_state) == expected
+
+
+def test_the_lead_in_says_where_the_merge_s_move_is_declared(dw: ModuleType) -> None:
+    from ruamel.yaml import YAML
+
+    lead_in = dw._lead_in_to_done(_task("state:in-progress"), CAPABILITY_ROOT_DW, YAML(typ="safe"))
+    assert lead_in is not None
+    assert lead_in.describe() == (
+        "in-progress → review before the merge, review → done after it (workflow.yaml "
+        "declares the merge's move to done from review, not from in-progress, for this "
+        "issue's type)"
+    )
 
 
 def _wire_lead_in(

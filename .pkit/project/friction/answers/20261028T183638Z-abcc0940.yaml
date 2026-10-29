@@ -1,0 +1,12 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-082-set-up-topology.md
+    read:
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T18:36:38Z
+      outcome: unchanged
+      unchanged-because: "The change to the instance identity module is its docstring only: a clone with no instance id cannot release an owner, so a move back from In Progress on an owned issue refuses (DEC-035 point 4). Setting up a topology neither moves an issue back nor reads a clone's instance id differently, so every step and variant of the use case holds as written."

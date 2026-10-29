@@ -1,0 +1,123 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-instance
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-28T18:29:42Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-owner
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+    revalidated:
+      at: 2026-10-28T18:29:47Z
+      outcome: updated
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-062-work-found-from-tracker.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+    revalidated:
+      at: 2026-10-28T18:29:50Z
+      outcome: unchanged
+      unchanged-because: DEC-035 now says in its summary and point 1 that a clone with no instance id cannot move back from In Progress an issue an instance owns. The requirement is about an instance that set a number finding the issues it owns and their branches from GitHub, which that refusal does not touch, and point 7's listing reads as it did.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-092-take-seat.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T18:29:52Z
+      outcome: unchanged
+      unchanged-because: DEC-035's summary and point 1 now add that a clone with no instance id cannot move back from In Progress an issue an instance owns. The use case cites point 1 for the key a clone keeps in a file never committed, which stands. Its clone with no seat marks no issue and meets no clash guard, as point 1 still says, and the use case moves no issue back.
+  - artefact: tech-docs/analysis/project-management/use-case-model/journeys/JRN-004-set-up-and-adjust-topology.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+    revalidated:
+      at: 2026-10-28T18:29:55Z
+      outcome: unchanged
+      unchanged-because: DEC-035's summary and point 1 now add that a clone with no instance id cannot move back from In Progress an issue an instance owns. That refusal is the move-issue wrapper's, as the clash guard is, and point 8 still keeps the owner out of every gate and transition of the lifecycle. So the guarantee that a stopped path leaves each issue to move as before stands.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-lead-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T18:30:02Z
+      outcome: unchanged
+      unchanged-because: Point 3 now leaves the move back's refusal to point 4, and its commons covers every issue with no owner, an issue moved back from In Progress among them. The actor states that the lead agent's instance owns the work it files, which point 3 still decides, so nothing it states changes.
+  - artefact: tech-docs/analysis/project-management/use-case-model/actors/ACT-worker-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T18:30:05Z
+      outcome: unchanged
+      unchanged-because: Point 3 now leaves the move back's refusal to point 4, and its commons covers every issue with no owner, an issue moved back from In Progress among them. The actor states no claim at filing and no release, so nothing it states changes.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/040-work-in-parallel/REQ-061-one-owner-per-issue.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T18:30:08Z
+      outcome: unchanged
+      unchanged-because: Point 3 now leaves the move back's refusal to point 4, and its commons covers every issue with no owner, an issue moved back from In Progress among them. DEC-035's summary and point 1 add that a clone with no instance id cannot move back an issue an instance owns. None of this gives an issue a second owner, so the requirement's statement and measure stand.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-083-plan-across-scopes.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T18:30:10Z
+      outcome: unchanged
+      unchanged-because: Point 3 now leaves the move back's refusal to point 4, and its commons covers every issue with no owner, an issue moved back from In Progress among them. Variant 1a states that the lead agent's instance owns each issue it files, which point 3 still decides, and the use case moves no issue back.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-088-delegate-to-agent.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T18:30:13Z
+      outcome: unchanged
+      unchanged-because: Point 3 now leaves the move back's refusal to point 4, and its commons covers every issue with no owner, an issue moved back from In Progress among them. The lead's instance still becomes the Task's owner at start and stays its owner while a helper builds it, and the use case moves no Task back.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-086-resume-after-session-died.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+    revalidated:
+      at: 2026-10-28T18:30:16Z
+      outcome: unchanged
+      unchanged-because: Point 4 adds the release on a move back from In Progress and its refusal where the clone cannot release the owner, and DEC-035's summary and point 1 name that refusal for a clone with no instance id. The takeover by another instance while the session was dead, in variant 2a, is decided as before, and the use case moves no Task back.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+    revalidated:
+      at: 2026-10-28T18:30:18Z
+      outcome: unchanged
+      unchanged-because: DEC-006 adds the move back from In Progress, and DEC-035's summary and point 1 add that a clone with no instance id cannot move back an issue an instance owns. Step 2 reads an owned Task's state from the Task itself, and a Task moved back reads as any other. Variant 1a's unsigned listing from a clone with no seat stands, so nothing the use case states changes.

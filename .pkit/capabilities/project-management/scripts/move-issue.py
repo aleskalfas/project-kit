@@ -29,8 +29,10 @@ where it binds it, and `has_projects_v2_board` governs only where the map is
 silent (per [project-management:DEC-051-axis-carriage-activation]):
 
   * `board` — the Projects v2 single-select `Status` field carries the state.
-    State changes go through `gh project item-edit` (deferred at v1 —
-    surfaces as a dry-run guidance message until kit issue #122 lands).
+    DEC-006 has the agent maintain the Status, but the write on this path is
+    not built yet: it follows the read of a board-carried state (#2271), and
+    until then the move surfaces as a guidance message, and a move back from
+    in-progress is refused.
   * `kit-label` / `adopter-label` — the state lives as a label: the kit's
     `state:*` in greenfield, or the adopter's own label under a `label:`
     binding. State changes happen via `gh issue edit --add-label <new>
@@ -38,6 +40,12 @@ silent (per [project-management:DEC-051-axis-carriage-activation]):
   * `derived` / `degrade` — no label is written or removed (a derived state is
     carried by open/closed, and a degraded one by nothing); the wrapper's other
     domain side-effects still fire.
+
+Where a board is configured and does not carry the state, its Status is a
+projection of the state the agent maintains (DEC-006). The move writes the
+card's Status to the issue's new state, through `_lib/board_status`, and so does
+a move that finds the issue already there; the forward cascade writes each
+ancestor's. A write that fails is one line, and the move stands.
 
 The forward cascade per DEC-006 fires upward on a forward move: the
 script walks from the issue to the top of its hierarchy, one parent at a
@@ -48,7 +56,9 @@ behind up to the issue's state, capped
 at in-progress, through declared transitions only — an ancestor in todo
 goes to backlog, then to in-progress, each step its own label write,
 journaled where a journal is kept with the issue's move as the reason.
-A move to done from todo or backlog (won't-do) moves no ancestor. The
+A won't-do close from todo or backlog moves no ancestor, and a close as
+completed brings them level from any state, a Task's completed close from
+todo or backlog included (DEC-006). The
 cascade is not an authorisation: it asks for no confirmation, posts no audit
 comment and fires no hook. At the `full` audit projection each ancestor it
 moves gets the provenance comment a governed move gets, naming the move that
@@ -58,9 +68,28 @@ done, once the issue has closed as completed — and it does not run where
 the state is not written as a label. See the "forward cascade" section
 near the end of this file.
 
+The move back per DEC-006 ("Moving back from In Progress") takes an issue
+nobody is working on from in-progress back to backlog, or to todo. The person
+authorises it at hard-reject (`--yes`, or a yes at a terminal) and gives the
+reason the work stopped (`--reason`, required). It lands in backlog where the
+issue is in a milestone, or, for a container, where a child of it is in
+backlog, and in todo otherwise: the other target is refused, naming the right
+one. A container is refused where a child of it is in-progress or in review,
+each such child named, or where its children cannot all be told. So is an
+issue with an owner this clone cannot release, the owner named: any owner,
+where this clone takes no part in instance ownership, and a claim another
+account made on the comment log (`_lib/instance_claims.cannot_release`). So is
+every move back where the board carries the state, until #2271. The reason
+is posted as the move's audit comment before the label changes, at every
+projection but `off`, and journaled with the move. The owner's claim is then
+released through `_lib/instance_claims.release`, the one release path
+close-issue takes. No ancestor moves with it, and a Task's branch and draft
+pull request stay as they are.
+
 Membership gate per DEC-021 runs at startup.
 
-The clash guard (DEC-035 point 6) runs before anything is written, where this
+The clash guard (DEC-035 point 6) runs before anything is written, and after a
+move back's own checks, where this
 clone set an instance id or holds a seat of a topology: a move of an issue
 another instance owns is refused at bypassable-with-audit (DEC-014), through
 `_lib/instance_claims`. `--bypass-owner "<reason>"` posts the reason on the
@@ -79,10 +108,15 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  transitioned, already there, or dry-run reported — a forward cascade
-     left incomplete is a warning, not a failure: the issue's move stands
+     left incomplete is a warning, not a failure: the issue's move stands,
+     and so does a move back whose release of the owner failed
   1  membership refusal / authorisation refusal / the clash guard refused an
-     issue another instance owns / this clone's seat could not be confirmed
-  2  usage error (unknown state, illegal transition, issue not found)
+     issue another instance owns / this clone's seat could not be confirmed /
+     a move back with no reason, or of a container with a child in-progress or
+     in review, or whose children cannot all be told, or of an issue with an
+     owner this clone cannot release, or where the board carries the state
+  2  usage error (unknown state, illegal transition, issue not found, a move
+     back to the state it does not land in, --reason on any other move)
   3  gh failure
 """
 
@@ -106,6 +140,7 @@ from _lib import audit as _audit
 from _lib import (
     axis_carriage,
     axis_labels,
+    board_status,
     body_parent_ref,
     bootstrap_gate,
     composed_move,
@@ -255,6 +290,17 @@ def main() -> int:
             "instance owns (bypassable-with-audit per DEC-014, DEC-035 point 6): "
             "the reason is posted on the issue as an audit comment before the "
             "move. Distinct from --bypass, which clears the transition's gate."
+        ),
+    )
+    parser.add_argument(
+        "--reason",
+        default=None,
+        metavar="REASON",
+        help=(
+            "Required by a move back from in-progress to backlog or todo, and taken "
+            "by no other move: why the work stopped. Posted on the issue as the "
+            "move's audit comment before the label changes, and given as the "
+            "move's journal entry's reason (DEC-006)."
         ),
     )
     parser.add_argument(
@@ -421,6 +467,16 @@ def main() -> int:
     # a `derive` binding the label planner already writes nothing.
     state_on_board = axis_carriage.is_board_carried("state", config, substrate_map)
 
+    # The board's Status, where it is a projection this project keeps (DEC-006):
+    # a board is configured and the state is not carried on it. None otherwise,
+    # and then no board call is made. Where the board carries the state, its
+    # Status is the state's source, which this script does not write.
+    status = (
+        board_status.Projector(config, workflow)
+        if board_status.maintained(config, substrate_map)
+        else None
+    )
+
     # Audit-comment projection (DEC-049): where the project keeps a journal it
     # records every move regardless; `audit.projection` controls the GitHub
     # comment projection — `off` posts nothing, `audit` (default) posts only
@@ -438,6 +494,7 @@ def main() -> int:
         invoker=invoker,
         projection=projection,
         levels=_cascade_levels(workflow),
+        status=status,
     )
 
     def moved_issue(origin: str | None) -> _MovedIssue:
@@ -461,6 +518,29 @@ def main() -> int:
         )
     except instance_claims.Unconfirmed as exc:
         return instance_claims.say_unconfirmed("move-issue", args.issue_number, exc)
+
+    # The move back (DEC-006) is settled before the guard, whose bypass posts its
+    # reason: whether the board carries the state, the move's reason, where it
+    # lands, whether a container may take it, and whether this clone can release
+    # the owner, which no bypass of the guard changes. A move the workflow does
+    # not declare is no move back, and is refused below.
+    transition = _find_transition(workflow, current_state, args.to, structural_type)
+    move_back = transition is not None and _is_move_back(current_state, args.to)
+    if move_back:
+        refused = _check_move_back(
+            args.issue_number,
+            args.to,
+            args.reason,
+            milestone=milestone,
+            structural_type=structural_type,
+            context=cascade_context,
+            state_on_board=state_on_board,
+            clone=clone,
+            capability_root=capability_root,
+        )
+        if refused is not None:
+            return refused
+
     if clone is not None:
         decision = instance_claims.guard(
             args.issue_number,
@@ -523,14 +603,22 @@ def main() -> int:
                         actor=invoker.github_login,
                         reason=merge_reason,
                     )
+        # The card may still show where the issue was: a merge's close moves the
+        # issue to done without a move of ours. The write converges, so it is made
+        # whether or not the card already says it.
+        if status is not None:
+            if args.dry_run:
+                _print_status_plan(status, workflow, args.to)
+            else:
+                board_status.report(status.write(args.issue_number, args.to))
         # The forward cascade is idempotent, so the issue already being in place
         # does not end the walk: re-running a move whose cascade left an ancestor
         # behind brings that ancestor level. An issue already at done came there
-        # from where its old label places it — a merge's close leaves review —
-        # which tells a finished issue from a won't-do one; where the label
-        # already reads done, or neither a state label nor a milestone records
-        # where it was, its close reason tells them apart instead. It is the one
-        # reading the journal entries for the close take, so the two agree.
+        # from where its old label places it — a merge's close leaves review. A
+        # close as completed tells a finished issue from a won't-do one wherever
+        # it came from, and otherwise that origin does (`_finished_work`). The
+        # origin is the one reading the journal entries for the close take, so
+        # the two agree.
         if not args.no_cascade:
             origin = (
                 infer.state_before_close(
@@ -549,8 +637,7 @@ def main() -> int:
                 _run_forward_cascade(cascade, cascade_context)
         return 0
 
-    # Look up the transition.
-    transition = _find_transition(workflow, current_state, args.to, structural_type)
+    # The transition, looked up above.
     if transition is None:
         legal_targets = _legal_targets(workflow, current_state, structural_type)
         print(
@@ -558,6 +645,16 @@ def main() -> int:
             f"declared in workflow.yaml for {structural_type!r}.\n"
             f"  legal targets from {current_state!r}: "
             f"{', '.join(legal_targets) if legal_targets else '<none>'}",
+            file=sys.stderr,
+        )
+        return 2
+
+    # `--reason` is the move back's alone (DEC-006); any other move gives its
+    # reason another way, such as `--bypass-reason`.
+    if args.reason is not None and not move_back:
+        print(
+            "error: --reason applies to a move back from in-progress only "
+            f"(got {current_state} → {args.to}).",
             file=sys.stderr,
         )
         return 2
@@ -604,6 +701,9 @@ def main() -> int:
                 )
                 return 1
 
+    # Why the work stopped, on a move back, which its checks above required.
+    move_back_reason = (args.reason or "").strip() if move_back else ""
+
     # Residual-placeholder check per DEC-031 — hard-reject at transition.
     # Run before any mutation so an unauthored body blocks the transition.
     placeholder_findings = detect_placeholder_residuals(
@@ -635,14 +735,20 @@ def main() -> int:
     print(f"  target:       {args.to}")
     print(f"  authorisation: {transition.authorisation}")
     print(f"  severity:      {transition.severity}")
+    if move_back:
+        print(f"  reason:        {move_back_reason}")
+        if clone is not None:
+            plan_line = instance_claims.release_plan(clone, when="on the move back")
+            print(f"  ownership:     {plan_line}")
 
     if state_on_board:
         print(
             f"\n[note] board substrate detected (projects_v2_board_id="
             f"{config.get('projects_v2_board_id')}). State lives on the "
-            "Projects v2 Status field; bulk gh-project field-set is deferred "
-            "(per DEC-019). This invocation will surface the planned move "
-            "but not mutate the board field at v1."
+            "Projects v2 Status field, and the agent maintains the Status (DEC-006), "
+            "but the write where the board carries the state is not built yet: it "
+            "follows the read of #2271. This invocation will surface the planned move "
+            "but not mutate the board field."
         )
 
     plan = _compute_plan(
@@ -654,6 +760,8 @@ def main() -> int:
         substrate_map=substrate_map,
     )
     _print_plan(plan)
+    if status is not None:
+        _print_status_plan(status, workflow, args.to)
 
     # Cascade preview: each ancestor's steps, read before anything is written.
     cascade = None
@@ -679,7 +787,11 @@ def main() -> int:
     # bypass: the bypassable authorisation gate above refuses a --bypass without
     # a non-empty --bypass-reason. Empty when no gate was bypassed.
     bypass_reason = (args.bypass_reason or "").strip() if is_bypass_audit else ""
-    if projection != "off" and is_bypass_audit:
+    # The reason the move's audit comment carries: a bypass's justification, or
+    # why the work stopped on a move back (DEC-006). No move back is bypassable,
+    # so at most one of the two is given.
+    audit_reason = bypass_reason or move_back_reason
+    if projection != "off" and audit_reason:
         # move-issue is the sole writer of the TRANSITION audit comment (DEC-049): it renders the
         # one canonical comment from the schema template; wrappers pass the reason
         # through rather than posting their own (killing the #672 double-post).
@@ -692,12 +804,17 @@ def main() -> int:
         key = _transition_audit_key(
             current_state,
             args.to,
-            bypass_reason,
+            audit_reason,
             _landed_moves(args.issue_number, engine_status, config, substrate_map),
         )
-        audit_comment = (
-            _render_audit_comment(capability_root, invoker, bypass_reason) + "\n\n" + key
+        rendered = (
+            _render_move_back_comment(
+                capability_root, invoker, current_state, args.to, move_back_reason
+            )
+            if move_back
+            else _render_audit_comment(capability_root, invoker, bypass_reason)
         )
+        audit_comment = rendered + "\n\n" + key
         if not _post_transition_audit_once(args.issue_number, audit_comment, key, config):
             return 3
 
@@ -724,28 +841,49 @@ def main() -> int:
     # like-with-like against an artifact's `produced_by` login (COR-033 P4).
     # A bypassed move carries its justification as the entry's reason, at every
     # projection: the journal is the canonical trail where it is kept (DEC-049).
-    # A move to done a merged PR made (`--merged-pr`) carries that PR's reason.
-    # No move into done is bypassable in the shipped workflow, so at most one of
-    # the two is given; were both, the bypass's justification is the entry's why.
+    # A move to done a merged PR made (`--merged-pr`) carries that PR's reason,
+    # and a move back the reason the work stopped. No move into done is
+    # bypassable in the shipped workflow, and no move back either, so at most one
+    # is given; were two, the bypass's justification is the entry's why.
     _journal_move(
         args.issue_number,
         current_state,
         args.to,
         invoker.github_login,
-        reason=_bypass_journal_reason(bypass_reason) or merge_reason,
+        reason=(
+            _bypass_journal_reason(bypass_reason)
+            or _move_back_journal_reason(move_back_reason)
+            or merge_reason
+        ),
     )
 
+    # The move back releases the owner's claim (DEC-006), through the one release
+    # path close-issue takes. A release that fails is a warning: the move stands.
+    # An owner this clone cannot release refused the move before any write, so a
+    # clone that takes no part in instance ownership has no owner to release here.
+    if move_back and clone is not None:
+        instance_claims.say(
+            instance_claims.release(
+                args.issue_number, clone, config, happened=f"moved back to {args.to}"
+            )
+        )
+
     # DEC-049 `full` projection: post a provenance-stamped comment for a governed
-    # move not already covered by the bypass audit above, so the governed-vs-
+    # move not already covered by the audit comment above, so the governed-vs-
     # ungoverned boundary is visible on the issue. Best-effort — never fails the
     # move (the canonical record is the journal where one is kept, the tracker
     # otherwise).
-    if projection == "full" and not is_bypass_audit:
+    if projection == "full" and not audit_reason:
         _gh_comment(
             args.issue_number,
             _render_provenance_comment(invoker, current_state, args.to),
             config,
         )
+
+    # The board's Status follows the label written above (DEC-006). A write that
+    # fails is one line, and the move stands: the label is the source.
+    if status is not None:
+        board_status.report(status.write(args.issue_number, args.to))
 
     # Forward cascade. Each ancestor step it writes is journaled, where a journal is
     # kept, the way this move was, by the same actor, with this move named as the
@@ -845,6 +983,12 @@ def _print_plan(plan: Plan) -> None:
         print(f"  - remove label {plan.remove_label!r}")
     if not plan.add_label and not plan.remove_label:
         print("  · (substrate: board) — no label mutations.")
+
+
+def _print_status_plan(status: board_status.Projector, workflow: dict, target: str) -> None:
+    """The plan's line for the board's Status, which reads nothing to say it."""
+    name = board_status.option_name(workflow, target)
+    print(f"  ~ set the card's Status on {status.board} to {name!r}")
 
 
 # ---- workflow-schema helpers ----------------------------------------
@@ -960,6 +1104,249 @@ def _bypass_reason_missing(bypass: bool, bypass_reason: str | None) -> bool:
     `bypass` is False the flag is inert, so there is nothing to enforce.
     """
     return bool(bypass) and not (bypass_reason or "").strip()
+
+
+# ---- the move back (DEC-006, "Moving back from In Progress") ----------------
+#
+# A person moves an issue nobody is working on back from in-progress, so
+# in-progress means work is moving. Every check here runs before anything is
+# written, the clash guard's bypass comment included, and writes nothing. The
+# writes are main()'s: the reason as the audit comment, the label, the journal
+# entry, and the release of the owner's claim.
+
+# The states a child of a container holds where the container may not move back
+# over it: the container would stand behind it.
+_STARTED = ("in-progress", "review")
+
+
+def _is_move_back(current: str, target: str) -> bool:
+    """Whether a move from ``current`` to ``target`` goes back in the lifecycle
+    order: a move back (DEC-006). False for a state outside the order."""
+    order = infer.STATE_ORDER
+    try:
+        return order.index(target) < order.index(current)
+    except ValueError:
+        return False
+
+
+def _move_back_journal_reason(reason: str) -> str | None:
+    """The reason a move back is journaled with — why the work stopped — or None
+    for any other move, whose argv to the engine is then unchanged."""
+    return f"move back: {reason}" if reason else None
+
+
+def _render_move_back_comment(
+    capability_root: Path, invoker: object, from_state: str, to_state: str, reason: str
+) -> str:
+    """The move back's audit comment (DEC-006, DEC-049 point 2): the canonical
+    audit line carrying the reason the work stopped, and the move below it, as a
+    writer that says more than the template appends its prose (`_lib/audit`)."""
+    return (
+        f"{_render_audit_comment(capability_root, invoker, reason)}\n\n"
+        f"Moved back from {from_state} to {to_state}, since the work stopped "
+        "(project-management DEC-006)."
+    )
+
+
+@dataclass(frozen=True)
+class _Children:
+    """A container's children as the move back reads them.
+
+    ``read`` holds each child in this repository with the state it is in, a
+    closed one at done. ``untold`` holds each child that could not be read, with
+    why: one the issue list did not return, one whose state is no state of the
+    lifecycle, and one in another repository whose read failed. ``open_elsewhere``
+    holds each child in another repository that is open: only open or closed is
+    read there, so it holds the container until it closes, and reading it again
+    tells no more. ``incomplete`` says why the child set itself could not be
+    listed in full, when it could not, and then nothing else is read."""
+
+    read: tuple[tuple[containment.ResolvedChild, str], ...] = ()
+    untold: tuple[tuple[containment.ResolvedChild, str], ...] = ()
+    open_elsewhere: tuple[containment.ResolvedChild, ...] = ()
+    incomplete: str | None = None
+
+    @property
+    def told(self) -> bool:
+        """Whether the state of every child is known."""
+        return self.incomplete is None and not self.untold and not self.open_elsewhere
+
+
+def _read_children(
+    number: int, config: dict, substrate_map: axis_labels.SubstrateMap | None
+) -> _Children:
+    """Read a container's children and the state of each, for its move back.
+
+    The children are the containment seam's (`containment.resolve_children`),
+    native sub-issues and first lines alike, from one listing of the issues. A
+    child in this repository is placed by the inference every reading of a
+    position takes. A child in another repository is read there by open and
+    closed alone, as the closure fold reads it, so an open one cannot be told
+    from one in-progress."""
+    corpus = containment.fetch_issue_corpus(config)
+    if corpus is None:
+        return _Children(incomplete="the issue list could not be read (gh failure)")
+    resolution = containment.resolve_children(
+        config, parent_number=number, corpus=corpus.bodies, corpus_complete=corpus.complete
+    )
+    if not resolution.complete:
+        return _Children(incomplete=resolution.incomplete_reason)
+    rows = {row.get("number"): row for row in corpus.rows}
+    read: list[tuple[containment.ResolvedChild, str]] = []
+    untold: list[tuple[containment.ResolvedChild, str]] = []
+    open_elsewhere: list[containment.ResolvedChild] = []
+    for child in resolution.children:
+        if child.repository is not None:
+            record = containment.read_issue_record(
+                config, issue_number=child.number, repository=child.repository
+            )
+            if isinstance(record, containment.UnreadIssue):
+                untold.append((child, f"it could not be read: {record.detail}"))
+            elif str(record.issue.get("state", "")).upper() != "CLOSED":
+                open_elsewhere.append(child)
+            continue
+        row = rows.get(child.number)
+        if row is None:
+            untold.append((child, "it is not among the issues the issue list returned"))
+            continue
+        state = infer.infer_current_state(
+            state=str(row.get("state", "")).lower(),
+            milestone=row.get("milestone") or {},
+            labels=_label_names(row),
+            substrate_map=substrate_map,
+        )
+        if state not in infer.STATE_ORDER:
+            untold.append((child, f"its state reads {state!r}, which is no state of the lifecycle"))
+            continue
+        read.append((child, state))
+    return _Children(read=tuple(read), untold=tuple(untold), open_elsewhere=tuple(open_elsewhere))
+
+
+def _move_back_landing(milestone: dict | None, children: _Children | None) -> tuple[str, str]:
+    """Where a move back lands, and why (DEC-006): backlog where the issue is in
+    a milestone, which keeps the scheduling, or, for a container, where a child
+    of it is in backlog, since a container is never behind the work under it;
+    todo otherwise, which withdraws the scheduling. ``children`` is None for an
+    issue that is no container."""
+    if milestone:
+        title = milestone.get("title") if isinstance(milestone, dict) else None
+        return "backlog", f"it is in the Milestone {title!r}" if title else "it is in a Milestone"
+    for child, state in children.read if children is not None else ():
+        if state == "backlog":
+            return "backlog", f"its child {child.ref} is in backlog"
+    if children is None:
+        return "todo", "it is in no Milestone"
+    return "todo", "it is in no Milestone, and no child of it is in backlog"
+
+
+def _check_move_back(
+    number: int,
+    target: str,
+    reason: str | None,
+    *,
+    milestone: dict | None,
+    structural_type: str,
+    context: _CascadeContext,
+    state_on_board: bool,
+    clone: instance_claims.Clone | None,
+    capability_root: Path,
+) -> int | None:
+    """Refuse a move back that may not be made, saying why; the exit code, or
+    None where it may (DEC-006).
+
+    Where the board carries the state, it is not made yet. It needs a reason. A
+    container needs every child told, and none in-progress or in review. It
+    lands where `_move_back_landing` says: the other target is a usage error,
+    which names the right one. And this clone must be able to release every
+    owner of the issue, so the issue never waits moved back and still claimed
+    (`instance_claims.cannot_release`)."""
+    if state_on_board:
+        print(
+            f"[refused] #{number} does not move back here: the board carries its state, and "
+            "the board's Status write for a board-carried state comes with #2271 (pull "
+            "request #2275). Nothing was written: no claim was released and no move "
+            "journaled (DEC-006).",
+            file=sys.stderr,
+        )
+        return 1
+    if not (reason or "").strip():
+        print(
+            f"[refused] #{number}: a move back from in-progress needs "
+            '--reason "<why the work stopped>", posted on the issue before the move '
+            "(DEC-006). Nothing was written.",
+            file=sys.stderr,
+        )
+        return 1
+    children = None
+    if structural_type in context.levels:
+        children = _read_children(number, context.config, context.substrate_map)
+        if not children.told:
+            _say_children_untold(number, children)
+            return 1
+        started = [(child, state) for child, state in children.read if state in _STARTED]
+        if started:
+            print(
+                f"[refused] #{number} does not move back while a child of it is in-progress "
+                "or in review, since a container never stands behind the work under it "
+                "(DEC-006). Nothing was written.",
+                file=sys.stderr,
+            )
+            for child, state in started:
+                print(f"  - {child.ref} is {state}", file=sys.stderr)
+            print(
+                f"  → #{number} moves back once no child of it is in-progress or in review.",
+                file=sys.stderr,
+            )
+            return 1
+    landing, why = _move_back_landing(milestone, children)
+    if landing != target:
+        print(
+            f"error: #{number} moves back to {landing}, not {target}: {why} (DEC-006).\n"
+            f'  → run `move-issue {number} --to {landing} --reason "<why the work stopped>"`.',
+            file=sys.stderr,
+        )
+        return 2
+    kept = instance_claims.cannot_release(
+        number,
+        clone,
+        context.config,
+        capability_root=capability_root,
+        login=getattr(context.invoker, "github_login", None),
+    )
+    if kept is not None:
+        print(
+            f"[refused] #{number} does not move back: {kept.why}. A move back releases the "
+            f"owner, so the issue never waits in {target} still claimed (DEC-006). Nothing "
+            f"was written.\n  → {kept.remedy}.",
+            file=sys.stderr,
+        )
+        return 1
+    return None
+
+
+def _say_children_untold(number: int, children: _Children) -> None:
+    """The refusal of a container's move back where the state of a child of it
+    is not known, naming each such child and what lets the move go on."""
+    print(
+        f"[refused] #{number}: whether a child of it is in-progress or in review "
+        "cannot be told, so it does not move back (DEC-006). Nothing was written.",
+        file=sys.stderr,
+    )
+    if children.incomplete is not None:
+        print(
+            f"  → its children could not be listed in full: {children.incomplete}",
+            file=sys.stderr,
+        )
+    for child, why in children.untold:
+        print(f"  → {child.ref}: {why}", file=sys.stderr)
+    for child in children.open_elsewhere:
+        print(
+            f"  → {child.ref} is open in {child.repository}, where only open or closed is "
+            f"read, so it holds #{number} until it closes.",
+            file=sys.stderr,
+        )
+    if children.incomplete is not None or children.untold:
+        print("  → run this again once every child can be read.", file=sys.stderr)
 
 
 def _infer_current_state(
@@ -1297,7 +1684,9 @@ class _CascadeContext:
     ``invoker`` is who runs the move, and the cascade's moves are theirs;
     ``projection`` is the audit projection (DEC-049), at `full` of which each
     ancestor moved gets a provenance comment. ``levels`` are the issue types it
-    moves (`_cascade_levels`), empty when workflow.yaml declares none."""
+    moves (`_cascade_levels`), empty when workflow.yaml declares none.
+    ``status`` writes each ancestor's board Status where the project keeps it as
+    a projection (DEC-006), None where it does not."""
 
     workflow: dict
     issue_types: dict
@@ -1307,6 +1696,7 @@ class _CascadeContext:
     invoker: object
     projection: str
     levels: tuple[str, ...]
+    status: board_status.Projector | None = None
 
     @property
     def actor(self) -> str | None:
@@ -1402,7 +1792,7 @@ def _cascade_forward_target(child_target: str) -> str:
 
 
 # Where an issue's move to done comes from when it finished work, not abandoned
-# it: a move to done from todo or backlog is a won't-do close.
+# it, whatever close reason the tracker reports for it.
 _COMPLETING_ORIGINS = ("in-progress", "review")
 
 
@@ -1421,15 +1811,15 @@ def _forward_cascade_target(mover: _MovedIssue) -> str | None:
 def _finished_work(mover: _MovedIssue) -> bool:
     """Whether a move to done finished the issue's work rather than dropped it.
 
-    It did from in-progress or review, and did not from todo or backlog — a
-    won't-do close. Where the issue's label already reads done, so where it
-    came from is not recorded, its close reason tells: completed finished it;
-    any other reason, or none reported, does not say it did."""
-    if mover.origin in _COMPLETING_ORIGINS:
+    A close as completed did, wherever the issue came from: completed work is
+    progress, so a Task's completed close from todo or backlog brings its
+    ancestors level too (DEC-006). A move from in-progress or review did, too.
+    Any other move did not say it did: one from todo or backlog is a won't-do
+    close, and one whose origin is not recorded, closed for another reason or
+    with none reported, cannot be told from one."""
+    if mover.closed_as == CLOSED_COMPLETED:
         return True
-    if mover.origin in ("todo", "backlog"):
-        return False
-    return mover.closed_as == CLOSED_COMPLETED
+    return mover.origin in _COMPLETING_ORIGINS
 
 
 def _no_cascade_to_done(mover: _MovedIssue) -> str:
@@ -1893,7 +2283,7 @@ def _step_ancestor(
 ) -> _AncestorOutcome:
     """Write each step as its own label edit, computed from the labels as the
     step before left them, and journal it; then project the steps that landed
-    (`_project_cascaded_move`).
+    (`_project_cascaded_move`, `_project_cascaded_status`).
 
     A step whose label landed is followed by the next whether or not the engine
     took it, so the ancestor never rests between the two writes of one step; a
@@ -1916,6 +2306,7 @@ def _step_ancestor(
         if not _gh_apply_state_label(number, edit, context.config):
             said.append(f"{current} → {step} not written (the label write failed)")
             _project_cascaded_move(number, reached, reason, context)
+            _project_cascaded_status(number, reached, context)
             return _AncestorOutcome(
                 number,
                 "; ".join(said) if len(said) > 1 else f"not moved: {said[0]}",
@@ -1931,6 +2322,7 @@ def _step_ancestor(
         reached.append(step)
         current = step
     _project_cascaded_move(number, reached, reason, context)
+    _project_cascaded_status(number, reached, context)
     if not all_journaled:
         return _AncestorOutcome(number, "; ".join(said), complete=False)
     return _AncestorOutcome(number, " → ".join(reached))
@@ -1959,6 +2351,16 @@ def _project_cascaded_move(
             "the move stands.",
             file=sys.stderr,
         )
+
+
+def _project_cascaded_status(number: int, reached: list[str], context: _CascadeContext) -> None:
+    """Where the project keeps the board's Status as a projection (DEC-006), set
+    ancestor ``number``'s to the state its steps reached: one write, however many
+    steps landed, and none when none did. A write that fails is one line, and the
+    ancestor's move stands."""
+    if context.status is None or len(reached) < 2:
+        return
+    board_status.report(context.status.write(number, reached[-1]))
 
 
 def _print_cascade_report(

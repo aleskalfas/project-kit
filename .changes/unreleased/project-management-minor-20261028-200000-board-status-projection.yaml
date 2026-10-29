@@ -1,0 +1,16 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A board's Status is now kept as the projection of each issue's state, as
+  DEC-006 decides, where a Projects v2 board is configured and does not carry
+  the state. `move-issue` and every wrapper over it set the card's Status to the
+  issue's new state, the forward cascade sets each parent's, and `create-issue`
+  sets the first Status of the card it adds. A write that fails is one line,
+  and the move stands. The new command `sync-board` writes the Status again from
+  every issue's state, on the cards that differ only, adds a card for each open
+  issue that has none, and names each card whose Status disagreed: the issue's
+  state wins. `pre-check` warns, with the remedy, for each of the five states
+  the board's Status has no option for. Where the board carries the state,
+  nothing changes.

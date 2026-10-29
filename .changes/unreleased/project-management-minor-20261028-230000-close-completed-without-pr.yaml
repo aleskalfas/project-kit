@@ -1,0 +1,25 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  A Task whose work was not a pull request, such as an audit, an investigation
+  or a decision walked with the user, now closes as completed (DEC-006, #2282).
+  `close-issue <N> --mode=completed --result "<where the result lives>"` closes
+  it on the person's authorisation: `--yes`, or a yes at a terminal. Every
+  checkbox must be ticked, and the gate is not skippable in this mode. The close
+  comment names where the work's result lives, such as an issue, a record or a
+  comment, and a retry posts no second one. GitHub records the Task as
+  completed, its labels are reconciled to done, the move is journaled from
+  where it was as `completed close: <where>`, and the owner is released.
+  Completed work is progress, so the forward cascade then brings each ancestor
+  behind up to In Progress, through `move-issue <N> --to done`, and the closure
+  cascade runs after it. A Task in Todo, Backlog or In Progress closes, and one
+  in Review, which has a pull request open, is refused, naming `done-work`.
+  `move-issue <N> --to done` on an issue closed as completed brings its
+  ancestors level whatever state its label held, Todo or Backlog included, where
+  it moved none before. `workflow.yaml` declares In Progress → Done for a Task
+  and the `manual-completed` closure trigger, and the issue lifecycle's
+  definition version rises to 7. A won't-do close of a Task In Progress is
+  journaled too. `done-work` still moves a Task In Progress at the merge to
+  Review first.
