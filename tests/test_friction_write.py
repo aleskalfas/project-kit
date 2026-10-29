@@ -1,18 +1,19 @@
 """Tests for the friction writers — `revalidate`, `defer`, `record-status` (Task #992, COR-050,
 COR-062).
 
-Every test stands up a real adopter repository (`make_adopter_repo`) with a
-place declared and writes documents in block-style YAML, so a test can say
-exactly which bytes a writer may touch. `revalidate` and `defer` write the
-change's own answer file and leave the artefact's file byte for byte, its
-answers already taken into an answer file (`answers_in_files`). `record-status`
-replaces one key of the block, the expected file the original with that key's
-lines replaced, compared whole. The status tests commit real history, since
-`record-status` runs the whole-repository check at HEAD. The property-style test
-puts seeded random documents — both forms, block and flow style, awkward texts —
-through random writes, each read back by the answer reader and passed through
-validation. Three seeds take the round trip through the repository, and the rest
-the answer files' pure layer, which starts no process (#2309).
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`), with a place declared. It writes documents in
+block-style YAML, so a test can say exactly which bytes a writer may touch.
+`revalidate` and `defer` write the change's own answer file and leave the
+artefact's file byte for byte, its answers already taken into an answer file
+(`answers_in_files`). `record-status` replaces one key of the block, the
+expected file the original with that key's lines replaced, compared whole. The
+status tests commit real history, since `record-status` runs the
+whole-repository check at HEAD. The property-style test puts seeded random
+documents — both forms, block and flow style, awkward texts — through random
+writes, each read back by the answer reader and passed through validation.
+Three seeds take the round trip through the repository, and the rest the answer
+files' pure layer, which starts no process (#2309).
 """
 
 from __future__ import annotations
@@ -38,7 +39,7 @@ from project_kit.cli import main
 from project_kit.document_parts import split_front_matter
 from project_kit.friction_discovery import Anchor, discover_artefacts, parse_artefacts
 from project_kit.friction_validate import validate_friction
-from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo
 from tests.friction_documents import (
     CONFIG,
     SOURCE,
@@ -46,6 +47,7 @@ from tests.friction_documents import (
     own_answer_file,
     own_entry,
 )
+from tests.shipped_rule_sets import own
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -108,10 +110,9 @@ RULE_SET = (
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    adopter = make_adopter_repo()
-    adopter.write({CONFIG: friction_config(), **SOURCE})
-    return adopter
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    committed_adopter.write({CONFIG: friction_config(), **SOURCE})
+    return committed_adopter
 
 
 def _put(repo: AdopterRepo, text: str, rel: str = GUIDE_PATH) -> Path:
@@ -1077,7 +1078,7 @@ def test_written_answers_read_back_identically_and_validate_in_the_pure_layer(
     The artefact's file is the repository's to keep: the round trip checks it."""
     schema, why = af.load_schema(repo.root)
     assert schema is not None, why
-    (place,) = discover_artefacts(repo.root).places
+    (place,) = own(discover_artefacts(repo.root).places)  # the shipped rule sets' left out
     name = "20261005T100000Z-00000000.yaml"
     for seed in (s for s in SEEDS if s not in ROUND_TRIP_SEEDS):
         rng = random.Random(seed)

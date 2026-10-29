@@ -70,6 +70,7 @@ from tests.friction_documents import (
     guide,
     own_entry,
 )
+from tests.shipped_rule_sets import own
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -1134,7 +1135,7 @@ def test_the_writers_answer_an_artefact_carrying_an_anchor_of_a_registered_kind(
         return result.output
 
     def block() -> dict[str, Any]:
-        [artefact] = fd.discover_artefacts(repo.root).artefacts
+        [artefact] = own(fd.discover_artefacts(repo.root).artefacts)
         return artefact.friction
 
     def answers() -> dict[str, Any]:

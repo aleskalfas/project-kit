@@ -22,7 +22,7 @@ from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor, discover_artefacts
-from tests.adopter_repo import MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import (
     CONFIG,
     T1,
@@ -31,6 +31,7 @@ from tests.friction_documents import (
     document,
     friction_config,
 )
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 GUIDE = "docs/guide.md"
 CLI = Anchor("path", "src/cli/**")
@@ -90,8 +91,10 @@ def answers(*entries: dict[str, Any]) -> str:
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _check(timeline: Timeline) -> fr.RepositoryCheck:
@@ -712,6 +715,7 @@ def test_no_anchor_stands_on_an_answer_file(timeline: Timeline) -> None:
 
 
 def test_no_place_reads_a_file_in_the_answer_folder(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start(
         {f"{FOLDER}/notes.md": document("notes", anchors={"path": ["src/**"]})},
         friction_config(places=("docs", ".pkit/project")),
