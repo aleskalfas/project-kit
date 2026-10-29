@@ -578,12 +578,16 @@ def test_a_missing_or_retired_rule_is_a_warning_naming_it(adopter: AdopterRepo) 
 
 
 def test_a_range_past_the_highest_rule_is_one_warning(adopter: AdopterRepo) -> None:
-    adopter.write({"docs/guide.md": "Core rules 20-40 say so, and core rules 30 and 31.\n"})
+    # The range opens at the set's highest rule, so it holds that one alone.
+    highest = max(int(rule.id.removeprefix("RS-OPS-")) for rule in the_set(REPO, "OPS").rules)
+    adopter.write(
+        {"docs/guide.md": f"Core rules {highest}-40 say so, and core rules 30 and 31.\n"}
+    )
     messages = [u.message for u in refs.unheld_operational_rules(adopter.root)]
-    ranged = [m for m in messages if "'Core rules 20-40" in m]
+    ranged = [m for m in messages if f"'Core rules {highest}-40" in m]
     assert len(ranged) == 1, messages
-    assert "cites core rules 23 to 40, past the highest rule backbone:OPS" in ranged[0]
-    assert "core rule 22" in ranged[0]
+    assert f"cites core rules {highest + 1} to 40, past the highest rule backbone:OPS" in ranged[0]
+    assert f"core rule {highest}" in ranged[0]
     # A list names each number, so each missing one is its own warning.
     assert sum("core rules 30 and 31" in m for m in messages) == 2
 

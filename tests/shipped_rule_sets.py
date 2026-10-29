@@ -17,7 +17,8 @@ shipped sets out of what it compares:
   pass or a count line.
 
 A test of what the shipped sets change, such as a fresh install's counts, reads
-them with `shipped_rules`, so it follows the set as it grows.
+them with `shipped_rules`, and their statuses with `shipped_statuses`, so it follows
+the set as it grows, a rule proposed for acceptance included.
 
 The dormant-pass tests that take the folder out cover a state no installed project
 reaches since ADR-075, since every install carries it.
@@ -26,6 +27,7 @@ reaches since ADR-075, since every install carries it.
 from __future__ import annotations
 
 import shutil
+from collections import Counter
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import Any, TypeVar
@@ -84,3 +86,9 @@ def shipped_rules(root: Path) -> tuple[str, ...]:
     """The ids of the rules the backbone's rule sets hold in the adopter at `root`, in
     the order discovery reads them."""
     return tuple(r.id for r in rs.discover_rule_sets(root).rules if is_shipped(r.path))
+
+
+def shipped_statuses(root: Path) -> Counter[str]:
+    """How many of the backbone's rules in the adopter at `root` hold each status. A
+    rule the backbone proposes, before a person accepts it, is counted as proposed."""
+    return Counter(r.status for r in rs.discover_rule_sets(root).rules if is_shipped(r.path))

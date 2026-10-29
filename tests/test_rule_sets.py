@@ -30,7 +30,12 @@ from project_kit import rule_sets as rs
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import HANGING, RESOLVING, register_kinds
-from tests.shipped_rule_sets import own, shipped_rules, without_shipped_rule_sets
+from tests.shipped_rule_sets import (
+    own,
+    shipped_rules,
+    shipped_statuses,
+    without_shipped_rule_sets,
+)
 
 REPO = Path(__file__).resolve().parents[1]
 CONFIG = ".pkit/project/config.yaml"
@@ -129,10 +134,11 @@ def test_a_valid_rule_set_is_clean_and_parsed(adopter: AdopterRepo) -> None:
     first = rule_set.rule("RS-CMN-001")
     assert first is not None and first.section.startswith("## RS-CMN-001 — Rule RS-CMN-001")
     assert first.offers == ("cause-location",)
-    shipped = len(shipped_rules(adopter.root))  # the backbone's set, each rule accepted
+    shipped = shipped_statuses(adopter.root)  # the backbone's set, accepted or proposed
+    assert set(shipped) <= {"accepted", "proposed"}
     assert rs.summary_lines(result) == [
-        f"2 rule set(s), {6 + shipped} rule(s) (1 proposed, {3 + shipped} accepted, "
-        "1 superseded, 1 withdrawn); 0 error(s), 0 report(s)."
+        f"2 rule set(s), {6 + shipped.total()} rule(s) ({1 + shipped['proposed']} proposed, "
+        f"{3 + shipped['accepted']} accepted, 1 superseded, 1 withdrawn); 0 error(s), 0 report(s)."
     ]
 
 
@@ -1334,15 +1340,16 @@ def test_validate_command_prints_the_rule_sets_section_and_fails_on_errors(
 
 
 def test_validate_command_is_quiet_on_a_fresh_install(adopter: AdopterRepo) -> None:
-    """A fresh install holds the backbone's rule sets alone, each rule accepted, and they
-    pass (COR-068; ADR-075 point 1)."""
-    rules = len(shipped_rules(adopter.root))
-    assert rules > 0
+    """A fresh install holds the backbone's rule sets alone, each rule accepted or, before
+    a person accepts it, proposed, and they pass (COR-068; ADR-075 point 1)."""
+    shipped = shipped_statuses(adopter.root)
+    assert shipped["accepted"] > 0 and set(shipped) <= {"accepted", "proposed"}
+    proposed = f"{shipped['proposed']} proposed, " if shipped["proposed"] else ""
     result = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert result.exit_code == 0, result.output
     assert (
-        f"\n  rule-sets\n    1 rule set(s), {rules} rule(s) ({rules} accepted); "
-        "0 error(s), 0 report(s).\n"
+        f"\n  rule-sets\n    1 rule set(s), {shipped.total()} rule(s) "
+        f"({proposed}{shipped['accepted']} accepted); 0 error(s), 0 report(s).\n"
     ) in result.output
 
 
