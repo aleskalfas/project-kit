@@ -457,42 +457,65 @@ def highlight(pid, x, y, w, v):
     return out, 380
 
 
-KIND_W, KIND_H = 688, 672
+KIND_H = 600
 KIND_TEMPLATE = {
-    "note": "A kind of a thing as a tall column in its owner's colour: a filled tag (its prefix), a head, a line of text, where it lives, and a big count with its caption; made by the slide generator.",
-    "root": {**CLEAR_AREA, "width": KIND_W, "height": KIND_H},
+    "note": "A kind of a thing as a column in its owner's colour: a filled tag (its prefix), a head, what it decides, a real file of it, and why it lives where it does; made by the slide generator.",
+    "root": {**CLEAR_AREA, "width": 896, "height": KIND_H},
     "parts": {
-        "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": KIND_W, "height": KIND_H,
+        "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": 896, "height": KIND_H,
                "color": "@{bg}", "border_color": "@{tone}", "border_width": 2, "ink": "@text_primary"},
         "tag": {"type": "shape", "shape": "rectangle", "text": "", "x": 40, "y": 40, "width": 180, "height": 88,
                 "color": "@{tone}", "border_color": "@{tone}", "border_width": 1, "ink": "@text_on_color"},
         "tagtext": {"type": "text", "text": "{tag}", "style": "@style.heading", "ink": "@text_on_color", "x": 40, "y": 44, "width": 180, "height": 80, "align": "center"},
-        "head": {"type": "text", "text": "{head}", "style": "@style.tile_heading", "ink": "@text_primary", "x": 40, "y": 164, "width": KIND_W - 80, "height": 64},
-        "text": {"type": "text", "text": "{text}", "style": "@style.body", "x": 40, "y": 240, "width": KIND_W - 80, "height": 100},
-        "path": {"type": "text", "text": "{path}", "style": "@style.body", "ink": "@{tone}", "x": 40, "y": 352, "width": KIND_W - 80, "height": 100},
-        "num": {"type": "text", "text": "{num}", "style": "@style.title", "ink": "@{tone}", "x": 40, "y": 452, "width": KIND_W - 80, "height": 140},
-        "numcap": {"type": "text", "text": "{numcap}", "style": "@style.body", "x": 40, "y": 592, "width": KIND_W - 80, "height": 56},
+        "head": {"type": "text", "text": "{head}", "style": "@style.tile_heading", "ink": "@text_primary", "x": 40, "y": 164, "width": 816, "height": 64},
+        "text": {"type": "text", "text": "{text}", "style": "@style.body", "x": 40, "y": 240, "width": 816, "height": 100},
+        "path": {"type": "text", "text": "{path}", "style": "@style.body", "ink": "@{tone}", "x": 40, "y": 352, "width": 816, "height": 56},
+        "why": {"type": "text", "text": "{why}", "style": "@style.body", "ink": "@text_primary", "x": 40, "y": 428, "width": 816, "height": 150},
+    },
+}
+GROUP_H = 124
+GROUP_TEMPLATE = {
+    "note": "A group's heading over the columns it holds: what they share, where they live, and a bar as wide as the group; made by the slide generator.",
+    "root": {**CLEAR_AREA, "width": 1856, "height": GROUP_H},
+    "parts": {
+        "head": {"type": "text", "text": "{head}", "style": "@style.key", "ink": "@text_primary", "x": 0, "y": 0, "width": 1856, "height": 56},
+        "path": {"type": "text", "text": "{path}", "style": "@style.body", "ink": "@text_secondary", "x": 0, "y": 58, "width": 1856, "height": 52},
+        "bar": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 116, "width": 1856, "height": 6,
+                "color": "@border_strong", "border_color": "@border_strong", "border_width": 1, "ink": "@text_primary"},
     },
 }
 KIND_TONES = {"pkit": ("role_code_bg", "role_code"), "yours": ("role_people_bg", "role_people")}
+GROUP_GAP = 192
 
 
-def kinds(pid, y, items):
-    """The kinds of a thing as columns across the slide, each in its owner's colour (pkit's purple, yours blue)."""
+def kinds(pid, y, v):
+    """Kinds of a thing as columns in their owner's colour (pkit's purple, yours blue), in groups across
+    the slide: each group under a heading (what its kinds share, where they live) and a bar its width."""
     out = {}
-    n = len(items)
-    w = (SPAN16 - (n - 1) * GUT) / n
-    for i, it in enumerate(items):
-        bg, tone = KIND_TONES[it.get("owner", "pkit")]
-        ww = round(w)
-        out[f"{pid}-col{i + 1}"] = {
-            "template": "kind", "parent": pid, "x": round(MARGIN + i * (w + GUT)), "y": y,
-            "tag": it["tag"], "head": md(it["head"]), "text": md(it["text"]), "path": md(it["path"]),
-            "num": str(it["num"]), "numcap": md(it["numcap"]), "bg": bg, "tone": tone,
-            "override": {"root": {"width": ww}, "bg": {"width": ww},
-                         **{p: {"width": ww - 80} for p in ("head", "text", "path", "num", "numcap")}},
+    groups = v["groups"]
+    n = sum(len(g["kinds"]) for g in groups)
+    w = (SPAN16 - (n - len(groups)) * GUT - (len(groups) - 1) * GROUP_GAP) / n
+    ww = round(w)
+    x = MARGIN
+    i = 0
+    for gi, g in enumerate(groups, 1):
+        gw = round(len(g["kinds"]) * w + (len(g["kinds"]) - 1) * GUT)
+        out[f"{pid}-grp{gi}"] = {
+            "template": "kind_group", "parent": pid, "x": round(x), "y": y, "head": md(g["head"]), "path": md(g["path"]),
+            "override": {"root": {"width": gw}, "head": {"width": gw}, "path": {"width": gw}, "bar": {"width": gw}},
         }
-    return out, KIND_H
+        for it in g["kinds"]:
+            i += 1
+            bg, tone = KIND_TONES[it.get("owner", "pkit")]
+            out[f"{pid}-col{i}"] = {
+                "template": "kind", "parent": pid, "x": round(x), "y": y + GROUP_H + 24,
+                "tag": it["tag"], "head": md(it["head"]), "text": md(it["text"]), "path": md(it["path"]), "why": md(it["why"]),
+                "bg": bg, "tone": tone,
+                "override": {"root": {"width": ww}, "bg": {"width": ww}, **{p: {"width": ww - 80} for p in ("head", "text", "path", "why")}},
+            }
+            x += w + GUT
+        x += GROUP_GAP - GUT
+    return out, GROUP_H + 24 + KIND_H
 
 
 PYR_H, PYR_GAP = 172, 18
@@ -741,7 +764,7 @@ def build_slide(s, n, total):
         elif kind == "compare":
             add(compare(pid, y, v["left"], v["right"]))
         elif kind == "kinds":
-            add(kinds(pid, y, v["kinds"]))
+            add(kinds(pid, y, v))
         elif kind == "pyramid":
             add(pyramid(pid, y, v))
         elif kind == "install":
@@ -804,6 +827,7 @@ def main(slides_path, board_path):
     board["templates"]["term_image"] = TERM_IMAGE_TEMPLATE
     board["templates"]["highlight"] = HIGHLIGHT_TEMPLATE
     board["templates"]["kind"] = KIND_TEMPLATE
+    board["templates"]["kind_group"] = GROUP_TEMPLATE
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     talk = sl["talk"]
     content = [s for s in sl["slides"]]

@@ -24714,27 +24714,27 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 672,
+    "height": 600,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-col1",
-    "width": 688,
+    "width": 896,
     "x": 128,
-    "y": 576
+    "y": 724
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 672,
+    "height": 600,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-col1",
-    "width": 688,
+    "width": 896,
     "x": 128,
-    "y": 576
+    "y": 724
    },
-   "mural_id": "157ddd0e-5f15-423a-bda6-c26c339be802",
+   "mural_id": "8fefbc89-920a-424a-94ee-f5362e4f6609",
    "tracked": [
     "title",
     "text",
@@ -24762,7 +24762,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305487138
+   "updatedOn": 1793306273684
   },
   "T-decisions-col1.bg": {
    "board": {
@@ -24770,12 +24770,12 @@
     "border_style": "solid",
     "border_width": 2,
     "color": "#F6F2FFFF",
-    "height": 672,
+    "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col1",
     "text": "",
     "title": "tpl:kind#bg",
-    "width": 688,
+    "width": 896,
     "x": 0,
     "y": 0
    },
@@ -24783,16 +24783,16 @@
     "border_color": "#6929C4FF",
     "border_width": 2,
     "color": "#F6F2FFFF",
-    "height": 672,
+    "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col1",
     "text": "",
     "title": "tpl:kind#bg",
-    "width": 688,
+    "width": 896,
     "x": 0,
     "y": 0
    },
-   "mural_id": "8ce4903a-bdd8-45b5-b21f-ff1b9cd695a2",
+   "mural_id": "0e8689bf-ddcf-4066-82f0-85a89dcd3b1a",
    "tracked": [
     "title",
     "text",
@@ -24820,7 +24820,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306313221
   },
   "T-decisions-col1.head": {
    "board": {
@@ -24832,7 +24832,7 @@
     "parent": "T-decisions-col1",
     "text": "pkit's principles",
     "title": "tpl:kind#head",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 164
    },
@@ -24843,11 +24843,11 @@
     "parent": "T-decisions-col1",
     "text": "pkit's principles",
     "title": "tpl:kind#head",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 164
    },
-   "mural_id": "f4b8086d-38c5-4f4a-b57f-cfb41e58c798",
+   "mural_id": "d7347b36-b237-488f-ac64-d041550691a7",
    "tracked": [
     "title",
     "text",
@@ -24875,117 +24875,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col1.num": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 120,
-    "ink": "#6929C4FF",
-    "parent": "T-decisions-col1",
-    "text": "67",
-    "title": "tpl:kind#num",
-    "width": 608,
-    "x": 40,
-    "y": 452
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 120,
-    "ink": "#6929C4FF",
-    "parent": "T-decisions-col1",
-    "text": "67",
-    "title": "tpl:kind#num",
-    "width": 608,
-    "x": 40,
-    "y": 452
-   },
-   "mural_id": "1314ef53-c9f2-439d-b975-c1618c2e088a",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col1.numcap": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-col1",
-    "text": "up from 39 in June",
-    "title": "tpl:kind#numcap",
-    "width": 608,
-    "x": 40,
-    "y": 592
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-col1",
-    "text": "up from 39 in June",
-    "title": "tpl:kind#numcap",
-    "width": 608,
-    "x": 40,
-    "y": 592
-   },
-   "mural_id": "d4161c01-da5a-45d6-9330-cdacc42d702a",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col1.path": {
    "board": {
@@ -24995,9 +24885,9 @@
     "font_size": 36,
     "ink": "#6929C4FF",
     "parent": "T-decisions-col1",
-    "text": ".pkit/decisions/core/",
+    "text": "core/COR-065-records-and-projection.md",
     "title": "tpl:kind#path",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 352
    },
@@ -25006,13 +24896,13 @@
     "font_size": 36,
     "ink": "#6929C4FF",
     "parent": "T-decisions-col1",
-    "text": ".pkit/decisions/core/",
+    "text": "core/COR-065-records-and-projection.md",
     "title": "tpl:kind#path",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 352
    },
-   "mural_id": "ecbeadb8-fbb1-4d50-8cc4-c3e074ad9b31",
+   "mural_id": "ef07c87b-6155-4485-873f-d563f572c2f0",
    "tracked": [
     "title",
     "text",
@@ -25040,7 +24930,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col1.tag": {
    "board": {
@@ -25070,7 +24960,7 @@
     "x": 40,
     "y": 40
    },
-   "mural_id": "09a88701-ab86-4d3d-b049-09d6634fafde",
+   "mural_id": "4ac41d97-7d0c-4a86-9b59-3c3cf057e67c",
    "tracked": [
     "title",
     "text",
@@ -25098,7 +24988,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306313221
   },
   "T-decisions-col1.tagtext": {
    "board": {
@@ -25126,7 +25016,7 @@
     "x": 40,
     "y": 44
    },
-   "mural_id": "cea0cd5b-a032-4c1a-9216-c94b64ba0a49",
+   "mural_id": "e36b2cb1-f33e-4e9e-8155-879339a2fcf8",
    "tracked": [
     "title",
     "text",
@@ -25154,7 +25044,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col1.text": {
    "board": {
@@ -25164,9 +25054,9 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-decisions-col1",
-    "text": "How the method works, in every project.",
+    "text": "How the method works, the same in every project.",
     "title": "tpl:kind#text",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 240
    },
@@ -25175,13 +25065,13 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-decisions-col1",
-    "text": "How the method works, in every project.",
+    "text": "How the method works, the same in every project.",
     "title": "tpl:kind#text",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 240
    },
-   "mural_id": "942f71d4-ea6e-4559-b11b-2fa18c38e8c2",
+   "mural_id": "9a61dc28-774c-4895-935a-46564c1965bf",
    "tracked": [
     "title",
     "text",
@@ -25209,7 +25099,62 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
+  },
+  "T-decisions-col1.why": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-decisions-col1",
+    "text": "Apart from yours: each upgrade replaces them, so you never edit them.",
+    "title": "tpl:kind#why",
+    "width": 816,
+    "x": 40,
+    "y": 428
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-decisions-col1",
+    "text": "Apart from yours: each upgrade replaces them, so you never edit them.",
+    "title": "tpl:kind#why",
+    "width": 816,
+    "x": 40,
+    "y": 428
+   },
+   "mural_id": "a3a68b4f-6a3f-4e81-a9e3-29476c44798d",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306314056
   },
   "T-decisions-col2": {
    "board": {
@@ -25218,27 +25163,27 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 672,
+    "height": 600,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-col2",
-    "width": 688,
-    "x": 880,
-    "y": 576
+    "width": 896,
+    "x": 1088,
+    "y": 724
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 672,
+    "height": 600,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-col2",
-    "width": 688,
-    "x": 880,
-    "y": 576
+    "width": 896,
+    "x": 1088,
+    "y": 724
    },
-   "mural_id": "79f16599-5e91-47da-b573-8916e60cc640",
+   "mural_id": "5c7a24d9-7840-486c-aa76-aa8e5f498338",
    "tracked": [
     "title",
     "text",
@@ -25266,37 +25211,37 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305487211
+   "updatedOn": 1793306273768
   },
   "T-decisions-col2.bg": {
    "board": {
-    "border_color": "#6929C4FF",
+    "border_color": "#0043CEFF",
     "border_style": "solid",
     "border_width": 2,
-    "color": "#F6F2FFFF",
-    "height": 672,
+    "color": "#EDF5FFFF",
+    "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col2",
     "text": "",
     "title": "tpl:kind#bg",
-    "width": 688,
+    "width": 896,
     "x": 0,
     "y": 0
    },
    "fields": {
-    "border_color": "#6929C4FF",
+    "border_color": "#0043CEFF",
     "border_width": 2,
-    "color": "#F6F2FFFF",
-    "height": 672,
+    "color": "#EDF5FFFF",
+    "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col2",
     "text": "",
     "title": "tpl:kind#bg",
-    "width": 688,
+    "width": 896,
     "x": 0,
     "y": 0
    },
-   "mural_id": "cfff1aa8-95f1-4895-ae96-a029b2708e16",
+   "mural_id": "359664f5-8c0a-4a24-bae2-cdfe0c87acee",
    "tracked": [
     "title",
     "text",
@@ -25324,7 +25269,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306313221
   },
   "T-decisions-col2.head": {
    "board": {
@@ -25334,9 +25279,9 @@
     "font_size": 48,
     "ink": "#161616FF",
     "parent": "T-decisions-col2",
-    "text": "An add-on's principles",
+    "text": "Your way of working",
     "title": "tpl:kind#head",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 164
    },
@@ -25345,13 +25290,13 @@
     "font_size": 48,
     "ink": "#161616FF",
     "parent": "T-decisions-col2",
-    "text": "An add-on's principles",
+    "text": "Your way of working",
     "title": "tpl:kind#head",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 164
    },
-   "mural_id": "2717119e-a2ed-4dea-b319-77f221e7058c",
+   "mural_id": "7825e5b9-8d0e-4d02-a4a8-d0da5048254b",
    "tracked": [
     "title",
     "text",
@@ -25379,117 +25324,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col2.num": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 120,
-    "ink": "#6929C4FF",
-    "parent": "T-decisions-col2",
-    "text": "83",
-    "title": "tpl:kind#num",
-    "width": 608,
-    "x": 40,
-    "y": 452
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 120,
-    "ink": "#6929C4FF",
-    "parent": "T-decisions-col2",
-    "text": "83",
-    "title": "tpl:kind#num",
-    "width": 608,
-    "x": 40,
-    "y": 452
-   },
-   "mural_id": "10260169-b33a-4a3b-9cd6-ae0c70a89dfb",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col2.numcap": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-col2",
-    "text": "across pkit's add-ons",
-    "title": "tpl:kind#numcap",
-    "width": 608,
-    "x": 40,
-    "y": 592
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-col2",
-    "text": "across pkit's add-ons",
-    "title": "tpl:kind#numcap",
-    "width": 608,
-    "x": 40,
-    "y": 592
-   },
-   "mural_id": "6640c2b9-4e67-4085-b5ed-46117ccd7198",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col2.path": {
    "board": {
@@ -25497,26 +25332,26 @@
     "color": "#FFFFFF00",
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#6929C4FF",
+    "ink": "#0043CEFF",
     "parent": "T-decisions-col2",
-    "text": ".pkit/capabilities/<name>/decisions/",
+    "text": "project/PRJ-002-version-bump-policy.md",
     "title": "tpl:kind#path",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 352
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#6929C4FF",
+    "ink": "#0043CEFF",
     "parent": "T-decisions-col2",
-    "text": ".pkit/capabilities/<name>/decisions/",
+    "text": "project/PRJ-002-version-bump-policy.md",
     "title": "tpl:kind#path",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 352
    },
-   "mural_id": "9a46fe82-31ff-4bc1-ac3c-4f1740efdbdc",
+   "mural_id": "4332614f-f37c-4968-8448-7b47aa47ea9e",
    "tracked": [
     "title",
     "text",
@@ -25544,14 +25379,14 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col2.tag": {
    "board": {
-    "border_color": "#6929C4FF",
+    "border_color": "#0043CEFF",
     "border_style": "solid",
     "border_width": 1,
-    "color": "#6929C4FF",
+    "color": "#0043CEFF",
     "height": 88,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col2",
@@ -25562,9 +25397,9 @@
     "y": 40
    },
    "fields": {
-    "border_color": "#6929C4FF",
+    "border_color": "#0043CEFF",
     "border_width": 1,
-    "color": "#6929C4FF",
+    "color": "#0043CEFF",
     "height": 88,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col2",
@@ -25574,7 +25409,7 @@
     "x": 40,
     "y": 40
    },
-   "mural_id": "357bd08f-f20d-457b-9faa-7103979c85be",
+   "mural_id": "db5fb0f3-acf4-4a6f-931a-bf2b4467ab21",
    "tracked": [
     "title",
     "text",
@@ -25602,7 +25437,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306313221
   },
   "T-decisions-col2.tagtext": {
    "board": {
@@ -25612,7 +25447,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col2",
-    "text": "DEC",
+    "text": "PRJ",
     "title": "tpl:kind#tagtext",
     "width": 180,
     "x": 40,
@@ -25624,13 +25459,13 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col2",
-    "text": "DEC",
+    "text": "PRJ",
     "title": "tpl:kind#tagtext",
     "width": 180,
     "x": 40,
     "y": 44
    },
-   "mural_id": "cd54a02e-0037-4306-ab71-7dce772907c1",
+   "mural_id": "6026ea23-d644-4709-84ea-0addf18d0f2f",
    "tracked": [
     "title",
     "text",
@@ -25658,7 +25493,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col2.text": {
    "board": {
@@ -25668,9 +25503,9 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-decisions-col2",
-    "text": "How each add-on works, shipped with it.",
+    "text": "How your team works, in the choices pkit leaves to you.",
     "title": "tpl:kind#text",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 240
    },
@@ -25679,13 +25514,13 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-decisions-col2",
-    "text": "How each add-on works, shipped with it.",
+    "text": "How your team works, in the choices pkit leaves to you.",
     "title": "tpl:kind#text",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 240
    },
-   "mural_id": "c965d2e3-1886-4226-92e5-2284bfbb7a9b",
+   "mural_id": "dfe7141d-bb9f-4392-b453-2fdbde5cacab",
    "tracked": [
     "title",
     "text",
@@ -25713,7 +25548,62 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
+  },
+  "T-decisions-col2.why": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-decisions-col2",
+    "text": "Yours alone: no upgrade ever writes here.",
+    "title": "tpl:kind#why",
+    "width": 816,
+    "x": 40,
+    "y": 428
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-decisions-col2",
+    "text": "Yours alone: no upgrade ever writes here.",
+    "title": "tpl:kind#why",
+    "width": 816,
+    "x": 40,
+    "y": 428
+   },
+   "mural_id": "dd9aa3f6-ec19-4c4b-9739-711f026ad4e0",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306314056
   },
   "T-decisions-col3": {
    "board": {
@@ -25722,27 +25612,27 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 672,
+    "height": 600,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-col3",
-    "width": 688,
-    "x": 1632,
-    "y": 576
+    "width": 896,
+    "x": 2176,
+    "y": 724
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 672,
+    "height": 600,
     "parent": "T-decisions",
     "show_title": false,
     "title": "T-decisions-col3",
-    "width": 688,
-    "x": 1632,
-    "y": 576
+    "width": 896,
+    "x": 2176,
+    "y": 724
    },
-   "mural_id": "9ad8f0a6-2355-43f5-b4a0-244369afcea6",
+   "mural_id": "f809dfac-b83f-41cb-85c6-5e5363c8f925",
    "tracked": [
     "title",
     "text",
@@ -25770,7 +25660,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305487273
+   "updatedOn": 1793306311949
   },
   "T-decisions-col3.bg": {
    "board": {
@@ -25778,12 +25668,12 @@
     "border_style": "solid",
     "border_width": 2,
     "color": "#EDF5FFFF",
-    "height": 672,
+    "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col3",
     "text": "",
     "title": "tpl:kind#bg",
-    "width": 688,
+    "width": 896,
     "x": 0,
     "y": 0
    },
@@ -25791,16 +25681,16 @@
     "border_color": "#0043CEFF",
     "border_width": 2,
     "color": "#EDF5FFFF",
-    "height": 672,
+    "height": 600,
     "ink": "#161616FF",
     "parent": "T-decisions-col3",
     "text": "",
     "title": "tpl:kind#bg",
-    "width": 688,
+    "width": 896,
     "x": 0,
     "y": 0
    },
-   "mural_id": "1335dc70-2f2c-434f-9fbc-e7c3235fbfbd",
+   "mural_id": "e2c39b12-b34e-4b87-bb26-da0ed6706456",
    "tracked": [
     "title",
     "text",
@@ -25828,7 +25718,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306313221
   },
   "T-decisions-col3.head": {
    "board": {
@@ -25838,9 +25728,9 @@
     "font_size": 48,
     "ink": "#161616FF",
     "parent": "T-decisions-col3",
-    "text": "Your way of working",
+    "text": "Your architecture",
     "title": "tpl:kind#head",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 164
    },
@@ -25849,13 +25739,13 @@
     "font_size": 48,
     "ink": "#161616FF",
     "parent": "T-decisions-col3",
-    "text": "Your way of working",
+    "text": "Your architecture",
     "title": "tpl:kind#head",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 164
    },
-   "mural_id": "e5fa6fd0-4209-44a0-8017-ba68df4f756d",
+   "mural_id": "0fe2167b-8d9d-4ebe-9a52-b2ea7b30cf84",
    "tracked": [
     "title",
     "text",
@@ -25883,117 +25773,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col3.num": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 120,
-    "ink": "#0043CEFF",
-    "parent": "T-decisions-col3",
-    "text": "11",
-    "title": "tpl:kind#num",
-    "width": 608,
-    "x": 40,
-    "y": 452
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 120,
-    "ink": "#0043CEFF",
-    "parent": "T-decisions-col3",
-    "text": "11",
-    "title": "tpl:kind#num",
-    "width": 608,
-    "x": 40,
-    "y": 452
-   },
-   "mural_id": "59c59dce-ad83-4614-92ad-3158f78cc1b6",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col3.numcap": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-col3",
-    "text": "in project-kit",
-    "title": "tpl:kind#numcap",
-    "width": 608,
-    "x": 40,
-    "y": 592
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-decisions-col3",
-    "text": "in project-kit",
-    "title": "tpl:kind#numcap",
-    "width": 608,
-    "x": 40,
-    "y": 592
-   },
-   "mural_id": "0489d19b-fbf5-4690-819c-f38b07d0a6e5",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col3.path": {
    "board": {
@@ -26003,9 +25783,9 @@
     "font_size": 36,
     "ink": "#0043CEFF",
     "parent": "T-decisions-col3",
-    "text": ".pkit/decisions/project/",
+    "text": "ADR-001-project-root-resolution.md",
     "title": "tpl:kind#path",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 352
    },
@@ -26014,13 +25794,13 @@
     "font_size": 36,
     "ink": "#0043CEFF",
     "parent": "T-decisions-col3",
-    "text": ".pkit/decisions/project/",
+    "text": "ADR-001-project-root-resolution.md",
     "title": "tpl:kind#path",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 352
    },
-   "mural_id": "7f064c5a-a319-4334-937b-bc94e92c5ae8",
+   "mural_id": "e27b0801-307c-4d17-ad31-d013c52f6ac5",
    "tracked": [
     "title",
     "text",
@@ -26048,7 +25828,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col3.tag": {
    "board": {
@@ -26078,7 +25858,7 @@
     "x": 40,
     "y": 40
    },
-   "mural_id": "ef995c99-8c91-4935-b0a1-cd90be672431",
+   "mural_id": "936831bf-c001-4fe2-9967-a462be2798a4",
    "tracked": [
     "title",
     "text",
@@ -26106,7 +25886,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306313221
   },
   "T-decisions-col3.tagtext": {
    "board": {
@@ -26116,7 +25896,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col3",
-    "text": "PRJ",
+    "text": "ADR",
     "title": "tpl:kind#tagtext",
     "width": 180,
     "x": 40,
@@ -26128,13 +25908,13 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-decisions-col3",
-    "text": "PRJ",
+    "text": "ADR",
     "title": "tpl:kind#tagtext",
     "width": 180,
     "x": 40,
     "y": 44
    },
-   "mural_id": "ff151018-b159-4f6c-8733-b37124bd7553",
+   "mural_id": "e85261d8-3daa-493d-af24-b5736a55c6ea",
    "tracked": [
     "title",
     "text",
@@ -26162,7 +25942,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-col3.text": {
    "board": {
@@ -26172,9 +25952,9 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-decisions-col3",
-    "text": "Process, tooling, conventions.",
+    "text": "How your system is built, its structure, technologies and boundaries.",
     "title": "tpl:kind#text",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 240
    },
@@ -26183,13 +25963,13 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-decisions-col3",
-    "text": "Process, tooling, conventions.",
+    "text": "How your system is built, its structure, technologies and boundaries.",
     "title": "tpl:kind#text",
-    "width": 608,
+    "width": 816,
     "x": 40,
     "y": 240
    },
-   "mural_id": "276cd265-88ef-4b80-ace0-914e4eb98d92",
+   "mural_id": "77d871d1-7648-408a-b5db-d4c84a6e4a52",
    "tracked": [
     "title",
     "text",
@@ -26217,36 +25997,91 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
-  "T-decisions-col4": {
+  "T-decisions-col3.why": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-decisions-col3",
+    "text": "Apart from how you work: they sit with your system's docs, where its architect keeps them.",
+    "title": "tpl:kind#why",
+    "width": 816,
+    "x": 40,
+    "y": 428
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-decisions-col3",
+    "text": "Apart from how you work: they sit with your system's docs, where its architect keeps them.",
+    "title": "tpl:kind#why",
+    "width": 816,
+    "x": 40,
+    "y": 428
+   },
+   "mural_id": "55d4f539-cf0e-4ddd-b312-e7da5916d6f4",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306314056
+  },
+  "T-decisions-grp1": {
    "board": {
     "border_color": "#FFFFFF00",
     "border_style": "solid",
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 672,
+    "height": 124,
     "parent": "T-decisions",
     "show_title": false,
-    "title": "T-decisions-col4",
-    "width": 688,
-    "x": 2384,
+    "title": "T-decisions-grp1",
+    "width": 1856,
+    "x": 128,
     "y": 576
    },
    "fields": {
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 672,
+    "height": 124,
     "parent": "T-decisions",
     "show_title": false,
-    "title": "T-decisions-col4",
-    "width": 688,
-    "x": 2384,
+    "title": "T-decisions-grp1",
+    "width": 1856,
+    "x": 128,
     "y": 576
    },
-   "mural_id": "cadd0f44-6718-4a8f-830f-cac494afff53",
+   "mural_id": "2758d6f8-4734-4d85-8f04-2814e1df4096",
    "tracked": [
     "title",
     "text",
@@ -26274,37 +26109,92 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305487481
+   "updatedOn": 1793306273639
   },
-  "T-decisions-col4.bg": {
+  "T-decisions-grp1.bar": {
    "board": {
-    "border_color": "#0043CEFF",
+    "border_color": "#8D8D8DFF",
     "border_style": "solid",
-    "border_width": 2,
-    "color": "#EDF5FFFF",
-    "height": 672,
+    "border_width": 1,
+    "color": "#8D8D8DFF",
+    "height": 6,
     "ink": "#161616FF",
-    "parent": "T-decisions-col4",
+    "parent": "T-decisions-grp1",
     "text": "",
-    "title": "tpl:kind#bg",
-    "width": 688,
+    "title": "tpl:kind_group#bar",
+    "width": 1856,
+    "x": 0,
+    "y": 116
+   },
+   "fields": {
+    "border_color": "#8D8D8DFF",
+    "border_width": 1,
+    "color": "#8D8D8DFF",
+    "height": 6,
+    "ink": "#161616FF",
+    "parent": "T-decisions-grp1",
+    "text": "",
+    "title": "tpl:kind_group#bar",
+    "width": 1856,
+    "x": 0,
+    "y": 116
+   },
+   "mural_id": "78afbad5-9452-4322-bc57-e7980721cff7",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306313221
+  },
+  "T-decisions-grp1.head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-decisions-grp1",
+    "text": "How work is done",
+    "title": "tpl:kind_group#head",
+    "width": 1856,
     "x": 0,
     "y": 0
    },
    "fields": {
-    "border_color": "#0043CEFF",
-    "border_width": 2,
-    "color": "#EDF5FFFF",
-    "height": 672,
+    "font": "proxima-nova",
+    "font_size": 40,
     "ink": "#161616FF",
-    "parent": "T-decisions-col4",
-    "text": "",
-    "title": "tpl:kind#bg",
-    "width": 688,
+    "parent": "T-decisions-grp1",
+    "text": "How work is done",
+    "title": "tpl:kind_group#head",
+    "width": 1856,
     "x": 0,
     "y": 0
    },
-   "mural_id": "c008ff17-f61e-4136-896e-ac6fc953600c",
+   "mural_id": "14f9e641-638f-4a0d-b6a0-ddf9368bcb50",
    "tracked": [
     "title",
     "text",
@@ -26332,144 +26222,34 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306314056
   },
-  "T-decisions-col4.head": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 48,
-    "ink": "#161616FF",
-    "parent": "T-decisions-col4",
-    "text": "Your architecture",
-    "title": "tpl:kind#head",
-    "width": 608,
-    "x": 40,
-    "y": 164
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 48,
-    "ink": "#161616FF",
-    "parent": "T-decisions-col4",
-    "text": "Your architecture",
-    "title": "tpl:kind#head",
-    "width": 608,
-    "x": 40,
-    "y": 164
-   },
-   "mural_id": "40ec1aae-a998-4c82-af9d-b5212bb2fac9",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col4.num": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 120,
-    "ink": "#0043CEFF",
-    "parent": "T-decisions-col4",
-    "text": "74",
-    "title": "tpl:kind#num",
-    "width": 608,
-    "x": 40,
-    "y": 452
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 120,
-    "ink": "#0043CEFF",
-    "parent": "T-decisions-col4",
-    "text": "74",
-    "title": "tpl:kind#num",
-    "width": 608,
-    "x": 40,
-    "y": 452
-   },
-   "mural_id": "218bcbd9-e50f-4479-97dd-141e1372573d",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col4.numcap": {
+  "T-decisions-grp1.path": {
    "board": {
     "align": "left",
     "color": "#FFFFFF00",
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#525252FF",
-    "parent": "T-decisions-col4",
-    "text": "in project-kit",
-    "title": "tpl:kind#numcap",
-    "width": 608,
-    "x": 40,
-    "y": 592
+    "parent": "T-decisions-grp1",
+    "text": ".pkit/decisions/",
+    "title": "tpl:kind_group#path",
+    "width": 1856,
+    "x": 0,
+    "y": 58
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#525252FF",
-    "parent": "T-decisions-col4",
-    "text": "in project-kit",
-    "title": "tpl:kind#numcap",
-    "width": 608,
-    "x": 40,
-    "y": 592
+    "parent": "T-decisions-grp1",
+    "text": ".pkit/decisions/",
+    "title": "tpl:kind_group#path",
+    "width": 1856,
+    "x": 0,
+    "y": 58
    },
-   "mural_id": "94dd900c-561c-4bf0-9059-d5c151a7392c",
+   "mural_id": "453ad917-95c6-414a-bdde-efe1909f85c8",
    "tracked": [
     "title",
     "text",
@@ -26497,92 +26277,36 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
-  "T-decisions-col4.path": {
+  "T-decisions-grp2": {
    "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#0043CEFF",
-    "parent": "T-decisions-col4",
-    "text": "docs/architecture/decisions/",
-    "title": "tpl:kind#path",
-    "width": 608,
-    "x": 40,
-    "y": 352
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#0043CEFF",
-    "parent": "T-decisions-col4",
-    "text": "docs/architecture/decisions/",
-    "title": "tpl:kind#path",
-    "width": 608,
-    "x": 40,
-    "y": 352
-   },
-   "mural_id": "6e62ca7d-92e7-44c1-851b-e8cad8c77a4f",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793305490561
-  },
-  "T-decisions-col4.tag": {
-   "board": {
-    "border_color": "#0043CEFF",
+    "border_color": "#FFFFFF00",
     "border_style": "solid",
     "border_width": 1,
-    "color": "#0043CEFF",
-    "height": 88,
-    "ink": "#FFFFFFFF",
-    "parent": "T-decisions-col4",
-    "text": "",
-    "title": "tpl:kind#tag",
-    "width": 180,
-    "x": 40,
-    "y": 40
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 124,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-grp2",
+    "width": 896,
+    "x": 2176,
+    "y": 576
    },
    "fields": {
-    "border_color": "#0043CEFF",
+    "border_color": "#FFFFFF00",
     "border_width": 1,
-    "color": "#0043CEFF",
-    "height": 88,
-    "ink": "#FFFFFFFF",
-    "parent": "T-decisions-col4",
-    "text": "",
-    "title": "tpl:kind#tag",
-    "width": 180,
-    "x": 40,
-    "y": 40
+    "color": "#FFFFFF00",
+    "height": 124,
+    "parent": "T-decisions",
+    "show_title": false,
+    "title": "T-decisions-grp2",
+    "width": 896,
+    "x": 2176,
+    "y": 576
    },
-   "mural_id": "a4462f9a-1186-4004-99a1-ea5836e8efac",
+   "mural_id": "d7c58cd5-6433-43d5-925e-4cba0e1256e2",
    "tracked": [
     "title",
     "text",
@@ -26610,35 +26334,92 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306273835
   },
-  "T-decisions-col4.tagtext": {
+  "T-decisions-grp2.bar": {
    "board": {
-    "align": "center",
+    "border_color": "#8D8D8DFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#8D8D8DFF",
+    "height": 6,
+    "ink": "#161616FF",
+    "parent": "T-decisions-grp2",
+    "text": "",
+    "title": "tpl:kind_group#bar",
+    "width": 896,
+    "x": 0,
+    "y": 116
+   },
+   "fields": {
+    "border_color": "#8D8D8DFF",
+    "border_width": 1,
+    "color": "#8D8D8DFF",
+    "height": 6,
+    "ink": "#161616FF",
+    "parent": "T-decisions-grp2",
+    "text": "",
+    "title": "tpl:kind_group#bar",
+    "width": 896,
+    "x": 0,
+    "y": 116
+   },
+   "mural_id": "3a41afaa-c75b-45c7-b27d-f4edfba1f044",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793306313221
+  },
+  "T-decisions-grp2.head": {
+   "board": {
+    "align": "left",
     "color": "#FFFFFF00",
     "font": "proxima-nova",
-    "font_size": 64,
-    "ink": "#FFFFFFFF",
-    "parent": "T-decisions-col4",
-    "text": "ADR",
-    "title": "tpl:kind#tagtext",
-    "width": 180,
-    "x": 40,
-    "y": 44
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-decisions-grp2",
+    "text": "What you build",
+    "title": "tpl:kind_group#head",
+    "width": 896,
+    "x": 0,
+    "y": 0
    },
    "fields": {
-    "align": "center",
     "font": "proxima-nova",
-    "font_size": 64,
-    "ink": "#FFFFFFFF",
-    "parent": "T-decisions-col4",
-    "text": "ADR",
-    "title": "tpl:kind#tagtext",
-    "width": 180,
-    "x": 40,
-    "y": 44
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-decisions-grp2",
+    "text": "What you build",
+    "title": "tpl:kind_group#head",
+    "width": 896,
+    "x": 0,
+    "y": 0
    },
-   "mural_id": "1be5bfcb-f3c4-46cd-98e3-5f6e00514022",
+   "mural_id": "22b6e55e-33de-4128-b145-b854d4fe5f26",
    "tracked": [
     "title",
     "text",
@@ -26666,34 +26447,34 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
-  "T-decisions-col4.text": {
+  "T-decisions-grp2.path": {
    "board": {
     "align": "left",
     "color": "#FFFFFF00",
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#525252FF",
-    "parent": "T-decisions-col4",
-    "text": "Structure, technologies, boundaries.",
-    "title": "tpl:kind#text",
-    "width": 608,
-    "x": 40,
-    "y": 240
+    "parent": "T-decisions-grp2",
+    "text": "docs/architecture/decisions/, a path you choose",
+    "title": "tpl:kind_group#path",
+    "width": 896,
+    "x": 0,
+    "y": 58
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#525252FF",
-    "parent": "T-decisions-col4",
-    "text": "Structure, technologies, boundaries.",
-    "title": "tpl:kind#text",
-    "width": 608,
-    "x": 40,
-    "y": 240
+    "parent": "T-decisions-grp2",
+    "text": "docs/architecture/decisions/, a path you choose",
+    "title": "tpl:kind_group#path",
+    "width": 896,
+    "x": 0,
+    "y": 58
    },
-   "mural_id": "82068b4a-0d86-4bc8-bdc0-6aa65ddb3038",
+   "mural_id": "6e9ce724-4685-463b-a5a8-c44bc1ea2c43",
    "tracked": [
     "title",
     "text",
@@ -26721,7 +26502,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions-limit": {
    "board": {
@@ -26736,7 +26517,7 @@
     "title": "T-decisions-limit",
     "width": 2944,
     "x": 128,
-    "y": 1296
+    "y": 1372
    },
    "fields": {
     "border_color": "#FFFFFF00",
@@ -26748,9 +26529,9 @@
     "title": "T-decisions-limit",
     "width": 2944,
     "x": 128,
-    "y": 1296
+    "y": 1372
    },
-   "mural_id": "22d00a42-e94e-40bf-bd26-c663442d4103",
+   "mural_id": "16e7ae92-a97b-44dc-8bc0-c99c5fd664ce",
    "tracked": [
     "title",
     "text",
@@ -26778,7 +26559,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305487912
+   "updatedOn": 1793306273949
   },
   "T-decisions-limit.bar": {
    "board": {
@@ -26808,7 +26589,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "ec4fe15f-bf81-4645-8871-0efa72661095",
+   "mural_id": "8b4ac853-bd34-448a-a421-6a0a57ce84ba",
    "tracked": [
     "title",
     "text",
@@ -26836,7 +26617,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306313221
   },
   "T-decisions-limit.bg": {
    "board": {
@@ -26866,7 +26647,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "5e382345-6ee3-474d-9b89-c1382f0f340b",
+   "mural_id": "b93923c3-b630-4ec7-b32c-265093be5ceb",
    "tracked": [
     "title",
     "text",
@@ -26894,7 +26675,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305489594
+   "updatedOn": 1793306313221
   },
   "T-decisions-limit.text": {
    "board": {
@@ -26921,7 +26702,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "654c6181-461f-4f1e-a17b-17c101693987",
+   "mural_id": "5d82ff11-5351-4225-9988-ee3b192cf934",
    "tracked": [
     "title",
     "text",
@@ -26949,7 +26730,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305490561
+   "updatedOn": 1793306314056
   },
   "T-decisions.bg": {
    "board": {
@@ -27016,7 +26797,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-decisions",
-    "text": "A decision record keeps one choice and why it was made. There are four kinds, by whose choice it is.",
+    "text": "A decision record keeps one choice and why it was made. Where it lives says what it is about, and who may change it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -27027,7 +26808,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-decisions",
-    "text": "A decision record keeps one choice and why it was made. There are four kinds, by whose choice it is.",
+    "text": "A decision record keeps one choice and why it was made. Where it lives says what it is about, and who may change it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -27061,7 +26842,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793305492770
+   "updatedOn": 1793306314957
   },
   "T-decisions.num": {
    "board": {

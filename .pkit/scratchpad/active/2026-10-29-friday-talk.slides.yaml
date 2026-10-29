@@ -358,48 +358,46 @@ slides:
 - id: decisions
   part: P1
   title: Decision records
-  message: A decision record keeps one choice and why it was made. There are four kinds, by whose choice it is.
+  message: A decision record keeps one choice and why it was made. Where it lives says what it is about, and who
+    may change it.
   problem: ''
   does: []
   show: 'This week: COR-065 overturned a sentence of COR-006, by a new record, not an edit'
   visual:
     kind: kinds
-    kinds:
-    - tag: COR
-      owner: pkit
-      head: pkit's principles
-      text: How the method works, in every project.
-      path: .pkit/decisions/core/
-      num: 67
-      numcap: up from 39 in June
-    - tag: DEC
-      owner: pkit
-      head: An add-on's principles
-      text: How each add-on works, shipped with it.
-      path: .pkit/capabilities/<name>/decisions/
-      num: 83
-      numcap: across pkit's add-ons
-    - tag: PRJ
-      owner: yours
-      head: Your way of working
-      text: Process, tooling, conventions.
-      path: .pkit/decisions/project/
-      num: 11
-      numcap: in project-kit
-    - tag: ADR
-      owner: yours
-      head: Your architecture
-      text: Structure, technologies, boundaries.
-      path: docs/architecture/decisions/
-      num: 74
-      numcap: in project-kit
+    groups:
+    - head: How work is done
+      path: .pkit/decisions/
+      kinds:
+      - tag: COR
+        owner: pkit
+        head: pkit's principles
+        text: How the method works, the same in every project.
+        path: core/COR-065-records-and-projection.md
+        why: 'Apart from yours: each upgrade replaces them, so you never edit them.'
+      - tag: PRJ
+        owner: yours
+        head: Your way of working
+        text: How your team works, in the choices pkit leaves to you.
+        path: project/PRJ-002-version-bump-policy.md
+        why: 'Yours alone: no upgrade ever writes here.'
+    - head: What you build
+      path: docs/architecture/decisions/, a path you choose
+      kinds:
+      - tag: ADR
+        owner: yours
+        head: Your architecture
+        text: How your system is built, its structure, technologies and boundaries.
+        path: ADR-001-project-root-resolution.md
+        why: 'Apart from how you work: they sit with your system''s docs, where its architect keeps them.'
   limit: 'Writing and reviewing a record takes time: worth it only for choices that bind later work.'
   minutes: 1.5
-  notes: 'pkit''s own and its add-ons'' records are replaced by each upgrade; yours are never touched. pkit''s
-    principles change by a new record you can read, never by a quiet edit: this week COR-065 overturned a sentence
-    of COR-006. project-kit is pkit''s own source, so its counts are one project''s. Every kind has one shape,
-    which the next slide shows. Unfinished ideas live in scratchpad notes, which may contradict and be dropped:
-    this talk is one.'
+  notes: 'Two questions give the three places: what the record is about, how work is done or what you build, and
+    who may change it, pkit or you. pkit never decides your architecture, so there is no fourth. pkit''s principles
+    change by a new record you can read, never by a quiet edit: 39 in June, 67 now, and this week COR-065 overturned
+    a sentence of COR-006. In project-kit itself, 11 PRJ and 74 ADR. Every kind has one shape, which the next slide
+    shows. Add-ons bring decision records of their own; they come with the capabilities. Unfinished ideas live in
+    scratchpad notes, which may contradict and be dropped: this talk is one.'
 - id: found
   part: P1
   title: Decided once, found later
@@ -697,7 +695,8 @@ slides:
   minutes: 3
   notes: 'Underneath: a structure (EPIC, Feature, Task), a lifecycle with gates, merging with reviewers, planning
     a batch of work in one approval, fixers after a merge, a board. Parallel agents in separate clones also exist,
-    still experimental (the last slide).'
+    still experimental (the last slide). Like every capability, it brings its own decision records (DEC),
+    kept beside pkit''s and yours, and replaced by its upgrades.'
 - id: se
   part: P3
   title: software-engineering
