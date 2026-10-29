@@ -18,7 +18,8 @@ DEC-001 point 1, RS-SAN-001), at the format rule's status, as the parts are:
   `--preview` lists each breach.
 
 The reader and the forms are tested on their own first, then through the check's
-structure step, then end to end in an adopter.
+structure step, then end to end in an adopter. There the check runs in the test's
+own process, its `pkit` calls answered there too (`tests/in_process.py`, #2325).
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ from tests.analysis_repo import (
     installed,
     load_lib,
     proposing_san,
-    run_script,
+    run_in_process,
 )
 
 _CHECK, _MODEL, _STRUCTURE, _FORMS = load_lib("check", "model", "structure", "forms")
@@ -739,7 +740,7 @@ def project(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch)
 
 
 def _said(repo: AdopterRepo, *args: str) -> tuple[int, list[tuple[str, str, str]]]:
-    completed = run_script(repo, VALIDATE, "--json", *args)
+    completed = run_in_process(repo, VALIDATE, "--json", *args)
     document = json.loads(completed.stdout)
     found = [(f["severity"], f["location"], f["message"]) for f in document["findings"]]
     return completed.returncode, found

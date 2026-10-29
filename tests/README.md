@@ -184,6 +184,13 @@ the clock, `-n 3`, against 1 923 s before, on a machine other runs shared
 (2026-10-29). What is left is mostly `git`: one test spent 43 s of its 53 s
 waiting on 182 `git` processes.
 
+`test_software_analysis.py` and `test_software_analysis_resolver.py` are
+converted too (#2325), with ten other modules, and still rank among the slowest.
+Run back to back, `-n 3`, on 2026-10-29, the twelve modules' 452 tests took 179 s
+on the clock, against 262 s before. Before, 79 of those tests started a process
+of `pkit` or a script, and now 6 do, each marked with why. What is left is the
+stamps' and the checks' own reading of git.
+
 A software-analysis test stamps, links and writes the overview in its own
 process, through `tests/analysis_repo.py` (#2319). A script a test runs through
 `run_script`, such as the number check, still runs as a process until its

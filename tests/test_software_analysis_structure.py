@@ -19,6 +19,9 @@
 
 The reader and the gate are tested on their own first, then end to end in an
 adopter, where the backbone's reading gives the rule's status and each entry's span.
+There the stamp and the check run in the test's own process, their `pkit` calls
+answered there too, and so does the validator `pkit validate` starts
+(`tests/in_process.py`, #2325).
 """
 
 from __future__ import annotations
@@ -52,9 +55,10 @@ from tests.analysis_repo import (
     link,
     load_lib,
     proposing_san,
-    run_script,
+    run_in_process,
     stamped,
 )
+from tests.in_process import start_in_process
 
 _CHECK, _MODEL, _STRUCTURE, _FORMS = load_lib("check", "model", "structure", "forms")
 C: Any = _CHECK
@@ -868,7 +872,7 @@ def project(make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch)
 
 
 def _validate(repo: AdopterRepo, *args: str) -> tuple[int, Any]:
-    completed = run_script(repo, VALIDATE, *args)
+    completed = run_in_process(repo, VALIDATE, *args)
     return completed.returncode, (
         json.loads(completed.stdout) if "--json" in args else completed.stdout
     )
@@ -886,7 +890,7 @@ ACTOR_FRONT = (
 
 
 def test_proposed_the_check_reports_nothing_and_the_preview_never_changes_the_exit(
-    project: AdopterRepo, pkit_on_path: Path
+    project: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     project.write(
         {
@@ -916,7 +920,9 @@ def test_proposed_the_check_reports_nothing_and_the_preview_never_changes_the_ex
     code, output = _validate(project, "--preview")
     assert code == 0
     assert "preview: `**Context:**` is missing" in output
-    # `pkit validate` runs the normal check, so the proposed rule shows nothing there.
+    # `pkit validate` runs the normal check, so the proposed rule shows nothing there. Its
+    # runner starts the validator in the test's own process.
+    start_in_process(monkeypatch)
     result = CliRunner().invoke(
         main, ["--color", "never", "validate", "--only", "software-analysis:artefacts"]
     )
@@ -961,7 +967,7 @@ def test_accepted_a_departure_fails_and_an_entry_is_read_within_its_span(
 
 
 def test_pkit_validate_reports_where_san_binds_on_none_and_warns_once_a_rule_is_accepted(
-    project: AdopterRepo, pkit_on_path: Path
+    project: AdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Never silent, end to end (DEC-001 point 1): `pkit validate` reports that no rule of
     `SAN` binds on the analysis while none is accepted. Once one is, and no set of the
@@ -973,6 +979,7 @@ def test_pkit_validate_reports_where_san_binds_on_none_and_warns_once_a_rule_is_
         {actor_at("ACT-tester"): ACTOR_FRONT + WITHOUT_CONTEXT + "\n", **proposing_san(project)}
     )
     only = ["--color", "never", "validate", "--only", "software-analysis:artefacts"]
+    start_in_process(monkeypatch)  # the validator `pkit validate` starts, in this process
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 0, result.output
     assert "0 error(s), 0 warning(s), 0 info(s), 1 report(s)." in result.output
@@ -1000,7 +1007,7 @@ def test_a_record_is_held_to_its_structure_while_the_format_rule_is_proposed(
     `SAN` ships the rule accepted, so a proposed copy is the fixture."""
     project.write(proposing_san(project))
     stamped(project, "actor", "tester", "--unanchored-because", "No code embodies it.")
-    record = run_script(
+    record = run_in_process(
         project,
         NEW,
         "revalidation",
@@ -1051,7 +1058,7 @@ def test_the_stamp_refuses_a_declaration_whose_hint_is_no_one_line_comment(
     broken = text.replace("hint: The event that starts", "hint: The event --> that starts", 1)
     assert broken != text
     project.write({declaration: broken})
-    completed = run_script(project, NEW, "use-case", "run-suite", "--actor", "ACT-tester")
+    completed = run_in_process(project, NEW, "use-case", "run-suite", "--actor", "ACT-tester")
     assert completed.returncode == 1, completed.stdout
     assert "\nrefused: the kinds' structures cannot be read: " in f"\n{completed.stderr}"
     assert "restore it as the capability ships it" in completed.stderr
@@ -1127,7 +1134,7 @@ def test_every_kind_stamped_and_filled_carries_its_structure(
         "--step",
         "UC-002",
     )
-    record = run_script(
+    record = run_in_process(
         project,
         NEW,
         "revalidation",

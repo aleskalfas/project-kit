@@ -29,15 +29,20 @@ declared here and exercised in `test_software_analysis_use_cases.py`.
 The capability's scripts are pointed at this interpreter in the adopter copy,
 and the `pkit` they read through is the real CLI under this interpreter
 (`pkit_on_path`), so no test reaches `uv` or the network.
+
+The check, the filler and living-docs' validator run in the test's own process,
+their `pkit` calls answered there too, and so does each command the backbone's
+runner starts (`tests/in_process.py`, #2325). Two tests keep a process, each
+marked with why: the filler's end-to-end tests, the backbone's runner starting it.
 """
 
 from __future__ import annotations
 
 import ast
 import json
-import os
+import subprocess
 import sys
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -64,9 +69,10 @@ from tests.analysis_repo import (
     installed,
     load,
     prepare_seeded,
+    run_in_process,
     run_script,
-    seed,
 )
+from tests.in_process import InProcessPkit, Runner, start_in_process
 
 FILL = SA / "scripts" / "fill-readers.py"
 FILL_USE_CASES = SA / "scripts" / "fill-use-cases.py"
@@ -112,7 +118,8 @@ def documented(project: AdopterRepo) -> AdopterRepo:
     """The adopter with living-docs installed beside it, its validator under this
     interpreter: a provider of the documentation role. The user space's definition
     inherits LDOC and is scoped to the user root's pages, so RS-LDOC-003 binds on them
-    and their readers are checked (living-docs DEC-001 points 2 and 3)."""
+    and their readers are checked (living-docs DEC-001 points 2 and 3). A test that
+    resolves the readers point starts its filler in its own process (`in_process`)."""
     project.install_capabilities("living-docs")
     path = project.root / LD / "scripts" / "validate.py"
     body = path.read_text(encoding="utf-8").split("\n", 1)[1]
@@ -131,6 +138,14 @@ def documented(project: AdopterRepo) -> AdopterRepo:
         }
     )
     return project
+
+
+@pytest.fixture
+def in_process(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+    """Each command the backbone's runner starts, such as the readers point's filler,
+    started in the test's own process (`tests/in_process.py`, `start_in_process`): the
+    scripts started, in order."""
+    return start_in_process(monkeypatch)
 
 
 def _package(root: Path) -> dict[str, Any]:
@@ -159,9 +174,10 @@ def _resolve(address: str) -> dict[str, Any]:
     return json.loads(result.output)
 
 
-def _check(repo: AdopterRepo) -> dict[str, Any]:
-    """The validator's findings document, run as the backbone runs it."""
-    completed = run_script(repo, VALIDATE, "--json")
+def _check(repo: AdopterRepo, *, pkit: Runner | None = None) -> dict[str, Any]:
+    """The validator's findings document, run as the backbone runs it, in the test's own
+    process (`run_in_process`): its `pkit` calls answered by `pkit` where given."""
+    completed = run_in_process(repo, VALIDATE, "--json", pkit=pkit)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -420,6 +436,10 @@ def _actors(repo: AdopterRepo) -> None:
     )
 
 
+@pytest.mark.process(
+    "fill-readers' end-to-end test: the backbone's runner starts it to resolve the readers "
+    "point, and its document and the lines a person reads come from its own process"
+)
 def test_the_actors_in_force_are_readers_beside_the_defaults(documented: AdopterRepo) -> None:
     _actors(documented)
     entries = {e["id"]: e for e in _resolve(READERS)["entries"]}
@@ -458,12 +478,14 @@ def test_the_actors_in_force_are_readers_beside_the_defaults(documented: Adopter
     ]
 
 
-def test_a_page_may_name_an_actor_as_its_reader(documented: AdopterRepo) -> None:
+def test_a_page_may_name_an_actor_as_its_reader(
+    documented: AdopterRepo, in_process: list[Path]
+) -> None:
     _actors(documented)
     page = "---\nreader: {reader}\nkind: signpost\n---\n\n# A page\n"
     documented.write({"docs/guide.md": page.format(reader="act-tester")})
-    validate = documented.root / LD / "scripts" / "validate.py"
-    completed = run_script(documented, validate.relative_to(documented.root), "--json")
+    validate = LD / "scripts" / "validate.py"
+    completed = run_in_process(documented, validate, "--json")
     assert completed.returncode == 0, completed.stderr
     document = json.loads(completed.stdout)
     assert _findings(document, "error") == []
@@ -474,26 +496,32 @@ def test_a_page_may_name_an_actor_as_its_reader(documented: AdopterRepo) -> None
     # A withdrawn actor is history, not a reader: the page naming it fails living-docs'
     # check, while the analysis, withdrawing an actor soundly, passes its own.
     documented.write({"docs/guide.md": page.format(reader="act-retired")})
-    completed = run_script(documented, validate.relative_to(documented.root), "--json")
+    completed = run_in_process(documented, validate, "--json")
     ((location, _message),) = _findings(json.loads(completed.stdout), "error")
     assert location == "docs/guide.md:/reader"
-    assert run_script(documented, VALIDATE).returncode == 0
+    assert run_in_process(documented, VALIDATE).returncode == 0
+    # Each resolution of the readers point started the filler, in this process.
+    assert [script.name for script in in_process] == ["fill-readers.py"] * 2
 
 
-def test_a_file_whose_id_is_no_actor_s_is_no_reader(documented: AdopterRepo) -> None:
+def test_a_file_whose_id_is_no_actor_s_is_no_reader(
+    documented: AdopterRepo, in_process: list[Path]
+) -> None:
     """An actor file that reads is judged alone: one whose `id` is no actor id is not a
     reader — the filler skips it and still answers — and the capability's own check
     reports it."""
     stray = _actor("USER-stray", "Stray", "active", "Anything")
     documented.write({**_actor("ACT-tester", "Test author", "active", "Run the suite"), **stray})
-    completed = run_script(documented, FILL, "--json")
+    completed = run_in_process(documented, FILL, "--json")
     assert completed.returncode == 0, completed.stderr
     assert [reader["id"] for reader in json.loads(completed.stdout)["value"]] == ["act-tester"]
     assert [e["id"] for e in _resolve(READERS)["entries"]] == ["act-tester", "maintainer", "user"]
+    assert [script.name for script in in_process] == ["fill-readers.py"]
     locations = [location for location, _message in _findings(_check(documented), "error")]
     assert f"{actor_at('USER-stray')}:/id" in locations
 
 
+@pytest.mark.usefixtures("in_process")
 def test_no_analysis_contributes_no_reader(documented: AdopterRepo) -> None:
     resolved = _resolve(READERS)
     assert resolved["resolved"], resolved["why"]
@@ -502,6 +530,10 @@ def test_no_analysis_contributes_no_reader(documented: AdopterRepo) -> None:
     assert (ours["state"], ours["query_contract"]) == ("taken", True)
 
 
+@pytest.mark.process(
+    "fill-readers' failing end-to-end test: it fails closed across the process, its exit and "
+    "its standard error the reason the backbone's runner reads as `inert`"
+)
 def test_any_one_actor_file_that_cannot_be_read_leaves_the_readers_unresolved(
     documented: AdopterRepo,
 ) -> None:
@@ -833,7 +865,7 @@ def test_an_evidence_entry_s_id_is_its_own_three_fields(
             "fields (DEC-001 point 7)",
         )
     ]
-    assert run_script(seeded, VALIDATE).returncode == 1
+    assert run_in_process(seeded, VALIDATE).returncode == 1
 
 
 def _withdraw(repo: AdopterRepo, rel: str) -> None:
@@ -921,7 +953,7 @@ def test_a_copy_that_differs_from_the_point_warns(seeded: AdopterRepo) -> None:
             "again otherwise — revalidate UC-001 against it (DEC-001 point 7)",
         )
     ]
-    assert run_script(seeded, VALIDATE).returncode == 0
+    assert run_in_process(seeded, VALIDATE).returncode == 0
 
 
 def test_the_point_s_own_entries_warn_on_a_check_or_id_not_their_own(
@@ -966,7 +998,7 @@ def test_the_point_s_own_entries_warn_on_a_check_or_id_not_their_own(
     ]
     held = {e["id"]: e for e in _resolve(EVIDENCE)["entries"]}
     assert held[_id("UC-002", check=BRIDGE)]["replaces"] == ["pytest-bridge"]
-    assert run_script(seeded, VALIDATE).returncode == 0
+    assert run_in_process(seeded, VALIDATE).returncode == 0
 
 
 def test_a_copy_the_point_no_longer_holds_says_nothing(seeded: AdopterRepo) -> None:
@@ -990,29 +1022,29 @@ def test_a_copy_the_point_no_longer_holds_says_nothing(seeded: AdopterRepo) -> N
     )
 
 
-# Slow by design: the seed stamped under a `pkit` of the test's own, so no template has it.
-def test_the_point_is_read_only_when_a_record_copies_evidence(
-    project: AdopterRepo,
-    pkit_on_path: Path,
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def _without_connections() -> Runner:
+    """A `pkit` that answers nothing for a point: `connections` exits 3 with no output,
+    and every other command is the in-process `pkit`'s."""
+    pkit = InProcessPkit()
+
+    def broken(args: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        if list(args[1:2]) == ["connections"]:
+            return subprocess.CompletedProcess(list(args), 3, "", "")
+        return pkit(args, **options)
+
+    return broken
+
+
+def test_the_point_is_read_only_when_a_record_copies_evidence(seeded: AdopterRepo) -> None:
     """A `pkit` that answers nothing for the point is never asked while no record
     copies evidence; once one does, no document is an unresolved point, which says
     nothing but the summary line."""
-    broken = tmp_path_factory.mktemp("broken-pkit")
-    (broken / "pkit").write_text(
-        f'#!/bin/sh\nif [ "$1" = connections ]; then exit 3; fi\nexec "{pkit_on_path}/pkit" "$@"\n',
-        encoding="utf-8",
-    )
-    (broken / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{broken}{os.pathsep}{os.environ['PATH']}")
-    seed(project)
-    project.write({RECORD: _record({"UC-001": "holds"})})
-    document = _check(project)
+    broken = _without_connections()
+    seeded.write({RECORD: _record({"UC-001": "holds"})})
+    document = _check(seeded, pkit=broken)
     assert _beside_unbound(document) == []
     assert [line for line in document["summary"] if line.startswith("evidence")] == []
-    project.write({RECORD: _record({"UC-001": "holds"}, [_entry("UC-001")])})
-    document = _check(project)
+    seeded.write({RECORD: _record({"UC-001": "holds"}, [_entry("UC-001")])})
+    document = _check(seeded, pkit=broken)
     assert _beside_unbound(document) == []
     assert f"`pkit connections resolve {EVIDENCE} --json` exited 3" in document["summary"][1]
