@@ -249,6 +249,23 @@ def listed_record() -> str:
     return pointed_record((), title="A listed record", lead=items).replace("PRJ-900", "PRJ-910")
 
 
+#: When `commit_install` dates the install's commit: a day before the scripted history's
+#: epoch, so every commit a test makes comes after it, a `Timeline`'s among them.
+INSTALLED_AT = HISTORY_EPOCH - timedelta(days=1)
+
+
+def commit_install(adopter: AdopterRepo) -> None:
+    """A `prepare` that commits the installed `.pkit/` on `main`, dated `INSTALLED_AT` (#2320).
+
+    A template built with it is built once per session and copied for each test
+    (`tests/README.md`, "Built once, copied for each test"). So a test's base commit
+    holds only its own files, on top of the install's commit, and its tree is the one a
+    commit of everything would hold. The install is committed as git commits it, with
+    no answer settled, whatever fixtures the first test that asks for the template
+    uses."""
+    GitRepo.commit(adopter, "install", None, date=INSTALLED_AT)
+
+
 class Timeline:
     """Commits on an adopter repository, each a day after the last, so origins have known dates."""
 

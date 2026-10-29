@@ -1,9 +1,10 @@
 """Tests for the prune, `pkit friction prune` (`project_kit.friction_prune`; COR-062 point 8;
 #2207).
 
-Each test stands up a real adopter repository with dated commits, writes its answer files by
-hand, as `test_answer_files.py` does, whose helpers build them, and plans or runs the prune
-at HEAD. Which files a prune keeps though no answer in them is live is
+Each test stands up a real adopter repository, its install committed once per session
+(`committed_adopter`), with dated commits. It writes its answer files by hand, as
+`test_answer_files.py` does, whose helpers build them, and plans or runs the prune at
+HEAD. Which files a prune keeps though no answer in them is live is
 `StateAnswers.prune`'s, tested in `test_answer_files.py`; here are the command's own
 reading, refusals, consent and output, and what a prune owes the change check.
 """
@@ -22,7 +23,7 @@ from project_kit import friction_repository as fr
 from project_kit import friction_write
 from project_kit.cli import main
 from project_kit.friction_git import FrictionCheckError
-from tests.adopter_repo import GitRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo, GitRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, T2, Timeline, document, friction_config
 from tests.shipped_rule_sets import without_shipped_rule_sets
 from tests.test_answer_files import GUIDE, T1, T3, answer_path, answers, bare_guide, entry
@@ -36,8 +37,10 @@ def other() -> str:
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _replaced(timeline: Timeline, *, mode: str = "warning") -> None:

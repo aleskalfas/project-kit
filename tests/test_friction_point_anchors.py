@@ -10,7 +10,8 @@ point is a dead anchor, and an anchor on a retired point stands on nothing
 until it is re-pointed. The explanation shows the point's diff alone, and a
 whole-record anchor works as before.
 
-Every test stands up a real adopter repository, commits a base on `main`
+Every test stands up a real adopter repository, its install committed once per
+session (`committed_adopter`), commits a base on `main`
 with the record and an artefact anchored to its point, revalidated there,
 branches `feature` off it and commits one change.
 """
@@ -24,7 +25,7 @@ import pytest
 from project_kit import friction_check as fc
 from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
-from tests.adopter_repo import MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.friction_documents import (
     LISTED,
     POINTED,
@@ -44,8 +45,10 @@ ON_POINT = {"record": ["PRJ-900#2"]}
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    """Dated commits on an adopter whose install the template committed, so a test's base
+    commits only its own files."""
+    return Timeline(committed_adopter)
 
 
 def _start(timeline: Timeline, anchors: dict[str, list[str]] | None = None, **record: Any) -> str:
