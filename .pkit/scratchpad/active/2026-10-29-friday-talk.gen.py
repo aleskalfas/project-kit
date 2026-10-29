@@ -457,6 +457,52 @@ def highlight(pid, x, y, w, v):
     return out, 380
 
 
+PYR_H, PYR_GAP = 172, 18
+
+
+def pyramid(pid, y, v):
+    """A stepped pyramid of layers, the top first, and a column of relations beside it."""
+    out = {}
+    levels = v["levels"]
+    cx = v.get("center", 1180)
+    top_w, step = v.get("top_w", 760), v.get("step", 300)
+    for i, lv in enumerate(levels):
+        w = top_w + i * step
+        x = round(cx - w / 2)
+        yy = y + i * (PYR_H + PYR_GAP)
+        k, val = stage(pid, i + 1, x, yy, w, "neutral", lv["head"], lv.get("text", ""), PYR_H)
+        val["override"]["box"] = {"width": w, "height": PYR_H, "color": lv["fill"], "border_color": lv["fill"]}
+        val["override"]["dot"] = {"color": lv["fill"], "border_color": lv["fill"]}
+        val["override"]["head"] = {"x": 32, "y": 22, "width": w - 64, "height": 64, "align": "center", "ink": lv["ink"]}
+        val["override"]["text"] = {"x": 32, "y": 92, "width": w - 64, "height": PYR_H - 110, "align": "center", "ink": lv["ink"]}
+        out[k] = val
+    h = len(levels) * PYR_H + (len(levels) - 1) * PYR_GAP
+    # the relations: a box per relation, an arrow beside it (down, up), or into the apex (left)
+    sx = v.get("side_x", 2240)
+    sw = MARGIN + SPAN16 - sx
+    li = 100
+    for j, sd in enumerate(v["side"]):
+        sy = y + sd["at"]
+        sh = sd.get("h", 240)
+        tx, tw = sx + LINK_W + 16, sw - LINK_W - 16
+        k, val = stage(pid, 50 + j, tx, sy, tw, "neutral", sd["head"], sd.get("text", ""), sh)
+        k, val = styled((k, val), PAIR_STYLES["tinted"]["left"])
+        out[k] = val
+        li += 1
+        arrow = sd.get("arrow", "down")
+        if arrow == "left":
+            apex_right = cx + top_w / 2
+            ax = round(apex_right + 16)
+            aw = round(tx - ax - 8)
+            out[f"{pid}-l{li}"] = {"template": "link", "parent": pid, "x": ax, "y": sy, "x1": aw - 8, "y1": sh / 2, "x2": 8, "y2": sh / 2,
+                                   "tone": "role_code", "override": {"root": {"width": aw, "height": sh}, "arrow": {"border_width": 6}}}
+        else:
+            y1, y2 = (8, sh - 8) if arrow == "down" else (sh - 8, 8)
+            out[f"{pid}-l{li}"] = {"template": "link", "parent": pid, "x": sx, "y": sy, "x1": LINK_W / 2, "y1": y1, "x2": LINK_W / 2, "y2": y2,
+                                   "tone": "role_code", "override": {"root": {"width": LINK_W, "height": sh}, "arrow": {"border_width": 6}}}
+    return out, h
+
+
 def install(pid, y, v):
     """The commands as two tinted steps with pictograms on the left, the project's tree on the right."""
     out = {}
@@ -634,6 +680,8 @@ def build_slide(s, n, total):
                 add(cards(pid, y, v["cards"]))
         elif kind == "compare":
             add(compare(pid, y, v["left"], v["right"]))
+        elif kind == "pyramid":
+            add(pyramid(pid, y, v))
         elif kind == "install":
             add(install(pid, y, v))
             if v.get("stages"):

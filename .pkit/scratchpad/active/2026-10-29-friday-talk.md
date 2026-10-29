@@ -10,6 +10,53 @@ The talk's notes, its slides as data and its Mural board map live beside this no
 
 Started on 26 October in a branch folder (`talk-notes/`), moved here on 29 October.
 
+## Hand-off: where the slides stand, and how to go on (29 October, evening)
+
+The work moves to another clone from here. Everything it needs is on branch `docs/talk-notes`; this clone stops touching the board.
+
+**Where things are.**
+
+- Board: https://app.mural.co/t/ibmresearchdesign6459/m/ibmresearchdesign6459/1793230020758/311a5a3a4aeef1ac127c90b21b7e6ad6292360f8
+- `2026-10-29-friday-talk.slides.yaml`: the slides' content, the source of truth for what each slide says (one entry per slide; `minutes` per slide add up to the talk's length).
+- `2026-10-29-friday-talk.gen.py`: turns the slides file into instances of the board's templates in the board map. It also renders each terminal panel to a PNG (see "The deck's style").
+- `2026-10-29-friday-talk.board.yaml` and `….board.yaml.state.json`: the board map and its sync state, which the mural-boards skill (`~/.claude/skills/mural-boards`, user-level, on this machine) pushes. Both are committed so another clone continues the sync.
+- `2026-10-29-friday-talk-icons/`: Carbon pictograms recoloured to the board's roles, and the rendered terminal panels (`term-*.png`).
+- `2026-10-29-friday-talk-tools/`: `stray_duplicates.py` (finds and deletes duplicates the board tool leaves), `make_row_icons.py` (recolours Carbon pictograms), `mural_fonts.py` (lists the fonts Mural accepts).
+
+**The loop for one change.** With `A=.pkit/scratchpad/active` and `M=$A/2026-10-29-friday-talk.board.yaml`:
+
+1. Edit the slides file (and the generator, for a new kind of visual).
+2. Where a slide's parts change, take the old parts off the board first, by their exact instance ids: `uv run --script ~/.claude/skills/mural-boards/scripts/mural_boards.py remove $M <ids> --yes`. List the ids from the map; a prefix can match another slide's parts (`T-opening-c` matched the opening's cards `T-opening-c1`…).
+3. Generate: `uv run --no-project --with pyyaml python $A/2026-10-29-friday-talk.gen.py $A/2026-10-29-friday-talk.slides.yaml $M`.
+4. Dry run, then push and verify: `… mural_boards.py push $M --brief`, then `… push $M --yes --brief --verify`. Only library `FIT` lines are expected (six); a `FIT T-…` line is a slide's text too long for its box.
+5. Clear duplicates: `uv run --no-project --with pyyaml --with jsonschema python $A/2026-10-29-friday-talk-tools/stray_duplicates.py ~/.claude/skills/mural-boards/scripts/mural_boards.py $M` (add `--yes` to delete). After a push the board service sometimes fails a request after making the object, the tool retries, and a second copy stays, invisible but in the way of `remove`. The script deletes only an undescribed object with a described twin of the same type, title, position and parent, and holds one that contains anything else (agreed with the maintainer on 29 October).
+6. Commit (signed) and push the branch.
+
+**What the board tool taught.**
+
+- Areas cannot move: a slide that shifts in its row is rebuilt (taken down and made again), which the tool does on its own when everything inside is described.
+- A colour in a template is written in eight hex digits (`#262626FF`); six digits are refused by the API. Colours inside a text box's html spans take six.
+- Mural accepts 12 fonts, none monospace (`mural_fonts.py` lists them), so a terminal is rendered by the generator to a PNG in IBM Plex Mono (installed on this machine; the renderer is `rsvg-convert`) and placed as an image.
+- `pull` before editing when the maintainer may have edited on the board; a text moved by hand shows as a `CONFLICT` on push.
+- Never read `~/.config/mural-boards/.env` or `token.json`.
+
+**The deck's style (decided 29 October).**
+
+- Length: 30 minutes, 14 slides (the slides file's `minutes`). Part 1's order stays Decisions → Checked → Rules and processes as data → What every session is told. Scratchpad notes are a spoken line on the decisions slide. Schemas and processes are one slide; staying current and what comes next are one slide ("Over time").
+- The opening ("Why pkit?") pairs each common practice with pkit's opinion: four rows, a grey problem box (pictogram, what usually happens) and a light purple answer box (pictogram, what pkit asks you to do, the part of the talk), joined by bold purple arrows. The maintainer's point: projects do not usually keep decisions, conventions, tied docs or written permissions; pkit's value is its opinion that they should.
+- One style for anything shown as a command line: a light terminal panel (`#F4F4F4`, border `#E0E0E0`), IBM Plex Mono; prompt and `#` comments grey, the command green (`#198038`), its arguments near black. In a listing, what is pkit's is purple (`#6929C4`) and what is yours blue (`#0043CE`), with a legend line.
+- Something to take away (such as `pkit visibility private` on the install slide) is a yellow note: light yellow box, yellow bar on its left, a dark-yellow pictogram, a question as heading, a small terminal and one line.
+- Slides done in this style: "Why pkit?", "Install pkit" (the commands; the full tree of what `pkit init` creates, taken from a real install; the visibility note) and "Decision records" (where records live by owner; one real record, PRJ-002, its parts explained; the four-step flow below).
+
+**In progress: "How pkit fits together", a new slide after "Install pkit".** The maintainer asked for it on 29 October: the audience should see how pkit's parts rest on each other, with the decisions at the top, before the slides take the folders one by one. Its ground is COR-065 (accepted): where an accepted record decides, the rest of the system is its projection; a disagreement is read first as the projection falling short; a record changes only when a person accepts a new one; scratchpad notes come before a record. The generator has the `pyramid` kind (committed with this hand-off); the slide is not yet in the slides file, and the maintainer has not yet seen its wording. The design proposed:
+
+- Left, a stepped pyramid, darkest at the top (Carbon purples, white text on the two darkest): **Decisions** (the why, accepted by you) → **Rules · schemas · processes** (the exact what, read by every session and tool) → **Skills · agents · permissions** (how agents act, in which role, with what rights) → **pkit's commands and checks** (they carry it out, and check it on every change) → **Your code and documents** (the work itself, tied to what it depends on).
+- Right, three relation boxes: **Scratchpad notes**, with an arrow into the apex (they explore a question before it is decided); **↓ carried out** (each layer is the projection of the decisions above it); **↑ checked** (where a layer and a decision disagree, the layer is fixed first, and a decision changes only when you accept a new one).
+- Lead: "Decisions are the source: everything else in pkit carries them out, and is checked against them." Bottom line: COR-065.
+- Time: 1.5 minutes, taken from Install (2 → 1.5), project-management (3.5 → 3) and Checked (1.5 → 1).
+
+**Next, slide by slide.** After the pyramid: "Checked every time", "Rules and processes as data" and "Over time" (the two merged slides, which the maintainer has not reviewed), then the rest in order. Each slide that shows commands or files (checked: `pkit validate`; rules and processes: `workflow.yaml`; sessions: `CLAUDE.md`; docs: `pkit friction check`) still uses the old grey code box, and moves to the terminal style. Refreshing the "this week" evidence lines with 29 October's events was proposed and set aside by the maintainer ("not important now"). This note's "Time (45 minutes …)" table below is superseded by the slides file's minutes.
+
 Working notes for the Friday talk (goal reconsidered 26 October: present project-kit, its building blocks and its motives; show how light it is and what it gives without capabilities). One block at a time, with the maintainer. For each: what it is, the problem it answers, the adopter's gain, its weight, evidence, and the honest weak spot.
 
 ## The list
@@ -69,7 +116,7 @@ The flow follows an adopter: install it, learn it, keep it current, see what com
 15. **What's next (experimental)** — software-analysis, living-docs, and real multi-clone parallel work (seats and pools): all three run today, all three still being shaped
 
 
-### Time (45 minutes, agreed 29 October)
+### Time (45 minutes, agreed 29 October; superseded by 30 minutes, see the hand-off above)
 
 | # | Block | Minutes |
 |---|---|---|
