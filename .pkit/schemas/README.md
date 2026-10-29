@@ -26,7 +26,7 @@ pkit:
         - src/project_kit/loaded_rule_sets.py
         - src/project_kit/working_tree.py
         - .pkit/lifecycle/ownership.py
-      record: [COR-010, COR-017, COR-018, COR-019, COR-020, COR-023, COR-029, COR-030, "COR-033#P7", COR-041, COR-048, "COR-049#5", "COR-049#6", COR-050, COR-051, COR-052, COR-053, "COR-054#1", COR-055, COR-056, COR-062, "COR-064#1", "COR-064#2", COR-068, ADR-056, ADR-057, "ADR-058#1", "ADR-058#3", "ADR-058#5", "ADR-068#1"]
+      record: [COR-010, COR-017, COR-018, COR-019, COR-020, COR-023, COR-029, COR-030, "COR-033#P7", COR-041, COR-048, "COR-049#5", "COR-049#6", COR-050, COR-051, COR-052, COR-053, "COR-054#1", COR-055, COR-056, COR-062, "COR-064#1", "COR-064#2", COR-068, ADR-056, ADR-057, "ADR-058#1", "ADR-058#3", "ADR-058#5", "ADR-068#1", ADR-073]
       artefact:
         - .pkit/cli/README.md#friction-artefacts---at-rev---json
         - .pkit/cli/README.md#schemas-validate-path

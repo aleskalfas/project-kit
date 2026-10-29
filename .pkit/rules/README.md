@@ -11,7 +11,8 @@ pkit:
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - src/project_kit/install.py
         - src/project_kit/loaded_rule_sets.py
-      record: [COR-001, COR-014, "COR-064#1", "COR-064#2", COR-068, ADR-073]
+      record: [COR-001, COR-014, "COR-051#6", "COR-064#1", "COR-064#2", COR-068, ADR-073]
+      artefact: [".pkit/schemas/README.md#rule-set-files"]
 ---
 
 # Rules
@@ -46,7 +47,7 @@ The kit's rules are a *loaded rule set*: a rule set whose accepted rules bind on
 
 Your `project.md` is a plain file. It is loaded as it stands, and nothing checks its numbers or its origins, nor a citation such as "project rule 4" (COR-068 point 7). You may convert it into a loaded set of your own, when you choose:
 
-1. Write the set as a rule-set file in `rule-sets/` under your internal documentation root (`docs/rule-sets/` by default). Give it a name of its own and `loaded: true`, and copy your rules into it, one section per rule, `### RS-<SET>-NNN — Title`, keeping each rule's number.
+1. Write the set as a rule-set file in `rule-sets/` under your internal documentation root (`docs/rule-sets/` by default). Give it a name of its own and `loaded: true`, and copy your rules into it, one section per rule, `### RS-<SET>-NNN — Title`, keeping each rule's number. The folder, its default and the form of a rule's heading are the schemas reference's, [Rule-set files](../schemas/README.md#rule-set-files).
 2. Give each rule its origin: the record that decides it, or the decider's words (COR-051 point 5). Only you know who decided each rule and why, so no command or migration converts the file for you.
 3. Run `pkit rule-sets generate`. It writes `.pkit/rules/project.md` from your set.
 4. Run `pkit validate`. From then on it fails on a `project.md` out of step with your set, and reads each citation of your rules by "project rule N".
