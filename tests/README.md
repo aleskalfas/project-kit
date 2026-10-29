@@ -159,6 +159,13 @@ Both passes ran only these modules, `-n 3`, on 2026-10-29, on a Mac other builde
 were sharing. Each of its tests still runs the change check, which reads git for its
 base.
 
+The whole-repository check's, the report's and the derived links' four modules lay
+their history on that committed install too (#2328). Their 261 tests took
+1 324 s on the clock, against 1 833 s before, in passes of their own, `-n 3`, on
+2026-10-29. What is left is git: the simplest of these tests starts some 25 git
+processes to commit its history and check it. On a Mac other builders were sharing,
+each took a third of a second.
+
 `test_software_analysis_check.py` is converted (#2319): its 61 tests took 58 s on
 the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
 What is left is mostly the backbone's own reading of the analysis, which each

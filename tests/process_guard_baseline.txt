@@ -53,10 +53,6 @@ test_document_parts.py
 test_entrypoint_exec_bit.py
 test_environment.py
 test_evidence_validate.py
-test_friction_derived_links.py
-test_friction_report.py
-test_friction_report_body.py
-test_friction_repository.py
 test_handed_over_writers.py
 test_harness_support.py
 test_held_folders_bounded.py
