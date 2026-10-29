@@ -8,6 +8,7 @@ masters and LIB objects are left untouched.
 Usage: python gen_slides.py <slides.yaml> <board.yaml>
 """
 
+import re
 import sys
 
 import yaml
@@ -315,7 +316,8 @@ def vlink(pid, i, x, y, h):
 # grey, the command green, its arguments near black, output dark grey; in a listing, what is pkit's
 # purple and what is yours blue. Colours travel as spans in Mural's html.
 TERM = {"prompt": "#6F6F6F", "command": "#198038", "args": "#161616", "comment": "#6F6F6F", "output": "#393939",
-        "branch": "#A8A8A8", "pkit": "#6929C4", "yours": "#0043CE", "plain": "#161616"}
+        "branch": "#A8A8A8", "pkit": "#6929C4", "yours": "#0043CE", "plain": "#161616",
+        "del": "#DA1E28", "add": "#198038"}
 TERM_LINE = 46
 TERM_FONT = "ibm-plex-mono"
 
@@ -377,13 +379,22 @@ def term_segments(content):
             out.append([(line, "args")])
         elif not line.strip():
             out.append([])
-        elif line.lstrip().startswith("#"):
+        elif line.lstrip().startswith("#") and not line.lstrip().startswith("##"):
             out.append([(line, "comment")])
         elif line.startswith("$ "):
             cmd, _, rest = line[2:].partition(" ")
             out.append([("$ ", "prompt"), (cmd, "command")] + ([(" " + rest, "args")] if rest else []))
+        elif line.startswith("- "):
+            out.append([(line, "del")])
+        elif line.startswith("+ "):
+            out.append([(line, "add")])
         else:
-            out.append([(line, "output")])
+            # a body, then an inline comment after two spaces; a body is a heading, a key and its value, or output
+            i = line.find("  #")
+            body, note = (line, "") if i < 0 else (line[:i], line[i:])
+            key = re.match(r"([A-Za-z][\w-]*: )(.*)$", body)
+            segs = [(body, "args")] if body.startswith("##") else [(key[1], "output"), (key[2], "args")] if key else [(body, "output")]
+            out.append(segs + ([(note, "comment")] if note else []))
         continued = line.rstrip().endswith("\\")
     return out
 
@@ -548,6 +559,49 @@ def kinds(pid, y, v):
             x += w + GUT
         x += GROUP_GAP - GUT
     return out, GROUP_H + 24 + KIND_H
+
+
+def step_card_template(stage_tpl):
+    """The stage with a picture inside it: the step's name, a line of what happens, and the moment it shows,
+    rendered in the terminal style (`file` names a PNG in the icons folder); made from the stage template."""
+    import copy
+
+    t = copy.deepcopy(stage_tpl)
+    t.pop("master", None)
+    t["note"] = "A step of a story with its picture inside: the stage's box, dot, head and text, and a terminal image below them; made by the slide generator from the stage template."
+    t["parts"]["img"] = {"type": "image", "file": ICONS_DIR + "/{file}.png", "x": 32, "y": 216, "width": 576, "height": 300}
+    return t
+
+
+CARD_TEXT_H, CARD_IMG_Y = 100, 216
+
+
+def story(pid, y, v):
+    """One thing through its steps, left to right: a card per step, its picture inside it, arrows between."""
+    out = {}
+    st = v["stages"]
+    n = len(st)
+    w = round((SPAN16 - (n - 1) * LINK_W) / n)
+    fs = v.get("font_size", 26)
+    pics = [terminal_png(f"{pid}-step{i}".removeprefix("T-"), s["terminal"], w - 64, fs) for i, s in enumerate(st, 1)]
+    h = CARD_IMG_Y + max(ph for _, ph in pics) + 32
+    x = MARGIN
+    for i, (s, (file, ph)) in enumerate(zip(st, pics), 1):
+        out[f"{pid}-card{i}"] = {
+            "template": "step_card", "parent": pid, "role": s.get("role", "neutral"), "head": md(s["head"]), "text": md(s["text"]),
+            "file": file, "x": x, "y": y,
+            "override": {
+                "root": {"width": w, "height": h}, "box": {"width": w, "height": h},
+                "head": {"width": w - 104, "height": 64}, "text": {"y": 100, "width": w - 64, "height": CARD_TEXT_H},
+                "img": {"x": 32, "y": CARD_IMG_Y, "width": w - 64, "height": ph},
+            },
+        }
+        x += w
+        if i < n:
+            k, val = link(pid, i, x, y, h)
+            out[k] = val
+            x += LINK_W
+    return out, h
 
 
 PYR_H, PYR_GAP = 172, 18
@@ -797,6 +851,8 @@ def build_slide(s, n, total):
             add(compare(pid, y, v["left"], v["right"]))
         elif kind == "kinds":
             add(kinds(pid, y, v))
+        elif kind == "story":
+            add(story(pid, y, v))
         elif kind == "pyramid":
             add(pyramid(pid, y, v))
         elif kind == "install":
@@ -860,6 +916,7 @@ def main(slides_path, board_path):
     board["templates"]["highlight"] = HIGHLIGHT_TEMPLATE
     board["templates"]["kind"] = KIND_TEMPLATE
     board["templates"]["kind_group"] = GROUP_TEMPLATE
+    board["templates"]["step_card"] = step_card_template(board["templates"]["stage"])
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     talk = sl["talk"]
     content = [s for s in sl["slides"]]

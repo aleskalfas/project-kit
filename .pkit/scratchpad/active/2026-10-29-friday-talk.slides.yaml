@@ -395,8 +395,8 @@ slides:
   notes: 'Two questions give the three places: what the record is about, how work is done or what you build, and
     who may change it, pkit or you. pkit never decides your architecture, so there is no fourth. pkit''s principles
     change by a new record you can read, never by a quiet edit: 39 in June, 67 now, and this week COR-065 overturned
-    a sentence of COR-006. In project-kit itself, 11 PRJ and 74 ADR. Every kind has one shape, which the next slide
-    shows. Add-ons bring decision records of their own; they come with the capabilities. Unfinished ideas live in
+    a sentence of COR-006. In project-kit itself, 11 PRJ and 74 ADR. The next slide follows one of them
+    through its life. Add-ons bring decision records of their own; they come with the capabilities. Unfinished ideas live in
     scratchpad notes, which may contradict and be dropped: this talk is one.'
 - id: found
   part: P1
@@ -405,81 +405,52 @@ slides:
     governs.
   problem: ''
   does: []
-  show: 'This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted, then built'
+  show: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted with the code
+    that carries it out'
   visual:
-    kind: flow
+    kind: story
     stages:
     - role: agents
       head: The agent drafts it
-      text: 'A choice later work will depend on comes up. Status: proposed.'
+      text: A choice later work will depend on comes up.
+      terminal: |-
+        $ cat .pkit/decisions/project/PRJ-002-….md
+        id: PRJ-002
+        title: Version-bump policy
+        status: proposed    # until you accept it
+        ## Context          # why it came up
+        ## Decision         # what is decided
+        ## Rationale        # why, what was rejected
+        ## Implications     # what follows
     - role: people
       head: You accept it
-      text: In the pull request, before it merges and before anything is built on it.
+      text: In the pull request, before it merges.
+      terminal: |-
+        # the pull request's change to PRJ-002
+          title: Version-bump policy
+        - status: proposed
+        + status: accepted
     - role: agents
       head: A later session finds it
-      text: Before changing a file, the agent looks up the records behind it.
-    panel_left:
-    - - - '$ '
-        - prompt
-      - - cat
-        - command
-      - - ' .pkit/decisions/project/PRJ-002-…md'
-        - args
-    - - - '---'
-        - output
-    - - - 'id: '
-        - output
-      - - PRJ-002
-        - args
-    - - - 'title: '
-        - output
-      - - Version-bump policy
-        - args
-    - - - 'status: '
-        - output
-      - - accepted
-        - command
-      - - '        # proposed, until you accept it'
-        - comment
-    - - - '---'
-        - output
-    - - - '## Context'
-        - args
-      - - '              # why the choice came up'
-        - comment
-    - - - '## Decision'
-        - args
-      - - '             # what is decided'
-        - comment
-    - - - '### 1. …'
-        - args
-      - - '                # numbered points, kept for good'
-        - comment
-    - - - '## Rationale'
-        - args
-      - - '            # why, and what was rejected'
-        - comment
-    - - - '## Implications'
-        - args
-      - - '         # what follows for code and docs'
-        - comment
-    panel_right: |-
-      $ pkit refs records-for .pkit/capabilities/project-management/schemas/workflow.yaml
-      …/schemas/workflow.yaml: 0 records tied directly, 5 artefacts anchoring it
-        Through the artefacts that anchor it, the narrowest first:
-          …/glossary.md#TERM-issue-lifecycle, by …/workflow.yaml, rests on 2 records:
-            project-management:DEC-006; project-management:DEC-033
-          …/REQ-042-held-moves-authorised.md, by …/workflow.yaml, rests on 4 records:
-            project-management:DEC-006; project-management:DEC-014; …
-        …
-      # before it changes workflow.yaml, the agent reads DEC-006
+      text: Before changing a file, the agent looks up its records.
+      terminal: |-
+        $ pkit refs records-for .pkit/release/README.md
+        6 records tied directly:
+          PRJ-002  Version-bump policy …
+          PRJ-004  Distribution via direct git URL …
+          ADR-040  Fetch externally-sourced content …
+          COR-010  Lifecycle of installed resources
+          …
+        # the agent reads these before changing it
     font_size: 26
   limit: Only records tied to a file are found, directly or through a document that depends on it.
   minutes: 1
-  notes: 'Accepting is yours: a check can refuse to merge a record still proposed, and whoever authorises a merge
-    sees every record it accepts. Before changing a file, the agent runs this lookup, one of the working rules
-    every session is told, and reads the records it names. A choice made in a chat is gone the next session; a
-    record is found.'
+  notes: 'One record, PRJ-002, through its life: drafted as proposed, accepted in the pull request by one line,
+    and found by a later session behind the release guide, beside records of the other two kinds. Accepting is yours:
+    a check can refuse to merge a record still proposed, and whoever authorises a merge sees every record it accepts.
+    Before changing a file, the agent runs this lookup, one of the working rules every session is told. It reads
+    what each file declares it depends on, the same declarations the docs slide shows later. A choice made in a chat
+    is gone the next session; a record is found.'
 - id: checked
   part: P1
   title: Checked every time

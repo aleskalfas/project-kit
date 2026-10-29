@@ -1938,6 +1938,67 @@ templates:
         y: 0
         width: 1856
         height: 56
+  step_card:
+    note: 'A step of a story with its picture inside: the stage''s box, dot, head and text, and a terminal
+      image below them; made by the slide generator from the stage template.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      width: 640
+      height: 224
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+    parts:
+      box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 640
+        height: 224
+        color: '@background'
+        border_color: '@role_{role}'
+        border_width: 2
+        ink: '@text_primary'
+      dot:
+        type: shape
+        shape: ellipse
+        text: ''
+        x: 32
+        y: 44
+        width: 24
+        height: 24
+        color: '@role_{role}'
+        border_color: '@role_{role}'
+        border_width: 1
+        ink: '@text_primary'
+      head:
+        type: text
+        text: '{head}'
+        style: '@style.key'
+        x: 72
+        y: 28
+        width: 536
+        height: 64
+        ink: '@text_primary'
+      text:
+        type: text
+        text: '{text}'
+        style: '@style.body'
+        x: 32
+        y: 100
+        width: 576
+        height: 96
+      img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/{file}.png
+        x: 32
+        y: 216
+        width: 576
+        height: 300
 instances:
   L01:
     template: slide
@@ -3455,14 +3516,14 @@ instances:
     title: Decided once, found later
     lead: You accept a choice before work builds on it, and a later session finds it before changing what
       it governs.
-    rests: 'This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted,
-      then built'
+    rests: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted
+      with the code that carries it out'
     n: 5
     total: 16
     override:
       rests:
-        text: 'This week: moving an issue back from In Progress to Backlog was added to DEC-006, accepted,
-          then built'
+        text: 'This week: ADR-075 decided how every session''s working rules are made, and merged accepted
+          with the code that carries it out'
     mural_ids:
       root: c76f456f-a5b6-42b3-97be-155d8bbe6bba
       bg: 420a5f21-5d41-4700-a1d0-1f7fa671ada6
@@ -3470,168 +3531,157 @@ instances:
       lead: 27d840f5-a8fb-4a0f-afc3-933712a3c046
       rests: cb37e205-696c-4b32-8348-020ecb694aaf
       num: a73c10be-6f3b-4e74-a689-35daeeaa8ee1
-  T-found-s1:
-    template: stage
+  T-found-card1:
+    template: step_card
     parent: T-found
     role: agents
     head: The agent drafts it
-    text: 'A choice later work will depend on comes up. Status: proposed.'
+    text: A choice later work will depend on comes up.
+    file: term-found-step1
     x: 128
     y: 576
     override:
       root:
         width: 917
-        height: 272
+        height: 640
       box:
         width: 917
-        height: 272
+        height: 640
       head:
         width: 813
         height: 64
       text:
         y: 100
         width: 853
-        height: 135
+        height: 100
+      img:
+        x: 32
+        y: 216
+        width: 853
+        height: 392
     mural_ids:
-      root: c35c7756-23e9-467d-83a4-fa4bd5810d84
-      box: fbf6bbed-5766-413a-9fab-7e7aaa2d2642
-      dot: 2646f251-6816-4fc7-9ddb-2ae52d18ba8e
-      head: 9465f0d5-3500-403e-b4db-bdab9a7fbbb8
-      text: 538f8ae4-dba3-415f-9ce6-f1ba25d8605a
+      root: da315c99-528d-4b74-8d92-89aa6b1f6b71
+      box: f32cc4bb-593e-4e2b-807b-dfed54d3d312
+      dot: 14544d88-90bc-4730-ae07-b3448ec6e6f9
+      head: f855a35b-9720-4aa1-9909-4de6393eec7b
+      text: b5161279-d8ba-4998-a3a9-d42e7dd17b51
+      img: d2e25cf5-1b82-4450-9a14-fe966eec4b02
   T-found-l1:
     template: link
     parent: T-found
     x: 1045
     y: 576
     x1: 16
-    y1: 136.0
+    y1: 320.0
     x2: 80
-    y2: 136.0
+    y2: 320.0
     tone: text_secondary
     override:
       root:
         width: 96
-        height: 272
+        height: 640
     mural_ids:
-      root: e81b9426-21ed-429d-a01e-fc3decb01949
-      arrow: af7f24e0-f242-40d6-8e17-5121002b2e4e
-  T-found-s2:
-    template: stage
+      root: a82c25b5-f883-4048-988d-a1f3f2ea5c19
+      arrow: fdb79b63-4941-4e70-a626-f5de0dd9dc72
+  T-found-card2:
+    template: step_card
     parent: T-found
     role: people
     head: You accept it
-    text: In the pull request, before it merges and before anything is built on it.
+    text: In the pull request, before it merges.
+    file: term-found-step2
     x: 1141
     y: 576
     override:
       root:
         width: 917
-        height: 272
+        height: 640
       box:
         width: 917
-        height: 272
+        height: 640
       head:
         width: 813
         height: 64
       text:
         y: 100
         width: 853
-        height: 135
+        height: 100
+      img:
+        x: 32
+        y: 216
+        width: 853
+        height: 232
     mural_ids:
-      root: 092977c9-0a25-404e-979f-f239aeb0d895
-      box: 1e2cf001-35e0-4948-bee3-c42192f51cf3
-      dot: 2b85b2cf-179e-42da-a0d7-248dc76a5cae
-      head: 413a7afa-0af6-4bd0-96c3-62475463fbbf
-      text: 78067214-39d7-4a2e-aa31-e65d9bae73b0
+      root: f3590b44-808e-4818-a705-8b90b915e298
+      box: b0fafdab-ca17-4ab2-857c-e12af30f3e46
+      dot: 6c643c39-573b-404e-bf87-7492aacad22c
+      head: e4759357-c9e4-4092-9c90-1fc5ea31800f
+      text: dea9b610-9ed7-4966-b3b9-82a68e294cb2
+      img: ee548477-9d2e-434c-a963-0d5ffbae5942
   T-found-l2:
     template: link
     parent: T-found
-    x: 2059
+    x: 2058
     y: 576
     x1: 16
-    y1: 136.0
+    y1: 320.0
     x2: 80
-    y2: 136.0
+    y2: 320.0
     tone: text_secondary
     override:
       root:
         width: 96
-        height: 272
+        height: 640
     mural_ids:
-      root: ccf2281c-edfc-4e38-91e5-72864194bb68
-      arrow: 6e406033-3855-4aac-bd1b-753f67f14f97
-  T-found-s3:
-    template: stage
+      root: 0e75cb7e-661d-4cd0-84a7-68bfe2a0793b
+      arrow: 01dab095-5221-4a6e-9c3c-57d2836e2031
+  T-found-card3:
+    template: step_card
     parent: T-found
     role: agents
     head: A later session finds it
-    text: Before changing a file, the agent looks up the records behind it.
-    x: 2155
+    text: Before changing a file, the agent looks up its records.
+    file: term-found-step3
+    x: 2154
     y: 576
     override:
       root:
         width: 917
-        height: 272
+        height: 640
       box:
         width: 917
-        height: 272
+        height: 640
       head:
         width: 813
         height: 64
       text:
         y: 100
         width: 853
-        height: 135
-    mural_ids:
-      root: 73632610-7776-452f-bbcc-26743cb746dc
-      box: 220e05e2-9d94-40e1-ad6c-e228c0ef2402
-      dot: 175e2bad-973f-4a7c-a3fd-8c55468009d2
-      head: 5317deda-d976-4a1f-8519-5db977f9cc04
-      text: 995a2ec9-3df9-4135-af89-76c51440278b
-  T-found-left:
-    template: term_image
-    parent: T-found
-    x: 128
-    y: 896
-    file: term-found-left
-    override:
-      root:
-        width: 1440
-        height: 512
+        height: 100
       img:
-        width: 1440
-        height: 512
+        x: 32
+        y: 216
+        width: 853
+        height: 392
     mural_ids:
-      root: 90e99a86-152a-4919-8627-0689ec879ce8
-      img: a89d78cd-b187-49ad-8506-2f88a763d5f4
-  T-found-right:
-    template: term_image
-    parent: T-found
-    x: 1632
-    y: 896
-    file: term-found-right
-    override:
-      root:
-        width: 1440
-        height: 432
-      img:
-        width: 1440
-        height: 432
-    mural_ids:
-      root: 559f8600-8d0c-48e2-9442-d2c71152d13a
-      img: db1130ce-b3af-4a7c-8f55-aad7ebe48502
+      root: 1b028e88-5e3b-4915-a40a-73b4cec85536
+      box: 0aef0e12-bcfd-4989-b135-9884ac562e67
+      dot: a17e747c-8511-4c2d-9d14-3cf458840300
+      head: c7931b94-df6d-446a-b266-a0d5df2c226b
+      text: 1d01112d-2b9b-48fd-9174-fd2a773ea454
+      img: c0a36491-add7-45c8-8845-4deecb31ee43
   T-found-limit:
     template: notice
     parent: T-found
     text: 'Limit: Only records tied to a file are found, directly or through a document that depends on
       it.'
     x: 128
-    y: 1456
+    y: 1264
     mural_ids:
-      root: 0a4baf7d-fdf5-4f63-bd2b-321ae4751616
-      bg: 364d42ec-7b4d-47f4-855e-0a417f5ee230
-      bar: 01dbc7e4-710e-4961-96fd-1aa41e9cf263
-      text: 7ba180a5-095f-4073-b963-76c3f9271c70
+      root: 670bd892-636d-4a44-b8ef-877f7de34467
+      bg: fca86c38-4ca5-4ebb-8ec8-beb2b94e48e9
+      bar: e6915114-4b75-4f89-9c5d-90d0917726ce
+      text: dc91dee6-6ec3-42a0-9773-6616147762ab
   T-checked:
     template: slide
     title: Checked every time
