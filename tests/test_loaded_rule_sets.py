@@ -4,8 +4,9 @@ A loaded set (`loaded: true`) keeps operational rules. Its accepted rules bind o
 the work of the sessions that load a file generated from it, never on an artefact.
 These tests hold:
 
-- **the backbone's set**, `OPS`: core's 22 rules, each accepted with an origin,
-  each keeping its number, and `.pkit/rules/core.md` generated from it;
+- **the backbone's set**, `OPS`: core's rules, numbered in order from 1, each
+  with an origin, the 22 of #2260 accepted, and `.pkit/rules/core.md` generated
+  from its accepted rules;
 - **the projection** (`loaded_rule_sets.project`): accepted rules only, under
   `N. Title (RS-<SET>-NNN)`, the prose and the groups kept, no front matter, no
   retired or proposed rule, nothing added;
@@ -100,13 +101,20 @@ def findings(adopter: AdopterRepo, kind: Kind) -> list[rs.RuleSetFinding]:
 # --- the backbone's set, `OPS` -------------------------------------------------------
 
 
-def test_ops_holds_core_s_22_rules_each_accepted_with_an_origin() -> None:
+def test_ops_numbers_core_s_rules_in_order_each_with_an_origin() -> None:
+    """Each rule keeps its number as its id, so the ids run from 1 with no gap. The
+    22 rules #2260 brought in are accepted; a rule added since may be proposed on
+    the branch of the change that proposes it (COR-066 point 1)."""
     ops = the_set(REPO, "OPS")
     assert ops.path == ".pkit/rule-sets/ops.md"
     assert (ops.component, ops.citation, ops.loaded) == ("backbone", "backbone:OPS", True)
-    assert [rule.id for rule in ops.rules] == [f"RS-OPS-{n:03d}" for n in range(1, 23)]
-    for rule in ops.rules:
+    ids = [rule.id for rule in ops.rules]
+    assert ids == [f"RS-OPS-{n:03d}" for n in range(1, len(ids) + 1)]
+    assert len(ids) >= 22
+    for rule in ops.rules[:22]:
         assert rule.status == "accepted", rule.id
+    for rule in ops.rules:
+        assert rule.status in ("accepted", "proposed"), rule.id
         origin = rule.origin or {}
         assert "decision" in origin or {"date", "by", "why"} <= set(origin), rule.id
         # COR-068 point 6: a core record, or the decider's words; never an ADR or a PRJ.
@@ -121,8 +129,8 @@ def test_each_ops_rule_is_anchored_to_core_records_or_says_why_it_is_not() -> No
     artefacts = {
         a.id: a for a in fd.discover_artefacts(REPO).artefacts if a.path == ".pkit/rule-sets/ops.md"
     }
-    assert sorted(artefacts) == [f"RS-OPS-{n:03d}" for n in range(1, 23)]
     origins = {rule.id: rule.origin or {} for rule in the_set(REPO, "OPS").rules}
+    assert sorted(artefacts) == sorted(origins)
     for rule_id, artefact in artefacts.items():
         anchors, reason = dict(artefact.anchors), artefact.unanchored_because
         assert bool(anchors) != bool(reason), rule_id
@@ -130,7 +138,8 @@ def test_each_ops_rule_is_anchored_to_core_records_or_says_why_it_is_not() -> No
         records = anchors.get("record", ())
         assert all(record.startswith("COR-") for record in records), rule_id
         decided = origins[rule_id].get("decision")
-        assert decided is None or decided in records, rule_id
+        # The origin's record is anchored, whole or at the point the rule rests on.
+        assert decided is None or decided in {r.split("#", 1)[0] for r in records}, rule_id
 
 
 def test_ops_and_core_md_are_clean_in_the_methodology_s_source() -> None:
@@ -145,7 +154,8 @@ def test_core_md_is_the_projection_of_ops() -> None:
 
 def test_each_rule_of_core_md_names_its_number_title_and_id() -> None:
     headings = re.findall(r"^### (\d+)\. (.+) \((RS-OPS-\d{3})\)$", CORE_RULES.read_text(), re.M)
-    assert [int(n) for n, _title, _id in headings] == list(range(1, 23))
+    accepted = [int(r.id[-3:]) for r in the_set(REPO, "OPS").rules if r.status == "accepted"]
+    assert [int(n) for n, _title, _id in headings] == accepted
     assert all(rule_id == f"RS-OPS-{int(n):03d}" for n, _title, rule_id in headings)
     assert ("19", "A session changes only its own repository", "RS-OPS-019") in headings
 
@@ -568,8 +578,9 @@ def test_a_range_past_the_highest_rule_is_one_warning(adopter: AdopterRepo) -> N
     messages = [u.message for u in refs.unheld_operational_rules(adopter.root)]
     ranged = [m for m in messages if "'Core rules 20-40" in m]
     assert len(ranged) == 1, messages
-    assert "cites core rules 23 to 40, past the highest rule backbone:OPS" in ranged[0]
-    assert "core rule 22" in ranged[0]
+    highest = len(the_set(REPO, "OPS").rules)
+    assert f"cites core rules {highest + 1} to 40, past the highest rule backbone:OPS" in ranged[0]
+    assert f"core rule {highest}" in ranged[0]
     # A list names each number, so each missing one is its own warning.
     assert sum("core rules 30 and 31" in m for m in messages) == 2
 
