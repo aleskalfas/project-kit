@@ -1,6 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  The `living-docs` agent's storyboard says "the changelog" where it named
-  `CHANGELOG.md`, a name the test of shipped agents reads as project-kit's own
-  file (#2167). The deployed agent is unchanged.

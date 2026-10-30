@@ -1,6 +1,0 @@
-component: project-management
-kind: none
-body: >
-  The records DEC-032, DEC-053 and DEC-055 are refined for the answer files of
-  COR-062, ahead of the build, #1779. The README is deferred to that build, and
-  nothing you run changes yet.

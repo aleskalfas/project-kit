@@ -1,7 +1,0 @@
-component: backbone
-kind: none
-body: >
-  The permissions README says that the Claude Code hook does not ask on a
-  deferred command that may hide a guardrail's form in auto mode or bypass
-  mode, and its friction block records it revalidated as updated. Nothing the
-  backbone ships or runs changes.

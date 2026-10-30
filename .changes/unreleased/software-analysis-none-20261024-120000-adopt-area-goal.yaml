@@ -1,8 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  Internal. In project-kit's own settings for the capability, the goal of the
-  core's area 050-adopt now names putting the system on a machine, running each
-  project at the version it pins, and linking each report to its fix (#1717).
-  Only the project-owned settings file changes, and nothing the capability
-  ships changes.

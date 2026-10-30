@@ -1,7 +1,0 @@
-component: backbone
-kind: none
-body: >
-  A start of `pkit` loads the modules of the command it runs and no other
-  command's, and `pkit --help` reads each capability's commands once. Importing
-  the CLI takes about 27 ms instead of 186 ms. No command's name, help, options
-  or output changes.
