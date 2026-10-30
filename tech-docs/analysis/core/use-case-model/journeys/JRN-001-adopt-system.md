@@ -7,6 +7,7 @@ steps:
   - UC-049
   - UC-021
   - UC-023
+  - UC-025
   - UC-006
 relies-on:
   - UC-048
@@ -22,6 +23,7 @@ pkit:
         - src/project_kit/declared_rule_sets.py
         - src/project_kit/friction_check.py
         - src/project_kit/provisioning.py
+        - src/project_kit/connections.py
       record:
         - COR-001
         - COR-017
@@ -30,6 +32,8 @@ pkit:
         - COR-050#14
         - COR-050#15
         - COR-051#6
+        - COR-053#1
+        - COR-053#7
         - COR-059#6
         - COR-059#9
         - PRJ-004
@@ -43,6 +47,7 @@ pkit:
         - UC-049
         - UC-021
         - UC-023
+        - UC-025
         - UC-006
         - UC-048
 ---
@@ -62,18 +67,22 @@ pkit:
    - **Needs from step 1 (UC-049):** the adopter's choice to commit the system for the team, or keep it out of the shared repository. A system kept out of the shared repository hides only its [components](../../glossary.md#term-component--component)' declared footprints, and none holds the [rule set](../../glossary.md#term-rule-set--rule-set) a capability's install creates. So git does not ignore that set, and a commit of the adopter's may carry it to the team ([ADR-009 point 1](../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#1-the-footprint-is-one-declared-list-per-component)).
    - **Needs from UC-048 (outside this journey):** the capability, shipped in the [distribution](../../glossary.md#term-distribution--distribution) of the CLI the operator installed. Outside the [methodology](../../glossary.md#term-methodology--methodology)'s [source repository](../../glossary.md#term-source-repository--source-repository), the capability's install copies it from there (UC-023 variant 6a). A capability that distribution does not ship is refused, unless the project authors it (UC-023 variant 3b).
    - **Needs from step 2 (UC-021):** the internal [documentation root](../../glossary.md#term-documentation-root--documentation-root), under which the capability's install may create a rule set of the project's own ([COR-017](../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)). A root changed by hand afterwards leaves that set where no [place](../../glossary.md#term-place--place) finds it, and [validation](../../glossary.md#term-validation--validation) fails on that set ([COR-051 point 6](../../../../../.pkit/decisions/core/COR-051-rule-sets.md#6-two-kinds-two-owners)).
-4. [UC-006](../use-cases/030-change/UC-006-gate-merges.md) — Make my merges wait on the system's checks
+4. [UC-025](../use-cases/020-set-up/UC-025-choose-role-provider.md) — Choose which installed capability provides a role
+   - **Needs from step 3 (UC-023):** a second installed capability that provides a [role](../../glossary.md#term-role--role) one installed capability provides already. The role then has no provider, and validation fails on it until the project selects one (COR-053 points [1](../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles) and [7](../../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)). The install's plan lists the conflict before anything is written (UC-023 variant 1a).
+5. [UC-006](../use-cases/030-change/UC-006-gate-merges.md) — Make my merges wait on the system's checks
    - **Needs from step 1 (UC-049):** the system committed for the team, so each checkout the CI pipeline makes holds it. A checkout holds nothing of a system kept out of the shared repository (ADR-009 point 3).
    - **Needs from step 1 (UC-049):** the version the project records. Under a CLI at another release than the project records, the CI job's `pkit sync` stops, and the CI job fails (COR-059 point 9). A [version pin](../../glossary.md#term-version-pin--version-pin), which the install does not write, keeps the CI job at the project's release ([ADR-049 point 1](../../../../architecture/decisions/ADR-049-per-project-version-pin.md#1-pin-source-a-dedicated-project-owned-directive-file)).
    - **Needs from step 2 (UC-021):** the places the backbone configuration declares, which the [change check](../../glossary.md#term-change-check--change-check) reads beside those an installed capability declares (COR-050 points [1](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#1-artefacts) and [14](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#14-project-settings)). Where no place is declared at all, or no [artefact](../../glossary.md#term-artefact--artefact) in one carries anchors, the change check is dormant and passes ([COR-050 point 15](../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#15-dormant-until-used)). The merges then wait on validation and the project's other checks alone.
    - **Needs from step 3 (UC-023):** the capability, committed with the commands it registers. The rule set its install creates makes the method set's accepted rules bind on older artefacts, so the CI job may fail (COR-017).
    - **Needs from step 3 (UC-023):** what the capability's install provisioned. A checkout holds none of it, so the CI job runs `pkit sync` first ([ADR-065 point 11](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)). Otherwise a validator the capability registers finds its environment not provisioned, and validation fails (UC-006 variant 3a).
+   - **Needs from step 4 (UC-025):** one provider for each role that two installed capabilities provide, named in the backbone configuration. Until it names one, validation fails on the role, so the CI job fails on every [pull request](../../glossary.md#term-pull-request--pull-request) (COR-053 point 1 and `connections.py`).
 
 **Variants:**
 
-- **1a.** The adopter keeps the [system](../../glossary.md#term-system--system) out of the shared repository ([UC-049](../use-cases/050-adopt/UC-049-install-system.md) variant 12a). No checkout the CI pipeline makes holds the system, so the path ends after step 3 ([ADR-009 point 3](../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#3-private--make-the-whole-footprint-git-invisible-via-gitinfoexclude)).
+- **1a.** The adopter keeps the [system](../../glossary.md#term-system--system) out of the shared repository ([UC-049](../use-cases/050-adopt/UC-049-install-system.md) variant 12a). No checkout the CI pipeline makes holds the system, so the path ends after step 4 ([ADR-009 point 3](../../../../architecture/decisions/ADR-009-git-footprint-visibility.md#3-private--make-the-whole-footprint-git-invisible-via-gitinfoexclude)).
 - **2a.** The adopter keeps the default of every key of the [backbone configuration](../../glossary.md#term-backbone-configuration--backbone-configuration). The path goes on at step 3, and the [change check](../../glossary.md#term-change-check--change-check) reads only the places the [capabilities](../../glossary.md#term-capability--capability) declare.
-- **3a.** The [project](../../glossary.md#term-project--project) needs no capability yet. The path goes on at step 4, and the change check reads only the places the backbone configuration declares.
+- **3a.** The [project](../../glossary.md#term-project--project) needs no capability yet. The path goes on at step 5, and the change check reads only the places the backbone configuration declares.
+- **4a.** No [role](../../glossary.md#term-role--role) is provided by two installed capabilities. The path goes on at step 5.
 
 **Postconditions:** The [project](../../glossary.md#term-project--project) holds the [system](../../glossary.md#term-system--system) and the [capabilities](../../glossary.md#term-capability--capability) the adopter chose, committed for the team, and [validation](../../glossary.md#term-validation--validation) passes the project's [backbone configuration](../../glossary.md#term-backbone-configuration--backbone-configuration). No [pull request](../../glossary.md#term-pull-request--pull-request) merges into the [default branch](../../glossary.md#term-default-branch--default-branch) through the hosting service's protection while a check of the CI job fails on it.
 
