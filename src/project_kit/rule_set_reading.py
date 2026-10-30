@@ -25,7 +25,9 @@ walk routes or judge pins itself (ADR-057 point 1):
   a revalidation. Each artefact also carries the rules the change brings it
   under, which bind on it at the head and did not at the base, and an
   artefact the change brings under a rule without altering it is listed
-  apart (COR-057 point 2).
+  apart (COR-057 point 2). It lists too each budget of a rules file the change
+  raises, lowers, adds or removes (COR-069 point 4; ADR-077 point 6), which no
+  rule's content holds.
 
 Each artefact carries its span and each rule its text, read at that state,
 so a reader whose checkout is elsewhere has what it needs. Each part of a rule
@@ -49,6 +51,7 @@ from typing import Any
 from project_kit import cli_render, default_branch
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
+from project_kit import loaded_rule_sets as lr
 from project_kit import rule_sets as rs
 from project_kit.friction_git import SHORT, CommitTree
 from project_kit.working_tree import WorkingTree, working_tree
@@ -390,6 +393,9 @@ def altered_document(
       altering it, in the head's walk order, in the same form, `change` being
       `unaltered`: a scope widened, a rule accepted, a pin updated or a place typed,
       or a move the pairing follows into a set's paths.
+    - `budgets`: each budget of a rules file the change sets otherwise than its base
+      (`budget_entry`): a loaded set's `budget`, and `rule-sets.plain-file-budget`.
+      A budget is none of a rule's fields, so nothing above shows its change.
 
     Raises `FrictionCheckError` when the base cannot be compared, as the change check does.
     """
@@ -399,8 +405,8 @@ def altered_document(
     base_state = fc.resolve_base(target_root, base_ref, resolved=resolved, head=named)
     diff = fc.read_diff(target_root, base_state.commit, named)
     base_tree = CommitTree(target_root, base_state.commit)
-    head_discovery, _head_sets, head_reach = rs.reach_at(target_root, head_tree)
-    base_discovery, _base_sets, base_reach = rs.reach_at(target_root, base_tree)
+    head_discovery, head_sets, head_reach = rs.reach_at(target_root, head_tree)
+    base_discovery, base_sets, base_reach = rs.reach_at(target_root, base_tree)
     base_presence = rs.CheckPresence(target_root, base_tree)
     head_presence = rs.CheckPresence(target_root, None if named is None else head_tree)
     pairing = fc.pair_artefacts(base_discovery, head_discovery, diff)
@@ -458,6 +464,12 @@ def altered_document(
         "brought_unaltered": [
             entry(UNALTERED, before, after, rules) for before, after, rules in unaltered
         ],
+        "budgets": [
+            budget_entry(change)
+            for change in lr.budget_changes(
+                target_root, base_sets, head_sets, base_tree, None if named is None else head_tree
+            )
+        ],
     }
 
 
@@ -482,6 +494,26 @@ def brought_under(base: rs.ArtefactReach | None, head: rs.ArtefactReach | None) 
 
 def _cited(binding: rs.Binding) -> str:
     return binding.rule_set.cite(binding.rule.id)
+
+
+def budget_entry(change: lr.BudgetChange) -> dict[str, Any]:
+    """One budget the change sets otherwise than its base (ADR-077 point 6).
+
+    - `set_by`: the loaded set as cited, or `rule-sets.plain-file-budget`; `path`: the
+      file it is written in; `file`: the rules file it bounds, `null` for a capability's
+      set, which has none.
+    - `base`, `head`: the budget in words at each state, `null` where it has none.
+    - `change`: `raised`, `lowered`, `added` or `removed`. A raise is a person's to
+      authorise (COR-069 point 4).
+    """
+    return {
+        "set_by": change.set_by,
+        "path": change.path,
+        "file": change.file,
+        "base": change.base,
+        "head": change.head,
+        "change": change.change,
+    }
 
 
 # --- rendering ---------------------------------------------------------------------------
@@ -594,8 +626,10 @@ def _artefacts_named(path: str, locations: Sequence[str], at_path: int) -> str:
 
 
 def render_altered_human(document: Mapping[str, Any]) -> str:
-    """The read view of what a change altered: each artefact, how it was altered, and the
-    rules that bind on it at the base and at the head."""
+    """The read view of what a change altered: first each budget the change raises,
+    under a heading of its own (ADR-077 point 6); then each artefact, how it was
+    altered, and the rules that bind on it at the base and at the head; then each other
+    change of a budget."""
     base, head = document["base"], document["head"]
     head_name = (
         f"the working tree at {head['commit'][:SHORT]}"
@@ -615,6 +649,12 @@ def render_altered_human(document: Mapping[str, Any]) -> str:
                 "rebase onto it for results that hold",
             )
         )
+    budgets = document.get("budgets", [])
+    raised = [budget for budget in budgets if budget["change"] == lr.RAISED]
+    if raised:
+        lines.append("  Budgets the change raises, each a person's to authorise (COR-069 point 4):")
+        lines.extend(_budget_line(budget) for budget in raised)
+        lines.append("")
     artefacts = document["artefacts"]
     brought = document["brought_unaltered"]
     if not artefacts:
@@ -625,6 +665,10 @@ def render_altered_human(document: Mapping[str, Any]) -> str:
         lines.extend(["", "  Brought under a rule, unaltered:"])
     for entry in brought:
         lines.extend(_altered_lines(entry))
+    others = [budget for budget in budgets if budget["change"] != lr.RAISED]
+    if others:
+        lines.extend(["", "  Budgets otherwise changed:"])
+        lines.extend(_budget_line(budget) for budget in others)
     ruled = sum(
         1
         for entry in artefacts
@@ -638,6 +682,20 @@ def render_altered_human(document: Mapping[str, Any]) -> str:
         ]
     )
     return "\n".join(lines) + "\n"
+
+
+def _budget_line(budget: Mapping[str, Any]) -> str:
+    """One budget the change sets otherwise: how, what sets it, from what to what, and
+    the file it is written in and the rules file it bounds."""
+
+    def words(value: int | None) -> str:
+        return "none" if value is None else str(value)
+
+    bounds = "" if budget["file"] is None else f", bounding {budget['file']}"
+    return (
+        f"    {budget['change']:<9} {budget['set_by']}  {words(budget['base'])} → "
+        f"{words(budget['head'])} word(s)  ({budget['path']}{bounds})"
+    )
 
 
 def _altered_lines(entry: Mapping[str, Any]) -> list[str]:
