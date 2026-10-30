@@ -108,6 +108,10 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 **Before you make a choice that later work will build on, draft the record that decides it, and let no work rest on the choice until a person accepts the record (COR-065 point 3).** Such choices include a library, an interface or format others use, a convention and a boundary between parts. A change to what an accepted record decides needs a record too. Where your project received that record from elsewhere, follow it in your own files, or propose the change where the record is kept. An accepted rule whose origin states the choice serves as its record. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs no record. Nor does a choice an accepted record already makes. Where you and the person who authorises the merge disagree, that person decides.
 
+### 24. Follow the rule sets' rules on what your change owns (RS-OPS-024)
+
+**Follow the accepted rules that rule sets bind on what your change owns (COR-057 point 2).** Before writing, you may run `pkit rule-sets reach` with your files to see the rules on each one that exists. Before your last commit, run `pkit rule-sets altered` once, and follow each rule it lists as binding: at the head for a file the change adds, edits or brings under a rule, and at the base for one it removes. Where it lists none, this rule asks nothing more. These are the rules the rule-set reviewer judges your change against, and this rule adds none (COR-051 points 4 and 7, COR-057 point 1, [project-kit#2274](https://github.com/aleskalfas/project-kit/issues/2274)).
+
 ## Where these rules came from
 
 The split between this file and `.pkit/rules/project.md` is governed by COR-014's universal-applicability principle: rules that apply to any adopting project ship here; rules tied to a specific project's tooling live in the project namespace. Capability-specific operational rules (e.g. work-tracker conventions) live in the capability's own documentation.

@@ -45,6 +45,7 @@ The kit's rules are a *loaded rule set*: a rule set whose accepted rules bind on
 - **The loaded file** is `core.md`, where the include reads it. It holds the set's accepted rules under the set's sections, each headed `### N. Title (RS-OPS-0NN)` with its statement, and none of the set's data: no front matter, no origin, no retired rule.
 - **It is generated.** `pkit rule-sets generate` writes `core.md` from `OPS` where the set is authored, in the methodology's source. A change to a rule regenerates the file in the same change, and `pkit validate` fails there on a `core.md` that differs from its set. In your project the two arrive together by sync. You neither generate nor edit `core.md`, and the command refuses to.
 - **Citations of a rule** by layer and number, such as "core rule 19", or by id are read by `pkit validate`. One that names a missing, superseded or withdrawn rule is a warning (the CLI reference, `validate`).
+- **A rule a project chooses to bind on its own files** goes in an ordinary rule set, not in a loaded one (COR-068 point 1). Core rule 24 has every session follow the rules such sets bind on what its change owns, as `pkit rule-sets altered` lists them.
 
 ## Each rules file's budget
 
@@ -77,7 +78,7 @@ Seven categories:
 - **Working across repositories** — a session mutates only its own repository's context.
 - **Answers on artefacts** — a reviewer checks the answers your change owes, and a person, or the delegate they named, decides any other answer on an artefact.
 - **When a step fails** — retry once a step that failed for a cause outside your own work, then stop and report.
-- **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly; and before a choice later work will build on, draft the record that decides it, for a person to accept.
+- **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly; before a choice later work will build on, draft the record that decides it, for a person to accept; and follow the rule sets' rules on what your change owns.
 
 Each rule is terse: what it requires, in as few sentences as it needs, and a pointer to the record or area README that owns its reason, or to the issue that decided it. A rule that cites neither leaves its reason to its origin in the set, as `core.md`'s preface says. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
 

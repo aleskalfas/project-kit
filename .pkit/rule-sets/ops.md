@@ -2,7 +2,7 @@
 rule-set: OPS
 loaded: true
 budget: 2300
-version: 3.0.0
+version: 4.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -142,6 +142,12 @@ rules:
     pkit:
       friction:
         anchors: {record: ["COR-065#3", "COR-065#1", "COR-064#6", "COR-066#1"]}
+  RS-OPS-024:
+    status: accepted
+    origin: {date: 2026-10-29, by: "Aleš Kalfas", why: "A rule a project chooses to bind on its own files sits in an ordinary rule set and binds whoever writes them, so a session follows the rules the rule-set reviewer judges its change by, and this rule adds none (project-kit#2274)."}
+    pkit:
+      friction:
+        anchors: {record: ["COR-051#4", "COR-051#7", "COR-057#1", "COR-057#2"]}
 ---
 
 *Operational rules shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`; a project that receives them by sync edits neither (core rule 1). A rule cites the record or issue its reason lives in, and where it cites neither, its origin in the set holds the reason: read it when the why is not obvious, and keep the rule meanwhile.*
@@ -253,6 +259,10 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 ### RS-OPS-023 — A choice later work builds on starts with its record
 
 **Before you make a choice that later work will build on, draft the record that decides it, and let no work rest on the choice until a person accepts the record (COR-065 point 3).** Such choices include a library, an interface or format others use, a convention and a boundary between parts. A change to what an accepted record decides needs a record too. Where your project received that record from elsewhere, follow it in your own files, or propose the change where the record is kept. An accepted rule whose origin states the choice serves as its record. A choice that binds nothing beyond its own change, such as a name or an order inside it, needs no record. Nor does a choice an accepted record already makes. Where you and the person who authorises the merge disagree, that person decides.
+
+### RS-OPS-024 — Follow the rule sets' rules on what your change owns
+
+**Follow the accepted rules that rule sets bind on what your change owns (COR-057 point 2).** Before writing, you may run `pkit rule-sets reach` with your files to see the rules on each one that exists. Before your last commit, run `pkit rule-sets altered` once, and follow each rule it lists as binding: at the head for a file the change adds, edits or brings under a rule, and at the base for one it removes. Where it lists none, this rule asks nothing more. These are the rules the rule-set reviewer judges your change against, and this rule adds none (COR-051 points 4 and 7, COR-057 point 1, [project-kit#2274](https://github.com/aleskalfas/project-kit/issues/2274)).
 
 ## Where these rules came from
 
