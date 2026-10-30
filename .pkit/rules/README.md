@@ -79,7 +79,7 @@ Seven categories:
 - **When a step fails** — retry once a step that failed for a cause outside your own work, then stop and report.
 - **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly; and before a choice later work will build on, draft the record that decides it, for a person to accept.
 
-Each rule is terse: what it requires, in a sentence or two, and a pointer to the record or area README that owns its reason, or to the issue that decided it. A rule that cites neither leaves its reason to its origin in the set, as `core.md`'s preface says. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
+Each rule is terse: what it requires, in as few sentences as it needs, and a pointer to the record or area README that owns its reason, or to the issue that decided it. A rule that cites neither leaves its reason to its origin in the set, as `core.md`'s preface says. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
 
 `core.md` itself follows core rule 13 (the `@`-include authoring convention): no top-level heading, opens with an italic preface, sections start at H2. The host `CLAUDE.md` owns the H1 and places the `@<path>` line after its intro paragraph, so the included sections become natural sub-sections of the host. This pattern applies to any future kit-shipped file intended for `@`-include.
 
