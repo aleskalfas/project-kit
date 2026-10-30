@@ -1,0 +1,20 @@
+[
+  {
+    "id": "pm-foreign-subject-read-here",
+    "file": ".pkit/capabilities/project-management/scripts/detect-state.py",
+    "find": "subject = predicates.read_subject(args.issue_number)",
+    "replace": "subject = predicates.read_subject(args.issue_number.rpartition(\"#\")[2])"
+  },
+  {
+    "id": "pm-foreign-closed-read-open",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/lifecycle_predicates.py",
+    "find": "    if record.issue[\"state\"] == \"CLOSED\":\n        done = infer.infer_current_state(",
+    "replace": "    if record.issue[\"state\"] == \"OPEN\":\n        done = infer.infer_current_state("
+  },
+  {
+    "id": "pm-held-said-otherwise",
+    "file": ".pkit/capabilities/project-management/scripts/close-issue.py",
+    "find": "is held by its open child(ren):\",",
+    "replace": "is held by open child(ren):\","
+  }
+]

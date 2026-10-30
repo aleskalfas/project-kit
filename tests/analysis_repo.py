@@ -3,25 +3,30 @@
 Shared by the software-analysis tests (`test_software_analysis*.py`): the
 paths the capability's places resolve to with the internal root at
 `tech-docs/`, `prepare` for an adopter repository, and the stamp, run as the
-dispatcher runs `pkit analysis new`. The scripts run as subprocesses under
-this interpreter — their `uv run --script` shebang pointed at it — and the
-`pkit` they read through is the real CLI under this interpreter (the
-`pkit_on_path` fixture), so nothing reaches `uv` or the network.
+dispatcher runs `pkit analysis new`.
+
+The stamp, the links and the overview run in the test's own process
+(`run_in_process`): each script's `main`, its `pkit` calls answered by the
+backbone's CLI in this process (`tests/in_process.py`). So a template's stamps
+start no process of `pkit` or of a script (#2319). `run_script` runs a script as
+a subprocess under this interpreter, its `uv run --script` shebang pointed at
+it, for a test whose point is the process. The `pkit` such a script reads
+through is the real CLI under this interpreter (the `pkit_on_path` fixture), so
+nothing reaches `uv` or the network.
 
 `installed` builds the adopter each test module's `project` fixture returns, with
 `$PKIT_CHECK_BASE` removed: the backbone names the scripts' base from it when
 set, and a developer's own value must not decide what these repositories answer.
 The adopter is a copy of a template built once per test session, `prepare`d —
-or `prepare_seeded`, the shape a module's `seeded` fixture returns: stamping
-the seed starts some two dozen `pkit` processes, more than most tests of these
-modules cost in all (#1204).
+or `prepare_seeded`, the shape a module's `seeded` fixture returns, the seed
+stamped and filled (#1204).
 """
 
 from __future__ import annotations
 
-import importlib
 import json
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -34,6 +39,7 @@ from scripts import prose_lint as pl
 
 from project_kit import document_parts
 from project_kit.friction_check import BASE_ENV
+from tests import in_process
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, Prepare
 
 REPO = Path(__file__).resolve().parent.parent
@@ -128,23 +134,10 @@ _yaml: Any = YAML(typ="safe")
 
 
 def load_lib(*names: str) -> tuple[ModuleType, ...]:
-    """Pure `_lib` modules of the capability's scripts, imported together as the scripts
-    import them: `_lib` is on the path only while they load, since another capability's
-    `_lib` is not importable beside it."""
-    scripts = str(CAPABILITY / "scripts")
-
-    def ours() -> list[str]:
-        return [k for k in sys.modules if k == "_lib" or k.startswith("_lib.")]
-
-    saved = {k: sys.modules.pop(k) for k in ours()}
-    sys.path.insert(0, scripts)
-    try:
-        return tuple(importlib.import_module(f"_lib.{name}") for name in names)
-    finally:
-        sys.path.remove(scripts)
-        for key in ours():
-            del sys.modules[key]
-        sys.modules.update(saved)
+    """`_lib` modules of the capability's scripts, imported together as the scripts import
+    them, through the one loader (`tests/in_process.py`, `load`): `_lib` is on the path
+    only while they load, since another capability's `_lib` is not importable beside it."""
+    return in_process.load(CAPABILITY / "scripts", *names)
 
 
 def field_hint(kind: str, name: str) -> str:
@@ -182,7 +175,7 @@ def prepare(repo: AdopterRepo) -> AdopterRepo:
     return repo
 
 
-# Slow: four stamps, built once per session; the first test to ask pays it in its setup.
+# Four stamps, built once per session; the first test to ask pays them in its setup.
 def prepare_seeded(repo: AdopterRepo) -> None:
     """`prepare`, then `seed`: an actor, two use cases and a journey, filled."""
     prepare(repo)
@@ -204,6 +197,7 @@ def installed(
 
 
 def run_script(repo: AdopterRepo, script: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """`script`, the adopter's copy, run as the dispatcher runs it: a process."""
     return subprocess.run(
         [sys.executable, str(repo.root / script), *args],
         cwd=repo.root,
@@ -213,9 +207,44 @@ def run_script(repo: AdopterRepo, script: Path, *args: str) -> subprocess.Comple
     )
 
 
+#: The `pkit` the `pkit_on_path` fixture puts first on PATH (`tests/conftest.py`): the
+#: real CLI under this interpreter.
+_REAL_PKIT = f'#!/bin/sh\nexec "{sys.executable}" -P -m project_kit "$@"\n'
+
+
+def _real_pkit_first() -> bool:
+    """Whether the `pkit` first on PATH is the real CLI under this interpreter, as
+    `pkit_on_path` writes it. A `pkit` a test put before it, such as one that stands for
+    an older backbone, is not."""
+    found = shutil.which("pkit")
+    try:
+        return found is not None and Path(found).read_text(encoding="utf-8") == _REAL_PKIT
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
+def run_in_process(
+    repo: AdopterRepo, script: Path, *args: str, pkit: in_process.Runner | None = None
+) -> subprocess.CompletedProcess[str]:
+    """`script` run as `run_script` runs it, but in the test's own process: the adopter's
+    copy's `main` with `args`, from the repository's root, in the test's environment,
+    standard output and standard error apart (`tests/in_process.py`, `run_main`). Its
+    `pkit` calls go through the capability's one private function, `backbone._run`,
+    unchanged. `pkit` answers them where given. Else the backbone's CLI answers them in
+    this process where the real CLI is first on PATH, and otherwise the `pkit` first on
+    PATH does, as a process."""
+    scripts = (repo.root / script).parent
+    loaded, backbone = in_process.load(scripts, script.name, "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        if pkit is not None or _real_pkit_first():
+            in_process.route_pkit(patched, backbone, pkit)
+        return in_process.run_main(loaded, *args, cwd=repo.root)
+
+
 def new(repo: AdopterRepo, *args: str) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis new …`, run as the dispatcher runs it, against `main`."""
-    return run_script(repo, NEW, *args, "--base", MAIN)
+    """`pkit analysis new …`, run as the dispatcher runs it, against `main`, in the test's
+    own process (`run_in_process`)."""
+    return run_in_process(repo, NEW, *args, "--base", MAIN)
 
 
 def stamped(repo: AdopterRepo, *args: str) -> str:
@@ -226,9 +255,9 @@ def stamped(repo: AdopterRepo, *args: str) -> str:
 
 
 def link(repo: AdopterRepo) -> subprocess.CompletedProcess[str]:
-    """`pkit analysis link`, run as the dispatcher runs it: the links between the terms
-    and the views written (DEC-004 point 7)."""
-    completed = run_script(repo, LINK)
+    """`pkit analysis link`, run as the dispatcher runs it, in the test's own process: the
+    links between the terms and the views written (DEC-004 point 7)."""
+    completed = run_in_process(repo, LINK)
     assert completed.returncode == 0, completed.stderr
     return completed
 
@@ -335,10 +364,10 @@ def fill(repo: AdopterRepo) -> None:
             lambda m: _EXAMPLE_CITATION.sub("", m["example"]), path.read_text(encoding="utf-8")
         )
         path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
-    linked = run_script(repo, LINK)
+    linked = run_in_process(repo, LINK)
     assert linked.returncode == 0, linked.stderr
     if overviews:
-        written = run_script(repo, OVERVIEW_SCRIPT)
+        written = run_in_process(repo, OVERVIEW_SCRIPT)
         assert written.returncode == 0, written.stderr
 
 

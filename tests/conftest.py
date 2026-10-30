@@ -18,17 +18,19 @@ from project_kit import (
     run_cache,
     session_guard,
 )
+from tests import in_process
 from tests.adopter_repo import (
     AdopterRepo,
     AdopterTemplates,
     MakeAdopterRepo,
     Prepare,
     build_adopter_repo,
+    building_template,
     prepared,
     refusing_global_config,
     stub_adapter_primitives,
 )
-from tests.friction_documents import settled_commit, settled_write
+from tests.friction_documents import commit_install, settled_commit, settled_write
 
 #: What a run of the command runner sets in the environment of what it runs.
 RUN_VARIABLES = (command_runner.DEADLINE_ENV, command_runner.STRAYS_ENV, run_cache.CACHE_ENV)
@@ -81,6 +83,30 @@ def outside_any_session(monkeypatch: pytest.MonkeyPatch) -> None:
     command runs (`session_guard`) answers the same in a session and in CI. A
     test that needs a session sets the anchor itself."""
     monkeypatch.delenv(session_guard.CLAUDE_CODE_ANCHOR, raising=False)
+
+
+@pytest.fixture(scope="session")
+def unguarded_modules() -> frozenset[str]:
+    """The test modules the process guard does not hold yet (`in_process.BASELINE`)."""
+    return in_process.baseline()
+
+
+@pytest.fixture(autouse=True)
+def process_starts(
+    request: pytest.FixtureRequest,
+    monkeypatch: pytest.MonkeyPatch,
+    unguarded_modules: frozenset[str],
+) -> Iterator[in_process.ProcessStarts]:
+    """The guard (#2314, choice 4): every process of `pkit` or a capability script the
+    test starts, its setting-up and its tearing-down included, counted. A test that
+    starts one without `@pytest.mark.process(<reason>)` fails, unless its module is in
+    the baseline the slices of #2313 empty. A test may ask for this fixture to read what
+    it started (`started`)."""
+    starts = in_process.ProcessStarts(building_template).watch(monkeypatch)
+    yield starts
+    why = in_process.judge(request.node, starts, unguarded_modules)
+    if why is not None:
+        pytest.fail(why, pytrace=False)
 
 
 #: Where a clone of a project-management adopter keeps its instance id (DEC-035
@@ -211,6 +237,15 @@ def adopter_repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """An adopter repository at `tmp_path` with the backbone installed and the
     scripted history laid down (`adopter_repo.history` holds the SHAs)."""
     return make_adopter_repo(history=True)
+
+
+@pytest.fixture
+def committed_adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+    """An adopter repository at `tmp_path` with the backbone installed and the install
+    committed on `main`, one commit dated `INSTALLED_AT` (`friction_documents.commit_install`).
+    Its template is built once per session and copied for each test, so a test that
+    commits a base commits only its own files, not the whole installed `.pkit/` (#2320)."""
+    return make_adopter_repo(prepare=commit_install)
 
 
 @pytest.fixture

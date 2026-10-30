@@ -36,6 +36,7 @@ from project_kit import rule_sets as rs
 from project_kit import validators
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.shipped_rule_sets import own, own_keys
 
 CONFIG = ".pkit/project/config.yaml"
 EVIDENCE = "evidence"
@@ -101,7 +102,9 @@ def _types(repo: AdopterRepo) -> dict[str, fd.ArtefactType]:
 
 
 def _type_of(repo: AdopterRepo) -> dict[str, str | None]:
-    return {location: resolved.type for location, resolved in _types(repo).items()}
+    """Each artefact's type but the shipped rule sets' rules, whose type is the subject of
+    a test of its own."""
+    return {location: resolved.type for location, resolved in own_keys(_types(repo)).items()}
 
 
 def _patterns(ranked: tuple[fd.RankedPlace, ...]) -> list[tuple[str, int]]:
@@ -537,7 +540,7 @@ def _rule_set(name: str, scope: str | None = None) -> str:
 def _in_scope_of() -> dict[str, list[str]]:
     document = _document()
     assert document["schema_version"] == 1
-    return {a["location"]: a["in_scope_of"] for a in document["artefacts"]}
+    return {a["location"]: a["in_scope_of"] for a in own(document["artefacts"])}
 
 
 def test_a_list_scope_selects_as_it_did_and_a_mapping_adds_exclude_and_types(
@@ -606,7 +609,7 @@ def test_the_document_gives_each_artefact_its_type_and_lists_the_registries(
     _files(repo, "tech-docs/evidence/a.md", "notes/b.md")
     document = _document()
     assert document["schema_version"] == 1  # keys added within the version
-    places = document["places"]
+    places = own(document["places"])
     assert [(p["written"], p["type"]) for p in places] == [
         ("tech-docs/evidence", "own"),
         ("notes", "own"),

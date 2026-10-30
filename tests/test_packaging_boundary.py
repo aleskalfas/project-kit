@@ -228,6 +228,7 @@ def test_kit_owned_content_still_ships(built_wheel: Path) -> None:
         "process": "process/README.md",
         "lifecycle": "lifecycle/ownership.py",
         "migrations": "migrations/backbone/README.md",
+        "rule-sets": "rule-sets/ops.md",
         # `decisions/core` is hook-filtered since #909 (a static directory
         # entry shipped untracked files); `VERSION` is a static single-file
         # entry — covered so a change to the static list is caught here too.

@@ -16,6 +16,7 @@ from project_kit import project_config as pc
 from project_kit import report_context
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.shipped_rule_sets import own
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -520,7 +521,7 @@ RULE_SET = "---\nrule-set: CMN\nversion: 1.0.0\nrules: {}\n---\n\n# Rules\n"
 def _project_rule_sets(repo: AdopterRepo) -> list[str]:
     from project_kit import rule_sets
 
-    return [s.path for s in rule_sets.discover_rule_sets(repo.root).rule_sets]
+    return [s.path for s in own(rule_sets.discover_rule_sets(repo.root).rule_sets)]
 
 
 def _places(repo: AdopterRepo) -> list:

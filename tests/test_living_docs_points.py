@@ -25,21 +25,29 @@ Three layers:
   declaration with the agent as deployed, and report it were the agent to do
   more than propose.
 
-The capability's scripts are pointed at this interpreter in the adopter copy,
-and the `pkit` they read through is the real CLI under this interpreter
-(`pkit_on_path`), so no test reaches `uv` or the network.
+The capability's scripts run in the test's own process: the validator's and the
+filler's `main`, every `pkit` they read through answered by the backbone's CLI
+in this process too, and the fillers `pkit connections resolve` starts, started
+in this process through the runner's one lookup (`tests/in_process.py`). The
+filler reads in threads, so its in-process `pkit` calls are made one at a time
+(`one_call_at_a_time`). project-management's checks of the fixers point are its
+public functions, called in this process. Four tests keep a real process, each
+marked with why. There the capability's scripts are pointed at this interpreter
+in the adopter copy, and the `pkit` they read through is the real CLI under this
+interpreter (`pkit_on_path`), so no test reaches `uv` or the network.
 """
 
 from __future__ import annotations
 
-import importlib.util
+import functools
 import json
 import os
 import shutil
 import subprocess
 import sys
+import threading
+from collections.abc import Sequence
 from pathlib import Path
-from types import ModuleType
 from typing import Any
 
 import pytest
@@ -55,6 +63,16 @@ from project_kit.manifest import (
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import document as friction_document
+from tests.in_process import (
+    QUERY_ENVIRONMENT,
+    InProcessPkit,
+    Runner,
+    load,
+    route_pkit,
+    run_main,
+    start_in_process,
+)
+from tests.test_living_docs_spaces import _answering
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -78,21 +96,8 @@ DEPLOYED_AGENT = REPO / ".claude" / "agents" / f"{AGENT}.md"
 READERS_FILLER = "tech-docs/pkit/fillers/pkit/documentation/readers.yaml"
 
 
-def _library(name: str) -> ModuleType:
-    """A module of the capability's script library, under a name of its own: the
-    library is `_lib` in every capability, so it is never imported by that name."""
-    spec = importlib.util.spec_from_file_location(
-        f"living_docs_lib_{name}", CAPABILITY / "scripts" / "_lib" / f"{name}.py"
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-    return module
-
-
-readers_lib = _library("readers")
-doc_check_lib = _library("doc_check")
+#: Two modules of the capability's script library, loaded with its `_lib` kept apart.
+readers_lib, doc_check_lib = load("living-docs", "readers", "doc_check")
 
 
 def _package() -> dict[str, Any]:
@@ -620,9 +625,12 @@ SPACES = {
 
 
 @pytest.fixture
-def docs_project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
+def docs_project(make_adopter_repo: MakeAdopterRepo, request: pytest.FixtureRequest) -> AdopterRepo:
     """An adopter with living-docs installed, two separate roots, a page in each, and
-    each space's definition scoped to its root's pages."""
+    each space's definition scoped to its root's pages. A test marked `process` reads
+    through the real CLI under this interpreter (`pkit_on_path`)."""
+    if request.node.get_closest_marker("process") is not None:
+        request.getfixturevalue("pkit_on_path")
     repo = make_adopter_repo(capabilities=("living-docs",))
     for script in ("validate.py", "fill-doc-check.py"):
         _to_this_interpreter(repo, LD / "scripts" / script)
@@ -644,15 +652,43 @@ def docs_project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> Adop
     return repo
 
 
-def _validate(repo: AdopterRepo) -> dict[str, Any]:
-    """The validator's findings document, run as the backbone runs it."""
-    completed = subprocess.run(
-        [sys.executable, str(repo.root / LD / "scripts" / "validate.py"), "--json"],
-        cwd=repo.root,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+def one_call_at_a_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each call of the in-process `pkit` made one at a time, the next waiting for the
+    one before to end: a call uses the process's directory, environment and standard
+    streams, so it is not safe beside another in a thread, and the filler starts its
+    three readings in threads (`InProcessPkit`). Each reading still starts when the
+    filler starts it. A call made inside another, in its thread, goes on."""
+    call = InProcessPkit.__call__
+    lock = threading.RLock()
+
+    def one_at_a_time(self: InProcessPkit, *args: Any, **options: Any) -> Any:
+        with lock:
+            return call(self, *args, **options)
+
+    monkeypatch.setattr(InProcessPkit, "__call__", one_at_a_time)
+
+
+def filled(root: Path, *args: str, pkit: Runner | None = None) -> subprocess.CompletedProcess[str]:
+    """The documentation-check filler, as the backbone runs it: its `main` with `--json`,
+    or `args` when given, in this process from `root`, in the environment the backbone
+    gives a query. Every `pkit` it reads through is answered in this process, by `pkit`
+    when given, each call one at a time (`one_call_at_a_time`)."""
+    fill, backbone = load("living-docs", "fill-doc-check.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        one_call_at_a_time(patched)
+        route_pkit(patched, backbone, pkit)
+        return run_main(fill, *(args or ("--json",)), cwd=root, env=QUERY_ENVIRONMENT)
+
+
+def _validate(repo: AdopterRepo, *, pkit: Runner | None = None) -> dict[str, Any]:
+    """The validator's findings document, as the backbone reads it: its `main` with
+    `--json` in this process from the repository's root, in the environment the backbone
+    gives a query, every `pkit` it reads through answered in this process, by `pkit`
+    when given."""
+    validate, backbone = load("living-docs", "validate.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone, pkit)
+        completed = run_main(validate, "--json", cwd=repo.root, env=QUERY_ENVIRONMENT)
     assert completed.returncode == 0, completed.stderr
     return json.loads(completed.stdout)
 
@@ -821,33 +857,24 @@ def test_an_out_of_step_contributor_leaves_the_whole_readers_point_unresolved(
     assert "'analysis-test' to 'pkit::documentation:readers' is inert" in result.output
 
 
-def test_the_point_is_read_only_when_some_page_names_a_reader(
-    docs_project: AdopterRepo,
-    pkit_on_path: Path,
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_the_point_is_read_only_when_some_page_names_a_reader(docs_project: AdopterRepo) -> None:
     """A `pkit` that answers nothing for the point is never asked while no page names
     a reader; once one does, no document is an unresolved point, never a pass. The
     places are read through `pkit` whatever the pages say, so only the point's read
     is broken."""
-    broken = tmp_path_factory.mktemp("broken-pkit")
-    (broken / "pkit").write_text(
-        f'#!/bin/sh\nif [ "$1" = connections ]; then exit 3; fi\nexec "{pkit_on_path}/pkit" "$@"\n',
-        encoding="utf-8",
+    broken = _answering(
+        "connections", lambda argv, _own: subprocess.CompletedProcess(argv, 3, "", "")
     )
-    (broken / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{broken}{os.pathsep}{os.environ['PATH']}")
     docs_project.write(
         {"docs/guide.md": "# Not a page yet\n", "tech-docs/README.md": "# Nor this\n"}
     )
-    document = _validate(docs_project)
+    document = _validate(docs_project, pkit=broken)
     assert _errors(document) == []
     assert _readers_line(document) == (
         "readers: no page names one yet, so pkit::documentation:readers is not read."
     )
     docs_project.write({"docs/guide.md": _page("user")})
-    ((location, message),) = _errors(_validate(docs_project))
+    ((location, message),) = _errors(_validate(docs_project, pkit=broken))
     assert location == READERS
     assert "`pkit connections resolve pkit::documentation:readers --json` exited 3" in message
 
@@ -896,8 +923,13 @@ def _living_docs_entries(repo: AdopterRepo) -> tuple[dict[str, Any], list[dict[s
     return document, [e["value"] for e in document["entries"] if e["origin"] == "living-docs"]
 
 
-def test_nothing_committed_owes_nothing(tracked_project: AdopterRepo) -> None:
+def test_nothing_committed_owes_nothing(
+    tracked_project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    started = start_in_process(monkeypatch)
+    one_call_at_a_time(monkeypatch)
     document, ours = _living_docs_entries(tracked_project)
+    assert ("living-docs", "fill-doc-check.py") in [(s.parents[1].name, s.name) for s in started]
     assert document["resolved"], document["why"]
     assert ours == []
     filler = next(f for f in document["fillers"] if f["name"] == "living-docs")
@@ -908,7 +940,8 @@ def test_nothing_committed_owes_nothing(tracked_project: AdopterRepo) -> None:
 
 
 def _fill_doc_check(root: Path) -> subprocess.CompletedProcess[str]:
-    """The filler run as the backbone runs it, from `root`."""
+    """The filler run as the backbone runs it, from `root`, as a process of its own, for
+    a test marked `process`."""
     return subprocess.run(
         [sys.executable, str(root / LD / "scripts" / "fill-doc-check.py"), "--json"],
         cwd=root,
@@ -924,7 +957,7 @@ def test_history_not_yet_made_is_empty_and_history_cut_short_is_no_answer(
     """The two cases a filler that reads history tells apart (COR-052 point 6): with
     no commit there is nothing owed and it answers `[]`; in a shallow clone that
     stops short of where a page was last judged it gives no answer, never `[]`."""
-    unmade = _fill_doc_check(docs_project.root)
+    unmade = filled(docs_project.root)
     assert unmade.returncode == 0, unmade.stderr
     assert json.loads(unmade.stdout) == {"schema_version": 1, "value": []}
 
@@ -941,7 +974,7 @@ def test_history_not_yet_made_is_empty_and_history_cut_short_is_no_answer(
         repo.commit(f"a {version}", {"src/a.py": f"A = {version}\n"})
     shallow = tmp_path / "shallow"
     repo.git("clone", "-q", "--depth", "2", f"file://{repo.root}", str(shallow))
-    cut = _fill_doc_check(shallow)
+    cut = filled(shallow)
     assert (cut.returncode, cut.stdout) == (1, ""), cut.stderr
     assert "git fetch --unshallow" in cut.stderr
 
@@ -974,6 +1007,10 @@ def _git_asked_outside_pkit(
     return every, outside
 
 
+@pytest.mark.process(
+    "that the filler asks git nothing of its own is seen only by a git first on PATH, told "
+    "apart by whether a pkit process started it"
+)
 def test_a_history_git_cannot_read_is_no_answer_and_the_filler_asks_git_nothing(
     docs_project: AdopterRepo,
     pkit_on_path: Path,
@@ -998,70 +1035,84 @@ def test_a_history_git_cannot_read_is_no_answer_and_the_filler_asks_git_nothing(
     assert outside.read_text(encoding="utf-8") == ""
 
 
-def _timed_pkit(
-    tmp_path_factory: pytest.TempPathFactory,
-    pkit_on_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    failing: tuple[str, ...] = (),
-) -> Path:
-    """A `pkit` first on PATH that logs when each reading the filler makes starts and
-    ends, then runs the real one — the reading of HEAD a second late, so a reading
-    started only after it ended shows — or, for a reading `failing` names, exits 1
-    saying so. Returns the log: one JSON line per event, `[event, reading, time]`."""
-    bin_dir = tmp_path_factory.mktemp("timed-pkit")
-    log = bin_dir / "log"
-    log.touch()
-    script = f"""#!{sys.executable}
-import json, subprocess, sys, time
-reading = " ".join(sys.argv[1:3])
-def note(event):
-    with open({str(log)!r}, "a", encoding="utf-8") as handle:
-        handle.write(json.dumps([event, reading, time.time()]) + "\\n")
-note("start")
-if reading == "repository base":
-    time.sleep(1)
-if reading in {list(failing)!r}:
-    print(f"{{reading}} failed on purpose", file=sys.stderr)
-    code = 1
-else:
-    code = subprocess.run([{str(pkit_on_path / "pkit")!r}, *sys.argv[1:]]).returncode
-note("end")
-sys.exit(code)
-"""
-    (bin_dir / "pkit").write_text(script, encoding="utf-8")
-    (bin_dir / "pkit").chmod(0o755)
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
-    return log
+#: The filler's three readings, each named by the two words after `pkit`.
+HEAD, CHECK, PAGES_READ = "repository base", "friction check", "friction artefacts"
+
+#: How long a reading waits for the others, in seconds, before it is taken to wait in vain.
+PATIENCE = 5.0
 
 
-def _events(log: Path) -> dict[tuple[str, str], float]:
-    """Each event of each reading, at its first time: a reading the backbone makes in
-    turn, through the same `pkit`, never moves the filler's own."""
-    events: dict[tuple[str, str], float] = {}
-    for event, reading, at in map(json.loads, log.read_text(encoding="utf-8").splitlines()):
-        events.setdefault((event, reading), at)
-    return events
+def _reading(argv: Sequence[str]) -> str:
+    return " ".join(argv[1:3])
 
 
-def test_the_filler_starts_its_three_readings_at_once(
-    docs_project: AdopterRepo,
-    pkit_on_path: Path,
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """None of the three readings waits for another: the check and the places start
-    while the reading of HEAD is still running, and the answer is the one they give."""
+def _met() -> Runner:
+    """A `pkit` that answers each call in this process, the first call of each of the
+    three readings only once all three have started: a reading started only after
+    another was answered never comes, and the wait breaks (`threading.Barrier`)."""
+    pkit = InProcessPkit()
+    barrier = threading.Barrier(3, timeout=PATIENCE)
+    waited: set[str] = set()
+    guard = threading.Lock()
+
+    def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        reading = _reading(argv)
+        with guard:
+            first = reading in (HEAD, CHECK, PAGES_READ) and reading not in waited
+            waited.add(reading)
+        if first:
+            barrier.wait()
+        return pkit(argv, **options)
+
+    return run
+
+
+def _failing(failing: Sequence[str]) -> Runner:
+    """A `pkit` that answers each call in this process, or, for a reading `failing`
+    names, exits 1 saying so; the reading of HEAD only once the other two have ended, so
+    the readings that end first are never for that the ones named."""
+    pkit = InProcessPkit()
+    ended: set[str] = set()
+    others_ended = threading.Event()
+    guard = threading.Lock()
+
+    def answer(argv: list[str], options: dict[str, Any]) -> subprocess.CompletedProcess[Any]:
+        if _reading(argv) not in failing:
+            return pkit(argv, **options)
+        said = f"{_reading(argv)} failed on purpose\n"
+        out: Any = ("", said) if options.get("text") else (b"", said.encode())
+        if not options.get("capture_output"):
+            sys.stderr.write(said)
+            out = (None, None)
+        completed = subprocess.CompletedProcess(argv, 1, *out)
+        if options.get("check"):
+            completed.check_returncode()
+        return completed
+
+    def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        reading = _reading(argv)
+        if reading == HEAD:
+            others_ended.wait(PATIENCE)
+        try:
+            return answer(list(argv), options)
+        finally:
+            with guard:
+                ended.add(reading)
+                if {CHECK, PAGES_READ} <= ended:
+                    others_ended.set()
+
+    return run
+
+
+def test_the_filler_starts_its_three_readings_at_once(docs_project: AdopterRepo) -> None:
+    """None of the three readings waits for another: each starts before any of them is
+    answered, and the answer is the one they give."""
     docs_project.write({"src/a.py": "A = 1\n"})
     docs_project.commit("base")
-    alone = _fill_doc_check(docs_project.root)
+    alone = filled(docs_project.root)
     assert alone.returncode == 0, alone.stderr
-    log = _timed_pkit(tmp_path_factory, pkit_on_path, monkeypatch)
-    timed = _fill_doc_check(docs_project.root)
-    assert (timed.returncode, timed.stdout) == (0, alone.stdout), timed.stderr
-    events = _events(log)
-    head_read = events[("end", "repository base")]
-    assert events[("start", "friction check")] < head_read
-    assert events[("start", "friction artefacts")] < head_read
+    met = filled(docs_project.root, pkit=_met())
+    assert (met.returncode, met.stdout) == (0, alone.stdout), met.stderr
 
 
 @pytest.mark.parametrize(
@@ -1075,9 +1126,6 @@ def test_the_filler_starts_its_three_readings_at_once(
 )
 def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
     docs_project: AdopterRepo,
-    pkit_on_path: Path,
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeypatch: pytest.MonkeyPatch,
     committed: bool,
     failing: tuple[str, ...],
     named: str | None,
@@ -1088,19 +1136,22 @@ def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
     if committed:
         docs_project.write({"src/a.py": "A = 1\n"})
         docs_project.commit("base")
-    _timed_pkit(tmp_path_factory, pkit_on_path, monkeypatch, failing)
-    filled = _fill_doc_check(docs_project.root)
+    answered = filled(docs_project.root, pkit=_failing(failing))
     if named is None:
-        assert (filled.returncode, json.loads(filled.stdout)) == (
+        assert (answered.returncode, json.loads(answered.stdout)) == (
             0,
             {"schema_version": 1, "value": []},
-        ), filled.stderr
+        ), answered.stderr
         return
-    assert (filled.returncode, filled.stdout) == (1, ""), filled.stderr
-    assert filled.stderr.startswith(f"error: {named}"), filled.stderr
-    assert filled.stderr.count("failed on purpose") <= 1
+    assert (answered.returncode, answered.stdout) == (1, ""), answered.stderr
+    assert answered.stderr.startswith(f"error: {named}"), answered.stderr
+    assert answered.stderr.count("failed on purpose") <= 1
 
 
+@pytest.mark.process(
+    "the filler's end-to-end test: pkit connections resolve starts fill-doc-check as the "
+    "point's query filler, and the filler's view for a person runs as a process"
+)
 def test_the_filler_contributes_page_friction_and_uncovered_surface(
     tracked_project: AdopterRepo,
 ) -> None:
@@ -1160,13 +1211,15 @@ def test_the_filler_contributes_page_friction_and_uncovered_surface(
 
 
 def test_a_page_anchored_on_a_part_owes_only_when_that_part_changes(
-    tracked_project: AdopterRepo,
+    tracked_project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Through the backbone, which reads each part anchor as the friction checks do
     (COR-050 points 2 and 5): a page anchored on one section of another page, on its
     lead, or on one point of a record owes an answer only when that part changed. A
     change elsewhere in the same page or record asks the others nothing, and the
-    obligation names the part anchor that changed."""
+    obligation names the part anchor that changed. The fillers start in this process."""
+    start_in_process(monkeypatch)
+    one_call_at_a_time(monkeypatch)
     repo = tracked_project
     page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
     record = repo.root / LD / "decisions" / "DEC-001-living-docs-discipline.md"
@@ -1268,6 +1321,11 @@ def _check_doc_mapping(repo: AdopterRepo, body: Path) -> subprocess.CompletedPro
     )
 
 
+@pytest.mark.process(
+    "project-management's doc-mapping gate end to end, across two capabilities: it reads "
+    "the point through pkit connections resolve, which starts the filler, and a CI gate "
+    "is judged by its exit code and exact streams"
+)
 def test_an_uncovered_path_is_unmet_until_a_page_on_the_branch_anchors_it(
     tracked_project: AdopterRepo, tmp_path: Path
 ) -> None:
@@ -1350,6 +1408,36 @@ def _our_fixer(listed: dict[str, Any]) -> dict[str, Any]:
     return entry
 
 
+#: project-management's reading and checks of the fixers point, loaded with its `_lib`
+#: kept apart.
+(pm_fixers,) = load("project-management", "fixers")
+
+
+def _unbounded(pkit: Runner) -> Runner:
+    """`pkit`, a call's `timeout` left out: nothing bounds a call answered in this
+    process, as nothing bounds a command `start_in_process` starts."""
+
+    def run(argv: Sequence[str], *, timeout: float | None = None, **options: Any) -> Any:
+        return pkit(argv, **options)
+
+    return run
+
+
+def _checked(repo: AdopterRepo) -> tuple[Any, list[Any]]:
+    """project-management's reading of the fixers point and its checks of each entry,
+    its public functions called in this process, every `pkit` they read through
+    answered here too."""
+    pkit = _unbounded(InProcessPkit())
+    point = pm_fixers.read_point(run=pkit)
+    return point, pm_fixers.check(
+        point, repo.root, types=functools.partial(pm_fixers.read_types, run=pkit)
+    )
+
+
+@pytest.mark.process(
+    "the fixers point's end-to-end test: project-management's list-fixers and "
+    "check-fixers, each a process reading the point through pkit, with living-docs' entry"
+)
 def test_the_fixer_of_pages_passes_project_management_s_checks(
     tracked_project: AdopterRepo,
 ) -> None:
@@ -1407,10 +1495,11 @@ def test_a_fixer_of_pages_that_does_more_than_propose_starts_no_agent(
     old, new = change
     assert text.count(old) == 1
     _deploy_agent(tracked_project, text.replace(old, new))
-    (reported,) = _our_fixer(_fixer_verb(tracked_project, "list-fixers"))["problems"]
-    assert problem in reported["text"], reported
-    assert reported["severity"] == "report"
-    checked = _fixer_verb(tracked_project, "check-fixers")
-    assert checked["summary"] == [
-        f"{FIXERS}: 1 type(s) for 1 agent(s); 0 pass the checks, 0 granted"
-    ]
+    point, checked = _checked(tracked_project)
+    assert point.resolved, point.why
+    assert (point.agents, [item.entry.type for item in checked]) == ((AGENT,), [PAGE_TYPE])
+    (item,) = checked
+    (reported,) = item.problems
+    assert problem in reported.text, reported
+    assert reported.severity == "report"
+    assert not item.startable

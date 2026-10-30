@@ -42,7 +42,8 @@ from project_kit.friction_git import CommitTree
 from project_kit.line_breaks import universal_newlines
 from project_kit.working_tree import WorkingTree
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import POINTED, POINTS, pointed_record
+from tests.friction_documents import POINTED, POINTS, commit_install, pointed_record
+from tests.shipped_rule_sets import own, without_shipped_rule_sets
 
 CONFIG = ".pkit/project/config.yaml"
 EVIDENCE_PACKAGE = ".pkit/capabilities/evidence/package.yaml"
@@ -129,8 +130,9 @@ def _evidence_declares(adopter: AdopterRepo, blocks: str) -> None:
 @pytest.fixture
 def adopter(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
     """Project places and a capability's, a document, a collection, a plain file and
-    an excluded one."""
-    repo = make_adopter_repo(capabilities=("evidence",))
+    an excluded one, on the install the template committed (`commit_install`), so a
+    test's commit holds only what it changed."""
+    repo = make_adopter_repo(capabilities=("evidence",), prepare=commit_install)
     _evidence_declares(
         repo,
         "docs:\n"
@@ -168,7 +170,7 @@ def test_the_places_are_the_project_s_then_each_capability_s_with_their_location
     document = _document()
     assert document["schema_version"] == fd.ARTEFACTS_SCHEMA_VERSION
     assert document["roots"] == {"internal": "tech-docs", "user": "handbook"}
-    places = document["places"]
+    places = own(document["places"])
     assert [(p["source"], p["pointer"], p["written"], p["path"]) for p in places] == [
         ("project", "/friction/places/0", "notes", "notes"),
         ("project", "/friction/places/1", "notes/rules.md", "notes/rules.md"),
@@ -210,7 +212,7 @@ def test_a_place_encloses_a_root_only_when_it_reaches_every_document_in_it(
 def test_a_synced_copy_is_matched_but_never_walked(make_adopter_repo: MakeAdopterRepo) -> None:
     adopter = make_adopter_repo(capabilities=("evidence",))
     adopter.write({CONFIG: f"friction:\n  places: [{EVIDENCE_README}]\n"})
-    (place,) = _document()["places"]
+    (place,) = own(_document()["places"])
     assert (place["files"], place["synced"]) == ([], [EVIDENCE_README])
 
 
@@ -246,7 +248,7 @@ def test_a_place_leaving_the_repository_is_skipped(adopter: AdopterRepo) -> None
 
 
 def test_each_file_names_the_places_matching_it_and_its_own_fields(adopter: AdopterRepo) -> None:
-    files = {f["path"]: f for f in _document()["files"]}
+    files = {f["path"]: f for f in own(_document()["files"])}
     assert files["notes/rules.md"]["places"] == [0, 1]  # read under the first
     guide = {"id": "guide", "reader": "user", "kind": "signpost"}
     assert files["notes/guide.md"]["fields"] == guide
@@ -256,7 +258,7 @@ def test_each_file_names_the_places_matching_it_and_its_own_fields(adopter: Adop
 
 
 def test_every_artefact_with_its_place_and_its_own_fields(adopter: AdopterRepo) -> None:
-    artefacts = _document()["artefacts"]
+    artefacts = own(_document()["artefacts"])
     assert [(a["location"], a["kind"], a["place"]) for a in artefacts] == [
         ("notes/guide.md", "document", 0),
         ("notes/rules.md#RS-CMN-001", "entry", 0),
@@ -397,8 +399,11 @@ DOC_RULES = (
 
 
 def _part_anchors(document: dict[str, Any]) -> dict[str, Any]:
-    """Each artefact listing a part anchor, by location."""
-    return {a["location"]: a["part_anchors"] for a in document["artefacts"] if a["part_anchors"]}
+    """Each artefact the test wrote that lists a part anchor, by location: the shipped
+    sets' rules, one of which anchors a point of a core record, are left out."""
+    return {
+        a["location"]: a["part_anchors"] for a in own(document["artefacts"]) if a["part_anchors"]
+    }
 
 
 def test_an_anchor_on_an_entry_gives_the_span_its_part_resolves_to(adopter: AdopterRepo) -> None:
@@ -775,7 +780,7 @@ def _rule_set(name: str, scope: str | None = None) -> str:
 def _in_scope_of() -> dict[str, list[str]]:
     document = _document()
     assert document["schema_version"] == 1  # a key added within the document's version
-    return {a["location"]: a["in_scope_of"] for a in document["artefacts"]}
+    return {a["location"]: a["in_scope_of"] for a in own(document["artefacts"])}
 
 
 def test_each_artefact_names_the_rule_sets_whose_scope_covers_it(adopter: AdopterRepo) -> None:
@@ -1150,6 +1155,7 @@ def test_the_same_state_prints_the_same_bytes(adopter: AdopterRepo) -> None:
 
 
 def test_without_json_a_line_per_place_and_the_counts(adopter: AdopterRepo) -> None:
+    without_shipped_rule_sets(adopter)
     result = _run()
     assert result.exit_code == 0, result.output
     assert "  tech-docs/evidence/**/*.md  (capability:evidence, location runs)  1 file(s)" in (
@@ -1174,7 +1180,7 @@ def test_an_empty_configuration_is_no_places(make_adopter_repo: MakeAdopterRepo)
     adopter = make_adopter_repo()
     adopter.write({CONFIG: ""})
     document = _document()
-    assert (document["places"], document["artefacts"]) == ([], [])
+    assert (own(document["places"]), own(document["artefacts"])) == ([], [])
 
 
 def test_a_usage_error_exits_2(adopter: AdopterRepo) -> None:

@@ -16,6 +16,13 @@ Three layers:
   `revoke-fixer`, and `ask-fixers` with a terminal and with none;
 - `pkit validate`'s `project-management:fixers` member over the same
   repository.
+
+Each command's `main` runs in the test's own process, from the adopter's copy of
+the capability, and every `pkit` it reads through is answered by the backbone's
+CLI in this process too (`tests/in_process.py`). Three tests keep a real
+process, each marked with why: `ask-fixers` with a real terminal on both ends,
+granting and dropping what was typed ahead, and `pkit validate` starting the
+validator as its member.
 """
 
 from __future__ import annotations
@@ -44,6 +51,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.in_process import load, route_pkit, run_main, start_in_process
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -766,15 +774,14 @@ def project(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRe
 
 
 def _run(repo: AdopterRepo, verb: str, *args: str) -> subprocess.CompletedProcess[str]:
-    """A fixer verb of the adopter's copy of the capability, with no terminal."""
-    return subprocess.run(
-        [sys.executable, str(repo.root / PM_REL / "scripts" / f"{verb}.py"), *args],
-        cwd=repo.root,
-        stdin=subprocess.DEVNULL,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    """A fixer verb of the adopter's copy of the capability, with no terminal: its
+    `main` in this process from the repository's root, every `pkit` it reads through
+    answered in this process too, and each command `pkit` starts for it started here."""
+    script, backbone = load(repo.root / PM_REL / "scripts", f"{verb}.py", "backbone")
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, backbone)
+        start_in_process(patched)
+        return run_main(script, *args, cwd=repo.root)
 
 
 def _listed(repo: AdopterRepo) -> dict[str, Any]:
@@ -867,13 +874,53 @@ def _at_a_terminal(repo: AdopterRepo, typed: str, *, ahead: str = "") -> tuple[i
     return proc.wait(timeout=60), b"".join(chunks).decode("utf-8", "replace").replace("\r\n", "\n")
 
 
-@pytest.mark.parametrize(("typed", "answer"), [("\n", "granted"), ("n\n", "refused")])
+def _asked(repo: AdopterRepo, typed: str | None) -> tuple[int, str]:
+    """The question `ask-fixers` asks, in this process, as the drift command asks it
+    (`fixer_cli.ask_pending`): a person at a terminal answers `typed` once it is shown,
+    or the input ends where it is None. The point is read through the in-process `pkit`."""
+    out = _Terminal()
+
+    def read() -> str:
+        assert out.shown.endswith("Turn this on? [Y/n] ")
+        if typed is None:
+            raise EOFError
+        return typed
+
+    with pytest.MonkeyPatch.context() as patched:
+        route_pkit(patched, fixers.backbone)
+        code = fixer_cli.ask_pending(
+            point=fixers.read_point(),
+            repo_root=repo.root,
+            config_path=repo.root / CONFIG_REL,
+            interactive=True,
+            read=read,
+            out=out,
+        )
+    return code, out.getvalue()
+
+
+@pytest.mark.parametrize(
+    ("typed", "answer"),
+    [
+        pytest.param(
+            "\n",
+            "granted",
+            marks=pytest.mark.process(
+                "a real pseudo-terminal on both ends of ask-fixers: the terminal is the point"
+            ),
+        ),
+        ("n\n", "refused"),
+    ],
+)
 def test_at_a_terminal_each_answer_is_recorded_as_it_is_given(
     project: AdopterRepo, typed: str, answer: str
 ) -> None:
-    code, output = _at_a_terminal(project, typed)
+    if answer == "granted":
+        code, output = _at_a_terminal(project, typed)
+        assert "Turn this on? [Y/n]" in output
+    else:
+        code, output = _asked(project, typed)
     assert code == 0, output
-    assert "Turn this on? [Y/n]" in output
     assert f"Recorded: {FIXER} {answer} {PAGE}." in output
     assert f"Commit {CONFIG_REL}" in output
     assert _answers(project) == {FIXER: {answer: [PAGE]}}
@@ -883,12 +930,15 @@ def test_at_a_terminal_each_answer_is_recorded_as_it_is_given(
 
 
 def test_input_that_ends_unanswered_records_nothing(project: AdopterRepo) -> None:
-    code, output = _at_a_terminal(project, "\x04")  # end of input, at the terminal
+    code, output = _asked(project, None)  # end of input, at the terminal
     assert code == 0, output
     assert f"pkit pm grant-fixer {FIXER} --type {PAGE}" in output
     assert (project.root / CONFIG_REL).read_text(encoding="utf-8") == CONFIG
 
 
+@pytest.mark.process(
+    "typeahead dropped from a real terminal's input queue before the question: a tty behaviour"
+)
 def test_input_typed_before_the_question_answers_nothing(project: AdopterRepo) -> None:
     """An Enter pressed before the question is shown, during a slow install say, is
     dropped: only the answer typed to the question shown counts."""
@@ -983,15 +1033,25 @@ def test_an_unresolved_point_asks_nothing_and_says_why(project: AdopterRepo) -> 
 # --- pkit validate's member -----------------------------------------------------------------------
 
 
-def _validate(repo: AdopterRepo) -> Any:
+def _validate(repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch | None = None) -> Any:
+    """`pkit validate --only project-management:fixers`: the validator started as a
+    process, or, given `monkeypatch`, in this process through the runner's one lookup."""
     script = repo.root / PM_REL / "scripts" / "check-fixers.py"
     body = script.read_text(encoding="utf-8").split("\n", 1)[1]
     script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
-    return CliRunner().invoke(
+    started = start_in_process(monkeypatch) if monkeypatch is not None else None
+    result = CliRunner().invoke(
         main, ["--color", "never", "validate", "--only", "project-management:fixers"]
     )
+    if started is not None:
+        assert [path.name for path in started] == ["check-fixers.py"]
+    return result
 
 
+@pytest.mark.process(
+    "the validate command's end-to-end test: pkit validate starts the validator, as its "
+    "project-management:fixers member, and the validator starts pkit"
+)
 def test_validation_passes_a_good_declaration(project: AdopterRepo) -> None:
     result = _validate(project)
     assert result.exit_code == 0, result.output
@@ -999,7 +1059,7 @@ def test_validation_passes_a_good_declaration(project: AdopterRepo) -> None:
 
 
 def test_validation_fails_the_project_s_entry_naming_an_undeployed_agent(
-    project: AdopterRepo,
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     filler = project.root / "docs" / "pkit" / "fillers" / "pkit" / "work-tracking" / "fixers.yaml"
     filler.parent.mkdir(parents=True, exist_ok=True)
@@ -1011,7 +1071,7 @@ def test_validation_fails_the_project_s_entry_naming_an_undeployed_agent(
     (project.root / CONFIG_REL).write_text(
         CONFIG + f"fixers:\n  gone:\n    granted: [{PAGE}]\n", encoding="utf-8"
     )
-    result = _validate(project)
+    result = _validate(project, monkeypatch)
     assert result.exit_code == 1, result.output
     assert "agent ghost is not deployed" in result.output
     assert "pkit pm revoke-fixer gone --type docs-test:page" in result.output
@@ -1026,7 +1086,9 @@ class _Terminal(io.StringIO):
         self.shown = self.getvalue()
 
 
-def test_the_ask_entry_point_can_be_called_by_another_command(project: AdopterRepo) -> None:
+def test_the_ask_entry_point_can_be_called_by_another_command(
+    project: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """The drift command asks through the same function: it hands the point, the
     terminal and the answer's reader in. Each prompt reaches the terminal before
     the answer is read."""
@@ -1036,6 +1098,7 @@ def test_the_ask_entry_point_can_be_called_by_another_command(project: AdopterRe
         assert out.shown.endswith("Turn this on? [Y/n] ")
         return "y\n"
 
+    route_pkit(monkeypatch, fixers.backbone)
     code = fixer_cli.ask_pending(
         point=fixers.read_point(),
         repo_root=project.root,

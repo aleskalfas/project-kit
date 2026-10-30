@@ -40,6 +40,10 @@ suite in one process. The two passes by hand:
 A plain `uv run pytest -q` still runs everything in one process, the `serial`
 tests included.
 
+**The parallel pass ends by printing its 30 slowest tests** (`--durations=30`),
+in every run: in a local run's output, and in CI's log of the step that runs the
+aggregator.
+
 **A test that cannot share the machine with other workers** is marked
 `@pytest.mark.serial`. Make it worker-safe instead when you can — whatever it
 writes under `tmp_path`, every change to the environment or the working
@@ -60,6 +64,79 @@ opened (a read-only cache directory, a sandbox that does not allow it), the step
 says so and runs without the limit. `tests/test_check_script.py` pins both the
 passes and the slots.
 
+**A test calls the code in its own process.** A process of `pkit` or of a
+capability script costs a third of a second to a second, and most tests check
+what the code answers, not that a process ran it (#2313). So a test keeps a real
+process only where the process is the point. The rule below says which tests do,
+and how a test is converted.
+
+The rule: which tests keep a real process, and how one is converted (#2314,
+choice 2).
+
+1. Per command, one or two end-to-end tests keep a real process. So do one test
+   per output mode, and one per registered validator, filler or resolver, run
+   through `pkit`'s runner.
+2. A converted test enters where the process test entered. That is the script's
+   `main(argv)` in the test's own process, or a public function where the
+   assertion is on its result, and never a private helper alone.
+3. Convert a test rather than delete it. Delete only an exact duplicate, and name
+   the test that keeps its assertion.
+4. A template is built by the real code in the test's own process, never written
+   by hand.
+5. Each slice proves its conversion with a planted-bug spot-check against its old
+   tests and its new ones.
+
+**A kept process test is marked with its reason**:
+`@pytest.mark.process("<why the process is the point>")`. A guard, the autouse
+fixture `process_starts`, counts each process of `pkit` or a capability script
+the test starts, and fails a test that starts one without the mark. It counts
+from the start itself, so the count is the same on every run. It does not count
+what an adopter template's build starts, nor what a test of the runner asks of
+`run_command` itself.
+
+**The guard holds every module but those in its baseline**,
+`tests/process_guard_baseline.txt`, the modules no slice of #2313 has converted
+yet. A slice takes its modules out, and no module is ever added. So a new module
+is held from its first test.
+
+**What a converted test calls** lives in `tests/in_process.py`:
+
+- `load(capability, *names)` loads a capability's scripts, such as `validate.py`,
+  and its `_lib` modules in the test's own process. Each capability's `_lib` is
+  kept apart in `sys.modules`. While a call loads, no `_lib` folder is on the
+  import path and no `_lib` module imported by path is in `sys.modules`.
+  `run_main(script, *args, cwd=...)` runs a script's `main` as its process ran.
+- `route_pkit(monkeypatch, backbone)` answers every `pkit` call of a capability
+  with the backbone's CLI in the test's own process. Each capability makes its
+  calls through one private function, `_lib.backbone._run`, looked up when
+  called, and the route replaces only that function. The argument lists and the
+  documents are unchanged (ADR-057 point 1). project-management's streaming
+  starts (`agent_runs`, `merge_queue`) and its top-level scripts' calls do not
+  go through it, and its route takes the keywords its calls pass (`timeout`, an
+  `env` with routing off, UTF-8 decoding with `replace`), which the in-process
+  `pkit` itself refuses.
+- `InProcessPkit`, the in-process `pkit`, answers as a process does. It gives a
+  `CompletedProcess` with its exit code and standard error apart, from the
+  working directory given, in the environment the runner gives a query. An
+  exception is exit 1 with its traceback, a keyword it does not model is
+  refused, and the backbone's caches are cleared before each call.
+- `start_in_process(monkeypatch)` starts in the test's own process each command
+  the backbone's runner starts for a component, such as a validator. The
+  runner's one lookup still resolves the command, so a broken registration still
+  fails.
+
+**A test leaves the import path as it found it.** A fixture that puts a folder on
+`sys.path` takes it off after its tests, through `monkeypatch.syspath_prepend` or
+its own teardown. A folder left on the path outlives the test, and every later
+test on its worker imports from it. A capability's `_lib` folder left so made
+eleven of `friction_answers`' tests start a real `pkit` on one of CI's workers
+(#2353).
+
+**The spot-check** is `uv run python scripts/spot_check.py BUGS --base REF TEST...`.
+It plants each bug the JSON file BUGS lists, one at a time, and runs the tests as
+REF holds them and as they are now. It exits 1 when the new tests miss a bug the
+old tests caught. The bugs of #2315 are in `tests/spot_checks/`.
+
 **The slowest modules**, by the time their tests take together, setup
 included, in one parallel pass (`uv run pytest -q -n 4 -m "not serial"
 --junitxml=...`, 2026-10-01, on a 12-core Mac other runs were sharing; the pass
@@ -70,18 +147,57 @@ summed 1 879 s of test time and took 529 s on the clock):
 | `test_software_analysis.py` | 45 | 233 | 5.2 | 20.7 |
 | `test_software_analysis_numbers.py` | 15 | 116 | 7.7 | 21.8 |
 | `test_software_analysis_check.py` | 27 | 98 | 3.6 | 21.1 |
-| `test_living_docs_spaces.py` | 51 | 92 | 1.8 | 6.7 |
 | `test_software_analysis_resolver.py` | 53 | 89 | 1.7 | 18.7 |
 | `test_friction_check.py` | 76 | 63 | 0.8 | 1.8 |
-| `test_process_cascade_engine.py` | 33 | 60 | 1.8 | 5.9 |
 | `test_default_branch.py` | 66 | 53 | 0.8 | 27.9 |
 
-A software-analysis test runs the capability's scripts as the backbone does — a
-stamp, the check, the number check — each a process that starts several `pkit`
-processes of its own, from a third of a second to a second each; living-docs'
-tests run its validator the same way. What their tests share is built once
-("Built once, copied for each test", below); what is left is each test's own
-runs. A test that stays slow says why in a comment above it.
+`test_living_docs_spaces.py` has left the table. #2315 converted it, and its 180
+tests took 23 s on the clock in a pass of their own, `-n 4`, against 127 s before
+(2026-10-29).
+
+`test_process_cascade_engine.py` has left it too. #2323 converted it, with eight
+other modules of the process engine and project-management's closure fold. Their
+288 tests took 43 s on the clock in a pass of their own, `-n 3`, against 207 s
+before (2026-10-29).
+
+`test_friction_check.py`'s row predates #2320, which commits the install of the
+friction modules once per session (`committed_adopter`). Its 148 tests and the
+164 of four other friction modules took 359 s on the clock, against 564 s before.
+Both passes ran only these modules, `-n 3`, on 2026-10-29, on a Mac other builders
+were sharing. Each of its tests still runs the change check, which reads git for its
+base.
+
+The whole-repository check's, the report's and the derived links' four modules lay
+their history on that committed install too (#2328). Their 261 tests took
+1 324 s on the clock, against 1 833 s before, in passes of their own, `-n 3`, on
+2026-10-29. What is left is git: the simplest of these tests starts some 25 git
+processes to commit its history and check it. On a Mac other builders were sharing,
+each took a third of a second.
+
+`test_software_analysis_check.py` is converted (#2319): its 61 tests took 58 s on
+the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
+What is left is mostly the backbone's own reading of the analysis, which each
+stamp and each check asks for.
+
+The numbering, renumbering and requirement modules are converted too (#2324),
+`test_software_analysis_numbers.py` among them. Their 214 tests took 1 549 s on
+the clock, `-n 3`, against 1 923 s before, on a machine other runs shared
+(2026-10-29). What is left is mostly `git`: one test spent 43 s of its 53 s
+waiting on 182 `git` processes.
+
+`test_software_analysis.py` and `test_software_analysis_resolver.py` are
+converted too (#2325), with ten other modules, and still rank among the slowest.
+Run back to back, `-n 3`, on 2026-10-29, the twelve modules' 452 tests took 179 s
+on the clock, against 262 s before. Before, 79 of those tests started a process
+of `pkit` or a script, and now 6 do, each marked with why. What is left is the
+stamps' and the checks' own reading of git.
+
+A software-analysis test stamps, links and writes the overview in its own
+process, through `tests/analysis_repo.py` (#2319). A script a test runs through
+`run_script`, such as the number check, still runs as a process until its
+module's slice of #2313 converts it. What its tests share is built once ("Built
+once, copied for each test", below). A test that stays slow says why in a comment
+above it.
 
 ## Type checking
 
@@ -123,12 +239,13 @@ do when a change raises a count, and the only causes for raising the baseline.
 
 Most tests that need "a project with the kit installed" should not `git init`
 and call `install_kit` by hand. `tests/adopter_repo.py` provides one builder
-and `tests/conftest.py` exposes it as two fixtures:
+and `tests/conftest.py` exposes it as three fixtures:
 
 | Fixture | Gives you | Reach for it when |
 |---|---|---|
 | `make_adopter_repo` | A factory: `make_adopter_repo(capabilities=(), history=False, chdir=True, root=tmp_path, prepare=None, fresh=False)` returning an `AdopterRepo`, a copy of a template built once per session (below). | A test drives the CLI or the Python API against an installed adopter. `make_adopter_repo()` with no arguments is the bare shape — `git init`ed `tmp_path`, backbone installed, adapter shell primitives stubbed, cwd moved there, **no commits** — that the per-file `installed_target` / `kit_target` fixtures wrap. |
 | `adopter_repo` | `make_adopter_repo(history=True)`: the same adopter with the scripted history committed; `adopter_repo.history` holds the SHAs. | A test needs real git state — validators that read history, the friction engine (COR-050), anything tracing a front-matter field across commits. |
+| `committed_adopter` | `make_adopter_repo(prepare=commit_install)`: the bare shape, its install committed on `main` in one commit dated `INSTALLED_AT` (`tests/friction_documents.py`). | A test commits a base of its own, as the friction tests do. It then commits only its own files, never the whole installed `.pkit/` (#2320). |
 
 Outside a fixture (a plain helper that takes `tmp_path` and `monkeypatch`), call
 `build_adopter_repo(root, monkeypatch=monkeypatch, ...)` directly; it builds the
@@ -171,8 +288,8 @@ first.
 what the module's tests start from — a seed stamped, a history committed. It
 runs once per session, from the template's root, and what it leaves is in every
 copy. `tests/analysis_repo.py` is the worked example: stamping the
-software-analysis seed (`prepare_seeded`, the modules' `seeded` fixture) starts
-some two dozen `pkit` processes, ten seconds and more, which no copy pays again.
+software-analysis seed (`prepare_seeded`, the modules' `seeded` fixture) asks
+`pkit` some two dozen times, which no copy pays again.
 A `prepare` depends on nothing but the repository it is handed — nothing of the
 test that happens to ask first, which may be in any module — and its full name
 is the template's key, so a lambda or a nested function is refused. It runs in

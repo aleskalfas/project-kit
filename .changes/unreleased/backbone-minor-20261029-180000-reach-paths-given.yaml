@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit rule-sets reach <path>...` answers for the files given, so a writer can
+  read the rules of its files before it writes them (#2273). The walk is the
+  same, and the paths only narrow its answer to the artefacts at them. A
+  relative path is read from the working directory. Each path is answered with
+  what the state holds there: an artefact, or the entries of a collection file;
+  a file a declared place matches whose front matter does not parse; a file
+  that is no artefact; a folder; no file; or a path outside the repository.
+  None of these is an error. The read view lists each path once, with the rules
+  that bind on each artefact there or why none binds, then the text of each
+  rule that binds, once each, with its set and its status. The entries of one
+  collection file that have the same answer are listed together. The document
+  gains a top-level `paths`, added within `schema_version` 1: `null` when no
+  path is given, else each path in the order given, `{given, path, answer,
+  artefacts}`. Given paths, its `artefacts` holds only the artefacts at them.
+  `--at`, `--preview` and `--json` work with the paths as they do without them.

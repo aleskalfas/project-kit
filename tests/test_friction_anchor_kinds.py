@@ -34,6 +34,12 @@ a `commands:` leaf:
   file entering the answer, a repointed mapping whose file the answer names —
   and what it cannot, pinned as a stated limit: a file leaving the answer;
 - a resolver's script is provisioned as a validator's is.
+
+The repository's install is committed once per session (`committed_adopter`). Each
+resolver the runner starts runs in the test's own process, its script still found
+through the runner's one lookup (`tests/in_process.py`, `start_in_process`). A test
+marked `process` starts it as a process: the resolver's end-to-end tests, and those
+whose point is what only a process meets, a bound or a value the system cannot pass.
 """
 
 from __future__ import annotations
@@ -41,6 +47,8 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import sys
+import textwrap
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -57,7 +65,7 @@ from project_kit import friction_validate as fv
 from project_kit import friction_write as fw
 from project_kit.cli import main
 from project_kit.manifest import read_backbone_manifest, write_backbone_manifest
-from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.adopter_repo import AdopterRepo
 from tests.anchor_kind_capabilities import ASKED, HANGING, RESOLVER, RESOLVING, register_kinds
 from tests.friction_documents import (
     CONFIG,
@@ -70,10 +78,15 @@ from tests.friction_documents import (
     guide,
     own_entry,
 )
+from tests.in_process import MARK, start_in_process
+from tests.shipped_rule_sets import own
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
 pytestmark = pytest.mark.usefixtures("answers_in_files")
+
+#: Why a test whose point is the bound keeps the resolver's process.
+BOUNDED = "a resolver stopped at its bound: only a process is bounded"
 
 # One whose source may be kept in two files: `sources/<value>.md` and an annex.
 SEVERAL = (
@@ -108,8 +121,31 @@ CAPTURED = {"sources/iso-8601.md": "ISO 8601, as captured.\n"}
 
 
 @pytest.fixture
-def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
-    return make_adopter_repo()
+def repo(committed_adopter: AdopterRepo) -> AdopterRepo:
+    return committed_adopter
+
+
+@pytest.fixture(autouse=True)
+def resolvers_started(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> list[Path]:
+    """The resolver scripts the backbone's runner starts, each run in this process
+    (`start_in_process`), but in a test that keeps its process. No bytecode is written,
+    so no cache folder lands beside a script in the repository a check lists."""
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    if request.node.get_closest_marker(MARK) is not None:
+        return []
+    return start_in_process(monkeypatch)
+
+
+def _main(body: str) -> str:
+    """A resolver's script `body` as a `main`, which the runner's start calls in this
+    process (`start_in_process`), and which a process of the script runs too."""
+    return (
+        "def main():\n"
+        + textwrap.indent(body, "    ")
+        + '\n\nif __name__ == "__main__":\n    main()\n'
+    )
 
 
 @pytest.fixture
@@ -121,16 +157,19 @@ def asked(monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFact
 
 
 def _start(adopter: AdopterRepo, files: dict[str, str], config: str | None = None) -> None:
-    """Commit the base state on `main` (the install and the fixture capability
-    included) and branch `feature` off it."""
+    """Commit the base state on `main`, the fixture capability included, on the install
+    the template committed (`commit_install`), and branch `feature` off it."""
     adopter.write({CONFIG: config or friction_config(), **SOURCE, **files})
     adopter.commit("base", files=None)
     adopter.checkout("feature", create=True)
 
 
 def _sources(adopter: AdopterRepo, script_body: str = RESOLVING) -> None:
-    """The fixture capability `sources`, registering the kind `source` with its resolver."""
-    register_kinds(adopter.root, "sources", kinds={"source": "resolve"}, script_body=script_body)
+    """The fixture capability `sources`, registering the kind `source` with its resolver,
+    whose script is `script_body` as a `main` (`_main`)."""
+    register_kinds(
+        adopter.root, "sources", kinds={"source": "resolve"}, script_body=_main(script_body)
+    )
 
 
 def _of_anchor(findings: tuple[fc.Finding, ...], anchor: fd.Anchor) -> list[fc.Finding]:
@@ -203,7 +242,7 @@ def test_the_packages_member_reports_a_resolver_without_the_declaration(
 
 
 def test_the_change_check_refuses_an_undeclared_resolver_it_reads_from_the_package(
-    repo: AdopterRepo,
+    repo: AdopterRepo, resolvers_started: list[Path]
 ) -> None:
     """The registry is read from package metadata, not handed in: the engine's
     refusal of a resolver without the declaration is reached from the key."""
@@ -212,7 +251,7 @@ def test_the_change_check_refuses_an_undeclared_resolver_it_reads_from_the_packa
         "sources",
         kinds={"source": "resolve"},
         contract=False,
-        script_body="raise SystemExit('a refused resolver is never started')\n",
+        script_body=_main("raise SystemExit('a refused resolver is never started')\n"),
     )
     _start(repo, {"docs/guide.md": guide()})
     repo.commit(
@@ -227,12 +266,16 @@ def test_the_change_check_refuses_an_undeclared_resolver_it_reads_from_the_packa
         "contract" in refused.message
     )
     assert "never started" not in refused.message
-    assert result.failing
+    assert result.failing and resolvers_started == []
 
 
 # --- a registered resolver, run under the query policy ------------------------------------
 
 
+@pytest.mark.process(
+    "the resolver's end-to-end test through the change check: a process the runner starts "
+    "under the query policy, the base override removed from its environment"
+)
 def test_the_change_check_asks_when_a_file_the_resolver_answers_changed(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -254,6 +297,10 @@ def test_the_change_check_asks_when_a_file_the_resolver_answers_changed(
     assert result.failing
 
 
+@pytest.mark.process(
+    "the resolver's end-to-end test through the whole-repository check: a process the "
+    "runner starts, its answer read against HEAD's files"
+)
 def test_the_whole_repository_check_finds_the_anchor_stale_after_its_file_changed(
     repo: AdopterRepo,
 ) -> None:
@@ -392,6 +439,7 @@ def test_a_change_that_adds_a_dead_anchor_fails(repo: AdopterRepo) -> None:
 
 # Serial: the bound is one second, which a machine busy with other test workers misses.
 @pytest.mark.serial
+@pytest.mark.process(BOUNDED)
 @pytest.mark.parametrize(("mode", "exit_code"), [("enforcing", 1), ("warning", 0)])
 def test_a_resolver_that_gives_no_answer_fails_the_change_check_in_enforcing_mode_alone(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch, mode: str, exit_code: int
@@ -603,6 +651,9 @@ def test_a_value_is_never_read_as_an_option(repo: AdopterRepo, asked: Path, valu
     assert asked.read_text(encoding="utf-8").splitlines() == [value]
 
 
+@pytest.mark.process(
+    "a value holding a NUL byte, which the system refuses to pass to a process it starts"
+)
 def test_a_value_the_system_cannot_pass_is_no_answer(repo: AdopterRepo, asked: Path) -> None:
     _sources(repo)
     resolution = _kinds(repo).resolve(fd.Anchor("source", "iso\x008601"))
@@ -628,6 +679,7 @@ def test_a_command_naming_no_leaf_says_so_before_the_declaration_is_looked_for(
 
 # Serial: the bound is one second, which a machine busy with other test workers misses.
 @pytest.mark.serial
+@pytest.mark.process(BOUNDED)
 def test_a_resolver_that_overran_its_bound_is_not_started_again_in_the_run(
     repo: AdopterRepo, asked: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -712,6 +764,10 @@ ANSWERING = "import json\nprint(json.dumps({!r}))\n"
             "import sys\nsys.stderr.write('the capture index is missing\\n')\nsys.exit(3)\n",
             "command 'resolve' exited 3: the capture index is missing",
             id="non-zero-exit",
+            marks=pytest.mark.process(
+                "the no-answer end to end: a resolver's exit status and standard error, read "
+                "from its process, carried through both checks and `explain`"
+            ),
         ),
         pytest.param(
             "print('sources/iso-8601.md')\n",
@@ -773,6 +829,7 @@ def test_a_resolver_that_gives_no_answer_leaves_the_anchor_unresolved(
 
 # Serial: the bound is one second, which a machine busy with other test workers misses.
 @pytest.mark.serial
+@pytest.mark.process(BOUNDED)
 def test_a_resolver_that_overruns_its_bound_gives_no_answer(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1134,7 +1191,7 @@ def test_the_writers_answer_an_artefact_carrying_an_anchor_of_a_registered_kind(
         return result.output
 
     def block() -> dict[str, Any]:
-        [artefact] = fd.discover_artefacts(repo.root).artefacts
+        [artefact] = own(fd.discover_artefacts(repo.root).artefacts)
         return artefact.friction
 
     def answers() -> dict[str, Any]:

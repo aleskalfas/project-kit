@@ -28,11 +28,11 @@ A rule is a statement that every artefact it binds on must satisfy (point 7). It
 - a template is a starting shape;
 - a schema checks the mechanically checkable part of some rules.
 
-Rules serve four needs: instructions for whoever writes an artefact, criteria for whoever checks it, a name that findings can cite, and extension across layers. The methodology's own operational rules for agents working in a repository are a different thing that shares the word, and are not governed by this record.
+Rules serve four needs: instructions for whoever writes an artefact, criteria for whoever checks it, a name that findings can cite, and extension across layers. The methodology's own operational rules for agents working in a repository bind on what a session does, not on artefacts. They are kept in loaded rule sets (refinement per COR-068).
 
 ### 2. A rule set is a collection of artefacts
 
-A rule set is one file. In the terms of the anchors-and-friction record (COR-050), it is a collection file whose entries are rules, and each rule is an artefact in its own right.
+A rule set is one file. In the terms of the anchors-and-friction record (COR-050), it is a collection file whose entries are rules, and each rule is an artefact in its own right. A loaded set has no scope, inherits no set and is inherited by none (refinement per COR-068).
 - **Its front matter holds the data,** in the file and never in a sidecar (refinement per COR-063):
   - the rule set's name and version;
   - what it inherits (point 7);
@@ -65,7 +65,7 @@ A rule's id is `RS-<SET>-NNN`: the family prefix, the rule set's name, and a num
 ### 4. Statuses and the gate
 
 - A rule without a status is **proposed**, and binds nothing.
-- **Accepted** rules bind, on the artefacts point 7 says: writers follow them and checks enforce them.
+- **Accepted** rules bind, on the artefacts point 7 says: writers follow them and checks enforce them. An accepted rule of a loaded set binds on the work of the sessions that load it, not on artefacts (refinement per COR-068).
 - A **superseded** rule names its successor and binds nothing.
 - A **withdrawn** rule is retired without a successor and binds nothing.
 - Superseded and withdrawn rules stay in place with their ids.
@@ -89,7 +89,7 @@ Whether a quoted reason truly supports its rule is judgment, left to agents and 
 - **Method rule sets** ship with the backbone or with a component. They are owned and versioned with it and refreshed by sync.
 - **Project rule sets** are owned by the project. They live in a folder under its internal documentation root (COR-049), the *default folder*, and in any further places the project declares. Sync never reads or writes them, and uninstall never writes them. Beside the project's own edits, they are written only by writers a record names (COR-001). A capability's install is one, creating the one project rule set the capability declares, as COR-017 sets. So is that capability's migration for an earlier install.
 
-A project never edits a method rule set; it extends it. A method rule set is cited with its component's name; a project rule set is cited bare.
+A project never edits a method rule set; it extends it. A method rule set is cited with its component's name; a project rule set is cited bare. A rule of a loaded set is also cited by its layer and number, such as "core rule 19" (refinement per COR-068).
 
 A change of the internal root never leaves a project rule set in the default folder unfound in silence:
 - **The default folder follows the root.** Every reader finds it through the current root. Nothing records it when a set is first placed there, though a location derived from a root is otherwise recorded then (COR-049 point 5). Install, which places a set there, records nothing either.
@@ -107,8 +107,8 @@ A change of the internal root never leaves a project rule set in the default fol
   - what the set inherits changes: a set added or dropped, or a pin moved to another major
 - **Routes.** A *route* leads from an artefact to a rule set. It starts at a set whose scope selects the artefact, and follows what that set inherits, pin by pin. It passes only through sets whose own scope, where they have one, also selects the artefact. A set *reaches* every artefact from which a route leads to it. One artefact may have several routes to one set: from two sets whose scopes both select it, or along two lines of inheritance from one set.
 - **Where a rule binds.** An inherited rule binds within the scope of the set that inherits it. Exactly: an accepted rule binds on an artefact when a route leads from the artefact to the rule's set, and no pin on that route is behind its set (below). A *shared set*, one with no scope of its own, therefore reaches wherever the sets that inherit it reach, and nowhere else. A set that declares a scope keeps it. Its rules bind only on artefacts its own scope selects, whoever inherits it, so inheriting a set never widens its scope.
-- **Method rule sets.** A method rule set takes no scope (point 2), so every route starts at a set of the project's own. No rule of a method rule set binds, even on the artefacts of the backbone or component that ships it, until a set of the project's own with a scope inherits it, directly or not.
-- **One answer.** The backbone answers, for each artefact, which accepted rules bind on it. Writers, checks and reviewers all read that one answer.
+- **Method rule sets.** A method rule set takes no scope (point 2), so every route starts at a set of the project's own. No rule of a method rule set binds, even on the artefacts of the backbone or component that ships it, until a set of the project's own with a scope inherits it, directly or not. A loaded method set binds where its loaded file is loaded instead (refinement per COR-068).
+- **One answer.** The backbone answers, for each artefact, which accepted rules bind on it. Writers, checks and reviewers all read that one answer. It holds no rule of a loaded set (refinement per COR-068).
 - **A pin behind its set.** When a new major version of an inherited set arrives, the inheriting set is reported in status and fails validation wherever the check is enforced, until the project reviews it and updates the pin. Until then, the pin is behind its set, and no rule binds through it, whether the new major changed the rule or not. The repository holds only the newer major, and nobody has reviewed it for the inheriting set. So each inheritor's pin decides when a shared set's new rules start binding within its reach.
 - **Pins that disagree.** One artefact reached through two routes that pin the same set at different majors is a validation error, never a silent choice between them.
 - **Adding and filling.** An inheriting set may add rules of its own, and may fill extension points that inherited rules offer. Each extension point is filled at most once along an inheritance chain. A filling rule anchors to the rule it fills, so a change to the inherited rule flags the fill. A fill binds only where the rule it fills binds through the filling set, and only while both are accepted.

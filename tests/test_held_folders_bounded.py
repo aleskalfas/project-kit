@@ -34,6 +34,7 @@ from project_kit import friction_discovery as fd
 from project_kit import package_validate as pv
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.shipped_rule_sets import own
 
 CONFIG = ".pkit/project/config.yaml"
 EVIDENCE = "evidence"
@@ -112,7 +113,7 @@ def test_held_dot_in_a_location_at_the_root_equals_the_roots_and_holds_nothing(
     (folder,) = discovery.held_folders
     assert folder.skipped is not None and folder.skipped.reason == fd.SKIP_OVERLAP
     assert discovery.held == ()
-    assert [a.path for a in discovery.artefacts] == ["docs/page.md"]
+    assert [a.path for a in own(discovery.artefacts)] == ["docs/page.md"]
 
     cli = CliRunner().invoke(main, ["validate", "--no-refs"])
     assert cli.exit_code == 1, cli.output
@@ -201,7 +202,7 @@ def test_a_held_folder_enclosing_another_component_s_place_is_refused_and_one_in
     (held,) = discovery.held
     assert (held.path, held.component) == ("docs/evidence/records/run.md", EVIDENCE)
     assert [(p.source, p.pattern) for p in held.places] == [("capability:demo-recording", "docs/.")]
-    assert discovery.artefacts == ()
+    assert own(discovery.artefacts) == []
 
 
 def test_a_held_folder_wins_over_its_own_place_and_one_it_would_empty_is_refused(
@@ -237,7 +238,7 @@ def test_a_held_folder_wins_over_its_own_place_and_one_it_would_empty_is_refused
     (held,) = discovery.held
     assert (held.path, held.component) == ("docs/evidence/records/run.md", EVIDENCE)
     assert [p.pattern for p in held.places] == ["docs/evidence/**/*.md"]
-    assert [a.path for a in discovery.artefacts] == ["docs/evidence/pages/page.md"]
+    assert [a.path for a in own(discovery.artefacts)] == ["docs/evidence/pages/page.md"]
 
     package = repo.root / _package(EVIDENCE)
     package.write_text(
@@ -298,7 +299,7 @@ def test_two_held_folders_sharing_files_are_refused_at_both(
     }
     discovery = fd.discover_artefacts(repo.root)
     assert discovery.held == ()
-    assert [a.path for a in discovery.artefacts] == ["docs/evidence/records/old/run.md"]
+    assert [a.path for a in own(discovery.artefacts)] == ["docs/evidence/records/old/run.md"]
 
 
 def test_one_component_s_two_held_folders_sharing_files_are_refused_at_both(
@@ -366,7 +367,7 @@ def test_a_held_folder_sharing_files_with_a_rule_set_folder_is_refused_and_rules
     assert discovery.held == ()
     (read,) = [f for f in discovery.files if f.path == rules]
     assert read.rule_set is not None
-    assert [a.location for a in discovery.artefacts] == [f"{rules}#RS-RUNS-001"]
+    assert [a.location for a in own(discovery.artefacts)] == [f"{rules}#RS-RUNS-001"]
 
 
 # --- a glob of folders (#1821) ---------------------------------------------------------
@@ -420,7 +421,7 @@ def test_a_glob_held_folder_holds_each_component_s_records_and_wins_over_its_own
     ]
     assert {h.component for h in discovery.held} == {EVIDENCE}
     assert [p.pattern for p in discovery.held[0].places] == ["docs", "docs/analysis/**/*.md"]
-    assert [a.path for a in discovery.artefacts] == [
+    assert [a.path for a in own(discovery.artefacts)] == [
         "docs/analysis/billing/glossary.md",
         "docs/analysis/glossary.md",
     ]
@@ -482,7 +483,9 @@ def test_a_glob_held_folder_never_empties_a_place_its_own_component_s_included(
     repo.write({"docs/analysis/billing/revalidations/r2.md": "---\ndate: '2026-10-01'\n---\n"})
     discovery = fd.discover_artefacts(repo.root)
     assert discovery.held == ()
-    assert [a.path for a in discovery.artefacts] == ["docs/analysis/billing/revalidations/r2.md"]
+    assert [a.path for a in own(discovery.artefacts)] == [
+        "docs/analysis/billing/revalidations/r2.md"
+    ]
 
 
 def test_a_glob_held_folder_shares_no_file_with_another_component_s_or_a_rule_set_folder(
@@ -536,4 +539,4 @@ def test_a_glob_held_folder_shares_no_file_with_another_component_s_or_a_rule_se
     }
     discovery = fd.discover_artefacts(repo.root)
     assert discovery.held == ()
-    assert [a.location for a in discovery.artefacts] == [f"{rules}#RS-RUNS-001"]
+    assert [a.location for a in own(discovery.artefacts)] == [f"{rules}#RS-RUNS-001"]

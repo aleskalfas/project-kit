@@ -4,9 +4,10 @@
 whole-repository check, so every test holds them to it: the debt is exactly
 the check's stale and deferred findings, oldest first; an explanation's
 findings are exactly the check's for that artefact, each with the commits
-behind it and what clears it. Every test stands up a real adopter repository
-and lays down dated history (`Timeline`); the read-only test compares every
-byte of the repository, `.git` included, before and after each command.
+behind it and what clears it. Every test stands up a real adopter repository,
+its install committed once per session (`committed_adopter`), and lays down
+dated history (`Timeline`); the read-only test compares every byte of the
+repository, `.git` included, before and after each command.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
-from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
+from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, Author, GitRepo, MakeAdopterRepo
 from tests.friction_documents import (
     CONFIG,
     T1,
@@ -35,6 +36,7 @@ from tests.friction_documents import (
     friction_config,
     guide,
 )
+from tests.shipped_rule_sets import without_shipped_rule_sets
 
 #: The documents here say each artefact's answers beside its anchors, and each write
 #: takes them into answer files, as a change writes them (COR-062 point 1).
@@ -52,8 +54,8 @@ CORE = Anchor("path", "src/core/**")
 
 
 @pytest.fixture
-def timeline(make_adopter_repo: MakeAdopterRepo) -> Timeline:
-    return Timeline(make_adopter_repo())
+def timeline(committed_adopter: AdopterRepo) -> Timeline:
+    return Timeline(committed_adopter)
 
 
 def _cli(*args: str) -> Result:
@@ -202,6 +204,7 @@ def test_debt_matches_the_whole_repository_check(timeline: Timeline) -> None:
 
 
 def test_debt_json_document_shape(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     shas = _debt_history(timeline)
     result = _cli("debt", "--json")
     assert result.exit_code == 0, result.output
@@ -264,6 +267,7 @@ def test_debt_human_view(timeline: Timeline) -> None:
 
 
 def test_debt_when_there_is_none_and_while_dormant(timeline: Timeline) -> None:
+    without_shipped_rule_sets(timeline.adopter)
     timeline.start({"docs/guide.md": guide()})
     result = _cli("debt")
     assert result.exit_code == 0, result.output
@@ -281,6 +285,7 @@ def test_debt_lists_the_accepted_unanchored_apart_and_counts_only_the_forgotten(
 ) -> None:
     """COR-050 points 1 and 8: after the debt, the check's unanchored measure — the
     forgotten artefacts, counted, and apart from them those accepted with a reason."""
+    without_shipped_rule_sets(timeline.adopter)
     reason = "No code embodies the sponsor: it funds the project."
     timeline.start(
         {
@@ -322,6 +327,7 @@ def test_debt_lists_the_accepted_unanchored_apart_and_counts_only_the_forgotten(
 
 def test_debt_leaves_out_an_artefact_under_an_excluded_path(timeline: Timeline) -> None:
     """COR-050 point 7: excluded paths are left out of the measures, the debt with them."""
+    without_shipped_rule_sets(timeline.adopter)
     _excluded_history(timeline)
     listing = frep.run_debt(timeline.adopter.root)
     assert [(e.finding.kind.value, e.finding.location) for e in listing.entries] == [
