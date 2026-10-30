@@ -803,14 +803,20 @@ def test_the_full_history_is_fetched_and_confirmed_before_the_check(
 def test_the_query_commands_are_provisioned_before_the_check_as_the_required_check_does(
     workflow: dict[str, Any],
 ) -> None:
-    """The same step, in the same place, as `checks.yml` runs before its aggregator."""
+    """The same step, in the same place, as each part of `checks.yml` runs before its
+    part of the aggregator (ADR-078 point 1). A part may give the step an id of its own."""
     checks = YAML(typ="safe").load((WORKFLOW.parent / "checks.yml").read_text(encoding="utf-8"))
-    (theirs,) = [
-        s for s in checks["jobs"]["checks"]["steps"] if s.get("name", "").startswith("Sync")
+    theirs = [
+        {key: value for key, value in step.items() if key != "id"}
+        for job in checks["jobs"].values()
+        for step in job["steps"]
+        if step.get("name", "").startswith("Sync")
     ]
+    assert len(theirs) == 3
     sync = _index(workflow, RENDER, "Sync")
-    assert _steps(workflow, RENDER)[sync] == theirs
-    assert theirs["run"] == "uv run pkit sync"
+    for step in theirs:
+        assert _steps(workflow, RENDER)[sync] == step
+        assert step["run"] == "uv run pkit sync"
     assert _index(workflow, RENDER, "Install project") < sync
     assert sync < _index(workflow, RENDER, "Whole-repository friction check")
 
