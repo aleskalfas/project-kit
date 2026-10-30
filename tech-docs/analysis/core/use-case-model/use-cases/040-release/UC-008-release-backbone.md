@@ -93,7 +93,7 @@ pkit:
    - the move of the backbone and of each component, with the floors and upper bounds declared for it
    - any warning on a [migration](../../../glossary.md#term-migration--migration)'s folder
    - the new changelog entry
-7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The changeset guard reads the release pull request's diff as only what `pkit release apply` writes, and exempts that diff from the surface check ([UC-003](../030-change/UC-003-declare-changeset.md)).
+7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The changeset guard reads the release pull request's diff as only what `pkit release apply` writes, with any answers those writes need. The guard exempts that diff from the surface check ([UC-003](../030-change/UC-003-declare-changeset.md)).
 8. The maintainer reviews the new versions and the changelog entry.
 9. The maintainer runs `pkit release merge <pr>`. The system checks that the pull request is a release pull request: a `release/` head branch under a `chore(release):` title.
 14. At its entry, before it reads the pull request, `pkit release merge` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md) and [ADR-061 point 6](../../../../../architecture/decisions/ADR-061-hosting-service-acts-in-the-backbone.md#6-the-command-guards-the-changes-it-makes)).
