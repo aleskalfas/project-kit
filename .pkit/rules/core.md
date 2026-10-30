@@ -42,7 +42,7 @@ Operational practices that keep work consistent and recoverable.
 
 ### 9. Conventional commits, one logical unit each (RS-OPS-009)
 
-**Use conventional commits and keep one logical unit per commit.** The branch-naming convention (`<type>/<issue-number>-<slug>`) and any work-tracker-specific requirements for branches (issue-linking, label conventions, etc.) live in the installed work-tracking capability's documentation. See COR-008's "Operational reference" section for the recommended type list and branch-naming examples.
+**Use conventional commits and keep one logical unit per commit.** The branch-naming convention, `<type>/<issue-number>-<slug>`, is COR-008's: see its "Operational reference" section for the recommended type list, the convention and its examples.
 
 ### 10. Surface changes bump the version of the affected component (RS-OPS-010)
 
