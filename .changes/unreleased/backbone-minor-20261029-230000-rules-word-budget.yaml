@@ -1,0 +1,24 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Each rules file a session loads may now have a word budget (COR-069,
+  ADR-077). A loaded rule set gives its loaded file's as `budget` in its front
+  matter, beside `loaded: true`; the backbone's set `OPS` gives core.md's, at
+  its size today. Your own `.pkit/rules/project.md`, kept as a plain file,
+  takes its budget from the new configuration key
+  `rule-sets.plain-file-budget`, which nothing sets for you: without it, the
+  file has no budget. A word is a run of characters none of which is Unicode
+  white space. `pkit validate`'s `rule-sets` member prints one line for each
+  rules file, with its count against its budget, in every project. It fails a
+  file past its budget where its owner can shorten it (`rules-file-over-budget`),
+  so never for core.md in a project that receives it, and fails a component's
+  loaded set without a budget where the set is authored
+  (`loaded-set-without-budget`). It warns of the key where you keep no plain
+  rules file (`plain-file-budget-unused`). The rule-set schema refuses
+  `budget` on an ordinary set. `pkit rule-sets generate` prints each file's
+  count against its budget, and `pkit rule-sets altered` lists each budget a
+  change raises, lowers, adds or removes, the raises first, and gains
+  `budgets` in its JSON. Nothing needs migrating: the key and `budget` are
+  optional.

@@ -2488,7 +2488,8 @@ def friction_since_command(
 @main.group("rule-sets")
 def rule_sets_group() -> None:
     """Rule sets (COR-051): which accepted rules bind on each artefact, and on what a
-    change altered; and the loaded file of a loaded set (COR-068).
+    change altered; and the loaded file of a loaded set (COR-068) and its budget
+    (COR-069).
 
     The reach walk's answer (COR-051 point 7), for a capability's script or a
     migration to read rather than walk routes or judge pins itself (ADR-057
@@ -2615,7 +2616,10 @@ def rule_sets_altered_command(base_ref: str | None, head_rev: str | None, as_jso
     the rules the change brings it under: those that bind on it at the head
     and did not at the base. An artefact the change brings under a rule
     without altering it, by a wider scope, an accepted rule, an updated pin
-    or a typed place, is listed apart (COR-057 point 2). Exit 0
+    or a typed place, is listed apart (COR-057 point 2). Each budget of a
+    rules file the change raises, lowers, adds or removes is listed too, the
+    raises first under a heading of their own: a raise is a person's to
+    authorise (COR-069 point 4). Exit 0
     when answered; 1 when a configuration cannot be read, the base cannot be
     compared or REV names no commit; 2 on a usage error.
     """
@@ -2655,7 +2659,9 @@ def rule_sets_generate_command() -> None:
     (ADR-075 points 2 and 4). The file holds each accepted rule under the
     heading `N. Title (RS-<SET>-NNN)` with its statement, under the set's
     sections, and none of the set's data. Says for each file whether it
-    changed. Writes no other file, and validates, syncs or merges nothing.
+    changed, and its count of words against the set's `budget` (COR-069),
+    with the room left or the words over; a file past its budget is written
+    all the same. Writes no other file, and validates, syncs or merges nothing.
     Refuses, writing nothing, where every loaded set here arrives by sync —
     the next sync brings its file — where a rule-set file cannot be read or a
     set's rules and sections do not join (`pkit validate` names the fix), and
