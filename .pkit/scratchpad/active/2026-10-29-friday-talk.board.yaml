@@ -26,6 +26,8 @@ theme:
     background_inverse: '#393939FF'
     text_inverse: '#FFFFFFFF'
     accent_inverse: '#78A9FFFF'
+    role_addon: '#F1C21BFF'
+    role_addon_bg: '#FCF4D6FF'
 zones:
   boundary_y: -1959
   left_x: -4246
@@ -7386,6 +7388,1258 @@ templates:
         y: 1640
         width: 1440
         height: 48
+  slice_T-addons:
+    note: What an add-on is, drawn for one slide by the slide generator.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 878.0
+    parts:
+      coretag:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 720
+        height: 64
+        color: '@role_code_bg'
+        border_color: '@role_code_bg'
+        border_width: 1
+        ink: '@text_primary'
+      coretagbar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 10
+        height: 64
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      coretagtext:
+        type: text
+        text: 'Core pkit: in every project'
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 32
+        y: 4
+        width: 672
+        height: 56
+      addontag:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 0
+        width: 984
+        height: 64
+        color: '@role_addon_bg'
+        border_color: '@role_addon_bg'
+        border_width: 1
+        ink: '@text_primary'
+      addontagbar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 0
+        width: 10
+        height: 64
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      addontagtext:
+        type: text
+        text: 'An add-on (COR-017): one folder you install'
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 768
+        y: 4
+        width: 936
+        height: 56
+      r0layer:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 88
+        width: 720
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0layertext:
+        type: text
+        text: Decisions
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 116
+        width: 656
+        height: 56
+      r0cell:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 88
+        width: 984
+        height: 112
+        color: '@role_addon_bg'
+        border_color: '@role_addon_bg'
+        border_width: 1
+        ink: '@text_primary'
+      r0cellbar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 88
+        width: 10
+        height: 112
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      r0head:
+        type: text
+        text: Decision records
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 776
+        y: 116
+        width: 700
+        height: 56
+      r0chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-addons-r0.png
+        x: 1508
+        y: 106
+        width: 180
+        height: 76
+      r1layer:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 216
+        width: 720
+        height: 112
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+        border_width: 1
+        ink: '@text_primary'
+      r1layertext:
+        type: text
+        text: Rules · schemas · processes
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 244
+        width: 656
+        height: 56
+      r1cell:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 216
+        width: 984
+        height: 112
+        color: '@role_addon_bg'
+        border_color: '@role_addon_bg'
+        border_width: 1
+        ink: '@text_primary'
+      r1cellbar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 216
+        width: 10
+        height: 112
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      r1head:
+        type: text
+        text: Schemas and processes
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 776
+        y: 244
+        width: 726
+        height: 56
+      r1chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-addons-r1.png
+        x: 1534
+        y: 234
+        width: 154
+        height: 76
+      r2layer:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 344
+        width: 720
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2layertext:
+        type: text
+        text: Skills · agents · permissions
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 32
+        y: 372
+        width: 656
+        height: 56
+      r2cell:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 344
+        width: 984
+        height: 112
+        color: '@role_addon_bg'
+        border_color: '@role_addon_bg'
+        border_width: 1
+        ink: '@text_primary'
+      r2cellbar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 344
+        width: 10
+        height: 112
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      r2head:
+        type: text
+        text: Skills, agents, rules
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 776
+        y: 372
+        width: 462
+        height: 56
+      r2chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-addons-r2.png
+        x: 1270
+        y: 362
+        width: 418
+        height: 76
+      r3layer:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 472
+        width: 720
+        height: 112
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r3layertext:
+        type: text
+        text: Commands and checks
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 32
+        y: 500
+        width: 656
+        height: 56
+      r3cell:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 472
+        width: 984
+        height: 112
+        color: '@role_addon_bg'
+        border_color: '@role_addon_bg'
+        border_width: 1
+        ink: '@text_primary'
+      r3cellbar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 736
+        y: 472
+        width: 10
+        height: 112
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      r3head:
+        type: text
+        text: Commands and checks
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 776
+        y: 500
+        width: 555
+        height: 56
+      r3chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-addons-r3.png
+        x: 1363
+        y: 490
+        width: 325
+        height: 76
+      thead:
+        type: text
+        text: One command wires it, read from a fresh install
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1784
+        y: 0
+        width: 1160
+        height: 56
+      timg:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-addons-term.png
+        x: 1784
+        y: 64
+        width: 1160
+        height: 514
+      whyhead:
+        type: text
+        text: Why pkit has add-ons
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 616
+        width: 2944
+        height: 56
+      w0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 684
+        width: 688
+        height: 194.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w0bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 684
+        width: 688
+        height: 8
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      w0text:
+        type: text
+        text: Core holds only what every project needs. The rest would be weight.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 716
+        width: 624
+        height: 138.0
+      w1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 752
+        y: 684
+        width: 688
+        height: 194.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w1bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 752
+        y: 684
+        width: 688
+        height: 8
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      w1text:
+        type: text
+        text: An add-on gets each upgrade, as core does. A copy would not.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 784
+        y: 716
+        width: 624
+        height: 138.0
+      w2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1504
+        y: 684
+        width: 688
+        height: 194.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w2bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1504
+        y: 684
+        width: 688
+        height: 8
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      w2text:
+        type: text
+        text: 'One folder: its path says who owns a file.'
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1536
+        y: 716
+        width: 624
+        height: 138.0
+      w3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2256
+        y: 684
+        width: 688
+        height: 194.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w3bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2256
+        y: 684
+        width: 688
+        height: 8
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      w3text:
+        type: text
+        text: Made only for a need that kept coming back in real work.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2288
+        y: 716
+        width: 624
+        height: 138.0
+  caption_T-pm:
+    note: One line across the slide, made by the slide generator.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 56
+    parts:
+      text:
+        type: text
+        text: 'Why you hold both ends: only you commit the team to a plan or a merge. The agent does the
+          work in between.'
+        style: '@style.key'
+        ink: '@role_people'
+        x: 0
+        y: 0
+        width: 2944
+        height: 56
+  cards_T-pm:
+    note: A row of toned cards, drawn for one slide by the slide generator.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 260
+    parts:
+      c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 688
+        height: 260
+        color: '@role_addon_bg'
+        border_color: '@role_addon_bg'
+        border_width: 1
+        ink: '@text_primary'
+      c0bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 10
+        height: 260
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      c0head:
+        type: text
+        text: Its skill and agents
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 40
+        y: 28
+        width: 616
+        height: 56
+      c0text:
+        type: text
+        text: The pm skill, the project-manager agent, and pm-reviewer for each pull request.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 40
+        y: 96
+        width: 616
+        height: 140
+      c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 752
+        y: 0
+        width: 688
+        height: 260
+        color: '@role_addon_bg'
+        border_color: '@role_addon_bg'
+        border_width: 1
+        ink: '@text_primary'
+      c1bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 752
+        y: 0
+        width: 10
+        height: 260
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      c1head:
+        type: text
+        text: 88 commands
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 792
+        y: 28
+        width: 616
+        height: 56
+      c1text:
+        type: text
+        text: pkit pm … files, moves and merges, and checks each step first.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 96
+        width: 616
+        height: 140
+      c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1504
+        y: 0
+        width: 688
+        height: 260
+        color: '@role_addon_bg'
+        border_color: '@role_addon_bg'
+        border_width: 1
+        ink: '@text_primary'
+      c2bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1504
+        y: 0
+        width: 10
+        height: 260
+        color: '@role_addon'
+        border_color: '@role_addon'
+        border_width: 1
+        ink: '@text_primary'
+      c2head:
+        type: text
+        text: Its issue workflow
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1544
+        y: 28
+        width: 616
+        height: 56
+      c2text:
+        type: text
+        text: Every move is checked by pkit's engine.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1544
+        y: 96
+        width: 616
+        height: 140
+      c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2256
+        y: 0
+        width: 688
+        height: 260
+        color: '@role_people_bg'
+        border_color: '@role_people_bg'
+        border_width: 1
+        ink: '@text_primary'
+      c3bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2256
+        y: 0
+        width: 10
+        height: 260
+        color: '@role_people'
+        border_color: '@role_people'
+        border_width: 1
+        ink: '@text_primary'
+      c3head:
+        type: text
+        text: What you do
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 2296
+        y: 28
+        width: 616
+        height: 56
+      c3text:
+        type: text
+        text: Give it a GitHub repository, then run pkit pm bootstrap once.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2296
+        y: 96
+        width: 616
+        height: 140
+  wired_T-se:
+    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card
+      per tie.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 824
+    parts:
+      p0head:
+        type: text
+        text: Its agents, after install
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 0
+        width: 901
+        height: 56
+      p0img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-se-p0.png
+        x: 0
+        y: 68
+        width: 901
+        height: 378
+      p1head:
+        type: text
+        text: Its list for the merge
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1021
+        y: 0
+        width: 901
+        height: 56
+      p1img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-se-p1.png
+        x: 1021
+        y: 68
+        width: 901
+        height: 378
+      p1sign:
+        type: text
+        text: +
+        style: '@style.heading'
+        ink: '@role_code'
+        align: center
+        x: 901
+        y: 213
+        width: 120
+        height: 88
+      p2head:
+        type: text
+        text: 'The merge, pull request #2279'
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 2042
+        y: 0
+        width: 901
+        height: 56
+      p2img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-se-p2.png
+        x: 2042
+        y: 68
+        width: 901
+        height: 378
+      p2sign:
+        type: text
+        text: →
+        style: '@style.heading'
+        ink: '@role_code'
+        align: center
+        x: 1922
+        y: 213
+        width: 120
+        height: 88
+      t0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 494
+        width: 688
+        height: 330
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t0head:
+        type: text
+        text: Your conventions
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 40
+        y: 530
+        width: 608
+        height: 64
+      t0text:
+        type: text
+        text: You write them once. The builder reads them first. They stay yours without the add-on.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 40
+        y: 614
+        width: 608
+        height: 180
+      t1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 752
+        y: 494
+        width: 688
+        height: 330
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t1head:
+        type: text
+        text: Code is reviewed
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 792
+        y: 530
+        width: 608
+        height: 64
+      t1text:
+        type: text
+        text: Before this add-on, nothing in pkit reviewed code. A change with two security holes merged.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 614
+        width: 608
+        height: 180
+      t2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1504
+        y: 494
+        width: 688
+        height: 330
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t2head:
+        type: text
+        text: Blocks mean something
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 1544
+        y: 530
+        width: 608
+        height: 64
+      t2text:
+        type: text
+        text: Each reviewer blocks only on a failure it can show. The rest is advice.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1544
+        y: 614
+        width: 608
+        height: 180
+      t3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2256
+        y: 494
+        width: 688
+        height: 330
+        color: '@role_people_bg'
+        border_color: '@role_people'
+        border_width: 2
+        ink: '@text_primary'
+      t3head:
+        type: text
+        text: What you do
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 2296
+        y: 530
+        width: 608
+        height: 64
+      t3text:
+        type: text
+        text: Write your conventions down, and name their file in overlay.yaml.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2296
+        y: 614
+        width: 608
+        height: 180
+  sockets_T-connect:
+    note: Add-ons connecting through a role's slots, drawn for one slide by the slide generator.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 872.0
+    parts:
+      pbox:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 880
+        y: 0
+        width: 800
+        height: 624
+        color: '@role_addon_bg'
+        border_color: '@role_addon'
+        border_width: 4
+        ink: '@text_primary'
+      pname:
+        type: text
+        text: project-management
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 912
+        y: 24
+        width: 736
+        height: 64
+      prole:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-connect-prole.png
+        x: 912
+        y: 100
+        width: 408
+        height: 76
+      s0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 912
+        y: 176
+        width: 736
+        height: 120
+        color: '@background'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      s0chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-connect-s0.png
+        x: 936
+        y: 188
+        width: 134
+        height: 76
+      s0text:
+        type: text
+        text: which agent fixes each document
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 936
+        y: 238
+        width: 688
+        height: 50
+      s1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 912
+        y: 320
+        width: 736
+        height: 120
+        color: '@background'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      s1chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-connect-s1.png
+        x: 936
+        y: 332
+        width: 178
+        height: 76
+      s1text:
+        type: text
+        text: the use cases to plan from
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 936
+        y: 382
+        width: 688
+        height: 50
+      s2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 912
+        y: 464
+        width: 736
+        height: 120
+        color: '@background'
+        border_color: '@role_neutral'
+        border_width: 2
+        ink: '@text_primary'
+      s2chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-connect-s2.png
+        x: 936
+        y: 476
+        width: 178
+        height: 76
+      s2text:
+        type: text
+        text: the docs a change must update
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 936
+        y: 526
+        width: 688
+        height: 50
+      c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 50
+        width: 620
+        height: 230
+        color: '@role_addon_bg'
+        border_color: '@role_addon'
+        border_width: 2
+        ink: '@text_primary'
+      c0name:
+        type: text
+        text: living-docs
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 32
+        y: 70
+        width: 556
+        height: 64
+      c0role:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-connect-c0.png
+        x: 32
+        y: 142
+        width: 322
+        height: 76
+      c0text:
+        type: text
+        text: docs for each reader
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 202
+        width: 556
+        height: 50
+      c0a0:
+        type: arrow
+        points:
+        - - 628
+          - 145
+        - - 904
+          - 236
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      c0a1:
+        type: arrow
+        points:
+        - - 628
+          - 185
+        - - 904
+          - 524
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 344
+        width: 620
+        height: 230
+        color: '@role_addon_bg'
+        border_color: '@role_addon'
+        border_width: 2
+        ink: '@text_primary'
+      c1name:
+        type: text
+        text: software-analysis
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 32
+        y: 364
+        width: 556
+        height: 64
+      c1role:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-connect-c1.png
+        x: 32
+        y: 436
+        width: 250
+        height: 76
+      c1text:
+        type: text
+        text: what the software must do
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 496
+        width: 556
+        height: 50
+      c1a0:
+        type: arrow
+        points:
+        - - 628
+          - 439
+        - - 904
+          - 236
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      c1a1:
+        type: arrow
+        points:
+        - - 628
+          - 479
+        - - 904
+          - 380
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      thead:
+        type: text
+        text: What pkit status shows, in project-kit
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1744
+        y: 0
+        width: 1200
+        height: 56
+      timg:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-connect-term.png
+        x: 1744
+        y: 64
+        width: 1200
+        height: 446
+      whyhead:
+        type: text
+        text: Why pkit connects add-ons this way
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 656
+        width: 2944
+        height: 56
+      w0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 724
+        width: 939
+        height: 148.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w0bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 724
+        width: 939
+        height: 8
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      w0text:
+        type: text
+        text: Swap an add-on for one in the same role. The rest stays as it is.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 756
+        width: 875
+        height: 92.0
+      w1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1003
+        y: 724
+        width: 939
+        height: 148.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w1bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1003
+        y: 724
+        width: 939
+        height: 8
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      w1text:
+        type: text
+        text: Install only what you need. An empty slot does no harm.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1035
+        y: 756
+        width: 875
+        height: 92.0
+      w2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2006
+        y: 724
+        width: 939
+        height: 148.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w2bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2006
+        y: 724
+        width: 939
+        height: 8
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      w2text:
+        type: text
+        text: pkit status draws the wiring, and pkit validate checks it.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2038
+        y: 756
+        width: 875
+        height: 92.0
 instances:
   L01:
     template: slide
@@ -7846,7 +9100,7 @@ instances:
     lead: Your AI agent works fast, and forgets everything your project decided.
     rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
     n: 1
-    total: 22
+    total: 24
     override:
       rests:
         text: 'The question: how do you make it work your project''s way, without a heavy framework?'
@@ -8211,7 +9465,7 @@ instances:
     lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
     rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
     n: 2
-    total: 22
+    total: 24
     override:
       rests:
         text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
@@ -8582,7 +9836,7 @@ instances:
     rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
       later.
     n: 3
-    total: 22
+    total: 24
     override:
       rests:
         text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
@@ -8689,7 +9943,7 @@ instances:
       records, issues or docs.
     rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
@@ -8752,7 +10006,7 @@ instances:
     rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
       one'
     n: 5
-    total: 22
+    total: 24
     override:
       rests:
         text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
@@ -8976,7 +10230,7 @@ instances:
     rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
       merged with its code.'
     n: 6
-    total: 22
+    total: 24
     override:
       rests:
         text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
@@ -9147,7 +10401,7 @@ instances:
     rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
       generated from the rules.'
     n: 7
-    total: 22
+    total: 24
     override:
       rests:
         text: 'This week: each rule got a permanent id and a status. The file every session loads is now
@@ -9314,7 +10568,7 @@ instances:
     rests: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit
       validate checks them all.'
     n: 8
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit
@@ -9368,7 +10622,7 @@ instances:
       wrote no engine of its own.
     rests: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
     n: 9
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
@@ -9460,7 +10714,7 @@ instances:
       exact part.
     rests: 'In project-kit: pkit ships 11 skills, each with its command.'
     n: 10
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In project-kit: pkit ships 11 skills, each with its command.'
@@ -9553,7 +10807,7 @@ instances:
     rests: Every session holds only each skill's short description. The steps load when the task comes
       up.
     n: 11
-    total: 22
+    total: 24
     override:
       rests:
         text: Every session holds only each skill's short description. The steps load when the task comes
@@ -9626,7 +10880,7 @@ instances:
     rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
       it follows.'
     n: 12
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
@@ -9718,7 +10972,7 @@ instances:
     lead: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
     rests: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
     n: 13
-    total: 22
+    total: 24
     override:
       rests:
         text: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
@@ -9782,7 +11036,7 @@ instances:
     rests: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
       17 skills and agents.'
     n: 14
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
@@ -9877,7 +11131,7 @@ instances:
     rests: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
       which validate the issue first.'
     n: 15
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
@@ -9971,7 +11225,7 @@ instances:
     rests: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37
       routine ones allowed.'
     n: 16
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused,
@@ -10078,7 +11332,7 @@ instances:
     rests: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
       its own: 16 in project-kit.'
     n: 17
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
@@ -10169,7 +11423,7 @@ instances:
     rests: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by the
       project.'
     n: 18
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by
@@ -10272,7 +11526,7 @@ instances:
     rests: 'In project-kit today: 21 answers wait as "fixed later". pkit friction debt lists each, with
       its reason.'
     n: 19
-    total: 22
+    total: 24
     override:
       rests:
         text: 'In project-kit today: 21 answers wait as "fixed later". pkit friction debt lists each,
@@ -10344,55 +11598,141 @@ instances:
       eyebrow: 93507d00-b5d8-459f-920a-71d2a95eaa2b
       title: 0798a5b4-2824-4836-9b9a-71a5a1cf5489
       summary: cea9317a-6cc7-44f4-b395-6d62a7f4e07e
-  T-pm:
+  T-addons:
     template: slide
-    title: project-management
-    lead: You talk to one agent; it plans the work and runs builders in parallel.
-    rests: 'This week, in one evening: six builders, four pull requests merged'
+    title: Why some parts of pkit are add-ons
+    lead: Core pkit holds what every project needs. The rest comes as add-ons, called capabilities, that
+      you choose.
+    rests: pkit 1.149 ships 4 add-ons, and 3 more are on their way to 2.0. In a fresh install, one took
+      a single command and 8 seconds.
     n: 20
-    total: 22
+    total: 24
     override:
       rests:
-        text: 'This week, in one evening: six builders, four pull requests merged'
+        text: pkit 1.149 ships 4 add-ons, and 3 more are on their way to 2.0. In a fresh install, one
+          took a single command and 8 seconds.
     mural_ids:
-      root: 11f7dc20-0568-4b04-a9c9-ab6cc69f9fbc
-      bg: eb32dd62-a7cf-4a22-9408-c5ce3c473670
-      title: b8ac802b-3d0b-4892-946d-aec18f362b21
-      lead: 06381246-daef-4d18-8a49-a5b8179f30cd
-      rests: 2af74160-ac1f-4e2e-8324-9beb623bca97
-      num: 44bef21f-c643-44ff-991e-7585699270a9
+      root: 503f0eed-7550-4278-af54-ee3ac0fe8e74
+      bg: 139fdfca-1697-44b0-9a7f-aa190a4f7dd2
+      title: 736892c5-18dd-4ec4-aa84-b40bf164fb79
+      lead: 7f7035ac-de43-4f46-a49e-130e2eb2800a
+      rests: e8580299-c894-4382-a897-a6bdb53f632d
+      num: 7be4ef23-74c6-4012-8577-2374d027494e
+  T-addons-slice:
+    template: slice_T-addons
+    parent: T-addons
+    x: 128
+    y: 576
+    mural_ids:
+      root: 5f1d035d-f053-42b1-a2e5-d43daf321371
+      coretag: ebd4440b-2061-4e54-8d48-47e95fc22c79
+      coretagbar: 7365e502-7192-4a73-a86b-f9bae2f00bed
+      addontag: 3d5618b8-1aaf-46c0-8d33-aaf4df19463f
+      addontagbar: 857d4bfb-a7ba-4aa7-9211-9bc26bc5a36c
+      r0layer: 48a6c1f5-3b8d-4e55-a4b9-6588c96ff200
+      r0cell: 6857d972-1d0c-4225-9570-d9093c61e357
+      r0cellbar: 37bbc272-7ad0-4bd5-bab9-2182d91243ce
+      r1layer: c0e6bf6a-eb13-4867-9a1d-5d49ce195648
+      r1cell: b0382f2c-d472-432c-bd60-b1331b5245e8
+      r1cellbar: 4a751655-bbe4-4474-b979-77d2f5b602da
+      r2layer: 8ebc0dd1-03e2-4306-86d2-ee58052bc116
+      r2cell: e601567a-b724-4eff-bcbe-c9ed439ae5f0
+      r2cellbar: aff63d66-c81d-47fc-a936-aa01571a49be
+      r3layer: 3fdbf33c-d2c9-4836-82f3-d3b3e588eeb6
+      r3cell: 672e63bb-907d-4f0b-b43e-a8f89a67280e
+      r3cellbar: 235b6d58-c5d1-47ab-bd8f-9df1b23b53b6
+      w0box: 8c232145-b9fd-46e5-8549-a92eda0a91ac
+      w0bar: 61f4ae10-9021-442e-a814-16da23755f03
+      w1box: 8eda554b-f75a-4960-b6b9-6cc3a9b481b2
+      w1bar: 7536ee29-0211-4bf6-9c53-45fbe3d229b6
+      w2box: ad063bf0-8edb-45b0-954a-15a23a778ab9
+      w2bar: 3a05697e-29f6-4b9c-9e83-defce58b7e30
+      w3box: a3adbe36-6895-4d09-8d39-a3245246078a
+      w3bar: 9cf0b565-4a5e-49b4-8e41-2e4867287b84
+      coretagtext: b72076e3-837c-49b5-b0a1-0e5e0fcffc5c
+      addontagtext: 91cc41fe-8442-4712-9392-86a3fbfbdf9b
+      r0layertext: 11d9b276-8abe-4dd1-b027-295d38d391b5
+      r0head: 22cbf375-8796-4aa2-9f53-307600059e8e
+      r1layertext: a7004832-3368-4e35-ae56-7ecf232ceefb
+      r1head: cbebfe86-7963-4860-b8f2-a8390ab7d3a2
+      r2layertext: 8ea42f14-5d2a-490a-b866-15f0ab4664b3
+      r2head: 5eaa7072-1954-4aa3-b158-4a7bcd98cc4f
+      r3layertext: 406ec0cd-87f0-49c7-ac34-aa6c282d8be5
+      r3head: a023d05d-8eab-4674-9597-caa617646cbc
+      thead: df033883-1682-4a98-8975-dd09aee518a4
+      whyhead: 51d9bdd6-fe6a-427e-9862-20d6a8ea15ad
+      w0text: 3e996804-e537-4cb2-9cfe-79f878ddd53e
+      w1text: d81ba20c-62c3-4e27-9e0c-26b8a4c42097
+      w2text: 94a66fe5-9d49-443c-8be5-933cbc6c20d2
+      w3text: 058b6bbd-e6bf-4516-a7ec-ac779b18f427
+      r0chip: 073b6680-3236-412f-934e-fbd9262e3256
+      r1chip: ee6b03ac-3934-4aab-abb9-955b86e0b0a6
+      r2chip: 65b3179f-5386-46ac-b95a-85d3b247f381
+      r3chip: f1123bb9-ae40-494a-b780-8c3fb1974e48
+      timg: faeaaffa-86cb-4b4c-856c-cf796a43280c
+  T-addons-limit:
+    template: notice
+    parent: T-addons
+    text: 'Limit: Some add-ons need another first. software-engineering will not install without project-management.'
+    x: 128
+    y: 1502.0
+    mural_ids:
+      root: 981141fa-ec74-4ca9-b1cf-2d222d5fe121
+      bg: 50930c2f-3336-443d-88b2-36e561c3b2eb
+      bar: 3d2275e5-94f2-4747-b041-b4eac2ad7fcf
+      text: 9b1f20a8-41eb-4b0e-b4d7-2c7638aab933
+  T-pm:
+    template: slide
+    title: What project-management adds
+    lead: 'One agent that files the work, plans it and starts builders in parallel. You decide: you approve
+      the plan, and each merge.'
+    rests: 'In project-kit on 29 October: 22 pull requests merged, up to 7 open at once, each with its
+      reviewers'' verdicts.'
+    n: 21
+    total: 24
+    override:
+      rests:
+        text: 'In project-kit on 29 October: 22 pull requests merged, up to 7 open at once, each with
+          its reviewers'' verdicts.'
+    mural_ids:
+      root: b010c37c-14ee-4d6f-91ad-1c0a4661a5ae
+      bg: 093844f9-ef8a-45c3-b81f-31e1df1bcd9b
+      title: 97157737-c2fa-4893-89b0-0923898bcf94
+      lead: ecdf2848-2169-42a8-9ec9-7efc41cd2ad8
+      rests: 2bd3e10b-e04b-4be7-83d5-0a785ab55a39
+      num: 158f8144-bec9-42d2-bc93-f3ac248ccfc4
   T-pm-s1:
     template: stage
     parent: T-pm
     role: people
     head: You
-    text: Describe the work, approve the plan, say yes to each merge.
+    text: Say what you want. Approve the plan once.
     x: 128
     y: 576
     override:
       root:
-        width: 664
+        width: 512
         height: 448
       box:
-        width: 664
+        width: 512
         height: 448
       head:
-        width: 560
+        width: 408
         height: 64
       text:
         y: 100
-        width: 600
+        width: 448
         height: 311
     mural_ids:
-      root: 1ff91108-8f3e-4e88-bfeb-d4110434c327
-      box: 08326fd6-082d-4f22-b60f-d4ee9e3ce03a
-      dot: 57655807-1cfc-490b-9c02-5312adde5f11
-      head: 451acbbf-8853-42b5-99fc-d4ef68815dc9
-      text: 816edb60-1ea9-4948-8605-9e5f949dc2c0
+      root: 2d35333a-1789-4343-bc07-efbdd4c2f1a3
+      box: 6bfba03b-1c13-4ab1-bbbe-ec034e06910e
+      dot: b9188d5c-2222-46a5-8338-af15fab2e54b
+      head: fbaf1262-e5a0-496b-9af8-2561d28ac960
+      text: e7b1d5c6-38c9-4415-bc23-5508ba273d3a
   T-pm-l1:
     template: link
     parent: T-pm
-    x: 792
+    x: 640
     y: 576
     x1: 16
     y1: 224.0
@@ -10404,40 +11744,40 @@ instances:
         width: 96
         height: 448
     mural_ids:
-      root: 1f3e62dc-ce52-44f8-aae9-340893ddd6b8
-      arrow: f1635522-4dcc-4f09-b6eb-198ff3c0fc59
+      root: b69f323d-f194-44e1-b7ad-f8baacf36b4f
+      arrow: c358a500-8e86-4399-89e8-6a6473e711e6
   T-pm-s2:
     template: stage
     parent: T-pm
-    role: agents
-    head: Project-manager agent
-    text: Files and plans the work, then starts one builder per task, each in its own copy of the repository.
-    x: 888
+    role: addon
+    head: project-manager
+    text: Files the issues, plans the Tasks, and starts a builder for each.
+    x: 736
     y: 576
     override:
       root:
-        width: 664
+        width: 512
         height: 448
       box:
-        width: 664
+        width: 512
         height: 448
       head:
-        width: 560
+        width: 408
         height: 64
       text:
         y: 100
-        width: 600
+        width: 448
         height: 311
     mural_ids:
-      root: f59c1408-8ad3-40e7-9bfd-968be69ea339
-      box: 0fdfea51-0c5e-463f-ae19-c0d1f404e0e1
-      dot: ce4264f7-1135-4aab-abde-c7f260bb5cc6
-      head: e1eba29e-c3a1-402a-8f05-3eaf25553151
-      text: ce411ae8-743a-4de8-a5ff-5d9a36efad4f
+      root: 11b6c4bc-e639-4b43-926c-688e8c6477f2
+      box: 65813304-ca6e-431d-be4d-3b44669057f6
+      dot: 242c8805-402f-425d-9251-4a9659914f29
+      head: ceec7dff-e984-46e5-a29f-25ea114554fd
+      text: a15b6984-8c13-4a26-9afb-4f097dbc5fbc
   T-pm-l2:
     template: link
     parent: T-pm
-    x: 1552
+    x: 1248
     y: 576
     x1: 16
     y1: 48.0
@@ -10449,12 +11789,12 @@ instances:
         width: 96
         height: 96
     mural_ids:
-      root: 81be4752-1719-4e49-951a-c668a23e2314
-      arrow: 4a28a3ab-1fce-4adf-8436-d150d50e4d15
+      root: 4abc94f3-310a-483d-88cd-fd51f966d1c6
+      arrow: 2e9afad1-38dd-4e4a-b313-c1bd73e32745
   T-pm-l3:
     template: link
     parent: T-pm
-    x: 1552
+    x: 1248
     y: 752
     x1: 16
     y1: 48.0
@@ -10466,12 +11806,12 @@ instances:
         width: 96
         height: 96
     mural_ids:
-      root: 5860ae45-0210-45b4-aa5b-52fa0966ca6e
-      arrow: e88171bc-66ab-4a5d-8772-5abd88280687
+      root: 138fc44a-9b70-4833-b76c-43d9547bf6ec
+      arrow: 76d4f612-38e2-4ae8-8f80-80a0c2bff3d2
   T-pm-l4:
     template: link
     parent: T-pm
-    x: 1552
+    x: 1248
     y: 928
     x1: 16
     y1: 48.0
@@ -10483,69 +11823,69 @@ instances:
         width: 96
         height: 96
     mural_ids:
-      root: 6a0511be-cee1-42ca-ad51-e1a0cf9f15c7
-      arrow: 796bae55-69cd-4d1d-99e0-07c69b8eeb9d
+      root: 1c9bbf2f-c3ff-4e60-8d02-779d6c5b83ac
+      arrow: efbe6cd8-a16a-4304-ae44-7fbb695fc225
   T-pm-f1:
     template: artefact
     parent: T-pm
     icon: agents
-    text: 'Builder: task A'
-    x: 1648
+    text: 'Builder: Task A'
+    x: 1344
     y: 576
     override:
       root:
-        width: 664
+        width: 512
       box:
-        width: 664
+        width: 512
       text:
-        width: 552
+        width: 400
     mural_ids:
-      root: cb1a3b11-dfd4-4416-8d08-24e4f3b9fb8f
-      box: ad181653-19e3-403d-8dbb-8111d6cbd6a1
-      text: ec0cb3de-b7c9-4d92-a26c-9f8b2e665c85
-      icon: a9f2a301-7bf5-4566-ae16-955d68e9cced
+      root: 58b988d0-5101-4869-a095-82d8386c1f3a
+      box: f8a5cbce-67a3-4fca-b7ab-842207cbea2f
+      text: b651adbe-1340-4318-bebb-9fe57e841090
+      icon: 33e233bd-16c0-499a-a3a8-fa9f4b01b56d
   T-pm-f2:
     template: artefact
     parent: T-pm
     icon: agents
-    text: 'Builder: task B'
-    x: 1648
+    text: 'Builder: Task B'
+    x: 1344
     y: 752
     override:
       root:
-        width: 664
+        width: 512
       box:
-        width: 664
+        width: 512
       text:
-        width: 552
+        width: 400
     mural_ids:
-      root: 23cfb9ca-c424-470e-bb34-f691417729a2
-      box: b9bc2fa7-6547-4142-8d85-1bf79b874a80
-      text: f2770d95-cb86-4111-973b-7abe3df65e42
-      icon: d19876cb-5f12-4c41-b9d7-14f51ed6e5b6
+      root: 7bedcbb7-c1c4-425c-b247-c8415e5a9218
+      box: 4bb33045-b3e2-4f94-a95b-fb219a712799
+      text: f0885b9e-ff5d-4f8f-ae75-7217aa8c7274
+      icon: eeeb7a6c-babb-4707-8a87-b3983cfe7f1d
   T-pm-f3:
     template: artefact
     parent: T-pm
     icon: agents
-    text: 'Builder: task C'
-    x: 1648
+    text: 'Builder: Task C'
+    x: 1344
     y: 928
     override:
       root:
-        width: 664
+        width: 512
       box:
-        width: 664
+        width: 512
       text:
-        width: 552
+        width: 400
     mural_ids:
-      root: de0c51f3-90b7-493b-b84f-478a33c50f79
-      box: 5b8638b1-dd69-4174-8dbf-7ad5f80dca95
-      text: 1adb8ccd-441a-495e-a4ad-3e1e85b8c6c4
-      icon: 9c23b67f-e14f-4a22-9dc8-0cfe9e94a116
+      root: ea412582-bc1a-4173-b920-52db2d748c90
+      box: f9e8b7f8-098d-4d96-ab0d-05ff2b36799e
+      text: 3f019eab-4c8a-4e63-b27a-746810c7e744
+      icon: 9a4ee6eb-14c1-44af-860e-f2e1442493f6
   T-pm-l5:
     template: link
     parent: T-pm
-    x: 2312
+    x: 1856
     y: 576
     x1: 16
     y1: 48.0
@@ -10557,12 +11897,12 @@ instances:
         width: 96
         height: 96
     mural_ids:
-      root: 77fb8e62-8f34-469a-b07d-996ef78d7a93
-      arrow: 097ec529-cf23-4e39-854e-ba5cbb745fd8
+      root: b1ab9259-a2e8-45f3-b065-64d36729941c
+      arrow: d358363c-e69f-4e02-bcfd-0d64c1be399c
   T-pm-l6:
     template: link
     parent: T-pm
-    x: 2312
+    x: 1856
     y: 752
     x1: 16
     y1: 48.0
@@ -10574,12 +11914,12 @@ instances:
         width: 96
         height: 96
     mural_ids:
-      root: 4254524c-240d-4514-8d31-aca1981a185f
-      arrow: 7c04aa42-dfac-4918-bdbe-1499b4d10c50
+      root: 12631898-ea96-4b4f-a600-40cd7352dc6d
+      arrow: 4264cef0-63e8-42ce-8582-0ce156d10804
   T-pm-l7:
     template: link
     parent: T-pm
-    x: 2312
+    x: 1856
     y: 928
     x1: 16
     y1: 48.0
@@ -10591,265 +11931,272 @@ instances:
         width: 96
         height: 96
     mural_ids:
-      root: f866ef72-181a-4495-ade8-3d949944a320
-      arrow: ab127fec-bdd6-478e-a582-953e80910e1b
+      root: 9bd6eaf1-4175-41e2-9f13-94f585291390
+      arrow: 39af93b3-b6e2-4a6f-ab45-059c8378d2ad
   T-pm-s3:
     template: stage
     parent: T-pm
-    role: checks
-    head: Reviewers, then merge
-    text: Reviewers check each result; on your yes, the agent merges it.
-    x: 2408
+    role: addon
+    head: Reviewers
+    text: Each checks the change. All must approve.
+    x: 1952
     y: 576
     override:
       root:
-        width: 664
+        width: 512
         height: 448
       box:
-        width: 664
+        width: 512
         height: 448
       head:
-        width: 560
+        width: 408
         height: 64
       text:
         y: 100
-        width: 600
+        width: 448
         height: 311
     mural_ids:
-      root: 886d2407-5c93-4594-a822-50c8e0ae062a
-      box: d768a604-d06e-4e8c-b5e6-4c342efdf820
-      dot: 0e5c1aaf-a1be-41dc-9dcd-85e1d307e7d1
-      head: 45bd0fd4-0776-4c36-bca3-2d7b70498d4f
-      text: c975cda9-0a15-43f4-9bae-b926c5774fbb
-  T-pm-limit:
-    template: notice
+      root: ceec87cf-e86c-40da-8598-e87bdb6d3c09
+      box: 248591f0-7e25-4dd3-9bdf-c92fc0d82ced
+      dot: 6eb2ba8c-a667-4cee-a4ca-1da67647f351
+      head: cb41fde3-0e13-46eb-a7f6-ecf999165b23
+      text: bcc814c2-0f2a-4a49-96e3-98278da39832
+  T-pm-l8:
+    template: link
     parent: T-pm
-    text: 'Limit: GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not
-      the manual.'
+    x: 2464
+    y: 576
+    x1: 16
+    y1: 224.0
+    x2: 80
+    y2: 224.0
+    tone: text_secondary
+    override:
+      root:
+        width: 96
+        height: 448
+    mural_ids:
+      root: 0f585651-95a1-4a30-9d7b-b42820a0c6b2
+      arrow: 5bb55e6a-b51a-4e9f-baba-e0af28c5b7c2
+  T-pm-s4:
+    template: stage
+    parent: T-pm
+    role: people
+    head: You
+    text: Say yes. Then the agent merges.
+    x: 2560
+    y: 576
+    override:
+      root:
+        width: 512
+        height: 448
+      box:
+        width: 512
+        height: 448
+      head:
+        width: 408
+        height: 64
+      text:
+        y: 100
+        width: 448
+        height: 311
+    mural_ids:
+      root: c2390529-4ebc-45ca-89d5-8c5f110b265d
+      box: 95cd5f04-74c7-41b6-a235-6d2a531cd2da
+      dot: 9c0d5140-4274-43e0-a090-71fa1c83abe8
+      head: 71952cb4-d6c4-4bcf-92ea-bead4af2b9c0
+      text: 8fc3b971-1730-4f2e-9ddd-91b12f29281f
+  T-pm-caption:
+    template: caption_T-pm
+    parent: T-pm
     x: 128
     y: 1072
     mural_ids:
-      root: 9da8fe1a-c517-46a8-9aca-eb8340e898bb
-      bg: 44f2ab90-759c-4b57-91f2-8727c9c39999
-      bar: c6b29b0a-8169-4272-bb7e-ed1e832bf029
-      text: 4a95d150-d7ad-4770-87b0-c4119ce19917
+      root: 6b743641-a32f-4f08-93df-b0d46c4cc7f9
+      text: 0f46f722-f094-4ba0-88d1-b0be80048a5b
+  T-pm-tcards:
+    template: cards_T-pm
+    parent: T-pm
+    x: 128
+    y: 1176
+    mural_ids:
+      root: 441d9347-3174-49bd-a547-6eb730027196
+      c0box: 543a5df3-99b1-46f9-a08b-99a453796e4c
+      c0bar: d2afdf5b-dc5f-42ce-8965-bfe72ee24950
+      c1box: 2da7bdce-1479-4b01-8e3b-a263956e78ef
+      c1bar: 99014a9e-e0ea-4fc5-adee-8c6757a0b14c
+      c2box: f359dc73-6382-433a-96cf-f6502cceffd8
+      c2bar: 74f0afe1-76fd-4692-9a1e-44e2410d8fba
+      c3box: 3d809c73-a98d-491d-8efc-ca470c4c1a3a
+      c3bar: e8ab7502-20ef-4781-a2a6-78c75018ab4e
+      c0head: 4a49dff2-5c6e-4dcf-bb50-cd4c3060b0dd
+      c0text: 1c0074be-0955-4ae2-bb8f-ce4170920643
+      c1head: a857e214-ff18-401e-9b51-29321173a33e
+      c1text: 6d99b706-ef4f-404d-9cb5-6ad73bb33f91
+      c2head: ef355cc6-a812-45ed-8c97-9bf1736fa09c
+      c2text: 210d8596-c246-4b92-8819-0a14cb0c9612
+      c3head: 555b1fe5-3a7c-4d25-8226-846a34127728
+      c3text: 2e6f0d43-bf90-43a0-81ca-206b62de5bfb
+  T-pm-limit:
+    template: notice
+    parent: T-pm
+    text: 'Limit: GitHub only, and large: 63 decision records and 88 commands. You meet it through the
+      agent, not the manual.'
+    x: 128
+    y: 1484
+    mural_ids:
+      root: aa8ce159-7bf7-4436-b584-a130126a37f4
+      bg: bfa1b370-7359-405b-b8d8-20e498bd04f4
+      bar: 0983f8bc-c94f-473e-b67c-23dc21dbb0c6
+      text: 9eb16fd7-e9cb-473b-b45c-ec72ef47ab11
   T-se:
     template: slide
-    title: software-engineering
-    lead: The builder follows your conventions; its three reviewers join every code merge with nothing
-      to wire.
-    rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
-      before merge'
-    n: 21
-    total: 22
+    title: What software-engineering adds
+    lead: A builder that follows your conventions, and three reviewers of its code, on every merge that
+      changes code.
+    rests: 'In project-kit on 29 October: of 22 merges, the 21 that changed code each had the code, security
+      and docs reviewers.'
+    n: 22
+    total: 24
     override:
       rests:
-        text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
-          fixed before merge'
+        text: 'In project-kit on 29 October: of 22 merges, the 21 that changed code each had the code,
+          security and docs reviewers.'
     mural_ids:
-      root: 9362117e-b3e1-4a9c-bafa-c67436bcb379
-      bg: f6fe6e18-f941-4b90-b997-f37d9ded0329
-      title: f2ded814-a170-4835-ae32-538ad5532880
-      lead: 9f23aeb7-462f-49ef-b1b0-2a648cac4af8
-      rests: c9dbb299-0614-4fdb-adc4-a3587ed47f70
-      num: f7d24157-d492-4feb-ac8e-3c10b4415f3a
-  T-se-problem:
-    template: callout
+      root: 073b1cfd-8858-47c9-b256-60e81eaf9c7e
+      bg: eb98daf4-faba-4150-b1dc-a8a093ddbf1f
+      title: 3945ba38-ef01-4061-ac01-313729be6edb
+      lead: e69ab7af-fd22-4596-bf53-9c09fec389cf
+      rests: 118be204-3efa-4c8c-9406-11e31b204e0f
+      num: c88df022-7598-48eb-a96e-185150f7779d
+  T-se-wired:
+    template: wired_T-se
     parent: T-se
-    title: The problem
-    body: An AI writes in its default style, and the code is merged on a glance, or reviewed by its author.
     x: 128
     y: 576
     mural_ids:
-      root: e13f78e1-3f55-4594-aa97-abb35efbc702
-      bg: 78496b91-fe77-4b4e-9efe-2d3084f1d618
-      bar: ae09092f-1346-49d7-b8ff-f36f7b4e48ec
-      title: 231084c2-8235-4a70-91b5-071893ed8e7e
-      body: f8fe861c-7509-4560-be46-b0e69ead9d8f
-  T-se-s1:
-    template: stage
-    parent: T-se
-    role: code
-    head: software-engineering
-    text: Brings the builder and three reviewers.
-    x: 128
-    y: 800
-    override:
-      root:
-        width: 917
-        height: 272
-      box:
-        width: 917
-        height: 272
-      head:
-        width: 813
-        height: 64
-      text:
-        y: 100
-        width: 853
-        height: 135
-    mural_ids:
-      root: 8ad8c033-9920-43a3-b616-6078f7f28acc
-      box: 1a8b6866-1be9-45ec-8b1c-a44864812c30
-      dot: 626f53d3-7a9e-4939-8fda-ac597d061f14
-      head: 0e2f3ee0-d5bf-4be1-a2b5-41fc11b99e4e
-      text: c42a26d7-684d-4877-a0f8-8a650d16c6cf
-  T-se-l1:
-    template: link
-    parent: T-se
-    x: 1045
-    y: 800
-    x1: 16
-    y1: 136.0
-    x2: 80
-    y2: 136.0
-    tone: text_secondary
-    override:
-      root:
-        width: 96
-        height: 272
-    mural_ids:
-      root: 239e0c1d-a1de-41d3-a0fb-97a57e116b54
-      arrow: 894d9559-8f62-425f-b7cb-0a48535d131d
-  T-se-s2:
-    template: stage
-    parent: T-se
-    role: neutral
-    head: A slot
-    text: '"Which reviewers a merge needs": software-engineering fills it.'
-    x: 1141
-    y: 800
-    override:
-      root:
-        width: 917
-        height: 272
-      box:
-        width: 917
-        height: 272
-      head:
-        width: 813
-        height: 64
-      text:
-        y: 100
-        width: 853
-        height: 135
-    mural_ids:
-      root: 1f77d3c0-1e5f-4e5d-8004-00c5f2009467
-      box: a91034d9-3480-43c0-bd51-c5554d097300
-      dot: 2ec9309b-f431-4151-b6ad-6b3f5a205070
-      head: 55343b2e-f347-4f46-acfb-a273737c3dd9
-      text: ab06af8e-d394-4cf2-b986-6755698c6474
-  T-se-l2:
-    template: link
-    parent: T-se
-    x: 2059
-    y: 800
-    x1: 16
-    y1: 136.0
-    x2: 80
-    y2: 136.0
-    tone: text_secondary
-    override:
-      root:
-        width: 96
-        height: 272
-    mural_ids:
-      root: c7fd6743-9e1b-48f0-9214-0d19abf914eb
-      arrow: 10e6ecda-722c-437f-8ab9-ad1066392d3f
-  T-se-s3:
-    template: stage
-    parent: T-se
-    role: agents
-    head: project-management
-    text: Requires them on every code change, without naming who.
-    x: 2155
-    y: 800
-    override:
-      root:
-        width: 917
-        height: 272
-      box:
-        width: 917
-        height: 272
-      head:
-        width: 813
-        height: 64
-      text:
-        y: 100
-        width: 853
-        height: 135
-    mural_ids:
-      root: 7b306a45-71ec-4b4f-b998-d0003a6bb7fe
-      box: bbe9d1f7-dd09-4009-addf-d5af7c384bd6
-      dot: 52be9cf6-062b-4a04-a266-287aa509cbc2
-      head: 837e2ace-5879-4f7e-a873-14eafbf767b4
-      text: 6bb0d2d5-3c57-43a4-8da7-41d413152dae
-  T-se-d1:
-    template: step
-    parent: T-se
-    ident: '1'
-    text: The builder reads your conventions first, then follows them
-    x: 128
-    y: 1120
-    override:
-      root:
-        width: 1440
-      bg:
-        width: 1440
-      text:
-        width: 1376
-    mural_ids:
-      root: 31349d16-78be-48df-819c-3b83b60c30cf
-      bg: 71e6a8c9-4d58-47a6-a4cc-23fef8901733
-      tag: 86859fa7-2939-402f-b90d-047c9220c1b9
-      text: 489c4f36-b454-43cf-aa1c-1117808aa89f
-  T-se-d2:
-    template: step
-    parent: T-se
-    ident: '2'
-    text: 'Code, security, docs reviewers: each blocks only on what it can prove'
-    x: 1632
-    y: 1120
-    override:
-      root:
-        width: 1440
-      bg:
-        width: 1440
-      text:
-        width: 1376
-    mural_ids:
-      root: 93e7d61c-1e17-4d64-bb62-a71a4f985409
-      bg: 2667c04f-0b62-4d43-8760-7e5622175780
-      tag: d043db7f-ecd2-4971-af3e-5b9abc152944
-      text: bdf06f14-3da9-4af6-aa74-37a94d45fbaf
+      root: 8760c5fb-306f-4284-a615-84bea70fa169
+      t0box: c16f6fb0-0c21-4f88-b473-f2142795ea47
+      t1box: 3a1aa95a-4bbe-4664-b612-18bf27826cd0
+      t2box: 27c78f7d-1e1f-47f8-bcf5-6e32a395b8a3
+      t3box: f6f9e2a6-e75d-4cbc-88d0-ff88cee1d542
+      p0head: 784ba102-5765-41d3-8a72-33236a35cb44
+      p1head: a76ef723-07e1-4c9b-8e83-887034b721c0
+      p1sign: 6a38660b-309f-4f3b-8a57-1486d1205006
+      p2head: 43fed194-cd0a-4e51-beef-e21257620b12
+      p2sign: 7783ce3e-e976-4eba-9a91-c17ce6163d9b
+      t0head: 3442a54a-7e46-4f06-9b10-621fe9ab2343
+      t0text: 7e1b6aab-9ac7-48d1-936d-3cd079698648
+      t1head: 86a394e5-2c60-41aa-9024-64a8d7ba60c9
+      t1text: 4025f275-ae34-4827-ade8-ec81ddd23e75
+      t2head: 47ce39af-35a9-429e-83d2-8f8d51bcebf6
+      t2text: a2e2d127-4fd0-4455-95c8-a1dcbe3ed770
+      t3head: 483b7216-57b5-4019-993d-b53962883eee
+      t3text: b8d8a059-444a-418d-b74c-655d200996c0
+      p0img: 8da9a652-5bd3-4bb6-ba5c-ec264bfd3067
+      p1img: 88faf601-805c-4ae9-a23b-171eb96e8701
+      p2img: f54d7f8f-efc8-43d0-b081-f7650e53a695
   T-se-limit:
     template: notice
     parent: T-se
-    text: 'Limit: With no conventions written down, the builder falls back on generic habits.'
+    text: 'Limit: With no conventions written down, the builder and its reviewers fall back on general
+      good practice.'
     x: 128
-    y: 1478.0
+    y: 1448
     mural_ids:
-      root: 5e2aa846-4f27-4569-946a-a7c0314e3857
-      bg: 27f1f5d6-e750-453e-a05b-2decd72f0c7a
-      bar: 39d007bb-7202-449f-8574-8c460641f6b4
-      text: 2e45d063-d7b5-4389-acb0-43b225ea3eb9
+      root: 8dee6458-d810-4618-b4b3-8b38504853f3
+      bg: 541e2d35-7f61-4f94-8c31-1dc578118be8
+      bar: 9ef81288-0052-430d-8316-7f4cbd3852f4
+      text: 1c40d184-1111-4c21-9a58-db6327c00dcd
+  T-connect:
+    template: slide
+    title: How add-ons work together
+    lead: Through slots named for a role, never for an add-on. The add-on that needs something opens a
+      slot; any other can fill it.
+    rests: 'In project-kit: 3 roles, each played by one add-on, and 6 slots, 4 of them filled.'
+    n: 23
+    total: 24
+    override:
+      rests:
+        text: 'In project-kit: 3 roles, each played by one add-on, and 6 slots, 4 of them filled.'
+    mural_ids:
+      root: 83b4ab77-69b1-4399-8237-4129fbb6e147
+      bg: bf89b372-bb59-4af0-9f8d-8c765a8ac2d2
+      title: b1ce833f-c3a8-4d60-b53e-581ed8a4da95
+      lead: 7fa621e3-ed51-488e-9f2a-8121859f5349
+      rests: 49fdea14-6bc2-404a-a0d8-cc1b45cda131
+      num: 1f8823a3-98b1-4d8e-a874-9dbcfcdc502a
+  T-connect-sockets:
+    template: sockets_T-connect
+    parent: T-connect
+    x: 128
+    y: 576
+    mural_ids:
+      root: f8aec4b0-6033-4ed7-b744-0c43d5718ee5
+      pbox: d381c177-27b9-4e85-8017-e4771c60c33d
+      s0box: 03c53b14-da25-406c-9636-e35b2f37d28b
+      s1box: 1c8fcfc6-3fd7-48d6-af10-3b34cf2afb03
+      s2box: 020738e5-c6d9-4ba9-b161-b2a5e10eda00
+      c0box: 147b528b-c346-4cf2-b6b9-ce81b3dc9d08
+      c1box: 0f25a019-65f3-4b09-a204-18a5fddbb750
+      w0box: cf358806-8500-403c-9c5c-f42262f5e938
+      w0bar: 269ac8e9-1be3-475f-97f2-f08a668665c1
+      w1box: 2a429dd3-50db-43d4-a7e7-9a912890619a
+      w1bar: 111e3a8d-509b-4508-97c1-09bc4cc32dff
+      w2box: d4ca2374-8c91-486b-bf2e-6e17b616ec8b
+      w2bar: d3299846-f954-4539-a451-cdf638067120
+      pname: 9c51f26f-8e6d-4be7-84c2-8c40bea7cbef
+      s0text: feeb42c7-02c3-4d85-ba6a-e74f26d57f79
+      s1text: 9000b982-cbab-46a0-b8e8-794c2142a893
+      s2text: 9c8c1d50-cf18-4780-9a7a-b9f6b3fd016a
+      c0name: 4b31e28b-7453-4d2d-9361-f560a3239303
+      c0text: 0aabb417-88cb-4cfe-9743-882e03372d61
+      c1name: c520c7e2-4435-401c-81e8-4488794ca81a
+      c1text: dd3fbcca-9dcc-444e-aac5-a96ba4530c3b
+      thead: 9a78c178-f4da-4ada-8452-378532a89f7e
+      whyhead: 9bd3d2dd-ad7f-478b-9952-26edb14c74d3
+      w0text: 4a83fc12-c7e2-444c-a0a6-fe72c6a92e40
+      w1text: 3527b594-4119-46c3-b694-34b3665bf374
+      w2text: 5844c027-fca5-456d-8162-d4ea31abda29
+      prole: e950d467-0a80-4c4a-a652-ac9d917138eb
+      s0chip: 43861200-40c3-4a69-a256-d09efad03a15
+      s1chip: bdd32421-e6e0-4372-aec3-93014689f23e
+      s2chip: b9b24100-358c-4059-a085-31c3728c1afb
+      c0role: 9a40f0c4-a821-4578-8fdd-a480e50040c7
+      c1role: 027f8e88-f021-4128-8dde-b7d6045824b5
+      timg: 1c93503a-dcee-4834-b777-116a14bec9c4
+      c0a0: e41a130e-802d-496f-97c2-24a71e08d4ec
+      c0a1: 0bcf994c-2901-400a-a277-d8a1d92604b9
+      c1a0: f90f1b4f-7e61-45b4-b4c3-64ecc81a9f85
+      c1a1: 26d4b994-cfef-4bd0-b162-2192800e19d9
+  T-connect-limit:
+    template: notice
+    parent: T-connect
+    text: 'Limit: Each role has one add-on so far, so swapping one for another is designed, not yet shown.'
+    x: 128
+    y: 1496.0
+    mural_ids:
+      root: 69496934-c52e-498d-a1ba-4df93ab33476
+      bg: f58ae599-312a-4127-908f-6ed829f6e73b
+      bar: bd796631-88ff-4016-aae3-2ce63e2feb0d
+      text: 43b22e48-d5f3-4688-8028-157c2be2c54a
   T-questions:
     template: slide
     title: Questions?
     lead: Everything shown is in project-kit's own repository, built with pkit itself.
     rests: github.com/aleskalfas/project-kit
-    n: 22
-    total: 22
+    n: 24
+    total: 24
     override:
       rests:
         text: github.com/aleskalfas/project-kit
     mural_ids:
-      root: 5a06831e-c8a9-48cc-b837-8487e59cade1
-      bg: 8ae6fc95-848a-4620-b34c-b905a92b5898
-      title: 51f72a30-2bd2-4bdf-b740-d6bb411d4b68
-      lead: 3ca7a347-5db8-45d3-bc42-8466a65793a4
-      rests: 261073c4-a97e-480f-a2f0-987cf1a65fa7
-      num: 2ebe011b-a4ab-4aaf-8485-48ad62de605e
+      root: c958b2e3-33f6-46fc-99cf-dfd621c60634
+      bg: 52aad57f-4096-4945-8a23-bea2421f0ee3
+      title: 32615e01-30f6-4ac4-8e47-7a15d0e07330
+      lead: 740e23d7-e17f-44a5-a4c5-3a3fdab4421f
+      rests: 01cf7949-5be0-4eab-9b4f-47298d09d5d3
+      num: 84337aa5-2092-41d2-9b9c-221401c3dee8
 library:
   frame: LIB
   groups:
@@ -10939,8 +12286,10 @@ layouts:
   gap: 400
 - row:
   - T-part-P4
+  - T-addons
   - T-pm
   - T-se
+  - T-connect
   origin:
   - -4246
   - 12041
@@ -13084,6 +14433,62 @@ objects:
 
       #DEFBE6'
     x: 200
+    y: 3116
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+  LIB.theme.swatch.role_addon:
+    mural_id: 34dbeb23-c71f-43c4-a4fc-e79ef59ac55c
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2040
+    y: 2900
+    width: 360
+    height: 200
+    color: '#F1C21BFF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+  LIB.theme.label.role_addon:
+    mural_id: 58dea008-1d4d-4e0d-acf3-cc2fd3e18498
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_addon
+
+      #F1C21B'
+    x: 2040
+    y: 3116
+    width: 360
+    height: 90
+    font_size: 24
+    ink: '#161616FF'
+  LIB.theme.swatch.role_addon_bg:
+    mural_id: a3e2aa40-5fbe-4b85-b651-116797666e51
+    type: shape
+    shape: rectangle
+    library: true
+    parent: LIB
+    text: ''
+    x: 2500
+    y: 2900
+    width: 360
+    height: 200
+    color: '#FCF4D6FF'
+    border_color: '#C6C6C6FF'
+    border_width: 1
+  LIB.theme.label.role_addon_bg:
+    mural_id: f94240e6-b053-4724-8245-e06b188b30f5
+    type: text
+    library: true
+    parent: LIB
+    text: 'role_addon_bg
+
+      #FCF4D6'
+    x: 2500
     y: 3116
     width: 360
     height: 90

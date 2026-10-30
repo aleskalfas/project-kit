@@ -74,7 +74,8 @@ def fanout(pid, y, v):
     items = v["middle"]
     n = len(items)
     h = n * ART_H + (n - 1) * FAN_GAP
-    cols = len(v["left"]) + 2
+    rights = v["right"] if isinstance(v["right"], list) else [v["right"]]
+    cols = len(v["left"]) + 1 + len(rights)
     w = (SPAN16 - (cols - 1) * LINK_W) / cols
     x = MARGIN
     si = li = 0
@@ -102,10 +103,16 @@ def fanout(pid, y, v):
         k, val = link(pid, li, round(x), round(y + j * (ART_H + FAN_GAP)), ART_H)
         out[k] = val
     x += LINK_W
-    r = v["right"]
-    si += 1
-    k, val = stage(pid, si, round(x), y, round(w), r.get("role", "neutral"), r["head"], r.get("text", ""), h)
-    out[k] = val
+    for r in rights:
+        if r is not rights[0]:
+            li += 1
+            k, val = link(pid, li, round(x), y, h)
+            out[k] = val
+            x += LINK_W
+        si += 1
+        k, val = stage(pid, si, round(x), y, round(w), r.get("role", "neutral"), r["head"], r.get("text", ""), h)
+        out[k] = val
+        x += w
     return out, h
 
 
@@ -317,7 +324,7 @@ def vlink(pid, i, x, y, h):
 # purple and what is yours blue. Colours travel as spans in Mural's html.
 TERM = {"prompt": "#6F6F6F", "command": "#198038", "args": "#161616", "comment": "#6F6F6F", "output": "#393939",
         "branch": "#A8A8A8", "pkit": "#6929C4", "yours": "#0043CE", "plain": "#161616",
-        "del": "#DA1E28", "add": "#198038"}
+        "del": "#DA1E28", "add": "#198038", "addon": "#8E6A00"}
 TERM_LINE = 46
 TERM_FONT = "ibm-plex-mono"
 
@@ -732,6 +739,167 @@ def table_map(pid, y, v):
     return {f"{pid}-map": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
 
+CARD_TONES = {"pkit": ("@role_code_bg", "@role_code"), "yours": ("@role_people_bg", "@role_people"),
+              "addon": ("@role_addon_bg", "@role_addon")}
+
+
+def tone_cards(pid, y, cards, h=260):
+    """A row of cards, each a head and a text on its tone's background with a bar of the tone on its left. One
+    instance of a template made for this slide."""
+    n = len(cards)
+    cw = round((SPAN16 - (n - 1) * GUT) / n)
+    parts = {}
+    for i, c in enumerate(cards):
+        x = i * (cw + GUT)
+        bg, line = CARD_TONES[c.get("tone", "pkit")]
+        parts[f"c{i}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": 0, "width": cw, "height": h,
+                             "color": bg, "border_color": bg, "border_width": 1, "ink": "@text_primary"}
+        parts[f"c{i}bar"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": 0, "width": 10, "height": h,
+                             "color": line, "border_color": line, "border_width": 1, "ink": "@text_primary"}
+        parts[f"c{i}head"] = {"type": "text", "text": md(c["head"]), "style": "@style.key", "ink": "@text_primary",
+                              "x": x + 40, "y": 28, "width": cw - 72, "height": 56}
+        parts[f"c{i}text"] = {"type": "text", "text": md(c["text"]), "style": "@style.body", "ink": "@text_primary",
+                              "x": x + 40, "y": 96, "width": cw - 72, "height": h - 120}
+    name = f"cards_{pid}"
+    EXTRA_TEMPLATES[name] = {"note": "A row of toned cards, drawn for one slide by the slide generator.",
+                             "root": {**CLEAR_AREA, "width": SPAN16, "height": h}, "parts": parts}
+    return {f"{pid}-tcards": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, h
+
+
+def caption_line(pid, y, text, ink="@role_people"):
+    """One line across the slide, in the key style."""
+    name = f"caption_{pid}"
+    EXTRA_TEMPLATES[name] = {"note": "One line across the slide, made by the slide generator.",
+                             "root": {**CLEAR_AREA, "width": SPAN16, "height": 56},
+                             "parts": {"text": {"type": "text", "text": md(text), "style": "@style.key", "ink": ink,
+                                                "x": 0, "y": 0, "width": SPAN16, "height": 56}}}
+    return {f"{pid}-caption": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, 56
+
+
+def why_row(parts, top, head, items, bar):
+    """Under a picture: a heading, then a box per reason with a bar on top. Adds its parts; returns its height."""
+    n = len(items)
+    bw = round((SPAN16 - (n - 1) * GUT) / n)
+    lines = max(-(-text_w(t, 36) // (bw - 124)) for t in items)
+    bh = 32 + lines * 46 + 24
+    parts["whyhead"] = {"type": "text", "text": md(head), "style": "@style.key", "ink": "@text_primary", "x": 0, "y": round(top), "width": SPAN16, "height": 56}
+    for i, t in enumerate(items):
+        x = i * (bw + GUT)
+        parts[f"w{i}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": round(top + 68), "width": bw, "height": bh,
+                             "color": "@role_neutral_bg", "border_color": "@role_neutral_bg", "border_width": 1, "ink": "@text_primary"}
+        parts[f"w{i}bar"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": round(top + 68), "width": bw, "height": 8,
+                             "color": bar, "border_color": bar, "border_width": 1, "ink": "@text_primary"}
+        parts[f"w{i}text"] = {"type": "text", "text": md(t), "style": "@style.body", "ink": "@text_primary",
+                              "x": x + 32, "y": round(top + 68 + 32), "width": bw - 64, "height": lines * 46}
+    return 68 + bh
+
+
+def slice_view(pid, y, v):
+    """What an add-on is: pkit's layers as rows on the left, purple, each continued by what an add-on brings to that
+    layer, yellow, with the folder it lives in as a chip; a terminal on the right; reasons under both."""
+    fs = v.get("font_size", 22)
+    LW, YX, YW = 720, 736, 984
+    TX = 1784
+    TW = SPAN16 - TX
+    ROW, RG, TOP = 112, 16, 88
+    parts = {}
+
+    def shape(key, x, top, w, h, fill, line, bw=1):
+        parts[key] = {"type": "shape", "shape": "rectangle", "text": "", "x": round(x), "y": round(top), "width": round(w), "height": round(h),
+                      "color": fill, "border_color": line, "border_width": bw, "ink": "@text_primary"}
+
+    def text(key, s_, style, x, top, w, h, ink="@text_primary"):
+        parts[key] = {"type": "text", "text": md(s_), "style": style, "ink": ink, "x": round(x), "y": round(top), "width": round(w), "height": round(h)}
+
+    for key, label, x, w, bg, bar in (("core", v["core_head"], 0, LW, "@role_code_bg", "@role_code"),
+                                       ("addon", v["addon_head"], YX, YW, "@role_addon_bg", "@role_addon")):
+        shape(f"{key}tag", x, 0, w, 64, bg, bg)
+        shape(f"{key}tagbar", x, 0, 10, 64, bar, bar)
+        text(f"{key}tagtext", label, "@style.key", x + 32, 4, w - 48, 56)
+    for i, r in enumerate(v["rows"]):
+        top = TOP + i * (ROW + RG)
+        shape(f"r{i}layer", 0, top, LW, ROW, r["fill"], r["fill"])
+        text(f"r{i}layertext", r["layer"], "@style.key", 32, top + (ROW - 56) / 2, LW - 64, 56, r.get("ink", "@text_primary"))
+        shape(f"r{i}cell", YX, top, YW, ROW, "@role_addon_bg", "@role_addon_bg")
+        shape(f"r{i}cellbar", YX, top, 10, ROW, "@role_addon", "@role_addon")
+        file, cw_, ch_ = chip_png(f"{pid}-r{i}".removeprefix("T-"), r["chip"], 22)
+        text(f"r{i}head", r["head"], "@style.key", YX + 40, top + (ROW - 56) / 2, YW - cw_ - 104, 56)
+        parts[f"r{i}chip"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": YX + YW - 32 - cw_, "y": round(top + (ROW - ch_) / 2),
+                              "width": cw_, "height": ch_}
+    left_h = TOP + len(v["rows"]) * (ROW + RG) - RG
+    text("thead", v["terminal_head"], "@style.key", TX, 0, TW, 56)
+    tfile, th = terminal_png(f"{pid}-term".removeprefix("T-"), v["terminal"], TW, fs)
+    parts["timg"] = {"type": "image", "file": f"{ICONS_DIR}/{tfile}.png", "x": TX, "y": 64, "width": TW, "height": th}
+    H = max(left_h, 64 + th)
+    if v.get("why"):
+        H += 32 + why_row(parts, H + 32, v["why"]["head"], v["why"]["items"], "@role_addon")
+    name = f"slice_{pid}"
+    EXTRA_TEMPLATES[name] = {"note": "What an add-on is, drawn for one slide by the slide generator.",
+                             "root": {**CLEAR_AREA, "width": SPAN16, "height": H}, "parts": parts}
+    return {f"{pid}-slice": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
+def sockets(pid, y, v):
+    """Add-ons connecting through a role's slots: contributors on the left, yellow; the add-on that plays the role
+    in the middle, its slots inside it; an arrow from each contributor to each slot it fills; a terminal on the
+    right; reasons under all three."""
+    fs = v.get("font_size", 22)
+    CW_, PX, PW = 620, 880, 800
+    TX = 1744
+    TW = SPAN16 - TX
+    SLOT_H, SLOT_G = 120, 24
+    parts = {}
+
+    def shape(key, x, top, w, h, fill, line, bw=1):
+        parts[key] = {"type": "shape", "shape": "rectangle", "text": "", "x": round(x), "y": round(top), "width": round(w), "height": round(h),
+                      "color": fill, "border_color": line, "border_width": bw, "ink": "@text_primary"}
+
+    def text(key, s_, style, x, top, w, h, ink="@text_primary"):
+        parts[key] = {"type": "text", "text": md(s_), "style": style, "ink": ink, "x": round(x), "y": round(top), "width": round(w), "height": round(h)}
+
+    prov = v["provider"]
+    slots = prov["slots"]
+    PH = 176 + len(slots) * (SLOT_H + SLOT_G) - SLOT_G + 40
+    shape("pbox", PX, 0, PW, PH, "@role_addon_bg", "@role_addon", 4)
+    text("pname", prov["name"], "@style.tile_heading", PX + 32, 24, PW - 64, 64)
+    file, cw_, ch_ = chip_png(f"{pid}-prole".removeprefix("T-"), "plays " + prov["role"], 24)
+    parts["prole"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": PX + 32, "y": 100, "width": cw_, "height": ch_}
+    slot_mid = {}
+    for i, sl in enumerate(slots):
+        top = 176 + i * (SLOT_H + SLOT_G)
+        shape(f"s{i}box", PX + 32, top, PW - 64, SLOT_H, "@background", "@role_neutral", 2)
+        file, cw_, ch_ = chip_png(f"{pid}-s{i}".removeprefix("T-"), sl["id"], 24)
+        parts[f"s{i}chip"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": PX + 56, "y": top + 12, "width": cw_, "height": ch_}
+        text(f"s{i}text", sl["text"], "@style.body", PX + 56, top + 62, PW - 112, 50)
+        slot_mid[sl["id"]] = top + SLOT_H / 2
+    contribs = v["contributors"]
+    BH = 230
+    gap = 64
+    total = len(contribs) * BH + (len(contribs) - 1) * gap
+    c0 = (PH - total) / 2
+    for i, c in enumerate(contribs):
+        top = c0 + i * (BH + gap)
+        shape(f"c{i}box", 0, top, CW_, BH, "@role_addon_bg", "@role_addon", 2)
+        text(f"c{i}name", c["name"], "@style.tile_heading", 32, top + 20, CW_ - 64, 64)
+        file, cw_, ch_ = chip_png(f"{pid}-c{i}".removeprefix("T-"), c["role"], 24)
+        parts[f"c{i}role"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": 32, "y": round(top + 92), "width": cw_, "height": ch_}
+        text(f"c{i}text", c["text"], "@style.body", 32, top + 152, CW_ - 64, 50)
+        for j, target in enumerate(c["to"]):
+            sy = top + BH / 2 + (j - (len(c["to"]) - 1) / 2) * 40
+            parts[f"c{i}a{j}"] = {"type": "arrow", "points": [[CW_ + 8, round(sy)], [PX + 32 - 8, round(slot_mid[target])]],
+                                  "arrow_type": "straight", "tip": "end", "color": "@role_code", "border_width": 6, "border_style": "solid"}
+    text("thead", v["terminal_head"], "@style.key", TX, 0, TW, 56)
+    tfile, th = terminal_png(f"{pid}-term".removeprefix("T-"), v["terminal"], TW, fs)
+    parts["timg"] = {"type": "image", "file": f"{ICONS_DIR}/{tfile}.png", "x": TX, "y": 64, "width": TW, "height": th}
+    H = max(PH, 64 + th)
+    if v.get("why"):
+        H += 32 + why_row(parts, H + 32, v["why"]["head"], v["why"]["items"], "@role_code")
+    name = f"sockets_{pid}"
+    EXTRA_TEMPLATES[name] = {"note": "Add-ons connecting through a role's slots, drawn for one slide by the slide generator.",
+                             "root": {**CLEAR_AREA, "width": SPAN16, "height": H}, "parts": parts}
+    return {f"{pid}-sockets": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
 def wired(pid, y, v):
     """What comes wired: terminals side by side, joined by a sign between them (pkit's file + your file = what
     your tool gets); under them a card per tie, and the yellow note last in that row. The terminals and cards are
@@ -756,11 +924,12 @@ def wired(pid, y, v):
     ties, note = v["ties"], v.get("note")
     nw = v.get("note_w", 0) if note else 0
     cw = round((SPAN16 - (nw + GUT if note else 0) - (len(ties) - 1) * GUT) / len(ties))
-    CH = 380
+    CH = v.get("card_h", 380)
     for i, t in enumerate(ties):
         x = i * (cw + GUT)
+        tbg, tline = CARD_TONES[t.get("tone", "pkit")]
         parts[f"t{i}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": row2, "width": cw, "height": CH,
-                             "color": "@role_code_bg", "border_color": "@role_code", "border_width": 2, "ink": "@text_primary"}
+                             "color": tbg, "border_color": tline, "border_width": 2, "ink": "@text_primary"}
         parts[f"t{i}head"] = {"type": "text", "text": md(t["head"]), "style": "@style.tile_heading", "ink": "@text_primary",
                               "x": x + 40, "y": row2 + 36, "width": cw - 80, "height": 64}
         parts[f"t{i}text"] = {"type": "text", "text": md(t["text"]), "style": "@style.body", "ink": "@text_primary",
@@ -1482,6 +1651,10 @@ def build_slide(s, n, total, prefix="T-", labels=LABELS["en"]):
             add(files(pid, y, v))
         elif kind == "answers":
             add(answers(pid, y, v))
+        elif kind == "slice":
+            add(slice_view(pid, y, v))
+        elif kind == "sockets":
+            add(sockets(pid, y, v))
         elif kind == "wired":
             add(wired(pid, y, v))
         elif kind == "ties":
@@ -1506,6 +1679,10 @@ def build_slide(s, n, total, prefix="T-", labels=LABELS["en"]):
             add(pairs(pid, y, v["pairs"], v.get("style", "plain"), bool(v.get("icons"))))
         elif kind == "fanout":
             add(fanout(pid, y, v))
+            if v.get("caption"):
+                add(caption_line(pid, y, v["caption"]))
+            if v.get("cards"):
+                add(tone_cards(pid, y, v["cards"], v.get("card_h", 260)))
             if s.get("does"):
                 add(steps(pid, y, s["does"]))
         elif kind == "actors":
@@ -1612,6 +1789,8 @@ def main(slides_path, board_path, cs_path=None):
     board["templates"]["kind_group"] = GROUP_TEMPLATE
     board["templates"]["step_card"] = step_card_template(board["templates"]["stage"])
     board["templates"]["talk_cover"] = TALK_COVER_TEMPLATE
+    # An add-on's things are yellow (Part 5), as the schemas slide's tag for an add-on's example.
+    board["theme"].setdefault("overrides", {}).update({"role_addon": "#F1C21BFF", "role_addon_bg": "#FCF4D6FF"})
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     new, rows, order = {}, {}, []
     build_set(sl, "T-", LABELS["en"], new, rows, order)

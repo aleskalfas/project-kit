@@ -9,7 +9,7 @@
 # Vocabulary, one word per thing: you (never "the person" or "the user"); merge
 # (never "land"); depends on (never "rests on" or "anchored"); capability (an
 # optional add-on, defined on the install slide); the project-manager agent;
-# builder (defined on the agents slide); "rules" always qualified.
+# builder (defined on the project-management slide); "rules" always qualified.
 
 talk:
   project: project-kit (pkit)
@@ -1271,64 +1271,229 @@ slides:
     your documents under friction.places in .pkit/project/config.yaml and name in each one''s front matter what it depends
     on. The docs and analysis add-ons do both for their own documents. Tried on 30 October in a throwaway copy of project-kit.
     In project-kit today, 21 answers wait as fixed later; all but one name the issue that fixes them.'
-- id: pm
+- id: addons
   part: P4
-  title: project-management
-  message: You talk to one agent; it plans the work and runs builders in parallel.
+  title: Why some parts of pkit are add-ons
+  message: Core pkit holds what every project needs. The rest comes as add-ons, called capabilities, that you choose.
   problem: ''
   does: []
-  show: 'This week, in one evening: six builders, four pull requests merged'
+  show: 'pkit 1.149 ships 4 add-ons, and 3 more are on their way to 2.0. In a fresh install, one took a single command and
+    8 seconds.'
+  visual:
+    kind: slice
+    font_size: 22
+    core_head: 'Core pkit: in every project'
+    addon_head: 'An add-on (COR-017): one folder you install'
+    rows:
+    - {layer: Decisions, fill: '#491D8BFF', ink: '@text_on_color', head: Decision records, chip: decisions/}
+    - {layer: Rules · schemas · processes, fill: '#6929C4FF', ink: '@text_on_color', head: Schemas and processes, chip: schemas/}
+    - {layer: Skills · agents · permissions, fill: '#BE95FFFF', head: 'Skills, agents, rules', chip: 'skills/ agents/ permissions/'}
+    - {layer: Commands and checks, fill: '#D4BBFFFF', head: Commands and checks, chip: 'scripts/ package.yaml'}
+    terminal_head: One command wires it, read from a fresh install
+    terminal:
+    - [['$ ', prompt], [pkit, command], [' capabilities install project-management', args]]
+    - [['  Installed capability ', output], ['''project-management''', addon], [' v0.54.0', output]]
+    - [['  merged   .claude/settings.json', output], ['      # allows its skill', comment]]
+    - [['  created  .claude/skills/pm/SKILL.md', output], ['     # and 6 procedures', comment]]
+    - [['  created  .claude/agents/pm-reviewer.md', output]]
+    - [['  created  .claude/agents/project-manager.md', output]]
+    - [['$ ', prompt], [pkit, command], [' permissions explain', args]]
+    - [['agent:project-manager', output]]
+    - [['  deny  issue-tracker-write', del]]
+    - [['  (contributed by capability: project-management)', comment]]
+    - [['$ ', prompt], [pkit, command], [' validate', args]]
+    - [['  13 validator(s) ran; 0 error(s)', output], ['     # 12 before', comment]]
+    - [['  All checks passed.', add]]
+    why:
+      head: Why pkit has add-ons
+      items:
+      - Core holds only what every project needs. The rest would be weight.
+      - An add-on gets each upgrade, as core does. A copy would not.
+      - 'One folder: its path says who owns a file.'
+      - Made only for a need that kept coming back in real work.
+  limit: Some add-ons need another first. software-engineering will not install without project-management.
+  minutes: 1.5
+  notes: 'Everything before this point is core pkit, in every install. Some ways of working fit only some projects, such as
+    tracking issues on GitHub, or reviewing code. pkit packs each one as an add-on, called a capability (COR-017). An add-on
+    brings the same layers as core, for its own way of working: its own decision records, schemas and processes, skills,
+    agents and permission rules, commands and checks. All of it sits in one folder, .pkit/capabilities/ and its name. pkit
+    makes one only when three things hold. Some projects need it, but not all (COR-014). It can come and go as one folder.
+    The same need came back in real work (COR-007). The same test moves agents: pkit''s first core agents included a product
+    manager, which a project with no add-ons has no use for, so it moved into project-management (COR-026). Installing one
+    copies its folder and registers it. It deploys its skills and agents into .claude/, adds its permission rules to pkit''s
+    model, and adds its checks to pkit validate. Read from a fresh install: project-management took about 8 seconds, with
+    nothing set up first. An add-on may need another, with a version it accepts: software-engineering refuses to install
+    until project-management is there (COR-030). Uninstall removes the folder, and refuses while your own files still cite
+    it. You can write an add-on of your own, with the capability-author skill and pkit new capability; three of project-kit''s
+    add-ons are written that way, in its own repository (COR-031). The release you install today, 1.149, has 4 add-ons:
+    project-management, software-engineering, evidence and demo-recording. living-docs, software-analysis and doc-examples
+    are on the main branch, for 2.0.'
+- id: pm
+  part: P4
+  title: What project-management adds
+  message: 'One agent that files the work, plans it and starts builders in parallel. You decide: you approve the plan, and
+    each merge.'
+  problem: ''
+  does: []
+  show: 'In project-kit on 29 October: 22 pull requests merged, up to 7 open at once, each with its reviewers'' verdicts.'
   visual:
     kind: fanout
     left:
-    - role: people
-      head: You
-      text: Describe the work, approve the plan, say yes to each merge.
-    - role: agents
-      head: Project-manager agent
-      text: Files and plans the work, then starts one builder per task, each in its own copy of the repository.
+    - {role: people, head: You, text: Say what you want. Approve the plan once.}
+    - {role: addon, head: project-manager, text: 'Files the issues, plans the Tasks, and starts a builder for each.'}
     middle:
-    - icon: agents
-      head: 'Builder: task A'
-    - icon: agents
-      head: 'Builder: task B'
-    - icon: agents
-      head: 'Builder: task C'
+    - {icon: agents, head: 'Builder: Task A'}
+    - {icon: agents, head: 'Builder: Task B'}
+    - {icon: agents, head: 'Builder: Task C'}
     right:
-      role: checks
-      head: Reviewers, then merge
-      text: Reviewers check each result; on your yes, the agent merges it.
-  limit: 'GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual.'
-  minutes: 3
-  notes: 'Underneath: a structure (EPIC, Feature, Task), a lifecycle with gates, merging with reviewers, planning a batch
-    of work in one approval, fixers after a merge, a board. Parallel agents in separate clones also exist, still experimental
-    (the last slide). Like every capability, it brings its own decision records (DEC), kept beside pkit''s and yours, and
-    replaced by its upgrades.'
+    - {role: addon, head: Reviewers, text: Each checks the change. All must approve.}
+    - {role: people, head: You, text: Say yes. Then the agent merges.}
+    caption: 'Why you hold both ends: only you commit the team to a plan or a merge. The agent does the work in between.'
+    cards:
+    - {tone: addon, head: Its skill and agents, text: 'The pm skill, the project-manager agent, and pm-reviewer for each pull request.'}
+    - {tone: addon, head: 88 commands, text: 'pkit pm … files, moves and merges, and checks each step first.'}
+    - {tone: addon, head: Its issue workflow, text: Every move is checked by pkit's engine.}
+    - {tone: yours, head: What you do, text: 'Give it a GitHub repository, then run pkit pm bootstrap once.'}
+  limit: 'GitHub only, and large: 63 decision records and 88 commands. You meet it through the agent, not the manual.'
+  minutes: 1.5
+  notes: 'project-management is a rulebook for running the work on GitHub: issues, pull requests and merges. Its rules for
+    the work are data, and its commands carry them out, so the agent follows them instead of remembering them (DEC-020,
+    DEC-057). You talk to one agent, the project manager. It turns what you want into a plan of Features and Tasks, and
+    you approve the plan once. It starts a builder for each Task, several at once, each on its own branch. A builder is
+    an agent that builds one Task. Tasks that change the same files wait for each other. Reviewers check each pull request,
+    and all must approve. Then you say yes, and it merges: pkit pm land-work merges nothing without your yes. The agent does
+    the work in between, and you hold both ends: only a person commits the team, to a plan, a schedule or a merge (DEC-057).
+    Its issue workflow, shown earlier, runs on pkit''s process engine. Its permission rule refuses the project-manager agent
+    raw gh changes, so it goes through these commands. It has 63 decision records of its own, kept in its folder and cited
+    like project-management:DEC-032. What you do: give it a GitHub repository, and run pkit pm bootstrap once, which creates
+    its labels; until then its pre-check fails, and its commands refuse. It can also run agents in several clones of one
+    repository, through seats and pools; that runs in project-kit, and is still being shaped. Next: each builder starts
+    fresh, in a sandboxed clone of its own (DEC-063, being built). Read from project-kit: of the 22 pull requests merged
+    on 29 October, up to 7 were open at the same time, and each carried its reviewers'' verdicts.'
 - id: se
   part: P4
-  title: software-engineering
-  message: The builder follows your conventions; its three reviewers join every code merge with nothing to wire.
-  problem: An AI writes in its default style, and the code is merged on a glance, or reviewed by its author.
-  does:
-  - The builder reads your conventions first, then follows them
-  - 'Code, security, docs reviewers: each blocks only on what it can prove'
-  show: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed before merge'
+  title: What software-engineering adds
+  message: A builder that follows your conventions, and three reviewers of its code, on every merge that changes code.
+  problem: ''
+  does: []
+  show: 'In project-kit on 29 October: of 22 merges, the 21 that changed code each had the code, security and docs reviewers.'
   visual:
-    kind: flow
-    stages:
-    - role: code
-      head: software-engineering
-      text: Brings the builder and three reviewers.
-    - role: neutral
-      head: A slot
-      text: '"Which reviewers a merge needs": software-engineering fills it.'
-    - role: agents
-      head: project-management
-      text: Requires them on every code change, without naming who.
-  limit: With no conventions written down, the builder falls back on generic habits.
-  minutes: 2.5
-  notes: 'Capabilities never name each other: one fills a slot another defines. Swap one for another that fills the same slot,
-    and nothing connected notices.'
+    kind: wired
+    font_size: 22
+    card_h: 330
+    signs: ['+', '→']
+    panels:
+    - head: Its agents, after install
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' capabilities install software-engineering', args]]
+      - [['  created  .claude/agents/', output], [software-engineer, addon], ['.md', output]]
+      - [['  created  .claude/agents/', output], [code-reviewer, addon], ['.md', output]]
+      - [['  created  .claude/agents/', output], [security-reviewer, addon], ['.md', output]]
+      - [['  created  .claude/agents/', output], [docs-reviewer, addon], ['.md', output]]
+      - [['# software-engineer: builds, by your conventions', comment]]
+      - [['# code-reviewer: is the code correct?', comment]]
+      - [['# security-reviewer: secrets, injection', comment]]
+      - [['# docs-reviewer: do the docs still hold?', comment]]
+    - head: Its list for the merge
+      terminal:
+      - [['# review-contributions.yaml', comment]]
+      - [['- floor: ', output], [touches-code, args]]
+      - [['  reviewer: ', output], [code-reviewer, addon]]
+      - [['- floor: ', output], [touches-code, args]]
+      - [['  reviewer: ', output], [security-reviewer, addon]]
+      - [['- floor: ', output], [touches-code, args]]
+      - [['  reviewer: ', output], [docs-reviewer, addon]]
+      - [['- match: ', output], ['{type: "*"}', args]]
+      - [['  reviewer: ', output], [docs-reviewer, addon]]
+    - head: 'The merge, pull request #2279'
+      terminal:
+      - [['# first round', comment]]
+      - [['pm-reviewer        ', output], [APPROVED, add]]
+      - [['docs-reviewer      ', output], [APPROVED, add]]
+      - [['code-reviewer      ', output], [CHANGES_REQUESTED, del]]
+      - [['  [block] The new Status writer', del]]
+      - [['  can''t find an org-owned board …', del]]
+      - [['security-reviewer  ', output], [APPROVED, add]]
+      - [['rule-set-reviewer  ', output], [APPROVED, add]]
+      - [['# fixed, all five approved, merged', comment]]
+    ties:
+    - {head: Your conventions, text: 'You write them once. The builder reads them first. They stay yours without the add-on.'}
+    - {head: Code is reviewed, text: 'Before this add-on, nothing in pkit reviewed code. A change with two security holes merged.'}
+    - {head: Blocks mean something, text: 'Each reviewer blocks only on a failure it can show. The rest is advice.'}
+    - {head: What you do, tone: yours, text: 'Write your conventions down, and name their file in overlay.yaml.'}
+  limit: With no conventions written down, the builder and its reviewers fall back on general good practice.
+  minutes: 1.5
+  notes: 'software-engineering has two aims: code that agents write follows your conventions in every session, and code
+    is reviewed before it merges (DEC-003). Its builder, software-engineer, has no coding opinions of its own. It reads your
+    conventions first, from the file you name in overlay.yaml, and follows them; with none written, it says so and works
+    by general good practice (DEC-001). Your conventions stay yours: removing the add-on never removes them. Its three reviewers
+    check correctness, security, and the docs, with the answers a change wrote for them. Each blocks only on a failure it
+    can show in the change. Everything else is advice, so a block is never only taste, and nobody learns to skip it (DEC-002).
+    The reviewers came from a real failure: in an adopting project, a pull request with a token on a command line and a
+    shell injection passed the merge, because nothing reviewed code (#715). How they join the merge: the add-on ships one
+    file, review-contributions.yaml. project-management reads that file from every installed add-on, and requires each
+    reviewer it names (project-management DEC-032). It never names software-engineering. Installing the add-on is the switch:
+    there is no setting to turn the reviewers on. The code and security reviewers run only when a change touches code; on
+    29 October, the one merge that changed only records had no code review. software-engineering does name project-management,
+    as an add-on it needs, so it installs only after it. Pull request #2279: the code reviewer blocked a status writer that
+    could not find a board an organisation owns. It was fixed, all five reviewers approved, and it merged 43 minutes after
+    the block. project-kit has written no conventions for its own code yet, so its code reviewer said it reviewed as a careful
+    generalist.'
+- id: connect
+  part: P4
+  title: How add-ons work together
+  message: Through slots named for a role, never for an add-on. The add-on that needs something opens a slot; any other
+    can fill it.
+  problem: ''
+  does: []
+  show: 'In project-kit: 3 roles, each played by one add-on, and 6 slots, 4 of them filled.'
+  visual:
+    kind: sockets
+    font_size: 22
+    provider:
+      name: project-management
+      role: pkit::work-tracking
+      slots:
+      - {id: fixers, text: which agent fixes each document}
+      - {id: use-cases, text: the use cases to plan from}
+      - {id: doc-check, text: the docs a change must update}
+    contributors:
+    - {name: living-docs, role: 'pkit::documentation', text: docs for each reader, to: [fixers, doc-check]}
+    - {name: software-analysis, role: 'pkit::analysis', text: what the software must do, to: [fixers, use-cases]}
+    terminal_head: What pkit status shows, in project-kit
+    terminal:
+    - [['$ ', prompt], [pkit, command], [' status', args]]
+    - [['  Connections', output]]
+    - [['    roles   3 named: 3 active, 0 in conflict', output]]
+    - [['      pkit::analysis      → ', pkit], [software-analysis, addon]]
+    - [['      pkit::documentation → ', pkit], [living-docs, addon]]
+    - [['      pkit::work-tracking → ', pkit], [project-management, addon]]
+    - [['    points  6 defined: 2 unfilled', output]]
+    - [['    pkit::work-tracking:fixers', pkit]]
+    - [['      data v1 · project-management — filled', output]]
+    - [['      bound  ', output], [software-analysis, addon], [' (contributes)', output]]
+    - [['      bound  ', output], [living-docs, addon], [' (contributes)', output]]
+    why:
+      head: Why pkit connects add-ons this way
+      items:
+      - Swap an add-on for one in the same role. The rest stays as it is.
+      - Install only what you need. An empty slot does no harm.
+      - pkit status draws the wiring, and pkit validate checks it.
+  limit: Each role has one add-on so far, so swapping one for another is designed, not yet shown.
+  minutes: 1
+  notes: 'When one add-on needs something from another, it never names the other. It opens a slot, called a connection point,
+    under a role such as pkit::work-tracking. The add-on that plays the role defines its slots, and any installed add-on
+    can fill them (COR-053). project-management plays work-tracking. One of its slots asks which agent fixes each kind of
+    document: living-docs answers for its pages, software-analysis for use cases, requirements and the rest of the analysis.
+    project-management reads this slot to know which agent to start for each stale document, and knows neither add-on exists.
+    A slot is optional unless it says, with a reason, that it must be filled, so an add-on still works alone. In a fresh
+    install with project-management alone, the fixers slot stays empty, pkit validate passes, and pkit status names living-docs
+    and software-analysis as add-ons that could fill it. Two add-ons that claim one role are an error until you choose one,
+    with pkit connections providers. Why roles: naming the add-on is the one thing that stops you from replacing it. The
+    reviewers'' file of software-engineering is an older slot of project-management''s own, from before roles; it keeps
+    the same rule, since the side that needs reviewers never names who supplies them. Next, project-management gets a builder
+    slot, and software-engineering fills it with its software-engineer (DEC-063, being built). The fixers themselves do
+    not yet run unattended on Claude Code: their runner waits for a check of the tool first.'
 - id: questions
   part: P5
   title: Questions?
