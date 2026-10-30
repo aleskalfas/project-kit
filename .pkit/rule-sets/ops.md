@@ -1,7 +1,7 @@
 ---
 rule-set: OPS
 loaded: true
-version: 2.0.0
+version: 3.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -215,7 +215,7 @@ Operational practices that keep work consistent and recoverable.
 
 ### RS-OPS-016 — Intermediate files stay in the agent workspace
 
-**Keep intermediate files in the agent workspace, and nowhere else outside the repository.** What an agent writes only to get its work done — a pull-request or issue body, a script, captured output, review notes — goes in the workspace: `.agent-workspace/` at the repository root. A worktree has its own, at its root; another repository's workspace is off limits under the cross-repository rule (core rule 19). The methodology's install and sync create the folder and exclude it from version control through the repository's local exclude file, so nothing in it reaches a commit. Reading, creating and editing files there with the harness's file tools is granted by every shipped profile, so write intermediate files there with the file tools; a shell redirect or here-document into the folder is judged like any other shell write. A write anywhere else outside the repository asks, one file at a time, for the whole session, until the operator approves a stream of harmless confirmations without reading them — the confirmation fatigue the permission model exists to prevent (COR-028). Remove what you no longer need. *(How a harness is made to approve the folder is the adapter's concern; the grant and the harness-neutral contract are the permission model's, which the backbone ships — see `.pkit/permissions/README.md`.)* Rationale and field note: [project-kit#1043](https://github.com/aleskalfas/project-kit/issues/1043).
+**Keep intermediate files in the agent workspace, and nowhere else outside the repository.** What an agent writes only to get its work done — a pull-request or issue body, a script, captured output, review notes — goes in the workspace: `.agent-workspace/` at the repository root. A worktree has its own, at its root; another repository's workspace is off limits under the cross-repository rule (core rule 19). The methodology's install and sync create the folder and exclude it from version control through the repository's local exclude file, so nothing in it reaches a commit. Reading, creating and editing files there with the harness's file tools is granted by every shipped profile, so write intermediate files there with the file tools; a shell redirect or here-document into the folder is judged like any other shell write. A write anywhere else outside the repository asks, one file at a time, for the whole session, until the operator approves a stream of harmless confirmations without reading them — the confirmation fatigue the permission model exists to prevent (COR-028). Once you no longer need a file you wrote there, remove it with `pkit workspace remove <path>...`, never with `rm`. Remove only what you wrote: the folder is shared, and a capability may keep lasting state there under a child named after itself, which the command refuses to remove. *(How a harness is made to approve the folder is the adapter's concern; the grant and the harness-neutral contract are the permission model's, which the backbone ships — see `.pkit/permissions/README.md`.)* Rationale and field notes: [project-kit#1043](https://github.com/aleskalfas/project-kit/issues/1043) and [project-kit#2360](https://github.com/aleskalfas/project-kit/issues/2360).
 
 ## Communicating with the user
 
