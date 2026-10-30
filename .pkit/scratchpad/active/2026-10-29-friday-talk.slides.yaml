@@ -575,74 +575,62 @@ slides:
     and a rule on when a decision record starts (#2258). Next: each installed capability brings its own rules, loaded while
     it is installed (#2269, shown with the capabilities), and the rules trimmed to a sentence or two each (#2261). Today:
     22 rules, about 2,800 words, in every session.'
-- id: rests
+- id: skillsfrom
   part: P2
-  title: What a skill rests on
-  message: On the decisions it follows, and on the command it runs. The skill's first lines name both.
+  title: Where skills come from
+  message: pkit's decisions define kinds of file. Each kind gets a skill that writes it as decided, and a command that 
+    creates it.
   problem: ''
   does: []
-  show: 'In project-kit: all 14 skills name the decisions they follow. 13 of them also name the command they run.'
+  show: 'In project-kit: pkit ships 11 skills, each with its command.'
   visual:
-    kind: rests
-    left_head: The decisions it follows
-    center_head: The skill
-    right_head: The command it runs
-    skill_head: 'decision-author.md: its first lines'
-    card_h: 220
-    font_size: 28
-    decisions:
-    - head: COR-006
-      text: A decision holds the why. A skill holds the steps.
-      line: 6
-    - head: COR-008
-      text: How commits and branches are named.
-      line: 7
-    - head: COR-025
-      text: 'ADRs: the records about what you build.'
-      line: 8
-    terminal:
-    - [['---', output]]
-    - [['name: ', output], [decision-author, args]]
-    - [['description: ', output], [Author a new decision record …, args]]
-    - [['metadata:', output]]
-    - [['  wraps_command: ', output], [pkit new decision, command]]
-    - [['gates:', output], ['      # stops unless all are accepted', comment]]
-    - [['  - ', output], [COR-006, pkit]]
-    - [['  - ', output], [COR-008, pkit]]
-    - [['  - ', output], [COR-025, pkit]]
-    - [['reads:', output]]
-    - [['  records: [COR-024, COR-046, COR-049]', output]]
-    - [['---', output]]
-    command:
-      line: 4
-      terminal: $ pkit new decision
-      does:
-      - Picks the next number
-      - Lays out the file
-      - Refuses a name in use
-  limit: pkit checks that the first lines name every decision the skill mentions, not that the steps agree with those 
-    decisions.
+    kind: map
+    chip_font: 32
+    columns:
+    - head: The decision
+      text: defines a kind of file
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: The skill
+      text: writes one as decided
+      fill: '#BE95FFFF'
+      cell: name
+    - head: The command
+      text: creates the file
+      fill: '#D4BBFFFF'
+      cell: chip
+    - head: What you get
+      text: a new file, ready to fill in
+      fill: '#E8DAFFFF'
+    rows:
+    - [{head: COR-012, text: Scratchpad notes}, scratchpad-author, pkit new scratchpad, A dated note in active/]
+    - [{head: COR-006, text: Decision records}, decision-author, pkit new decision, 'The next number, proposed until you accept
+        it']
+    - [{head: COR-013, text: Agents}, agent-author, pkit new agent, An agent file in pkit's shape]
+    - [{head: COR-010, text: Migrations}, migration-author, pkit new migration, A script that upgrades installed 
+        projects]
+    caption: 'And 7 more pairs: areas, adapters, storyboards, schemas, processes, capabilities and reports.'
+  limit: pkit's skills cover only pkit's own files. For work that keeps coming back in your project, you write your own.
   minutes: 1
-  notes: 'A skill is not written freely. Its first lines name the decisions it follows and the command it runs. The skill
-    for writing a decision record follows three decisions. COR-006 says that a decision holds the reason for a choice, and
-    a skill holds the steps. COR-008 says how commits and branches are named. COR-025 makes architecture decisions a kind
-    of record of their own. The skill also reads three more decisions. Its first step stops unless the three it follows are
-    accepted. Skills come from decisions too. COR-007 says that work which comes back two or three times gets a tool. COR-005
-    says that every command for creating files ships with its skill, in the same change. pkit validate checks the tie. Take
-    COR-025 out of the first lines, and it reports: body cites record COR-025 but it is not declared in frontmatter. The 14th
-    skill, pm, runs the pkit pm commands without naming one.'
+  notes: 'Skills in pkit are not written at random. pkit''s decisions define kinds of file: scratchpad notes, decision records,
+    agents, migrations and more. Each kind has a skill and a command. The skill holds the choices: which kind, a good name,
+    the body, and your review. The command holds the exact part: the next number, the file''s layout, and a name not yet taken.
+    COR-005 says that every command for creating files ships with its skill, in the same change. COR-007 says that work which
+    comes back two or three times gets a tool. A skill names the decisions it follows in its first lines, and pkit validate
+    checks those names. Your own skills go in .pkit/skills/project/, beside pkit''s, and a sync never changes them.'
 - id: skills
   part: P2
   title: One skill, step by step
-  message: The agent follows the steps in order. At step 5 it runs the command, so the number and the layout are always 
+  message: The agent follows the steps in order. At step 6 it runs the command, so the number and the layout are always 
     right.
   problem: ''
   does: []
-  show: 'In project-kit: 14 skills. Every session holds only their short descriptions, and the steps load when needed.'
+  show: 'Every session holds only each skill''s short description. The steps load when the task comes up.'
   visual:
     kind: checklist
     head: 'The skill decision-author: a new decision record'
     steps:
+    - Check that its decisions are accepted
     - Pick the kind of record
     - Read the writing rules
     - Read the record's shape
@@ -652,7 +640,7 @@ slides:
     - Check it against the rules
     - Show you the draft
     - Commit, after you approve
-    mark: 5
+    mark: 6
     mark_note: its command
     terminal_head: 'Its command: pkit new decision'
     font_size: 28
@@ -673,7 +661,8 @@ slides:
     command also refuses a name already taken. Every session holds only each skill''s short description, so 14 skills cost
     a few hundred words. The steps load when the task comes up. Why agents must use the skill: a record filed by hand once
     got a wrong number (PR #16), and core rule 3 came from it. A skill also names the decision records it follows, and stops
-    if one is not accepted.'
+    if one is not accepted. Its first step checks that the decisions it names in its first lines are accepted: COR-006, COR-008
+    and COR-025. If one is not, the skill stops.'
 - id: agents
   part: P2
   title: 'Agents: roles with limits'
