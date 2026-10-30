@@ -582,61 +582,71 @@ slides:
     22 rules, about 2,800 words, in every session.'
 - id: schemas
   part: P1
-  title: Where schemas and processes come from
-  message: From decisions exact enough for a program. pkit writes them down as data, and a command applies them the same
-    way every time.
+  title: Schemas and processes
+  message: 'A schema is an exact rule, written as data. A process is one such rule: the stages of the work, and the check
+    before each move.'
   problem: ''
   does: []
-  show: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked, and pkit process status says
-    why.'
+  show: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
   visual:
-    kind: map
-    chip_font: 32
-    columns:
-    - head: The decision
-      text: says why
-      fill: '#491D8BFF'
-      ink: '@text_on_color'
-    - head: Written as data
-      text: says exactly what
-      fill: '#6929C4FF'
-      ink: '@text_on_color'
-    - head: Applied by
-      text: a command
-      fill: '#BE95FFFF'
-      cell: chip
-    - head: What it refuses
-      text: every time
-      fill: '#E8DAFFFF'
-    rows:
-    - [{head: COR-018, text: Schemas}, 'EPIC titles: [EPIC], then the area it covers', pkit pm create-issue, 'A title in the
-        wrong form, before it is filed']
-    - [{head: COR-033, text: Processes}, 'Review → Done: you say yes, and the merge is the gate', pkit process can-move, 'Done
-        with no merge, whoever asks']
-    head_h: 136
-    row_h: 112
-    why:
-      head: Why pkit writes rules as data
+    kind: board
+    font_size: 22
+    states: [Todo, Backlog, In Progress, Review, Done]
+    moves:
+    - {who: you, text: you schedule it}
+    - {who: agent, text: the agent starts}
+    - {who: agent, text: the agent opens a pull request}
+    - {who: you, text: you merge it}
+    card:
+      at: 2
+      to: 4
+      head: 'Feature #2270'
+      text: closes when every box in it is ticked
+      refused: Refused
+      reason: 7 boxes unticked
+    panels:
+    - head: 'The rule as data: a schema'
+      terminal:
+      - [['# workflow.yaml, from project-management', comment]]
+      - [['- from: ', output], [in-progress, args]]
+      - [['  to: ', output], [done, args]]
+      - [['  authorisation: ', output], [user, yours]]
+      - [['  gate:', output]]
+      - [['    kind: ', output], [deterministic, args]]
+      - [['    predicate:', output]]
+      - [['      run: ', output], [gate-checkboxes-ticked, pkit]]
+      caption: pkit validate checks that it has the shape a process needs.
+    - head: What the agent asks
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' process status \', args]]
+      - [['    project-management:issue-lifecycle', args]]
+      - [['    --subject 2270', args]]
+      - [['Where: ', output], ['in-progress — Branch open, work in flight.', args]]
+      - [['Legal moves (live precheck):', output]]
+      - [['  ✗ done  [close-issue]', del]]
+      - [['      7 unticked checkbox(es) remain', del]]
+    - head: Why pkit has them
       items:
-      - The decision keeps the why. The data keeps the exact rule, in one place.
-      - Change a rule, and you change a line of data, not code and prompts.
-      - An agent can forget a rule it reads. A command applies it every time.
-      - One engine checks every process. A gate never passes on an agent's word.
+      - The agent asks where work stands, instead of guessing.
+      - A move needs its check or your yes, never just the agent's word.
+      - The rule is written once, and every command and agent reads it.
   limit: 'pkit brings the engine, not a process: the one in use today comes with the project-management add-on.'
-  minutes: 1
-  notes: 'Some decisions are exact enough for a program: a title format, which moves an issue may make. pkit writes those
-    as data, a YAML file with a schema that says what the file must look like (COR-018). The decision keeps the why, the
-    data keeps the exact rule, and the code only applies it. COR-018 weighed two other places: rules written into the code,
-    where every change edits the code, and rules read from the decisions'' prose, which breaks. A process is staged work
-    written the same way: its states, the moves between them, and the gate on each move (COR-033). pkit has one engine
-    for every process, so each discipline does not build its own copy that drifts. The engine answers three questions the
-    same way every time: where is this issue, may it move, is it valid. A gate passes on a check, or on a record made by
-    someone other than the agent it gates, never on the agent''s own word (COR-033 point 4). The examples come from the
-    project-management add-on, met on the install slide: create-issue checks the title against titles.yaml before it files
-    the issue, and Review to Done needs your merge. A log of each move is optional and off by default (COR-033 point 7).
-    What comes with pkit: the engine and pkit process commands, the process skill for a definition''s shape, the process-author
-    agent for its gates (COR-044), and pkit process new for a process of your own. pkit validate checks every schema and
-    every process definition. Your own data files can name the schema they follow, and pkit validate checks them too (COR-023).'
+  minutes: 1.5
+  notes: 'Everyone knows a task board: Todo, In Progress, Done. A board only shows where work is. A process also says who
+    may make each move, and what must hold first. pkit writes it down as data, so a program checks every move. That file
+    is a schema: an exact rule written as data, with a description of the shape the file must have, which pkit validate
+    checks (COR-018). The decision keeps the why; the schema keeps the exact rule, in one place, and every command, skill
+    and agent reads the same file. A rule only in prose is read anew by each agent, and a rule written into code changes
+    only when the code does. A process is one kind of schema: the stages, the moves between them, and the gate on each move
+    (COR-033). One engine in pkit runs every process. It answers where an issue is, whether it may move, and why not, the
+    same way every time. A gate passes on a check, or on a record made by someone other than the agent it gates, never on
+    the agent''s own word (COR-033 point 4). On the board, a Feature skips Review: it closes when every box in it is ticked,
+    and you say yes. Feature #2270 has 7 boxes unticked, so the engine refuses Done; read live on 30 October. Another schema
+    of the same add-on, titles.yaml, holds each issue type''s title format, and pkit pm create-issue refuses a title in the
+    wrong form before it files the issue. A log of each move is optional and off unless you turn it on (COR-033 point 7).
+    What comes with pkit: the engine and the pkit process commands, the process skill for a definition''s shape, the process-author
+    agent for its gates (COR-044), and pkit process new for a process of your own. Your own data files can name the schema
+    they follow, and pkit validate checks them too (COR-023).'
 - id: skillsfrom
   part: P2
   title: Where skills come from
@@ -1252,5 +1262,5 @@ slides:
   visual:
     kind: none
   limit: ''
-  minutes: 1.5
+  minutes: 1
   notes: ''

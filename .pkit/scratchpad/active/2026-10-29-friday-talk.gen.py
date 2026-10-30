@@ -844,6 +844,103 @@ def roles(pid, y, v):
     return {f"{pid}-roles": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
 
+WHO_TONES = {"you": "@role_people", "agent": "@role_code"}
+
+
+def board(pid, y, v):
+    """A process as the task board everyone knows: a column per state, an arrow between the column heads, and above
+    each arrow who makes that move, in its tone (you blue, the agent purple). One card sits in its column; a dashed red
+    arrow from it to the state it may not reach yet, and the reason in red there. Under the board, panels side by side,
+    each with a heading: a terminal (the rule as data; what the agent asks), with an optional caption, or a box of
+    reasons with a bar on top. The board and the boxes are one instance of a template made for this slide; the
+    terminals are images."""
+    states, moves, card = v["states"], v["moves"], v["card"]
+    n = len(states)
+    ag = 96
+    sw = round((SPAN16 - (n - 1) * ag) / n)
+    xs = [i * (sw + ag) for i in range(n)]
+    WHO_H, HEAD_H, LANE_H = 52, 72, 210
+    head_top = WHO_H + 8
+    lane_top = head_top + HEAD_H + 12
+    parts = {}
+
+    def shape(key, x, top, w, h, fill, line, bw=2):
+        parts[key] = {"type": "shape", "shape": "rectangle", "text": "", "x": round(x), "y": round(top), "width": round(w), "height": round(h),
+                      "color": fill, "border_color": line, "border_width": bw, "ink": "@text_primary"}
+
+    def text(key, s, style, x, top, w, h, ink="@text_primary", align=None):
+        parts[key] = {"type": "text", "text": md(s), "style": style, "ink": ink, "x": round(x), "y": round(top), "width": round(w), "height": round(h)}
+        if align:
+            parts[key]["align"] = align
+
+    for i, s in enumerate(states):
+        shape(f"s{i}head", xs[i], head_top, sw, HEAD_H, "#E8DAFFFF", "#E8DAFFFF", 1)
+        text(f"s{i}name", s, "@style.key", xs[i] + 24, head_top + 8, sw - 48, 56)
+        shape(f"s{i}lane", xs[i], lane_top, sw, LANE_H, "@role_neutral_bg", "@role_neutral_bg", 1)
+        if i:
+            m = moves[i - 1]
+            parts[f"m{i}arrow"] = {"type": "arrow", "points": [[xs[i] - ag + 14, head_top + HEAD_H // 2], [xs[i] - 14, head_top + HEAD_H // 2]],
+                                   "arrow_type": "straight", "tip": "end", "color": "@role_code", "border_width": 6, "border_style": "solid"}
+            mid = xs[i] - ag / 2
+            text(f"m{i}who", m["text"], "@style.body", mid - (sw + ag) / 2, 0, sw + ag, 48, WHO_TONES[m["who"]], "center")
+    at, to = card["at"], card["to"]
+    cx, cw = xs[at] + 24, sw - 48
+    ch = LANE_H - 32
+    shape("card", cx, lane_top + 16, cw, ch, "@background", "@role_code", 4)
+    text("cardhead", card["head"], "@style.key", cx + 24, lane_top + 32, cw - 48, 56)
+    text("cardtext", card["text"], "@style.body", cx + 24, lane_top + 92, cw - 48, 92)
+    mid_y = lane_top + 16 + ch / 2
+    parts["cardarrow"] = {"type": "arrow", "points": [[cx + cw + 8, round(mid_y)], [xs[to] + 16, round(mid_y)]], "arrow_type": "straight",
+                          "tip": "end", "color": "@text_error", "border_width": 6, "border_style": "dashed"}
+    text("refusedhead", card["refused"], "@style.key", xs[to] + 40, lane_top + 32, sw - 64, 56, "@text_error")
+    text("refusedtext", card["reason"], "@style.body", xs[to] + 40, lane_top + 92, sw - 64, 92, "@text_error")
+    board_h = lane_top + LANE_H
+
+    panels = v["panels"]
+    pn = len(panels)
+    pw = round((SPAN16 - (pn - 1) * GUT) / pn)
+    ptop = board_h + 40
+    PHEAD = 68
+    fs = v.get("font_size", 22)
+    images = {}
+    heights = []
+    for i, p in enumerate(panels):
+        if p.get("terminal"):
+            file, h = terminal_png(f"{pid}-p{i}".removeprefix("T-"), p["terminal"], pw, fs)
+            images[i] = (file, h)
+            heights.append(h + (52 if p.get("caption") else 0))
+        else:
+            iw = pw - 64
+            lines = sum(max(1, -(-text_w(t, 36) // (iw - 60))) for t in p["items"])
+            heights.append(8 + 28 + lines * 46 + (len(p["items"]) - 1) * 20 + 28)
+    body_h = max(heights)
+    for i, p in enumerate(panels):
+        x = i * (pw + GUT)
+        text(f"p{i}head", p["head"], "@style.key", x, ptop, pw, 56)
+        top = ptop + PHEAD
+        if i in images:
+            file, h = images[i]
+            parts[f"p{i}img"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": x, "y": top, "width": pw, "height": h}
+            if p.get("caption"):
+                text(f"p{i}caption", p["caption"], "@style.caption", x, top + h + 8, pw, 40, "@text_secondary")
+        else:
+            shape(f"p{i}box", x, top, pw, body_h, "@role_neutral_bg", "@role_neutral_bg", 1)
+            shape(f"p{i}bar", x, top, pw, 8, "@role_code", "@role_code", 1)
+            ty = top + 36
+            for j, t in enumerate(p["items"]):
+                lines = max(1, -(-text_w(t, 36) // (pw - 124)))
+                text(f"p{i}item{j}", t, "@style.body", x + 32, ty, pw - 64, lines * 46)
+                ty += lines * 46 + 20
+    H = ptop + PHEAD + body_h
+    name = f"board_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "A process as a task board whose moves are checked, drawn for one slide by the slide generator.",
+        "root": {**CLEAR_AREA, "width": SPAN16, "height": H},
+        "parts": parts,
+    }
+    return {f"{pid}-board": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
 def ideas(pid, y, v):
     """Where ideas start: a conversation, the scratchpad note that keeps it, and what the note becomes, the
     products large on the right, the first (records) dark like the pyramid's apex, dropped small below. A box
@@ -1248,6 +1345,8 @@ def build_slide(s, n, total):
             add(table_map(pid, y, v))
         elif kind == "roles":
             add(roles(pid, y, v))
+        elif kind == "board":
+            add(board(pid, y, v))
         elif kind == "wired":
             add(wired(pid, y, v))
         elif kind == "ties":
