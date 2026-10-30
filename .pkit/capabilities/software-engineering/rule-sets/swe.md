@@ -1,6 +1,7 @@
 ---
 rule-set: SWE
 loaded: true
+budget: 213
 version: 1.0.0
 rules:
   RS-SWE-001:
