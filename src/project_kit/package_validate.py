@@ -501,6 +501,14 @@ def _repository_findings(
             for index, value in enumerate(values):
                 _check_relative(findings, f"/{key}/{index}", value, "a repository-relative path")
 
+    # The host that reaches the capabilities' rules index lies inside the project's root
+    # (ADR-076 point 4).
+    loaded_rules: Any = raw.get("loaded_rules")
+    if isinstance(loaded_rules, Mapping):
+        host: Any = cast("Mapping[str, Any]", loaded_rules).get("host")
+        if host is not None:
+            _check_relative(findings, "/loaded_rules/host", host, "a repository-relative path")
+
     for index, pattern in enumerate(_items(raw.get("runtime_ignore"))):
         if isinstance(pattern, str) and journal.drops_claim(pattern):
             findings.append(

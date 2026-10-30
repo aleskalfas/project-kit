@@ -88,6 +88,7 @@ if TYPE_CHECKING:
     from project_kit.capabilities import CapabilitySource, CollisionFinding, MandatoryUpstream
     from project_kit.changesets import Changeset
     from project_kit.decisions import stamp_decision
+    from project_kit.loaded_rules import SetReading
     from project_kit.merge import run_merge
     from project_kit.migrations import refuse_inside_migration
     from project_kit.process import ProcessEngine
@@ -2494,8 +2495,9 @@ def rule_sets_group() -> None:
     migration to read rather than walk routes or judge pins itself (ADR-057
     points 1 and 2): `reach` and `altered` read only and run no query.
     `generate` writes the file a session loads from a loaded set authored here
-    (ADR-075 point 4). Validation of rule-set files is `pkit validate`'s
-    `rule-sets` member.
+    (ADR-075 point 4), and `loaded` says which loaded files bind, every layer's
+    (ADR-076 point 1). Validation of rule-set files, and of how each loaded file
+    reaches a session, is `pkit validate`'s `rule-sets` member.
     """
 
 
@@ -2670,6 +2672,50 @@ def rule_sets_generate_command() -> None:
         raise click.ClickException("not in a project tree.")
     generation = loaded_rule_sets.generate(target_root)
     click.echo(loaded_rule_sets.render(generation), nl=False)
+
+
+@rule_sets_group.command("loaded")
+@click.option(
+    "--index",
+    "adapter",
+    metavar="ADAPTER",
+    default=None,
+    help="Print the capabilities' rules index the backbone renders for registered adapter "
+    "ADAPTER's `loaded_rules:` form, as the lifecycle writes it, instead of the list.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def rule_sets_loaded_command(adapter: str | None, as_json: bool) -> None:
+    """Which loaded files bind here, every layer's with its owner (ADR-076 point 1).
+
+    In the order a session reads them: the backbone's `.pkit/rules/core.md`;
+    the `rules.md` of each loaded set of a capability the backbone manifest
+    registers, by name, so a capability unregistered with its files kept is
+    left out; and the project's own loaded set's file or its plain
+    `.pkit/rules/project.md`. Each with the set it is generated from, or as a
+    plain file, and whether the checkout holds it. The capabilities' rules
+    index, `.pkit/rules/capabilities.md`, takes its entries from this answer,
+    and validation's `rule-sets` member checks the same answer, so a
+    capability's file is delivered exactly where it is checked. With --index,
+    the index's text for that adapter's form. Reads only. Exit 0 when
+    answered; 1 where ADAPTER is not registered; 2 on a usage error.
+    """
+    import json
+
+    from project_kit import loaded_rules
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if adapter is not None:
+        click.echo(loaded_rules.render_index_for(target_root, adapter), nl=False)
+        return
+    if as_json:
+        document = loaded_rules.loaded_document(target_root)
+        click.echo(json.dumps(document, indent=2, sort_keys=True))
+        return
+    click.echo(loaded_rules.render_loaded_human(target_root), nl=False)
 
 
 @main.group(invoke_without_command=True)
@@ -5374,6 +5420,13 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
     # under project/, the skips chosen above are recorded and each override
     # removes the project's artefact, then its copy, its migrations and its
     # restamp.
+    from project_kit import loaded_rules
+
+    # Its loaded set is read before the copy, and what the copy newly binds is said
+    # after it (ADR-076 point 6).
+    rules_before = loaded_rules.read_component(
+        name, loaded_rules.component_folder(target_root, name)
+    )
     refreshed_path = caps.refresh_capability(
         target_root,
         capability_source,
@@ -5382,6 +5435,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         record=record,
         overridden=overridden,
     )
+    _echo_capability_bound(target_root, name, rules_before, capability_source.path, dry_run=dry_run)
 
     verb = "Would refresh" if dry_run else "Refreshed"
     skip_note = f" ({len(merged_skipped)} artifact(s) skipped)" if merged_skipped else ""
@@ -7319,6 +7373,7 @@ def install_capability_cmd(
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -7370,6 +7425,7 @@ def _install_capability_in_source(
         )
     )
     _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
+    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
@@ -7668,6 +7724,7 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
             f"(in-repo) at {registered_path.relative_to(target_root)}/",
         )
     )
+    _echo_capability_bound(target_root, name, None, capability_source.path, dry_run=dry_run)
 
     if not dry_run:
         # Run the SAME deploy primitives a kit-source install runs, so the
@@ -7767,9 +7824,11 @@ def _upgrade_capability_in_source(
 def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     """Deploy a capability just brought in or refreshed, and provision its query commands.
 
-    The tail `install`, `register` and `upgrade` share: re-run the installed
+    The tail `install`, `register` and `upgrade` share, after the manifest is
+    written: render the capabilities' rules index, so a session loads the
+    capability's rules from here on (ADR-076 point 2); re-run the installed
     adapter primitives so the harness picks up the capability's skills and
-    agents, then provision its query commands, so an offline `pkit validate`
+    agents; then provision its query commands, so an offline `pkit validate`
     answers without a `pkit sync` first (#1090). Deploy is identical whatever
     the capability's origin (COR-031 D1).
     """
@@ -7780,8 +7839,22 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
         source_kit=source_kit,
         dry_run=False,
     )
+    install_mod.render_rules_index(ctx)
     install_mod.run_installed_adapter_primitives(ctx)
     install_mod.provision_query_commands(ctx, component=name)
+
+
+def _echo_capability_bound(
+    target_root: Path, name: str, before: SetReading | None, source: Path, *, dry_run: bool
+) -> None:
+    """What a capability's install, register or upgrade newly binds of its loaded set,
+    read where it is copied from, against its reading `before`, none for an install
+    (ADR-076 point 6). A dry run says nothing: its copy is only named."""
+    from project_kit import loaded_rules
+
+    if dry_run:
+        return
+    loaded_rules.echo_bound(target_root, loaded_rules.bound_by({name: before}, [(name, source)]))
 
 
 def _ask_point_questions(
@@ -8312,6 +8385,9 @@ def uninstall_capability_cmd(
             source_kit=source_kit,
             dry_run=False,
         )
+        # The capability is unregistered, so the index leaves its rules out from here
+        # on, its files kept or not (ADR-076 point 2).
+        install_mod.render_rules_index(ctx)
         install_mod.run_installed_adapter_primitives(ctx)
 
 

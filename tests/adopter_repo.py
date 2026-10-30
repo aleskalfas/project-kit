@@ -367,7 +367,11 @@ class AdopterRepo(GitRepo):
 
     def install_capabilities(self, *names: str) -> None:
         """Install kit-shipped capabilities in the given order, refusing (as the
-        CLI does) when a declared dependency is not installed yet."""
+        CLI does) when a declared dependency is not installed yet, then render the
+        capabilities' rules index, as the CLI's install does after it registers one
+        (ADR-076 point 2)."""
+        if not names:
+            return
         for name in names:
             source = caps.find_capability_in_source(self.source_kit, name)
             if source is None:
@@ -382,6 +386,11 @@ class AdopterRepo(GitRepo):
                     f"list dependencies before dependents"
                 )
             caps.install_capability(self.root, source)
+        ctx = install_mod.InstallContext(
+            target_root=self.root, source_kit=self.source_kit, dry_run=False
+        )
+        with contextlib.redirect_stdout(io.StringIO()):
+            install_mod.render_rules_index(ctx)
 
     def script_history(self) -> ScriptedHistory:
         """Lay down the scripted history described on `ScriptedHistory`.

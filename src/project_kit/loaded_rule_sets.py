@@ -7,8 +7,9 @@ on an artefact (COR-068 points 1 and 2). This module is the one home of that fil
 - **Where it goes** (`loaded_file_of`), by the set's owner, never by a key in the
   set (ADR-075 point 2): the backbone's set at `.pkit/rules/core.md`
   (`BACKBONE_LOADED_FILE`), a project's own at `.pkit/rules/project.md`
-  (`PROJECT_LOADED_FILE`), the paths the harness's include reads. A capability's
-  loaded set has none: validation refuses it (COR-068 point 4).
+  (`PROJECT_LOADED_FILE`), the paths the harness's include reads, and a
+  capability's at `rules.md` at the root of its tree (`capability_loaded_file`,
+  ADR-076 point 1), which the capabilities' rules index reaches (`loaded_rules`).
 - **What it holds** (`project`), the one projection of a set into its file (ADR-075
   point 3): the set's body with each accepted rule's section under the heading
   `N. Title (RS-<SET>-NNN)`, at the level the set writes it, and each proposed,
@@ -22,7 +23,9 @@ on an artefact (COR-068 points 1 and 2). This module is the one home of that fil
 - **Checking it** (`staleness_findings`), the part of validation's `rule-sets` member
   that fails a loaded file out of step with its set (ADR-075 point 5): byte for
   byte once line endings are read as `\\n`, only where the set is authored, by the
-  tree's own predicate (`is_synced_copy`).
+  tree's own predicate (`is_synced_copy`). Where a capability is authored, the same
+  member fails its loaded set's preface that does not name it, and a `rules.md` at
+  its root with no loaded set behind it (`capability_findings`, ADR-076 point 1).
 
 The generator and the check both call `project`, so a file the generator writes
 always passes the check (ADR-075, "Why one function for the generator and the
@@ -51,6 +54,9 @@ BACKBONE_LOADED_FILE = PurePosixPath(".pkit/rules/core.md")
 #: (ADR-075 point 6).
 PROJECT_LOADED_FILE = PurePosixPath(".pkit/rules/project.md")
 
+#: A capability's loaded file, at the root of its tree (ADR-076 point 1).
+CAPABILITY_LOADED_FILE_NAME = "rules.md"
+
 #: The command that writes a loaded file, as the findings and messages name it.
 GENERATE_COMMAND = "pkit rule-sets generate"
 
@@ -58,14 +64,19 @@ GENERATE_COMMAND = "pkit rule-sets generate"
 _TITLE_SEPARATORS = " \t—–-:"
 
 
-def loaded_file_of(rule_set: rs.RuleSet) -> PurePosixPath | None:
-    """The loaded file of a loaded set, by its owner; `None` for a capability's set,
-    which has none (COR-068 point 4)."""
+def capability_loaded_file(name: str) -> PurePosixPath:
+    """The loaded file of capability `name`'s loaded set, from the root: its name gives it,
+    as one constant gives the backbone's (ADR-076 point 1)."""
+    return PurePosixPath(fd.CAPABILITIES_DIR.as_posix()) / name / CAPABILITY_LOADED_FILE_NAME
+
+
+def loaded_file_of(rule_set: rs.RuleSet) -> PurePosixPath:
+    """The loaded file of a loaded set, by its owner (ADR-075 point 2; ADR-076 point 1)."""
     if rule_set.component == fd.BACKBONE_COMPONENT:
         return BACKBONE_LOADED_FILE
     if rule_set.component is None:
         return PROJECT_LOADED_FILE
-    return None
+    return capability_loaded_file(rule_set.component)
 
 
 def rule_number(rule_id: str) -> int:
@@ -131,12 +142,10 @@ def project(rule_set: rs.RuleSet) -> str:
 
 def unprojectable(rule_set: rs.RuleSet, discovery: rs.RuleSetDiscovery) -> str | None:
     """Why a loaded set's file cannot be projected, or None: its rules and sections do
-    not join, it is a capability's, or its owner has another loaded set first by path.
-    Each is a finding of validation's `rule-sets` member, which names the fix."""
+    not join, or its owner has another loaded set first by path. Each is a finding of
+    validation's `rule-sets` member, which names the fix."""
     if any(True for _ in rs.join_findings(rule_set)):
         return "its rules and its sections do not join"
-    if loaded_file_of(rule_set) is None:
-        return f"it is {rule_set.owner}'s, and a capability's loaded set has no loaded file"
     first = first_loaded(discovery, rule_set.component)
     if first is not None and first is not rule_set:
         return f"{rule_set.owner} has a loaded rule set already, {first.citation}"
@@ -171,10 +180,11 @@ def staleness_findings(
 ) -> Iterable[rs.RuleSetFinding]:
     """Each loaded file out of step with its set, where the set is authored.
 
-    For the first loaded set of the backbone and of the project, its file is compared
-    with `project`'s text, byte for byte once line endings are read as `\\n`. A file
-    that differs, or is missing, is an error naming the file, the set and the command
-    that writes it. A set that arrives by sync is not compared: the project receives it
+    For the first loaded set of each owner, the backbone, each capability and the
+    project, its file is compared with `project`'s text, byte for byte once line endings
+    are read as `\\n`. A file that differs, or is missing, is an error naming the file,
+    the set and the command that writes it. A set that arrives by sync is not compared:
+    the project receives it
     and its file together and edits neither. A set that cannot be projected is left to
     the finding that says why. A tree without the ownership module cannot tell where a
     set is authored, so each loaded set is skipped with a report saying so.
@@ -185,7 +195,6 @@ def staleness_findings(
     is_synced_copy = synced_copy_test(target_root)
     for rule_set in candidates:
         loaded_file = loaded_file_of(rule_set)
-        assert loaded_file is not None  # unprojectable says so otherwise
         if is_synced_copy is None:
             yield rs.RuleSetFinding(
                 rule_set.path,
@@ -211,6 +220,71 @@ def staleness_findings(
                 f"(COR-068 point 3). Run `{GENERATE_COMMAND}`, and edit the set, not the "
                 f"loaded file.",
             )
+
+
+def preface(rule_set: rs.RuleSet) -> str:
+    """The prose before a set's first rule: its body up to the first heading that opens
+    with one of its rules' ids, or the whole body when none does."""
+    ids = [rule.id for rule in rule_set.rules]
+    for heading in document_parts.body_headings(rule_set.body):
+        if any(document_parts.heading_opens_with(heading.title, rule_id) for rule_id in ids):
+            return rule_set.body[: heading.start]
+    return rule_set.body
+
+
+def capability_findings(
+    target_root: Path, discovery: rs.RuleSetDiscovery
+) -> Iterable[rs.RuleSetFinding]:
+    """What a capability's loaded set and its loaded file get wrong where the capability is
+    authored (ADR-076 point 1), by the tree's own predicate (`is_synced_copy`):
+
+    - a loaded set whose preface does not name its capability: a session reads the file,
+      not the records, so the file says whose layer its rules are (COR-070 point 1). Only
+      the name is checked; the rest of the preface is judged by whoever accepts the set
+    - a `rules.md` at the root of a registered capability with no loaded set behind it, so
+      a file left behind by a removed set is never delivered unchecked
+
+    A tree without the ownership module cannot tell where a capability is authored, and
+    the staleness check reports that already, so nothing is judged here.
+    """
+    is_synced_copy = synced_copy_test(target_root)
+    if is_synced_copy is None:
+        return
+    for rule_set in loaded_sets(discovery):
+        component = rule_set.component
+        if component in (None, fd.BACKBONE_COMPONENT) or is_synced_copy(rule_set.path):
+            continue
+        if first_loaded(discovery, component) is not rule_set:
+            continue  # a second loaded set is its own finding
+        if component not in preface(rule_set):
+            yield rs.RuleSetFinding(
+                rule_set.path,
+                "",
+                rs.Severity.ERROR,
+                rs.RuleSetFindingKind.LOADED_PREFACE,
+                f"the preface of {rule_set.citation}, the prose before its first rule, does "
+                f"not name its capability, {component}. A session reads the loaded file, not "
+                f"the records, so the file says whose rules they are and how they stand to "
+                f"core's and to a project's (COR-070 point 1; the rules README gives the "
+                f"sentence). Name {component} in the preface.",
+            )
+    for name in fd.installed_capability_names(target_root):
+        loaded_file = capability_loaded_file(name)
+        if not (target_root / loaded_file).is_file() or is_synced_copy(str(loaded_file)):
+            continue
+        if first_loaded(discovery, name) is not None:
+            continue
+        yield rs.RuleSetFinding(
+            str(loaded_file),
+            "",
+            rs.Severity.ERROR,
+            rs.RuleSetFindingKind.LOADED_FILE_ORPHANED,
+            f"capability {name} holds a loaded file, {loaded_file}, but ships no loaded rule "
+            f"set it is generated from, so its rules would reach every session with nothing "
+            f"to check them (ADR-076 point 1). Remove the file, or restore the set it was "
+            f"generated from in {fd.CAPABILITIES_DIR.as_posix()}/{name}/{fd.RULE_SETS_SEGMENT}/ "
+            f"and run `{GENERATE_COMMAND}`.",
+        )
 
 
 def _stale(path: Path, expected: str) -> str | None:
@@ -260,8 +334,9 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
 
     Refuses, before it writes anything, where:
 
-    - a rule-set file of the backbone or the project cannot be read, or a loaded set
-      cannot be projected (`unprojectable`): the message names `pkit validate`
+    - a rule-set file of the backbone, of the project or of a capability authored here
+      cannot be read, or a loaded set cannot be projected (`unprojectable`): the
+      message names `pkit validate`
     - the tree has no ownership module, so where a set is authored cannot be told
     - no loaded set is authored here: none at all, or only sets that arrive by sync,
       whose files the next sync brings (COR-068 point 3)
@@ -273,8 +348,12 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
     computes the same answer and writes nothing.
     """
     discovery = rs.discover_rule_sets(target_root)
+    synced = synced_copy_test(target_root)
     unreadable = [
-        u for u in discovery.unreadable if u.place.component in (None, fd.BACKBONE_COMPONENT)
+        u
+        for u in discovery.unreadable
+        if u.place.component in (None, fd.BACKBONE_COMPONENT)
+        or (synced is not None and not synced(u.path))
     ]
     if unreadable:
         raise GenerateRefusal(
@@ -315,7 +394,7 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
         )
     for rule_set in authored:
         loaded_file = loaded_file_of(rule_set)
-        if loaded_file is not None and (target_root / loaded_file).is_symlink():
+        if (target_root / loaded_file).is_symlink():
             raise GenerateRefusal(
                 f"the loaded file of {rule_set.citation}, {loaded_file}, is a link, which "
                 f"validation reads as no loaded file; nothing was written. Replace the link "
@@ -324,7 +403,6 @@ def generate(target_root: Path, *, write: bool = True) -> Generation:
     written: list[Generated] = []
     for rule_set in authored:
         loaded_file = loaded_file_of(rule_set)
-        assert loaded_file is not None
         text = project(rule_set)
         target = target_root / loaded_file
         changed = _stale(target, text) is not None

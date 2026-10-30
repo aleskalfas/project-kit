@@ -15,12 +15,13 @@ import shutil
 import stat
 import subprocess
 import sysconfig
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import ExitStack
 from dataclasses import dataclass
 from enum import StrEnum
 from importlib.resources import as_file, files
 from pathlib import Path, PurePath
+from typing import Any
 
 import click
 
@@ -698,7 +699,10 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
         click.echo("  would register each adapter at the version it ships (.pkit/manifest.yaml)")
     else:
         register_adapters(target_root)
+    # A first install lists every rule core's set binds (ADR-076 point 6).
+    _echo_newly_bound(ctx, {}, [("backbone", source_kit)])
     settings_backed_up = _backup_existing_claude_settings(ctx)
+    render_rules_index(ctx)
     run_installed_adapter_primitives(ctx)
 
     _render_runtime_ignore(ctx)
@@ -757,6 +761,20 @@ def _render_runtime_ignore(ctx: InstallContext) -> None:
     click.echo(visibility.render_runtime_ignore(ctx.target_root, dry_run=ctx.dry_run))
 
 
+def render_rules_index(ctx: InstallContext) -> None:
+    """Render the capabilities' rules index, `.pkit/rules/capabilities.md`, whole, at the
+    core tier (ADR-076 point 2).
+
+    Derivable state: rendered from `pkit rule-sets loaded` and the registered adapters'
+    `loaded_rules:` wherever the lifecycle regenerates derivable state, after the
+    manifest is written, so the render reads what is registered. A file at the path that
+    is no index is never written over. Local import, as the other renders'.
+    """
+    from project_kit import loaded_rules
+
+    click.echo(loaded_rules.write_index(ctx.target_root, dry_run=ctx.dry_run))
+
+
 def refresh_private_region(ctx: InstallContext) -> None:
     """Re-render pkit's region of the local exclude file from the footprint, where the
     project is private (ADR-009 point 3): a component the step installed may declare
@@ -767,6 +785,15 @@ def refresh_private_region(ctx: InstallContext) -> None:
     line = visibility.refresh_private_region(ctx.target_root, dry_run=ctx.dry_run)
     if line is not None:
         click.echo(line)
+
+
+def _echo_newly_bound(
+    ctx: InstallContext, before: Mapping[str, Any], delivered: Sequence[tuple[str, Path]]
+) -> None:
+    """Print what a step newly binds of each loaded set it delivers (ADR-076 point 6)."""
+    from project_kit import loaded_rules
+
+    loaded_rules.echo_bound(ctx.target_root, loaded_rules.bound_by(before, delivered))
 
 
 def _record_install_target(ctx: InstallContext) -> None:
@@ -1064,7 +1091,10 @@ def _install_area(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bool 
         # overwrite it. Exclude it from the flat-content pass so sync only
         # propagates core.md. On init (overwrite=False), project.md is
         # absent in fresh adopters so the file-presence guard below handles it.
-        _handled.add("project.md")
+        # capabilities.md, the capabilities' rules index, is rendered for each
+        # project from what it installs (`render_rules_index`, ADR-076 point 2),
+        # never copied from the source's own.
+        _handled |= {"project.md", "capabilities.md"}
     elif area_name == LIFECYCLE_AREA:
         _handled.add(LIFECYCLE_MARK)  # written first, above
     for entry in sorted(src.iterdir()):

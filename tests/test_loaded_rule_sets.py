@@ -411,13 +411,19 @@ def test_one_loaded_set_to_an_owner(adopter: AdopterRepo) -> None:
     assert "ONE" in finding.message
 
 
-def test_a_capability_s_loaded_set_is_refused(make_adopter_repo: MakeAdopterRepo) -> None:
+def test_a_capability_s_loaded_set_is_no_longer_refused(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """COR-070 point 1 lifts COR-068 point 4's refusal: a capability ships one loaded set,
+    whose loaded file is its `rules.md` (ADR-076 point 1)."""
     adopter = make_adopter_repo(capabilities=("evidence",))
     adopter.write(
         {".pkit/capabilities/evidence/rule-sets/ev.md": loaded_text("EV", accepted("RS-EV-001"))}
     )
-    (finding,) = findings(adopter, Kind.CAPABILITY_LOADED)
-    assert "COR-068 point 4" in finding.message
+    result = rs.validate_rule_sets(adopter.root)
+    assert [f for f in result.findings if f.location.endswith("ev.md")] == []
+    ev = the_set(adopter.root, "EV")
+    assert str(lr.loaded_file_of(ev)) == ".pkit/capabilities/evidence/rules.md"
 
 
 def test_an_h1_in_a_loaded_set_s_body_is_refused(adopter: AdopterRepo) -> None:

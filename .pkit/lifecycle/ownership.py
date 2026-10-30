@@ -100,6 +100,18 @@ _ADOPTER_OWNED_KIT_FILES: frozenset[str] = frozenset(
     }
 )
 
+# Files of the rules area that are no synced copy of `core.md`'s kind: the project's
+# own `project.md`, and the capabilities' rules index, `capabilities.md`, which the
+# lifecycle renders for each project from what is installed, as it renders
+# `.gitignore` (ADR-076 point 2). Neither is propagated from the methodology's source,
+# and the packaging leaves the source's own out of the bundle.
+_PROJECT_RULES_FILES: frozenset[str] = frozenset(
+    {
+        "project.md",  # the project's own operational rules (COR-014).
+        "capabilities.md",  # rendered per project from the installed capabilities (ADR-076).
+    }
+)
+
 # Scratchpad state folders are adopter-owned per COR-012: init stubs them, sync
 # never touches their contents.
 _SCRATCHPAD_STATE_DIRS: frozenset[str] = frozenset({"active", "done", "dropped"})
@@ -167,7 +179,7 @@ def is_adopter_owned_by_tier(rel_posix: str) -> bool:
     # `.pkit/project/` and `.pkit/<area>/project/`.
     if parts[0] == "project":
         return True
-    if parts[0] == "rules" and len(parts) > 1 and parts[1] == "project.md":
+    if parts[0] == "rules" and len(parts) == 2 and parts[1] in _PROJECT_RULES_FILES:
         return True
     if parts[0] == "scratchpad" and len(parts) > 1 and parts[1] in _SCRATCHPAD_STATE_DIRS:
         return True
@@ -304,7 +316,8 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
       `.pkit/capabilities/<name>/project/`,
       `.pkit/adapters/<harness>/project/` (the per-component manifest) and
       `.pkit/adapters/<harness>/settings/project/` — plus
-      `.pkit/rules/project.md`, `.pkit/scratchpad/{active,done,dropped}/` and
+      `.pkit/rules/project.md`, the capabilities' rules index
+      `.pkit/rules/capabilities.md`, `.pkit/scratchpad/{active,done,dropped}/` and
       the adopter-owned top-level files above: the project side of the
       no-shared-files split (COR-001). A `project/` component elsewhere is
       *inside* a kit-owned refresh root and is not the adopter's. This step
@@ -342,8 +355,8 @@ def is_sync_managed(target_root: Path | str, raw_path: str) -> bool:
         return False
     if parts[1] == "capabilities":
         return _capability_path_is_sync_managed(root, parts)
-    if rel == ".pkit/rules/project.md":
-        return False  # adopter-authored sibling of the propagated core.md.
+    if len(parts) == 3 and parts[1] == "rules" and parts[2] in _PROJECT_RULES_FILES:
+        return False  # project.md, the project's own, and the index rendered for it.
     if parts[1] == "scratchpad" and len(parts) >= 3 and parts[2] in _SCRATCHPAD_STATE_DIRS:
         return False
     return True

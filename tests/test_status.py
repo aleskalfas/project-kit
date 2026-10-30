@@ -106,8 +106,21 @@ def _deploy_agent(root: Path, name: str, *, marked: bool = True) -> None:
 
 
 def _deployed(output: str) -> list[str]:
-    """The adapter section's lines after `settings.json`."""
-    return _section(output, "Adapter: claude-code").splitlines()[1:]
+    """The adapter section's lines after `settings.json`, up to the rules index's."""
+    lines = _section(output, "Adapter: claude-code").splitlines()[1:]
+    ends = [i for i, line in enumerate(lines) if line.startswith("    rules index")]
+    return lines[: ends[0]] if ends else lines
+
+
+def test_status_reports_the_rules_index_after_the_agents(installed_target: Path) -> None:
+    """The capabilities' rules index, beside the deployed skills and agents (ADR-076):
+    first install renders it, including no capability's rules yet."""
+    result = CliRunner().invoke(status, [])
+    assert result.exit_code == 0, result.output
+    lines = _section(result.output, "Adapter: claude-code").splitlines()
+    assert lines[-1] == (
+        f"    {'rules index':<18} .pkit/rules/capabilities.md, including no capability's rules"
+    )
 
 
 def test_status_detects_kit_skill_in_per_name_dir_symlink_form(installed_target: Path) -> None:
