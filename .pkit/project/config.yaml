@@ -141,6 +141,8 @@ friction:
     - .claude/
     - CHANGELOG.md
     - uv.lock
+    # derivable: the capabilities' rules index the lifecycle renders (ADR-076 point 2)
+    - .pkit/rules/capabilities.md
     # history once released: the changesets a release consumes, read as written, so
     # no citation in one is judged against today's rules (ADR-075 point 8)
     - .changes/
