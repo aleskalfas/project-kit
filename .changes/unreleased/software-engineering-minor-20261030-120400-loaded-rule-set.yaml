@@ -7,5 +7,6 @@ body: >
   The capability ships its operational rules as its loaded rule set
   `SWE`, whose `rules.md` every session loads wherever the capability is
   installed (COR-070): while building, run the tests of what your change
-  touches and the project's fast checks, and leave the full suite to where
-  the project runs it, where it runs one.
+  changes and the checks the project names as its fast checks; where the
+  project runs its full suite in a gate on each change, you need not run it
+  yourself, and where it runs it nowhere, run it once or say you could not.

@@ -6,7 +6,7 @@ custom:
 body: >
   The capability ships its operational rules as its loaded rule set
   `PM`, whose `rules.md` every session loads wherever the capability is
-  installed (COR-070): a pull request's body opens with `Closes #<issue>`, by
-  the PR template; work starts from a Task the tracker holds, and its branch
-  and pull request link to it; and an issue carries one value on each
-  classification axis. Branch naming itself stays core's (COR-008).
+  installed (COR-070): a pull request that closes issues names each with a
+  closing keyword, first in its body as the PR template puts it; and an issue
+  carries one value on each required axis the project's substrate map
+  carries. Branch naming, and a branch's related issue, stay core's (COR-008).
