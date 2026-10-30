@@ -1,0 +1,416 @@
+answers:
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:28:51Z
+      outcome: unchanged
+      unchanged-because: "The trim shortens core rules 13 and 15 without changing them: an included file still has no H1 and nests under the host's heading, and the permission-layer rule still asks for the narrowest action and extracts a recurring diagnostic into a command (COR-007), so the README's account of the include and of working with the permission layer holds."
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:28:54Z
+      outcome: unchanged
+      unchanged-because: "Core rule 16 keeps its requirement in fewer words: intermediate files go in the agent workspace, a worktree's own in a worktree, and nowhere else outside the repository, so the README's \"workspace rule in .pkit/rules/core.md\" still says what the rule asks."
+  - artefact: CONTRIBUTING.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T013912Z-adb73078.yaml
+      - 20261027T020951Z-6b2a327a.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T032257Z-fe59c9c1.yaml
+      - 20261027T113029Z-9dec9cb8.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T145906Z-a3781d7a.yaml
+      - 20261029T151432Z-da31ac16.yaml
+      - 20261029T152404Z-888b608a.yaml
+      - 20261029T155317Z-2d90650e.yaml
+      - 20261029T155559Z-74f6b0d1.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T160608Z-f0e5731a.yaml
+      - 20261029T190551Z-85ee9700.yaml
+      - 20261029T192508Z-de8fa78a.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261029T202326Z-9a279d42.yaml
+      - 20261029T204639Z-57b1f9b1.yaml
+      - 20261029T204651Z-6eb49a72.yaml
+      - 20261029T212322Z-bf411b6a.yaml
+      - 20261029T213250Z-52102acd.yaml
+      - 20261029T213830Z-1305dbb8.yaml
+    revalidated:
+      at: 2026-10-29T23:28:58Z
+      outcome: unchanged
+      unchanged-because: "The decisions README's acceptance gate now says a person accepts a record rather than a one-line flip, which is what this file's steps for a core record already say: open it proposed, the maintainer accepts it in its change, and it lands accepted (COR-066 point 1)."
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:02Z
+      outcome: unchanged
+      unchanged-because: The journey needs the record accepted before the change builds on it, which the trimmed core rule 2 still asks, now saying that a person accepts it within its change; no step of the journey relies on the wording the trim removed.
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-017-backbone-migration-safe.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:06Z
+      outcome: unchanged
+      unchanged-because: "Core rule 5 keeps its meaning: a migration detects state already migrated and exits cleanly, and a backbone migration acts only on a positive sign and never deletes by a path's name or position, saying so in the release's notes where it adds a missing default, as the requirement states."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-29T23:29:09Z
+      outcome: unchanged
+      unchanged-because: The README's gate now says a person accepts the record first or the implementation pauses, which the example's author having the record accepted first, or pausing, still matches; the acceptance distinction reads COR-051 point 4 as before.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-workspace
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:13Z
+      outcome: unchanged
+      unchanged-because: Core rule 16 still asks an agent to keep its intermediate files in the workspace, write there with the file tools and remove what it no longer needs, so the term's example of a pull request's body written there with a file tool holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:17Z
+      outcome: unchanged
+      unchanged-because: "The trim changes the rules' wording, not what an operational rule is: core rule 8 still asks an agent to pause before a destructive operation, project rule 4 still asks for signed commits, and core rule 2 is still backbone:RS-OPS-002 in the loaded set."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183129Z-d1c2e7b6.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:20Z
+      outcome: unchanged
+      unchanged-because: "Each core and project rule the use case cites keeps its requirement: rule 2's accepted records, 8's pause, 14 and 15's permission model, 19's own repository, 21's one retry, 22's lookup, and project rules 2 and 4, which the trim leaves or only shortens."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:23Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 still has an agent write the answers its change owes and leaves any other answer to a person's accepted words or the named delegate, so the use case's account of who decides an answer no change owes holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T124541Z-754e4b23.yaml
+    revalidated:
+      at: 2026-10-29T23:29:26Z
+      outcome: unchanged
+      unchanged-because: Project rule 2, which the use case cites for the pre-push hook and CI's runs of the suite, is unchanged by this change; the trim touches only project rules 1, 3 and 4.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:28Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 still leaves an answer no change of the writer's own owes to the person, shown word for word, or to the delegate the default branch names, as the use case says.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:31Z
+      outcome: unchanged
+      unchanged-because: core.md is still the methodology's operational rules, generated from OPS in the source repository and refreshed by sync, and both files are still included in the instruction file, so the use case's steps and variant 4a hold.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:34Z
+      outcome: unchanged
+      unchanged-because: Core rule 16 still alone asks an agent to keep intermediate files in the workspace and nowhere else outside the repository, and to remove what it no longer needs, as the use case's assumption and step 6 say.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:37Z
+      outcome: unchanged
+      unchanged-because: Core rule 19 still has an agent mutate no other repository without the user's confirmation, by any route, and stop and ask, so the use case's assumption that only the rule asks it of a raw route holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:40Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 still has the reviewer check the answers before a direct commit to the default branch, where the project chose one, and the person the agent works for told, as the use case's assumption says.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:42Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 still has the writer write each answer the person accepted, as the use case cites it beside COR-050 point 3; the trim keeps that requirement.
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:45Z
+      outcome: updated
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      at: 2026-10-29T23:29:48Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/decisions/README.md
+          reason: "The decisions README's gate now says a person accepts a record, not a one-line flip, against the use case's assumption that who accepts a decision record is open and its variant 1a landing a rule proposed. #2191 realizes COR-066, and this use case follows it there."
+        - anchor:
+            kind: path
+            value: .pkit/rules/core.md
+          reason: "Core rule 2 now says a person accepts a proposal within its change and an agent writes accepted only once that person has, against the use case's assumption that the gate asks only for a reviewed status flip. #2191 realizes COR-066, and this use case follows it there."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+    revalidated:
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/decisions/README.md
+          reason: "The decisions README's gate now says a person accepts a record in its change before it lands, while step 9 and the postconditions still end with the record proposed, accepted later through UC-040. #2191 realizes COR-066, and this use case follows it there."
+        - anchor:
+            kind: path
+            value: .pkit/rules/core.md
+          reason: "Core rule 2 now says a change holding a proposal does not land until a person accepts it, while step 9 still ends with the record proposed. #2191 realizes COR-066, and this use case follows it there."
