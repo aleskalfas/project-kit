@@ -16,6 +16,7 @@ pkit:
         - .pkit/adapters/claude-code/settings/core/settings.json
         - src/project_kit/permissions.py
         - src/project_kit/workspace.py
+        - src/project_kit/workspace_remove.py
         - src/project_kit/visibility.py
         - src/project_kit/run_rules.py
         - .pkit/schemas/permission-runs.schema.json
@@ -30,6 +31,7 @@ pkit:
         - .pkit/cli/README.md#folders-a-sync-writes
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#sync
+        - .pkit/cli/README.md#workspace-remove-path---dry-run
         - .pkit/cli/README.md#agents-run-agent---folder-dir----commit-sha---rules-of-capabilitycommand---files-to-dir---limit-seconds---effort-level---json
         - .pkit/cli/README.md#schemas-validate-path
         - .pkit/cli/README.md#standard-flags
@@ -349,6 +351,8 @@ Every checkout of a project has one agent workspace: `.agent-workspace/` at its 
   - **A repository or worktree nested inside the folder is not the folder.** When any directory from the folder down to the target holds a `.git` entry, the target is another checkout's.
   - **An existing file with more than one link is not inside either.** A hard link planted in the folder would carry a write to its other name.
 - **No shell command is the workspace's.** A redirect, a here-document or an `rm` into the folder is judged like any other shell write, the leading-`cd` strip included ("Compound commands" above). A remainder with a redirect into the folder still abstains. Write intermediate files with the file tools.
+- **Files leave through `pkit workspace remove`, never through `rm`.** The command tests each path after the shell expanded it, and removes nothing unless every path lies inside the folder ([the CLI README, `workspace remove`](../cli/README.md#workspace-remove-path---dry-run)). The permission model decides it as it decides any `pkit` command, so the workspace privilege does not cover it. Agents remove only what they wrote.
+- **A capability's lasting state lies under its own name.** The folder is shared by every agent working in the checkout, and some of what it holds must last. A capability keeps such state under a direct child named after itself, as project-management keeps its drift queue. The removal command refuses any path at or under such a child.
 - **Realized by the hook, never as a session-wide rule.** The projection reports a `workspace` grant as `runtime`, never as a native allow: a harness-wide `Write` or `Edit` rule would reach far beyond the folder. An adapter whose harness does not already approve the folder emits the narrowest path-scoped rule its harness offers, and one whose harness does emits nothing.
 - **In Claude Code:** [the Claude Code adapter's README, "The agent workspace"](../adapters/claude-code/README.md#the-agent-workspace), says which of the two Claude Code does. It also says that the adapter's enforcement declaration names the dimension `path-scoped-allow`.
 - **A prompt there is a defect** ("A prompt for the agent workspace is a defect" below).
