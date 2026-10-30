@@ -844,6 +844,69 @@ def roles(pid, y, v):
     return {f"{pid}-roles": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
 
+ANSWER_TONES = {"updated": ("#DEFBE6FF", "#24A148FF"), "unchanged": ("@role_people_bg", "@role_people"),
+                "deferred": ("#FCF4D6FF", "#F1C21BFF")}
+
+
+def answers(pid, y, v):
+    """A change answering for a document: on the left, a heading and a terminal (the check naming the document);
+    on the right, a heading, a row per kind of answer (a filled tag in the answer's tone, and what it means), then a
+    terminal (the answer as written). Under both, a heading and a box per reason, a bar on top. The headings, tags
+    and boxes are one instance of a template made for this slide; the terminals are images."""
+    fs = v.get("font_size", 24)
+    LW = v.get("left_w", 1200)
+    RX = LW + GUT
+    RW = SPAN16 - RX
+    HEAD = 68
+    ROW, RGAP, TAGW = 88, 16, 300
+    parts = {}
+
+    def text(key, s, style, x, top, w, h, ink="@text_primary"):
+        parts[key] = {"type": "text", "text": md(s), "style": style, "ink": ink, "x": round(x), "y": round(top), "width": round(w), "height": round(h)}
+
+    def shape(key, x, top, w, h, fill, line, bw=1):
+        parts[key] = {"type": "shape", "shape": "rectangle", "text": "", "x": round(x), "y": round(top), "width": round(w), "height": round(h),
+                      "color": fill, "border_color": line, "border_width": bw, "ink": "@text_primary"}
+
+    left, right = v["left"], v["right"]
+    text("lhead", left["head"], "@style.key", 0, 0, LW, 56)
+    lfile, lh = terminal_png(f"{pid}-left".removeprefix("T-"), left["terminal"], LW, fs)
+    parts["limg"] = {"type": "image", "file": f"{ICONS_DIR}/{lfile}.png", "x": 0, "y": HEAD, "width": LW, "height": lh}
+    text("rhead", right["head"], "@style.key", RX, 0, RW, 56)
+    top = HEAD
+    for i, a in enumerate(right["answers"]):
+        bg, tone = ANSWER_TONES[a["tone"]]
+        shape(f"a{i}tag", RX, top, TAGW, ROW, tone, tone)
+        text(f"a{i}tagtext", a["tag"], "@style.key", RX + 24, top + (ROW - 56) / 2, TAGW - 48, 56, "@text_on_color" if a["tone"] != "deferred" else "@text_primary")
+        shape(f"a{i}box", RX + TAGW, top, RW - TAGW, ROW, bg, bg)
+        text(f"a{i}text", a["text"], "@style.body", RX + TAGW + 32, top + (ROW - 50) / 2, RW - TAGW - 64, 50)
+        top += ROW + RGAP
+    rfile, rh = terminal_png(f"{pid}-right".removeprefix("T-"), right["terminal"], RW, fs)
+    parts["rimg"] = {"type": "image", "file": f"{ICONS_DIR}/{rfile}.png", "x": RX, "y": top + 8, "width": RW, "height": rh}
+    H = max(HEAD + lh, top + 8 + rh)
+    why = v.get("why")
+    if why:
+        wt = H + 40
+        n = len(why["items"])
+        bw = round((SPAN16 - (n - 1) * GUT) / n)
+        lines = max(-(-text_w(t, 36) // (bw - 124)) for t in why["items"])
+        bh = 32 + lines * 46 + 24
+        text("whyhead", why["head"], "@style.key", 0, wt, SPAN16, 56)
+        for i, t in enumerate(why["items"]):
+            x = i * (bw + GUT)
+            shape(f"w{i}box", x, wt + 68, bw, bh, "@role_neutral_bg", "@role_neutral_bg")
+            shape(f"w{i}bar", x, wt + 68, bw, 8, "@role_code", "@role_code")
+            text(f"w{i}text", t, "@style.body", x + 32, wt + 68 + 32, bw - 64, lines * 46)
+        H = wt + 68 + bh
+    name = f"answers_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "A change answering for a document, drawn for one slide by the slide generator.",
+        "root": {**CLEAR_AREA, "width": SPAN16, "height": H},
+        "parts": parts,
+    }
+    return {f"{pid}-answers": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
 TAG_TONES = {"core": ("@role_code_bg", "@role_code"), "example": ("#FCF4D6FF", "#F1C21BFF")}
 
 
@@ -1411,6 +1474,8 @@ def build_slide(s, n, total):
             add(board(pid, y, v))
         elif kind == "files":
             add(files(pid, y, v))
+        elif kind == "answers":
+            add(answers(pid, y, v))
         elif kind == "wired":
             add(wired(pid, y, v))
         elif kind == "ties":
@@ -1495,8 +1560,11 @@ def main(slides_path, board_path):
     order = ["T-cover"]
     for i, p in enumerate(sl["parts"], 1):
         sid = f"T-part-{p['id']}"
-        new[sid] = {"template": "section", "part": str(i), "title": p["title"], "summary": p["summary"]}
-        rows[sid] = [sid]
+        if p.get("section", True):
+            new[sid] = {"template": "section", "part": str(i), "title": p["title"], "summary": p["summary"]}
+            rows[sid] = [sid]
+        else:  # slides on a row of their own, with no section before them (the closing questions)
+            rows[sid] = []
         order.append(sid)
         for s in content:
             if s["part"] == p["id"]:
@@ -1515,7 +1583,8 @@ def main(slides_path, board_path):
             v["mural_ids"] = old_ids[k]
     board["instances"].update(new)
     for sid in order:
-        board["layouts"].append({"row": rows[sid], "origin": old_origin.get(sid, "auto"), "gap": 400})
+        if rows[sid]:
+            board["layouts"].append({"row": rows[sid], "origin": old_origin.get(rows[sid][0], "auto"), "gap": 400})
     yaml.safe_dump(board, open(board_path, "w"), sort_keys=False, allow_unicode=True, width=200)
     print(f"generated {len(new)} instances in {len(order)} rows")
 

@@ -35,8 +35,9 @@ parts:
   title: What you install
   summary: 'Capabilities: optional add-ons for your kind of work, and how they connect.'
 - id: P5
-  title: Over time
-  summary: How pkit improves without breaking your work, and what comes next.
+  title: Questions
+  summary: ''
+  section: false
 slides:
 - id: opening
   part: P0
@@ -1213,20 +1214,62 @@ slides:
 - id: docs
   part: P3
   title: Docs that know when they're wrong
-  message: When code changes, the documents that depend on it are named, not found later by accident.
-  problem: Documentation goes stale silently, and you find out when someone acts on it.
-  does:
-  - Each document declares what it depends on
-  - 'The change says, per document: updated, still true, or fixed later'
-  - A reviewer checks the answers; what is out of date is counted
-  show: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it wasn''t'
+  message: 'When something a document depends on changes, the change must answer for it: updated, still true, or fixed
+    later.'
+  problem: ''
+  does: []
+  show: 'In project-kit today: 21 answers wait as "fixed later". pkit friction debt lists each, with its reason.'
   visual:
-    kind: code
-    code: "# trial run: the greeting in cli.py changed\n$ pkit friction check\n  ACT-cli-user     depends on cli.py\n  UC-001\
-      \           depends on cli.py\n  docs/usage.md    depends on cli.py\n3 documents to answer for\n"
-  limit: Only documents that declare what they depend on are covered; the rest go stale as before.
+    kind: answers
+    font_size: 22
+    left_w: 1200
+    left:
+      head: The check names the document
+      terminal:
+      - [['# the change moves changesets to .changesets/', comment]]
+      - [['$ ', prompt], [pkit, command], [' friction check', args]]
+      - [['  .pkit/release/README.md', args]]
+      - [['    ', output], [friction, del], ['  path .changie.yaml  changed in this diff', output]]
+      - [['              and carries no answer', output]]
+      - [['Result: ', output], [failed, del]]
+      - []
+      - [['# after the answer', comment]]
+      - [['$ ', prompt], [pkit, command], [' friction check', args]]
+      - [['    ', output], [answered, add], ['  path .changie.yaml  changed in this diff;', output]]
+      - [['              answered: updated', output]]
+      - [['Result: ', output], [passed, add]]
+    right:
+      head: The change answers for it, in one of three ways
+      answers:
+      - {tone: updated, tag: Updated, text: The change fixed the document too.}
+      - {tone: unchanged, tag: Still true, text: Nothing in it became wrong. The answer says why.}
+      - {tone: deferred, tag: Fixed later, text: The answer names the issue that will fix it.}
+      terminal:
+      - [['# .pkit/project/friction/answers/20261030T024530Z-ba8d160a.yaml', comment]]
+      - [['answers:', output]]
+      - [['  - artefact: ', output], [.pkit/release/README.md, args]]
+      - [['    revalidated:', output]]
+      - [['      outcome: ', output], [updated, add]]
+    why:
+      head: Why pkit asks for an answer
+      items:
+      - Not every change makes a document wrong. The answer says which.
+      - A reviewer checks each answer, so "still true" needs a real reason.
+      - A gap left open stays counted, with the issue that closes it.
+  limit: Only documents you list, with what they depend on, are covered. The rest go stale as before.
   minutes: 2
-  notes: Probably pkit's most distinctive idea. 50 deferred answers in project-kit today, all visible.
+  notes: 'When a change touches something a document depends on, the change check names the document and asks for an answer
+    (COR-050). Here a change moves the changesets folder in .changie.yaml, a file the release guide depends on. The check
+    fails until the change answers for the guide. There are three answers. Updated: the change fixed the document too,
+    here the guide''s mentions of the folder. Still true: nothing in the document became wrong, and the answer says why
+    in one sentence. Fixed later: the answer names the issue that will fix it, and the gap stays in pkit friction debt until
+    then. pkit friction revalidate or pkit friction defer writes the answer into an answer file of the change, kept in the
+    project, not only in a pull request''s text (COR-050, COR-062). A reviewer other than whoever wrote the answer checks
+    it, and blocks the merge when it does not hold (COR-050 point 3). Every session gets the rule that tells agents to write
+    these answers with their change, without asking you (core rule 20). In a fresh install the check sleeps until you list
+    your documents under friction.places in .pkit/project/config.yaml and name in each one''s front matter what it depends
+    on. The docs and analysis add-ons do both for their own documents. Tried on 30 October in a throwaway copy of project-kit.
+    In project-kit today, 21 answers wait as fixed later; all but one name the issue that fixes them.'
 - id: pm
   part: P4
   title: project-management
@@ -1255,7 +1298,7 @@ slides:
       head: Reviewers, then merge
       text: Reviewers check each result; on your yes, the agent merges it.
   limit: 'GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual.'
-  minutes: 2
+  minutes: 3
   notes: 'Underneath: a structure (EPIC, Feature, Task), a lifecycle with gates, merging with reviewers, planning a batch
     of work in one approval, fixers after a merge, a board. Parallel agents in separate clones also exist, still experimental
     (the last slide). Like every capability, it brings its own decision records (DEC), kept beside pkit''s and yours, and
@@ -1282,52 +1325,9 @@ slides:
       head: project-management
       text: Requires them on every code change, without naming who.
   limit: With no conventions written down, the builder falls back on generic habits.
-  minutes: 2
+  minutes: 2.5
   notes: 'Capabilities never name each other: one fills a slot another defines. Swap one for another that fills the same slot,
     and nothing connected notices.'
-- id: current
-  part: P5
-  title: Over time
-  message: Improvements arrive by one command and never overwrite your files, and three new things already run, still 
-    being shaped.
-  problem: ''
-  does: []
-  show: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until you decide'
-  visual:
-    kind: flow
-    stages:
-    - role: code
-      head: pkit improves
-      text: A release with its changelog.
-    - role: people
-      head: You upgrade
-      text: One command, when you choose.
-    - role: checks
-      head: Migrations repair
-      text: Renames and moves brought across, safe to re-run.
-    - role: people
-      head: You report back
-      text: Updates come down, reports go up.
-    cards:
-    - ident: A
-      space: tech
-      space_label: software-analysis
-      heading: What the software must do
-      body: Actors, use cases and requirements, kept true as the code changes.
-    - ident: B
-      space: user
-      space_label: living-docs
-      heading: Docs by audience
-      body: Every page depends on what makes it true, and agents fix it after a merge.
-    - ident: C
-      space: tech
-      space_label: parallel agents
-      heading: Agents in separate clones
-      body: A planner and workers, each taking only the work its pool allows.
-  limit: ''
-  minutes: 1.5
-  notes: 'One version for pkit''s core, one per capability. pkit upgrade replaces only pkit''s files; pkit pin holds a version;
-    pkit report sends what hurts upstream. The three cards: Experimental: say so.'
 - id: questions
   part: P5
   title: Questions?
