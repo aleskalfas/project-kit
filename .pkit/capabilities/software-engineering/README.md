@@ -11,7 +11,8 @@ pkit:
         - .pkit/capabilities/software-engineering/scripts/**
         - .pkit/capabilities/software-engineering/schemas/**
         - .pkit/capabilities/software-engineering/skills/**
-      record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, "COR-062#1", "COR-062#7", "COR-064#1", "COR-064#2", "COR-064#4", ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055", "project-management:DEC-060"]
+        - .pkit/capabilities/software-engineering/rule-sets/swe.md
+      record: [COR-070, COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, "COR-062#1", "COR-062#7", "COR-064#1", "COR-064#2", "COR-064#4", ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055", "project-management:DEC-060"]
 ---
 
 # software-engineering capability
@@ -29,6 +30,7 @@ When an adopter runs `pkit capabilities install software-engineering`:
 - `decisions/DEC-002-code-review-panel.md` — the panel decision: its three agents, its home, the per-agent block-threshold and knowledge-split disciplines, and `docs-reviewer`'s check of a change's answers.
 - `decisions/DEC-003-purpose.md` — what the capability is for: code that agents write follows the project's own conventions in every session, and code is reviewed, with its documentation, before the merge gate lets it through.
 - `decisions/DEC-004-skeleton-conventions-in-corpus.md` — the software-engineer writes the conventions a walking skeleton sets into the conventions corpus, in the skeleton's change, and a person accepts them with that change, before the slices are planned.
+- `rule-sets/swe.md` and `rules.md` — the capability's operational rules, its loaded rule set `SWE` and the loaded file generated from it ([COR-070](../../decisions/core/COR-070-capability-loaded-rules.md)). Wherever the capability is installed, every session loads `rules.md`, through the capabilities' rules index `CLAUDE.md` includes, and its accepted rules bind on the session's work (the rules README, "A capability's rules"). It proposes one rule, `software-engineering:RS-SWE-001`: while building, run the tests of what your change touches and the project's fast checks, and leave the full suite to where the project runs it, where it runs one. It binds once a person accepts it.
 
 It deliberately ships **no conventions content** — the conventions corpus is adopter-owned and accretes over time (see Adopter setup).
 

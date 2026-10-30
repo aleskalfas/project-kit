@@ -16,7 +16,7 @@ pkit:
         - src/project_kit/permissions.py
         - .pkit/rules/core.md
         - .pkit/schemas/harness-requirements.yaml
-      record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
+      record: [COR-002, COR-004, COR-005, COR-007, COR-016, COR-020, COR-026, COR-028, COR-047, COR-070, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, ADR-076, "project-management:DEC-029", "project-management:DEC-030"]
       artefact:
         - .pkit/lifecycle/README.md#uninstall-origin-aware-removal-cor-031-d4
       source: [claude-code-hooks]
@@ -35,7 +35,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 │   ├── core/settings.json             # kit baseline — universal allows + denies, and the start hook's registration
 │   └── project/settings.json          # adopter's project-specific additions
 ├── merge-settings.sh                  # merges the settings baseline + project additions into .claude/settings.json
-├── merge-claude-md.sh                 # ensures root CLAUDE.md loads the kit rules via @-includes
+├── merge-claude-md.sh                 # ensures root CLAUDE.md loads every layer's rules via @-includes
 ├── deploy-skills.sh                   # creates .claude/skills/ symlinks pointing back at .pkit/skills/
 ├── deploy-agents.sh                   # writes resolved agent copies into .claude/agents/
 ├── undeploy-capability.sh             # removes one capability's deployed skills and agents from .claude/
@@ -65,15 +65,36 @@ Top-level keys outside `permissions` (e.g. `agent`, `model`) in either `core/set
 
 ### `merge-claude-md.sh`
 
-Ensures the adopter's root `CLAUDE.md` loads the kit-shipped rules (`@.pkit/rules/core.md`) and project rules (`@.pkit/rules/project.md`) via Claude Code's `@<path>` include mechanism. Per the COR-002 merge contract (insert-if-absent / create-if-none posture):
+Ensures the adopter's root `CLAUDE.md` loads every layer's rules via Claude Code's `@<path>` include mechanism, in the order of their layers: core's (`@.pkit/rules/core.md`), the capabilities' rules index (`@.pkit/rules/capabilities.md`), which imports each installed capability's `rules.md`, and the project's (`@.pkit/rules/project.md`). Per the COR-002 merge contract (insert-if-absent / create-if-none posture), core's include and the index's line are kept present, each inserted wherever it is absent, and the project's include is inserted only together with core's ([ADR-076](../../../tech-docs/architecture/decisions/ADR-076-capability-rules-index.md) point 3):
 
-- **No CLAUDE.md:** creates a minimal one with an H1 and the `@`-includes.
-- **CLAUDE.md without the include:** inserts the `@`-include block after the first H1 (per core.md rule 13's authoring convention — included sections must nest under the host's heading, not appear at line 1). If no H1 is found, prepends a minimal header + includes above the existing content.
-- **CLAUDE.md already has the include:** no-op (idempotent).
+- **No CLAUDE.md:** creates a minimal one with an H1 and the three `@`-includes.
+- **CLAUDE.md without core's include:** inserts the three after the first H1 outside fenced code (per core.md rule 13's authoring convention — included sections must nest under the host's heading, not appear at line 1). If no H1 is found, prepends a minimal header + includes above the existing content.
+- **CLAUDE.md with core's include but not the index's line:** inserts `@.pkit/rules/capabilities.md` directly after core's include. A project that removed its `project.md` include does not find it back.
+- **Core's include only in fenced code or a code span,** where Claude Code imports nothing: inserts nothing and reports it (`refused`), naming the file. Move the include out of the code, and the next sync inserts the index's line after it.
+- **CLAUDE.md with both:** no-op (idempotent).
 
-Adopter content is never clobbered. Both `@.pkit/rules/core.md` (kit-owned, refreshed on sync) and `@.pkit/rules/project.md` (adopter-owned, never overwritten) are wired together so their rules compose in the agent's context.
+A file holds a line when one of its lines is exactly the line once the spaces and tabs around it are trimmed and a CRLF ending is read as `\n`, outside fenced code. A mention in a code span, in a fence, or inside a longer token does not hold it. `pkit validate` reads the line by the same definition.
+
+Every write goes through the file: the new content is written into the existing `CLAUDE.md`, never moved over it. A `CLAUDE.md` that is a link keeps its link, and the lines reach the file it links to. Its mode stays, and a file whose lines end in CRLF gets its new lines in CRLF too. Adopter content is never clobbered.
+
+The primitive reads `CLAUDE.md` alone. A project that moved core's include into a file `CLAUDE.md` imports, such as `AGENTS.md`, finds core's include and the index's line added to `CLAUDE.md` as well. In a repository holding only `AGENTS.md`, the primitive creates a `CLAUDE.md`, which Claude Code reads in place of `AGENTS.md`; that is left for a follow-up.
+
+Its copy of the index's line is the one `loaded_rules:` renders in the adapter's `package.yaml` (below), kept in the shell since a primitive is given no `pkit` to ask. A test holds the two equal.
 
 `merge-claude-md.sh` is an adapter primitive: `pkit init` and `pkit sync` invoke it (alongside `merge-settings.sh`, `deploy-skills.sh`, `deploy-agents.sh`) so the wiring is maintained automatically. Running it by hand is always safe.
+
+### How the capabilities' rules reach a session (`loaded_rules:`)
+
+The adapter's `package.yaml` declares how Claude Code reaches each installed capability's loaded file (ADR-076 point 4):
+
+```yaml
+loaded_rules:
+  entry: "@{file}"      # the index's line for one capability's rules.md, read from the index's folder
+  host: CLAUDE.md       # the file that reaches the index
+  line: "@{index}"      # the line it keeps, read from the host's folder
+```
+
+The backbone renders `.pkit/rules/capabilities.md` from it, one `@../capabilities/<name>/rules.md` per registered capability that ships a loaded set, and `pkit validate` checks the index and the line against it. A capability's rules then reach a session by the route core's do, two imports from `CLAUDE.md`, so they load in exactly the sessions core's load. The index's syntax enters the backbone only as this data: `@` is the token a loaded set may not write outside code.
 
 ### `deploy-skills.sh`
 
@@ -394,6 +415,7 @@ The harness-neutral contract is the permissions README's (*The agent workspace*:
 The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harness-requirement-declaration.md) point 2): its answer to each requirement in `.pkit/schemas/harness-requirements.yaml`, with the evidence for each. The grades are [the adapters README's](../README.md#harness-requirements), and `pkit harness report` resolves them for a project. In prose:
 
 - **A delegated helper's full result reaches the agent that delegated to it** (`delegated-result-complete`): `at-cost`, for every version. It holds while Claude Code's experimental agent-teams feature is off. While it is on, it holds only for a helper dispatched without a name: a named helper becomes a teammate, and its result arrives cut at 4064 characters. The methodology dispatches its helpers without a name (project-management DEC-029).
+- **Every session holds every layer's loaded rules from its start to its end** (`session-loads-rules`): `at-cost`, for no version yet. Core's loaded file and every capability's reach a session by one route, `CLAUDE.md` and its imports, so they load in a session a person starts at the project's root, in a subagent dispatched from one with a definition of the project's, and again after compaction. By the harness's own behaviour no layer's rules load, core's included, in the built-in Explore and Plan agents or a definition that sets `omitClaudeMd`, in a run with `--bare` or `--safe-mode`, for a file `claudeMdExcludes` or `managed-only` drops, or in a session started below the project's root whose person declined the external imports. Whether a session in a worktree under `.claude/worktrees/` also loads the main checkout's files is unobserved. So keep `CLAUDE.md` and the index out of `claudeMdExcludes`, dispatch the methodology's work to definitions that do not set `omitClaudeMd`, and approve the external imports where sessions start below the root. The range stays empty until a session is observed holding an imported capability file. Apart from that cost, the runner's own gap: a confined run passes `--setting-sources ""`, and a builder's working run loads no settings file either, so neither holds any layer's rules, core's included; #2352 takes it up.
 - **A process can start an agent unattended, confined for that one run** (`unattended-confined-run`): `at-cost`, for no version yet. The runner's confined form needs the platform's sandbox, which Claude Code runs on macOS, and on Linux with bubblewrap. On macOS an allowed command that starts `uv` runs outside it ("What stays open" above). The bound is the runner's tested range, `TESTED_RANGE`, empty until the probe passes ("The probe" above). Whoever widens the range widens the bound with it.
 
 ### `permission-enforcement.yaml`
@@ -405,7 +427,7 @@ The per-adapter enforcement-capability declaration (per COR-028): which dimensio
 The install/sync runtime (`pkit init` / `pkit sync`) automates all adapter primitives, invoking them in order. When running manually, the steps are:
 
 1. **Permissions.** Hand-merge `settings/core/settings.json` + `settings/project/settings.json` into your project's `.claude/settings.json`. Per COR-002's merge contract: append-only for adopter content, baseline-enforce for safety denies, idempotent. Or just run `merge-settings.sh`. The merge also registers the start hook (*The agent workspace* above).
-2. **Rules include.** Run `.pkit/adapters/claude-code/merge-claude-md.sh`. Ensures the root `CLAUDE.md` includes `@.pkit/rules/core.md` so the kit-shipped hard rules and tool-hygiene conventions load into the agent. Idempotent; never clobbers adopter content.
+2. **Rules include.** Run `.pkit/adapters/claude-code/merge-claude-md.sh`. Ensures the root `CLAUDE.md` includes `@.pkit/rules/core.md`, then `@.pkit/rules/capabilities.md`, so the kit-shipped hard rules and tool-hygiene conventions, and each installed capability's rules, load into the agent. Idempotent; never clobbers adopter content.
 3. **Skills.** Run `.pkit/adapters/claude-code/deploy-skills.sh`. Creates the `.claude/skills/` symlinks (tracked in git per the project's `.gitignore`, so a fresh clone has the same environment).
 4. **Agents.** Run `.pkit/adapters/claude-code/deploy-agents.sh`.
 5. **Undeploy one capability.** Not a setup step: `pkit capabilities uninstall` runs `.pkit/adapters/claude-code/undeploy-capability.sh <name>` where the capability's files stay. Running it by hand is safe, but a capability still registered is deployed again by the next sync.

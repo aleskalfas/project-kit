@@ -15,10 +15,11 @@ pkit:
         - src/project_kit/cli.py
         - src/project_kit/harness_support.py
         - src/project_kit/install.py
+        - src/project_kit/loaded_rules.py
         - src/project_kit/schemas_validate.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
-      record: [COR-005, COR-006, "COR-013#1", COR-028, COR-047, ADR-066]
+      record: [COR-005, COR-006, "COR-013#1", COR-028, COR-047, COR-070, ADR-066, ADR-076]
       artefact:
         - .pkit/adapters/claude-code/README.md
         - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
@@ -53,7 +54,7 @@ Per COR-005's bundle/adapter pattern: each adapter is an alternative implementat
 
 ## Primitives the lifecycle calls
 
-The lifecycle drives an adapter through scripts it finds **by name** in the adapter's directory: `pkit init`, `pkit sync`, `pkit upgrade` and the capability verbs walk `.pkit/adapters/<name>/`, one adapter after another in name order, and run each script present. That name is the whole contract — the lifecycle carries no knowledge of where a harness keeps its skills, agents or settings; the adapter does ([COR-005](../decisions/core/COR-005-bundle-pattern.md), [COR-013](../decisions/core/COR-013-agent-architecture.md)). `pkit new adapter` stamps none of these scripts: an adapter provides the ones its harness needs, and the Claude Code adapter's are the worked example ([its README, "What this adapter ships"](claude-code/README.md#what-this-adapter-ships)).
+The lifecycle drives an adapter through scripts it finds **by name** in the adapter's directory: `pkit init`, `pkit sync`, `pkit upgrade` and the capability verbs walk `.pkit/adapters/<name>/`, one adapter after another in name order, and run each script present. That name is the lifecycle's whole contract with a primitive — the lifecycle carries no knowledge of where a harness keeps its skills, agents or settings; the adapter does ([COR-005](../decisions/core/COR-005-bundle-pattern.md), [COR-013](../decisions/core/COR-013-agent-architecture.md)). Validation also reads one declaration of the adapter's: how its harness reaches a capability's rules file (`loaded_rules:`, "How a capability's rules reach a session" below). `pkit new adapter` stamps none of these scripts: an adapter provides the ones its harness needs, and the Claude Code adapter's are the worked example ([its README, "What this adapter ships"](claude-code/README.md#what-this-adapter-ships)).
 
 What the lifecycle relies on, for every script:
 
@@ -73,6 +74,22 @@ The scripts:
 
 - **Deploy primitives** — the first four, run in that order whenever the harness side needs (re-)materialising: init, sync, upgrade, and a capability's install, register, upgrade and uninstall. The settings merge comes first, since a skill may rely on the settings being in place. They deploy what the tree ships and drop what they deployed from a source that is gone. Each is optional; a harness that loads skills from their canonical paths needs no `deploy-skills.sh`.
 - **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, run when a capability is unregistered but its subtree stays on disk: an incubated capability's uninstall, and any capability's uninstall in the methodology's source repository. The deploy primitives cannot help there — the source files still exist, so a deploy re-run does not see the capability as gone. The script removes what the adapter deployed for that one capability, recognised by the adapter's own deploy mark, and never adopter content. An adapter that deploys nothing per capability can ship one that does nothing. Its absence is **reported**, not skipped: the lifecycle names the adapter in a `warning` line, because that harness keeps the unregistered capability active, and the uninstall goes on.
+
+## How a capability's rules reach a session
+
+A capability may ship operational rules of its own, as a loaded file at `.pkit/capabilities/<name>/rules.md` ([COR-070](../decisions/core/COR-070-capability-loaded-rules.md)). Each adapter delivers every installed capability's loaded file to the sessions its harness starts, by the route that carries core's rules where the harness offers one, so every session that loads core's rules loads it too.
+
+**An adapter declares its delivery** in its `package.yaml`, under `loaded_rules:` ([ADR-076](../../tech-docs/architecture/decisions/ADR-076-capability-rules-index.md) point 4). The key says that its harness reaches the capabilities' loaded files through one index, which the host file reaches by one line:
+
+- `entry:` the index's line for one capability's loaded file, with `{file}` for its path read from the index's folder. The part before `{file}` is the harness's import token.
+- `host:` the file that reaches the index, a path relative to the project's root and inside it.
+- `line:` the line the host keeps, with `{index}` for the index's path read from the host's folder.
+
+**The backbone renders the index**, `.pkit/rules/capabilities.md`, from that key and `pkit rule-sets loaded`, one entry per capability the manifest registers that ships a loaded set, wherever the lifecycle regenerates derivable state. The adapter's merge primitive keeps `line:` present in `host:`. So no adapter names a path under `.pkit/`, and the backbone names no harness's syntax.
+
+**What takes a capability out.** Its uninstall, and an unregistration that keeps its files, renders the index without it. The host's line stays, since the index carries every install and uninstall.
+
+**Validation checks it**, for each registered adapter: `pkit validate` fails an index out of step with the registered capabilities, an entry whose file is missing, and a host without the line, and warns of an adapter that declares no `loaded_rules:`, whose harness's sessions then load no capability's rules. While registered adapters declare different `entry:` forms, the index is not rendered and validation fails, until the record that adds the second adapter decides how one index serves both. An adapter whose harness reaches the files another way needs a key of its own or a validator it registers.
 
 ## The agent runner
 
@@ -154,13 +171,13 @@ The layer **detects**; it does not alter the harness's configuration or duplicat
 
 **The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
-**Status.** The requirement set holds two entries: `delegated-result-complete`, and `unattended-confined-run`, which the drift command depends on (ADR-066 point 13). The Claude Code adapter answers both ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
+**Status.** The requirement set holds three entries: `delegated-result-complete`; `unattended-confined-run`, which the drift command depends on (ADR-066 point 13); and `session-loads-rules`, that every session holds every layer's loaded rules from its start to its end, which COR-070 point 6 depends on. An answer to it names apart a kind of session the adapter's own way of starting one leaves without the files, as "not achievable" is kept apart from "at a cost". The Claude Code adapter answers all three ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
 
 ## Adding a new harness
 
 1. Run `pkit new adapter <new-harness-name>`, through the `adapter-author` skill. It stamps `.pkit/adapters/<new-harness-name>/` with `package.yaml`, `README.md` and `migrations/`, and registers the adapter. It stamps no script and no settings: those depend on the harness.
 2. Fill in the stamped `README.md`: what the harness expects and how this adapter satisfies that.
-3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills/agents (see "Primitives the lifecycle calls" above), and any runtime artifacts the harness needs.
+3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills/agents (see "Primitives the lifecycle calls" above), the `loaded_rules:` declaration of how the harness reaches each capability's rules file (see "How a capability's rules reach a session" above), and any runtime artifacts the harness needs.
 4. Write the adapter's `harness-support.yaml`: an answer to each requirement in `.pkit/schemas/harness-requirements.yaml` you can answer with evidence (see "Harness requirements" above). Leave out one you cannot answer yet; it reports `indeterminate`. Run `pkit validate`, then `pkit harness report --adapter <new-harness-name>` to read what the harness leaves unmet.
 5. Update this README's "Currently shipped" list.
 

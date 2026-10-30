@@ -38,11 +38,13 @@ pkit:
         - src/project_kit/upgrade.py
         - src/project_kit/treecopy.py
         - src/project_kit/lifecycle_ownership.py
+        - src/project_kit/loaded_rules.py
+        - src/project_kit/visibility.py
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - hatch_build.py
-      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#1", "COR-050#5", "COR-050#12", "COR-050#14", "COR-050#16", COR-052, COR-053, "COR-054#3", COR-055, "COR-056#2", "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", "COR-062#9", "COR-062#11", "ADR-049#3", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
+      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#1", "COR-050#5", "COR-050#12", "COR-050#14", "COR-050#16", COR-052, COR-053, "COR-054#3", COR-055, "COR-056#2", "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", "COR-062#9", "COR-062#11", COR-070, "ADR-049#3", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066, ADR-076]
 ---
 
 # Lifecycle
@@ -220,6 +222,14 @@ footprint:
 # (ADR-009 rule 7). Aggregated into the pkit-owned `.pkit/.gitignore`.
 runtime_ignore:
   - .pkit/capabilities/<name>/project/some-runtime.log
+
+# Optional, an adapter's alone: how its harness reaches each installed
+# capability's loaded file (ADR-076 point 4). The backbone renders
+# `.pkit/rules/capabilities.md` from it; the adapters README says how.
+loaded_rules:
+  entry: "@{file}"
+  host: CLAUDE.md
+  line: "@{index}"
 ```
 
 #### Field layout and casing
@@ -886,16 +896,17 @@ The upgrade command transitions an adopter project to a target backbone version.
 1. **Compatibility and collisions.** Each check may refuse, and none writes.
    - **A component its bundle ships older:** an adapter or a capability the running pkit's bundle ships older than the version the project records refuses the transition. Copying it would move its recorded version down, under migrations that run forward only. The refusal names the component, both versions, and a pkit whose bundle ships that version or newer. No flag overrides it.
    - **A clash of area names:** a project's own area at `.pkit/lifecycle/` refuses the transition ("A clash of area names", below). No flag overrides it.
+   - **A file that is not the capabilities' rules index:** a file at `.pkit/rules/capabilities.md` whose first line is not the backbone's marker refuses the transition ("The capabilities' rules index", below). No flag overrides it.
    - **Compatibility resolution:** each installed component's post-upgrade `requires_backbone` must admit the target. It is read from the bundle where the bundle ships the component, and from the installed copy where it does not. Conflicts are surfaced so the adopter can address them: upgrade specific components, pin the backbone, or remove an incompatible component.
    - **The dependency gates** run over the set the transition would leave ("The dependency gates", below).
    - **The collision flow** asks about each new naming collision, or refuses ("A new collision", below).
 2. **The target is recorded.** `backbone_version` becomes the target, by an edit of its own line, before anything else is written. `completed_version` keeps its value or stays missing. Each capability manifest still at its root then moves under its `project/`, each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed.
-3. **Propagation at the target.** The propagation step `pkit sync` runs copies the target's content (per COR-001): the backbone's trees, adapters included, and every installed kit-shipped capability the target ships, with its skips. The upgrade calls the step, never the sync command, so sync's guard never stops it (ADR-065 point 1). An adapter the copy placed that the registry lacks is registered, and recorded at the version it ships. Then `.pkit/.gitignore` is rendered, so a migration reads the render of the target's declarations.
+3. **Propagation at the target.** The propagation step `pkit sync` runs copies the target's content (per COR-001): the backbone's trees, adapters included, and every installed kit-shipped capability the target ships, with its skips. The upgrade calls the step, never the sync command, so sync's guard never stops it (ADR-065 point 1). An adapter the copy placed that the registry lacks is registered, and recorded at the version it ships. Then `.pkit/.gitignore` is rendered, so a migration reads the render of the target's declarations. The upgrade then says what the copy newly binds of each loaded set it delivered ("What a step newly binds", below).
 4. **Backbone migrations** run in order: manifest-schema → structural → resource-scoped, across minor-version boundaries from the recorded completion, `completed_version`, to the target. With no completion recorded, every backbone migration up to the target runs (the replay, below).
 5. **Adapter migrations** run for each adapter, from the version its manifest records, in version order with the same scope ordering within each `<major>.<minor>.0/` directory. Their scripts are read from the running pkit's bundle, as a capability's are. Each registered adapter is then recorded at the version the target ships. One with no manifest runs no migration ("An adapter's manifest", above).
 6. **Capability migrations** run for each copied capability, dependencies first by their `requires_capabilities` (COR-030), each from the version it records. Each capability is then restamped at the version it ships. One with no readable version runs none and is recorded at that version.
 7. **Seed paths.** Each one that is missing is created, never over one that exists ("Seed paths", below). They follow the migrations, so a migration that moves a project's file to a seed path finds no fresh seed there.
-8. **Derivable state.** Each component's setup primitive re-applies the kit-side spec at its current version and the adopter's config, idempotently: merge delivery in its tier that asks nothing, deploy, `.pkit/.gitignore` rendered again, the agent workspace and provisioning. The report lists each widening the settings merge brings ("What the settings merge widens", below).
+8. **Derivable state.** Each component's setup primitive re-applies the kit-side spec at its current version and the adopter's config, idempotently: the capabilities' rules index rendered again, merge delivery in its tier that asks nothing, deploy, `.pkit/.gitignore` rendered again, pkit's private region of the local exclude file where the project is private, the agent workspace and provisioning. The report lists each widening the settings merge brings ("What the settings merge widens", below).
 9. **The completion is recorded.** `completed_version` becomes the target, by an edit of its own line.
 10. **The pin,** the last of the upgrade's writes, as ADR-049 and ADR-064 set.
 
@@ -924,6 +935,19 @@ A new collision is a skill or agent name that a shipped capability's target vers
   - a clash between two artefacts one release ships, core's or a shipped capability's, which is the release's to prevent
   - a collision with externally-sourced content, which surfaces as COR-041 sets
   - a core area whose name a project's own area takes, which stops the upgrade instead ("A clash of area names", below)
+
+### The capabilities' rules index
+
+`.pkit/rules/capabilities.md` is derivable state the core layer renders for each project, beside `core.md` and `project.md` ([ADR-076](../../tech-docs/architecture/decisions/ADR-076-capability-rules-index.md) point 2). It holds a marker line, then one entry per capability the manifest registers that ships a loaded set, in the form each registered adapter's `loaded_rules:` gives, by the capabilities' names. One function renders it from `pkit rule-sets loaded` and the adapters' key, and validation compares the file with the same function's output.
+
+- **Rendered whole** at first install, sync, the self-host branch, a transition's step 8, and a capability's install, register, upgrade and uninstall, each after the manifest is written. No migration reads it, so step 3 does not render it.
+- **Never a synced copy.** The ownership predicate answers it as it answers `.pkit/.gitignore`, so sync never copies the methodology's source's own index, and the packaging leaves it out of the bundle.
+- **A file that is not the index:** a file at its path whose first line is not the marker is someone else's. The transition's step 1 and sync, before they write, refuse, naming the file; nothing overrides it. Move the file elsewhere, or remove it, and run the command again. An empty file is no clash.
+- **Adapters that differ:** while registered adapters declare different `entry:` forms, the render writes nothing and says so, and validation fails.
+
+### What a step newly binds
+
+Install, sync and upgrade, and a capability's install, register and upgrade, print for each loaded set they deliver, core's `OPS` and each capability's alike, the set's name and version and each rule it newly binds, changes or retires since the copy it replaces ([COR-070](../decisions/core/COR-070-capability-loaded-rules.md) point 3; ADR-076 point 6). A first install lists every accepted rule. One function compares two readings of a set's accepted rules, by id, status and statement: the set the project holds, read before the copy, and the set the step copies. Where no adapter in use declares `loaded_rules:`, a capability's set says that its rules bind no session in the project, rather than list them as bound. The lines inform, and stop nothing: installing the capability is the consent to its rules.
 
 ### A clash of area names
 
@@ -1014,7 +1038,7 @@ Only an unambiguous order is compared: a pin that is not a version blocks nothin
 2. **Its manifest,** still at the capability's root, moves under its `project/`, each skip chosen in step 1 is recorded there, and each project artefact an override chose to replace is removed, all before the copy.
 3. **Its copy,** with its skips, then `.pkit/.gitignore` rendered, so a migration reads the new version's render. It creates no seed path.
 4. **Its migrations,** after the copy, from the version it records, then its restamp at the version it ships. One with no readable version runs none.
-5. **Its derivable state:** merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` rendered again.
+5. **Its derivable state:** the capabilities' rules index rendered again, merge delivery and deploy, its query commands' provisioning, and `.pkit/.gitignore` rendered again. The upgrade says what its copy newly binds of the capability's loaded set ("What a step newly binds", above).
 
 **After it, the questions** of the points the capability defines and of the points its contributions reach, asked where a person can answer and printed otherwise ("A data point's question", above). They are no step of the transition. An incubated capability's upgrade, and one in the methodology's source, end with them too.
 
@@ -1056,10 +1080,10 @@ Either way, the kit-side spec at the recorded version is the source of truth for
 `pkit sync` reconciles a project at the release it records, and moves no version (COR-059 point 2). Among the project's files it writes three kinds of thing, and no other:
 
 - **The methodology's content** at the recorded release: its trees, adapters included, and each installed capability the running pkit ships at the version the project records ("The downgrade guard on capability refresh", below). A project-owned path is never overwritten.
-- **Derivable state:** the deployed skills and agents, `.pkit/.gitignore`, the agent workspace and its line in the clone's local exclude file, and the query commands' environments.
+- **Derivable state:** the capabilities' rules index, the deployed skills and agents, `.pkit/.gitignore`, pkit's region of the clone's local exclude file where the project is private, the agent workspace and its line in that file, and the query commands' environments.
 - **The project's own paths, through merge delivery only,** in its tier that asks nothing. For Claude Code it merges `.claude/settings.json` and `CLAUDE.md`, adding the methodology's entries and never removing one the project wrote. A tier that asks never runs in sync. Merge delivery may create its own target file where it is missing, such as `CLAUDE.md`, as merge, not as seeding.
 
-It writes no recorded version, no manifest and no seed path, runs no migration, and asks no question a data point declares ([COR-061](../decisions/core/COR-061-point-questions.md) point 4).
+It writes no recorded version, no manifest and no seed path, runs no migration, and asks no question a data point declares ([COR-061](../decisions/core/COR-061-point-questions.md) point 4). Before it writes, it stops on a file at the index's path that is not the index ("The capabilities' rules index", above), and after its copy it says what the copy newly binds of each loaded set ("What a step newly binds", above).
 
 ### The incubated-origin skip-branch (COR-031 D1)
 
