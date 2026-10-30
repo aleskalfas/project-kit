@@ -151,7 +151,7 @@ A project already current returns after these checks, before step 1, and only wr
 
 1. **Compatibility and collisions.** Each may refuse, and none writes:
    - the refusal of a component its bundle ships older (point 7)
-   - the refusal of a clash of area names (point 13)
+   - the refusal of a clash of area names (point 13), and beside it the refusal of a file at the capabilities' rules index's path that lacks its marker (refinement per [ADR-076](ADR-076-capability-rules-index.md) point 2)
    - compatibility resolution (COR-010)
    - the dependency gates and the collision flow (point 6)
 2. **The target is recorded:** `backbone_version` becomes the target. `completed_version` keeps its value, or stays missing. Then each capability manifest still at its root moves under `project/` (point 2). Each skip chosen in step 1 is recorded in its capability's manifest (point 6).
@@ -160,7 +160,7 @@ A project already current returns after these checks, before step 1, and only wr
 5. **Adapter migrations,** each from the version its manifest records. Their scripts are read from the bundle, as a capability's are, so the adapter copy carries no `migrations/`. Each adapter is recorded at its bundled version when its migrations finish.
 6. **Capability migrations,** dependencies first by their `requires_capabilities` (COR-030). Each capability is restamped when its migrations finish.
 7. **Seed paths are created where missing** (point 11), never over one that exists.
-8. **Derivable state:** merge delivery, deploy, `.pkit/.gitignore` rendered again, the agent workspace and provisioning.
+8. **Derivable state:** merge delivery, deploy, `.pkit/.gitignore` rendered again, the agent workspace and provisioning. The capabilities' rules index is rendered among them, before merge delivery keeps the line that reaches it (refinement per [ADR-076](ADR-076-capability-rules-index.md) point 2).
 9. **The completion is recorded:** `completed_version` becomes the target.
 10. **The pin,** the last of the upgrade's writes, as ADR-049 point 1 and ADR-064 point 1 set.
 
@@ -349,6 +349,7 @@ The core layer writes a project-owned path only through a writer a record names 
 | `.pkit/.gitignore` | the core layer's render of the runtime-ignore declarations of the backbone and each installed component (ADR-009 rule 7) |
 | `.agent-workspace/` and its line in the local exclude file | the core layer's workspace step |
 | the query commands' environments | the core layer's provisioning of each registered query command |
+| `.pkit/rules/capabilities.md` | the core layer's render from `pkit rule-sets loaded` and the adapters' `loaded_rules:` (refinement per [ADR-076](ADR-076-capability-rules-index.md) point 2) |
 
 - **First install, sync and a transition each regenerate every piece of derivable state.** None of it is recorded in a manifest (COR-010).
 - **The local exclude file** (`.git/info/exclude`) belongs to the clone, not to the project's tree. Two writers keep apart in it: the workspace step adds one line, and `pkit visibility` keeps its own region (ADR-009).
