@@ -75,7 +75,7 @@ pkit:
 - **1d.** The command changes files rather than the hosting service, such as `pkit new decision` or `pkit sync`. At its entry, before it reads anything, the command compares the two repositories as step 2 does ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)). The path goes on at step 3.
 
 > [!WARNING]
-> **Not built yet:** only the commands that write to the hosting service run the guard. So a command that only writes files changes the other repository with no question. The guarded commands are these:
+> **Not built yet:** besides `pkit workspace remove`, only the commands that write to the hosting service run the guard. So any other command that only writes files changes the other repository with no question. The guarded commands are these:
 >
 > - the `pkit pull-request` verbs that write
 > - `pkit version tag` and `untag` with `--push`
