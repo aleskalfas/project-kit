@@ -25,6 +25,9 @@
     "repository": {
       "$ref": "#/$defs/repository"
     },
+    "rule-sets": {
+      "$ref": "#/$defs/rule-sets"
+    },
     "project": {
       "title": "The reserved `project` block (COR-048 point 2)",
       "description": "Keys owned by the project's own decision records. Checked only for being well-formed — a mapping — and otherwise not inspected; project-supplied schemas for it are deferred until a real need appears.",
@@ -153,6 +156,19 @@
           "description": "The name of the branch the project's pull requests merge into — declared once, for every reader (COR-054 point 1). Resolved as the remote-tracking reference of the branch's upstream, else `origin/<name>`, and as the local branch only when there is no remote (point 2); a comparison's base named for one run (`--base`, `$PKIT_CHECK_BASE`) replaces it for that run only (point 3). A branch name as git accepts one, and not a reference: no `origin/` or `refs/` prefix. Default `main`. Written by the project, by hand or `pkit config set`, and by the upgrade migration that retires a component's own setting for it.",
           "type": "string",
           "pattern": "^(?![-/.])(?!origin/)(?!refs/)(?!HEAD$)(?!@$)(?!.*\\.\\.)(?!.*@\\{)(?!.*//)(?!.*/\\.)(?!.*\\.lock(?:/|$))(?!.*[/.]$)[^\\x00-\\x20\\x7f~^:?*\\[\\\\]+$"
+        }
+      }
+    },
+    "rule-sets": {
+      "title": "Rule-set settings (COR-069)",
+      "description": "The project's settings for the rules files sessions load, in the block named for the functionality and its command group (ADR-077 point 2).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "plain-file-budget": {
+          "description": "The budget, in words, of the project's own rules kept as a plain file at `.pkit/rules/project.md` (COR-069 point 3; COR-068 point 7): `pkit validate` fails the file when it holds more. A word is a run of characters none of which has Unicode's White_Space property. Default: none — the file has no budget, and nothing is checked. Where the project keeps no plain rules file, because it has none or keeps its rules as a loaded set whose own `budget` bounds the file, the key bounds nothing, and validation warns. Written by the project, by hand or `pkit config set`, in a change a person authorises; never by install or upgrade.",
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
