@@ -1,0 +1,3 @@
+component: project-management
+kind: none
+body: project-kit's own topology of seats, `.pkit/capabilities/project-management/project/topology.yaml`, is removed. The file is project-kit's configuration under the capability's `project/` folder, which never ships or syncs, so nothing an adopter receives changes.
