@@ -21,24 +21,26 @@ moves: `github.com/aleskalfas/project-kit/` then `blob/`, `tree/`, `raw/` or
 `blame/`, or `raw.githubusercontent.com/aleskalfas/project-kit/`, with the host,
 owner and repository in any case and with or without the scheme; then `latest/`
 or `main/`, as a tag or a branch (`refs/tags/latest/`); then a path that is
-`docs`, in any case, or under it. The path runs up to the first space, quote,
-bracket, brace, parenthesis, backtick, backslash, bar or `$`, less a full stop,
-comma or emphasis mark that ends a sentence. A link at `main` is read since
-`main` moves as `latest` does. A link at a version tag or a commit names text
-that never moves, and is not read.
+`docs`, written so in any case, or under it. The path runs up to the first
+space, quote, bracket, brace, parenthesis, backtick, backslash, bar or `$`, less
+the punctuation (`.`, `,`, `;`, `:`, `!`, `?`) or emphasis marks (`*`, `_`, `~`)
+that end it. A link at `main` is read since `main` moves as `latest` does. A
+link at a version tag or a commit names text that never moves, and is not read.
 
-**When it holds.** When its path, without its `#fragment` or `?query`, names a
-file called exactly `README.md` in the tree's `docs/`. So a link to a guide's
-folder, or to a page inside it, fails: only the README keeps its path (ADR-069
-point 3), and a shipped page links nothing unshipped but its guide's README
-(point 4). A fragment is not checked. A template is no address: a segment that
-starts with a placeholder (`docs/<area>/README.md`, `{area}`, `$AREA`) or a path
-holding a `%` that encodes nothing (`docs/%s/`).
+**When it holds.** When its path, without its `#fragment` or `?query` and with
+each `%xx` decoded, names a file called exactly `README.md` in the tree's
+`docs/`. So a link to a guide's folder, or to a page inside it, fails: only the
+README keeps its path (ADR-069 point 3), and a shipped page links nothing
+unshipped but its guide's README (point 4). A fragment is not checked. A
+template is no address: a segment that starts with a placeholder
+(`docs/<area>/README.md`, `{area}`, `$AREA`) or a path holding a `%` that
+encodes nothing (`docs/%s/`).
 
-**What reads may only grow looser.** Each tag's text never changes, so reading
+**The reading may only grow looser.** Each tag's text never changes, so reading
 more forms as addresses, or holding them to more, could fail a tag nothing can
 mend. Change the reading only to accept more. There is no list of exceptions: a
-failure at a tag is mended in the tree, by keeping a README at the path it names.
+failure at a tag is mended in the tree, by keeping a README at the path it
+names, and one whose path can hold no README goes to the maintainer.
 
 **Where no release tag is present.** The tree's addresses are read in every
 clone. A clone holding no release tag, such as a clone made without its tags,
@@ -127,9 +129,10 @@ def addresses_in(text: str) -> list[tuple[str, str]]:
             continue
         path = raw.rstrip(_TRAILING)
         address = match[0][: len(match[0]) - (len(raw) - len(path))]
-        target = unquote(path.split("#", 1)[0].split("?", 1)[0]).rstrip("/")
-        if target.lower() == "docs" or target.lower().startswith("docs/"):
-            found.append((address, target))
+        # `docs` as written, as `git grep` finds it; the target is decoded.
+        written = path.split("#", 1)[0].split("?", 1)[0].rstrip("/")
+        if written.lower() == "docs" or written.lower().startswith("docs/"):
+            found.append((address, unquote(written)))
     return found
 
 
@@ -374,6 +377,8 @@ def test_an_encoded_character_is_read_as_it_names() -> None:
     assert addresses_in(f"{BASE}/blob/latest/docs/permissions/READ%4DE.md") == [
         (f"{BASE}/blob/latest/docs/permissions/READ%4DE.md", GUIDE)
     ]
+    # Only a `docs` written as such starts an address, as only it is on a line read.
+    assert addresses_in(f"{BASE}/blob/latest/%64ocs/permissions/README.md") == []
 
 
 def test_only_a_readme_in_the_tree_s_docs_resolves_an_address() -> None:
