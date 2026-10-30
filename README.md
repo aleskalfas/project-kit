@@ -58,6 +58,7 @@ pkit:
         - .pkit/lifecycle/README.md#a-data-points-question
         - .pkit/lifecycle/README.md#what-ships-a-migration
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
+        - .pkit/cli/README.md#capabilities--two-ways-in
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#upgrade
         - .pkit/cli/README.md#status
@@ -68,6 +69,7 @@ pkit:
         - .pkit/capabilities/evidence/README.md#
         - .pkit/capabilities/living-docs/README.md#a-fresh-project-the-first-stamp-sets-the-roots-apart
         - .pkit/adapters/README.md#currently-shipped
+      source: [claude-code-plugins, claude-code-plugin-manifest, claude-code-hooks]
 ---
 
 # project-kit
@@ -241,26 +243,35 @@ Answer in English.
 
 An upgrade's migrations may also write a file of yours, and a starter file you deleted comes back (COR-059). [The mental model](#the-mental-model) lists every such way. Put your own rules in `.pkit/rules/project.md`, since an edit to a methodology file is lost at the next sync.
 
-## Compared with a hand-kept setup
+<a id="compared-with-a-hand-kept-setup"></a>
+## Compared with a hand-kept setup and plugins
 
-Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep by hand and copy from project to project.
+Without project-kit, you keep a setup by hand, or build it from Claude Code plugins. You can also use plugins beside project-kit.
 
-| | Hand-kept `CLAUDE.md` and agent files | project-kit |
-|---|---|---|
-| Nothing to install or learn | ✅ | ❌ `uv`, `jq`, a CLI and its conventions |
-| No running cost on each change | ✅ | ❌ answers, acceptances and a CI job |
-| Works with other agent tools | ✅ you write each tool's files | ❌ [Claude Code only](.pkit/adapters/README.md#currently-shipped), today |
-| You choose every line and every allow | ✅ | ❌ its files are synced, and its allows return |
-| Rules load into every session | ✅ | ✅ |
-| An improvement reaches every project, on any machine | ❌ copied by hand, or one machine's `~/.claude/` | ✅ at each project's next upgrade |
-| Taking an update keeps your own files | ❌ merged by hand | ✅ one owner per file, with listed exceptions |
-| A deny catches other forms of its command | ❌ the start of a command only | ✅ once the hook is on |
-| Stale documents flagged on the change | ❌ | ✅ once anchored in a declared place |
-| Reviewer agents ready to call | ❌ written by you | ✅ four shipped |
+- **By hand:** a `CLAUDE.md` and agent files you keep yourself, and copy from project to project.
+- **From [plugins](https://code.claude.com/docs/en/plugins):** Claude Code installs a plugin's skills, agents, hooks and MCP servers as one unit, mostly from a marketplace, a catalog of plugins. A plugin may be your own, or one someone else built.
+
+A plugin holds whatever its author put in it, so its column marks what a plugin can carry.
+
+| | Hand-kept `CLAUDE.md` and agent files | Claude Code plugins | project-kit |
+|---|---|---|---|
+| Nothing to install or learn | ✅ | ✅ no tool beyond Claude Code | ❌ `uv`, `jq`, a CLI and its conventions |
+| No running cost on each change | ✅ | ✅ | ❌ answers, acceptances and a CI job |
+| Adds little to every session's context | ✅ only what you write | ✅ names and descriptions, full text only when used | ❌ its rules load whole |
+| Works with other agent tools | ✅ you write each tool's files | ❌ Claude Code, claude.ai and Cowork | ❌ [Claude Code only](.pkit/adapters/README.md#currently-shipped), today |
+| You choose every line and every allow | ✅ | ✅ in a plugin you build | ❌ its files are synced, and its allows return |
+| Setups others built, from a catalog | ❌ | ✅ marketplaces | ❌ [only the capabilities it ships](.pkit/cli/README.md#capabilities--two-ways-in) |
+| Rules load into every session | ✅ | ✅ through a hook at session start, not a `CLAUDE.md` | ✅ |
+| An improvement reaches every project, on any machine | ❌ copied by hand, or one machine's `~/.claude/` | ✅ through its marketplace, on each machine that installs it | ✅ at each project's next upgrade |
+| Taking an update keeps your own files | ❌ merged by hand | ✅ a plugin stays in `~/.claude/plugins/` | ✅ one owner per file, with listed exceptions |
+| A deny catches other forms of its command | ❌ the start of a command only, unless you write a hook | ✅ where a hook it ships checks them | ✅ once the hook is on |
+| Stale documents flagged on the change | ❌ | ❌ a hook can flag one in a session, but not hold the merge | ✅ once anchored in a declared place |
+| Reviewer agents ready to call | ❌ written by you | ✅ any a plugin ships | ✅ four shipped |
 
 ## When not to use it
 
 - **A one-off task.** Just ask Claude. project-kit is for work that repeats, must survive a new session, or spans projects and people.
+- **Sharing only skills, agents or hooks.** A [Claude Code plugin](https://code.claude.com/docs/en/plugins) gives them to your teammates and your other projects.
 - **Another agent tool.** project-kit works with [Claude Code only](.pkit/adapters/README.md#currently-shipped), today.
 - **No room for the running cost.** Each change answers the documents whose anchors it touches, and each decision waits for acceptance. Someone also keeps the CI job.
 

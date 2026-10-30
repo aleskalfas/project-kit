@@ -1,0 +1,4 @@
+# yaml-language-server: $schema=../../schemas/source.schema.json
+title: Claude Code plugin manifest reference
+url: https://code.claude.com/docs/en/plugins/manifest-reference
+version: "2026-10-30"
