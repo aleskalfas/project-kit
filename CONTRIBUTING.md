@@ -22,7 +22,7 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, "project-management:DEC-053", "living-docs:DEC-002", "doc-examples:DEC-001"]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, "COR-062#1", "COR-062#4", "COR-062#7", "COR-062#10", "COR-066#1", PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, ADR-068, ADR-078, "project-management:DEC-053", "living-docs:DEC-002", "doc-examples:DEC-001"]
       artefact:
         - .pkit/capabilities/doc-examples/README.md
         - .pkit/decisions/README.md
@@ -52,13 +52,21 @@ There is one source of truth for "what must pass before this lands": **`scripts/
 The same aggregator runs in two places, so the gate can't drift:
 
 - **Pre-push hook** (`.githooks/pre-push`) — runs it before every push for fast local feedback. Opt in once per clone: `git config core.hooksPath .githooks` (bypass in a pinch with `git push --no-verify`).
-- **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on a clean Linux runner for every PR, every merge the merge queue is about to make, and every push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
+- **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on clean Linux runners for every PR, every merge the merge queue is about to make, and every push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
 
-**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` instead of the whole aggregator in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
+**How CI splits a full run** ([ADR-078](tech-docs/architecture/decisions/ADR-078-ci-suite-parallel-jobs.md)). CI runs the aggregator as three parts side by side, each a job on a runner of its own, and the aggregator defines them:
+- **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs its share of the suite's parallel pass, cut where a committed table of measured test times balances the two.
+- **the remainder,** `./scripts/check.sh --rest`: every other line, with the tests marked `serial`.
+
+A job before them decides the form and pins the base every part reads. One job named `checks`, the status `main` requires, runs last and passes only when every part said that it passed. Its summary lists each part, with how it ended and how long it took.
+
+Each part names its own failures in its job's summary, and a slice names each failing test and how to run the slice again. Run any part by hand with the same argument. The hook runs the aggregator whole, so it runs what the parts run. [`tests/README.md`](tests/README.md), "Running the suite", says how the suite is cut and how the table of times is kept.
+
+**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` in the remainder's job, and no slice, instead of the full run's parts in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
 - **Only answers changed since.** `pkit friction since` says every change from that run's head lies in the answer files the change adds, where its answers to friction live (COR-062 point 1). A merge of the base counts only for what differs from git's merge of it.
 
-The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
+The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The deciding job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
 
 **The full suite is the hook's and CI's, not a builder's.** The aggregator's test step runs the suite in parallel workers, then the tests marked `serial` on their own, and lets at most two full suites run on a machine at once — a third waits and says whose runs it waits for. While you build, run the test modules for the files you changed and the fast gates instead (`.pkit/rules/project.md`); [`tests/README.md`](tests/README.md) "Running the suite" has the details.
 
