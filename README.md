@@ -256,7 +256,7 @@ A plugin holds whatever its author put in it, so its column marks what a plugin 
 |---|---|---|---|
 | Nothing to install or learn | ✅ | ✅ no tool beyond Claude Code | ❌ `uv`, `jq`, a CLI and its conventions |
 | No running cost on each change | ✅ | ✅ | ❌ answers, acceptances and a CI job |
-| Adds little to every session's context | ✅ only what you write | ✅ a skill's full text loads only when used | ❌ its rules load whole |
+| Adds little to every session's context | ✅ only what you write | ✅ names and descriptions, full text only when used | ❌ its rules load whole |
 | Works with other agent tools | ✅ you write each tool's files | ❌ Claude Code, claude.ai and Cowork | ❌ [Claude Code only](.pkit/adapters/README.md#currently-shipped), today |
 | You choose every line and every allow | ✅ | ✅ in a plugin you build | ❌ its files are synced, and its allows return |
 | Setups others built, from a catalog | ❌ | ✅ marketplaces | ❌ [only the capabilities it ships](.pkit/cli/README.md#capabilities--two-ways-in) |
@@ -264,7 +264,7 @@ A plugin holds whatever its author put in it, so its column marks what a plugin 
 | An improvement reaches every project, on any machine | ❌ copied by hand, or one machine's `~/.claude/` | ✅ through its marketplace, on each machine that installs it | ✅ at each project's next upgrade |
 | Taking an update keeps your own files | ❌ merged by hand | ✅ a plugin stays in `~/.claude/plugins/` | ✅ one owner per file, with listed exceptions |
 | A deny catches other forms of its command | ❌ the start of a command only, unless you write a hook | ✅ where a hook it ships checks them | ✅ once the hook is on |
-| Stale documents flagged on the change | ❌ | ❌ it acts in Claude Code sessions, not at the merge | ✅ once anchored in a declared place |
+| Stale documents flagged on the change | ❌ | ❌ a hook can flag one in a session, but not hold the merge | ✅ once anchored in a declared place |
 | Reviewer agents ready to call | ❌ written by you | ✅ any a plugin ships | ✅ four shipped |
 
 ## When not to use it
