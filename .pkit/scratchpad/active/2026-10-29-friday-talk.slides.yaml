@@ -580,11 +580,92 @@ slides:
     and a rule on when a decision record starts (#2258). Next: each installed capability brings its own rules, loaded while
     it is installed (#2269, shown with the capabilities), and the rules trimmed to a sentence or two each (#2261). Today:
     22 rules, about 2,800 words, in every session.'
+- id: schemaslook
+  part: P1
+  title: What schemas and processes look like
+  message: 'A schema is two files: the rule as data, and the shape that data must have. A process is a schema of stages
+    and moves.'
+  problem: ''
+  does: []
+  show: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit validate checks them all.'
+  visual:
+    kind: files
+    font_size: 22
+    groups:
+    - head: 'A schema: two files'
+      tag: In core pkit
+      tone: core
+      panels:
+      - head: The rule, as data
+        terminal:
+        - [['# .pkit/schemas/privilege-catalog.yaml', comment]]
+        - [['vcs-history-rewrite:', output]]
+        - [['  description: ', output], ['Rewriting published git history (force-push).', args]]
+        - [['  guardrail: ', output], ['true', args]]
+        - [['  recognize:', output]]
+        - [['    bash:', output]]
+        - [['      - cmd: ', output], [git, args]]
+        - [['        subcommand: ', output], ['[push]', args]]
+        - [['        flag_any: ', output], ['["--force", "-f", …]', args]]
+      - head: The shape it must have
+        terminal:
+        - [['# .pkit/schemas/privilege-catalog.schema.json', comment]]
+        - [['"entry": {', output]]
+        - [['  "type": ', output], ['"object",', args]]
+        - [['  "additionalProperties": ', output], ['false,', args]]
+        - [['  "required": ', output], ['["description", "recognize"],', args]]
+        - [['  "properties": {', output]]
+        - [['    "description": {', output]]
+        - [['      "type": ', output], ['"string",', args]]
+        - [['      "minLength": ', output], ['1,', args]]
+    - head: 'A process: one kind of schema'
+      tag: 'An add-on''s example: not in core pkit'
+      tone: example
+      panels:
+      - head: The issue workflow
+        terminal:
+        - [['# .pkit/capabilities/project-management/', comment]]
+        - [['#   schemas/workflow.yaml', comment]]
+        - [['process:', output]]
+        - [['  id: ', output], [issue-lifecycle, args]]
+        - [['  states:  ', output], ['# todo … done, five', comment]]
+        - [['  transitions:', output]]
+        - [['    - from: ', output], [review, args]]
+        - [['      to: ', output], [done, args]]
+        - [['      authorisation: ', output], [user, yours]]
+    below:
+      head: What core pkit brings, so no add-on and no project builds it again
+      terminals:
+      - - [['# for schemas', comment]]
+        - [['$ ', prompt], [pkit, command], [' new schema <capability> <name>', args], ['   # a rule and its shape, as a pair', comment]]
+        - [['$ ', prompt], [pkit, command], [' validate', args], ['                         # every file against its shape', comment]]
+        - [['$ ', prompt], [pkit, command], [' data validate <file>', args], ['             # your own data files too', comment]]
+      - - [['# for processes', comment]]
+        - [['$ ', prompt], [pkit, command], [' process new <capability>:<id>', args], ['    # a process, its gates stubbed', comment]]
+        - [['$ ', prompt], [pkit, command], [' process status', args], ['                   # where it is, and why', comment]]
+        - [['$ ', prompt], [pkit, command], [' process move', args], ['                     # the move, refused if not allowed', comment]]
+  limit: pkit validate checks that a file has its shape, not that the rule in it is right.
+  minutes: 1
+  notes: 'Before the example, the files themselves. A schema is a pair of files. One holds the rule as data, here the privilege
+    that covers force-push: what it is, that it is a guardrail, and how a command is recognised as one. The other, the
+    .schema.json file beside it, says what such data must contain: an entry needs a description and a recognize block,
+    and nothing else may appear. pkit''s commands, skills and agents read the first file; pkit validate checks it against
+    the second (COR-018). This very rule is why force-push is refused for every agent, on the permissions slide later.
+    pkit''s own schemas live in .pkit/schemas/, 8 of them, mostly the permission model. Each add-on keeps its own in its
+    schemas/ folder. A process is one kind of schema: a file of states and moves, with a gate on each move (COR-033). The
+    one shown is not part of core pkit: it is the issue workflow of the project-management add-on, the only process in use
+    today. Core pkit ships what every process needs: the shape every process file must have (.pkit/schemas/_defs/process.schema.json),
+    the engine, and the commands. That is the point of the bottom row: pkit brings the commands for schemas and processes,
+    so an add-on or a project never builds its own validator or its own state machine. Why the rule is data: it lives in
+    one place, apart from the code that applies it, so changing it is a data edit, not a code change (COR-018); and a new
+    process is a new file, not new machinery (COR-033). pkit process new adds a process to a capability, with a stub for
+    each gate that fails until the process-author agent writes it (COR-044). Your own data files can name the schema they
+    follow, and pkit data validate checks them (COR-023).'
 - id: schemas
   part: P1
-  title: Schemas and processes
-  message: 'A schema is an exact rule, written as data. A process is one such rule: the stages of the work, and the check
-    before each move.'
+  title: How an add-on uses a process
+  message: project-management brings the issue workflow. pkit's engine checks every move, so the add-on wrote no engine of
+    its own.
   problem: ''
   does: []
   show: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
@@ -605,7 +686,7 @@ slides:
       refused: Refused
       reason: 7 boxes unticked
     panels:
-    - head: 'The rule as data: a schema'
+    - head: The move, in the add-on's workflow.yaml
       terminal:
       - [['# workflow.yaml, from project-management', comment]]
       - [['- from: ', output], [in-progress, args]]
@@ -615,8 +696,8 @@ slides:
       - [['    kind: ', output], [deterministic, args]]
       - [['    predicate:', output]]
       - [['      run: ', output], [gate-checkboxes-ticked, pkit]]
-      caption: pkit validate checks that it has the shape a process needs.
-    - head: What the agent asks
+      caption: Its shape comes from core pkit, the same for every process.
+    - head: What the agent asks pkit
       terminal:
       - [['$ ', prompt], [pkit, command], [' process status \', args]]
       - [['    project-management:issue-lifecycle', args]]
@@ -625,28 +706,23 @@ slides:
       - [['Legal moves (live precheck):', output]]
       - [['  ✗ done  [close-issue]', del]]
       - [['      7 unticked checkbox(es) remain', del]]
-    - head: Why pkit has them
+    - head: Why it helps
       items:
       - The agent asks where work stands, instead of guessing.
       - A move needs its check or your yes, never just the agent's word.
-      - The rule is written once, and every command and agent reads it.
+      - The add-on records each move through pkit's engine, and built none of its own.
   limit: 'pkit brings the engine, not a process: the one in use today comes with the project-management add-on.'
-  minutes: 1.5
-  notes: 'Everyone knows a task board: Todo, In Progress, Done. A board only shows where work is. A process also says who
-    may make each move, and what must hold first. pkit writes it down as data, so a program checks every move. That file
-    is a schema: an exact rule written as data, with a description of the shape the file must have, which pkit validate
-    checks (COR-018). The decision keeps the why; the schema keeps the exact rule, in one place, and every command, skill
-    and agent reads the same file. A rule only in prose is read anew by each agent, and a rule written into code changes
-    only when the code does. A process is one kind of schema: the stages, the moves between them, and the gate on each move
-    (COR-033). One engine in pkit runs every process. It answers where an issue is, whether it may move, and why not, the
-    same way every time. A gate passes on a check, or on a record made by someone other than the agent it gates, never on
-    the agent''s own word (COR-033 point 4). On the board, a Feature skips Review: it closes when every box in it is ticked,
-    and you say yes. Feature #2270 has 7 boxes unticked, so the engine refuses Done; read live on 30 October. Another schema
-    of the same add-on, titles.yaml, holds each issue type''s title format, and pkit pm create-issue refuses a title in the
-    wrong form before it files the issue. A log of each move is optional and off unless you turn it on (COR-033 point 7).
-    What comes with pkit: the engine and the pkit process commands, the process skill for a definition''s shape, the process-author
-    agent for its gates (COR-044), and pkit process new for a process of your own. Your own data files can name the schema
-    they follow, and pkit validate checks them too (COR-023).'
+  minutes: 1
+  notes: 'Say it plainly: this is how an add-on uses a process; core pkit has no issue workflow. Everyone knows a task board:
+    Todo, In Progress, Done. A board only shows where work is. This process also says who may make each move, and what must
+    hold first. On the board, a Feature skips Review: it closes when every box in it is ticked, and you say yes. Feature
+    #2270 has 7 boxes unticked, so pkit refuses Done; read live on 30 October with pkit process status, a core command.
+    The engine answers where an issue is, whether it may move, and why not, the same way every time. A gate passes on a
+    check, or on a record made by someone other than the agent it gates, never on the agent''s own word (COR-033 point 4).
+    The add-on wrote the rule and its gates, and nothing else: its close command records each move with pkit process move,
+    and lets a parent follow its children with pkit process cascade. Another schema of the same add-on, titles.yaml, holds
+    each issue type''s title format, and pkit pm create-issue refuses a title in the wrong form before it files the issue.
+    A log of each move is optional and off unless you turn it on (COR-033 point 7).'
 - id: skillsfrom
   part: P2
   title: Where skills come from
@@ -1249,7 +1325,7 @@ slides:
       heading: Agents in separate clones
       body: A planner and workers, each taking only the work its pool allows.
   limit: ''
-  minutes: 2
+  minutes: 1.5
   notes: 'One version for pkit''s core, one per capability. pkit upgrade replaces only pkit''s files; pkit pin holds a version;
     pkit report sends what hurts upstream. The three cards: Experimental: say so.'
 - id: questions

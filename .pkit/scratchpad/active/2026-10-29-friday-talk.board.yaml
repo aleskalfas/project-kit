@@ -6759,7 +6759,7 @@ templates:
         height: 92
       p0head:
         type: text
-        text: 'The rule as data: a schema'
+        text: The move, in the add-on's workflow.yaml
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -6775,7 +6775,7 @@ templates:
         height: 344
       p0caption:
         type: text
-        text: pkit validate checks that it has the shape a process needs.
+        text: Its shape comes from core pkit, the same for every process.
         style: '@style.caption'
         ink: '@text_secondary'
         x: 0
@@ -6784,7 +6784,7 @@ templates:
         height: 40
       p1head:
         type: text
-        text: What the agent asks
+        text: What the agent asks pkit
         style: '@style.key'
         ink: '@text_primary'
         x: 1003
@@ -6800,7 +6800,7 @@ templates:
         height: 310
       p2head:
         type: text
-        text: Why pkit has them
+        text: Why it helps
         style: '@style.key'
         ink: '@text_primary'
         x: 2006
@@ -6851,13 +6851,181 @@ templates:
         height: 92
       p2item2:
         type: text
-        text: The rule is written once, and every command and agent reads it.
+        text: The add-on records each move through pkit's engine, and built none of its own.
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
         y: 722
         width: 875
         height: 92
+  files_T-schemaslook:
+    note: Real files side by side in groups, and the commands that come with them, drawn for one slide
+      by the slide generator.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 882
+    parts:
+      g0head:
+        type: text
+        text: 'A schema: two files'
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 0
+        y: 0
+        width: 1942
+        height: 64
+      g0tag:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 72
+        width: 335
+        height: 52
+        color: '@role_code_bg'
+        border_color: '@role_code_bg'
+        border_width: 1
+        ink: '@text_primary'
+      g0tagbar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 72
+        width: 10
+        height: 52
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      g0tagtext:
+        type: text
+        text: In core pkit
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 73
+        width: 287
+        height: 50
+      p0head:
+        type: text
+        text: The rule, as data
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 140
+        width: 939
+        height: 56
+      p0img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-schemaslook-p0.png
+        x: 0
+        y: 200
+        width: 939
+        height: 378
+      p1head:
+        type: text
+        text: The shape it must have
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1003
+        y: 140
+        width: 939
+        height: 56
+      p1img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-schemaslook-p1.png
+        x: 1003
+        y: 200
+        width: 939
+        height: 378
+      g1head:
+        type: text
+        text: 'A process: one kind of schema'
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 2006
+        y: 0
+        width: 939
+        height: 64
+      g1tag:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2006
+        y: 72
+        width: 747
+        height: 52
+        color: '#FCF4D6FF'
+        border_color: '#FCF4D6FF'
+        border_width: 1
+        ink: '@text_primary'
+      g1tagbar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2006
+        y: 72
+        width: 10
+        height: 52
+        color: '#F1C21BFF'
+        border_color: '#F1C21BFF'
+        border_width: 1
+        ink: '@text_primary'
+      g1tagtext:
+        type: text
+        text: 'An add-on''s example: not in core pkit'
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2038
+        y: 73
+        width: 699
+        height: 50
+      p2head:
+        type: text
+        text: The issue workflow
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 2006
+        y: 140
+        width: 939
+        height: 56
+      p2img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-schemaslook-p2.png
+        x: 2006
+        y: 200
+        width: 939
+        height: 378
+      bhead:
+        type: text
+        text: What core pkit brings, so no add-on and no project builds it again
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 610
+        width: 2944
+        height: 56
+      b0img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-schemaslook-b0.png
+        x: 0
+        y: 674
+        width: 1440
+        height: 208
+      b1img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-schemaslook-b1.png
+        x: 1504
+        y: 674
+        width: 1440
+        height: 208
 instances:
   L01:
     template: slide
@@ -7318,7 +7486,7 @@ instances:
     lead: Your AI agent works fast, and forgets everything your project decided.
     rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
     n: 1
-    total: 22
+    total: 23
     override:
       rests:
         text: 'The question: how do you make it work your project''s way, without a heavy framework?'
@@ -7683,7 +7851,7 @@ instances:
     lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
     rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
     n: 2
-    total: 22
+    total: 23
     override:
       rests:
         text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
@@ -8054,7 +8222,7 @@ instances:
     rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
       later.
     n: 3
-    total: 22
+    total: 23
     override:
       rests:
         text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
@@ -8158,7 +8326,7 @@ instances:
       records, issues or docs.
     rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
-    total: 22
+    total: 23
     override:
       rests:
         text: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
@@ -8221,7 +8389,7 @@ instances:
     rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
       one'
     n: 5
-    total: 22
+    total: 23
     override:
       rests:
         text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
@@ -8445,7 +8613,7 @@ instances:
     rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
       merged with its code.'
     n: 6
-    total: 22
+    total: 23
     override:
       rests:
         text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
@@ -8616,7 +8784,7 @@ instances:
     rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
       generated from the rules.'
     n: 7
-    total: 22
+    total: 23
     override:
       rests:
         text: 'This week: each rule got a permanent id and a status. The file every session loads is now
@@ -8775,71 +8943,126 @@ instances:
       bg: b0935e86-0ca4-4f1f-b60d-d806fcd1dd55
       bar: f2213a49-12d8-4e9f-9220-2e2037336669
       text: a1a454d6-ab69-451a-85f8-f2694907f945
+  T-schemaslook:
+    template: slide
+    title: What schemas and processes look like
+    lead: 'A schema is two files: the rule as data, and the shape that data must have. A process is a
+      schema of stages and moves.'
+    rests: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit
+      validate checks them all.'
+    n: 8
+    total: 23
+    override:
+      rests:
+        text: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit
+          validate checks them all.'
+    mural_ids:
+      root: 7f801a34-a040-4c5f-8c84-beea068d3a65
+      bg: 86936a24-32b2-4b8f-b248-f27528c5c72a
+      title: 1cc2ad65-d651-477d-bb67-ddf6110caaae
+      lead: a3f26ec6-dc5e-4045-98d6-ac0220e4a978
+      rests: ef6558a1-8e92-4857-b620-5ee6c623f423
+      num: e636867b-595e-4279-b03c-875271978669
+  T-schemaslook-files:
+    template: files_T-schemaslook
+    parent: T-schemaslook
+    x: 128
+    y: 576
+    mural_ids:
+      root: 84d9419a-20af-4c24-b4ad-ad2f0c026ea7
+      g0tag: d86e6ea7-195f-4603-9fe9-ec7a1f448753
+      g0tagbar: 5719b562-af16-4bf7-a0e1-c2fe34949f83
+      g1tag: 1929c36c-18ca-4d65-891a-80d0689c892c
+      g1tagbar: 51c23695-6411-4c32-9b9f-37a6c1d42418
+      g0head: 46668382-102f-4de7-b605-46f0135c62a4
+      g0tagtext: dbf85f09-8e43-4fee-8e8f-2d251af4ff5a
+      p0head: fb1860b0-f9c8-4b6f-9baf-996796a02fc2
+      p1head: fa15beb4-a235-4ec0-98c6-0e02c4f07fc3
+      g1head: 662d2338-f075-4705-ab71-f2ba178599ed
+      g1tagtext: 99a8714e-c914-4864-b115-50ab6e00262a
+      p2head: f240d6c2-0d9f-4490-8516-500f82c367c1
+      bhead: ecf01af2-0973-4481-be45-cac67b7de4e0
+      p0img: bc38e3cf-c34e-4764-ab69-72e64aef36df
+      p1img: 971586b0-2868-436c-8c63-3fec5564159f
+      p2img: 00c5830e-5f51-4aa0-8a29-0a72eabb31bc
+      b0img: 5c7f07a8-0e98-4bd5-a6d6-3b0d7e1eeced
+      b1img: fce769a4-d960-4b4d-8237-03ada0d59bc1
+  T-schemaslook-limit:
+    template: notice
+    parent: T-schemaslook
+    text: 'Limit: pkit validate checks that a file has its shape, not that the rule in it is right.'
+    x: 128
+    y: 1506
+    mural_ids:
+      root: 3a0776ae-6ae7-4af8-bcd5-924bd2bf8b13
+      bg: 2d244f52-1739-4aa8-a8b5-454ae4867329
+      bar: 879ba116-8d3c-4632-91a5-eb0309b62084
+      text: 864af29f-c93f-40ab-85a2-c3d7bbd687be
   T-schemas:
     template: slide
-    title: Schemas and processes
-    lead: 'A schema is an exact rule, written as data. A process is one such rule: the stages of the work,
-      and the check before each move.'
+    title: How an add-on uses a process
+    lead: project-management brings the issue workflow. pkit's engine checks every move, so the add-on
+      wrote no engine of its own.
     rests: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
-    n: 8
-    total: 22
+    n: 9
+    total: 23
     override:
       rests:
         text: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
     mural_ids:
-      root: f71db6bd-fb45-4564-98fa-3b49c81a093f
-      bg: 60fdbdb1-830a-4aab-9ed7-2fda5f8ff29b
-      title: b3d77c0a-f995-4bd8-be9f-831219df33e1
-      lead: 97b72ccf-1340-442f-a45b-1e89cf48d4f2
-      rests: 7fb40c27-4735-4bdb-8e11-9ca8b0ed71d2
-      num: e8af797f-bef1-4ea0-ba76-2ea1940cd24e
+      root: 46902b72-bfae-43d5-9037-d4669681b6de
+      bg: ffce5e8e-7230-47a7-b823-8be942a7a844
+      title: 22bf4da2-70d7-46fb-95f8-3b0b0c39e713
+      lead: 8fc7518b-850d-4e0e-9788-a9d1568fbb0c
+      rests: 70a947a3-9c20-4063-8e64-c38bc6b4d7fb
+      num: 3aca64e2-d30d-428a-8bd0-8a60ff1d8712
   T-schemas-board:
     template: board_T-schemas
     parent: T-schemas
     x: 128
     y: 576
     mural_ids:
-      root: 8ff0cd22-ad6b-434c-a947-338fd685fbd0
-      s0head: 8de9a3f9-bb12-48e5-a2e9-3c838c24f7a2
-      s0lane: b44fc869-aff5-48a2-b0bd-62d019d88dca
-      s1head: 2e70255c-bad4-4ab9-8358-36e137292fbe
-      s1lane: c44a4ddb-be53-4f49-a089-d61c058f0241
-      s2head: 50e7524b-8aa1-48b0-b6da-c6e5c86780aa
-      s2lane: 82fef809-d3ab-4845-8f18-68b0870aa166
-      s3head: 789f1b12-a9a2-44c6-8bff-053bb58f7f63
-      s3lane: 2b629e62-9bba-49d4-82b7-6426f2e2fef1
-      s4head: ff89a7b0-05d3-453c-9c5a-53b3db3024f9
-      s4lane: e58c028e-dfaa-4da1-ae04-73ae1c0eb5de
-      card: f4e757df-e662-42fc-ab25-b318f188c048
-      p2box: d7af97e8-ba08-4339-8c65-f0fee3974568
-      p2bar: ed868b79-937c-4d84-bd6a-433b2bc182c7
-      s0name: 4e19fe44-c30b-4fbc-993b-fc38a066402d
-      s1name: 7b787a4b-2a65-43f9-92cb-12714337c5c0
-      m1who: 5a0109be-e673-4880-867d-01ea8c2012ef
-      s2name: b44b5812-5486-42d7-b4ac-9d1f367a63ab
-      m2who: 9f038f9e-9bab-4d80-bbf1-16550a467212
-      s3name: 8f7aad00-3c58-4d86-b9e0-b86ee3db0249
-      m3who: b52af07e-c6bc-4fda-8a2e-2280efb1c01a
-      s4name: fb14d1c6-2cc3-4aae-8f2d-01fa350a7c1f
-      m4who: 52c62ca9-a798-4547-bc88-f9d00a9ba5d8
-      cardhead: 7e627b0c-4800-4692-b717-7dee258aea9f
-      cardtext: a8433aa3-576e-41a3-9143-f1a67dcd93ff
-      refusedhead: 616ea204-1c17-4be0-85a0-d5b6e8bbcfb6
-      refusedtext: f7b0286c-5008-4122-a408-487302db8317
-      p0head: 6f6ff6c0-3481-4125-ba3a-1d434184031f
-      p0caption: c74f760b-8e8d-4464-bce1-061a4a7d38d8
-      p1head: bb90ee63-1339-4e97-9aad-b99089312d6f
-      p2head: 313e0a9a-d27c-4e89-bff5-ddd841c42d01
-      p2item0: 49d8c38c-b764-4e27-89fc-1b52237f2277
-      p2item1: 7d4d61ef-4d3c-4b07-b614-a414f24ebace
-      p2item2: d180b2a6-2ff4-4076-8549-b6b09b2f9d51
-      p0img: 438bf2fc-b408-4696-b7d5-5c57466cdb38
-      p1img: 3c486229-5422-4d62-96bc-8bebad1772bf
-      m1arrow: 95f5f559-0d11-47c6-8558-511435794814
-      m2arrow: a73dc1c9-a322-45e4-af34-1c813bd4f18c
-      m3arrow: 95401ea3-c9ab-448a-9911-6feefcf262f6
-      m4arrow: df4c6df0-cb08-4361-9ed8-61432c1b2cc3
-      cardarrow: 17e8fae6-6747-4fc9-bc4a-f5206c9d5feb
+      root: 88dc8770-b022-42c0-ae7c-aacfe829836c
+      s0head: 9fb587f6-9ad3-4cc6-a5bd-5366d2973c46
+      s0lane: 46a01c92-a4ea-4496-a071-79dcd24b419b
+      s1head: a81ebb92-c380-4005-b0fb-d54fc60d7571
+      s1lane: 18ef1367-f1c7-42c8-93ad-2cec7fa84693
+      s2head: 2cb88d8b-d349-473a-a41d-5048cea9e744
+      s2lane: 564a2e65-e06a-4c6b-9cea-cf31fbfa8abc
+      s3head: 50404051-f0bf-46c8-a658-9c0af6fe2245
+      s3lane: 1d7eb1eb-7c83-4d5c-8049-7f56606338d6
+      s4head: ff2889b8-7864-47a2-8317-4f336db3137f
+      s4lane: 5bcfb05b-190a-4015-abca-fb7492056db5
+      card: acf43839-d07e-4d36-aa33-c9d51d5e92f4
+      p2box: 4e7b6a3d-f7cd-48eb-8217-75a5841645c1
+      p2bar: 29fa83cf-9e3f-4f68-ba14-ae2d9b77dc23
+      s0name: 0458ef78-2730-4930-a56e-a6b8aaeb0f55
+      s1name: c56b95b4-a8c0-42d3-a1ed-2e489b15a0ce
+      m1who: 1bd9faa9-72a8-4cd4-b7be-9b2488c5fc85
+      s2name: 2d002e7e-67d3-4b1d-acb6-9fa202e9f1bf
+      m2who: fd79b1e3-16ae-4edf-a15d-9334cb93156c
+      s3name: 2a17a8c8-acb5-4c37-8526-d274bd79f0ba
+      m3who: dd429986-a3d5-4802-80fd-484c1b8e3797
+      s4name: cb0f3e3e-4680-4e98-a243-b09ae6f8a21c
+      m4who: ec20ba5b-937b-4928-bb80-ba4fd07c33c9
+      cardhead: dc2e0423-caf9-4e98-996a-c77e30ed68ac
+      cardtext: f9e96685-11b0-4135-831a-1cdbd56ee0ff
+      refusedhead: 7b58ea70-2204-4d29-a95f-1b3138e45782
+      refusedtext: 3f514dd5-a772-4e56-b741-b1aa428198e2
+      p0head: 83144b36-6aaf-4343-b159-d9ed541b1bfd
+      p0caption: 2c5b1438-335d-4c49-b813-c1cfcda5b6f2
+      p1head: e245a813-d883-4e66-80a0-1231623df9f7
+      p2head: 4b123bbb-9d82-42f9-be98-35924fb66038
+      p2item0: 9ef4bf5a-967a-41e2-94af-4005adbee0ef
+      p2item1: 17c1999b-a600-4e5a-aaee-81f0f8a1ced1
+      p2item2: a2b0caf9-201c-4e42-aad0-ea817ab049df
+      p0img: 8dd99d92-dd22-46e4-8ae2-c6a5119f30fb
+      p1img: 57645454-2161-49d0-a4e0-b8ba40d7ee8e
+      m1arrow: 6eac84f7-1ab9-479b-bfd5-82911fb466fc
+      m2arrow: f6115c76-b501-44a0-baec-c879bc2fcf60
+      m3arrow: f92d74e0-94f0-4a25-813b-b7d5847de98f
+      m4arrow: 65a1f292-88b1-4b9b-9cbe-0e0bc578decf
+      cardarrow: edc9e7b2-5caf-48f6-99d9-56b64af7cd0e
   T-schemas-limit:
     template: notice
     parent: T-schemas
@@ -8848,10 +9071,10 @@ instances:
     x: 128
     y: 1482
     mural_ids:
-      root: 973827a6-a6d0-444d-b7ff-f640f57a4249
-      bg: 9933d8bd-02e7-422b-8ac8-48b03cfb85b5
-      bar: 38c550e1-c83f-46eb-8b3c-d6ce7e423414
-      text: 33446dc9-7707-4cc2-af73-9add3da2bc2d
+      root: e3ca2aae-c4e6-4319-b693-a73a7c4518f8
+      bg: ef49cc02-ab37-4523-b363-7a225bf4d0b8
+      bar: 69692d96-d411-43b7-85e9-81a786387603
+      text: a3244571-8083-42d1-b729-9e2013031708
   T-part-P2:
     template: section
     part: '3'
@@ -8870,8 +9093,8 @@ instances:
     lead: Each kind of file pkit's decisions define gets a skill for the choices, and a command for the
       exact part.
     rests: 'In project-kit: pkit ships 11 skills, each with its command.'
-    n: 9
-    total: 22
+    n: 10
+    total: 23
     override:
       rests:
         text: 'In project-kit: pkit ships 11 skills, each with its command.'
@@ -8963,8 +9186,8 @@ instances:
       are always right.
     rests: Every session holds only each skill's short description. The steps load when the task comes
       up.
-    n: 10
-    total: 22
+    n: 11
+    total: 23
     override:
       rests:
         text: Every session holds only each skill's short description. The steps load when the task comes
@@ -9036,8 +9259,8 @@ instances:
       only the tools it needs.'
     rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
       it follows.'
-    n: 11
-    total: 22
+    n: 12
+    total: 23
     override:
       rests:
         text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
@@ -9128,8 +9351,8 @@ instances:
     title: One piece of work, and who sees it
     lead: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
     rests: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
-    n: 12
-    total: 22
+    n: 13
+    total: 23
     override:
       rests:
         text: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
@@ -9192,8 +9415,8 @@ instances:
       and checks every tie.
     rests: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
       17 skills and agents.'
-    n: 13
-    total: 22
+    n: 14
+    total: 23
     override:
       rests:
         text: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
@@ -9287,8 +9510,8 @@ instances:
       hold when an agent forgets them.
     rests: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
       which validate the issue first.'
-    n: 14
-    total: 22
+    n: 15
+    total: 23
     override:
       rests:
         text: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
@@ -9381,8 +9604,8 @@ instances:
       see are worth reading.
     rests: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37
       routine ones allowed.'
-    n: 15
-    total: 22
+    n: 16
+    total: 23
     override:
       rests:
         text: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused,
@@ -9485,8 +9708,8 @@ instances:
       doubts them.
     rests: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
       its own: 16 in project-kit.'
-    n: 16
-    total: 22
+    n: 17
+    total: 23
     override:
       rests:
         text: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
@@ -9576,8 +9799,8 @@ instances:
     lead: Rename a file, and the documents tied to it are named before the change merges.
     rests: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by the
       project.'
-    n: 17
-    total: 22
+    n: 18
+    total: 23
     override:
       rests:
         text: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by
@@ -9678,8 +9901,8 @@ instances:
     lead: When code changes, the documents that depend on it are named, not found later by accident.
     rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it
       wasn''t'
-    n: 18
-    total: 22
+    n: 19
+    total: 23
     override:
       rests:
         text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed
@@ -9808,8 +10031,8 @@ instances:
     title: project-management
     lead: You talk to one agent; it plans the work and runs builders in parallel.
     rests: 'This week, in one evening: six builders, four pull requests merged'
-    n: 19
-    total: 22
+    n: 20
+    total: 23
     override:
       rests:
         text: 'This week, in one evening: six builders, four pull requests merged'
@@ -10099,8 +10322,8 @@ instances:
       to wire.
     rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
       before merge'
-    n: 20
-    total: 22
+    n: 21
+    total: 23
     override:
       rests:
         text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
@@ -10311,8 +10534,8 @@ instances:
       run, still being shaped.
     rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until
       you decide'
-    n: 21
-    total: 22
+    n: 22
+    total: 23
     override:
       rests:
         text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes
@@ -10570,8 +10793,8 @@ instances:
     title: Questions?
     lead: Everything shown is in project-kit's own repository, built with pkit itself.
     rests: github.com/aleskalfas/project-kit
-    n: 22
-    total: 22
+    n: 23
+    total: 23
     override:
       rests:
         text: github.com/aleskalfas/project-kit
@@ -10641,6 +10864,7 @@ layouts:
   - T-decisions
   - T-found
   - T-sessions
+  - T-schemaslook
   - T-schemas
   origin:
   - -4246

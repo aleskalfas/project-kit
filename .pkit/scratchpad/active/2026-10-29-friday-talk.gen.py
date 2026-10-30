@@ -844,6 +844,68 @@ def roles(pid, y, v):
     return {f"{pid}-roles": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
 
+TAG_TONES = {"core": ("@role_code_bg", "@role_code"), "example": ("#FCF4D6FF", "#F1C21BFF")}
+
+
+def files(pid, y, v):
+    """Real files side by side, in groups: each group a heading over its panels and a tag under it (purple: in core;
+    yellow: an example from an add-on), each panel a heading and a terminal. Under them, a heading and a row of
+    terminals (the commands that come with it). The headings and tags are one instance of a template made for this
+    slide; the terminals are images."""
+    groups, below = v["groups"], v.get("below")
+    count = sum(len(g["panels"]) for g in groups)
+    pw = round((SPAN16 - (count - 1) * GUT) / count)
+    fs = v.get("font_size", 22)
+    GH, TAG_TOP, TAG_H, PH_TOP = 64, 72, 52, 140
+    TERM_TOP = PH_TOP + 60
+    parts = {}
+
+    def text(key, s, style, x, top, w, h, ink="@text_primary"):
+        parts[key] = {"type": "text", "text": md(s), "style": style, "ink": ink, "x": round(x), "y": round(top), "width": round(w), "height": round(h)}
+
+    def shape(key, x, top, w, h, fill):
+        parts[key] = {"type": "shape", "shape": "rectangle", "text": "", "x": round(x), "y": round(top), "width": round(w), "height": round(h),
+                      "color": fill, "border_color": fill, "border_width": 1, "ink": "@text_primary"}
+
+    k = 0
+    row_h = 0
+    for gi, g in enumerate(groups):
+        gx = k * (pw + GUT)
+        gw = len(g["panels"]) * pw + (len(g["panels"]) - 1) * GUT
+        text(f"g{gi}head", g["head"], "@style.tile_heading", gx, 0, gw, GH)
+        bg, bar = TAG_TONES[g.get("tone", "core")]
+        tw = min(gw, round(text_w(g["tag"], 36)) + 120)
+        shape(f"g{gi}tag", gx, TAG_TOP, tw, TAG_H, bg)
+        shape(f"g{gi}tagbar", gx, TAG_TOP, 10, TAG_H, bar)
+        text(f"g{gi}tagtext", g["tag"], "@style.body", gx + 32, TAG_TOP + 1, tw - 48, 50)
+        for p in g["panels"]:
+            x = k * (pw + GUT)
+            text(f"p{k}head", p["head"], "@style.key", x, PH_TOP, pw, 56)
+            file, h = terminal_png(f"{pid}-p{k}".removeprefix("T-"), p["terminal"], pw, fs)
+            parts[f"p{k}img"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": x, "y": TERM_TOP, "width": pw, "height": h}
+            row_h = max(row_h, h)
+            k += 1
+    H = TERM_TOP + row_h
+    if below:
+        top = H + 32
+        text("bhead", below["head"], "@style.key", 0, top, SPAN16, 56)
+        n = len(below["terminals"])
+        bw = round((SPAN16 - (n - 1) * GUT) / n)
+        bh = 0
+        for i, t in enumerate(below["terminals"]):
+            file, h = terminal_png(f"{pid}-b{i}".removeprefix("T-"), t, bw, fs)
+            parts[f"b{i}img"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": i * (bw + GUT), "y": top + 64, "width": bw, "height": h}
+            bh = max(bh, h)
+        H = top + 64 + bh
+    name = f"files_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "Real files side by side in groups, and the commands that come with them, drawn for one slide by the slide generator.",
+        "root": {**CLEAR_AREA, "width": SPAN16, "height": H},
+        "parts": parts,
+    }
+    return {f"{pid}-files": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
 WHO_TONES = {"you": "@role_people", "agent": "@role_code"}
 
 
@@ -1347,6 +1409,8 @@ def build_slide(s, n, total):
             add(roles(pid, y, v))
         elif kind == "board":
             add(board(pid, y, v))
+        elif kind == "files":
+            add(files(pid, y, v))
         elif kind == "wired":
             add(wired(pid, y, v))
         elif kind == "ties":
