@@ -257,7 +257,7 @@ A lookalike stays untrusted, such as `2>&1t`, `{fd}>/dev/null` or `>&word`. So d
 
 A deny on any segment still wins over every allow, and over an untrusted construct.
 
-The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments. The reason for an untrusted construct lists the kinds of construct, and none of the command's text.
+The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments. The reason for an untrusted construct lists the kinds of construct, and none of the command's text. The reason for a fault quotes the error the hook met ("A fault" in "Grants and verdicts" above).
 
 ## A deny holds against the forms of its command
 
