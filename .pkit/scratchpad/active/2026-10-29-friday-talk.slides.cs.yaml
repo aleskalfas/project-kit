@@ -4,7 +4,7 @@
 # Přeloženo z anglické verze (2026-10-29-friday-talk.slides.yaml), slajd po slajdu podle smyslu.
 #
 # Slovník, jedno slovo pro jednu věc. Technické výrazy, které čeští vývojáři říkají anglicky,
-# zůstávají anglicky: add-on (add-ony, capabilities jen v závorce nebo v příkazu), engine, slot, role,
+# zůstávají anglicky: capability (mn. č. capabilities, ženský rod, neskloňuje se), engine, slot, role,
 # builder, gate, reviewer, review, merge, pull request, commit, hook, issue, session, skill, scratchpad.
 # Česky: rozhodnutí, záznam o rozhodnutí; jádro pkitu; oprávnění; schéma, proces, stav, přechod;
 # kontrola; vazba; repozitář, větev; vy (vykání, malými písmeny). Věty se staví česky, ne podle
@@ -33,7 +33,7 @@ parts:
   summary: Co pkit kontroluje a dokumenty, které nezastarají.
 - id: P4
   title: Co si doinstalujete
-  summary: Volitelné add-ony (capabilities) podle druhu vaší práce a jak se propojují.
+  summary: 'Volitelné části, kterým pkit říká capabilities: co se hodí k vaší práci a jak se propojují.'
 - id: P5
   title: Otázky
   summary: ''
@@ -161,7 +161,7 @@ slides:
   message: Nástroj nainstalujete jednou, pak pkit přidáte do každého projektu jedním příkazem. Upgrade mění jen soubory pkitu.
   problem: ''
   does: []
-  show: pkit status ukáže, co pkit v projektu nastavil. Volitelné add-ony (capabilities) přijdou na řadu později.
+  show: pkit status ukáže, co pkit v projektu nastavil. Volitelné části, kterým pkit říká capabilities, přijdou později.
   visual:
     kind: install
     terminal: "# jednou, na vašem počítači\n$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n\
@@ -439,8 +439,8 @@ slides:
   notes: 'Tři místa vycházejí ze dvou otázek. Čeho se záznam týká: jak se pracuje, nebo co stavíte? A kdo ho smí měnit: pkit,
     nebo vy? O vaší architektuře pkit nikdy nerozhoduje, proto čtvrté místo neexistuje. Principy pkitu se mění novým záznamem,
     který si můžete přečíst, nikdy tichou úpravou. V červnu jich bylo 39, teď jich je 67, a tento týden COR-065 nahradil větu
-    z COR-006. Samotný project-kit má 11 PRJ a 74 ADR. Add-ony přinášejí vlastní záznamy o rozhodnutí. Ukážeme je, až přijdou
-    na řadu add-ony.'
+    z COR-006. Samotný project-kit má 11 PRJ a 74 ADR. Capabilities přinášejí vlastní záznamy o rozhodnutí. Ukážeme je v části
+    o capabilities.'
 - id: found
   part: P1
   title: Rozhodnete jednou, agent to pak najde
@@ -553,8 +553,9 @@ slides:
     která se týkají jen určitých souborů, třeba kódu v Pythonu, se nenačítají. Jsou to sady pravidel omezené na ty soubory.
     Agent je vyhledá příkazem pkit rule-sets reach a při merge je zkontroluje reviewer (#2273 a #2274, v review). V review
     je také limit velikosti, který hlídá pkit validate (#2262), a pravidlo o tom, kdy začít psát záznam o rozhodnutí (#2258).
-    Dál přijde tohle: každý nainstalovaný add-on přinese vlastní pravidla, která se načítají, dokud je nainstalovaný (#2269,
-    ukážeme u add-onů), a pravidla se zkrátí na jednu až dvě věty (#2261). Dnes: 22 pravidel, asi 2 800 slov, v každé session.'
+    Dál přijde tohle: každá nainstalovaná capability přinese vlastní pravidla, která se načítají, dokud je nainstalovaná (#2269,
+    ukážeme u capabilities), a pravidla se zkrátí na jednu až dvě věty (#2261). Dnes: 22 pravidel, asi 2 800 slov, v každé
+    session.'
 - id: schemaslook
   part: P1
   title: Jak vypadají schémata a procesy
@@ -631,7 +632,7 @@ slides:
           - - 1,
             - args
     - head: 'Proces: zvláštní druh schématu'
-      tag: 'Příklad z add-onu: není v jádře pkitu'
+      tag: 'Příklad z capability: není v jádře pkitu'
       tone: example
       panels:
       - head: Workflow pro issues
@@ -665,7 +666,7 @@ slides:
           - - user
             - yours
     below:
-      head: Co dodá jádro pkitu, takže to žádný add-on ani projekt nemusí stavět znovu
+      head: Co dodá jádro pkitu, takže to žádná capability ani projekt nestaví znovu
       terminals:
       - - - - '# pro schémata'
             - comment
@@ -726,21 +727,20 @@ slides:
     vedle něj, říká, co taková data musí obsahovat: položka potřebuje popis a blok recognize a nic jiného v ní být nesmí.
     Příkazy, skilly a agenti pkitu čtou první soubor a pkit validate ho kontroluje podle druhého (COR-018). Právě kvůli tomuto
     pravidlu má force-push zakázaný každý agent. Uvidíte to později u oprávnění. Vlastní schémata pkitu leží v .pkit/schemas/.
-    Je jich 8 a většina patří k modelu oprávnění. Každý add-on má svá schémata ve vlastní složce schemas/. Proces je zvláštní
+    Je jich 8 a většina patří k modelu oprávnění. Každá capability má svá schémata ve vlastní složce schemas/. Proces je zvláštní
     druh schématu: soubor stavů a přechodů, kde na každém přechodu stojí gate, tedy kontrola, která musí projít (COR-033).
-    Ukázaný proces není součástí jádra pkitu. Je to workflow pro issues z add-onu project-management a zatím jediný proces,
+    Ukázaný proces není součástí jádra pkitu. Je to workflow pro issues z capability project-management a zatím jediný proces,
     který se používá. Jádro pkitu dodává to, co potřebuje každý proces: tvar, který musí mít každý soubor procesu (.pkit/schemas/_defs/process.schema.json),
-    engine a příkazy. O tom je spodní řada. Příkazy pro schémata a procesy přináší pkit, takže žádný add-on ani projekt nestaví
-    vlastní validátor ani vlastní stavový automat. Proč je pravidlo zapsané jako data? Leží na jednom místě, odděleně od kódu,
-    který ho uplatňuje, takže jeho změna je úprava dat, ne změna kódu (COR-018). A nový proces je nový soubor, ne nová mašinérie
-    (COR-033). pkit process new přidá proces do add-onu. Každý gate v něm je zatím stub, který selhává, dokud skutečnou kontrolu
-    nenapíše agent process-author (COR-044). Vaše vlastní datové soubory mohou uvést schéma, kterým se řídí, a pkit data validate
-    je zkontroluje (COR-023).'
+    engine a příkazy. O tom je spodní řada. Příkazy pro schémata a procesy přináší pkit, takže žádná capability ani projekt
+    nestaví vlastní validátor ani vlastní stavový automat. Proč je pravidlo zapsané jako data? Leží na jednom místě, odděleně
+    od kódu, který ho uplatňuje, takže jeho změna je úprava dat, ne změna kódu (COR-018). A nový proces je nový soubor, ne
+    nová mašinérie (COR-033). pkit process new přidá proces do capability. Každý gate v něm je zatím stub, který selhává,
+    dokud skutečnou kontrolu nenapíše agent process-author (COR-044). Vaše vlastní datové soubory mohou uvést schéma, kterým
+    se řídí, a pkit data validate je zkontroluje (COR-023).'
 - id: schemas
   part: P1
-  title: Jak add-on používá proces
-  message: project-management přináší workflow pro issues. Každý přechod ověří engine pkitu, takže add-on nemusel psát vlastní
-    engine.
+  title: Jak capability používá proces
+  message: project-management přináší workflow pro issues. Přechody hlídá engine pkitu, takže capability vlastní engine nemá.
   problem: ''
   does: []
   show: 'V project-kitu dnes: Feature #2270 nejde uzavřít, dokud v ní zbývá 7 nezaškrtnutých políček.'
@@ -770,7 +770,7 @@ slides:
       refused: Odmítnuto
       reason: chybí 7 zaškrtnutí
     panels:
-    - head: Přechod ve workflow.yaml add-onu
+    - head: Přechod ve workflow.yaml z capability
       terminal:
       - - - '# workflow.yaml z project-management'
           - comment
@@ -825,19 +825,19 @@ slides:
       items:
       - Agent se zeptá, jak je práce daleko, místo aby hádal.
       - Přechod projde jen po kontrole nebo s vaším ano. Slovo agenta nestačí.
-      - Add-on si vlastní engine nepsal. Každý přechod za něj provede engine pkitu.
-  limit: pkit dodává engine, ale žádný proces. Ten jediný, který se dnes používá, přináší add-on project-management.
+      - Capability si vlastní engine nepsala. Každý přechod za ni provede engine pkitu.
+  limit: pkit dodává engine, ale žádný proces. Ten jediný, který se dnes používá, přináší capability project-management.
   minutes: 1
-  notes: 'Řekněte to jasně: takhle add-on používá proces. Jádro pkitu žádné workflow pro issues nemá. Tabuli úkolů zná každý:
-    Todo, In Progress, Done. Tabule ale jen ukazuje, kde práce je. Tento proces navíc říká, kdo smí který přechod udělat a
-    co musí předtím platit. Na tabuli Feature přeskočí Review: uzavře se, až bude zaškrtnuté každé políčko a vy řeknete ano.
-    Feature #2270 má 7 políček nezaškrtnutých, a tak pkit přechod do Done odmítne. Přečteno živě 30. října příkazem pkit process
-    status, který patří k jádru. Engine odpoví, kde issue je, jestli smí dál a proč ne, a to pokaždé stejně. Gate projde jen
-    na základě kontroly nebo záznamu od někoho jiného, než je agent, kterého hlídá. Slovo samotného agenta nikdy nestačí (COR-033
-    bod 4). Add-on napsal pravidlo a kontroly u přechodů, nic víc. Jeho příkaz pro uzavření volá na každý přechod pkit process
-    move a rodiče nechá následovat své potomky pomocí pkit process cascade. Jiné schéma téhož add-onu, titles.yaml, určuje
-    formát názvu pro každý typ issue. pkit pm create-issue odmítne název ve špatném tvaru dřív, než issue založí. Log přechodů
-    je volitelný, a dokud ho nezapnete, je vypnutý (COR-033 bod 7).'
+  notes: 'Řekněte to jasně: takhle capability používá proces. Jádro pkitu žádné workflow pro issues nemá. Tabuli úkolů zná
+    každý: Todo, In Progress, Done. Tabule ale jen ukazuje, kde práce je. Tento proces navíc říká, kdo smí který přechod udělat
+    a co musí předtím platit. Na tabuli Feature přeskočí Review: uzavře se, až bude zaškrtnuté každé políčko a vy řeknete
+    ano. Feature #2270 má 7 políček nezaškrtnutých, a tak pkit přechod do Done odmítne. Přečteno živě 30. října příkazem pkit
+    process status, který patří k jádru. Engine odpoví, kde issue je, jestli smí dál a proč ne, a to pokaždé stejně. Gate
+    projde jen na základě kontroly nebo záznamu od někoho jiného, než je agent, kterého hlídá. Slovo samotného agenta nikdy
+    nestačí (COR-033 bod 4). Capability napsala pravidlo a kontroly u přechodů, nic víc. Její příkaz pro uzavření volá na
+    každý přechod pkit process move a rodiče nechá následovat své potomky pomocí pkit process cascade. Jiné schéma téže capability,
+    titles.yaml, určuje formát názvu pro každý typ issue. pkit pm create-issue odmítne název ve špatném tvaru dřív, než issue
+    založí. Log přechodů je volitelný, a dokud ho nezapnete, je vypnutý (COR-033 bod 7).'
 - id: skillsfrom
   part: P2
   title: Odkud se berou skilly
@@ -1017,7 +1017,7 @@ slides:
   message: Každá role ji vidí ve svou chvíli. Critic vidí návrh dřív než vy. Revieweři kontrolují až hotovou změnu.
   problem: ''
   does: []
-  show: Agenti jádra pkitu radí a nikdy neblokují. Add-ony přinášejí agenty, kteří umí merge zablokovat.
+  show: Agenti jádra pkitu radí a nikdy neblokují. Capabilities přinášejí agenty, kteří umí merge zablokovat.
   visual:
     kind: roles
     stops:
@@ -1191,11 +1191,11 @@ slides:
     přidá vlastní oprávnění. pkit to všechno zapíše do nastavení vašeho AI nástroje a volitelný hook zkontroluje každé volání,
     než se spustí. Omezení agenta sedí na třech místech. Pojistky platí pro všechny, i pro vás. Soubor agenta vyjmenuje jeho
     nástroje a váš AI nástroj ten seznam vynucuje jen u toho agenta. Pravidlo pro jednoho agenta potřebuje hook. Šest agentů
-    pkitu žádné vlastní pravidlo nemá, omezují je jen jejich nástroje. Jediné pravidlo pro jednoho agenta přináší add-on project-management.
-    Jeho agent project-manager nesmí používat přímé příkazy gh, které mění issues a pull requesty. Musí použít příkazy pkitu.
-    Ty issue ověří a hlídají gate uzavření i gate schválení. Agent tak nic z toho ze zvyku nepřeskočí. Add-on to pravidlo
-    přinese s sebou a nic nenastavujete. Zákaz je jen zpomalovací práh, ne bezpečnostní hranice. Obal jako bash -c nebo uv
-    run ho může obejít, a proto skutečné kontroly sedí uvnitř příkazů pkitu.'
+    pkitu žádné vlastní pravidlo nemá, omezují je jen jejich nástroje. Jediné pravidlo pro jednoho agenta přináší capability
+    project-management. Její agent project-manager nesmí používat přímé příkazy gh, které mění issues a pull requesty. Musí
+    použít příkazy pkitu. Ty issue ověří a hlídají gate uzavření i gate schválení. Agent tak nic z toho ze zvyku nepřeskočí.
+    Capability to pravidlo přinese s sebou a nic nenastavujete. Zákaz je jen zpomalovací práh, ne bezpečnostní hranice. Obal
+    jako bash -c nebo uv run ho může obejít, a proto skutečné kontroly sedí uvnitř příkazů pkitu.'
 - id: permday1
   part: P2
   title: Oprávnění od prvního dne
@@ -1269,7 +1269,7 @@ slides:
   message: Celý projekt a každou změnu před mergem. Agent totiž slepě věří všemu, co najde v souborech.
   problem: ''
   does: []
-  show: Hned po instalaci spustí pkit validate 12 kontrol a nemusíte nic nastavovat. Každý add-on přidá další, v project-kitu
+  show: Hned po instalaci spustí pkit validate 12 kontrol a nemusíte nic nastavovat. Každá capability přidá další, v project-kitu
     je jich 16.
   visual:
     kind: wired
@@ -1333,13 +1333,13 @@ slides:
   limit: Kontrola najde, co je rozbité nebo bez odpovědi. Jestli dokument stále platí, posoudí reviewer.
   minutes: 1
   notes: 'Kontroly jsou dvojího druhu. pkit validate kontroluje projekt tak, jak právě je. Každá část pkitu do něj registruje
-    vlastní kontrolu a každý nainstalovaný add-on přidá svoje. V čisté instalaci je jich 12, v project-kitu 16. Ověřují například,
-    že každý datový soubor odpovídá svému schématu, že každý záznam má správný tvar a že každý skill a agent uvádí, na co
-    odkazuje. Kontroly změn posuzují diff vůči jeho základu. pkit friction check chce od každého dokumentu navázaného na změněný
-    soubor odpověď: upraveno, stále platí i s důvodem, nebo odloženo (COR-050). pkit decisions check-diff odmítne záznam nebo
-    bod, který dostane už použité číslo, nebo o své číslo přijde (COR-058). Důvody uvádí COR-050: lidé zapomínají upravit
-    to, co závisí na jejich změně, a review se dívá na změnu před sebou, zatímco zastaralý popis bývá jinde. Přečteno z čisté
-    instalace 30. října: pkit nepřidává žádný git hook ani CI a kontrola změn spí, dokud projekt neřekne, kde má dokumenty.
+    vlastní kontrolu a každá nainstalovaná capability přidá svoje. V čisté instalaci je jich 12, v project-kitu 16. Ověřují
+    například, že každý datový soubor odpovídá svému schématu, že každý záznam má správný tvar a že každý skill a agent uvádí,
+    na co odkazuje. Kontroly změn posuzují diff vůči jeho základu. pkit friction check chce od každého dokumentu navázaného
+    na změněný soubor odpověď: upraveno, stále platí i s důvodem, nebo odloženo (COR-050). pkit decisions check-diff odmítne
+    záznam nebo bod, který dostane už použité číslo, nebo o své číslo přijde (COR-058). Důvody uvádí COR-050: lidé zapomínají
+    upravit to, co závisí na jejich změně, a review se dívá na změnu před sebou, zatímco zastaralý popis bývá jinde. Přečteno
+    z čisté instalace 30. října: pkit nepřidává žádný git hook ani CI a kontrola změn spí, dokud projekt neřekne, kde má dokumenty.
     Každá session ale dostane pravidlo, aby agenti před commitem spustili kontrolu změn a odpověděli na ni (pravidlo jádra
     č. 20).'
 - id: checked
@@ -1539,22 +1539,22 @@ slides:
     (COR-050, COR-062). Každou odpověď zkontroluje reviewer, který ji sám nepsal, a když neobstojí, zablokuje merge (COR-050
     bod 3). Každá session dostane pravidlo, podle kterého agenti píšou tyto odpovědi rovnou se svou změnou a neptají se vás
     (pravidlo jádra č. 20). V čisté instalaci kontrola spí, dokud dokumenty nevyjmenujete ve friction.places v .pkit/project/config.yaml
-    a v front matter každého z nich neuvedete, na čem závisí. Add-ony pro dokumentaci a analýzu to obojí udělají pro své dokumenty
-    samy. Vyzkoušeno 30. října na jednorázové kopii project-kitu. V project-kitu dnes čeká 21 odpovědí „odloženo“ a všechny
-    kromě jedné uvádějí issue, které dokument opraví.'
+    a v front matter každého z nich neuvedete, na čem závisí. Capabilities pro dokumentaci a analýzu to obojí udělají pro
+    své dokumenty samy. Vyzkoušeno 30. října na jednorázové kopii project-kitu. V project-kitu dnes čeká 21 odpovědí „odloženo“
+    a všechny kromě jedné uvádějí issue, které dokument opraví.'
 - id: addons
   part: P4
-  title: Proč jsou některé části pkitu add-ony
-  message: V jádru pkitu je jen to, co potřebuje každý projekt. Zbytek si vyberete jako add-ony (capabilities).
+  title: Proč má pkit capabilities
+  message: V jádru pkitu je jen to, co potřebuje každý projekt. Zbytek tvoří volitelné části, kterým pkit říká capabilities.
   problem: ''
   does: []
-  show: pkit 1.149 dodává 4 add-ony, další 3 přijdou s verzí 2.0. Jeden se do čistého projektu nainstaloval jedním příkazem
+  show: pkit 1.149 dodává 4 capabilities, další 3 přijdou s verzí 2.0. Jedna se do čistého projektu nainstalovala jedním příkazem
     za 8 sekund.
   visual:
     kind: slice
     font_size: 22
     core_head: 'Jádro pkitu: v každém projektu'
-    addon_head: 'Add-on (COR-017): jedna složka k instalaci'
+    addon_head: 'Capability: jedna složka k instalaci'
     rows:
     - layer: Rozhodnutí
       fill: '#491D8BFF'
@@ -1625,29 +1625,30 @@ slides:
     - - - '  All checks passed.'
         - add
     why:
-      head: Proč má pkit add-ony
+      head: Proč má pkit capabilities
       items:
       - Jádro má jen to, co potřebuje každý projekt. Zbytek by jen zatěžoval.
-      - Add-on dostane každý upgrade jako jádro. Kopie souborů ne.
+      - Capability dostane každý upgrade jako jádro. Kopie souborů ne.
       - 'Jedna složka: z cesty poznáte, čí soubor je.'
-      - Add-on vzniká jen z potřeby, která se v praxi opakovaně vracela.
-  limit: 'Některé add-ony závisí na jiných: software-engineering se bez project-management nenainstaluje.'
+      - Capability vzniká jen z potřeby, která se v praxi vracela.
+  limit: 'Některé capabilities závisí na jiných: software-engineering se bez project-management nenainstaluje.'
   minutes: 1.5
   notes: 'Všechno, co jsme zatím ukázali, patří do jádra pkitu a je v každé instalaci. Některé způsoby práce se ale hodí jen
-    pro některé projekty, třeba vedení issues na GitHubu nebo review kódu. Každý takový způsob práce pkit zabalí do add-onu,
-    kterému říká capability (COR-017). Add-on přináší stejné vrstvy jako jádro, jen pro svůj způsob práce: vlastní záznamy
-    o rozhodnutí, schémata a procesy, skilly, agenty a pravidla oprávnění, příkazy a kontroly. Všechno leží v jedné složce,
-    v .pkit/capabilities/ pod jménem add-onu. pkit add-on vytvoří, jen když platí tři věci. Potřebují ho některé projekty,
-    ale ne všechny (COR-014). Dá se přidat i odebrat jako jedna složka. A stejná potřeba se v praxi opakovaně vracela (COR-007).
-    Stejný test rozhoduje i o agentech. Mezi prvními agenty jádra byl product manager, kterého projekt bez add-onů k ničemu
-    nepotřebuje, a tak se přestěhoval do project-management (COR-026). Instalace zkopíruje složku add-onu a zaregistruje ho.
-    Nasadí jeho skilly a agenty do .claude/, přidá jeho pravidla do modelu oprávnění pkitu a jeho kontroly do pkit validate.
-    Přečteno z čisté instalace: project-management se nainstaloval asi za 8 sekund a nic se předem nastavovat nemuselo. Add-on
-    může záviset na jiném add-onu v určitém rozsahu verzí: software-engineering se odmítne nainstalovat, dokud v projektu
-    není project-management (COR-030). Odinstalace složku smaže, ale dokud na add-on odkazují vaše vlastní soubory, odmítne
-    to. Vlastní add-on napíšete se skillem capability-author a příkazem pkit new capability. Takhle vznikly i tři add-ony
-    project-kitu, přímo v jeho repozitáři (COR-031). Dnešní vydání 1.149 má 4 add-ony: project-management, software-engineering,
-    evidence a demo-recording. living-docs, software-analysis a doc-examples už jsou ve větvi main a vyjdou ve verzi 2.0.'
+    pro některé projekty, třeba vedení issues na GitHubu nebo review kódu. Každý takový způsob práce pkit zabalí do capability
+    (COR-017). Je to volitelná část, kterou si nainstalujete. Capability přináší stejné vrstvy jako jádro, jen pro svůj způsob
+    práce: vlastní záznamy o rozhodnutí, schémata a procesy, skilly, agenty a pravidla oprávnění, příkazy a kontroly. Všechno
+    leží v jedné složce, v .pkit/capabilities/ pod jménem capability. pkit vytvoří capability, jen když platí tři věci. Potřebují
+    ji některé projekty, ale ne všechny (COR-014). Dá se přidat i odebrat jako jedna složka. A stejná potřeba se v praxi opakovaně
+    vracela (COR-007). Stejný test rozhoduje i o agentech. Mezi prvními agenty jádra byl product manager, kterého projekt
+    bez capabilities k ničemu nepotřebuje, a tak se přestěhoval do project-management (COR-026). Instalace zkopíruje složku
+    capability a zaregistruje ji. Nasadí její skilly a agenty do .claude/, přidá její pravidla do modelu oprávnění pkitu a
+    její kontroly do pkit validate. Přečteno z čisté instalace: project-management se nainstaloval asi za 8 sekund a nic se
+    předem nastavovat nemuselo. Capability může záviset na jiné capability v určitém rozsahu verzí: software-engineering se
+    odmítne nainstalovat, dokud v projektu není project-management (COR-030). Odinstalace složku smaže, ale dokud na capability
+    odkazují vaše vlastní soubory, odmítne to. Vlastní capability napíšete se skillem capability-author a příkazem pkit new
+    capability. Takhle vznikly i tři capabilities project-kitu, přímo v jeho repozitáři (COR-031). Dnešní vydání 1.149 má
+    4 capabilities: project-management, software-engineering, evidence a demo-recording. living-docs, software-analysis a
+    doc-examples už jsou ve větvi main a vyjdou ve verzi 2.0.'
 - id: pm
   part: P4
   title: Co přináší project-management
@@ -1702,12 +1703,12 @@ slides:
     musí všichni. Pak řeknete ano a agent mergne. pkit pm land-work bez vašeho ano nic nemergne. Práci mezi tím dělá agent,
     ale začátek i konec patří vám: k plánu, k harmonogramu nebo k merge může tým zavázat jen člověk (DEC-057). Workflow pro
     issues jste už viděli. Běží na enginu procesů pkitu. Pravidlo oprávnění zakazuje agentovi project-manager měnit cokoli
-    přímo příkazem gh, a tak musí použít tyto příkazy. Add-on má 63 vlastních záznamů o rozhodnutí. Leží v jeho složce a citují
-    se ve tvaru project-management:DEC-032. Co uděláte vy: dáte mu GitHub repozitář a jednou spustíte pkit pm bootstrap, který
-    založí jeho labely. Do té doby jeho úvodní kontrola selhává a příkazy odmítají pracovat. project-management umí také spouštět
-    agenty v několika klonech jednoho repozitáře, pomocí seats a pools. V project-kitu to už běží, ale ještě se to dotváří.
-    Co přijde dál: každý builder začne načisto, ve vlastním klonu v sandboxu (DEC-063, ve vývoji). Přečteno z project-kitu:
-    z 22 pull requestů mergnutých 29. října bylo současně otevřených až 7 a každý nesl verdikty svých reviewerů.'
+    přímo příkazem gh, a tak musí použít tyto příkazy. Capability má 63 vlastních záznamů o rozhodnutí. Leží v její složce
+    a citují se ve tvaru project-management:DEC-032. Co uděláte vy: dáte mu GitHub repozitář a jednou spustíte pkit pm bootstrap,
+    který založí jeho labely. Do té doby jeho úvodní kontrola selhává a příkazy odmítají pracovat. project-management umí
+    také spouštět agenty v několika klonech jednoho repozitáře, pomocí seats a pools. V project-kitu to už běží, ale ještě
+    se to dotváří. Co přijde dál: každý builder začne načisto, ve vlastním klonu v sandboxu (DEC-063, ve vývoji). Přečteno
+    z project-kitu: z 22 pull requestů mergnutých 29. října bylo současně otevřených až 7 a každý nesl verdikty svých reviewerů.'
 - id: se
   part: P4
   title: Co přináší software-engineering
@@ -1831,7 +1832,7 @@ slides:
           - comment
     ties:
     - head: Vaše konvence
-      text: Napíšete je jednou a builder si je přečte nejdřív. Zůstanou vaše i bez add-onu.
+      text: Napíšete je jednou a builder si je přečte nejdřív. Zůstanou vaše i bez capability.
     - head: Kód projde review
       text: Dřív pkit kód nekontroloval. Mergla se tak i změna se dvěma bezpečnostními dírami.
     - head: Blokace má váhu
@@ -1844,26 +1845,26 @@ slides:
   notes: 'software-engineering má dva cíle: aby kód, který píšou agenti, v každé session dodržoval vaše konvence, a aby kód
     prošel review, než se mergne (DEC-003). Jeho builder, software-engineer, nemá na kód žádné vlastní názory. Nejdřív si
     přečte vaše konvence ze souboru, který uvedete v overlay.yaml, a pak se jimi řídí. Když žádné sepsané nejsou, řekne to
-    a drží se obecné dobré praxe (DEC-001). Konvence zůstávají vaše: když add-on odeberete, nezmizí. Tři revieweři kontrolují
+    a drží se obecné dobré praxe (DEC-001). Konvence zůstávají vaše: když capability odeberete, nezmizí. Tři revieweři kontrolují
     správnost, bezpečnost a dokumentaci, včetně odpovědí, které k ní změna napsala. Každý blokuje jen kvůli chybě, kterou
     ve změně umí ukázat. Všechno ostatní je rada. Blokace tak nikdy není jen otázka vkusu a nikdo se ji nenaučí přeskakovat
     (DEC-002). Revieweři vznikli ze skutečného selhání. V jednom projektu, který pkit používá, prošel do merge pull request
     s tokenem na příkazové řádce a se shell injection, protože kód nikdo nekontroloval (#715). Jak se revieweři k merge dostanou:
-    add-on dodává jeden soubor, review-contributions.yaml. project-management ten soubor čte z každého nainstalovaného add-onu
+    capability dodává jeden soubor, review-contributions.yaml. project-management ten soubor čte z každé nainstalované capability
     a vyžaduje schválení od každého reviewera, kterého soubor jmenuje (project-management DEC-032). project-management přitom
-    software-engineering nikde nejmenuje. Revieweři se zapínají samotnou instalací add-onu, žádné nastavení k tomu není. Reviewer
-    kódu a reviewer bezpečnosti běží, jen když změna sahá na kód. Jediný merge z 29. října, který měnil jen záznamy, proto
-    review kódu neměl. Naopak software-engineering jmenuje project-management jako add-on, na kterém závisí, a proto se instaluje
-    až po něm. Pull request #2279: reviewer kódu zablokoval nový kód, který zapisuje Status. Ten kód neuměl najít board, který
-    vlastní organizace. Chyba se opravila, všech pět reviewerů schválilo a merge proběhl 43 minut po blokaci. project-kit
-    zatím pro svůj kód žádné konvence nesepsal, a tak jeho reviewer kódu uvedl, že posuzoval jako pečlivý generalista.'
+    software-engineering nikde nejmenuje. Revieweři se zapínají samotnou instalací capability, žádné nastavení k tomu není.
+    Reviewer kódu a reviewer bezpečnosti běží, jen když změna sahá na kód. Jediný merge z 29. října, který měnil jen záznamy,
+    proto review kódu neměl. Naopak software-engineering jmenuje project-management jako capability, na které závisí, a proto
+    se instaluje až po ní. Pull request #2279: reviewer kódu zablokoval nový kód, který zapisuje Status. Ten kód neuměl najít
+    board, který vlastní organizace. Chyba se opravila, všech pět reviewerů schválilo a merge proběhl 43 minut po blokaci.
+    project-kit zatím pro svůj kód žádné konvence nesepsal, a tak jeho reviewer kódu uvedl, že posuzoval jako pečlivý generalista.'
 - id: connect
   part: P4
-  title: Jak add-ony spolupracují
-  message: Add-on nikdy nejmenuje jiný add-on, jen roli. Když něco potřebuje, otevře slot. Vyplnit ho může kterýkoli jiný.
+  title: Jak capabilities spolupracují
+  message: Capability nikdy nejmenuje jinou capability, jen roli. Když něco potřebuje, otevře slot. Vyplní ho kterákoli jiná.
   problem: ''
   does: []
-  show: 'V project-kitu: 3 role, každou hraje jeden add-on. Ze 6 slotů jsou 4 vyplněné.'
+  show: 'V project-kitu: 3 role, každou hraje jedna capability. Ze 6 slotů jsou 4 vyplněné.'
   visual:
     kind: sockets
     font_size: 22
@@ -1933,27 +1934,27 @@ slides:
       - - ' (contributes)'
         - output
     why:
-      head: Proč pkit propojuje add-ony takhle
+      head: Proč pkit propojuje capabilities takhle
       items:
-      - Add-on vyměníte za jiný ve stejné roli. Zbytek zůstane, jak je.
+      - Capability vyměníte za jinou ve stejné roli. Zbytek zůstane, jak je.
       - Instalujete jen to, co potřebujete. Prázdný slot ničemu nevadí.
       - pkit status zapojení ukáže a pkit validate ho zkontroluje.
-  limit: Každou roli zatím hraje jen jeden add-on. Výměna je tedy navržená, ale ještě nevyzkoušená.
+  limit: Každou roli zatím hraje jen jedna capability. Výměna je tedy navržená, ale ještě nevyzkoušená.
   minutes: 1
-  notes: 'Když jeden add-on potřebuje něco od jiného, nikdy ho nejmenuje. Otevře slot, kterému pkit říká connection point,
-    a to pod nějakou rolí, třeba pkit::work-tracking. Sloty definuje add-on, který danou roli hraje, a vyplnit je může kterýkoli
-    nainstalovaný add-on (COR-053). project-management hraje roli work-tracking. Jeden z jeho slotů se ptá, který agent opraví
-    který druh dokumentu. living-docs tam uvede agenta pro své stránky, software-analysis pro případy užití, požadavky a zbytek
-    analýzy. project-management z toho slotu čte, kterého agenta spustit ke každému zastaralému dokumentu, a přitom o žádném
-    z obou add-onů neví. Slot je volitelný, pokud sám neuvede, i s důvodem, že vyplněný být musí. Add-on proto funguje i sám.
-    V čisté instalaci jen s project-management zůstane slot fixers prázdný, pkit validate projde a pkit status uvede living-docs
-    a software-analysis jako add-ony, které by ho mohly vyplnit. Když si stejnou roli nárokují dva add-ony, je to chyba, dokud
-    jeden nevyberete příkazem pkit connections providers. Proč role: kdyby slot jmenoval konkrétní add-on, právě to by vám
-    bránilo add-on vyměnit. Soubor s reviewery, který dodává software-engineering, je ve skutečnosti starší slot samotného
-    project-management, ještě z doby před rolemi. Drží ale stejné pravidlo: strana, která reviewery potřebuje, nikdy nejmenuje,
-    kdo je dodá. Co přijde dál: project-management dostane slot pro buildera a software-engineering ho vyplní svým software-engineerem
-    (DEC-063, ve vývoji). Agenti, kteří dokumenty opravují, zatím na Claude Code bez dozoru neběží: jejich spouštěč nejdřív
-    čeká na prověření tohoto nástroje.'
+  notes: 'Když jedna capability potřebuje něco od jiné, nikdy ji nejmenuje. Otevře slot, kterému pkit říká connection point,
+    a to pod nějakou rolí, třeba pkit::work-tracking. Sloty definuje capability, která danou roli hraje, a vyplnit je může
+    kterákoli nainstalovaná capability (COR-053). project-management hraje roli work-tracking. Jeden z jeho slotů se ptá,
+    který agent opraví který druh dokumentu. living-docs tam uvede agenta pro své stránky, software-analysis pro případy užití,
+    požadavky a zbytek analýzy. project-management z toho slotu čte, kterého agenta spustit ke každému zastaralému dokumentu,
+    a přitom o žádné z těch dvou capabilities neví. Slot je volitelný, pokud sám neuvede, i s důvodem, že vyplněný být musí.
+    Capability proto funguje i sama. V čisté instalaci jen s project-management zůstane slot fixers prázdný, pkit validate
+    projde a pkit status uvede living-docs a software-analysis jako capabilities, které by ho mohly vyplnit. Když si stejnou
+    roli nárokují dvě capabilities, je to chyba, dokud jednu nevyberete příkazem pkit connections providers. Proč role: kdyby
+    slot jmenoval konkrétní capability, právě to by vám bránilo ji vyměnit. Soubor s reviewery, který dodává software-engineering,
+    je ve skutečnosti starší slot samotného project-management, ještě z doby před rolemi. Drží ale stejné pravidlo: strana,
+    která reviewery potřebuje, nikdy nejmenuje, kdo je dodá. Co přijde dál: project-management dostane slot pro buildera a
+    software-engineering ho vyplní svým software-engineerem (DEC-063, ve vývoji). Agenti, kteří dokumenty opravují, zatím
+    na Claude Code bez dozoru neběží: jejich spouštěč nejdřív čeká na prověření tohoto nástroje.'
 - id: questions
   part: P5
   title: Otázky?

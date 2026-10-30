@@ -17931,7 +17931,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-addons-limit",
-    "text": "Limit: Some add-ons need another first. software-engineering will not install without project-management.",
+    "text": "Limit: Some capabilities need another first. software-engineering will not install without project-management.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -17942,7 +17942,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-addons-limit",
-    "text": "Limit: Some add-ons need another first. software-engineering will not install without project-management.",
+    "text": "Limit: Some capabilities need another first. software-engineering will not install without project-management.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -17976,7 +17976,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338250695
   },
   "T-addons-slice": {
    "board": {
@@ -18159,7 +18159,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-addons-slice",
-    "text": "An add-on (COR-017): one folder you install",
+    "text": "A capability: one folder you install",
     "title": "tpl:slice_T-addons#addontagtext",
     "width": 936,
     "x": 768,
@@ -18170,7 +18170,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-addons-slice",
-    "text": "An add-on (COR-017): one folder you install",
+    "text": "A capability: one folder you install",
     "title": "tpl:slice_T-addons#addontagtext",
     "width": 936,
     "x": 768,
@@ -18204,7 +18204,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338381388
   },
   "T-addons-slice.coretag": {
    "board": {
@@ -20103,7 +20103,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-addons-slice",
-    "text": "An add-on gets each upgrade, as core does. A copy would not.",
+    "text": "A capability gets each upgrade, as core does. A copy would not.",
     "title": "tpl:slice_T-addons#w1text",
     "width": 624,
     "x": 784,
@@ -20114,7 +20114,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-addons-slice",
-    "text": "An add-on gets each upgrade, as core does. A copy would not.",
+    "text": "A capability gets each upgrade, as core does. A copy would not.",
     "title": "tpl:slice_T-addons#w1text",
     "width": 624,
     "x": 784,
@@ -20148,7 +20148,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338250643
   },
   "T-addons-slice.w2bar": {
    "board": {
@@ -20500,7 +20500,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-addons-slice",
-    "text": "Why pkit has add-ons",
+    "text": "Why pkit has capabilities",
     "title": "tpl:slice_T-addons#whyhead",
     "width": 2944,
     "x": 0,
@@ -20511,7 +20511,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-addons-slice",
-    "text": "Why pkit has add-ons",
+    "text": "Why pkit has capabilities",
     "title": "tpl:slice_T-addons#whyhead",
     "width": 2944,
     "x": 0,
@@ -20545,7 +20545,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338250317
   },
   "T-addons.bg": {
    "board": {
@@ -20612,7 +20612,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-addons",
-    "text": "Core pkit holds what every project needs. The rest comes as add-ons, called capabilities, that you choose.",
+    "text": "Core pkit holds what every project needs. The rest comes as capabilities, optional parts you choose.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -20623,7 +20623,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-addons",
-    "text": "Core pkit holds what every project needs. The rest comes as add-ons, called capabilities, that you choose.",
+    "text": "Core pkit holds what every project needs. The rest comes as capabilities, optional parts you choose.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -20657,7 +20657,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330263995
+   "updatedOn": 1793338249965
   },
   "T-addons.num": {
    "board": {
@@ -20723,7 +20723,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-addons",
-    "text": "pkit 1.149 ships 4 add-ons, and 3 more are on their way to 2.0. In a fresh install, one took a single command and 8 seconds.",
+    "text": "pkit 1.149 ships 4 capabilities, and 3 more are on their way to 2.0. In a fresh install, one took a single command and 8 seconds.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -20734,7 +20734,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-addons",
-    "text": "pkit 1.149 ships 4 add-ons, and 3 more are on their way to 2.0. In a fresh install, one took a single command and 8 seconds.",
+    "text": "pkit 1.149 ships 4 capabilities, and 3 more are on their way to 2.0. In a fresh install, one took a single command and 8 seconds.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -20768,7 +20768,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338249998
   },
   "T-addons.title": {
    "board": {
@@ -20778,7 +20778,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-addons",
-    "text": "Why some parts of pkit are add-ons",
+    "text": "Why some parts of pkit are capabilities",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -20789,7 +20789,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-addons",
-    "text": "Why some parts of pkit are add-ons",
+    "text": "Why some parts of pkit are capabilities",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -20823,7 +20823,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338249909
   },
   "T-agents": {
    "board": {
@@ -22915,7 +22915,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "pkit's own agents advise and never block. Add-ons bring agents that can block a merge.",
+    "text": "pkit's own agents advise and never block. Capabilities bring agents that can block a merge.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -22926,7 +22926,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "pkit's own agents advise and never block. Add-ons bring agents that can block a merge.",
+    "text": "pkit's own agents advise and never block. Capabilities bring agents that can block a merge.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -22960,7 +22960,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321598027
+   "updatedOn": 1793338249859
   },
   "T-agents.title": {
    "board": {
@@ -34099,7 +34099,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-checks",
-    "text": "In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings its own: 16 in project-kit.",
+    "text": "In a fresh install, pkit validate runs 12 checks with nothing to set up. Each capability brings its own: 16 in project-kit.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -34110,7 +34110,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-checks",
-    "text": "In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings its own: 16 in project-kit.",
+    "text": "In a fresh install, pkit validate runs 12 checks with nothing to set up. Each capability brings its own: 16 in project-kit.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -34144,7 +34144,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793325091275
+   "updatedOn": 1793338249765
   },
   "T-checks.title": {
    "board": {
@@ -34439,7 +34439,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-connect-limit",
-    "text": "Limit: Each role has one add-on so far, so swapping one for another is designed, not yet shown.",
+    "text": "Limit: Each role has one capability so far, so swapping one for another is designed, not yet shown.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -34450,7 +34450,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-connect-limit",
-    "text": "Limit: Each role has one add-on so far, so swapping one for another is designed, not yet shown.",
+    "text": "Limit: Each role has one capability so far, so swapping one for another is designed, not yet shown.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -34484,7 +34484,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330597080
+   "updatedOn": 1793338251504
   },
   "T-connect-sockets": {
    "board": {
@@ -36126,7 +36126,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-connect-sockets",
-    "text": "Swap an add-on for one in the same role. The rest stays as it is.",
+    "text": "Swap a capability for one in the same role. The rest stays as it is.",
     "title": "tpl:sockets_T-connect#w0text",
     "width": 875,
     "x": 32,
@@ -36137,7 +36137,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-connect-sockets",
-    "text": "Swap an add-on for one in the same role. The rest stays as it is.",
+    "text": "Swap a capability for one in the same role. The rest stays as it is.",
     "title": "tpl:sockets_T-connect#w0text",
     "width": 875,
     "x": 32,
@@ -36171,7 +36171,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330597080
+   "updatedOn": 1793338251504
   },
   "T-connect-sockets.w1bar": {
    "board": {
@@ -36523,7 +36523,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-connect-sockets",
-    "text": "Why pkit connects add-ons this way",
+    "text": "Why pkit connects capabilities this way",
     "title": "tpl:sockets_T-connect#whyhead",
     "width": 2944,
     "x": 0,
@@ -36534,7 +36534,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-connect-sockets",
-    "text": "Why pkit connects add-ons this way",
+    "text": "Why pkit connects capabilities this way",
     "title": "tpl:sockets_T-connect#whyhead",
     "width": 2944,
     "x": 0,
@@ -36568,7 +36568,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330597080
+   "updatedOn": 1793338251462
   },
   "T-connect.bg": {
    "board": {
@@ -36635,7 +36635,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-connect",
-    "text": "Through slots named for a role, never for an add-on. The add-on that needs something opens a slot; any other can fill it.",
+    "text": "A capability never names another, only a role. One that needs something opens a slot, and any other can fill it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -36646,7 +36646,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-connect",
-    "text": "Through slots named for a role, never for an add-on. The add-on that needs something opens a slot; any other can fill it.",
+    "text": "A capability never names another, only a role. One that needs something opens a slot, and any other can fill it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -36680,7 +36680,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330264179
+   "updatedOn": 1793338251070
   },
   "T-connect.num": {
    "board": {
@@ -36746,7 +36746,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-connect",
-    "text": "In project-kit: 3 roles, each played by one add-on, and 6 slots, 4 of them filled.",
+    "text": "In project-kit: 3 roles, each played by one capability, and 6 slots, 4 of them filled.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -36757,7 +36757,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-connect",
-    "text": "In project-kit: 3 roles, each played by one add-on, and 6 slots, 4 of them filled.",
+    "text": "In project-kit: 3 roles, each played by one capability, and 6 slots, 4 of them filled.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -36791,7 +36791,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338251121
   },
   "T-connect.title": {
    "board": {
@@ -36801,7 +36801,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-connect",
-    "text": "How add-ons work together",
+    "text": "How capabilities work together",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -36812,7 +36812,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-connect",
-    "text": "How add-ons work together",
+    "text": "How capabilities work together",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -36846,7 +36846,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330264140
+   "updatedOn": 1793338251691
   },
   "T-cover": {
    "board": {
@@ -37532,7 +37532,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-limit",
-    "text": "Omezen\u00ed: N\u011bkter\u00e9 add-ony z\u00e1vis\u00ed na jin\u00fdch: software-engineering se bez project-management nenainstaluje.",
+    "text": "Omezen\u00ed: N\u011bkter\u00e9 capabilities z\u00e1vis\u00ed na jin\u00fdch: software-engineering se bez project-management nenainstaluje.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -37543,7 +37543,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-limit",
-    "text": "Omezen\u00ed: N\u011bkter\u00e9 add-ony z\u00e1vis\u00ed na jin\u00fdch: software-engineering se bez project-management nenainstaluje.",
+    "text": "Omezen\u00ed: N\u011bkter\u00e9 capabilities z\u00e1vis\u00ed na jin\u00fdch: software-engineering se bez project-management nenainstaluje.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -37577,7 +37577,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332823750
+   "updatedOn": 1793338559454
   },
   "T-cs-addons-slice": {
    "board": {
@@ -37760,7 +37760,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Add-on (COR-017): jedna slo\u017eka k instalaci",
+    "text": "Capability: jedna slo\u017eka k instalaci",
     "title": "tpl:slice_T-cs-addons#addontagtext",
     "width": 936,
     "x": 768,
@@ -37771,7 +37771,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Add-on (COR-017): jedna slo\u017eka k instalaci",
+    "text": "Capability: jedna slo\u017eka k instalaci",
     "title": "tpl:slice_T-cs-addons#addontagtext",
     "width": 936,
     "x": 768,
@@ -37805,7 +37805,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332823232
+   "updatedOn": 1793338558532
   },
   "T-cs-addons-slice.coretag": {
    "board": {
@@ -39704,7 +39704,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Add-on dostane ka\u017ed\u00fd upgrade jako j\u00e1dro. Kopie soubor\u016f ne.",
+    "text": "Capability dostane ka\u017ed\u00fd upgrade jako j\u00e1dro. Kopie soubor\u016f ne.",
     "title": "tpl:slice_T-cs-addons#w1text",
     "width": 624,
     "x": 784,
@@ -39715,7 +39715,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Add-on dostane ka\u017ed\u00fd upgrade jako j\u00e1dro. Kopie soubor\u016f ne.",
+    "text": "Capability dostane ka\u017ed\u00fd upgrade jako j\u00e1dro. Kopie soubor\u016f ne.",
     "title": "tpl:slice_T-cs-addons#w1text",
     "width": 624,
     "x": 784,
@@ -39749,7 +39749,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332823357
+   "updatedOn": 1793338558753
   },
   "T-cs-addons-slice.w2bar": {
    "board": {
@@ -40046,7 +40046,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Add-on vznik\u00e1 jen z pot\u0159eby, kter\u00e1 se v praxi opakovan\u011b vracela.",
+    "text": "Capability vznik\u00e1 jen z pot\u0159eby, kter\u00e1 se v praxi vracela.",
     "title": "tpl:slice_T-cs-addons#w3text",
     "width": 624,
     "x": 2288,
@@ -40057,7 +40057,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Add-on vznik\u00e1 jen z pot\u0159eby, kter\u00e1 se v praxi opakovan\u011b vracela.",
+    "text": "Capability vznik\u00e1 jen z pot\u0159eby, kter\u00e1 se v praxi vracela.",
     "title": "tpl:slice_T-cs-addons#w3text",
     "width": 624,
     "x": 2288,
@@ -40091,7 +40091,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332824015
+   "updatedOn": 1793338558709
   },
   "T-cs-addons-slice.whyhead": {
    "board": {
@@ -40101,7 +40101,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Pro\u010d m\u00e1 pkit add-ony",
+    "text": "Pro\u010d m\u00e1 pkit capabilities",
     "title": "tpl:slice_T-cs-addons#whyhead",
     "width": 2944,
     "x": 0,
@@ -40112,7 +40112,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Pro\u010d m\u00e1 pkit add-ony",
+    "text": "Pro\u010d m\u00e1 pkit capabilities",
     "title": "tpl:slice_T-cs-addons#whyhead",
     "width": 2944,
     "x": 0,
@@ -40146,7 +40146,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332824190
+   "updatedOn": 1793338559313
   },
   "T-cs-addons.bg": {
    "board": {
@@ -40213,7 +40213,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-addons",
-    "text": "V j\u00e1dru pkitu je jen to, co pot\u0159ebuje ka\u017ed\u00fd projekt. Zbytek si vyberete jako add-ony (capabilities).",
+    "text": "V j\u00e1dru pkitu je jen to, co pot\u0159ebuje ka\u017ed\u00fd projekt. Zbytek tvo\u0159\u00ed voliteln\u00e9 \u010d\u00e1sti, kter\u00fdm pkit \u0159\u00edk\u00e1 capabilities.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -40224,7 +40224,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-addons",
-    "text": "V j\u00e1dru pkitu je jen to, co pot\u0159ebuje ka\u017ed\u00fd projekt. Zbytek si vyberete jako add-ony (capabilities).",
+    "text": "V j\u00e1dru pkitu je jen to, co pot\u0159ebuje ka\u017ed\u00fd projekt. Zbytek tvo\u0159\u00ed voliteln\u00e9 \u010d\u00e1sti, kter\u00fdm pkit \u0159\u00edk\u00e1 capabilities.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -40258,7 +40258,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332823151
+   "updatedOn": 1793338558064
   },
   "T-cs-addons.num": {
    "board": {
@@ -40324,7 +40324,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-addons",
-    "text": "pkit 1.149 dod\u00e1v\u00e1 4 add-ony, dal\u0161\u00ed 3 p\u0159ijdou s verz\u00ed 2.0. Jeden se do \u010dist\u00e9ho projektu nainstaloval jedn\u00edm p\u0159\u00edkazem za 8 sekund.",
+    "text": "pkit 1.149 dod\u00e1v\u00e1 4 capabilities, dal\u0161\u00ed 3 p\u0159ijdou s verz\u00ed 2.0. Jedna se do \u010dist\u00e9ho projektu nainstalovala jedn\u00edm p\u0159\u00edkazem za 8 sekund.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -40335,7 +40335,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-addons",
-    "text": "pkit 1.149 dod\u00e1v\u00e1 4 add-ony, dal\u0161\u00ed 3 p\u0159ijdou s verz\u00ed 2.0. Jeden se do \u010dist\u00e9ho projektu nainstaloval jedn\u00edm p\u0159\u00edkazem za 8 sekund.",
+    "text": "pkit 1.149 dod\u00e1v\u00e1 4 capabilities, dal\u0161\u00ed 3 p\u0159ijdou s verz\u00ed 2.0. Jedna se do \u010dist\u00e9ho projektu nainstalovala jedn\u00edm p\u0159\u00edkazem za 8 sekund.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -40369,7 +40369,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332824112
+   "updatedOn": 1793338558100
   },
   "T-cs-addons.title": {
    "board": {
@@ -40379,7 +40379,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-addons",
-    "text": "Pro\u010d jsou n\u011bkter\u00e9 \u010d\u00e1sti pkitu add-ony",
+    "text": "Pro\u010d m\u00e1 pkit capabilities",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -40390,7 +40390,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-addons",
-    "text": "Pro\u010d jsou n\u011bkter\u00e9 \u010d\u00e1sti pkitu add-ony",
+    "text": "Pro\u010d m\u00e1 pkit capabilities",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -40424,7 +40424,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332822939
+   "updatedOn": 1793338558270
   },
   "T-cs-agents": {
    "board": {
@@ -42516,7 +42516,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-agents",
-    "text": "Agenti j\u00e1dra pkitu rad\u00ed a nikdy neblokuj\u00ed. Add-ony p\u0159in\u00e1\u0161ej\u00ed agenty, kte\u0159\u00ed um\u00ed merge zablokovat.",
+    "text": "Agenti j\u00e1dra pkitu rad\u00ed a nikdy neblokuj\u00ed. Capabilities p\u0159in\u00e1\u0161ej\u00ed agenty, kte\u0159\u00ed um\u00ed merge zablokovat.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -42527,7 +42527,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-agents",
-    "text": "Agenti j\u00e1dra pkitu rad\u00ed a nikdy neblokuj\u00ed. Add-ony p\u0159in\u00e1\u0161ej\u00ed agenty, kte\u0159\u00ed um\u00ed merge zablokovat.",
+    "text": "Agenti j\u00e1dra pkitu rad\u00ed a nikdy neblokuj\u00ed. Capabilities p\u0159in\u00e1\u0161ej\u00ed agenty, kte\u0159\u00ed um\u00ed merge zablokovat.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -42561,7 +42561,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332816425
+   "updatedOn": 1793338557740
   },
   "T-cs-agents.title": {
    "board": {
@@ -53700,7 +53700,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-checks",
-    "text": "Hned po instalaci spust\u00ed pkit validate 12 kontrol a nemus\u00edte nic nastavovat. Ka\u017ed\u00fd add-on p\u0159id\u00e1 dal\u0161\u00ed, v project-kitu je jich 16.",
+    "text": "Hned po instalaci spust\u00ed pkit validate 12 kontrol a nemus\u00edte nic nastavovat. Ka\u017ed\u00e1 capability p\u0159id\u00e1 dal\u0161\u00ed, v project-kitu je jich 16.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -53711,7 +53711,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-checks",
-    "text": "Hned po instalaci spust\u00ed pkit validate 12 kontrol a nemus\u00edte nic nastavovat. Ka\u017ed\u00fd add-on p\u0159id\u00e1 dal\u0161\u00ed, v project-kitu je jich 16.",
+    "text": "Hned po instalaci spust\u00ed pkit validate 12 kontrol a nemus\u00edte nic nastavovat. Ka\u017ed\u00e1 capability p\u0159id\u00e1 dal\u0161\u00ed, v project-kitu je jich 16.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -53745,7 +53745,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332820463
+   "updatedOn": 1793338557805
   },
   "T-cs-checks.title": {
    "board": {
@@ -54040,7 +54040,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-limit",
-    "text": "Omezen\u00ed: Ka\u017edou roli zat\u00edm hraje jen jeden add-on. V\u00fdm\u011bna je tedy navr\u017een\u00e1, ale je\u0161t\u011b nevyzkou\u0161en\u00e1.",
+    "text": "Omezen\u00ed: Ka\u017edou roli zat\u00edm hraje jen jedna capability. V\u00fdm\u011bna je tedy navr\u017een\u00e1, ale je\u0161t\u011b nevyzkou\u0161en\u00e1.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -54051,7 +54051,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-limit",
-    "text": "Omezen\u00ed: Ka\u017edou roli zat\u00edm hraje jen jeden add-on. V\u00fdm\u011bna je tedy navr\u017een\u00e1, ale je\u0161t\u011b nevyzkou\u0161en\u00e1.",
+    "text": "Omezen\u00ed: Ka\u017edou roli zat\u00edm hraje jen jedna capability. V\u00fdm\u011bna je tedy navr\u017een\u00e1, ale je\u0161t\u011b nevyzkou\u0161en\u00e1.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -54085,7 +54085,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332827547
+   "updatedOn": 1793338560163
   },
   "T-cs-connect-sockets": {
    "board": {
@@ -55727,7 +55727,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Add-on vym\u011bn\u00edte za jin\u00fd ve stejn\u00e9 roli. Zbytek z\u016fstane, jak je.",
+    "text": "Capability vym\u011bn\u00edte za jinou ve stejn\u00e9 roli. Zbytek z\u016fstane, jak je.",
     "title": "tpl:sockets_T-cs-connect#w0text",
     "width": 875,
     "x": 32,
@@ -55738,7 +55738,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Add-on vym\u011bn\u00edte za jin\u00fd ve stejn\u00e9 roli. Zbytek z\u016fstane, jak je.",
+    "text": "Capability vym\u011bn\u00edte za jinou ve stejn\u00e9 roli. Zbytek z\u016fstane, jak je.",
     "title": "tpl:sockets_T-cs-connect#w0text",
     "width": 875,
     "x": 32,
@@ -55772,7 +55772,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332827416
+   "updatedOn": 1793338559685
   },
   "T-cs-connect-sockets.w1bar": {
    "board": {
@@ -56124,7 +56124,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Pro\u010d pkit propojuje add-ony takhle",
+    "text": "Pro\u010d pkit propojuje capabilities takhle",
     "title": "tpl:sockets_T-cs-connect#whyhead",
     "width": 2944,
     "x": 0,
@@ -56135,7 +56135,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Pro\u010d pkit propojuje add-ony takhle",
+    "text": "Pro\u010d pkit propojuje capabilities takhle",
     "title": "tpl:sockets_T-cs-connect#whyhead",
     "width": 2944,
     "x": 0,
@@ -56169,7 +56169,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332827374
+   "updatedOn": 1793338559550
   },
   "T-cs-connect.bg": {
    "board": {
@@ -56236,7 +56236,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-connect",
-    "text": "Add-on nikdy nejmenuje jin\u00fd add-on, jen roli. Kdy\u017e n\u011bco pot\u0159ebuje, otev\u0159e slot. Vyplnit ho m\u016f\u017ee kter\u00fdkoli jin\u00fd.",
+    "text": "Capability nikdy nejmenuje jinou capability, jen roli. Kdy\u017e n\u011bco pot\u0159ebuje, otev\u0159e slot. Vypln\u00ed ho kter\u00e1koli jin\u00e1.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -56247,7 +56247,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-connect",
-    "text": "Add-on nikdy nejmenuje jin\u00fd add-on, jen roli. Kdy\u017e n\u011bco pot\u0159ebuje, otev\u0159e slot. Vyplnit ho m\u016f\u017ee kter\u00fdkoli jin\u00fd.",
+    "text": "Capability nikdy nejmenuje jinou capability, jen roli. Kdy\u017e n\u011bco pot\u0159ebuje, otev\u0159e slot. Vypln\u00ed ho kter\u00e1koli jin\u00e1.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -56281,7 +56281,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332826645
+   "updatedOn": 1793338559445
   },
   "T-cs-connect.num": {
    "board": {
@@ -56347,7 +56347,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-connect",
-    "text": "V project-kitu: 3 role, ka\u017edou hraje jeden add-on. Ze 6 slot\u016f jsou 4 vypln\u011bn\u00e9.",
+    "text": "V project-kitu: 3 role, ka\u017edou hraje jedna capability. Ze 6 slot\u016f jsou 4 vypln\u011bn\u00e9.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -56358,7 +56358,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-connect",
-    "text": "V project-kitu: 3 role, ka\u017edou hraje jeden add-on. Ze 6 slot\u016f jsou 4 vypln\u011bn\u00e9.",
+    "text": "V project-kitu: 3 role, ka\u017edou hraje jedna capability. Ze 6 slot\u016f jsou 4 vypln\u011bn\u00e9.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -56392,7 +56392,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332827212
+   "updatedOn": 1793338559530
   },
   "T-cs-connect.title": {
    "board": {
@@ -56402,7 +56402,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-connect",
-    "text": "Jak add-ony spolupracuj\u00ed",
+    "text": "Jak capabilities spolupracuj\u00ed",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -56413,7 +56413,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-connect",
-    "text": "Jak add-ony spolupracuj\u00ed",
+    "text": "Jak capabilities spolupracuj\u00ed",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -56447,7 +56447,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332826593
+   "updatedOn": 1793338559001
   },
   "T-cs-cover": {
    "board": {
@@ -69453,7 +69453,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-install",
-    "text": "pkit status uk\u00e1\u017ee, co pkit v projektu nastavil. Voliteln\u00e9 add-ony (capabilities) p\u0159ijdou na \u0159adu pozd\u011bji.",
+    "text": "pkit status uk\u00e1\u017ee, co pkit v projektu nastavil. Voliteln\u00e9 \u010d\u00e1sti, kter\u00fdm pkit \u0159\u00edk\u00e1 capabilities, p\u0159ijdou pozd\u011bji.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -69464,7 +69464,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-install",
-    "text": "pkit status uk\u00e1\u017ee, co pkit v projektu nastavil. Voliteln\u00e9 add-ony (capabilities) p\u0159ijdou na \u0159adu pozd\u011bji.",
+    "text": "pkit status uk\u00e1\u017ee, co pkit v projektu nastavil. Voliteln\u00e9 \u010d\u00e1sti, kter\u00fdm pkit \u0159\u00edk\u00e1 capabilities, p\u0159ijdou pozd\u011bji.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -69498,7 +69498,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332807270
+   "updatedOn": 1793338556863
   },
   "T-cs-install.title": {
    "board": {
@@ -74170,7 +74170,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-part-P4",
-    "text": "Voliteln\u00e9 add-ony (capabilities) podle druhu va\u0161\u00ed pr\u00e1ce a jak se propojuj\u00ed.",
+    "text": "Voliteln\u00e9 \u010d\u00e1sti, kter\u00fdm pkit \u0159\u00edk\u00e1 capabilities: co se hod\u00ed k va\u0161\u00ed pr\u00e1ci a jak se propojuj\u00ed.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -74181,7 +74181,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-part-P4",
-    "text": "Voliteln\u00e9 add-ony (capabilities) podle druhu va\u0161\u00ed pr\u00e1ce a jak se propojuj\u00ed.",
+    "text": "Voliteln\u00e9 \u010d\u00e1sti, kter\u00fdm pkit \u0159\u00edk\u00e1 capabilities: co se hod\u00ed k va\u0161\u00ed pr\u00e1ci a jak se propojuj\u00ed.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -74215,7 +74215,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332822671
+   "updatedOn": 1793338557906
   },
   "T-cs-part-P4.title": {
    "board": {
@@ -85492,7 +85492,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "P\u0159echod ve workflow.yaml add-onu",
+    "text": "P\u0159echod ve workflow.yaml z capability",
     "title": "tpl:board_T-cs-schemas#p0head",
     "width": 939,
     "x": 0,
@@ -85503,7 +85503,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "P\u0159echod ve workflow.yaml add-onu",
+    "text": "P\u0159echod ve workflow.yaml z capability",
     "title": "tpl:board_T-cs-schemas#p0head",
     "width": 939,
     "x": 0,
@@ -85537,7 +85537,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332812198
+   "updatedOn": 1793338557139
   },
   "T-cs-schemas-board.p0img": {
    "board": {
@@ -85979,7 +85979,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "Add-on si vlastn\u00ed engine nepsal. Ka\u017ed\u00fd p\u0159echod za n\u011bj provede engine pkitu.",
+    "text": "Capability si vlastn\u00ed engine nepsala. Ka\u017ed\u00fd p\u0159echod za ni provede engine pkitu.",
     "title": "tpl:board_T-cs-schemas#p2item2",
     "width": 875,
     "x": 2038,
@@ -85990,7 +85990,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "Add-on si vlastn\u00ed engine nepsal. Ka\u017ed\u00fd p\u0159echod za n\u011bj provede engine pkitu.",
+    "text": "Capability si vlastn\u00ed engine nepsala. Ka\u017ed\u00fd p\u0159echod za ni provede engine pkitu.",
     "title": "tpl:board_T-cs-schemas#p2item2",
     "width": 875,
     "x": 2038,
@@ -86024,7 +86024,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332812968
+   "updatedOn": 1793338557208
   },
   "T-cs-schemas-board.refusedhead": {
    "board": {
@@ -87172,7 +87172,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-limit",
-    "text": "Omezen\u00ed: pkit dod\u00e1v\u00e1 engine, ale \u017e\u00e1dn\u00fd proces. Ten jedin\u00fd, kter\u00fd se dnes pou\u017e\u00edv\u00e1, p\u0159in\u00e1\u0161\u00ed add-on project-management.",
+    "text": "Omezen\u00ed: pkit dod\u00e1v\u00e1 engine, ale \u017e\u00e1dn\u00fd proces. Ten jedin\u00fd, kter\u00fd se dnes pou\u017e\u00edv\u00e1, p\u0159in\u00e1\u0161\u00ed capability project-management.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -87183,7 +87183,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-limit",
-    "text": "Omezen\u00ed: pkit dod\u00e1v\u00e1 engine, ale \u017e\u00e1dn\u00fd proces. Ten jedin\u00fd, kter\u00fd se dnes pou\u017e\u00edv\u00e1, p\u0159in\u00e1\u0161\u00ed add-on project-management.",
+    "text": "Omezen\u00ed: pkit dod\u00e1v\u00e1 engine, ale \u017e\u00e1dn\u00fd proces. Ten jedin\u00fd, kter\u00fd se dnes pou\u017e\u00edv\u00e1, p\u0159in\u00e1\u0161\u00ed capability project-management.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -87217,7 +87217,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332813182
+   "updatedOn": 1793338557805
   },
   "T-cs-schemas.bg": {
    "board": {
@@ -87284,7 +87284,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-schemas",
-    "text": "project-management p\u0159in\u00e1\u0161\u00ed workflow pro issues. Ka\u017ed\u00fd p\u0159echod ov\u011b\u0159\u00ed engine pkitu, tak\u017ee add-on nemusel ps\u00e1t vlastn\u00ed engine.",
+    "text": "project-management p\u0159in\u00e1\u0161\u00ed workflow pro issues. P\u0159echody hl\u00edd\u00e1 engine pkitu, tak\u017ee capability vlastn\u00ed engine nem\u00e1.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -87295,7 +87295,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-schemas",
-    "text": "project-management p\u0159in\u00e1\u0161\u00ed workflow pro issues. Ka\u017ed\u00fd p\u0159echod ov\u011b\u0159\u00ed engine pkitu, tak\u017ee add-on nemusel ps\u00e1t vlastn\u00ed engine.",
+    "text": "project-management p\u0159in\u00e1\u0161\u00ed workflow pro issues. P\u0159echody hl\u00edd\u00e1 engine pkitu, tak\u017ee capability vlastn\u00ed engine nem\u00e1.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -87329,7 +87329,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332813431
+   "updatedOn": 1793338557131
   },
   "T-cs-schemas.num": {
    "board": {
@@ -87450,7 +87450,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-schemas",
-    "text": "Jak add-on pou\u017e\u00edv\u00e1 proces",
+    "text": "Jak capability pou\u017e\u00edv\u00e1 proces",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -87461,7 +87461,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-schemas",
-    "text": "Jak add-on pou\u017e\u00edv\u00e1 proces",
+    "text": "Jak capability pou\u017e\u00edv\u00e1 proces",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -87495,7 +87495,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332812681
+   "updatedOn": 1793338557204
   },
   "T-cs-schemaslook": {
    "board": {
@@ -87715,7 +87715,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "Co dod\u00e1 j\u00e1dro pkitu, tak\u017ee to \u017e\u00e1dn\u00fd add-on ani projekt nemus\u00ed stav\u011bt znovu",
+    "text": "Co dod\u00e1 j\u00e1dro pkitu, tak\u017ee to \u017e\u00e1dn\u00e1 capability ani projekt nestav\u00ed znovu",
     "title": "tpl:files_T-cs-schemaslook#bhead",
     "width": 2944,
     "x": 0,
@@ -87726,7 +87726,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "Co dod\u00e1 j\u00e1dro pkitu, tak\u017ee to \u017e\u00e1dn\u00fd add-on ani projekt nemus\u00ed stav\u011bt znovu",
+    "text": "Co dod\u00e1 j\u00e1dro pkitu, tak\u017ee to \u017e\u00e1dn\u00e1 capability ani projekt nestav\u00ed znovu",
     "title": "tpl:files_T-cs-schemaslook#bhead",
     "width": 2944,
     "x": 0,
@@ -87760,7 +87760,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332811914
+   "updatedOn": 1793338557037
   },
   "T-cs-schemaslook-files.g0head": {
    "board": {
@@ -88054,7 +88054,7 @@
     "parent": "T-cs-schemaslook-files",
     "text": "",
     "title": "tpl:files_T-cs-schemaslook#g1tag",
-    "width": 755,
+    "width": 819,
     "x": 2006,
     "y": 72
    },
@@ -88067,7 +88067,7 @@
     "parent": "T-cs-schemaslook-files",
     "text": "",
     "title": "tpl:files_T-cs-schemaslook#g1tag",
-    "width": 755,
+    "width": 819,
     "x": 2006,
     "y": 72
    },
@@ -88099,7 +88099,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332811462
+   "updatedOn": 1793338556906
   },
   "T-cs-schemaslook-files.g1tagbar": {
    "board": {
@@ -88167,9 +88167,9 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "P\u0159\u00edklad z add-onu: nen\u00ed v j\u00e1d\u0159e pkitu",
+    "text": "P\u0159\u00edklad z capability: nen\u00ed v j\u00e1d\u0159e pkitu",
     "title": "tpl:files_T-cs-schemaslook#g1tagtext",
-    "width": 707,
+    "width": 771,
     "x": 2038,
     "y": 73
    },
@@ -88178,9 +88178,9 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "P\u0159\u00edklad z add-onu: nen\u00ed v j\u00e1d\u0159e pkitu",
+    "text": "P\u0159\u00edklad z capability: nen\u00ed v j\u00e1d\u0159e pkitu",
     "title": "tpl:files_T-cs-schemaslook#g1tagtext",
-    "width": 707,
+    "width": 771,
     "x": 2038,
     "y": 73
    },
@@ -88212,7 +88212,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332811554
+   "updatedOn": 1793338557695
   },
   "T-cs-schemaslook-files.p0head": {
    "board": {
@@ -89913,7 +89913,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "Nap\u00ed\u0161ete je jednou a builder si je p\u0159e\u010dte nejd\u0159\u00edv. Z\u016fstanou va\u0161e i bez add-onu.",
+    "text": "Nap\u00ed\u0161ete je jednou a builder si je p\u0159e\u010dte nejd\u0159\u00edv. Z\u016fstanou va\u0161e i bez capability.",
     "title": "tpl:wired_T-cs-se#t0text",
     "width": 608,
     "x": 40,
@@ -89924,7 +89924,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "Nap\u00ed\u0161ete je jednou a builder si je p\u0159e\u010dte nejd\u0159\u00edv. Z\u016fstanou va\u0161e i bez add-onu.",
+    "text": "Nap\u00ed\u0161ete je jednou a builder si je p\u0159e\u010dte nejd\u0159\u00edv. Z\u016fstanou va\u0161e i bez capability.",
     "title": "tpl:wired_T-cs-se#t0text",
     "width": 608,
     "x": 40,
@@ -89958,7 +89958,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793332826318
+   "updatedOn": 1793338559044
   },
   "T-cs-se-wired.t1box": {
    "board": {
@@ -111037,7 +111037,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come later.",
+    "text": "pkit status shows what pkit set up in a project. Optional parts, called capabilities, come later.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -111048,7 +111048,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come later.",
+    "text": "pkit status shows what pkit set up in a project. Optional parts, called capabilities, come later.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -111082,7 +111082,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793315952359
+   "updatedOn": 1793338248716
   },
   "T-install.title": {
    "board": {
@@ -115754,7 +115754,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P4",
-    "text": "Capabilities: optional add-ons for your kind of work, and how they connect.",
+    "text": "Capabilities: optional parts for your kind of work, and how they connect.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -115765,7 +115765,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-part-P4",
-    "text": "Capabilities: optional add-ons for your kind of work, and how they connect.",
+    "text": "Capabilities: optional parts for your kind of work, and how they connect.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -115799,7 +115799,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793325100173
+   "updatedOn": 1793338250718
   },
   "T-part-P4.title": {
    "board": {
@@ -127076,7 +127076,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-schemas-board",
-    "text": "The move, in the add-on's workflow.yaml",
+    "text": "The move, in the capability's workflow.yaml",
     "title": "tpl:board_T-schemas#p0head",
     "width": 939,
     "x": 0,
@@ -127087,7 +127087,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-schemas-board",
-    "text": "The move, in the add-on's workflow.yaml",
+    "text": "The move, in the capability's workflow.yaml",
     "title": "tpl:board_T-schemas#p0head",
     "width": 939,
     "x": 0,
@@ -127121,7 +127121,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793327442691
+   "updatedOn": 1793338249419
   },
   "T-schemas-board.p0img": {
    "board": {
@@ -127563,7 +127563,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-schemas-board",
-    "text": "The add-on records each move through pkit's engine, and built none of its own.",
+    "text": "The capability records each move through pkit's engine, and built none of its own.",
     "title": "tpl:board_T-schemas#p2item2",
     "width": 875,
     "x": 2038,
@@ -127574,7 +127574,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-schemas-board",
-    "text": "The add-on records each move through pkit's engine, and built none of its own.",
+    "text": "The capability records each move through pkit's engine, and built none of its own.",
     "title": "tpl:board_T-schemas#p2item2",
     "width": 875,
     "x": 2038,
@@ -127608,7 +127608,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793327442691
+   "updatedOn": 1793338249116
   },
   "T-schemas-board.refusedhead": {
    "board": {
@@ -128756,7 +128756,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-schemas-limit",
-    "text": "Limit: pkit brings the engine, not a process: the one in use today comes with the project-management add-on.",
+    "text": "Limit: pkit brings the engine, not a process: the one in use today comes with the project-management capability.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -128767,7 +128767,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-schemas-limit",
-    "text": "Limit: pkit brings the engine, not a process: the one in use today comes with the project-management add-on.",
+    "text": "Limit: pkit brings the engine, not a process: the one in use today comes with the project-management capability.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -128801,7 +128801,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793327442691
+   "updatedOn": 1793338249536
   },
   "T-schemas.bg": {
    "board": {
@@ -128868,7 +128868,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-schemas",
-    "text": "project-management brings the issue workflow. pkit's engine checks every move, so the add-on wrote no engine of its own.",
+    "text": "project-management brings the issue workflow. pkit's engine checks every move, so the capability wrote no engine of its own.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -128879,7 +128879,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-schemas",
-    "text": "project-management brings the issue workflow. pkit's engine checks every move, so the add-on wrote no engine of its own.",
+    "text": "project-management brings the issue workflow. pkit's engine checks every move, so the capability wrote no engine of its own.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -128913,7 +128913,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793327442691
+   "updatedOn": 1793338248949
   },
   "T-schemas.num": {
    "board": {
@@ -129034,7 +129034,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-schemas",
-    "text": "How an add-on uses a process",
+    "text": "How a capability uses a process",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -129045,7 +129045,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-schemas",
-    "text": "How an add-on uses a process",
+    "text": "How a capability uses a process",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -129079,7 +129079,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793327442691
+   "updatedOn": 1793338248901
   },
   "T-schemaslook": {
    "board": {
@@ -129299,7 +129299,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-schemaslook-files",
-    "text": "What core pkit brings, so no add-on and no project builds it again",
+    "text": "What core pkit brings, so no capability and no project builds it again",
     "title": "tpl:files_T-schemaslook#bhead",
     "width": 2944,
     "x": 0,
@@ -129310,7 +129310,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-schemaslook-files",
-    "text": "What core pkit brings, so no add-on and no project builds it again",
+    "text": "What core pkit brings, so no capability and no project builds it again",
     "title": "tpl:files_T-schemaslook#bhead",
     "width": 2944,
     "x": 0,
@@ -129344,7 +129344,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793327442691
+   "updatedOn": 1793338248959
   },
   "T-schemaslook-files.g0head": {
    "board": {
@@ -129638,7 +129638,7 @@
     "parent": "T-schemaslook-files",
     "text": "",
     "title": "tpl:files_T-schemaslook#g1tag",
-    "width": 747,
+    "width": 811,
     "x": 2006,
     "y": 72
    },
@@ -129651,7 +129651,7 @@
     "parent": "T-schemaslook-files",
     "text": "",
     "title": "tpl:files_T-schemaslook#g1tag",
-    "width": 747,
+    "width": 811,
     "x": 2006,
     "y": 72
    },
@@ -129683,7 +129683,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793327441717
+   "updatedOn": 1793338248821
   },
   "T-schemaslook-files.g1tagbar": {
    "board": {
@@ -129751,9 +129751,9 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-schemaslook-files",
-    "text": "An add-on's example: not in core pkit",
+    "text": "A capability's example: not in core pkit",
     "title": "tpl:files_T-schemaslook#g1tagtext",
-    "width": 699,
+    "width": 763,
     "x": 2038,
     "y": 73
    },
@@ -129762,9 +129762,9 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-schemaslook-files",
-    "text": "An add-on's example: not in core pkit",
+    "text": "A capability's example: not in core pkit",
     "title": "tpl:files_T-schemaslook#g1tagtext",
-    "width": 699,
+    "width": 763,
     "x": 2038,
     "y": 73
    },
@@ -129796,7 +129796,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793327442691
+   "updatedOn": 1793338248933
   },
   "T-schemaslook-files.p0head": {
    "board": {
@@ -131497,7 +131497,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-se-wired",
-    "text": "You write them once. The builder reads them first. They stay yours without the add-on.",
+    "text": "You write them once. The builder reads them first. They stay yours without the capability.",
     "title": "tpl:wired_T-se#t0text",
     "width": 608,
     "x": 40,
@@ -131508,7 +131508,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-se-wired",
-    "text": "You write them once. The builder reads them first. They stay yours without the add-on.",
+    "text": "You write them once. The builder reads them first. They stay yours without the capability.",
     "title": "tpl:wired_T-se#t0text",
     "width": 608,
     "x": 40,
@@ -131542,7 +131542,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338250743
   },
   "T-se-wired.t1box": {
    "board": {
@@ -131665,7 +131665,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-se-wired",
-    "text": "Before this add-on, nothing in pkit reviewed code. A change with two security holes merged.",
+    "text": "Before this capability, nothing in pkit reviewed code. A change with two security holes merged.",
     "title": "tpl:wired_T-se#t1text",
     "width": 608,
     "x": 792,
@@ -131676,7 +131676,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-se-wired",
-    "text": "Before this add-on, nothing in pkit reviewed code. A change with two security holes merged.",
+    "text": "Before this capability, nothing in pkit reviewed code. A change with two security holes merged.",
     "title": "tpl:wired_T-se#t1text",
     "width": 608,
     "x": 792,
@@ -131710,7 +131710,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793330193481
+   "updatedOn": 1793338250868
   },
   "T-se-wired.t2box": {
    "board": {

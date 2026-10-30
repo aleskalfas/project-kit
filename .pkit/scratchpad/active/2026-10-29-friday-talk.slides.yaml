@@ -7,8 +7,8 @@
 # components), limit, minutes, notes (spoken, not on the slide).
 #
 # Vocabulary, one word per thing: you (never "the person" or "the user"); merge
-# (never "land"); depends on (never "rests on" or "anchored"); capability (an
-# optional add-on, defined on the install slide); the project-manager agent;
+# (never "land"); depends on (never "rests on" or "anchored"); capability, pkit's
+# own term, never "add-on" (defined on the install slide); the project-manager agent;
 # builder (defined on the project-management slide); "rules" always qualified.
 
 talk:
@@ -34,7 +34,7 @@ parts:
   summary: What pkit checks, and documents that stay true.
 - id: P4
   title: What you install
-  summary: 'Capabilities: optional add-ons for your kind of work, and how they connect.'
+  summary: 'Capabilities: optional parts for your kind of work, and how they connect.'
 - id: P5
   title: Questions
   summary: ''
@@ -163,7 +163,7 @@ slides:
     yours.
   problem: ''
   does: []
-  show: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come later.
+  show: pkit status shows what pkit set up in a project. Optional parts, called capabilities, come later.
   visual:
     kind: install
     terminal: "# once, on your machine\n$ uv tool install \\\n    git+ssh://git@github.com/aleskalfas/project-kit.git@latest\n\
@@ -445,7 +445,7 @@ slides:
   notes: 'Two questions give the three places: what the record is about, how work is done or what you build, and who may change
     it, pkit or you. pkit never decides your architecture, so there is no fourth. pkit''s principles change by a new record
     you can read, never by a quiet edit: 39 in June, 67 now, and this week COR-065 replaced a sentence of COR-006. In project-kit
-    itself, 11 PRJ and 74 ADR. Add-ons bring decision records of their own, shown with the capabilities.'
+    itself, 11 PRJ and 74 ADR. Capabilities bring decision records of their own, shown in Part 5.'
 - id: found
   part: P1
   title: Decided once, found later
@@ -621,7 +621,7 @@ slides:
         - [['      "type": ', output], ['"string",', args]]
         - [['      "minLength": ', output], ['1,', args]]
     - head: 'A process: one kind of schema'
-      tag: 'An add-on''s example: not in core pkit'
+      tag: 'A capability''s example: not in core pkit'
       tone: example
       panels:
       - head: The issue workflow
@@ -636,7 +636,7 @@ slides:
         - [['      to: ', output], [done, args]]
         - [['      authorisation: ', output], [user, yours]]
     below:
-      head: What core pkit brings, so no add-on and no project builds it again
+      head: What core pkit brings, so no capability and no project builds it again
       terminals:
       - - [['# for schemas', comment]]
         - [['$ ', prompt], [pkit, command], [' new schema <capability> <name>', args], ['   # a rule and its shape, as a pair', comment]]
@@ -653,20 +653,20 @@ slides:
     .schema.json file beside it, says what such data must contain: an entry needs a description and a recognize block,
     and nothing else may appear. pkit''s commands, skills and agents read the first file; pkit validate checks it against
     the second (COR-018). This very rule is why force-push is refused for every agent, on the permissions slide later.
-    pkit''s own schemas live in .pkit/schemas/, 8 of them, mostly the permission model. Each add-on keeps its own in its
+    pkit''s own schemas live in .pkit/schemas/, 8 of them, mostly the permission model. Each capability keeps its own in its
     schemas/ folder. A process is one kind of schema: a file of states and moves, with a gate on each move (COR-033). The
-    one shown is not part of core pkit: it is the issue workflow of the project-management add-on, the only process in use
+    one shown is not part of core pkit: it is the issue workflow of the project-management capability, the only process in use
     today. Core pkit ships what every process needs: the shape every process file must have (.pkit/schemas/_defs/process.schema.json),
     the engine, and the commands. That is the point of the bottom row: pkit brings the commands for schemas and processes,
-    so an add-on or a project never builds its own validator or its own state machine. Why the rule is data: it lives in
+    so a capability or a project never builds its own validator or its own state machine. Why the rule is data: it lives in
     one place, apart from the code that applies it, so changing it is a data edit, not a code change (COR-018); and a new
     process is a new file, not new machinery (COR-033). pkit process new adds a process to a capability, with a stub for
     each gate that fails until the process-author agent writes it (COR-044). Your own data files can name the schema they
     follow, and pkit data validate checks them (COR-023).'
 - id: schemas
   part: P1
-  title: How an add-on uses a process
-  message: project-management brings the issue workflow. pkit's engine checks every move, so the add-on wrote no engine of
+  title: How a capability uses a process
+  message: project-management brings the issue workflow. pkit's engine checks every move, so the capability wrote no engine of
     its own.
   problem: ''
   does: []
@@ -688,7 +688,7 @@ slides:
       refused: Refused
       reason: 7 boxes unticked
     panels:
-    - head: The move, in the add-on's workflow.yaml
+    - head: The move, in the capability's workflow.yaml
       terminal:
       - [['# workflow.yaml, from project-management', comment]]
       - [['- from: ', output], [in-progress, args]]
@@ -712,17 +712,17 @@ slides:
       items:
       - The agent asks where work stands, instead of guessing.
       - A move needs its check or your yes, never just the agent's word.
-      - The add-on records each move through pkit's engine, and built none of its own.
-  limit: 'pkit brings the engine, not a process: the one in use today comes with the project-management add-on.'
+      - The capability records each move through pkit's engine, and built none of its own.
+  limit: 'pkit brings the engine, not a process: the one in use today comes with the project-management capability.'
   minutes: 1
-  notes: 'Say it plainly: this is how an add-on uses a process; core pkit has no issue workflow. Everyone knows a task board:
+  notes: 'Say it plainly: this is how a capability uses a process; core pkit has no issue workflow. Everyone knows a task board:
     Todo, In Progress, Done. A board only shows where work is. This process also says who may make each move, and what must
     hold first. On the board, a Feature skips Review: it closes when every box in it is ticked, and you say yes. Feature
     #2270 has 7 boxes unticked, so pkit refuses Done; read live on 30 October with pkit process status, a core command.
     The engine answers where an issue is, whether it may move, and why not, the same way every time. A gate passes on a
     check, or on a record made by someone other than the agent it gates, never on the agent''s own word (COR-033 point 4).
-    The add-on wrote the rule and its gates, and nothing else: its close command records each move with pkit process move,
-    and lets a parent follow its children with pkit process cascade. Another schema of the same add-on, titles.yaml, holds
+    The capability wrote the rule and its gates, and nothing else: its close command records each move with pkit process move,
+    and lets a parent follow its children with pkit process cascade. Another schema of the same capability, titles.yaml, holds
     each issue type''s title format, and pkit pm create-issue refuses a title in the wrong form before it files the issue.
     A log of each move is optional and off unless you turn it on (COR-033 point 7).'
 - id: skillsfrom
@@ -877,7 +877,7 @@ slides:
   message: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
   problem: ''
   does: []
-  show: 'pkit''s own agents advise and never block. Add-ons bring agents that can block a merge.'
+  show: 'pkit''s own agents advise and never block. Capabilities bring agents that can block a merge.'
   visual:
     kind: roles
     stops:
@@ -1010,9 +1010,9 @@ slides:
     them into your AI tool''s settings, and an optional hook checks each call before it runs. An agent is limited in three
     places. The guardrails bind everyone, you included. Its own file lists its tools, and your AI tool enforces that list
     for that agent alone. A rule for one agent needs the hook. pkit''s six agents have no rule of their own: their tools are
-    their limit. The one rule for a single agent ships with the project-management add-on. Its project-manager agent is refused
+    their limit. The one rule for a single agent ships with the project-management capability. Its project-manager agent is refused
     the raw gh commands that change issues and pull requests. It must use pkit''s commands, which validate the issue, hold
-    the close gate and the approval gate, and so cannot be skipped by habit. The add-on brings that rule with it, with nothing
+    the close gate and the approval gate, and so cannot be skipped by habit. The capability brings that rule with it, with nothing
     to set up. A deny is a speed bump, not a security boundary: a wrapper such as bash -c or uv run can slip past it, so the
     real gates live inside pkit''s commands.'
 - id: permday1
@@ -1072,7 +1072,7 @@ slides:
   message: The whole project, and each change before it merges. An agent acts on what files say, and never doubts them.
   problem: ''
   does: []
-  show: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings its own: 16 in project-kit.'
+  show: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each capability brings its own: 16 in project-kit.'
   visual:
     kind: wired
     font_size: 26
@@ -1110,7 +1110,7 @@ slides:
   limit: 'A check finds what is broken or unanswered. Whether a document is still right, a reviewer judges.'
   minutes: 1
   notes: 'Two kinds of check. pkit validate checks the project as it stands: each part of pkit registers its own check, and
-    each installed add-on adds its own, 12 in a fresh install and 16 in project-kit. Among them: every data file against
+    each installed capability adds its own, 12 in a fresh install and 16 in project-kit. Among them: every data file against
     its schema, every record''s shape, every skill and agent naming what it cites. The change checks judge a diff against
     its base. The friction check asks each document tied to a changed file for an answer: updated, still true with why,
     or fixed later (COR-050). The decision check refuses a record or a point that takes an id twice or loses one (COR-058).
@@ -1269,21 +1269,21 @@ slides:
     it, and blocks the merge when it does not hold (COR-050 point 3). Every session gets the rule that tells agents to write
     these answers with their change, without asking you (core rule 20). In a fresh install the check sleeps until you list
     your documents under friction.places in .pkit/project/config.yaml and name in each one''s front matter what it depends
-    on. The docs and analysis add-ons do both for their own documents. Tried on 30 October in a throwaway copy of project-kit.
+    on. The docs and analysis capabilities do both for their own documents. Tried on 30 October in a throwaway copy of project-kit.
     In project-kit today, 21 answers wait as fixed later; all but one name the issue that fixes them.'
 - id: addons
   part: P4
-  title: Why some parts of pkit are add-ons
-  message: Core pkit holds what every project needs. The rest comes as add-ons, called capabilities, that you choose.
+  title: Why some parts of pkit are capabilities
+  message: Core pkit holds what every project needs. The rest comes as capabilities, optional parts you choose.
   problem: ''
   does: []
-  show: 'pkit 1.149 ships 4 add-ons, and 3 more are on their way to 2.0. In a fresh install, one took a single command and
+  show: 'pkit 1.149 ships 4 capabilities, and 3 more are on their way to 2.0. In a fresh install, one took a single command and
     8 seconds.'
   visual:
     kind: slice
     font_size: 22
     core_head: 'Core pkit: in every project'
-    addon_head: 'An add-on (COR-017): one folder you install'
+    addon_head: 'A capability: one folder you install'
     rows:
     - {layer: Decisions, fill: '#491D8BFF', ink: '@text_on_color', head: Decision records, chip: decisions/}
     - {layer: Rules · schemas · processes, fill: '#6929C4FF', ink: '@text_on_color', head: Schemas and processes, chip: schemas/}
@@ -1305,27 +1305,27 @@ slides:
     - [['  13 validator(s) ran; 0 error(s)', output], ['     # 12 before', comment]]
     - [['  All checks passed.', add]]
     why:
-      head: Why pkit has add-ons
+      head: Why pkit has capabilities
       items:
       - Core holds only what every project needs. The rest would be weight.
-      - An add-on gets each upgrade, as core does. A copy would not.
+      - A capability gets each upgrade, as core does. A copy would not.
       - 'One folder: its path says who owns a file.'
       - Made only for a need that kept coming back in real work.
-  limit: Some add-ons need another first. software-engineering will not install without project-management.
+  limit: Some capabilities need another first. software-engineering will not install without project-management.
   minutes: 1.5
   notes: 'Everything before this point is core pkit, in every install. Some ways of working fit only some projects, such as
-    tracking issues on GitHub, or reviewing code. pkit packs each one as an add-on, called a capability (COR-017). An add-on
+    tracking issues on GitHub, or reviewing code. pkit packs each one as a capability, an optional part you install (COR-017). A capability
     brings the same layers as core, for its own way of working: its own decision records, schemas and processes, skills,
     agents and permission rules, commands and checks. All of it sits in one folder, .pkit/capabilities/ and its name. pkit
     makes one only when three things hold. Some projects need it, but not all (COR-014). It can come and go as one folder.
     The same need came back in real work (COR-007). The same test moves agents: pkit''s first core agents included a product
-    manager, which a project with no add-ons has no use for, so it moved into project-management (COR-026). Installing one
+    manager, which a project with no capabilities has no use for, so it moved into project-management (COR-026). Installing one
     copies its folder and registers it. It deploys its skills and agents into .claude/, adds its permission rules to pkit''s
     model, and adds its checks to pkit validate. Read from a fresh install: project-management took about 8 seconds, with
-    nothing set up first. An add-on may need another, with a version it accepts: software-engineering refuses to install
+    nothing set up first. A capability may need another, with a version it accepts: software-engineering refuses to install
     until project-management is there (COR-030). Uninstall removes the folder, and refuses while your own files still cite
-    it. You can write an add-on of your own, with the capability-author skill and pkit new capability; three of project-kit''s
-    add-ons are written that way, in its own repository (COR-031). The release you install today, 1.149, has 4 add-ons:
+    it. You can write a capability of your own, with the capability-author skill and pkit new capability; three of project-kit''s
+    capabilities are written that way, in its own repository (COR-031). The release you install today, 1.149, has 4 capabilities:
     project-management, software-engineering, evidence and demo-recording. living-docs, software-analysis and doc-examples
     are on the main branch, for 2.0.'
 - id: pm
@@ -1417,8 +1417,8 @@ slides:
       - [['rule-set-reviewer  ', output], [APPROVED, add]]
       - [['# fixed, all five approved, merged', comment]]
     ties:
-    - {head: Your conventions, text: 'You write them once. The builder reads them first. They stay yours without the add-on.'}
-    - {head: Code is reviewed, text: 'Before this add-on, nothing in pkit reviewed code. A change with two security holes merged.'}
+    - {head: Your conventions, text: 'You write them once. The builder reads them first. They stay yours without the capability.'}
+    - {head: Code is reviewed, text: 'Before this capability, nothing in pkit reviewed code. A change with two security holes merged.'}
     - {head: Blocks mean something, text: 'Each reviewer blocks only on a failure it can show. The rest is advice.'}
     - {head: What you do, tone: yours, text: 'Write your conventions down, and name their file in overlay.yaml.'}
   limit: With no conventions written down, the builder and its reviewers fall back on general good practice.
@@ -1426,27 +1426,27 @@ slides:
   notes: 'software-engineering has two aims: code that agents write follows your conventions in every session, and code
     is reviewed before it merges (DEC-003). Its builder, software-engineer, has no coding opinions of its own. It reads your
     conventions first, from the file you name in overlay.yaml, and follows them; with none written, it says so and works
-    by general good practice (DEC-001). Your conventions stay yours: removing the add-on never removes them. Its three reviewers
+    by general good practice (DEC-001). Your conventions stay yours: removing the capability never removes them. Its three reviewers
     check correctness, security, and the docs, with the answers a change wrote for them. Each blocks only on a failure it
     can show in the change. Everything else is advice, so a block is never only taste, and nobody learns to skip it (DEC-002).
     The reviewers came from a real failure: in an adopting project, a pull request with a token on a command line and a
-    shell injection passed the merge, because nothing reviewed code (#715). How they join the merge: the add-on ships one
-    file, review-contributions.yaml. project-management reads that file from every installed add-on, and requires each
-    reviewer it names (project-management DEC-032). It never names software-engineering. Installing the add-on is the switch:
+    shell injection passed the merge, because nothing reviewed code (#715). How they join the merge: the capability ships one
+    file, review-contributions.yaml. project-management reads that file from every installed capability, and requires each
+    reviewer it names (project-management DEC-032). It never names software-engineering. Installing the capability is the switch:
     there is no setting to turn the reviewers on. The code and security reviewers run only when a change touches code; on
     29 October, the one merge that changed only records had no code review. software-engineering does name project-management,
-    as an add-on it needs, so it installs only after it. Pull request #2279: the code reviewer blocked a status writer that
+    as a capability it needs, so it installs only after it. Pull request #2279: the code reviewer blocked a status writer that
     could not find a board an organisation owns. It was fixed, all five reviewers approved, and it merged 43 minutes after
     the block. project-kit has written no conventions for its own code yet, so its code reviewer said it reviewed as a careful
     generalist.'
 - id: connect
   part: P4
-  title: How add-ons work together
-  message: Through slots named for a role, never for an add-on. The add-on that needs something opens a slot; any other
-    can fill it.
+  title: How capabilities work together
+  message: A capability never names another, only a role. One that needs something opens a slot, and any other can fill
+    it.
   problem: ''
   does: []
-  show: 'In project-kit: 3 roles, each played by one add-on, and 6 slots, 4 of them filled.'
+  show: 'In project-kit: 3 roles, each played by one capability, and 6 slots, 4 of them filled.'
   visual:
     kind: sockets
     font_size: 22
@@ -1474,22 +1474,22 @@ slides:
     - [['      bound  ', output], [software-analysis, addon], [' (contributes)', output]]
     - [['      bound  ', output], [living-docs, addon], [' (contributes)', output]]
     why:
-      head: Why pkit connects add-ons this way
+      head: Why pkit connects capabilities this way
       items:
-      - Swap an add-on for one in the same role. The rest stays as it is.
+      - Swap a capability for one in the same role. The rest stays as it is.
       - Install only what you need. An empty slot does no harm.
       - pkit status draws the wiring, and pkit validate checks it.
-  limit: Each role has one add-on so far, so swapping one for another is designed, not yet shown.
+  limit: Each role has one capability so far, so swapping one for another is designed, not yet shown.
   minutes: 1
-  notes: 'When one add-on needs something from another, it never names the other. It opens a slot, called a connection point,
-    under a role such as pkit::work-tracking. The add-on that plays the role defines its slots, and any installed add-on
+  notes: 'When one capability needs something from another, it never names the other. It opens a slot, called a connection point,
+    under a role such as pkit::work-tracking. The capability that plays the role defines its slots, and any installed capability
     can fill them (COR-053). project-management plays work-tracking. One of its slots asks which agent fixes each kind of
     document: living-docs answers for its pages, software-analysis for use cases, requirements and the rest of the analysis.
-    project-management reads this slot to know which agent to start for each stale document, and knows neither add-on exists.
-    A slot is optional unless it says, with a reason, that it must be filled, so an add-on still works alone. In a fresh
+    project-management reads this slot to know which agent to start for each stale document, and knows neither capability exists.
+    A slot is optional unless it says, with a reason, that it must be filled, so a capability still works alone. In a fresh
     install with project-management alone, the fixers slot stays empty, pkit validate passes, and pkit status names living-docs
-    and software-analysis as add-ons that could fill it. Two add-ons that claim one role are an error until you choose one,
-    with pkit connections providers. Why roles: naming the add-on is the one thing that stops you from replacing it. The
+    and software-analysis as capabilities that could fill it. Two capabilities that claim one role are an error until you choose one,
+    with pkit connections providers. Why roles: naming the capability is the one thing that stops you from replacing it. The
     reviewers'' file of software-engineering is an older slot of project-management''s own, from before roles; it keeps
     the same rule, since the side that needs reviewers never names who supplies them. Next, project-management gets a builder
     slot, and software-engineering fills it with its software-engineer (DEC-063, being built). The fixers themselves do

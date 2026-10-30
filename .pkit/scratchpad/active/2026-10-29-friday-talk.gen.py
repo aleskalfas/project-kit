@@ -795,7 +795,7 @@ def why_row(parts, top, head, items, bar):
 
 
 def slice_view(pid, y, v):
-    """What an add-on is: pkit's layers as rows on the left, purple, each continued by what an add-on brings to that
+    """What a capability is: pkit's layers as rows on the left, purple, each continued by what a capability brings to that
     layer, yellow, with the folder it lives in as a chip; a terminal on the right; reasons under both."""
     fs = v.get("font_size", 22)
     LW, YX, YW = 720, 736, 984
@@ -834,13 +834,13 @@ def slice_view(pid, y, v):
     if v.get("why"):
         H += 32 + why_row(parts, H + 32, v["why"]["head"], v["why"]["items"], "@role_addon")
     name = f"slice_{pid}"
-    EXTRA_TEMPLATES[name] = {"note": "What an add-on is, drawn for one slide by the slide generator.",
+    EXTRA_TEMPLATES[name] = {"note": "What a capability is, drawn for one slide by the slide generator.",
                              "root": {**CLEAR_AREA, "width": SPAN16, "height": H}, "parts": parts}
     return {f"{pid}-slice": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
 
 def sockets(pid, y, v):
-    """Add-ons connecting through a role's slots: contributors on the left, yellow; the add-on that plays the role
+    """Capabilities connecting through a role's slots: contributors on the left, yellow; the capability that plays the role
     in the middle, its slots inside it; an arrow from each contributor to each slot it fills; a terminal on the
     right; reasons under all three."""
     fs = v.get("font_size", 22)
@@ -901,7 +901,7 @@ def sockets(pid, y, v):
     if v.get("why"):
         H += 32 + why_row(parts, H + 32, v["why"]["head"], v["why"]["items"], "@role_code")
     name = f"sockets_{pid}"
-    EXTRA_TEMPLATES[name] = {"note": "Add-ons connecting through a role's slots, drawn for one slide by the slide generator.",
+    EXTRA_TEMPLATES[name] = {"note": "Capabilities connecting through a role's slots, drawn for one slide by the slide generator.",
                              "root": {**CLEAR_AREA, "width": SPAN16, "height": H}, "parts": parts}
     return {f"{pid}-sockets": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
@@ -1087,7 +1087,7 @@ TAG_TONES = {"core": ("@role_code_bg", "@role_code"), "example": ("#FCF4D6FF", "
 
 def files(pid, y, v):
     """Real files side by side, in groups: each group a heading over its panels and a tag under it (purple: in core;
-    yellow: an example from an add-on), each panel a heading and a terminal. Under them, a heading and a row of
+    yellow: an example from a capability), each panel a heading and a terminal. Under them, a heading and a row of
     terminals (the commands that come with it). The headings and tags are one instance of a template made for this
     slide; the terminals are images."""
     groups, below = v["groups"], v.get("below")
@@ -1795,7 +1795,7 @@ def main(slides_path, board_path, cs_path=None):
     board["templates"]["kind_group"] = GROUP_TEMPLATE
     board["templates"]["step_card"] = step_card_template(board["templates"]["stage"])
     board["templates"]["talk_cover"] = TALK_COVER_TEMPLATE
-    # An add-on's things are yellow (Part 5), as the schemas slide's tag for an add-on's example.
+    # A capability's things are yellow (Part 5), as the schemas slide's tag for a capability's example.
     board["theme"].setdefault("overrides", {}).update({"role_addon": "#F1C21BFF", "role_addon_bg": "#FCF4D6FF"})
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     new, rows, order = {}, {}, []

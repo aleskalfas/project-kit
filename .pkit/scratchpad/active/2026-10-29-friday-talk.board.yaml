@@ -6761,7 +6761,7 @@ templates:
         height: 92
       p0head:
         type: text
-        text: The move, in the add-on's workflow.yaml
+        text: The move, in the capability's workflow.yaml
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -6853,7 +6853,7 @@ templates:
         height: 92
       p2item2:
         type: text
-        text: The add-on records each move through pkit's engine, and built none of its own.
+        text: The capability records each move through pkit's engine, and built none of its own.
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
@@ -6962,7 +6962,7 @@ templates:
         text: ''
         x: 2006
         y: 72
-        width: 747
+        width: 811
         height: 52
         color: '#FCF4D6FF'
         border_color: '#FCF4D6FF'
@@ -6982,12 +6982,12 @@ templates:
         ink: '@text_primary'
       g1tagtext:
         type: text
-        text: 'An add-on''s example: not in core pkit'
+        text: 'A capability''s example: not in core pkit'
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
         y: 73
-        width: 699
+        width: 763
         height: 50
       p2head:
         type: text
@@ -7007,7 +7007,7 @@ templates:
         height: 378
       bhead:
         type: text
-        text: What core pkit brings, so no add-on and no project builds it again
+        text: What core pkit brings, so no capability and no project builds it again
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -7389,7 +7389,7 @@ templates:
         width: 1440
         height: 48
   slice_T-addons:
-    note: What an add-on is, drawn for one slide by the slide generator.
+    note: What a capability is, drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -7459,7 +7459,7 @@ templates:
         ink: '@text_primary'
       addontagtext:
         type: text
-        text: 'An add-on (COR-017): one folder you install'
+        text: 'A capability: one folder you install'
         style: '@style.key'
         ink: '@text_primary'
         x: 768
@@ -7728,7 +7728,7 @@ templates:
         height: 514
       whyhead:
         type: text
-        text: Why pkit has add-ons
+        text: Why pkit has capabilities
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -7794,7 +7794,7 @@ templates:
         ink: '@text_primary'
       w1text:
         type: text
-        text: An add-on gets each upgrade, as core does. A copy would not.
+        text: A capability gets each upgrade, as core does. A copy would not.
         style: '@style.body'
         ink: '@text_primary'
         x: 784
@@ -8173,7 +8173,7 @@ templates:
         height: 64
       t0text:
         type: text
-        text: You write them once. The builder reads them first. They stay yours without the add-on.
+        text: You write them once. The builder reads them first. They stay yours without the capability.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
@@ -8203,7 +8203,8 @@ templates:
         height: 64
       t1text:
         type: text
-        text: Before this add-on, nothing in pkit reviewed code. A change with two security holes merged.
+        text: Before this capability, nothing in pkit reviewed code. A change with two security holes
+          merged.
         style: '@style.body'
         ink: '@text_primary'
         x: 792
@@ -8271,7 +8272,7 @@ templates:
         width: 608
         height: 180
   sockets_T-connect:
-    note: Add-ons connecting through a role's slots, drawn for one slide by the slide generator.
+    note: Capabilities connecting through a role's slots, drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -8534,7 +8535,7 @@ templates:
         height: 446
       whyhead:
         type: text
-        text: Why pkit connects add-ons this way
+        text: Why pkit connects capabilities this way
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -8567,7 +8568,7 @@ templates:
         ink: '@text_primary'
       w0text:
         type: text
-        text: Swap an add-on for one in the same role. The rest stays as it is.
+        text: Swap a capability for one in the same role. The rest stays as it is.
         style: '@style.body'
         ink: '@text_primary'
         x: 32
@@ -9039,7 +9040,7 @@ templates:
         text: ''
         x: 2006
         y: 72
-        width: 755
+        width: 819
         height: 52
         color: '#FCF4D6FF'
         border_color: '#FCF4D6FF'
@@ -9059,12 +9060,12 @@ templates:
         ink: '@text_primary'
       g1tagtext:
         type: text
-        text: 'Příklad z add-onu: není v jádře pkitu'
+        text: 'Příklad z capability: není v jádře pkitu'
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
         y: 73
-        width: 707
+        width: 771
         height: 50
       p2head:
         type: text
@@ -9084,7 +9085,7 @@ templates:
         height: 378
       bhead:
         type: text
-        text: Co dodá jádro pkitu, takže to žádný add-on ani projekt nemusí stavět znovu
+        text: Co dodá jádro pkitu, takže to žádná capability ani projekt nestaví znovu
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -9432,7 +9433,7 @@ templates:
         height: 92
       p0head:
         type: text
-        text: Přechod ve workflow.yaml add-onu
+        text: Přechod ve workflow.yaml z capability
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -9524,7 +9525,7 @@ templates:
         height: 92
       p2item2:
         type: text
-        text: Add-on si vlastní engine nepsal. Každý přechod za něj provede engine pkitu.
+        text: Capability si vlastní engine nepsala. Každý přechod za ni provede engine pkitu.
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
@@ -13206,7 +13207,7 @@ templates:
         width: 875
         height: 92
   slice_T-cs-addons:
-    note: What an add-on is, drawn for one slide by the slide generator.
+    note: What a capability is, drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -13276,7 +13277,7 @@ templates:
         ink: '@text_primary'
       addontagtext:
         type: text
-        text: 'Add-on (COR-017): jedna složka k instalaci'
+        text: 'Capability: jedna složka k instalaci'
         style: '@style.key'
         ink: '@text_primary'
         x: 768
@@ -13545,7 +13546,7 @@ templates:
         height: 514
       whyhead:
         type: text
-        text: Proč má pkit add-ony
+        text: Proč má pkit capabilities
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -13611,7 +13612,7 @@ templates:
         ink: '@text_primary'
       w1text:
         type: text
-        text: Add-on dostane každý upgrade jako jádro. Kopie souborů ne.
+        text: Capability dostane každý upgrade jako jádro. Kopie souborů ne.
         style: '@style.body'
         ink: '@text_primary'
         x: 784
@@ -13677,7 +13678,7 @@ templates:
         ink: '@text_primary'
       w3text:
         type: text
-        text: Add-on vzniká jen z potřeby, která se v praxi opakovaně vracela.
+        text: Capability vzniká jen z potřeby, která se v praxi vracela.
         style: '@style.body'
         ink: '@text_primary'
         x: 2288
@@ -13990,7 +13991,7 @@ templates:
         height: 64
       t0text:
         type: text
-        text: Napíšete je jednou a builder si je přečte nejdřív. Zůstanou vaše i bez add-onu.
+        text: Napíšete je jednou a builder si je přečte nejdřív. Zůstanou vaše i bez capability.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
@@ -14088,7 +14089,7 @@ templates:
         width: 608
         height: 180
   sockets_T-cs-connect:
-    note: Add-ons connecting through a role's slots, drawn for one slide by the slide generator.
+    note: Capabilities connecting through a role's slots, drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -14351,7 +14352,7 @@ templates:
         height: 446
       whyhead:
         type: text
-        text: Proč pkit propojuje add-ony takhle
+        text: Proč pkit propojuje capabilities takhle
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -14384,7 +14385,7 @@ templates:
         ink: '@text_primary'
       w0text:
         type: text
-        text: Add-on vyměníte za jiný ve stejné roli. Zbytek zůstane, jak je.
+        text: Capability vyměníte za jinou ve stejné roli. Zbytek zůstane, jak je.
         style: '@style.body'
         ink: '@text_primary'
         x: 32
@@ -15650,14 +15651,14 @@ instances:
     title: Install pkit
     lead: Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's
       files, never yours.
-    rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
+    rests: pkit status shows what pkit set up in a project. Optional parts, called capabilities, come
       later.
     n: 3
     total: 24
     override:
       rests:
-        text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
-          come later.
+        text: pkit status shows what pkit set up in a project. Optional parts, called capabilities, come
+          later.
     mural_ids:
       root: d51867d5-1a34-4b8e-97ef-8882b20450ef
       bg: feba0e21-f382-46fa-b774-156645218755
@@ -16434,8 +16435,8 @@ instances:
       text: 864af29f-c93f-40ab-85a2-c3d7bbd687be
   T-schemas:
     template: slide
-    title: How an add-on uses a process
-    lead: project-management brings the issue workflow. pkit's engine checks every move, so the add-on
+    title: How a capability uses a process
+    lead: project-management brings the issue workflow. pkit's engine checks every move, so the capability
       wrote no engine of its own.
     rests: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
     n: 9
@@ -16501,7 +16502,7 @@ instances:
     template: notice
     parent: T-schemas
     text: 'Limit: pkit brings the engine, not a process: the one in use today comes with the project-management
-      add-on.'
+      capability.'
     x: 128
     y: 1482
     mural_ids:
@@ -16787,12 +16788,12 @@ instances:
     template: slide
     title: One piece of work, and who sees it
     lead: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
-    rests: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
+    rests: pkit's own agents advise and never block. Capabilities bring agents that can block a merge.
     n: 13
     total: 24
     override:
       rests:
-        text: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
+        text: pkit's own agents advise and never block. Capabilities bring agents that can block a merge.
     mural_ids:
       root: 94ccde14-d1b3-4771-98a7-403175ed9e52
       bg: aeacc5ba-315d-4b6b-882c-01603e4a22ee
@@ -17146,14 +17147,14 @@ instances:
     title: What pkit checks, and why
     lead: The whole project, and each change before it merges. An agent acts on what files say, and never
       doubts them.
-    rests: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
+    rests: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each capability brings
       its own: 16 in project-kit.'
     n: 17
     total: 24
     override:
       rests:
-        text: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
-          its own: 16 in project-kit.'
+        text: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each capability
+          brings its own: 16 in project-kit.'
     mural_ids:
       root: 667cd5eb-b804-486a-8bd0-01ff96767252
       bg: 4a523221-8815-41ea-8943-91ee95b15059
@@ -17404,7 +17405,7 @@ instances:
     template: section
     part: '5'
     title: What you install
-    summary: 'Capabilities: optional add-ons for your kind of work, and how they connect.'
+    summary: 'Capabilities: optional parts for your kind of work, and how they connect.'
     override:
       eyebrow:
         text: Part 5
@@ -17417,17 +17418,17 @@ instances:
       summary: cea9317a-6cc7-44f4-b395-6d62a7f4e07e
   T-addons:
     template: slide
-    title: Why some parts of pkit are add-ons
-    lead: Core pkit holds what every project needs. The rest comes as add-ons, called capabilities, that
-      you choose.
-    rests: pkit 1.149 ships 4 add-ons, and 3 more are on their way to 2.0. In a fresh install, one took
-      a single command and 8 seconds.
+    title: Why some parts of pkit are capabilities
+    lead: Core pkit holds what every project needs. The rest comes as capabilities, optional parts you
+      choose.
+    rests: pkit 1.149 ships 4 capabilities, and 3 more are on their way to 2.0. In a fresh install, one
+      took a single command and 8 seconds.
     n: 20
     total: 24
     override:
       rests:
-        text: pkit 1.149 ships 4 add-ons, and 3 more are on their way to 2.0. In a fresh install, one
-          took a single command and 8 seconds.
+        text: pkit 1.149 ships 4 capabilities, and 3 more are on their way to 2.0. In a fresh install,
+          one took a single command and 8 seconds.
     mural_ids:
       root: 503f0eed-7550-4278-af54-ee3ac0fe8e74
       bg: 139fdfca-1697-44b0-9a7f-aa190a4f7dd2
@@ -17490,7 +17491,8 @@ instances:
   T-addons-limit:
     template: notice
     parent: T-addons
-    text: 'Limit: Some add-ons need another first. software-engineering will not install without project-management.'
+    text: 'Limit: Some capabilities need another first. software-engineering will not install without
+      project-management.'
     x: 128
     y: 1502.0
     mural_ids:
@@ -17927,15 +17929,15 @@ instances:
       text: 1c40d184-1111-4c21-9a58-db6327c00dcd
   T-connect:
     template: slide
-    title: How add-ons work together
-    lead: Through slots named for a role, never for an add-on. The add-on that needs something opens a
-      slot; any other can fill it.
-    rests: 'In project-kit: 3 roles, each played by one add-on, and 6 slots, 4 of them filled.'
+    title: How capabilities work together
+    lead: A capability never names another, only a role. One that needs something opens a slot, and any
+      other can fill it.
+    rests: 'In project-kit: 3 roles, each played by one capability, and 6 slots, 4 of them filled.'
     n: 23
     total: 24
     override:
       rests:
-        text: 'In project-kit: 3 roles, each played by one add-on, and 6 slots, 4 of them filled.'
+        text: 'In project-kit: 3 roles, each played by one capability, and 6 slots, 4 of them filled.'
     mural_ids:
       root: 83b4ab77-69b1-4399-8237-4129fbb6e147
       bg: bf89b372-bb59-4af0-9f8d-8c765a8ac2d2
@@ -17989,7 +17991,8 @@ instances:
   T-connect-limit:
     template: notice
     parent: T-connect
-    text: 'Limit: Each role has one add-on so far, so swapping one for another is designed, not yet shown.'
+    text: 'Limit: Each role has one capability so far, so swapping one for another is designed, not yet
+      shown.'
     x: 128
     y: 1528.0
     mural_ids:
@@ -18791,14 +18794,14 @@ instances:
     title: Instalace pkitu
     lead: Nástroj nainstalujete jednou, pak pkit přidáte do každého projektu jedním příkazem. Upgrade
       mění jen soubory pkitu.
-    rests: pkit status ukáže, co pkit v projektu nastavil. Volitelné add-ony (capabilities) přijdou na
-      řadu později.
+    rests: pkit status ukáže, co pkit v projektu nastavil. Volitelné části, kterým pkit říká capabilities,
+      přijdou později.
     n: 3
     total: 24
     override:
       rests:
-        text: pkit status ukáže, co pkit v projektu nastavil. Volitelné add-ony (capabilities) přijdou
-          na řadu později.
+        text: pkit status ukáže, co pkit v projektu nastavil. Volitelné části, kterým pkit říká capabilities,
+          přijdou později.
     mural_ids:
       root: e68e4cfc-1c91-4db3-ba67-aa2398e0f911
       bg: 47ad74c9-312f-4b2d-b734-1f23530d33d1
@@ -19573,9 +19576,9 @@ instances:
       text: 3c211c82-f241-493d-9fa2-a9936b9c52b2
   T-cs-schemas:
     template: slide
-    title: Jak add-on používá proces
-    lead: project-management přináší workflow pro issues. Každý přechod ověří engine pkitu, takže add-on
-      nemusel psát vlastní engine.
+    title: Jak capability používá proces
+    lead: project-management přináší workflow pro issues. Přechody hlídá engine pkitu, takže capability
+      vlastní engine nemá.
     rests: 'V project-kitu dnes: Feature #2270 nejde uzavřít, dokud v ní zbývá 7 nezaškrtnutých políček.'
     n: 9
     total: 24
@@ -19639,7 +19642,7 @@ instances:
   T-cs-schemas-limit:
     template: notice
     parent: T-cs-schemas
-    text: 'Omezení: pkit dodává engine, ale žádný proces. Ten jediný, který se dnes používá, přináší add-on
+    text: 'Omezení: pkit dodává engine, ale žádný proces. Ten jediný, který se dnes používá, přináší capability
       project-management.'
     x: 128
     y: 1482
@@ -19925,12 +19928,13 @@ instances:
     title: Kdo práci uvidí a kdy
     lead: Každá role ji vidí ve svou chvíli. Critic vidí návrh dřív než vy. Revieweři kontrolují až hotovou
       změnu.
-    rests: Agenti jádra pkitu radí a nikdy neblokují. Add-ony přinášejí agenty, kteří umí merge zablokovat.
+    rests: Agenti jádra pkitu radí a nikdy neblokují. Capabilities přinášejí agenty, kteří umí merge zablokovat.
     n: 13
     total: 24
     override:
       rests:
-        text: Agenti jádra pkitu radí a nikdy neblokují. Add-ony přinášejí agenty, kteří umí merge zablokovat.
+        text: Agenti jádra pkitu radí a nikdy neblokují. Capabilities přinášejí agenty, kteří umí merge
+          zablokovat.
     mural_ids:
       root: 686b40d6-f5d6-478a-88da-c62ed1f9f50c
       bg: 20489db9-2f1e-4635-bd9a-cc84bf716eb9
@@ -20283,13 +20287,13 @@ instances:
     template: slide
     title: Co pkit kontroluje a proč
     lead: Celý projekt a každou změnu před mergem. Agent totiž slepě věří všemu, co najde v souborech.
-    rests: Hned po instalaci spustí pkit validate 12 kontrol a nemusíte nic nastavovat. Každý add-on přidá
-      další, v project-kitu je jich 16.
+    rests: Hned po instalaci spustí pkit validate 12 kontrol a nemusíte nic nastavovat. Každá capability
+      přidá další, v project-kitu je jich 16.
     n: 17
     total: 24
     override:
       rests:
-        text: Hned po instalaci spustí pkit validate 12 kontrol a nemusíte nic nastavovat. Každý add-on
+        text: Hned po instalaci spustí pkit validate 12 kontrol a nemusíte nic nastavovat. Každá capability
           přidá další, v project-kitu je jich 16.
     mural_ids:
       root: cfe5dc90-deca-45b1-91da-aa1f244a76e6
@@ -20539,7 +20543,7 @@ instances:
     template: section
     part: '5'
     title: Co si doinstalujete
-    summary: Volitelné add-ony (capabilities) podle druhu vaší práce a jak se propojují.
+    summary: 'Volitelné části, kterým pkit říká capabilities: co se hodí k vaší práci a jak se propojují.'
     override:
       eyebrow:
         text: Část 5
@@ -20552,16 +20556,17 @@ instances:
       summary: 726e712b-1c70-4163-85d4-59b71fb8b304
   T-cs-addons:
     template: slide
-    title: Proč jsou některé části pkitu add-ony
-    lead: V jádru pkitu je jen to, co potřebuje každý projekt. Zbytek si vyberete jako add-ony (capabilities).
-    rests: pkit 1.149 dodává 4 add-ony, další 3 přijdou s verzí 2.0. Jeden se do čistého projektu nainstaloval
-      jedním příkazem za 8 sekund.
+    title: Proč má pkit capabilities
+    lead: V jádru pkitu je jen to, co potřebuje každý projekt. Zbytek tvoří volitelné části, kterým pkit
+      říká capabilities.
+    rests: pkit 1.149 dodává 4 capabilities, další 3 přijdou s verzí 2.0. Jedna se do čistého projektu
+      nainstalovala jedním příkazem za 8 sekund.
     n: 20
     total: 24
     override:
       rests:
-        text: pkit 1.149 dodává 4 add-ony, další 3 přijdou s verzí 2.0. Jeden se do čistého projektu nainstaloval
-          jedním příkazem za 8 sekund.
+        text: pkit 1.149 dodává 4 capabilities, další 3 přijdou s verzí 2.0. Jedna se do čistého projektu
+          nainstalovala jedním příkazem za 8 sekund.
     mural_ids:
       root: c44eb722-87bb-4f5b-b88c-d211a521d51d
       bg: 9a238ea3-dbab-4170-a2b9-9ab024052d18
@@ -20624,7 +20629,8 @@ instances:
   T-cs-addons-limit:
     template: notice
     parent: T-cs-addons
-    text: 'Omezení: Některé add-ony závisí na jiných: software-engineering se bez project-management nenainstaluje.'
+    text: 'Omezení: Některé capabilities závisí na jiných: software-engineering se bez project-management
+      nenainstaluje.'
     x: 128
     y: 1502.0
     mural_ids:
@@ -21060,15 +21066,15 @@ instances:
       text: 4b5a4b47-33cb-4b99-809c-5c19e50b07d5
   T-cs-connect:
     template: slide
-    title: Jak add-ony spolupracují
-    lead: Add-on nikdy nejmenuje jiný add-on, jen roli. Když něco potřebuje, otevře slot. Vyplnit ho může
-      kterýkoli jiný.
-    rests: 'V project-kitu: 3 role, každou hraje jeden add-on. Ze 6 slotů jsou 4 vyplněné.'
+    title: Jak capabilities spolupracují
+    lead: Capability nikdy nejmenuje jinou capability, jen roli. Když něco potřebuje, otevře slot. Vyplní
+      ho kterákoli jiná.
+    rests: 'V project-kitu: 3 role, každou hraje jedna capability. Ze 6 slotů jsou 4 vyplněné.'
     n: 23
     total: 24
     override:
       rests:
-        text: 'V project-kitu: 3 role, každou hraje jeden add-on. Ze 6 slotů jsou 4 vyplněné.'
+        text: 'V project-kitu: 3 role, každou hraje jedna capability. Ze 6 slotů jsou 4 vyplněné.'
     mural_ids:
       root: f8562f0d-6623-4973-8787-193bdf57aa0d
       bg: e0c2d4b1-9b5d-4c66-9359-22593465b08c
@@ -21122,7 +21128,7 @@ instances:
   T-cs-connect-limit:
     template: notice
     parent: T-cs-connect
-    text: 'Omezení: Každou roli zatím hraje jen jeden add-on. Výměna je tedy navržená, ale ještě nevyzkoušená.'
+    text: 'Omezení: Každou roli zatím hraje jen jedna capability. Výměna je tedy navržená, ale ještě nevyzkoušená.'
     x: 128
     y: 1528.0
     mural_ids:
