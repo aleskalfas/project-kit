@@ -1,0 +1,105 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-003-declare-changeset.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T014708Z-85b0316d.yaml
+    revalidated:
+      at: 2026-10-30T02:09:25Z
+      outcome: unchanged
+      unchanged-because: This change moves the changeset guard into the remainder's job of checks.yml, run after the aggregator whatever became of it, with --base the commit the deciding job pinned, the first parent of the merge; steps 7, 7a and 7b still hold. Main's changes, merged in, only reword the help of the rule-sets commands and of validation's rule-sets member and give pkit rule-sets reach optional paths, which this use case does not walk, so with both it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T014708Z-85b0316d.yaml
+    revalidated:
+      at: 2026-10-30T02:09:28Z
+      outcome: unchanged
+      unchanged-because: This change gives check.sh --shard i/N and --rest and has CI run a full run as two slices and the remainder, each with PKIT_CHECK_BASE and PKIT_CHECK_HEAD set; the hook still runs check.sh whole, every check still lies in it, and project rule 2's new sentence changes no step. Main's changes, merged in, only reword the help of the rule-sets commands and of validation's rule-sets member and give pkit rule-sets reach optional paths, which this use case does not walk, so with both it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-006-gate-merges.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T014708Z-85b0316d.yaml
+    revalidated:
+      at: 2026-10-30T02:09:32Z
+      outcome: unchanged
+      unchanged-because: This change runs pkit sync and the checks as parallel parts behind the one checks job, which stays the required status, and ADR-055 point 5's refined clause keeps the aggregator, whole or in its parts behind one job, the unit GitHub requires; step 3's job is still checks.yml, and steps 4 to 7 and variant 3d hold. Main's changes, merged in, only reword the help of the rule-sets commands and of validation's rule-sets member and give pkit rule-sets reach optional paths, which this use case does not walk, so with both it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T014708Z-85b0316d.yaml
+    revalidated:
+      at: 2026-10-30T02:09:35Z
+      outcome: unchanged
+      unchanged-because: This change runs the migration check in the remainder's job of checks.yml, against the commit the deciding job pinned, and check.sh still runs it as a line of its own, so step 7 holds. Main's changes, merged in, only reword the help of the rule-sets commands and of validation's rule-sets member and give pkit rule-sets reach optional paths, which this use case does not walk, so with both it holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T124541Z-754e4b23.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T014708Z-85b0316d.yaml
+    revalidated:
+      at: 2026-10-30T02:09:39Z
+      outcome: unchanged
+      unchanged-because: This change runs pkit migrations check-diff on every pull request in the remainder's job of checks.yml, and check.sh still runs it, so step 7 and the CI pipeline's line hold. Main's changes, merged in, only reword the help of the rule-sets commands and of validation's rule-sets member and give pkit rule-sets reach optional paths, which this use case does not walk, so with both it holds.

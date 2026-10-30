@@ -18,7 +18,7 @@ from project_kit import (
     run_cache,
     session_guard,
 )
-from tests import in_process
+from tests import in_process, slices
 from tests.adopter_repo import (
     AdopterRepo,
     AdopterTemplates,
@@ -34,6 +34,16 @@ from tests.friction_documents import commit_install, settled_commit, settled_wri
 
 #: What a run of the command runner sets in the environment of what it runs.
 RUN_VARIABLES = (command_runner.DEADLINE_ENV, command_runner.STRAYS_ENV, run_cache.CACHE_ENV)
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """`--shard`, `--shard-table` and `--test-report`: the suite's slices, as a full run
+    in CI cuts them (`tests/slices.py`, ADR-078)."""
+    slices.addoption(parser)
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    slices.configure(config)
 
 
 @pytest.fixture(autouse=True)

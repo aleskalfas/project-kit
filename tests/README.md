@@ -6,7 +6,7 @@ other gates (see [CONTRIBUTING.md](../CONTRIBUTING.md) "Running checks").
 ## Running the suite
 
 **While you build, run the tests of what you changed.** The full suite — some
-9 400 tests — is the pre-push hook's and CI's to run, not a builder's (the
+20 800 tests — is the pre-push hook's and CI's to run, not a builder's (the
 project's rules, `.pkit/rules/project.md`): run the test modules for the files
 you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates,
 `uv run pkit validate`, `uv run pkit friction check`,
@@ -31,7 +31,7 @@ only the tests marked `answers`.
   the landing.
 
 **The full suite runs in parallel.** `scripts/check.sh` — the one command the
-pre-push hook and CI's full run call, with no arguments in both — runs it in
+pre-push hook and CI's full run call — runs it in
 [pytest-xdist](https://pytest-xdist.readthedocs.io/) workers, `-n auto` (one per
 CPU), and then the tests marked `serial` on their own, in one process, in the
 same step. `PKIT_TEST_WORKERS` sets the number of workers; `0` runs the whole
@@ -40,9 +40,54 @@ suite in one process. The two passes by hand:
 A plain `uv run pytest -q` still runs everything in one process, the `serial`
 tests included.
 
+**CI splits a full run across three machines** (ADR-078). The hook runs the
+aggregator whole, on one machine. CI runs it as three parts side by side, each
+a job of its own, which the aggregator defines:
+
+- **two slices,** `./scripts/check.sh --shard 1/2` and `--shard 2/2`. Each runs
+  its share of the parallel pass, in parallel workers, and nothing else;
+- **the remainder,** `./scripts/check.sh --rest`: every other line of the
+  aggregator, with the tests marked `serial` in the test step's place. No other
+  worker shares its machine, as the mark asks.
+
+**How the suite is cut.** A slice reads the tests left after the `serial` mark's
+filter, in the order pytest collects them. It cuts them into runs of
+consecutive tests, where the running time crosses each half of the total
+(`tests/slices.py`). So every module stays in one slice, but the one a cut falls
+in.
+
+- **The times** come from the table of test times, `tests/test_times.json`: the
+  time each test took in a full run in CI. A test the table lacks weighs the
+  median, and an entry no test bears is ignored. A stale table costs time, never
+  coverage, since the cut covers the tests collected.
+- **The same cut in every slice.** It reads only the tests and the table, both
+  fixed by the commit, so a slice run again by hand runs the same tests, with the
+  same tests around them. A failing slice's summary says how.
+- **What a slice reports.** It ends by printing its report: a digest of the tests
+  collected, in order, with the table and the count of slices, how many tests it
+  collected, and how many its share held. `checks` fails unless the slices report
+  one digest and one count, and their shares add up to it.
+- **An empty share fails.** A slice whose share holds no test fails, where the
+  aggregator's passes of the tests marked `serial` and `answers` pass with none.
+- **By hand:** `uv run pytest -n auto -m "not serial" --shard=1/2` runs a slice's
+  tests alone. The option takes one token.
+
+**Keeping the table.** The project's maintainer refreshes it, from CI's own times,
+never a contributor's machine.
+
+- **When:** a full run on `main` is held to twenty minutes. Refresh the table when
+  full runs on `main` take longer, or when a tenth of the tests collected are
+  missing from it. The summary of `checks` shows both: each part's time, and how
+  many tests collected the table lacks.
+- **How:** `uv run python -m tests.slices table` writes it from the times each
+  slice of the newest full run on `main` that passed kept as an artifact of the
+  run, `test-times-<i>-of-<N>`. `--run <id>` names another run. Review it like any
+  change. No run writes the table, so a pull request's run cannot change what
+  later runs read.
+
 **The parallel pass ends by printing its 30 slowest tests** (`--durations=30`),
-in every run: in a local run's output, and in CI's log of the step that runs the
-aggregator.
+in every run: in a local run's output, and in the log of each slice's step in
+CI.
 
 **A test that cannot share the machine with other workers** is marked
 `@pytest.mark.serial`. Make it worker-safe instead when you can — whatever it

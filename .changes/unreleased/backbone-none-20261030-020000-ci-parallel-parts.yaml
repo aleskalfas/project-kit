@@ -1,0 +1,3 @@
+component: backbone
+kind: none
+body: Project rule 2 in `.pkit/rules/project.md`, project-kit's own and never synced, gives the suite's size and says that CI runs a full run as parallel jobs (ADR-078). Nothing an adopter receives changes.
