@@ -1,4 +1,3 @@
-# mural-boards map: pull before editing, push to apply (see the mural-boards skill).
 schema: mural-boards/1
 mural: ibmresearchdesign6459.1793230020758
 url: https://app.mural.co/t/ibmresearchdesign6459/m/ibmresearchdesign6459/1793230020758/311a5a3a4aeef1ac127c90b21b7e6ad6292360f8
@@ -88,8 +87,7 @@ templates:
         height: 48
         style: '@style.caption'
         align: right
-    note: 'Carbon 16:9 slide: an invisible area with a background shape; title, lead and footer on the
-      2x grid. Designed in master L01.'
+    note: 'Carbon 16:9 slide: an invisible area with a background shape; title, lead and footer on the 2x grid. Designed in master L01.'
   tile:
     master: L02
     root:
@@ -152,8 +150,7 @@ templates:
         width: =@grid.span.3 - 2 * @space.05
         height: 256
         style: '@style.body'
-    note: 'Carbon tile: layer fill, no border or shadow, 32 padding; an identifier tag, a space tag (user
-      or tech), heading and body. Designed in master L02.'
+    note: 'Carbon tile: layer fill, no border or shadow, 32 padding; an identifier tag, a space tag (user or tech), heading and body. Designed in master L02.'
   listhead:
     master: L03
     root:
@@ -247,8 +244,7 @@ templates:
         color: '@border_subtle'
         border_color: '@border_subtle'
         border_width: 1
-    note: 'Carbon structured list row: identifier tag and key in the first four columns, the value in
-      the other twelve. `key_ink` and `value_ink` (defaults text_primary, text_secondary) mute a row with
+    note: 'Carbon structured list row: identifier tag and key in the first four columns, the value in the other twelve. `key_ink` and `value_ink` (defaults text_primary, text_secondary) mute a row with
       text_helper.'
     defaults:
       key_ink: text_primary
@@ -339,8 +335,7 @@ templates:
         color: '@border_subtle'
         border_color: '@border_subtle'
         border_width: 1
-    note: 'A comparison column: space tag, heading, and two structured-list rows. Two side by side fill
-      the grid.'
+    note: 'A comparison column: space tag, heading, and two structured-list rows. Two side by side fill the grid.'
   callout:
     master: L06
     root:
@@ -391,8 +386,7 @@ templates:
         width: =@grid.span.16 - 80
         height: 56
         style: '@style.body'
-    note: 'Carbon inline notification, low contrast, info: tinted background with a thin bar on its left.
-      One per slide at most.'
+    note: 'Carbon inline notification, low contrast, info: tinted background with a thin bar on its left. One per slide at most.'
   node:
     master: L07
     root:
@@ -435,8 +429,7 @@ templates:
         width: =@grid.span.3 - 112
         height: 56
         style: '@style.key'
-    note: 'IBM technical-diagram node: white fill, 2-wide outline and a marker in its space''s colour
-      (user, tech or code).'
+    note: 'IBM technical-diagram node: white fill, 2-wide outline and a marker in its space''s colour (user, tech or code).'
   glyph:
     master: L08
     root:
@@ -466,8 +459,7 @@ templates:
       title: '{id}'
       show_title: false
       width: =@grid.span.5
-      height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption
-        * 1.5
+      height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption * 1.5
       color: '#FFFFFF00'
       border_color: '#FFFFFF00'
       border_width: 1
@@ -479,8 +471,7 @@ templates:
         x: 0
         y: 0
         width: =@grid.span.5
-        height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption
-          * 1.5
+        height: =3 * @space.05 + @space.03 + @size.title * 1.25 + 2 * @size.body * 1.25 + @size.caption * 1.5
         color: '@layer'
         border_color: '@layer'
         border_width: 1
@@ -509,8 +500,7 @@ templates:
         height: =@size.caption * 1.5
         style: '@style.caption'
         ink: '@text_helper'
-    note: 'Carbon stat tile: layer fill, no border or shadow, 32 padding; a big number, what it counts,
-      and its source. Designed in master L09.'
+    note: 'Carbon stat tile: layer fill, no border or shadow, 32 padding; a big number, what it counts, and its source. Designed in master L09.'
   card:
     master: L10
     root:
@@ -518,8 +508,7 @@ templates:
       title: '{id}'
       show_title: false
       width: =@grid.span.5
-      height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25
-        + @space.05
+      height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25 + @space.05
       color: '#FFFFFF00'
       border_color: '#FFFFFF00'
       border_width: 1
@@ -531,8 +520,7 @@ templates:
         x: 0
         y: 0
         width: =@grid.span.5
-        height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25
-          + @space.05
+        height: =3 * @space.05 + 64 + 2 * @size.tile_heading * 1.25 + @space.03 + 5 * @size.body * 1.25 + @space.05
         color: '@layer'
         border_color: '@layer'
         border_width: 1
@@ -577,9 +565,8 @@ templates:
         height: =5 * @size.body * 1.25
         style: '@style.body'
         ink: '@{body_ink}'
-    note: 'Carbon tile, five columns wide: layer fill, 32 padding; an identifier tag, a space tag, a heading
-      of up to two lines and up to five lines of body. Three fill a row. `heading_ink` / `body_ink` (defaults
-      text_primary, text_secondary) mute it with text_helper. Designed in master L10.'
+    note: 'Carbon tile, five columns wide: layer fill, 32 padding; an identifier tag, a space tag, a heading of up to two lines and up to five lines of body. Three fill a row. `heading_ink` / `body_ink`
+      (defaults text_primary, text_secondary) mute it with text_helper. Designed in master L10.'
     defaults:
       heading_ink: text_primary
       body_ink: text_secondary
@@ -626,15 +613,13 @@ templates:
         width: =@grid.span.4 - 2 * @space.05
         height: =3 * @size.key * 1.25
         style: '@style.key'
-    note: 'A statement in a chain or a process: layer fill, 32 padding, a small id or role tag and one
-      sentence of up to three lines. Joined by glyph arrows. Designed in master L11. A `fill` parameter
-      (default layer) highlights a conclusion with info_bg.'
+    note: 'A statement in a chain or a process: layer fill, 32 padding, a small id or role tag and one sentence of up to three lines. Joined by glyph arrows. Designed in master L11. A `fill` parameter (default
+      layer) highlights a conclusion with info_bg.'
     defaults:
       fill: layer
   role_badge:
     master: L12
-    note: 'Diagram role badge (from sketch E): the role''s Carbon pictogram and its name in the role colour,
-      a size step above step text. Parameters: role (code, checks, agents, people: icon file 2026-10-29-friday-talk-icons/<role>.png
+    note: 'Diagram role badge (from sketch E): the role''s Carbon pictogram and its name in the role colour, a size step above step text. Parameters: role (code, checks, agents, people: icon file 2026-10-29-friday-talk-icons/<role>.png
       and colour @role_<role>) and name. Designed in master L12.'
     root:
       type: area
@@ -666,8 +651,7 @@ templates:
         fit_pad: 16
   role_node:
     master: L13
-    note: 'Diagram step node (from sketch E): white, outlined in the role colour, a role-colour dot and
-      one line of step text; the box is sized around its text. Parameters: role, text. Designed in master
+    note: 'Diagram step node (from sketch E): white, outlined in the role colour, a role-colour dot and one line of step text; the box is sized around its text. Parameters: role, text. Designed in master
       L13.'
     root:
       type: area
@@ -716,10 +700,8 @@ templates:
         fit_pad: 0
   cycle_ring:
     master: L14
-    note: 'Diagram cycle ring (sketch E): four steps on one true circle, clockwise from the top, each
-      a role node with its role badge outside the ring, short arcs marking the direction, and what the
-      loop keeps in the centre. Slots n1-n4 use role_node, b1-b4 use role_badge (roles code, checks, agents,
-      people). Parameters: step1-step4, centre. Designed in master L14.'
+    note: 'Diagram cycle ring (sketch E): four steps on one true circle, clockwise from the top, each a role node with its role badge outside the ring, short arcs marking the direction, and what the loop
+      keeps in the centre. Slots n1-n4 use role_node, b1-b4 use role_badge (roles code, checks, agents, people). Parameters: step1-step4, centre. Designed in master L14.'
     root:
       type: area
       title: '{id}'
@@ -866,8 +848,7 @@ templates:
         border_style: solid
   section:
     master: L15
-    note: 'Section slide: opens each part of the deck. Carbon expressive: the inverse surface, an accent
-      bar, the part number, the part''s title at display size and one line on what the part establishes.
+    note: 'Section slide: opens each part of the deck. Carbon expressive: the inverse surface, an accent bar, the part number, the part''s title at display size and one line on what the part establishes.
       No footer or number. Designed in master L15.'
     root:
       type: area
@@ -933,8 +914,7 @@ templates:
         ink: '@text_inverse'
   stage:
     master: L16
-    note: 'Diagram stage: a step of a process with a short head and a line or two of what happens; white,
-      outlined in its role''s colour, a role dot. Sized to its text by script (overrides of width and
+    note: 'Diagram stage: a step of a process with a short head and a line or two of what happens; white, outlined in its role''s colour, a role dot. Sized to its text by script (overrides of width and
       height); joined by links. Designed in master L16.'
     root:
       type: area
@@ -989,9 +969,8 @@ templates:
         height: 96
   link:
     master: L17
-    note: 'Diagram link: one of Mural''s own arrows from a node to the next, in an invisible frame the
-      size of the gap between them. Parameters: the arrow''s end points inside the frame, and its tone
-      (a colour role). Designed in master L17.'
+    note: 'Diagram link: one of Mural''s own arrows from a node to the next, in an invisible frame the size of the gap between them. Parameters: the arrow''s end points inside the frame, and its tone (a
+      colour role). Designed in master L17.'
     root:
       type: area
       title: '{id}'
@@ -1022,9 +1001,8 @@ templates:
       tone: text_secondary
   branch:
     master: L18
-    note: 'Diagram branch: an outcome of a decision, a right-angled arrow in the outcome''s colour with
-      its label (OK in text_success, NOK in text_error). Parameters: four points, the label and where
-      it sits, the tone. Designed in master L18.'
+    note: 'Diagram branch: an outcome of a decision, a right-angled arrow in the outcome''s colour with its label (OK in text_success, NOK in text_error). Parameters: four points, the label and where it
+      sits, the tone. Designed in master L18.'
     root:
       type: area
       title: '{id}'
@@ -1074,8 +1052,7 @@ templates:
       tone: text_error
   label:
     master: L19
-    note: 'A label over a diagram or a column: one line in a theme text style. Parameters: text, style
-      (default key), ink. Designed in master L19.'
+    note: 'A label over a diagram or a column: one line in a theme text style. Parameters: text, style (default key), ink. Designed in master L19.'
     root:
       type: area
       title: '{id}'
@@ -1100,8 +1077,7 @@ templates:
       ink: text_primary
   notice:
     master: L20
-    note: 'Carbon inline notification with one sentence: the slide''s takeaway, low contrast info (a callout
-      without a body). Designed in master L20.'
+    note: 'Carbon inline notification with one sentence: the slide''s takeaway, low contrast info (a callout without a body). Designed in master L20.'
     root:
       type: area
       title: '{id}'
@@ -1146,9 +1122,8 @@ templates:
         height: 56
   reader:
     master: L21
-    note: 'A reader of the docs: a rule in the reader''s colour, their role badge, the first question
-      the docs must answer, and what they get. Five columns wide; three fill a row. Heights follow the
-      texts (overrides). Designed in master L21.'
+    note: 'A reader of the docs: a rule in the reader''s colour, their role badge, the first question the docs must answer, and what they get. Five columns wide; three fill a row. Heights follow the texts
+      (overrides). Designed in master L21.'
     root:
       type: area
       title: '{id}'
@@ -1205,8 +1180,7 @@ templates:
         height: 96
   code:
     master: L22
-    note: 'A code snippet (Carbon): layer fill, 32 padding, the text line by line. Mural has no monospace
-      font, so it uses the body font. Height follows the lines (overrides). Designed in master L22.'
+    note: 'A code snippet (Carbon): layer fill, 32 padding, the text line by line. Mural has no monospace font, so it uses the body font. Height follows the lines (overrides). Designed in master L22.'
     root:
       type: area
       title: '{id}'
@@ -1240,8 +1214,7 @@ templates:
         ink: '@text_primary'
   timeline:
     master: L23
-    note: 'A timeline of four milestones: one of Mural''s arrows as the time axis, a marker per milestone,
-      when it happens above the axis, its name and what happens below. Designed in master L23.'
+    note: 'A timeline of four milestones: one of Mural''s arrows as the time axis, a marker per milestone, when it happens above the axis, its name and what happens below. Designed in master L23.'
     root:
       type: area
       title: '{id}'
@@ -1414,8 +1387,7 @@ templates:
         height: 144
   actor:
     master: L24
-    note: 'Diagram actor (sketch B with pictograms): a circle tinted in its role''s colour with the role''s
-      pictogram, and its name centred below in the role colour. Parameters: role (colour @role_<role>),
+    note: 'Diagram actor (sketch B with pictograms): a circle tinted in its role''s colour with the role''s pictogram, and its name centred below in the role colour. Parameters: role (colour @role_<role>),
       icon (2026-10-29-friday-talk-icons/<icon>.png), name. Designed in master L24.'
     root:
       type: area
@@ -1458,10 +1430,8 @@ templates:
         height: 56
   artefact:
     master: L25
-    note: 'Diagram artefact: what a step reads or produces (a report, the repo, the rules, the docs debt)
-      or what starts it (a push, a schedule): a layer tile with its pictogram and a one-line label, sized
-      to the label by script. Parameters: icon (2026-10-29-friday-talk-icons/<icon>.png), text, ink (default
-      text_primary; text_helper mutes it). Designed in master L25.'
+    note: 'Diagram artefact: what a step reads or produces (a report, the repo, the rules, the docs debt) or what starts it (a push, a schedule): a layer tile with its pictogram and a one-line label, sized
+      to the label by script. Parameters: icon (2026-10-29-friday-talk-icons/<icon>.png), text, ink (default text_primary; text_helper mutes it). Designed in master L25.'
     root:
       type: area
       title: '{id}'
@@ -1504,10 +1474,8 @@ templates:
       ink: text_primary
   cover:
     master: L26
-    note: 'Cover: the deck''s first slide. Carbon expressive on the light surface: the project logo and
-      name, an accent bar, the presentation title at display size, the author, and the version with its
-      date. No footer or number. Parameters: title, project, author, version, date; a new version is a
-      parameter change. Designed in master L26.'
+    note: 'Cover: the deck''s first slide. Carbon expressive on the light surface: the project logo and name, an accent bar, the presentation title at display size, the author, and the version with its
+      date. No footer or number. Parameters: title, project, author, version, date; a new version is a parameter change. Designed in master L26.'
     root:
       type: area
       title: '{id}'
@@ -1588,8 +1556,7 @@ templates:
         width: =@grid.span.8
         height: 48
   pstage:
-    note: Diagram stage with a pictogram (2026-10-29-friday-talk-icons/<icon>.png) in place of the role
-      dot; made by the slide generator from the stage template.
+    note: Diagram stage with a pictogram (2026-10-29-friday-talk-icons/<icon>.png) in place of the role dot; made by the slide generator from the stage template.
     root:
       type: area
       title: '{id}'
@@ -1637,8 +1604,7 @@ templates:
         width: 576
         height: 96
   tree_bar:
-    note: A connector line of a tree, drawn as a thin bar so every line has one thickness; made by the
-      slide generator.
+    note: A connector line of a tree, drawn as a thin bar so every line has one thickness; made by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -1664,8 +1630,7 @@ templates:
     defaults:
       tone: border_strong
   tree_tag:
-    note: 'A tag in a tree: a filled box with one line of text in a role''s colour; made by the slide
-      generator.'
+    note: 'A tag in a tree: a filled box with one line of text in a role''s colour; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1719,8 +1684,7 @@ templates:
         width: 600
         height: 58
   terminal:
-    note: 'The deck''s terminal: a dark panel holding commands and their output, syntax coloured; made
-      by the slide generator.'
+    note: 'The deck''s terminal: a dark panel holding commands and their output, syntax coloured; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1753,8 +1717,7 @@ templates:
         width: 1360
         height: 328
   highlight:
-    note: 'An important note: a light yellow box with a yellow bar on its left, a pictogram, a question
-      and a line of text; made by the slide generator.'
+    note: 'An important note: a light yellow box with a yellow bar on its left, a pictogram, a question and a line of text; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1815,8 +1778,7 @@ templates:
         width: 1260
         height: 100
   term_image:
-    note: 'The deck''s terminal, rendered as an image (Mural has no monospace font): the file is term-<name>.png
-      beside the map; made by the slide generator.'
+    note: 'The deck''s terminal, rendered as an image (Mural has no monospace font): the file is term-<name>.png beside the map; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1835,8 +1797,7 @@ templates:
         width: 1440
         height: 400
   kind:
-    note: 'A kind of a thing as a column in its own tone: a filled tag (its prefix), a head, what it decides,
-      a real file of it, and why it lives where it does; made by the slide generator.'
+    note: 'A kind of a thing as a column in its own tone: a filled tag (its prefix), a head, what it decides, a real file of it, and why it lives where it does; made by the slide generator.'
     root:
       type: area
       title: '{id}'
@@ -1917,8 +1878,7 @@ templates:
         width: 816
         height: 150
   kind_group:
-    note: A group's heading over the columns it holds, saying what they share; its path and bar are separate
-      instances; made by the slide generator.
+    note: A group's heading over the columns it holds, saying what they share; its path and bar are separate instances; made by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -1939,8 +1899,7 @@ templates:
         width: 1856
         height: 56
   step_card:
-    note: 'A step of a story with its picture inside: the stage''s box, dot, head and text, and a terminal
-      image below them; made by the slide generator from the stage template.'
+    note: 'A step of a story with its picture inside: the stage''s box, dot, head and text, and a terminal image below them; made by the slide generator from the stage template.'
     root:
       type: area
       title: '{id}'
@@ -2000,8 +1959,7 @@ templates:
         width: 576
         height: 300
   ties_T-checked:
-    note: 'Documents'' ties, drawn for one slide by the slide generator: the files they describe, the
-      records they carry out, a line per tie.'
+    note: 'Documents'' ties, drawn for one slide by the slide generator: the files they describe, the records they carry out, a line per tie.'
     root:
       type: area
       title: '{id}'
@@ -2539,8 +2497,7 @@ templates:
         border_width: 4
         border_style: solid
   ideas_T-ideas:
-    note: 'Where ideas start, drawn for one slide by the slide generator: a conversation, the note that
-      keeps it, and what the note becomes.'
+    note: 'Where ideas start, drawn for one slide by the slide generator: a conversation, the note that keeps it, and what the note becomes.'
     root:
       type: area
       title: '{id}'
@@ -2813,8 +2770,7 @@ templates:
         border_width: 4
         border_style: dashed
   checklist_T-skills:
-    note: One procedure as a numbered checklist with its command's output beside it, drawn for one slide
-      by the slide generator.
+    note: One procedure as a numbered checklist with its command's output beside it, drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -3173,8 +3129,7 @@ templates:
         border_width: 6
         border_style: solid
   rests_T-rests:
-    note: 'What a skill rests on, drawn for one slide by the slide generator: the decisions it follows,
-      its first lines, the command it runs.'
+    note: 'What a skill rests on, drawn for one slide by the slide generator: the decisions it follows, its first lines, the command it runs.'
     root:
       type: area
       title: '{id}'
@@ -3443,8 +3398,7 @@ templates:
         width: 188
         height: 56
   map_T-skillsfrom:
-    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the
-      slide generator.
+    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -3952,8 +3906,7 @@ templates:
         ink: '@text_primary'
       w1text:
         type: text
-        text: A command cannot pick a name or write the body. Without a skill, agents skipped the writing
-          rules.
+        text: A command cannot pick a name or write the body. Without a skill, agents skipped the writing rules.
         style: '@style.body'
         ink: '@text_primary'
         x: 792
@@ -4027,8 +3980,7 @@ templates:
         width: 600
         height: 200.0
   roles_T-agents:
-    note: 'One piece of work and who sees it, drawn for one slide by the slide generator: a card per stop,
-      its limit, and the reason under it.'
+    note: 'One piece of work and who sees it, drawn for one slide by the slide generator: a card per stop, its limit, and the reason under it.'
     root:
       type: area
       title: '{id}'
@@ -4322,8 +4274,7 @@ templates:
         border_width: 6
         border_style: solid
   map_T-agentsfrom:
-    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the
-      slide generator.
+    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -4911,8 +4862,7 @@ templates:
         width: 600
         height: 150.0
   wired_T-agentswired:
-    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card
-      per tie.'
+    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card per tie.'
     root:
       type: area
       title: '{id}'
@@ -5082,8 +5032,7 @@ templates:
         width: 504
         height: 230
   map_T-permissions:
-    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the
-      slide generator.
+    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -5671,8 +5620,7 @@ templates:
         width: 600
         height: 150.0
   wired_T-permday1:
-    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card
-      per tie.'
+    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card per tie.'
     root:
       type: area
       title: '{id}'
@@ -5806,8 +5754,7 @@ templates:
         width: 504
         height: 230
   wired_T-checks:
-    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card
-      per tie.'
+    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card per tie.'
     root:
       type: area
       title: '{id}'
@@ -5941,8 +5888,7 @@ templates:
         width: 504
         height: 230
   map_T-schemas:
-    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the
-      slide generator.
+    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -6859,8 +6805,7 @@ templates:
         width: 875
         height: 92
   files_T-schemaslook:
-    note: Real files side by side in groups, and the commands that come with them, drawn for one slide
-      by the slide generator.
+    note: Real files side by side in groups, and the commands that come with them, drawn for one slide by the slide generator.
     root:
       type: area
       title: '{id}'
@@ -7737,6 +7682,8 @@ instances:
     override:
       logo:
         file: 2026-10-29-friday-talk-icons/agents.png
+      version:
+        text: Version pkit 1.149 · 30 October 2026
     mural_ids:
       root: 9489c8ef-d65d-4ff0-845f-3990f06cac8b
       bg: d67550a5-4ecf-4303-8d92-09a8e916900f
@@ -7751,6 +7698,9 @@ instances:
     part: '1'
     title: pkit at a glance
     summary: Why pkit exists, how to install it, and how its parts fit together.
+    override:
+      eyebrow:
+        text: Part 1
     mural_ids:
       root: 9f82d856-d6b6-4128-bdf5-b624aa4ca48b
       bg: 7ebfee27-2d72-4434-8f74-8b332037bfa0
@@ -8395,8 +8345,7 @@ instances:
     parent: T-fits
     role: neutral
     head: Carried out
-    text: Each layer carries out the decisions above it. The reasons stay in one place, where an agent
-      reads them before it changes anything.
+    text: Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them before it changes anything.
     x: 2352
     y: 576
     override:
@@ -8446,8 +8395,7 @@ instances:
     parent: T-fits
     role: neutral
     head: Checked
-    text: If a layer and a decision disagree, the layer is checked first, so decisions never drift to
-      match the code. Only you change a decision.
+    text: If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. Only you change a decision.
     x: 2352
     y: 1068
     override:
@@ -8495,16 +8443,13 @@ instances:
   T-install:
     template: slide
     title: Install pkit
-    lead: Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's
-      files, never yours.
-    rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
-      later.
+    lead: Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's files, never yours.
+    rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come later.
     n: 3
     total: 22
     override:
       rests:
-        text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
-          come later.
+        text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come later.
     mural_ids:
       root: d51867d5-1a34-4b8e-97ef-8882b20450ef
       bg: feba0e21-f382-46fa-b774-156645218755
@@ -8535,8 +8480,7 @@ instances:
     y: 1016
     icon: step-lock-important
     head: Don't want pkit in your repository?
-    body: pkit stays only in your clone, hidden by git's exclude file. Nothing of it is committed, and
-      your agent still uses all of it.
+    body: pkit stays only in your clone, hidden by git's exclude file. Nothing of it is committed, and your agent still uses all of it.
     override:
       root:
         width: 1440
@@ -8590,6 +8534,9 @@ instances:
     part: '2'
     title: From idea to rule
     summary: Where ideas start, your decisions, what every session is told, and rules a program applies.
+    override:
+      eyebrow:
+        text: Part 2
     mural_ids:
       root: 7f14984f-94fe-444f-b8ce-d300d207ae60
       bg: 016e7298-0ccf-43d8-8893-e94aa50442ce
@@ -8600,8 +8547,7 @@ instances:
   T-ideas:
     template: slide
     title: Where ideas start
-    lead: In conversation. A scratchpad note keeps what you agreed past the session, until it becomes
-      records, issues or docs.
+    lead: In conversation. A scratchpad note keeps what you agreed past the session, until it becomes records, issues or docs.
     rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
     total: 22
@@ -8662,16 +8608,13 @@ instances:
   T-decisions:
     template: slide
     title: Decision records
-    lead: A decision record keeps one choice and why it was made. Where it lives says what it is about,
-      and who may change it.
-    rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
-      one'
+    lead: A decision record keeps one choice and why it was made. Where it lives says what it is about, and who may change it.
+    rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old one'
     n: 5
     total: 22
     override:
       rests:
-        text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
-          one'
+        text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old one'
     mural_ids:
       root: 84534aef-8ec4-47fd-b295-4696ea808856
       bg: 125aaa62-bdfb-4010-9fda-8dc6672243f2
@@ -8874,8 +8817,7 @@ instances:
   T-decisions-limit:
     template: notice
     parent: T-decisions
-    text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that later work
-      builds on.'
+    text: 'Limit: Writing and reviewing a record takes time: worth it only for choices that later work builds on.'
     x: 128
     y: 1418
     mural_ids:
@@ -8886,16 +8828,13 @@ instances:
   T-found:
     template: slide
     title: Decided once, found later
-    lead: You accept a decision before work builds on it. Later, an agent finds the decision before changing
-      the files it covers.
-    rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
-      merged with its code.'
+    lead: You accept a decision before work builds on it. Later, an agent finds the decision before changing the files it covers.
+    rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and merged with its code.'
     n: 6
     total: 22
     override:
       rests:
-        text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
-          and merged with its code.'
+        text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and merged with its code.'
     mural_ids:
       root: d29fd65e-5ac2-41c1-8117-1f9dfb3f8014
       bg: c82a4af9-33a2-4514-8b83-6c8b8800e409
@@ -9045,8 +8984,7 @@ instances:
   T-found-limit:
     template: notice
     parent: T-found
-    text: 'Limit: Only records tied to a file are found, directly or through a document that depends on
-      it.'
+    text: 'Limit: Only records tied to a file are found, directly or through a document that depends on it.'
     x: 128
     y: 1425
     mural_ids:
@@ -9057,16 +8995,13 @@ instances:
   T-sessions:
     template: slide
     title: What every session is told
-    lead: A few short rules on how to work, pkit's and yours. Records are too many to load, so each rule
-      names the one behind it.
-    rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
-      generated from the rules.'
+    lead: A few short rules on how to work, pkit's and yours. Records are too many to load, so each rule names the one behind it.
+    rests: 'This week: each rule got a permanent id and a status. The file every session loads is now generated from the rules.'
     n: 7
     total: 22
     override:
       rests:
-        text: 'This week: each rule got a permanent id and a status. The file every session loads is now
-          generated from the rules.'
+        text: 'This week: each rule got a permanent id and a status. The file every session loads is now generated from the rules.'
     mural_ids:
       root: b83cbbe1-ce7b-48ed-9d2a-802cd1ac87f2
       bg: d4e7c315-56ee-4a20-95f8-ca409aa0da4d
@@ -9224,16 +9159,13 @@ instances:
   T-schemaslook:
     template: slide
     title: What schemas and processes look like
-    lead: 'A schema is two files: the rule as data, and the shape that data must have. A process is a
-      schema of stages and moves.'
-    rests: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit
-      validate checks them all.'
+    lead: 'A schema is two files: the rule as data, and the shape that data must have. A process is a schema of stages and moves.'
+    rests: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit validate checks them all.'
     n: 8
     total: 22
     override:
       rests:
-        text: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit
-          validate checks them all.'
+        text: 'In a fresh install: 8 schemas of pkit''s own, and the shape every process must have. pkit validate checks them all.'
     mural_ids:
       root: 7f801a34-a040-4c5f-8c84-beea068d3a65
       bg: 86936a24-32b2-4b8f-b248-f27528c5c72a
@@ -9279,8 +9211,7 @@ instances:
   T-schemas:
     template: slide
     title: How an add-on uses a process
-    lead: project-management brings the issue workflow. pkit's engine checks every move, so the add-on
-      wrote no engine of its own.
+    lead: project-management brings the issue workflow. pkit's engine checks every move, so the add-on wrote no engine of its own.
     rests: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked.'
     n: 9
     total: 22
@@ -9344,8 +9275,7 @@ instances:
   T-schemas-limit:
     template: notice
     parent: T-schemas
-    text: 'Limit: pkit brings the engine, not a process: the one in use today comes with the project-management
-      add-on.'
+    text: 'Limit: pkit brings the engine, not a process: the one in use today comes with the project-management add-on.'
     x: 128
     y: 1482
     mural_ids:
@@ -9358,6 +9288,9 @@ instances:
     part: '3'
     title: How the agent works
     summary: Procedures, roles, and what each agent may do.
+    override:
+      eyebrow:
+        text: Part 3
     mural_ids:
       root: dc38bb48-008c-450c-88f5-5662346a372f
       bg: f12e7947-62b2-41f2-879d-63fa5a1327c5
@@ -9368,8 +9301,7 @@ instances:
   T-skillsfrom:
     template: slide
     title: Where skills come from
-    lead: Each kind of file pkit's decisions define gets a skill for the choices, and a command for the
-      exact part.
+    lead: Each kind of file pkit's decisions define gets a skill for the choices, and a command for the exact part.
     rests: 'In project-kit: pkit ships 11 skills, each with its command.'
     n: 10
     total: 22
@@ -9448,8 +9380,7 @@ instances:
   T-skillsfrom-limit:
     template: notice
     parent: T-skillsfrom
-    text: 'Limit: pkit''s skills cover only pkit''s own files. For work that keeps coming back in your
-      project, you write your own.'
+    text: 'Limit: pkit''s skills cover only pkit''s own files. For work that keeps coming back in your project, you write your own.'
     x: 128
     y: 1516.0
     mural_ids:
@@ -9460,16 +9391,13 @@ instances:
   T-skills:
     template: slide
     title: One skill, step by step
-    lead: The agent follows the steps in order. At step 6 it runs the command, so the number and the layout
-      are always right.
-    rests: Every session holds only each skill's short description. The steps load when the task comes
-      up.
+    lead: The agent follows the steps in order. At step 6 it runs the command, so the number and the layout are always right.
+    rests: Every session holds only each skill's short description. The steps load when the task comes up.
     n: 11
     total: 22
     override:
       rests:
-        text: Every session holds only each skill's short description. The steps load when the task comes
-          up.
+        text: Every session holds only each skill's short description. The steps load when the task comes up.
     mural_ids:
       root: bcf5e350-33dd-4e42-af43-79c513086a2c
       bg: e8ae1e30-4a3c-41df-9336-aa8eb0de53a8
@@ -9533,16 +9461,13 @@ instances:
   T-agentsfrom:
     template: slide
     title: Where agents come from
-    lead: 'When the same kind of check keeps coming back, a decision names a role for it: one job, and
-      only the tools it needs.'
-    rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
-      it follows.'
+    lead: 'When the same kind of check keeps coming back, a decision names a role for it: one job, and only the tools it needs.'
+    rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.'
     n: 12
     total: 22
     override:
       rests:
-        text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
-          it follows.'
+        text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.'
     mural_ids:
       root: 6927991a-75c8-495b-911a-6dfd3a8e4838
       bg: ecfdc1e3-68e1-4264-bfe6-9ffee223b38a
@@ -9615,8 +9540,7 @@ instances:
   T-agentsfrom-limit:
     template: notice
     parent: T-agentsfrom
-    text: 'Limit: The AI tool enforces an agent''s tools. Which files it may change is a rule it follows,
-      not a lock.'
+    text: 'Limit: The AI tool enforces an agent''s tools. Which files it may change is a rule it follows, not a lock.'
     x: 128
     y: 1466.0
     mural_ids:
@@ -9689,16 +9613,13 @@ instances:
   T-agentswired:
     template: slide
     title: What every agent comes with
-    lead: Each agent arrives tied to its decisions and pointed at your folders. pkit fills in your paths
-      and checks every tie.
-    rests: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
-      17 skills and agents.'
+    lead: Each agent arrives tied to its decisions and pointed at your folders. pkit fills in your paths and checks every tie.
+    rests: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked 17 skills and agents.'
     n: 14
     total: 22
     override:
       rests:
-        text: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
-          17 skills and agents.'
+        text: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked 17 skills and agents.'
     mural_ids:
       root: 9976f024-9f08-4bcb-822f-f35a572f941b
       bg: e259d0ee-f22f-4221-9cf0-825243d9e524
@@ -9784,16 +9705,13 @@ instances:
   T-permissions:
     template: slide
     title: Where permissions come from
-    lead: From rules your project writes down as data. Your AI tool applies them to every call, so they
-      hold when an agent forgets them.
-    rests: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
-      which validate the issue first.'
+    lead: From rules your project writes down as data. Your AI tool applies them to every call, so they hold when an agent forgets them.
+    rests: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands, which validate the issue first.'
     n: 15
     total: 22
     override:
       rests:
-        text: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
-          which validate the issue first.'
+        text: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands, which validate the issue first.'
     mural_ids:
       root: 84de8304-8df1-426d-b15f-37a6204c6305
       bg: 4a81da47-14fd-4a64-ba48-a067fa933667
@@ -9866,8 +9784,7 @@ instances:
   T-permissions-limit:
     template: notice
     parent: T-permissions
-    text: 'Limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can
-      slip past.'
+    text: 'Limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can slip past.'
     x: 128
     y: 1466.0
     mural_ids:
@@ -9878,16 +9795,13 @@ instances:
   T-permday1:
     template: slide
     title: Permissions on day one
-    lead: A fresh install refuses destructive commands and allows routine ones, so the prompts you still
-      see are worth reading.
-    rests: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37
-      routine ones allowed.'
+    lead: A fresh install refuses destructive commands and allows routine ones, so the prompts you still see are worth reading.
+    rests: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37 routine ones allowed.'
     n: 16
     total: 22
     override:
       rests:
-        text: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused,
-          37 routine ones allowed.'
+        text: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37 routine ones allowed.'
     mural_ids:
       root: 63873b04-242c-403f-bcd9-8d01a61ddcf9
       bg: 9fe4bdf7-7e6e-4390-a4ae-9af784241109
@@ -9958,8 +9872,7 @@ instances:
   T-permday1-limit:
     template: notice
     parent: T-permday1
-    text: 'Limit: Without the hook, a rule for one agent is not applied: the settings bind every agent
-      alike.'
+    text: 'Limit: Without the hook, a rule for one agent is not applied: the settings bind every agent alike.'
     x: 128
     y: 1512
     mural_ids:
@@ -9972,6 +9885,9 @@ instances:
     part: '4'
     title: Staying consistent
     summary: What pkit checks, and documents that stay true.
+    override:
+      eyebrow:
+        text: Part 4
     mural_ids:
       root: 4ad6bb19-216e-49f0-bd57-a9b2640f446d
       bg: b0d0210a-2a26-4d68-9e6a-2b47ff85a9e5
@@ -9982,16 +9898,13 @@ instances:
   T-checks:
     template: slide
     title: What pkit checks, and why
-    lead: The whole project, and each change before it merges. An agent acts on what files say, and never
-      doubts them.
-    rests: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
-      its own: 16 in project-kit.'
+    lead: The whole project, and each change before it merges. An agent acts on what files say, and never doubts them.
+    rests: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings its own: 16 in project-kit.'
     n: 17
     total: 22
     override:
       rests:
-        text: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
-          its own: 16 in project-kit.'
+        text: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings its own: 16 in project-kit.'
     mural_ids:
       root: 667cd5eb-b804-486a-8bd0-01ff96767252
       bg: 4a523221-8815-41ea-8943-91ee95b15059
@@ -10062,8 +9975,7 @@ instances:
   T-checks-limit:
     template: notice
     parent: T-checks
-    text: 'Limit: A check finds what is broken or unanswered. Whether a document is still right, a reviewer
-      judges.'
+    text: 'Limit: A check finds what is broken or unanswered. Whether a document is still right, a reviewer judges.'
     x: 128
     y: 1472
     mural_ids:
@@ -10075,14 +9987,12 @@ instances:
     template: slide
     title: One tie, checked
     lead: Rename a file, and the documents tied to it are named before the change merges.
-    rests: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by the
-      project.'
+    rests: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by the project.'
     n: 18
     total: 22
     override:
       rests:
-        text: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by
-          the project.'
+        text: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by the project.'
     mural_ids:
       root: 34ed1387-7f4c-4df7-9ba0-1f7ecfa50a6d
       bg: 0df7886f-ee95-46e3-ba9b-345d49d9d33d
@@ -10176,16 +10086,13 @@ instances:
   T-docs:
     template: slide
     title: Docs that know when they're wrong
-    lead: 'When something a document depends on changes, the change must answer for it: updated, still
-      true, or fixed later.'
-    rests: 'In project-kit today: 21 answers wait as "fixed later". pkit friction debt lists each, with
-      its reason.'
+    lead: 'When something a document depends on changes, the change must answer for it: updated, still true, or fixed later.'
+    rests: 'In project-kit today: 21 answers wait as "fixed later". pkit friction debt lists each, with its reason.'
     n: 19
     total: 22
     override:
       rests:
-        text: 'In project-kit today: 21 answers wait as "fixed later". pkit friction debt lists each,
-          with its reason.'
+        text: 'In project-kit today: 21 answers wait as "fixed later". pkit friction debt lists each, with its reason.'
     mural_ids:
       root: 28954a10-bd2e-4d2b-b8d2-478d6d3c6291
       bg: 9f075d6e-bf91-459d-b8bf-6f3c7288b64c
@@ -10229,8 +10136,7 @@ instances:
   T-docs-limit:
     template: notice
     parent: T-docs
-    text: 'Limit: Only documents you list, with what they depend on, are covered. The rest go stale as
-      before.'
+    text: 'Limit: Only documents you list, with what they depend on, are covered. The rest go stale as before.'
     x: 128
     y: 1510.0
     mural_ids:
@@ -10243,6 +10149,9 @@ instances:
     part: '5'
     title: What you install
     summary: 'Capabilities: optional add-ons for your kind of work, and how they connect.'
+    override:
+      eyebrow:
+        text: Part 5
     mural_ids:
       root: ddc29d3d-75ec-4429-93d7-1e5a1547c06c
       bg: 53022b74-f38e-4702-861f-1bd7372b253f
@@ -10530,8 +10439,7 @@ instances:
   T-pm-limit:
     template: notice
     parent: T-pm
-    text: 'Limit: GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not
-      the manual.'
+    text: 'Limit: GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual.'
     x: 128
     y: 1072
     mural_ids:
@@ -10542,16 +10450,13 @@ instances:
   T-se:
     template: slide
     title: software-engineering
-    lead: The builder follows your conventions; its three reviewers join every code merge with nothing
-      to wire.
-    rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
-      before merge'
+    lead: The builder follows your conventions; its three reviewers join every code merge with nothing to wire.
+    rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed before merge'
     n: 21
     total: 22
     override:
       rests:
-        text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
-          fixed before merge'
+        text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed before merge'
     mural_ids:
       root: 9362117e-b3e1-4a9c-bafa-c67436bcb379
       bg: f6fe6e18-f941-4b90-b997-f37d9ded0329
@@ -10860,8 +10765,7 @@ layouts:
 objects:
   LIB:
     mural_id: 8bccad2a-99c9-4f05-9fbd-bc2c59407fbc
-    note: 'the library zone: component masters with mock text in brackets; fills bottom-up, grows upward,
-      never below y -2000'
+    note: 'the library zone: component masters with mock text in brackets; fills bottom-up, grows upward, never below y -2000'
     type: area
     library: true
     title: LIBRARY · component masters · not presentation content

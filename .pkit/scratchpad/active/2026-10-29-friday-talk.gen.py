@@ -1404,8 +1404,14 @@ def notice(pid, y, text):
     return {f"{pid}-limit": {"template": "notice", "parent": pid, "text": md(text), "x": MARGIN, "y": y}}, NOTICE_H
 
 
-def build_slide(s, n, total):
-    pid = f"T-{s['id']}"
+LABELS = {
+    "en": {"limit": "Limit: ", "part": "Part {part}", "version": "Version {version} · {date}"},
+    "cs": {"limit": "Omezení: ", "part": "Část {part}", "version": "Verze {version} · {date}"},
+}
+
+
+def build_slide(s, n, total, prefix="T-", labels=LABELS["en"]):
+    pid = f"{prefix}{s['id']}"
     inst = {
         pid: {
             "template": "slide", "title": md(s["title"]), "lead": md(s["message"]), "rests": md(s.get("show") or " "),
@@ -1513,7 +1519,7 @@ def build_slide(s, n, total):
             parts.update(d2)
             y += max(h1, h2) + GAP
         if s.get("limit"):
-            add(notice(pid, y, "Limit: " + s["limit"]))
+            add(notice(pid, y, labels["limit"] + s["limit"]))
         if s.get("footnote"):
             add(notice(pid, y, s["footnote"]))
     inst.update(parts)
@@ -1522,7 +1528,51 @@ def build_slide(s, n, total):
     return inst
 
 
-def main(slides_path, board_path):
+DIVIDER_TEMPLATE = {
+    "note": "A divider between two versions of the talk: an empty slide-sized area with one large line; made by the slide generator.",
+    "root": {**CLEAR_AREA, "width": GRID_W, "height": 1800},
+    "parts": {"text": {"type": "text", "text": "{text}", "style": "@style.title", "ink": "@text_secondary", "align": "center",
+                       "x": MARGIN, "y": 820, "width": GRID_W - 2 * MARGIN, "height": 160}},
+}
+
+
+def build_set(sl, prefix, labels, new, rows, order):
+    """One version of the talk: its cover, then per part its section and its slides, each part a row."""
+    talk = sl["talk"]
+    content = [s for s in sl["slides"]]
+    total = len(content)
+    cover = f"{prefix}cover"
+    new[cover] = {
+        "template": "cover", "project": talk.get("project", "project-kit"), "title": talk["title"], "author": talk["author"],
+        "date": talk["date"], "version": talk["version"],
+        "override": {"logo": {"file": "2026-10-29-friday-talk-icons/agents.png"},
+                     "version": {"text": labels["version"].format(version=talk["version"], date=talk["date"])}},
+    }
+    rows[cover] = [cover]
+    order.append(cover)
+    for i, p in enumerate(sl["parts"], 1):
+        sid = f"{prefix}part-{p['id']}"
+        if p.get("section", True):
+            new[sid] = {"template": "section", "part": str(i), "title": p["title"], "summary": p["summary"],
+                        "override": {"eyebrow": {"text": labels["part"].format(part=i)}}}
+            rows[sid] = [sid]
+        else:  # slides on a row of their own, with no section before them (the closing questions)
+            rows[sid] = []
+        order.append(sid)
+        for s in content:
+            if s["part"] == p["id"]:
+                n = content.index(s) + 1
+                new.update(build_slide(s, n, total, prefix, labels))
+                rows[sid].append(f"{prefix}{s['id']}")
+        # Variants of a slide, to choose from: after the part's last slide, so nothing moves.
+        for var in sl.get("variants") or []:
+            of = next(s for s in content if s["id"] == var["of"])
+            if of["part"] == p["id"]:
+                new.update(build_slide({**var, "part": p["id"]}, content.index(of) + 1, total, prefix, labels))
+                rows[sid].append(f"{prefix}{var['id']}")
+
+
+def main(slides_path, board_path, cs_path=None):
     global MAP_DIR
     from pathlib import Path
 
@@ -1547,36 +1597,15 @@ def main(slides_path, board_path):
     board["templates"]["kind_group"] = GROUP_TEMPLATE
     board["templates"]["step_card"] = step_card_template(board["templates"]["stage"])
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
-    talk = sl["talk"]
-    content = [s for s in sl["slides"]]
-    total = len(content)
-    new = {}
-    new["T-cover"] = {
-        "template": "cover", "project": talk.get("project", "project-kit"), "title": talk["title"], "author": talk["author"],
-        "date": talk["date"], "version": talk["version"],
-        "override": {"logo": {"file": "2026-10-29-friday-talk-icons/agents.png"}},
-    }
-    rows = {"T-cover": ["T-cover"]}
-    order = ["T-cover"]
-    for i, p in enumerate(sl["parts"], 1):
-        sid = f"T-part-{p['id']}"
-        if p.get("section", True):
-            new[sid] = {"template": "section", "part": str(i), "title": p["title"], "summary": p["summary"]}
-            rows[sid] = [sid]
-        else:  # slides on a row of their own, with no section before them (the closing questions)
-            rows[sid] = []
-        order.append(sid)
-        for s in content:
-            if s["part"] == p["id"]:
-                n = content.index(s) + 1
-                new.update(build_slide(s, n, total))
-                rows[sid].append(f"T-{s['id']}")
-        # Variants of a slide, to choose from: after the part's last slide, so nothing moves.
-        for var in sl.get("variants") or []:
-            of = next(s for s in content if s["id"] == var["of"])
-            if of["part"] == p["id"]:
-                new.update(build_slide({**var, "part": p["id"]}, content.index(of) + 1, total))
-                rows[sid].append(f"T-{var['id']}")
+    new, rows, order = {}, {}, []
+    build_set(sl, "T-", LABELS["en"], new, rows, order)
+    if cs_path:
+        # The Czech version, under the English one: a divider slide first, then the same talk in Czech.
+        board["templates"]["divider"] = DIVIDER_TEMPLATE
+        new["T-cs-divider"] = {"template": "divider", "text": "Česká verze"}
+        rows["T-cs-divider"] = ["T-cs-divider"]
+        order.append("T-cs-divider")
+        build_set(yaml.safe_load(open(cs_path)), "T-cs-", LABELS["cs"], new, rows, order)
     board["templates"].update(EXTRA_TEMPLATES)
     for k, v in new.items():
         if k in old_ids:
@@ -1590,4 +1619,4 @@ def main(slides_path, board_path):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)
