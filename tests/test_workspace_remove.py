@@ -147,6 +147,14 @@ def test_a_missing_path_inside_refuses_nothing_and_the_call_runs_again(root: Pat
     assert again.exit_code == 0, again.output
 
 
+def test_a_path_under_a_file_names_nothing(root: Path) -> None:
+    _file(root / WS / "notes.md")
+    result = _run(f"{WS}/notes.md/inner")
+    assert result.exit_code == 0, result.output
+    assert "missing" in result.stdout
+    assert (root / WS / "notes.md").exists()
+
+
 def test_a_path_given_twice_or_under_another_is_gone_once(root: Path) -> None:
     _file(root / WS / "d" / "x.md")
     result = _run(f"{WS}/d", f"{WS}/d/x.md", f"./{WS}/d")

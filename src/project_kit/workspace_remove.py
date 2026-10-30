@@ -212,9 +212,10 @@ def _test(given: str, cwd: str, root: str, names: _CapabilityNames) -> Target | 
     lasting = names.lasting(parts[0], folder, (root, checkout))
     if lasting is not None:
         return Held(given, lasting)
-    if not os.path.lexists(where):
+    try:
+        nested = _nested_below(where)
+    except (FileNotFoundError, NotADirectoryError):  # names nothing, even if it just vanished
         return None
-    nested = _nested_below(where)
     if nested is not None:
         return Held(given, nested)
     return Target(given, folder, parts)
@@ -256,7 +257,8 @@ def _nested_above(where: str, folder: str) -> str:
 def _nested_below(where: str) -> str | None:
     """Why `where`, a folder to remove, may not go: a `.git` entry anywhere in
     it, or a folder in it that cannot be read whole. None for a file or link,
-    and for a folder that holds no `.git` entry. Links are not followed."""
+    and for a folder that holds no `.git` entry. Links are not followed.
+    Raises `os.lstat`'s error where `where` names nothing."""
     if not stat.S_ISDIR(os.lstat(where).st_mode):
         return None
     unread: list[OSError] = []
