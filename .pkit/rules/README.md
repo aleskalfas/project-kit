@@ -11,7 +11,8 @@ pkit:
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - src/project_kit/install.py
         - src/project_kit/loaded_rule_sets.py
-      record: [COR-001, COR-014, "COR-051#6", "COR-064#1", "COR-064#2", COR-068, COR-069, ADR-075, ADR-077]
+        - src/project_kit/loaded_rules.py
+      record: [COR-001, COR-014, "COR-051#6", "COR-064#1", "COR-064#2", COR-068, COR-069, COR-070, ADR-075, ADR-076, ADR-077]
       artefact:
         - .pkit/schemas/README.md#rule-set-files
         - .pkit/cli/README.md#rule-sets-altered---base-ref---head-rev---json
@@ -20,7 +21,7 @@ pkit:
 
 # Rules
 
-Operational rules and tool hygiene patterns the kit ships for any project that adopts it. Every agent session loads two files: `core.md`, the kit's rules, and `project.md`, your project's own, which you own (COR-014).
+Operational rules and tool hygiene patterns the kit ships for any project that adopts it. Every agent session loads three files: `core.md`, the kit's rules; `capabilities.md`, an index of the rules each installed capability ships; and `project.md`, your project's own, which you own (COR-014, COR-070).
 
 ## Layout
 
@@ -28,14 +29,41 @@ Operational rules and tool hygiene patterns the kit ships for any project that a
 .pkit/rules/
 ├── README.md                             # this file
 ├── core.md                               # kit's universal hard rules + tool hygiene, generated
+├── capabilities.md                       # the capabilities' rules index, rendered for your project
 └── project.md                            # your project's own operational rules (adopter-owned)
 
 .pkit/rule-sets/
 ├── README.md                             # the folder's signpost
 └── ops.md                                # OPS, the set core.md is generated from
+
+.pkit/capabilities/<name>/
+├── rule-sets/<file>.md                   # a capability's loaded set, where it ships one
+└── rules.md                              # the capability's loaded file, generated from it
 ```
 
-`core.md` is **kit-owned** (propagation per COR-001): refreshed on every sync, not editable by adopters. To extend the rules in your project, add them to `project.md` — sync never touches it — and your root `CLAUDE.md` includes both `@.pkit/rules/core.md` and `@.pkit/rules/project.md`, so kit and project rules compose naturally.
+`core.md` is **kit-owned** (propagation per COR-001): refreshed on every sync, not editable by adopters. To extend the rules in your project, add them to `project.md` — sync never touches it — and your root `CLAUDE.md` includes `@.pkit/rules/core.md`, `@.pkit/rules/capabilities.md` and `@.pkit/rules/project.md`, in that order, so kit, capability and project rules compose naturally.
+
+## How the layers stand
+
+Every layer's rules bind at once: core's, each installed capability's and your project's. A capability's rules and your project's add to core's and never loosen them, and your project's never loosen a capability's. Where two cannot both be kept, the upper layer's rule binds: core's above a capability's, and both above your project's. Where rules of two capabilities cannot both be kept, the session stops the step and reports the clash, rather than choose between them (COR-070 point 4). A project that wants less proposes the change where the rule is kept, or uninstalls the capability.
+
+## A capability's rules
+
+A capability may ship operational rules of its own, as one loaded rule set in its `rule-sets/` folder: rules that bind on a session's work wherever the capability is installed (COR-070). Installing the capability is your consent to them, as it is to the project rule set its install declares, and install, sync and upgrade say which rules they newly bind, change or retire, core's among them. That is information, not a gate.
+
+- **Its loaded file** is `.pkit/capabilities/<name>/rules.md`, generated from the set where the capability is authored, by `pkit rule-sets generate`, and checked there as `core.md` is. In your project it arrives with the capability, by install, sync or upgrade, and you edit neither.
+- **Its preface** names the capability and says how its rules stand; it includes these sentences, its names filled in: "*These are the `<capability>` capability's operational rules, kept as its loaded rule set `<SET>` (COR-070). They bind on the work of every session in a project where `<capability>` is installed. They add to core's rules and never loosen them, and where one cannot be kept with a rule of core's, core's binds. A project's rules add to these and never loosen them. Where one of these rules cannot be kept with a rule of another capability's, stop the step and report the clash, rather than choose between them. Where a project's rule cannot be kept with one of these, this one binds.*" A session reads the file, not the records, so the file says whose rules they are. Validation fails a capability's loaded set whose preface does not name the capability, where the set is authored.
+- **Its rules are cited** by their ids with the capability's name, such as `project-management:RS-PM-001`, never by a form of capability and number.
+- **Its origins** cite a record of the capability's own, a core record, or give the decider's words, since the set is validated in every project that installs it.
+
+## The capabilities' rules index
+
+`.pkit/rules/capabilities.md` is how a session reaches each installed capability's loaded file (ADR-076 point 2). The backbone renders it whole for your project, from the capabilities your manifest registers and the form your adapter declares (`pkit rule-sets loaded` lists the same answer). It opens with a marker line, an HTML comment the harness drops, then holds one entry per registered capability that ships a loaded set, by the capabilities' names. It holds no rules of its own, and nothing else.
+
+- **Rendered** at first install, sync, upgrade, and each capability's install, register, upgrade and uninstall. It is committed with `.pkit/`, so every checkout that holds `core.md` holds it too.
+- **Nobody edits it.** A hand edit is overwritten at the next render, and `pkit validate` fails it until then. A file at its path that holds text but not the marker is not the index: sync and upgrade refuse to run until you move it. An empty file there is rendered over.
+- **Reached by one line** your `CLAUDE.md` keeps after core's include, `@.pkit/rules/capabilities.md`, which the adapter's merge inserts wherever it is absent. The line never needs removing: uninstalling a capability changes the index alone.
+- **Checked.** `pkit validate` fails an index out of step with the registered capabilities, an entry whose file is missing, and a `CLAUDE.md` without the line (the CLI reference, `validate`).
 
 ## Where the rules are kept
 
@@ -80,7 +108,7 @@ Seven categories:
 - **When a step fails** — retry once a step that failed for a cause outside your own work, then stop and report.
 - **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly; before a choice later work will build on, draft the record that decides it, for a person to accept; and follow the rule sets' rules on what your change owns.
 
-Each rule is terse: what it requires, in as few sentences as it needs, and a pointer to the record or area README that owns its reason, or to the issue that decided it. A rule that cites neither leaves its reason to its origin in the set, as `core.md`'s preface says. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
+Each rule is terse: what it requires, in as few sentences as it needs, and a pointer to the record or area README that owns its reason, or to the issue that decided it. A rule that cites neither leaves its reason to its origin in the set, as `core.md`'s preface says. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository. A loaded set's statements and prose hold no token outside code that opens with the harness's import form, such as a bare `@name`, since a session that loads the file could read it as an import of its own; validation refuses one.
 
 `core.md` itself follows core rule 13 (the `@`-include authoring convention): no top-level heading, opens with an italic preface, sections start at H2. The host `CLAUDE.md` owns the H1 and places the `@<path>` line after its intro paragraph, so the included sections become natural sub-sections of the host. This pattern applies to any future kit-shipped file intended for `@`-include.
 
@@ -89,3 +117,4 @@ Each rule is terse: what it requires, in as few sentences as it needs, and a poi
 - **Rationale.** That lives in the cited COR / PRJ / area README. A rule none of them holds cites the issue that decided it, or leaves its reason to its origin in the set. The rules file points; it does not re-state.
 - **Project-kit-internal mechanics.** Things like the project-kit's own version-bump policy (PRJ-002) belong in the project's own records and CLAUDE.md, not in the kit-shipped rules adopters receive. The rules file uses project-neutral phrasing — adopters never see project-kit-specific content there.
 - **Adopter-specific rules.** Those go in the adopter's `project.md`.
+- **A rule that binds only where a capability is installed.** That goes in the capability's loaded set, not in core's, whose rules bind in every project, and not in the capability's documentation, which no session loads (COR-070 point 5).

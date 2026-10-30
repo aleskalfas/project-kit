@@ -1,0 +1,19 @@
+answers:
+  - artefact: .pkit/decisions/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T02:33:10Z
+      outcome: unchanged
+      unchanged-because: "This change: document_parts.py adds two public readers, of lines outside fences and of running text, and changes no reading; rule_sets.py lifts the refusal of a capability's loaded set and adds the delivery check, the import-token, preface and orphaned-file findings, and counts each registered capability's loaded file against its budget; COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set; COR-068 points 3 to 6 gain pointers to COR-070 on a capability's loaded set and what a step newly binds; the lifecycle README gains the index among transition steps and sync's writes. The README's own text is as main holds it, its acceptance gate already the trim's (#2261, landed). Its record schema, statuses, id spaces and the gate are untouched, and its account of rule sets and their loaded sets holds with #2262's budget beside it."

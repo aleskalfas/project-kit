@@ -111,7 +111,7 @@ WHEEL_VERSIONS = (WHEEL_STANDARD, WHEEL_EDITABLE)
 # destinations — the duplication this hook exists to remove.
 # A WHOLESALE tree left in the static list ships unfiltered — that is the bug.
 # Note the criterion is not "has a `project/` subdirectory": `rules` has none
-# and is a member because of `rules/project.md`.
+# and is a member because of `rules/project.md` and the index `rules/capabilities.md`.
 #
 # `decisions/core` is the one member below the top level. It is bundled
 # wholesale, so it is the same case: as a static directory force-include it

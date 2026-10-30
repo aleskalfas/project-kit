@@ -72,6 +72,8 @@ def ownership():
         ("agents/project/overlay.yaml", True),
         ("agents/core/critic.md", False),
         ("rules/project.md", True),
+        # The capabilities' rules index is rendered for each project (ADR-076 point 2).
+        ("rules/capabilities.md", True),
         ("rules/core.md", False),
         ("decisions/project/PRJ-001-x.md", True),
         ("decisions/core/COR-001-x.md", False),

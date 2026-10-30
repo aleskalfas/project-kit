@@ -50,7 +50,7 @@ COR-068 leaves open:
 ### 2. One function projects a loaded set into its loaded file
 
 - **The home:** one function, in a module beside the rule-set reader, takes a loaded set as read and gives its loaded file's text. The generator writes that text, and the check compares the file with it. No other code builds a loaded file, so the two never disagree on what the file should hold.
-- **Where the file goes:** by the set's owner, not by a key in the set. The backbone's loaded set has its loaded file at `.pkit/rules/core.md`, the path the harness's include reads. One constant holds that path. A path in the data would let a set write any file, or two sets write one.
+- **Where the file goes:** by the set's owner, not by a key in the set. The backbone's loaded set has its loaded file at `.pkit/rules/core.md`, the path the harness's include reads. One constant holds that path. A path in the data would let a set write any file, or two sets write one. A capability's loaded file is `.pkit/capabilities/<name>/rules.md`, which the one function that gives each owner's loaded file gives from the capability's name (refinement per [ADR-076](ADR-076-capability-rules-index.md) point 1).
 - **What it reads:** the set's body and its rules' statuses, through the one reading of a document's parts (ADR-057 point 2). It reads nothing else.
 
 ### 3. The loaded file holds each accepted rule as `### N. Title (RS-OPS-0NN)`, under the set's sections
@@ -87,7 +87,7 @@ COR-068 leaves open:
 - **The `rule-sets` member refuses** what needs other files:
   - a set whose `inherits` names a loaded set
   - a second loaded set in one component's folder (COR-068 point 1)
-  - a set marked loaded in a capability's folder (COR-068 point 4)
+  - a set marked loaded in a capability's folder (COR-068 point 4). Lifted: a capability ships one loaded set, a second is refused as in any component's folder, and the member also refuses, in any loaded set, a token outside code that opens with an import prefix a registered adapter declares (refinement per [ADR-076](ADR-076-capability-rules-index.md) point 1)
   - an H1 in a loaded set's body
 - **A project's own loaded set** (COR-068 point 7) is validated as any loaded set is, and gets a loaded file the same way: point 2's function, with the loaded file at `.pkit/rules/project.md`, the path the project's include reads. Converting the plain file is the project's own step: write the set under its internal documentation root, give each rule its origin, and run the generator. The rules area's reference says how.
 - **What stays as for every set:** the schema's other keys, the join, ids, origins and successors (COR-068 point 1).

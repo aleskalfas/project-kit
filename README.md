@@ -39,7 +39,7 @@ pkit:
         - .pkit/agents/core/convention-compliance-reviewer.md
         - .pkit/capabilities/project-management/scripts/create-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
-      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
+      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, COR-070, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
       artefact:
         - ACT-adopter
         - ACT-ai-agent
@@ -104,11 +104,12 @@ The examples run in a fresh repository after [Install](#install) and `pkit init`
 
 ### Your rules load into every session
 
-**Your decisions live in the repository, not in a chat that is gone.** `pkit init` adds two include lines to your `CLAUDE.md`, so Claude Code loads the methodology's rules and yours whenever a session starts. Those rules tell every agent to build only on accepted decisions, and an agent's draft starts as `proposed` ([the decisions README, "The acceptance gate"](.pkit/decisions/README.md#the-acceptance-gate)):
+**Your decisions live in the repository, not in a chat that is gone.** `pkit init` adds three include lines to your `CLAUDE.md`. Claude Code then loads the methodology's rules, those of each capability you install, and yours whenever a session starts. Those rules tell every agent to build only on accepted decisions, and an agent's draft starts as `proposed` ([the decisions README, "The acceptance gate"](.pkit/decisions/README.md#the-acceptance-gate)):
 
 ```console
 $ grep @.pkit CLAUDE.md
 @.pkit/rules/core.md
+@.pkit/rules/capabilities.md
 @.pkit/rules/project.md
 $ grep -o "Act only on accepted decisions and rules" .pkit/rules/core.md
 Act only on accepted decisions and rules

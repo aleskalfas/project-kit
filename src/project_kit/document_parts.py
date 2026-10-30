@@ -227,6 +227,29 @@ def _scan(body: str) -> Iterator[tuple[int, str, bool]]:
         start += len(line) + 1
 
 
+def lines_outside_fences(body: str) -> Iterator[tuple[str, bool]]:
+    """Every line of `body` and whether it lies outside fenced code, as every reader of a
+    body's parts reads it (`_scan`): a line that opens or closes a fence lies inside it."""
+    for _start, line, outside in _scan(body):
+        yield line, outside
+
+
+def running_text(body: str) -> str:
+    """`body` with its fenced code, its code spans and its comments blanked, every other
+    character where it was and every line break kept: the text read as prose.
+
+    Fenced code is what `_scan` finds, and a code span or a comment is what hides a run of
+    running text (`_CODE_SPAN`, `_COMMENT`), so a token in any of them is no token of the
+    prose."""
+    kept = [line if outside else " " * len(line) for _start, line, outside in _scan(body)]
+    text = "\n".join(kept)
+
+    def blank(match: re.Match[str]) -> str:
+        return re.sub(r"[^\n]", " ", match.group(0))
+
+    return _CODE_SPAN.sub(blank, _COMMENT.sub(blank, text))
+
+
 def body_headings(body: str) -> tuple[Heading, ...]:
     """The headings of a Markdown body, in order, fenced code skipped.
 

@@ -103,6 +103,8 @@ def test_core_areas_are_sync_managed(tmp_path: Path, path: str) -> None:
         ".pkit/decisions/project/PRJ-001-x.md",
         ".pkit/skills/project/mine.md",
         ".pkit/rules/project.md",
+        # The capabilities' rules index, rendered for each project (ADR-076 point 2).
+        ".pkit/rules/capabilities.md",
         ".pkit/scratchpad/active/note.md",
         ".pkit/scratchpad/done/note.md",
         ".pkit/project/config.yaml",

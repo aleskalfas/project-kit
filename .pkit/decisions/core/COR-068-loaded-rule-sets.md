@@ -40,24 +40,24 @@ A loaded set's accepted rules bind on the work of each session that loads its lo
 The file a session loads is a projection of the set (COR-065 point 1), generated where the set is authored.
 - **Its content:** the set's accepted rules in the set's order, under the set's sections, each rule under a heading that names its id and title, followed by its statement. The prose between sections carries over. It holds no front matter, no origin and no retired rule, and takes the form the harness's include requires. Each statement keeps its pointer to the record it rests on (COR-065 point 7). The origin is the validated data behind that pointer.
 - **Kept in step:** a change that accepts, edits, supersedes or withdraws a rule regenerates the loaded file in the same change. Validation fails where the set is authored when the loaded file does not match its set.
-- **Delivered with its set:** a project that receives the set by sync receives its loaded file with it, at the place the harness's include reads, by the sync that refreshes the backbone's files (COR-001). The project neither generates it nor edits it. Core's loaded file is not suspendable (COR-001), since core's set binds in every project.
+- **Delivered with its set:** a project that receives the set by sync receives its loaded file with it, at the place the harness's include reads, by the sync that refreshes the backbone's files (COR-001). The project neither generates it nor edits it. Core's loaded file is not suspendable (COR-001), since core's set binds in every project. A capability's loaded file is kept among the capability's own files and arrives by sync, install and upgrade with its set, and the adapter's delivery brings it to the harness (refinement per [COR-070](COR-070-capability-loaded-rules.md) point 1).
 
 ### 4. Which sets bind where
 
 - **Core's loaded set** is a method set the backbone ships. It binds in every project that adopts the methodology, from its first session.
 - **A project's own loaded set** is a project set. It binds in that project.
-- **A capability's loaded set** binds in each project that installs the capability, while it is installed. How its loaded file reaches the sessions, and how a project's rules relate to a capability's, are decided with the first capability that ships one. Until then, validation refuses a capability's set marked loaded, so no accepted rule binds nowhere unseen.
+- **A capability's loaded set** binds in each project that installs the capability, while it is installed. How its loaded file reaches the sessions, and how a project's rules relate to a capability's, are decided with the first capability that ships one. Until then, validation refuses a capability's set marked loaded, so no accepted rule binds nowhere unseen. A capability ships one loaded set, which each adapter delivers by the route that carries core's rules, and no layer's rules loosen another's: a capability's add to core's, and a project's to both (refinement per [COR-070](COR-070-capability-loaded-rules.md) points 1, 2 and 4).
 
 ### 5. A version that no pin holds
 
-A loaded set keeps its version, as every rule-set file does (COR-051 point 2), and COR-051 point 7's rules say which number a change moves. Nothing pins it, so a new version holds nothing back. Its accepted rules bind once their acceptance lands, and in a project once the sync that brings them runs.
+A loaded set keeps its version, as every rule-set file does (COR-051 point 2), and COR-051 point 7's rules say which number a change moves. Nothing pins it, so a new version holds nothing back. Its accepted rules bind once their acceptance lands, and in a project once the sync that brings them runs. Install, sync and upgrade name each loaded set they deliver, core's among them, with the rules it newly binds, changes or retires, as information, not a gate (refinement per [COR-070](COR-070-capability-loaded-rules.md) point 3).
 
 ### 6. Ids, origins and citations
 
 - **A rule's id is its set's** (COR-051 point 3), so it is never renumbered and never reused. A rule that leaves is superseded or withdrawn, and stays in the set (COR-051 point 4).
 - **Core's set is named `OPS`,** for operational. Each rule's number is its id's number, so core rule 19 is `backbone:RS-OPS-019`, cited with its component as a method set's rule is (COR-051 point 6).
 - **Each rule's origin** cites the record that decides it, or gives the decider's words, which may name the issue where the rule was decided (COR-051 point 5).
-- **A citation by core or project and a number,** such as "core rule 19", names that layer's rule of that number, and stays a valid citation of it (refinement of COR-051 point 6).
+- **A citation by core or project and a number,** such as "core rule 19", names that layer's rule of that number, and stays a valid citation of it (refinement of COR-051 point 6). A capability's rules are cited by their ids with the capability's name, and by no form of capability and number (refinement per [COR-070](COR-070-capability-loaded-rules.md) point 1).
 - **Validation reports** a citation, in either form, of a rule that is missing, superseded or withdrawn, as a warning, since it is read from prose (COR-055). Where a set is authored it reads every citation of the set's rules. In a project that receives a set, it reads the project's own citations of that set's rules. It reads neither synced copies nor history: superseded records and recorded answers stay as they were written.
 
 ### 7. A project's rules not yet in a set

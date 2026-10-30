@@ -1,4 +1,4 @@
-*Operational rules shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`; a project that receives them by sync edits neither (core rule 1). A rule cites the record or issue its reason lives in, and where it cites neither, its origin in the set holds the reason: read it when the why is not obvious, and keep the rule meanwhile.*
+*Operational rules shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`; a project that receives them by sync edits neither (core rule 1). A rule cites the record or issue its reason lives in, and where it cites neither, its origin in the set holds the reason: read it when the why is not obvious, and keep the rule meanwhile. Every layer's rules bind at once: core's, each installed capability's and the project's. A capability's rules and a project's add to core's and never loosen them, and where a rule cannot be kept with one of a layer above it, the upper layer's binds (COR-070).*
 
 ## Hard rules
 
@@ -40,7 +40,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### 9. Conventional commits, one logical unit each (RS-OPS-009)
 
-**Use conventional commits and keep one logical unit per commit.** The branch-naming convention (`<type>/<issue-number>-<slug>`) and any work-tracker-specific requirements for branches (issue-linking, label conventions, etc.) live in the installed work-tracking capability's documentation. See COR-008's "Operational reference" section for the recommended type list and branch-naming examples.
+**Use conventional commits and keep one logical unit per commit.** The branch-naming convention, `<type>/<issue-number>-<slug>`, is COR-008's: see its "Operational reference" section for the recommended type list, the convention and its examples.
 
 ### 10. Surface changes bump the version of the affected component (RS-OPS-010)
 
@@ -114,4 +114,4 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ## Where these rules came from
 
-The split between this file and `.pkit/rules/project.md` is governed by COR-014's universal-applicability principle: rules that apply to any adopting project ship here; rules tied to a specific project's tooling live in the project namespace. Capability-specific operational rules (e.g. work-tracker conventions) live in the capability's own documentation.
+The split between this file and `.pkit/rules/project.md` is governed by COR-014's universal-applicability principle: rules that apply to any adopting project ship here; rules tied to a specific project's tooling live in the project namespace. A rule that binds only where a capability is installed, such as a work tracker's conventions, is kept in that capability's loaded file, which the capabilities' rules index reaches where the adapter delivers it, not in its documentation (COR-070).

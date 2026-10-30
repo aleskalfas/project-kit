@@ -26,7 +26,7 @@ pkit:
         - src/project_kit/loaded_rule_sets.py
         - src/project_kit/working_tree.py
         - .pkit/lifecycle/ownership.py
-      record: [COR-010, COR-017, COR-018, COR-019, COR-020, COR-023, COR-029, COR-030, "COR-033#P7", COR-041, COR-048, "COR-049#5", "COR-049#6", COR-050, COR-051, COR-052, COR-053, "COR-054#1", COR-055, COR-056, COR-062, "COR-064#1", "COR-064#2", COR-068, COR-069, ADR-056, ADR-057, "ADR-058#1", "ADR-058#3", "ADR-058#5", "ADR-068#1", ADR-075, ADR-077]
+      record: [COR-010, COR-017, COR-018, COR-019, COR-020, COR-023, COR-029, COR-030, "COR-033#P7", COR-041, COR-048, "COR-049#5", "COR-049#6", COR-050, COR-051, COR-052, COR-053, "COR-054#1", COR-055, COR-056, COR-062, "COR-064#1", "COR-064#2", COR-068, COR-069, COR-070, ADR-056, ADR-057, "ADR-058#1", "ADR-058#3", "ADR-058#5", "ADR-068#1", ADR-075, ADR-076, ADR-077]
       artefact:
         - .pkit/cli/README.md#friction-artefacts---at-rev---json
         - .pkit/cli/README.md#schemas-validate-path
@@ -652,20 +652,22 @@ The statement.
 
 Unknown keys are refused at every level, each with the nearest known key. The shape carries no version of its own; it is migrated when it changes (ADR-056 point 3).
 
-**Loaded sets** (COR-068; ADR-075 point 6). A loaded set keeps operational rules, the rules every session loads. The backbone's is `OPS`, `.pkit/rule-sets/ops.md`, whose loaded file is `.pkit/rules/core.md` (the rules area's README). Its rules bind on what a session does, not on files, so it takes none of the parts that say where a rule binds.
+**Loaded sets** (COR-068; ADR-075 point 6; COR-070; ADR-076 point 1). A loaded set keeps operational rules, the rules every session loads. The backbone's is `OPS`, `.pkit/rule-sets/ops.md`, whose loaded file is `.pkit/rules/core.md` (the rules area's README). A capability may ship one too, in its `rule-sets/` folder, whose loaded file is its `rules.md`; the capabilities' rules index reaches it. Its rules bind on what a session does, not on files, so it takes none of the parts that say where a rule binds.
 
 - **The schema refuses on a set marked loaded** what the file alone shows: `scope`, `inherits` and `checks`, and `offers` or `fills` on any rule.
 - **The `rule-sets` pass refuses** what needs other files:
   - a set whose `inherits` names a loaded set (`inherits-loaded`)
-  - a second loaded set of the backbone, or of the project, after the first by path (`second-loaded-set`): one to an owner, so "core rule 19" names one rule
-  - a set marked loaded in a capability's folder (`capability-loaded-set`), until the first capability that ships one decides how its loaded file reaches the sessions (COR-068 point 4)
+  - a second loaded set of the backbone, of a capability or of the project, after the first by path (`second-loaded-set`): one to an owner, so "core rule 19" names one rule
   - a first-level heading in the set's body (`loaded-heading`), since the loaded file is included under the host's heading
-- **The loaded file** is generated from the set by `pkit rule-sets generate`: the backbone's at `.pkit/rules/core.md`, a project's own at `.pkit/rules/project.md`. Where it goes is fixed by the set's owner, never by a key. It holds the set's body, each accepted rule's section under the heading `N. Title (RS-<SET>-NNN)` at the level the set writes it, and leaves out the front matter and each other rule's section.
+  - a token outside code, in any loaded set's statements and prose, core's included, that opens with the import prefix a registered adapter's `entry:` declares (`loaded-import-token`), for Claude Code `@`: a session that loads the file could read it as an import of its own. A path in backticks is code, and stays. Where no registered adapter declares an `entry:`, nothing is refused
+  - where a capability is authored, its loaded set's preface, the prose before its first rule, that does not name the capability (`loaded-preface`), and a `rules.md` at the capability's root with no loaded set behind it (`loaded-file-orphaned`)
+- **The loaded file** is generated from the set by `pkit rule-sets generate`: the backbone's at `.pkit/rules/core.md`, a capability's at `.pkit/capabilities/<name>/rules.md`, a project's own at `.pkit/rules/project.md`. Where it goes is fixed by the set's owner, never by a key. It holds the set's body, each accepted rule's section under the heading `N. Title (RS-<SET>-NNN)` at the level the set writes it, and leaves out the front matter and each other rule's section.
 - **Kept in step** (`loaded-file-stale`, an error): where the set is authored, the pass compares the loaded file with the generator's output, byte for byte once line endings are read as `\n`. A file that differs, or is missing, fails. Where the set is authored is asked of the tree's own predicate, `is_synced_copy`: where the set arrives by sync, the project receives both files together, and the pass compares neither. A tree without the ownership module cannot tell, so the pass skips the comparison and reports it (`loaded-file-unchecked`).
 - **Its budget** (COR-069; [ADR-077](../../tech-docs/architecture/decisions/ADR-077-rules-budget-realised.md) points 1 and 4): `budget`, at the top of the front matter beside `loaded: true`, bounds the loaded file's words. The pass counts the loaded file as written, and fails it past its budget where the set is authored, or always for the project's own set (`rules-file-over-budget`). Where it is authored, a component's loaded set that gives no `budget` fails (`loaded-set-without-budget`). Where the set arrives by sync, its file's count is reported and fails nothing. How a word is counted, and the summary line of each rules file, are the CLI reference's (`validate`); where each budget is set and how a change raises it are the rules area's README's.
 - **What holds as for every set:** the other keys, the join, ids, origins and successors. A loaded rule is an artefact, so a change to it is friction for what anchors to it.
 - **Where it binds:** no route starts at a loaded set or passes through one (below), so the rule-set reviewer and every per-artefact check judge no artefact against a loaded rule.
-- **Citing a loaded rule:** by its id, `backbone:RS-OPS-019`, or by layer and number, "core rule 19" ("Citing a rule" below).
+- **Citing a loaded rule:** by its id, `backbone:RS-OPS-019` or a capability's `project-management:RS-PM-001`, or, for core's and a project's own, by layer and number, "core rule 19" ("Citing a rule" below). A capability's rule has no form by layer and number (COR-070 point 1).
+- **How it reaches a session** is checked in the same pass, against the capabilities' rules index and the host file each registered adapter declares (`loaded-rules-undelivered`; the CLI reference, `validate`).
 
 **The body.** One section per rule, headed by its id and its title — `## RS-DOC-001 — Answer first`, at any heading level — holding the statement. A rule's content, for friction, is its data entry together with that section. Headings inside fenced code are not sections.
 
@@ -675,7 +677,7 @@ Unknown keys are refused at every level, each with the nearest known key. The sh
 
 **Citing a rule.** `RS-<SET>-NNN` or `RS-<SET>-NNN#<point>`, and with the owning component in front for a method rule set — `[living-docs:RS-LDOC-003]` in prose, in brackets like a capability decision citation, and `living-docs:RS-LDOC-003` in data. A bare id resolves too, since set names are unique; a component, when written, must be the one that owns the set. `pkit refs validate` resolves every rule citation in an agent's or skill's body, but a loaded set's, which the next check reads; `pkit refs lookup <citation>` prints where the rule lives; `refs.schema.json#/$defs/rule_citation` checks the shape in data; `pkit decisions validate` reports a rule id claimed twice across the rule sets.
 
-**Citing an operational rule** (COR-068 point 6; ADR-075 point 8). A rule of a loaded set is cited by its id, as any rule is, or by its layer and number: `core rule 19` names `backbone:RS-OPS-019`, and `project rule N` a rule of the project's own loaded set. Validation's `refs` member reads both, and warns of a citation of a rule the set lacks, or of a superseded or withdrawn one, naming its successor. The forms it reads, and the files it reads them in, are the CLI reference's (`validate`).
+**Citing an operational rule** (COR-068 point 6; ADR-075 point 8). A rule of a loaded set is cited by its id, as any rule is, or by its layer and number: `core rule 19` names `backbone:RS-OPS-019`, and `project rule N` a rule of the project's own loaded set. A capability's is cited by its id with the capability's name, `<capability>:RS-<SET>-NNN`, and by no form of capability and number (COR-070 point 1). Validation's `refs` member reads both, and warns of a citation of a rule the set lacks, or of a superseded or withdrawn one, naming its successor. The forms it reads, and the files it reads them in, are the CLI reference's (`validate`).
 
 **What the pass checks.** Errors fail `pkit validate`; reports print under its `rule-sets` heading.
 

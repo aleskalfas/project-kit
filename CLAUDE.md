@@ -3,6 +3,7 @@
 This is project-kit's own source repo — the methodology framework itself, not an adopting project. project-kit self-hosts.
 
 @.pkit/rules/core.md
+@.pkit/rules/capabilities.md
 @.pkit/rules/project.md
 
 ## Where to find what

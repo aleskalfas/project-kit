@@ -88,7 +88,7 @@ skip-excluded-dirs = true
 # That covers the `project/` globs only. EVERY OTHER LINE BELOW IS A HAND-COPY
 # of a specific case in `.pkit/lifecycle/ownership.py`, and hand-copies drift —
 # which is this whole change's thesis. The mapping:
-#   `.pkit/rules/project.md`      <- the `rules/project.md` case
+#   `.pkit/rules/project.md`, `.pkit/rules/capabilities.md` <- `_PROJECT_RULES_FILES`
 #   `.pkit/scratchpad/{active,done,dropped}` <- `_SCRATCHPAD_STATE_DIRS`
 #   `.pkit/manifest.yaml`, `.pkit/.gitignore` <- `_ADOPTER_OWNED_KIT_FILES`
 # Widening any of those in that module requires a matching line here, or the
@@ -101,6 +101,8 @@ withhold = [
   ".pkit/**/project",
   ".pkit/project",
   ".pkit/rules/project.md",
+  # The capabilities' rules index, rendered for each project (ADR-076 point 2).
+  ".pkit/rules/capabilities.md",
   ".pkit/scratchpad/active",
   ".pkit/scratchpad/done",
   ".pkit/scratchpad/dropped",

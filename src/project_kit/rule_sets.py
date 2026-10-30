@@ -876,13 +876,15 @@ class RuleSetFindingKind(Enum):
     UNKNOWN_CHECK = "unknown-check"  # a backbone check or registered command that is not there
     PIN_CONFLICT = "pin-conflict"  # routes to one artefact pinning one set at different majors
     FILL_CONFLICT = "fill-conflict"  # the most specific sets bring different fills for a point
-    # A loaded set (COR-068; ADR-075 points 5 and 6).
+    # A loaded set (COR-068; ADR-075 points 5 and 6; ADR-076 point 1).
     INHERITS_LOADED = "inherits-loaded"  # a set inheriting a loaded set, which none inherits
     SECOND_LOADED = "second-loaded-set"  # a second loaded set of one component, or the project
-    CAPABILITY_LOADED = "capability-loaded-set"  # a capability's set marked loaded
     LOADED_HEADING = "loaded-heading"  # an H1 in a loaded set's body
     LOADED_FILE_STALE = "loaded-file-stale"  # the loaded file differs from its set, or is missing
     LOADED_FILE_UNCHECKED = "loaded-file-unchecked"  # no ownership module: not compared
+    LOADED_PREFACE = "loaded-preface"  # a capability's loaded set whose preface names it not
+    LOADED_FILE_ORPHANED = "loaded-file-orphaned"  # a capability's rules.md with no loaded set
+    LOADED_IMPORT_TOKEN = "loaded-import-token"  # a harness's import token outside code
     # A rules file's budget (COR-069; ADR-077 point 4).
     RULES_FILE_OVER_BUDGET = "rules-file-over-budget"  # more words than its budget allows
     LOADED_SET_WITHOUT_BUDGET = "loaded-set-without-budget"  # a component's, where authored
@@ -1005,6 +1007,10 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
     from project_kit import loaded_rule_sets  # it reads this module's model
 
     findings.extend(loaded_rule_sets.staleness_findings(target_root, discovery))
+    findings.extend(loaded_rule_sets.capability_findings(target_root, discovery))
+    from project_kit import loaded_rules  # it reads this module's model
+
+    findings.extend(loaded_rules.import_token_findings(target_root, discovery))
     budgets = loaded_rule_sets.check_budgets(target_root, discovery)
     findings.extend(budgets.findings)
     findings.extend(_conflict_findings(reach(fd.shared_discovery(target_root), discovery)))
@@ -1503,30 +1509,20 @@ def _loaded_set_findings(
 ) -> Iterable[RuleSetFinding]:
     """What a loaded set gets wrong beyond its file's shape (COR-068; ADR-075 point 6).
 
-    - a capability's set marked loaded: how its loaded file would reach the sessions is
-      decided with the first capability that ships one, so until then its accepted rules
-      would bind nowhere unseen (COR-068 point 4)
     - a second loaded set of one component, or of the project, after the first by path:
       one loaded set to an owner, so a citation by layer and number names one rule
-      (COR-068 point 1)
+      (COR-068 point 1). A capability ships one too (COR-070 point 1)
     - an H1 in its body: the host file of the loaded file owns it (core rule 13)
 
     A set that inherits a loaded set is the inheritance check's (`_inheritance_findings`),
-    and what the file alone shows is the schema's.
+    and what the file alone shows is the schema's. What needs the tree's ownership or its
+    adapters, a capability's preface and an import token in a statement, is the loaded
+    files' module's (`loaded_rule_sets.capability_findings`,
+    `loaded_rules.import_token_findings`).
     """
     if not rule_set.loaded:
         return
     component = rule_set.component
-    if component is not None and component != fd.BACKBONE_COMPONENT:
-        yield _error(
-            rule_set.path,
-            f"/{LOADED_KEY}",
-            RuleSetFindingKind.CAPABILITY_LOADED,
-            f"{rule_set.owner} ships this rule set marked loaded, and a capability's loaded "
-            f"set is refused until the first capability that ships one decides how its loaded "
-            f"file reaches the sessions, so no accepted rule binds nowhere unseen (COR-068 "
-            f"point 4). Remove `{LOADED_KEY}`, or keep the rules in an ordinary set.",
-        )
     first = next(
         (other for other in discovery.rule_sets if other.loaded and other.component == component),
         rule_set,
@@ -2980,8 +2976,12 @@ UMBRELLA_SEVERITY = {
 
 
 def outcome(target_root: Path) -> validators.Outcome:
-    """The `rule-sets` member of `pkit validate`: the counts, then every finding —
-    errors fail, reports print (COR-051)."""
+    """The `rule-sets` member of `pkit validate`: the counts, then the delivery's line,
+    then every finding — errors fail, warnings and reports print (COR-051). The delivery
+    of the loaded files is the loaded files' module's check (`loaded_rules.check_delivery`,
+    ADR-076 point 5): its findings follow the pass's."""
+    from project_kit import loaded_rules  # it reads this module's model
+
     result = validate_rule_sets(target_root)
     findings = tuple(
         validators.Finding(
@@ -2991,7 +2991,10 @@ def outcome(target_root: Path) -> validators.Outcome:
         )
         for f in result.findings
     )
-    return validators.Outcome(tuple(summary_lines(result)), findings)
+    delivery = loaded_rules.check_delivery(target_root)
+    return validators.Outcome(
+        (*summary_lines(result), *delivery.summary), (*findings, *delivery.findings)
+    )
 
 
 # --- helpers ---------------------------------------------------------------------

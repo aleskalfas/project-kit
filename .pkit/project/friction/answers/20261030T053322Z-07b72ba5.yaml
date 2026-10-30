@@ -1,0 +1,31 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200836Z-0e9bee72.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+    revalidated:
+      at: 2026-10-30T05:33:22Z
+      outcome: updated
