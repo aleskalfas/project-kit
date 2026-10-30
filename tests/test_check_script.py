@@ -39,6 +39,14 @@ the same order, but the suite, and in its place only the tests marked `answers`;
 nothing marked passes, a failing one fails the run. Any other argument is
 refused before a check runs.
 
+The parts of a full run (#2308, ADR-078 point 1): `--rest` runs every line the whole
+run runs, in the same order, but the parallel pass, with the tests marked `serial`
+in the test step's place; `--shard i/N` runs only the parallel pass, cut to its
+share, after taking a slot. Together they run what the whole run runs. A slice
+whose share holds no test, pytest's exit 5, fails; any other failure does too.
+Where `$PKIT_TEST_REPORTS` names a folder, each pass reports into a folder of its
+own, and a slice reports its cut even where it names none.
+
 `check.sh` runs here for real, against a stub `uv` first on PATH, so no test
 runs the suite or pyright: the stub records every command it is handed; its
 `pytest` records its arguments and, on the parallel pass, holds until the test
@@ -73,8 +81,8 @@ RUN_EXAMPLES = ".pkit/capabilities/doc-examples/scripts/run-examples.py"
 # fences, which exit with $STUB_CONSOLE_STATUS, and the contents lists, which exit
 # with $STUB_CONTENTS_STATUS;
 # `pkit decisions check-diff` exits with $STUB_NUMBERING_STATUS; `pytest` logs its
-# arguments and, on the parallel pass, holds until the release file exists;
-# anything else passes.
+# arguments and, on the parallel pass, holds until the release file exists and
+# then exits with $STUB_PARALLEL_STATUS; anything else passes.
 STUB_UV = """#!/bin/sh
 shift
 while [ "${{1#-}}" != "$1" ]; do shift; done
@@ -101,7 +109,7 @@ case "$1" in
     case "$*" in
       *"not serial"*)
         while [ ! -e "$STUB_RELEASE" ]; do sleep 0.1; done
-        exit 0 ;;
+        exit "${{STUB_PARALLEL_STATUS:-0}}" ;;
       *"-m answers"*) exit "${{STUB_ANSWERS_STATUS:-0}}" ;;
     esac
     exit "${{STUB_SERIAL_STATUS:-0}}" ;;
@@ -418,12 +426,132 @@ def test_the_short_check_passes_with_nothing_marked_and_fails_on_a_failure(
     assert ("FAILED" in done.stdout) != ok
 
 
-@pytest.mark.parametrize("args", [("--quick",), ("--short", "--short"), ("short",)])
+@pytest.mark.parametrize(
+    "args",
+    [
+        ("--quick",),
+        ("--short", "--short"),
+        ("short",),
+        ("--rest", "--short"),
+        ("--shard",),
+        ("--shard", "0/2"),
+        ("--shard", "3/2"),
+        ("--shard", "1/0"),
+        ("--shard", "a/b"),
+        ("--shard", "1/2", "--rest"),
+        ("--shard=1/2",),
+        ("--rest", "--shard", "1/2"),
+    ],
+)
 def test_any_other_argument_is_refused_before_a_check_runs(
     checkout: Checkout, args: tuple[str, ...]
 ) -> None:
     done = checkout.check(*args)
 
     assert done.returncode == 2
-    assert "usage: scripts/check.sh [--short]" in done.stderr
+    assert "usage: scripts/check.sh [--short | --rest | --shard i/N]" in done.stderr
     assert not checkout.steps.exists()
+
+
+# --- the parts of a full run (#2308, ADR-078) ------------------------------------------
+
+#: What taking a test slot hands `uv`: `python -` and the slot's arguments.
+TAKES_A_SLOT = "python - "
+
+
+def _ran(checkout: Checkout, *args: str, **env: str) -> list[str]:
+    """What `check.sh` with `args` hands `uv`, once it ran to the end and passed."""
+    if checkout.steps.exists():
+        checkout.steps.unlink()
+    done = checkout.check(*args, **env)
+    assert done.returncode == 0, done.stdout + done.stderr
+    return checkout.steps.read_text().splitlines()
+
+
+def test_the_remainder_runs_every_line_but_the_parallel_pass(checkout: Checkout) -> None:
+    whole = _ran(checkout)
+
+    rest = _ran(checkout, "--rest")
+
+    assert rest == [
+        step for step in whole if step != PARALLEL_PASS and not step.startswith(TAKES_A_SLOT)
+    ]
+    assert "pytest -q -m serial" in rest
+
+
+def test_a_slice_runs_its_share_of_the_parallel_pass_and_nothing_else(
+    checkout: Checkout,
+) -> None:
+    ran = _ran(checkout, "--shard", "2/3")
+
+    assert len(ran) == 2
+    assert ran[0].startswith(TAKES_A_SLOT)
+    assert ran[1].startswith(f"{PARALLEL_PASS} --shard=2/3 --test-report=")
+    assert ran[1].endswith("/parallel")
+
+
+@pytest.mark.parametrize("count", [1, 2, 3])
+def test_the_parts_together_are_the_whole_run(checkout: Checkout, count: int) -> None:
+    """The remainder and every slice run each line the whole run runs, the parallel pass
+    once for each slice, with its share."""
+    whole = _ran(checkout)
+    rest = _ran(checkout, "--rest")
+    shares = [_ran(checkout, "--shard", f"{i}/{count}") for i in range(1, count + 1)]
+
+    parallel = [step for share in shares for step in share if step.startswith(PARALLEL_PASS)]
+    assert [step.split(" --test-report=")[0] for step in parallel] == [
+        f"{PARALLEL_PASS} --shard={i}/{count}" for i in range(1, count + 1)
+    ]
+    slots = [step for step in whole if step.startswith(TAKES_A_SLOT)]
+    assert sorted({*rest, PARALLEL_PASS, *slots}) == sorted(set(whole))
+    assert len(rest) + 2 == len(whole)
+
+
+@pytest.mark.parametrize(
+    ("status", "ok"),
+    [("0", True), ("5", False), ("1", False)],
+    ids=["passed", "an-empty-share", "a-test-fails"],
+)
+def test_a_slice_whose_share_holds_no_test_fails(checkout: Checkout, status: str, ok: bool) -> None:
+    done = checkout.check("--shard", "1/2", STUB_PARALLEL_STATUS=status)
+
+    assert (done.returncode == 0) == ok
+    verdict = "ok" if ok else "FAILED"
+    assert f"-- tests (slice 1/2 of the parallel pass): {verdict}" in done.stdout
+
+
+def test_the_remainder_passes_with_no_test_marked_serial_and_fails_on_a_failure(
+    checkout: Checkout,
+) -> None:
+    assert checkout.check("--rest", STUB_SERIAL_STATUS="5").returncode == 0
+    failed = checkout.check("--rest", STUB_SERIAL_STATUS="1")
+    assert failed.returncode == 1
+    assert "-- tests (the remainder: only those marked serial): FAILED" in failed.stdout
+    assert "-- changelog lint: ok" in failed.stdout
+
+
+@pytest.mark.parametrize(
+    ("args", "passes"),
+    [
+        ((), ["parallel", "serial"]),
+        (("--rest",), ["serial"]),
+        (("--short",), ["answers"]),
+        (("--shard", "1/2"), ["parallel"]),
+    ],
+    ids=["whole", "rest", "short", "slice"],
+)
+def test_each_pass_reports_into_a_folder_of_its_own_where_reports_are_asked_for(
+    checkout: Checkout, tmp_path: Path, args: tuple[str, ...], passes: list[str]
+) -> None:
+    reports = tmp_path / "reports"
+
+    _ran(checkout, *args, PKIT_TEST_REPORTS=str(reports))
+
+    asked = [line.split("--test-report=")[1] for line in checkout.log.read_text().splitlines()]
+    assert asked == [str(reports / name) for name in passes]
+
+
+def test_a_whole_run_asks_for_no_report_where_none_is_asked_for(checkout: Checkout) -> None:
+    _ran(checkout)
+
+    assert "--test-report" not in checkout.log.read_text()
