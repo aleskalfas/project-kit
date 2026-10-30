@@ -104,7 +104,7 @@ The examples run in a fresh repository after [Install](#install) and `pkit init`
 
 ### Your rules load into every session
 
-**Your decisions live in the repository, not in a chat that is gone.** `pkit init` adds three include lines to your `CLAUDE.md`, so Claude Code loads the methodology's rules, those of each capability you install, and yours whenever a session starts. Those rules tell every agent to build only on accepted decisions, and an agent's draft starts as `proposed` ([the decisions README, "The acceptance gate"](.pkit/decisions/README.md#the-acceptance-gate)):
+**Your decisions live in the repository, not in a chat that is gone.** `pkit init` adds three include lines to your `CLAUDE.md`. Claude Code then loads the methodology's rules, those of each capability you install, and yours whenever a session starts. Those rules tell every agent to build only on accepted decisions, and an agent's draft starts as `proposed` ([the decisions README, "The acceptance gate"](.pkit/decisions/README.md#the-acceptance-gate)):
 
 ```console
 $ grep @.pkit CLAUDE.md
