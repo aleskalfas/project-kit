@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  In a project made private with `pkit visibility private`, install, sync and
+  upgrade now render pkit's region of `.git/info/exclude` again from the
+  footprint, so a component installed since then no longer reaches the shared
+  tree. The rest of the file is kept, and a project that is not private is
+  left as it is.
