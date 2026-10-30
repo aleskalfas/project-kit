@@ -131,6 +131,7 @@ pkit:
 - **11a.** The version in `.pkit/VERSION` already has its tag, as after any push that is no release. `release-tag.yml` cuts no tag and publishes no notes, and the path goes on at step 15.
 - **11b.** The run of `release-tag.yml` for the release push fails. The next push to the default branch finds the version untagged, and tags that push's commit instead of the release commit.
 - **13a.** A release step that moved only components came between this release and the previous one. That step's changelog section is headed by its date, so no GitHub release's notes carry it (`release.py`).
+- **13b.** The version's changelog section is longer than the 125,000 characters a GitHub release keeps. The notes then hold the section's heading, a link to the section in `CHANGELOG.md` at the tag, and each component's new version (`release.py`).
 - **15a.** `latest` already points at that commit, as after a push that is no release. The script pushes nothing.
 - **15b.** Another run moved `latest` after this run read it, and the remote refuses the leased push. The script reads the remote's tags again. Where `latest` points at that commit, the run passes. Otherwise the run fails, `latest` stays where the other run put it, and the next push to the default branch runs step 15 again.
 - **15c.** The remote holds a branch named `latest`, which uv can take before the tag. The script refuses, pushes nothing, and the run fails until someone deletes the branch.

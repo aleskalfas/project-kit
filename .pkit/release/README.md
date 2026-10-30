@@ -516,7 +516,7 @@ PR** a human merges — it is *not* auto-run on every merge.
 | `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). Refuses a release `apply` would refuse. |
 | `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
-| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
+| `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section, or short notes pointing to it when it is longer than a Release keeps (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes, and which of the two forms they take, without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
 | `pkit release check-shareable <component>` | no | Pre-sharing lint: is a capability ready to be consumed externally-sourced (COR-041)? (below). |
 
@@ -954,11 +954,24 @@ publishes it as the body of a GitHub Release for tag `v<version>`.
   choice — see **PRJ-004** for the why; in short, install stays the git URL at a
   tag, and the Release is a **notes overlay** on that tag, never an
   artifact/download channel. Do not add an upload.
+- **A section too long for a Release gets short notes.** GitHub keeps at most
+  125,000 characters in a Release's body, and a section within that is
+  published whole. A longer section is replaced by short notes, which hold:
+  - the section's heading;
+  - a link to that section of `CHANGELOG.md` at the tag, on the GitHub
+    repository `origin` names (without a GitHub `origin`, the file and the
+    section are named, unlinked);
+  - each component's bump, from the version an older section last records
+    for it to the one this section gives it.
+
+  The notes reach `gh` on its standard input, never as an argument, so their
+  length never meets the system's limit on one argument.
 - **Idempotent.** Re-running **updates** the Release's notes rather than
   erroring; it creates the Release the first time and edits it thereafter. A
   **missing tag is a clear error** (the create path passes `--verify-tag`, so
   `gh` refuses to publish notes for a tag that does not exist).
-- **`--dry-run`** prints the notes it would publish without calling `gh`.
+- **`--dry-run`** prints the notes it would publish, and whether they are the
+  whole section or the short notes, without calling `gh`.
 - **Project-neutral.** The repo is derived from the ambient `gh` context (the
   git remote in the working directory), with no hardcoded owner/repo — the same
   discipline as `pkit release merge`.
@@ -1010,7 +1023,8 @@ merge, squash, or rebase, so the head commit's message is unreliable): if the
 tag matching `.pkit/VERSION` does not yet exist, it cuts it via `pkit version
 tag --push`, then — **only when it just cut a tag** — publishes the notes-only
 GitHub Release for that version via `pkit release publish-notes` (body = the
-`CHANGELOG.md` section; **no artifact**, per the guard above). Naturally
+`CHANGELOG.md` section, or its short notes when it is too long; **no
+artifact**, per the guard above). Naturally
 **idempotent** — a non-release push doesn't change `.pkit/VERSION`, so that
 version's tag already exists, the publish step is skipped, and the job no-ops.
 Backbone tag only (per-component tags were dropped by design, PRJ-004).
