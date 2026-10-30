@@ -17477,11 +17477,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 2,
+    "outline": 3,
     "show_title": false,
     "title": "T-agents",
     "width": 3200,
-    "x": 2954,
+    "x": 6554,
     "y": 6641
    },
    "fields": {
@@ -17489,14 +17489,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 2,
+    "outline": 3,
     "show_title": false,
     "title": "T-agents",
     "width": 3200,
-    "x": 2954,
+    "x": 6554,
     "y": 6641
    },
-   "mural_id": "bfbb88d4-5b03-49b0-a82a-50e5a940705c",
+   "mural_id": "61f4844b-01f6-439c-a5b4-d0867abb45d0",
    "tracked": [
     "title",
     "text",
@@ -17524,7 +17524,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231751469
+   "updatedOn": 1793319328394
   },
   "T-agents-a1": {
    "board": {
@@ -17553,7 +17553,7 @@
     "x": 128,
     "y": 800
    },
-   "mural_id": "d2060752-286b-4075-8757-4ca78ab5e441",
+   "mural_id": "1c17ca75-0bd9-4953-805e-b4506ab52241",
    "tracked": [
     "title",
     "text",
@@ -17581,7 +17581,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759400
+   "updatedOn": 1793319329581
   },
   "T-agents-a1.icon": {
    "board": {
@@ -17601,7 +17601,7 @@
     "x": 170,
     "y": 40
    },
-   "mural_id": "3561d640-265e-4831-bdff-707eaeba3e84",
+   "mural_id": "2753ea2e-fe3b-4711-9c58-79940ddd6f98",
    "tracked": [
     "title",
     "text",
@@ -17629,7 +17629,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231769657
+   "updatedOn": 1793319335764
   },
   "T-agents-a1.name": {
    "board": {
@@ -17657,7 +17657,7 @@
     "x": 0,
     "y": 192
    },
-   "mural_id": "51121374-7e22-4e6d-ae4c-9da60a259f27",
+   "mural_id": "f29e9864-2740-4ead-b3fc-4ee8381b0cfb",
    "tracked": [
     "title",
     "text",
@@ -17685,7 +17685,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-a1.ring": {
    "board": {
@@ -17715,7 +17715,7 @@
     "x": 130,
     "y": 0
    },
-   "mural_id": "5157e2c7-9ed0-4f7b-84cf-1fbc4ab9e65f",
+   "mural_id": "8c381f24-4876-4e0f-8c22-ac24c190fdd4",
    "tracked": [
     "title",
     "text",
@@ -17743,7 +17743,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-a2": {
    "board": {
@@ -17772,7 +17772,7 @@
     "x": 964,
     "y": 800
    },
-   "mural_id": "f82f022a-2905-4c1c-a6ee-e3945bf29c1c",
+   "mural_id": "6b4ec809-d3bc-412c-8eb2-34e1bc2072db",
    "tracked": [
     "title",
     "text",
@@ -17800,7 +17800,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759430
+   "updatedOn": 1793319329578
   },
   "T-agents-a2.icon": {
    "board": {
@@ -17820,7 +17820,7 @@
     "x": 170,
     "y": 40
    },
-   "mural_id": "11138d36-c6ba-48e1-9070-8c01f37b0969",
+   "mural_id": "8cf73319-653b-46c5-8df9-f44117e3fe6e",
    "tracked": [
     "title",
     "text",
@@ -17848,7 +17848,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231769705
+   "updatedOn": 1793319335848
   },
   "T-agents-a2.name": {
    "board": {
@@ -17876,7 +17876,7 @@
     "x": 0,
     "y": 192
    },
-   "mural_id": "8d54e737-e623-41fd-9ecd-9e955682f552",
+   "mural_id": "4409656d-7425-4c2f-80ba-29ee75379918",
    "tracked": [
     "title",
     "text",
@@ -17904,7 +17904,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-a2.ring": {
    "board": {
@@ -17934,7 +17934,7 @@
     "x": 130,
     "y": 0
    },
-   "mural_id": "1a87a542-f5c0-46fe-852c-dc10e7ec5bdc",
+   "mural_id": "e19b4c0c-6b45-4b27-8f55-70399c865101",
    "tracked": [
     "title",
     "text",
@@ -17962,7 +17962,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-a3": {
    "board": {
@@ -17991,7 +17991,7 @@
     "x": 1800,
     "y": 800
    },
-   "mural_id": "0ed409b2-afa6-411a-bde0-d9ada965ce8a",
+   "mural_id": "1bcf30c9-4c89-4b33-a30b-dbbc2e9becd2",
    "tracked": [
     "title",
     "text",
@@ -18019,7 +18019,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759512
+   "updatedOn": 1793319329669
   },
   "T-agents-a3.icon": {
    "board": {
@@ -18039,7 +18039,7 @@
     "x": 170,
     "y": 40
    },
-   "mural_id": "c78ea73f-3dc2-4c43-ba46-c08b269366e9",
+   "mural_id": "7d6df452-185e-462f-8163-26f8f3ea1348",
    "tracked": [
     "title",
     "text",
@@ -18067,7 +18067,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231769783
+   "updatedOn": 1793319335884
   },
   "T-agents-a3.name": {
    "board": {
@@ -18095,7 +18095,7 @@
     "x": 0,
     "y": 192
    },
-   "mural_id": "adf80916-b1ee-4bee-a643-b5a3df06566f",
+   "mural_id": "2212368e-4e6f-4641-8c7b-da23310b09a6",
    "tracked": [
     "title",
     "text",
@@ -18123,7 +18123,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-a3.ring": {
    "board": {
@@ -18153,7 +18153,7 @@
     "x": 130,
     "y": 0
    },
-   "mural_id": "327c35d9-edbb-4ddc-b66e-7b25c048cde2",
+   "mural_id": "91c177bd-5791-423d-8541-1fcb7cef8345",
    "tracked": [
     "title",
     "text",
@@ -18181,7 +18181,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-a4": {
    "board": {
@@ -18210,7 +18210,7 @@
     "x": 2636,
     "y": 800
    },
-   "mural_id": "9711652f-ef97-4921-ba1a-df714cba12d9",
+   "mural_id": "07e8d9e7-468c-4792-b4e1-b422685a17ae",
    "tracked": [
     "title",
     "text",
@@ -18238,7 +18238,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759142
+   "updatedOn": 1793319329959
   },
   "T-agents-a4.icon": {
    "board": {
@@ -18258,7 +18258,7 @@
     "x": 170,
     "y": 40
    },
-   "mural_id": "6f9f0098-d7ca-40cd-ac69-3c098c4958e9",
+   "mural_id": "15422530-7925-4109-aef5-373fda424d50",
    "tracked": [
     "title",
     "text",
@@ -18286,7 +18286,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231769803
+   "updatedOn": 1793319335958
   },
   "T-agents-a4.name": {
    "board": {
@@ -18314,7 +18314,7 @@
     "x": 0,
     "y": 192
    },
-   "mural_id": "961b31be-a20d-447b-92e0-c31737a5c6fb",
+   "mural_id": "a4de0a80-3bd3-4751-a4e8-19ad69d6bcba",
    "tracked": [
     "title",
     "text",
@@ -18342,7 +18342,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-a4.ring": {
    "board": {
@@ -18372,7 +18372,7 @@
     "x": 130,
     "y": 0
    },
-   "mural_id": "13dccb87-73d9-417c-94ab-f0c09ba9b2d8",
+   "mural_id": "3f59f92d-47d2-4971-84da-a9cb7a625f7a",
    "tracked": [
     "title",
     "text",
@@ -18400,7 +18400,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-d1": {
    "board": {
@@ -18429,7 +18429,7 @@
     "x": 128,
     "y": 1096
    },
-   "mural_id": "f245ed09-3a0a-41ec-a4c1-f1d64ffa9079",
+   "mural_id": "02baeaf4-3060-4b3f-b3c7-05221d57a9ff",
    "tracked": [
     "title",
     "text",
@@ -18457,7 +18457,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759528
+   "updatedOn": 1793319329959
   },
   "T-agents-d1.bg": {
    "board": {
@@ -18486,7 +18486,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "bde0810c-52c5-4ccb-b08b-9d3487972942",
+   "mural_id": "ae0502ff-34eb-4b1c-b73e-21ae8e4c5f64",
    "tracked": [
     "title",
     "text",
@@ -18514,7 +18514,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-d1.tag": {
    "board": {
@@ -18544,7 +18544,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "38f54690-daf8-44e9-b855-d11a6ce70c89",
+   "mural_id": "00d5a2ea-de3d-4660-b15b-0d0857fabd81",
    "tracked": [
     "title",
     "text",
@@ -18572,7 +18572,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-d1.text": {
    "board": {
@@ -18599,7 +18599,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "672ea127-3b3a-48ad-bd1d-4511aeec3aa8",
+   "mural_id": "3233fef6-5a43-4c86-b1ba-d773e7c1784c",
    "tracked": [
     "title",
     "text",
@@ -18627,7 +18627,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-d2": {
    "board": {
@@ -18656,7 +18656,7 @@
     "x": 1131,
     "y": 1096
    },
-   "mural_id": "2d2e8080-04db-4848-b698-026dfadc126b",
+   "mural_id": "bc88c4db-6f8b-496f-904b-f473732be0c7",
    "tracked": [
     "title",
     "text",
@@ -18684,7 +18684,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759096
+   "updatedOn": 1793319330012
   },
   "T-agents-d2.bg": {
    "board": {
@@ -18713,7 +18713,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "7ca7c0dd-d494-45d4-b56b-d744511bfa7a",
+   "mural_id": "96a256b9-7d1a-4482-84e5-35763ff65807",
    "tracked": [
     "title",
     "text",
@@ -18741,7 +18741,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-d2.tag": {
    "board": {
@@ -18771,7 +18771,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "48e7e471-e052-4c8d-b623-e8706e129823",
+   "mural_id": "056da7bd-642b-4cee-b0c7-21f42e24593f",
    "tracked": [
     "title",
     "text",
@@ -18799,7 +18799,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-d2.text": {
    "board": {
@@ -18826,7 +18826,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "166cac45-cfb1-4a2a-88b3-08fb458a8ef2",
+   "mural_id": "bde973c2-1555-4c92-b493-9bfae08d063a",
    "tracked": [
     "title",
     "text",
@@ -18854,7 +18854,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-d3": {
    "board": {
@@ -18883,7 +18883,7 @@
     "x": 2133,
     "y": 1096
    },
-   "mural_id": "242f2083-f7b3-4ce3-9a92-b8b132995672",
+   "mural_id": "4d62c22c-3683-477a-b006-6731dfc7a578",
    "tracked": [
     "title",
     "text",
@@ -18911,7 +18911,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759164
+   "updatedOn": 1793319331002
   },
   "T-agents-d3.bg": {
    "board": {
@@ -18940,7 +18940,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "8983b715-fc80-4d11-a859-0e4e5fc5bca9",
+   "mural_id": "47492483-f3e3-4075-9e7b-ac35166ba0c4",
    "tracked": [
     "title",
     "text",
@@ -18968,7 +18968,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-d3.tag": {
    "board": {
@@ -18998,7 +18998,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "aa56691a-cb8d-40c7-bcda-3ea84be3e2e6",
+   "mural_id": "0dcd0aba-233e-4249-8ac8-9fb16d00c094",
    "tracked": [
     "title",
     "text",
@@ -19026,7 +19026,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-d3.text": {
    "board": {
@@ -19053,7 +19053,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "7ded7fe2-f020-408a-8dc8-31f3d7709c68",
+   "mural_id": "316a6c55-8d03-40ea-a407-340cb7a3748b",
    "tracked": [
     "title",
     "text",
@@ -19081,7 +19081,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-limit": {
    "board": {
@@ -19110,7 +19110,7 @@
     "x": 128,
     "y": 1454
    },
-   "mural_id": "aa9ae26b-5df3-4a34-874e-7c711e1c1b09",
+   "mural_id": "5a80f791-11f8-4f7a-80f1-69057a35a3c8",
    "tracked": [
     "title",
     "text",
@@ -19138,7 +19138,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759676
+   "updatedOn": 1793319330832
   },
   "T-agents-limit.bar": {
    "board": {
@@ -19168,7 +19168,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "8397e0b2-57f9-4413-8b23-cd16de970ba1",
+   "mural_id": "5eb8d9f6-db52-4f7d-8f18-daa701c6e1fc",
    "tracked": [
     "title",
     "text",
@@ -19196,7 +19196,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-limit.bg": {
    "board": {
@@ -19226,7 +19226,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "c6e04215-273b-4d92-bf61-63eb7acf5dae",
+   "mural_id": "008af743-1f01-4bec-9b0e-5929a04b1c7e",
    "tracked": [
     "title",
     "text",
@@ -19254,7 +19254,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-limit.text": {
    "board": {
@@ -19281,7 +19281,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "e6c0ea88-6126-4e50-a793-a4c999876188",
+   "mural_id": "b500d928-dfe9-44ba-8895-fc5f533eb402",
    "tracked": [
     "title",
     "text",
@@ -19309,7 +19309,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-problem": {
    "board": {
@@ -19338,7 +19338,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "dbecdb0c-9c30-4938-856c-ea528ff05c57",
+   "mural_id": "f9661855-0996-4754-9f2d-0836dfd48654",
    "tracked": [
     "title",
     "text",
@@ -19366,7 +19366,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759368
+   "updatedOn": 1793319329494
   },
   "T-agents-problem.bar": {
    "board": {
@@ -19395,7 +19395,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "e1505137-a74e-4932-be61-60a79f3b7fe8",
+   "mural_id": "26f465a4-23ac-4444-88b9-61f7145f27bd",
    "tracked": [
     "title",
     "text",
@@ -19423,7 +19423,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-problem.bg": {
    "board": {
@@ -19452,7 +19452,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "231f634b-9dcd-4a1b-af3e-e01efb2d85a3",
+   "mural_id": "47088d47-137f-4fdf-a3fb-3041a78a058a",
    "tracked": [
     "title",
     "text",
@@ -19480,7 +19480,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents-problem.body": {
    "board": {
@@ -19507,7 +19507,7 @@
     "x": 40,
     "y": 92
    },
-   "mural_id": "f7801724-68f0-436c-ab11-df5561960c24",
+   "mural_id": "45ffd0a3-2642-4807-84f3-143d6f8c2e0c",
    "tracked": [
     "title",
     "text",
@@ -19535,7 +19535,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents-problem.title": {
    "board": {
@@ -19562,7 +19562,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "9d2dbfad-0734-4380-b603-9fd97bac47b2",
+   "mural_id": "60a51f26-10c9-44ab-99aa-bfa8cd095ef1",
    "tracked": [
     "title",
     "text",
@@ -19590,7 +19590,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents.bg": {
    "board": {
@@ -19619,7 +19619,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "b103eb41-2a44-49bf-9f10-b09cacb9786f",
+   "mural_id": "6859b53b-a62e-4bc3-81f0-d85f14bedd58",
    "tracked": [
     "title",
     "text",
@@ -19647,7 +19647,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-agents.lead": {
    "board": {
@@ -19674,7 +19674,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "7ad10a01-8ac0-4bcf-9786-5c566c990c0f",
+   "mural_id": "7c4492ac-03a6-4106-8999-ec9460118d37",
    "tracked": [
     "title",
     "text",
@@ -19702,7 +19702,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents.num": {
    "board": {
@@ -19712,7 +19712,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "9 / 16",
+    "text": "10 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -19724,13 +19724,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "9 / 16",
+    "text": "10 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "ef3f0d68-1c38-4b1b-adb3-89d5a80ac677",
+   "mural_id": "16d67334-67f2-43f8-9af1-98e063e1cd14",
    "tracked": [
     "title",
     "text",
@@ -19758,7 +19758,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317595247
+   "updatedOn": 1793319334408
   },
   "T-agents.rests": {
    "board": {
@@ -19785,7 +19785,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "c4f5b809-19dc-436c-a49d-f16600e4fb72",
+   "mural_id": "45a8dcfe-9d33-4d7d-9e83-5da7c4ae9ce6",
    "tracked": [
     "title",
     "text",
@@ -19813,7 +19813,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-agents.title": {
    "board": {
@@ -19840,7 +19840,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "fdeaa4ad-0502-483c-b572-e119eb8051a4",
+   "mural_id": "210ed5cc-4a59-42e4-a32b-364e32b07282",
    "tracked": [
     "title",
     "text",
@@ -19868,7 +19868,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-checked": {
    "board": {
@@ -19878,11 +19878,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 4,
+    "outline": 5,
     "show_title": false,
     "title": "T-checked",
     "width": 3200,
-    "x": 10154,
+    "x": 13754,
     "y": 6641
    },
    "fields": {
@@ -19890,14 +19890,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 4,
+    "outline": 5,
     "show_title": false,
     "title": "T-checked",
     "width": 3200,
-    "x": 10154,
+    "x": 13754,
     "y": 6641
    },
-   "mural_id": "5951474a-f8f1-489a-aae0-172538def434",
+   "mural_id": "a83cdc08-180c-4b33-8b7b-3465c5697c36",
    "tracked": [
     "title",
     "text",
@@ -19925,7 +19925,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311972174
+   "updatedOn": 1793319328518
   },
   "T-checked-check": {
    "board": {
@@ -19954,7 +19954,7 @@
     "x": 2152,
     "y": 737
    },
-   "mural_id": "0f746b86-fe17-48df-a131-f7c2e1c6a802",
+   "mural_id": "beeaffcd-b028-4fc3-a9af-48dd17d2bf33",
    "tracked": [
     "title",
     "text",
@@ -19982,7 +19982,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311977422
+   "updatedOn": 1793319330661
   },
   "T-checked-check.img": {
    "board": {
@@ -20002,7 +20002,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "9197345d-a58c-4fd0-9bd4-a60a96c15e31",
+   "mural_id": "2d713cda-d0c0-43f9-b470-e6f3509336d4",
    "tracked": [
     "title",
     "text",
@@ -20030,7 +20030,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311983275
+   "updatedOn": 1793319336025
   },
   "T-checked-limit": {
    "board": {
@@ -20059,7 +20059,7 @@
     "x": 128,
     "y": 1264
    },
-   "mural_id": "34e5d81b-36b8-4057-9241-4dffd76171aa",
+   "mural_id": "8dc03767-6f30-4480-baf6-50b7bdb7e370",
    "tracked": [
     "title",
     "text",
@@ -20087,7 +20087,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311977120
+   "updatedOn": 1793319331331
   },
   "T-checked-limit.bar": {
    "board": {
@@ -20117,7 +20117,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "1b8393fb-193c-417d-978a-dc5efd3427b3",
+   "mural_id": "e75aa360-255a-452d-8f9f-c3d277acbbef",
    "tracked": [
     "title",
     "text",
@@ -20145,7 +20145,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-limit.bg": {
    "board": {
@@ -20175,7 +20175,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "63757941-2de8-4b66-9eff-9450d5121110",
+   "mural_id": "4f48e504-b864-4585-b753-7b1cadb7e602",
    "tracked": [
     "title",
     "text",
@@ -20203,7 +20203,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-limit.text": {
    "board": {
@@ -20230,7 +20230,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "e7f78531-07b4-49df-bf60-5914b82b666c",
+   "mural_id": "6ef62386-2aab-4f6d-90ed-4ba6e84d5359",
    "tracked": [
     "title",
     "text",
@@ -20258,7 +20258,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties": {
    "board": {
@@ -20287,7 +20287,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "f49e5583-42d0-45ae-b31e-93da3b359dfc",
+   "mural_id": "f676f8f3-7e48-49a7-9ec4-1f1239597263",
    "tracked": [
     "title",
     "text",
@@ -20315,7 +20315,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311977309
+   "updatedOn": 1793319330710
   },
   "T-checked-ties.c1box": {
    "board": {
@@ -20345,7 +20345,7 @@
     "x": 600,
     "y": 444
    },
-   "mural_id": "6945b82f-d337-4059-a866-c8936e76148a",
+   "mural_id": "4361abc5-1b72-43dc-8755-b4253a8cb9b5",
    "tracked": [
     "title",
     "text",
@@ -20373,7 +20373,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.c1head": {
    "board": {
@@ -20400,7 +20400,7 @@
     "x": 632,
     "y": 460
    },
-   "mural_id": "1e01efcb-0345-4aef-99f7-b805fc3d7b1e",
+   "mural_id": "26ab08e8-cd80-4bc3-9491-8a91770c60d5",
    "tracked": [
     "title",
     "text",
@@ -20428,7 +20428,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.c1path": {
    "board": {
@@ -20455,7 +20455,7 @@
     "x": 632,
     "y": 520
    },
-   "mural_id": "3e9dbe52-8b06-40a4-a4af-11d42c594709",
+   "mural_id": "dd3985f7-eec0-4ee8-b1aa-d1a4e4ed7864",
    "tracked": [
     "title",
     "text",
@@ -20483,7 +20483,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.cbox": {
    "board": {
@@ -20513,7 +20513,7 @@
     "x": 600,
     "y": 88
    },
-   "mural_id": "de096b1f-dc9f-409d-b418-64b8643f359d",
+   "mural_id": "db602835-c891-4afa-a0a6-6b7112ea9873",
    "tracked": [
     "title",
     "text",
@@ -20541,7 +20541,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.chead": {
    "board": {
@@ -20568,7 +20568,7 @@
     "x": 632,
     "y": 120
    },
-   "mural_id": "5a4abf97-9c68-4e18-9feb-adca2afed7a3",
+   "mural_id": "6b74d722-712a-4e78-a8d0-7a15b9d4db04",
    "tracked": [
     "title",
     "text",
@@ -20596,7 +20596,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.cpath": {
    "board": {
@@ -20623,7 +20623,7 @@
     "x": 632,
     "y": 180
    },
-   "mural_id": "7ab71d09-5560-44e3-88f8-b2ffc9c34e8a",
+   "mural_id": "26b379c1-cb39-4a57-b93b-9769f603721a",
    "tracked": [
     "title",
     "text",
@@ -20651,7 +20651,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l0box": {
    "board": {
@@ -20681,7 +20681,7 @@
     "x": 0,
     "y": 72
    },
-   "mural_id": "8a81985c-4ac1-49e0-9f00-c8275f1ec105",
+   "mural_id": "224dbfe8-9ef0-4ae4-a6cc-50645dd55319",
    "tracked": [
     "title",
     "text",
@@ -20709,7 +20709,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.l0text": {
    "board": {
@@ -20736,7 +20736,7 @@
     "x": 20,
     "y": 78
    },
-   "mural_id": "c07b001d-b23f-4b3e-b4e7-0243aee3a144",
+   "mural_id": "8fd8ac55-f529-4f86-9a16-a0ea11fa3f58",
    "tracked": [
     "title",
     "text",
@@ -20764,7 +20764,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l0tie": {
    "board": {
@@ -20806,7 +20806,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l0tie"
    },
-   "mural_id": "c017295d-67b9-40eb-8f1a-e57a5bfcb8c6",
+   "mural_id": "e7d64d41-f7be-426a-91df-426856195420",
    "tracked": [
     "title",
     "text",
@@ -20834,7 +20834,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311984857
+   "updatedOn": 1793319337445
   },
   "T-checked-ties.l1box": {
    "board": {
@@ -20864,7 +20864,7 @@
     "x": 0,
     "y": 148
    },
-   "mural_id": "4e06f5e1-f189-40e0-965f-8f1985acf27b",
+   "mural_id": "a5b414b9-8df3-4b03-83a8-c5da5d689657",
    "tracked": [
     "title",
     "text",
@@ -20892,7 +20892,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.l1text": {
    "board": {
@@ -20919,7 +20919,7 @@
     "x": 20,
     "y": 154
    },
-   "mural_id": "5126bada-ddea-4beb-aea6-acc04b060d55",
+   "mural_id": "0d0d06e8-7a1b-4763-9a91-b414a8b839e0",
    "tracked": [
     "title",
     "text",
@@ -20947,7 +20947,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l1tie": {
    "board": {
@@ -20989,7 +20989,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l1tie"
    },
-   "mural_id": "cc1ee64f-e00a-4c24-abb0-8f13c0beef44",
+   "mural_id": "7122fc67-0025-4567-9bb2-fb1d0496a3b2",
    "tracked": [
     "title",
     "text",
@@ -21017,7 +21017,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311984920
+   "updatedOn": 1793319337421
   },
   "T-checked-ties.l2box": {
    "board": {
@@ -21047,7 +21047,7 @@
     "x": 0,
     "y": 224
    },
-   "mural_id": "e4744560-e6fe-4804-ae34-5deceb5f2895",
+   "mural_id": "7a327111-50f9-49ae-bba1-bb4b0a8801f6",
    "tracked": [
     "title",
     "text",
@@ -21075,7 +21075,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.l2text": {
    "board": {
@@ -21102,7 +21102,7 @@
     "x": 20,
     "y": 230
    },
-   "mural_id": "9d6c9a8c-0fd7-41f6-9cce-dc3f1a4b07ce",
+   "mural_id": "6c9ac7be-a584-40e0-ad39-284bec42693d",
    "tracked": [
     "title",
     "text",
@@ -21130,7 +21130,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l2tie": {
    "board": {
@@ -21172,7 +21172,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l2tie"
    },
-   "mural_id": "638fdc72-4710-48a6-abe0-1cf143e14107",
+   "mural_id": "dec0709a-63c6-43c8-bcea-5553ff08c7c7",
    "tracked": [
     "title",
     "text",
@@ -21200,7 +21200,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311985776
+   "updatedOn": 1793319337499
   },
   "T-checked-ties.l3box": {
    "board": {
@@ -21230,7 +21230,7 @@
     "x": 0,
     "y": 300
    },
-   "mural_id": "e7ae1d87-06b0-4d34-9152-ac5e942f1848",
+   "mural_id": "f49e3963-0686-4185-ae79-54df92c64a5f",
    "tracked": [
     "title",
     "text",
@@ -21258,7 +21258,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.l3text": {
    "board": {
@@ -21285,7 +21285,7 @@
     "x": 20,
     "y": 306
    },
-   "mural_id": "f506e62a-bceb-40a8-ab06-ed8d73d45514",
+   "mural_id": "c2e56258-37d8-4bb6-b0cb-eaaae25d17d3",
    "tracked": [
     "title",
     "text",
@@ -21313,7 +21313,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l3tie": {
    "board": {
@@ -21355,7 +21355,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l3tie"
    },
-   "mural_id": "0c634946-61c1-403c-be82-b561d57d9195",
+   "mural_id": "a0131659-07eb-4dfa-8f6b-f3af8a341846",
    "tracked": [
     "title",
     "text",
@@ -21383,7 +21383,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311985902
+   "updatedOn": 1793319337751
   },
   "T-checked-ties.l4box": {
    "board": {
@@ -21413,7 +21413,7 @@
     "x": 0,
     "y": 376
    },
-   "mural_id": "7053d083-fcf1-4760-9f86-9878d81226c2",
+   "mural_id": "19a6d1e6-15dd-467d-8306-9e4e0e91b367",
    "tracked": [
     "title",
     "text",
@@ -21441,7 +21441,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.l4text": {
    "board": {
@@ -21468,7 +21468,7 @@
     "x": 20,
     "y": 382
    },
-   "mural_id": "82c4f7b7-bd9f-4876-a00e-31f515433d72",
+   "mural_id": "535e9034-4ff9-4a95-b7f2-5dfca0c32dcc",
    "tracked": [
     "title",
     "text",
@@ -21496,7 +21496,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l4tie": {
    "board": {
@@ -21538,7 +21538,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l4tie"
    },
-   "mural_id": "ca1e16bb-c8c6-45de-8942-08bba4975eba",
+   "mural_id": "8fa3e20c-5f99-40b0-adad-8d19ebe9f857",
    "tracked": [
     "title",
     "text",
@@ -21566,7 +21566,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311985823
+   "updatedOn": 1793319337789
   },
   "T-checked-ties.l5box": {
    "board": {
@@ -21596,7 +21596,7 @@
     "x": 0,
     "y": 452
    },
-   "mural_id": "dee21bc8-3014-4613-bf0f-a3fa3b896f07",
+   "mural_id": "6552fd6d-5456-466d-b37d-a8fb1611756a",
    "tracked": [
     "title",
     "text",
@@ -21624,7 +21624,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.l5text": {
    "board": {
@@ -21651,7 +21651,7 @@
     "x": 20,
     "y": 458
    },
-   "mural_id": "ee025e3d-7d9d-4c56-841a-9ea85403c08f",
+   "mural_id": "7f39cb5f-8f61-4c55-90fa-2f6de616022b",
    "tracked": [
     "title",
     "text",
@@ -21679,7 +21679,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l5tie": {
    "board": {
@@ -21721,7 +21721,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l5tie"
    },
-   "mural_id": "2b2bf239-bba3-4742-ae0c-e8e00fa0ef41",
+   "mural_id": "be173f64-f8d4-406c-ad6a-938160f5db4b",
    "tracked": [
     "title",
     "text",
@@ -21749,7 +21749,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311985670
+   "updatedOn": 1793319337949
   },
   "T-checked-ties.l6box": {
    "board": {
@@ -21779,7 +21779,7 @@
     "x": 0,
     "y": 528
    },
-   "mural_id": "cbb76c2a-0606-4683-b61c-ecd088c61c03",
+   "mural_id": "12e7501c-bc78-4c09-a3b8-458986097cc6",
    "tracked": [
     "title",
     "text",
@@ -21807,7 +21807,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.l6note": {
    "board": {
@@ -21834,7 +21834,7 @@
     "x": 0,
     "y": 596
    },
-   "mural_id": "9a94ab42-664f-4ea0-b7d9-79e4c6a5bc49",
+   "mural_id": "fcba80f0-faef-49e7-920b-74fc7ec6dd61",
    "tracked": [
     "title",
     "text",
@@ -21862,7 +21862,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l6text": {
    "board": {
@@ -21889,7 +21889,7 @@
     "x": 20,
     "y": 534
    },
-   "mural_id": "e236282b-7438-49aa-ae4d-0ee412c78588",
+   "mural_id": "f0c13992-b76b-40b8-891d-1e63043809f9",
    "tracked": [
     "title",
     "text",
@@ -21917,7 +21917,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.l6tie": {
    "board": {
@@ -21959,7 +21959,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l6tie"
    },
-   "mural_id": "121ef7b2-f802-4e30-896f-2deee1b3f393",
+   "mural_id": "14d2dc54-b47c-4265-8bb9-67cc242bb43e",
    "tracked": [
     "title",
     "text",
@@ -21987,7 +21987,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311985403
+   "updatedOn": 1793319338748
   },
   "T-checked-ties.l6tie1": {
    "board": {
@@ -22029,7 +22029,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l6tie1"
    },
-   "mural_id": "d7abcfa9-40d9-459c-b294-9eb970e2c1a3",
+   "mural_id": "9d393d3e-3f95-4d95-8af3-ab861cff3142",
    "tracked": [
     "title",
     "text",
@@ -22057,7 +22057,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311985471
+   "updatedOn": 1793319338630
   },
   "T-checked-ties.lhead": {
    "board": {
@@ -22084,7 +22084,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "92c334c3-70d4-42dd-9aa3-373f1695e9b5",
+   "mural_id": "aef95921-9b3e-4d8f-b195-61619d420144",
    "tracked": [
     "title",
     "text",
@@ -22112,7 +22112,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.r0box": {
    "board": {
@@ -22142,7 +22142,7 @@
     "x": 1400,
     "y": 110
    },
-   "mural_id": "b1bd5208-d0b7-43c7-b3ec-62a1428a58b6",
+   "mural_id": "d09d70b7-e59d-40cb-91be-053484eada87",
    "tracked": [
     "title",
     "text",
@@ -22170,7 +22170,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.r0text": {
    "board": {
@@ -22197,7 +22197,7 @@
     "x": 1420,
     "y": 116
    },
-   "mural_id": "621bb7b8-c132-49e1-94fc-0c4e2a59ea0a",
+   "mural_id": "598e0736-f596-421d-bbeb-bfb15e528b86",
    "tracked": [
     "title",
     "text",
@@ -22225,7 +22225,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.r0tie": {
    "board": {
@@ -22267,7 +22267,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r0tie"
    },
-   "mural_id": "05f14142-386a-4f1a-bb45-222d19a17667",
+   "mural_id": "b92f79ca-ba5a-4036-ade3-3c425334ae1d",
    "tracked": [
     "title",
     "text",
@@ -22295,7 +22295,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311985506
+   "updatedOn": 1793319338744
   },
   "T-checked-ties.r1box": {
    "board": {
@@ -22325,7 +22325,7 @@
     "x": 1400,
     "y": 186
    },
-   "mural_id": "1c3876ac-7da2-48c3-8091-28700a111602",
+   "mural_id": "fa738f75-4eac-440a-880f-71321a9992b2",
    "tracked": [
     "title",
     "text",
@@ -22353,7 +22353,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.r1text": {
    "board": {
@@ -22380,7 +22380,7 @@
     "x": 1420,
     "y": 192
    },
-   "mural_id": "1db8d93b-ba40-44ef-a6a0-ee0ecec14304",
+   "mural_id": "f722ef01-dff9-4d7a-9f3c-d28d36d5e96f",
    "tracked": [
     "title",
     "text",
@@ -22408,7 +22408,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.r1tie": {
    "board": {
@@ -22450,7 +22450,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r1tie"
    },
-   "mural_id": "7745d350-3c26-4fc2-9f39-4056a47dbaf8",
+   "mural_id": "58cb7a4c-18b0-499d-80ab-4f370c4eb59c",
    "tracked": [
     "title",
     "text",
@@ -22478,7 +22478,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311986028
+   "updatedOn": 1793319338860
   },
   "T-checked-ties.r2box": {
    "board": {
@@ -22508,7 +22508,7 @@
     "x": 1400,
     "y": 262
    },
-   "mural_id": "9a30fe1a-b51a-41db-b3b9-78ae7d9e72cc",
+   "mural_id": "3c29180f-5ece-4002-92f2-6229fc892eb0",
    "tracked": [
     "title",
     "text",
@@ -22536,7 +22536,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.r2text": {
    "board": {
@@ -22563,7 +22563,7 @@
     "x": 1420,
     "y": 268
    },
-   "mural_id": "c48701f6-d709-4811-b205-a8c9b1ff9c74",
+   "mural_id": "c0c7a7b1-f899-4996-9b96-e9673c9e2f61",
    "tracked": [
     "title",
     "text",
@@ -22591,7 +22591,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.r2tie": {
    "board": {
@@ -22633,7 +22633,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r2tie"
    },
-   "mural_id": "190c3c9a-9984-4190-b0f7-d72f4bad1e79",
+   "mural_id": "c9a1b928-6587-46ff-8318-1685ed1e133c",
    "tracked": [
     "title",
     "text",
@@ -22661,7 +22661,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311986095
+   "updatedOn": 1793319338877
   },
   "T-checked-ties.r3box": {
    "board": {
@@ -22691,7 +22691,7 @@
     "x": 1400,
     "y": 338
    },
-   "mural_id": "32c6e29a-ef25-4332-aa66-b7d209992cfe",
+   "mural_id": "bcbe2beb-10b8-483c-95db-b388751a0a27",
    "tracked": [
     "title",
     "text",
@@ -22719,7 +22719,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.r3text": {
    "board": {
@@ -22746,7 +22746,7 @@
     "x": 1420,
     "y": 344
    },
-   "mural_id": "09e1cfb9-4482-46ef-8c5d-3950dfdf5d93",
+   "mural_id": "d80cd23d-3ac7-45be-b772-0697860322e0",
    "tracked": [
     "title",
     "text",
@@ -22774,7 +22774,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.r3tie": {
    "board": {
@@ -22816,7 +22816,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r3tie"
    },
-   "mural_id": "7cf57b11-a181-46f8-9866-ce0cd220ab69",
+   "mural_id": "b2402a0a-438c-4c37-96c1-1818cb778298",
    "tracked": [
     "title",
     "text",
@@ -22844,7 +22844,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311986182
+   "updatedOn": 1793319338400
   },
   "T-checked-ties.r4box": {
    "board": {
@@ -22874,7 +22874,7 @@
     "x": 1400,
     "y": 414
    },
-   "mural_id": "c5fcb624-8200-483e-a95b-c44d03c288c4",
+   "mural_id": "21a8d550-183d-4a7b-a851-c52a266388bb",
    "tracked": [
     "title",
     "text",
@@ -22902,7 +22902,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.r4text": {
    "board": {
@@ -22929,7 +22929,7 @@
     "x": 1420,
     "y": 420
    },
-   "mural_id": "101bf33d-eb49-4ae8-804c-20c9bc200303",
+   "mural_id": "05d1f8ec-bb2e-40f1-a76b-f1f35777ea79",
    "tracked": [
     "title",
     "text",
@@ -22957,7 +22957,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.r4tie": {
    "board": {
@@ -22999,7 +22999,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r4tie"
    },
-   "mural_id": "0a841022-c7b3-43c0-ac27-d0f15efe8f6b",
+   "mural_id": "2b66eeee-91fc-442a-a07c-0836a28a01a2",
    "tracked": [
     "title",
     "text",
@@ -23027,7 +23027,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311986280
+   "updatedOn": 1793319338394
   },
   "T-checked-ties.r5box": {
    "board": {
@@ -23057,7 +23057,7 @@
     "x": 1400,
     "y": 490
    },
-   "mural_id": "f73b5c26-398e-4491-a912-fdd5181fd055",
+   "mural_id": "b5679983-203a-4032-903b-ffd304ebbeb7",
    "tracked": [
     "title",
     "text",
@@ -23085,7 +23085,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked-ties.r5text": {
    "board": {
@@ -23112,7 +23112,7 @@
     "x": 1420,
     "y": 496
    },
-   "mural_id": "9be80aa6-96e7-4a0b-a312-bc53d3898ff2",
+   "mural_id": "15bf9466-bdab-48ac-b94f-a1bf5f1e9043",
    "tracked": [
     "title",
     "text",
@@ -23140,7 +23140,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked-ties.r5tie": {
    "board": {
@@ -23182,7 +23182,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r5tie"
    },
-   "mural_id": "9b50f6f3-5de6-415d-b005-f17e6f3dd4ec",
+   "mural_id": "56732fa6-4cb4-4895-8b08-d925a0fc1140",
    "tracked": [
     "title",
     "text",
@@ -23210,7 +23210,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311986421
+   "updatedOn": 1793319338576
   },
   "T-checked-ties.rhead": {
    "board": {
@@ -23237,7 +23237,7 @@
     "x": 1400,
     "y": 0
    },
-   "mural_id": "668c578e-6544-4cf1-95c0-43eeca08de16",
+   "mural_id": "2c1517cf-321b-46a2-890b-391ffbd8bc78",
    "tracked": [
     "title",
     "text",
@@ -23265,7 +23265,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked.bg": {
    "board": {
@@ -23294,7 +23294,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "9e37f662-2deb-44e8-b7a7-75bf546f1193",
+   "mural_id": "1f2a99e0-cf58-4f55-b8da-e24f507f157d",
    "tracked": [
     "title",
     "text",
@@ -23322,7 +23322,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-checked.lead": {
    "board": {
@@ -23349,7 +23349,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "4450c52d-b42f-4062-b6a4-5cf70b481575",
+   "mural_id": "cd7a6dca-231a-48ab-a45f-ff6956448532",
    "tracked": [
     "title",
     "text",
@@ -23377,7 +23377,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked.num": {
    "board": {
@@ -23387,7 +23387,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-checked",
-    "text": "11 / 16",
+    "text": "12 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -23399,13 +23399,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-checked",
-    "text": "11 / 16",
+    "text": "12 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "275ba8ac-52b4-482e-bfea-34c6cef816b2",
+   "mural_id": "17427f80-420b-4256-b0f5-3819d064111f",
    "tracked": [
     "title",
     "text",
@@ -23433,7 +23433,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317596080
+   "updatedOn": 1793319334408
   },
   "T-checked.rests": {
    "board": {
@@ -23460,7 +23460,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "00096ad2-053e-4751-b59c-62c1ab9a7edc",
+   "mural_id": "d24fd5c5-d6d4-493a-9c52-265192500ee1",
    "tracked": [
     "title",
     "text",
@@ -23488,7 +23488,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-checked.title": {
    "board": {
@@ -23515,7 +23515,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "99d05277-686f-481a-b576-8930e17f916e",
+   "mural_id": "39bf1540-f985-4c64-b7e6-0e1f41662226",
    "tracked": [
     "title",
     "text",
@@ -23543,7 +23543,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-cover": {
    "board": {
@@ -26696,7 +26696,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-current",
-    "text": "15 / 16",
+    "text": "16 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -26708,7 +26708,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-current",
-    "text": "15 / 16",
+    "text": "16 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -26742,7 +26742,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317596068
+   "updatedOn": 1793319340179
   },
   "T-current.rests": {
    "board": {
@@ -29270,7 +29270,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-decisions",
-    "text": "5 / 16",
+    "text": "5 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -29282,7 +29282,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-decisions",
-    "text": "5 / 16",
+    "text": "5 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -29316,7 +29316,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317594819
+   "updatedOn": 1793319339991
   },
   "T-decisions.rests": {
    "board": {
@@ -29436,11 +29436,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 5,
+    "outline": 6,
     "show_title": false,
     "title": "T-docs",
     "width": 3200,
-    "x": 13754,
+    "x": 17354,
     "y": 6641
    },
    "fields": {
@@ -29448,14 +29448,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 5,
+    "outline": 6,
     "show_title": false,
     "title": "T-docs",
     "width": 3200,
-    "x": 13754,
+    "x": 17354,
     "y": 6641
    },
-   "mural_id": "5a08a160-06d0-4f78-b452-e92b6b2a6d75",
+   "mural_id": "9a89db3c-2434-4cb9-9b94-bc8f5faa8821",
    "tracked": [
     "title",
     "text",
@@ -29483,7 +29483,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311972100
+   "updatedOn": 1793319328587
   },
   "T-docs-code": {
    "board": {
@@ -29512,7 +29512,7 @@
     "x": 1632,
     "y": 800
    },
-   "mural_id": "08f6f248-c320-4b5d-9919-60829678fbc2",
+   "mural_id": "f4cb9a07-4085-49b6-8939-477922bd93d5",
    "tracked": [
     "title",
     "text",
@@ -29540,7 +29540,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311977941
+   "updatedOn": 1793319331580
   },
   "T-docs-code.bg": {
    "board": {
@@ -29570,7 +29570,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "99aa0fd2-111f-4b56-a0ff-8435e50c36b0",
+   "mural_id": "42bba216-809d-4289-b45b-e6bcb22abdb1",
    "tracked": [
     "title",
     "text",
@@ -29598,7 +29598,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-code.text": {
    "board": {
@@ -29625,7 +29625,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "dda466a0-4801-4562-bdc3-a019536fd37f",
+   "mural_id": "1f9f8a3b-797d-41d6-9d20-38868d2ca177",
    "tracked": [
     "title",
     "text",
@@ -29653,7 +29653,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs-d1": {
    "board": {
@@ -29682,7 +29682,7 @@
     "x": 128,
     "y": 800
    },
-   "mural_id": "7f65057f-544f-4fdc-868e-45122718ba8f",
+   "mural_id": "db1f863a-04e4-4670-b27f-4b5ed41dad7f",
    "tracked": [
     "title",
     "text",
@@ -29710,7 +29710,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311977782
+   "updatedOn": 1793319331449
   },
   "T-docs-d1.bg": {
    "board": {
@@ -29739,7 +29739,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "a0b796bd-c53a-40b0-841e-362163920246",
+   "mural_id": "ae9e51a0-562a-4ddc-90ab-ed6d1ac2eaca",
    "tracked": [
     "title",
     "text",
@@ -29767,7 +29767,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-d1.tag": {
    "board": {
@@ -29797,7 +29797,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "7da77ba7-5969-4a50-9bf8-08bcc34fd83f",
+   "mural_id": "0dc68c72-94a6-4f3f-8074-3a753ef0b131",
    "tracked": [
     "title",
     "text",
@@ -29825,7 +29825,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-d1.text": {
    "board": {
@@ -29852,7 +29852,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "69842fa9-69dd-47b5-bb40-50c7700fb937",
+   "mural_id": "741a5206-d81b-41bd-8191-7b5e91f2a8f2",
    "tracked": [
     "title",
     "text",
@@ -29880,7 +29880,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs-d2": {
    "board": {
@@ -29909,7 +29909,7 @@
     "x": 880,
     "y": 800
    },
-   "mural_id": "d4d6ac2b-a7c8-4ca6-91fa-67757fdc689f",
+   "mural_id": "12efc18f-cae3-47cc-be3c-6c9fe7fa48b7",
    "tracked": [
     "title",
     "text",
@@ -29937,7 +29937,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311977779
+   "updatedOn": 1793319331481
   },
   "T-docs-d2.bg": {
    "board": {
@@ -29966,7 +29966,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "a1426211-4ffb-43ad-9ac6-a2570c0f86a1",
+   "mural_id": "9e3bd3b6-c54c-4875-9ad2-0389f9495387",
    "tracked": [
     "title",
     "text",
@@ -29994,7 +29994,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-d2.tag": {
    "board": {
@@ -30024,7 +30024,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "88bc096f-5025-43c7-8bce-7646c01799de",
+   "mural_id": "f854b028-09e9-4ab6-9604-586d3acdc455",
    "tracked": [
     "title",
     "text",
@@ -30052,7 +30052,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-d2.text": {
    "board": {
@@ -30079,7 +30079,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "20bd2678-2967-4820-a11e-b18a8679bf51",
+   "mural_id": "c388f266-0e23-4f3f-9fce-590fd4436e19",
    "tracked": [
     "title",
     "text",
@@ -30107,7 +30107,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs-d3": {
    "board": {
@@ -30136,7 +30136,7 @@
     "x": 128,
     "y": 1158
    },
-   "mural_id": "ecd82af2-e21a-4524-8b41-960e92ffc6df",
+   "mural_id": "8cc3673d-62c9-4dbb-a223-5eaf8a0b15d9",
    "tracked": [
     "title",
     "text",
@@ -30164,7 +30164,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311977843
+   "updatedOn": 1793319331512
   },
   "T-docs-d3.bg": {
    "board": {
@@ -30193,7 +30193,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "56f9c274-f421-4e99-9ac1-c7c3a50f9f72",
+   "mural_id": "3b454cf8-cd35-48e1-af4e-d114af75e2f7",
    "tracked": [
     "title",
     "text",
@@ -30221,7 +30221,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-d3.tag": {
    "board": {
@@ -30251,7 +30251,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "a4293729-908a-4397-ab1a-39e9bc3febdc",
+   "mural_id": "d26316ab-2e6f-4557-9329-d1fd6e2d7366",
    "tracked": [
     "title",
     "text",
@@ -30279,7 +30279,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-d3.text": {
    "board": {
@@ -30306,7 +30306,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "346a4735-eb5b-4e55-8722-19d2a24444f3",
+   "mural_id": "d9572e01-7a07-4989-a197-d869d42af0d2",
    "tracked": [
     "title",
     "text",
@@ -30334,7 +30334,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs-limit": {
    "board": {
@@ -30363,7 +30363,7 @@
     "x": 128,
     "y": 1516
    },
-   "mural_id": "81555356-5f41-485e-bbfb-0220fcde23a5",
+   "mural_id": "acf0f772-ae8a-422c-b42e-e45afabd848a",
    "tracked": [
     "title",
     "text",
@@ -30391,7 +30391,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978035
+   "updatedOn": 1793319332340
   },
   "T-docs-limit.bar": {
    "board": {
@@ -30421,7 +30421,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "75348e4b-8f51-4bf4-b04f-e6c6451bde3e",
+   "mural_id": "ffd75670-7715-49ba-be13-3588339ec47c",
    "tracked": [
     "title",
     "text",
@@ -30449,7 +30449,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-limit.bg": {
    "board": {
@@ -30479,7 +30479,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "0692295e-bac7-4518-8c98-b5d600d87ce3",
+   "mural_id": "ecf4f256-7b31-4340-bee5-2e1b2d50199f",
    "tracked": [
     "title",
     "text",
@@ -30507,7 +30507,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-limit.text": {
    "board": {
@@ -30534,7 +30534,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "23f2cb7d-2172-4968-a0ff-515fef9caa54",
+   "mural_id": "f059e320-b410-4c1a-b4cb-1fd1eb49c40d",
    "tracked": [
     "title",
     "text",
@@ -30562,7 +30562,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs-problem": {
    "board": {
@@ -30591,7 +30591,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "71c68cce-d3e4-4a2e-9814-e3d5f6c12dd7",
+   "mural_id": "f91c2a2a-9dff-461a-b183-606e0acd7c15",
    "tracked": [
     "title",
     "text",
@@ -30619,7 +30619,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311977134
+   "updatedOn": 1793319332048
   },
   "T-docs-problem.bar": {
    "board": {
@@ -30648,7 +30648,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "a59f7913-544b-4ecd-a25c-c826bd8c76ce",
+   "mural_id": "bd2ba614-8d2c-437c-b4f0-fa915f8a6652",
    "tracked": [
     "title",
     "text",
@@ -30676,7 +30676,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-problem.bg": {
    "board": {
@@ -30705,7 +30705,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "232e6801-e324-4100-a1a1-1bfbc702570c",
+   "mural_id": "9b3cc72d-a403-4f4b-b4bc-4b8640c60e25",
    "tracked": [
     "title",
     "text",
@@ -30733,7 +30733,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs-problem.body": {
    "board": {
@@ -30760,7 +30760,7 @@
     "x": 40,
     "y": 92
    },
-   "mural_id": "b33aad89-1437-41bd-8840-f285ffb75c62",
+   "mural_id": "e1e0b5a4-fbeb-4c9d-bce9-ad50dd0c7657",
    "tracked": [
     "title",
     "text",
@@ -30788,7 +30788,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs-problem.title": {
    "board": {
@@ -30815,7 +30815,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "a873caac-1ebf-428d-a574-e1354dededa3",
+   "mural_id": "1692c3e2-502e-44f8-95f6-c501c6cc79c1",
    "tracked": [
     "title",
     "text",
@@ -30843,7 +30843,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs.bg": {
    "board": {
@@ -30872,7 +30872,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "cfafd034-7933-4b66-b968-10868b08872f",
+   "mural_id": "55a2db7b-27e8-4990-98ef-50aaa47c71e3",
    "tracked": [
     "title",
     "text",
@@ -30900,7 +30900,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311978974
+   "updatedOn": 1793319333172
   },
   "T-docs.lead": {
    "board": {
@@ -30927,7 +30927,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "28503cd5-d118-4bba-9f12-c7e30d75ff32",
+   "mural_id": "301bf528-1c74-4e8f-9983-0268c005555f",
    "tracked": [
     "title",
     "text",
@@ -30955,7 +30955,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs.num": {
    "board": {
@@ -30965,7 +30965,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-docs",
-    "text": "12 / 16",
+    "text": "13 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -30977,13 +30977,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-docs",
-    "text": "12 / 16",
+    "text": "13 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "a6c34084-4948-4f68-b2ba-d76b88f5087b",
+   "mural_id": "740eefd0-b429-4844-bc2c-9caeddfd9299",
    "tracked": [
     "title",
     "text",
@@ -31011,7 +31011,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317596155
+   "updatedOn": 1793319334408
   },
   "T-docs.rests": {
    "board": {
@@ -31038,7 +31038,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "5734ca30-2724-4122-b4c6-541d527e3287",
+   "mural_id": "793b2891-3245-46f4-9800-1d8cd6420e98",
    "tracked": [
     "title",
     "text",
@@ -31066,7 +31066,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-docs.title": {
    "board": {
@@ -31093,7 +31093,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "dbe4ad63-aa35-424b-8a0f-753c6dc13597",
+   "mural_id": "be5af759-15ec-456f-bc87-0c51a29a6d7e",
    "tracked": [
     "title",
     "text",
@@ -31121,7 +31121,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793319334408
   },
   "T-fits": {
    "board": {
@@ -33955,7 +33955,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-fits",
-    "text": "2 / 16",
+    "text": "2 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -33967,7 +33967,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-fits",
-    "text": "2 / 16",
+    "text": "2 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -34001,7 +34001,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317594600
+   "updatedOn": 1793319339098
   },
   "T-fits.rests": {
    "board": {
@@ -35765,7 +35765,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-found",
-    "text": "6 / 16",
+    "text": "6 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -35777,7 +35777,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-found",
-    "text": "6 / 16",
+    "text": "6 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -35811,7 +35811,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317594836
+   "updatedOn": 1793319340222
   },
   "T-found.rests": {
    "board": {
@@ -37887,7 +37887,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-ideas",
-    "text": "4 / 16",
+    "text": "4 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -37899,7 +37899,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-ideas",
-    "text": "4 / 16",
+    "text": "4 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -37933,7 +37933,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317595331
+   "updatedOn": 1793319340045
   },
   "T-ideas.rests": {
    "board": {
@@ -38868,7 +38868,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "3 / 16",
+    "text": "3 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -38880,7 +38880,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "3 / 16",
+    "text": "3 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -38914,7 +38914,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317594673
+   "updatedOn": 1793319339347
   },
   "T-install.rests": {
    "board": {
@@ -41895,7 +41895,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-opening",
-    "text": "1 / 16",
+    "text": "1 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -41907,7 +41907,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-opening",
-    "text": "1 / 16",
+    "text": "1 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -41941,7 +41941,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317594571
+   "updatedOn": 1793319339267
   },
   "T-opening.rests": {
    "board": {
@@ -43751,11 +43751,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 3,
+    "outline": 4,
     "show_title": false,
     "title": "T-permissions",
     "width": 3200,
-    "x": 6554,
+    "x": 10154,
     "y": 6641
    },
    "fields": {
@@ -43763,14 +43763,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 3,
+    "outline": 4,
     "show_title": false,
     "title": "T-permissions",
     "width": 3200,
-    "x": 6554,
+    "x": 10154,
     "y": 6641
    },
-   "mural_id": "fe91f9b1-4955-484e-90b6-de181abf7590",
+   "mural_id": "4b64b01c-9776-4942-82c4-6a1d9414ddaf",
    "tracked": [
     "title",
     "text",
@@ -43798,7 +43798,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231751292
+   "updatedOn": 1793319328459
   },
   "T-permissions-cmp1": {
    "board": {
@@ -43827,7 +43827,7 @@
     "x": 128,
     "y": 800
    },
-   "mural_id": "cf47fefc-f64a-43a8-b535-ae24ba17b4e3",
+   "mural_id": "6079468c-d102-46e8-810e-243759f43a84",
    "tracked": [
     "title",
     "text",
@@ -43855,7 +43855,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759800
+   "updatedOn": 1793319330838
   },
   "T-permissions-cmp1.d1": {
    "board": {
@@ -43884,7 +43884,7 @@
     "x": 0,
     "y": 398
    },
-   "mural_id": "400948b7-495e-4fe1-8e06-4a198466a805",
+   "mural_id": "df0714ef-0ded-4d0f-a1f1-ba350b4578c9",
    "tracked": [
     "title",
     "text",
@@ -43912,7 +43912,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-cmp1.d2": {
    "board": {
@@ -43941,7 +43941,7 @@
     "x": 0,
     "y": 574
    },
-   "mural_id": "8239d7ce-2fc7-45d5-8294-34b954552a62",
+   "mural_id": "ed1ec05a-8164-4283-9c93-1a162c8b309d",
    "tracked": [
     "title",
     "text",
@@ -43969,7 +43969,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-cmp1.heading": {
    "board": {
@@ -43996,7 +43996,7 @@
     "x": 0,
     "y": 96
    },
-   "mural_id": "3411f6c1-f04c-4c25-a0ee-74a8b5415ff7",
+   "mural_id": "bb48de5e-d455-4b82-bb27-a09d8e83d586",
    "tracked": [
     "title",
     "text",
@@ -44024,7 +44024,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp1.k1": {
    "board": {
@@ -44051,7 +44051,7 @@
     "x": 0,
     "y": 240
    },
-   "mural_id": "e581a9fc-fa6f-4f8d-adf5-a34521b7602f",
+   "mural_id": "243ef3a4-96bf-4cbd-854c-5d2650f6bba8",
    "tracked": [
     "title",
     "text",
@@ -44079,7 +44079,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp1.k2": {
    "board": {
@@ -44106,7 +44106,7 @@
     "x": 0,
     "y": 432
    },
-   "mural_id": "3e162286-1183-4011-bc34-e15229ab17f5",
+   "mural_id": "d11c8afd-3249-461e-9366-544599286ec7",
    "tracked": [
     "title",
     "text",
@@ -44134,7 +44134,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp1.spacetag": {
    "board": {
@@ -44164,7 +44164,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "da41ef46-7016-495e-b4c8-a649accf2636",
+   "mural_id": "75238612-7ec7-4942-b5d0-13f05003907d",
    "tracked": [
     "title",
     "text",
@@ -44192,7 +44192,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-cmp1.v1": {
    "board": {
@@ -44219,7 +44219,7 @@
     "x": 564,
     "y": 240
    },
-   "mural_id": "5154176e-9555-427f-88e9-49dd65ccf087",
+   "mural_id": "78faef2f-154d-4093-a294-be9e36b8be87",
    "tracked": [
     "title",
     "text",
@@ -44247,7 +44247,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp1.v2": {
    "board": {
@@ -44274,7 +44274,7 @@
     "x": 564,
     "y": 432
    },
-   "mural_id": "59e43455-2aa7-46e1-8c4c-49d83459677e",
+   "mural_id": "1b28919a-f27a-45c1-8bc3-6141e0964c1f",
    "tracked": [
     "title",
     "text",
@@ -44302,7 +44302,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp2": {
    "board": {
@@ -44331,7 +44331,7 @@
     "x": 1632,
     "y": 800
    },
-   "mural_id": "dd02c165-4e20-4932-bc15-f1f8da299a58",
+   "mural_id": "3460be80-c582-4a29-a081-64d78bf9f1bb",
    "tracked": [
     "title",
     "text",
@@ -44359,7 +44359,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231760728
+   "updatedOn": 1793319330940
   },
   "T-permissions-cmp2.d1": {
    "board": {
@@ -44388,7 +44388,7 @@
     "x": 0,
     "y": 398
    },
-   "mural_id": "298d2b92-1b19-46ca-b771-f88d0340433c",
+   "mural_id": "eb9ac4c1-8c83-4cb4-8ceb-deb46874da06",
    "tracked": [
     "title",
     "text",
@@ -44416,7 +44416,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-cmp2.d2": {
    "board": {
@@ -44445,7 +44445,7 @@
     "x": 0,
     "y": 574
    },
-   "mural_id": "24237e97-fa6c-431a-b165-fea5218b851f",
+   "mural_id": "ce0443a2-e879-459c-b7f8-d2911f38591d",
    "tracked": [
     "title",
     "text",
@@ -44473,7 +44473,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-cmp2.heading": {
    "board": {
@@ -44500,7 +44500,7 @@
     "x": 0,
     "y": 96
    },
-   "mural_id": "90eef50f-4e8b-49c8-a555-a42cb79ad130",
+   "mural_id": "0ab46c72-ec32-4cd8-9e6e-0cab7616bde3",
    "tracked": [
     "title",
     "text",
@@ -44528,7 +44528,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp2.k1": {
    "board": {
@@ -44555,7 +44555,7 @@
     "x": 0,
     "y": 240
    },
-   "mural_id": "a01570bc-52be-4603-8725-d1ded54e7329",
+   "mural_id": "035a8b84-f713-4856-bfd8-3c8a661f6943",
    "tracked": [
     "title",
     "text",
@@ -44583,7 +44583,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp2.k2": {
    "board": {
@@ -44610,7 +44610,7 @@
     "x": 0,
     "y": 432
    },
-   "mural_id": "0a1ffdd7-9caa-4026-8947-6f307f7e8661",
+   "mural_id": "b9df7cc6-e654-4b68-96a1-a61bef1b6d10",
    "tracked": [
     "title",
     "text",
@@ -44638,7 +44638,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp2.spacetag": {
    "board": {
@@ -44668,7 +44668,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "eb78021e-f7c5-43ec-a325-fa326d5e5b06",
+   "mural_id": "06039804-5105-4bed-8a59-b408612122c3",
    "tracked": [
     "title",
     "text",
@@ -44696,7 +44696,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-cmp2.v1": {
    "board": {
@@ -44723,7 +44723,7 @@
     "x": 564,
     "y": 240
    },
-   "mural_id": "a5f9349d-7fd7-47c5-8d19-2324eae8c3b3",
+   "mural_id": "8d8348c5-97f8-4f54-9cfe-2ddc05227280",
    "tracked": [
     "title",
     "text",
@@ -44751,7 +44751,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-cmp2.v2": {
    "board": {
@@ -44778,7 +44778,7 @@
     "x": 564,
     "y": 432
    },
-   "mural_id": "25565761-c247-4d07-874f-3361b5da97f1",
+   "mural_id": "b769c901-af2b-4755-afe3-f0936ad66095",
    "tracked": [
     "title",
     "text",
@@ -44806,7 +44806,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-limit": {
    "board": {
@@ -44835,7 +44835,7 @@
     "x": 128,
     "y": 1424
    },
-   "mural_id": "879b31ed-0ecc-43dc-b63d-c5f76b91a4a4",
+   "mural_id": "a1c3d013-2c98-44ca-a862-f46f3fcf98f8",
    "tracked": [
     "title",
     "text",
@@ -44863,7 +44863,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231760619
+   "updatedOn": 1793319330818
   },
   "T-permissions-limit.bar": {
    "board": {
@@ -44893,7 +44893,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "dc267cce-e451-4d2f-8544-d598a2cd8bf0",
+   "mural_id": "07c4cb9e-a581-443a-9460-d5834b05e1d4",
    "tracked": [
     "title",
     "text",
@@ -44921,7 +44921,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-limit.bg": {
    "board": {
@@ -44951,7 +44951,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "5584e347-51c8-4c39-965a-a99c113a6fe2",
+   "mural_id": "b1156015-e7e0-4955-8b11-6ef064175ad4",
    "tracked": [
     "title",
     "text",
@@ -44979,7 +44979,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-limit.text": {
    "board": {
@@ -45006,7 +45006,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "949794a1-6f61-4af9-a325-7094ab3b7b56",
+   "mural_id": "04f5b363-0c44-4e7c-990b-be04024f707a",
    "tracked": [
     "title",
     "text",
@@ -45034,7 +45034,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793232473371
+   "updatedOn": 1793319334408
   },
   "T-permissions-problem": {
    "board": {
@@ -45063,7 +45063,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "15d6d692-c68c-49a4-a89b-b79e9b4a8d11",
+   "mural_id": "8ac99451-4b92-4f91-b0c6-28690dd85681",
    "tracked": [
     "title",
     "text",
@@ -45091,7 +45091,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231759755
+   "updatedOn": 1793319330802
   },
   "T-permissions-problem.bar": {
    "board": {
@@ -45120,7 +45120,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "bdfabd58-dcaa-40b5-8b44-4809c359f7f5",
+   "mural_id": "78db3efb-d33a-41c3-bc4b-8ba4b592ec2e",
    "tracked": [
     "title",
     "text",
@@ -45148,7 +45148,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-problem.bg": {
    "board": {
@@ -45177,7 +45177,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "8c36af75-120d-4bce-8a16-634d96f0e8e6",
+   "mural_id": "a06348b9-19d3-44a0-8280-b77a800fd5bb",
    "tracked": [
     "title",
     "text",
@@ -45205,7 +45205,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions-problem.body": {
    "board": {
@@ -45232,7 +45232,7 @@
     "x": 40,
     "y": 92
    },
-   "mural_id": "15ab0abd-0607-46c6-99ae-b604b48118ca",
+   "mural_id": "6aba09da-115f-4133-90d7-9445f05e200f",
    "tracked": [
     "title",
     "text",
@@ -45260,7 +45260,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions-problem.title": {
    "board": {
@@ -45287,7 +45287,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "3678d841-80fd-4fef-a9de-a765ce61c4cc",
+   "mural_id": "137376aa-7108-4a38-b5f1-44dc9d41c801",
    "tracked": [
     "title",
     "text",
@@ -45315,7 +45315,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions.bg": {
    "board": {
@@ -45344,7 +45344,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "d4d73382-e772-499e-bf2e-ce3a3788841c",
+   "mural_id": "162431a3-01a5-4eec-af11-0c8dfa356223",
    "tracked": [
     "title",
     "text",
@@ -45372,7 +45372,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-permissions.lead": {
    "board": {
@@ -45399,7 +45399,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "a8408ef5-0784-46f0-8fe0-0d18eb78e18d",
+   "mural_id": "eca26b6b-7cf0-4e61-9a6c-9de963d698e9",
    "tracked": [
     "title",
     "text",
@@ -45427,7 +45427,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-permissions.num": {
    "board": {
@@ -45437,7 +45437,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-permissions",
-    "text": "10 / 16",
+    "text": "11 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -45449,13 +45449,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-permissions",
-    "text": "10 / 16",
+    "text": "11 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "d57b4773-ce8a-4352-a001-20ace6401fc8",
+   "mural_id": "b6d639b3-9009-4066-b420-da2c47b2f860",
    "tracked": [
     "title",
     "text",
@@ -45483,7 +45483,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317596264
+   "updatedOn": 1793319334408
   },
   "T-permissions.rests": {
    "board": {
@@ -45510,7 +45510,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "a6e1d423-4117-4b35-a857-37d895820fde",
+   "mural_id": "35623201-f003-4a9c-82e1-2c4c783c041a",
    "tracked": [
     "title",
     "text",
@@ -45538,7 +45538,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793232473036
+   "updatedOn": 1793319334408
   },
   "T-permissions.title": {
    "board": {
@@ -45565,7 +45565,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "5b294fbf-40cb-4536-b892-b4bf9778a42f",
+   "mural_id": "181733e3-5193-4672-855c-cb0ff51a5bc8",
    "tracked": [
     "title",
     "text",
@@ -45593,7 +45593,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793319334408
   },
   "T-pm": {
    "board": {
@@ -48392,7 +48392,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-pm",
-    "text": "13 / 16",
+    "text": "14 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -48404,7 +48404,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-pm",
-    "text": "13 / 16",
+    "text": "14 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -48438,7 +48438,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317596240
+   "updatedOn": 1793319340258
   },
   "T-pm.rests": {
    "board": {
@@ -48727,7 +48727,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-questions",
-    "text": "16 / 16",
+    "text": "17 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -48739,7 +48739,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-questions",
-    "text": "16 / 16",
+    "text": "17 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -48773,7 +48773,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317596335
+   "updatedOn": 1793319340452
   },
   "T-questions.rests": {
    "board": {
@@ -48884,6 +48884,2117 @@
     "file"
    ],
    "updatedOn": 1793275219220
+  },
+  "T-rests": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 1800,
+    "outline": 1,
+    "show_title": false,
+    "title": "T-rests",
+    "width": 3200,
+    "x": -646,
+    "y": 6641
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 1800,
+    "outline": 1,
+    "show_title": false,
+    "title": "T-rests",
+    "width": 3200,
+    "x": -646,
+    "y": 6641
+   },
+   "mural_id": "8b36044a-c293-4569-9f27-178c765d944c",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319328232
+  },
+  "T-rests-limit": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 112,
+    "parent": "T-rests",
+    "show_title": false,
+    "title": "T-rests-limit",
+    "width": 2944,
+    "x": 128,
+    "y": 1428
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 112,
+    "parent": "T-rests",
+    "show_title": false,
+    "title": "T-rests-limit",
+    "width": 2944,
+    "x": 128,
+    "y": 1428
+   },
+   "mural_id": "6b882ded-3ca6-41de-a8bb-4f2498dd80ea",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319329371
+  },
+  "T-rests-limit.bar": {
+   "board": {
+    "border_color": "#0043CEFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#0043CEFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-rests-limit",
+    "text": "",
+    "title": "tpl:notice#bar",
+    "width": 6,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#0043CEFF",
+    "border_width": 1,
+    "color": "#0043CEFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-rests-limit",
+    "text": "",
+    "title": "tpl:notice#bar",
+    "width": 6,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "0d1053d5-4ada-453a-a2b8-9728cce761eb",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319333172
+  },
+  "T-rests-limit.bg": {
+   "board": {
+    "border_color": "#EDF5FFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#EDF5FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-rests-limit",
+    "text": "",
+    "title": "tpl:notice#bg",
+    "width": 2944,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#EDF5FFFF",
+    "border_width": 1,
+    "color": "#EDF5FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-rests-limit",
+    "text": "",
+    "title": "tpl:notice#bg",
+    "width": 2944,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "c5b3a3bd-99c8-4c9e-b957-66deaad91603",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319333172
+  },
+  "T-rests-limit.text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-limit",
+    "text": "Limit: pkit checks that the first lines name every decision the skill mentions, not that the steps agree with those decisions.",
+    "title": "tpl:notice#text",
+    "width": 2864,
+    "x": 40,
+    "y": 28
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-limit",
+    "text": "Limit: pkit checks that the first lines name every decision the skill mentions, not that the steps agree with those decisions.",
+    "title": "tpl:notice#text",
+    "width": 2864,
+    "x": 40,
+    "y": 28
+   },
+   "mural_id": "11f54947-2cea-46a9-9ff7-491274a3d46c",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319410479
+  },
+  "T-rests-rests": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 804,
+    "parent": "T-rests",
+    "show_title": false,
+    "title": "T-rests-rests",
+    "width": 2944,
+    "x": 128,
+    "y": 576
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 804,
+    "parent": "T-rests",
+    "show_title": false,
+    "title": "T-rests-rests",
+    "width": 2944,
+    "x": 128,
+    "y": 576
+   },
+   "mural_id": "29cdf438-21b6-4f25-91ea-00f31fd6e9ad",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319329318
+  },
+  "T-rests-rests.band": {
+   "board": {
+    "border_color": "#BE95FFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 732,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#band",
+    "width": 1180,
+    "x": 920,
+    "y": 72
+   },
+   "fields": {
+    "border_color": "#BE95FFFF",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 732,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#band",
+    "width": 1180,
+    "x": 920,
+    "y": 72
+   },
+   "mural_id": "7e89cec4-7346-4162-b0e8-a5ade5febc36",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319333172
+  },
+  "T-rests-rests.bandhead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "decision-author.md: its first lines",
+    "title": "tpl:rests_T-rests#bandhead",
+    "width": 1116,
+    "x": 952,
+    "y": 104
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "decision-author.md: its first lines",
+    "title": "tpl:rests_T-rests#bandhead",
+    "width": 1116,
+    "x": 952,
+    "y": 104
+   },
+   "mural_id": "aba2e94b-f963-4649-ad0e-6d433f0eb853",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.c0text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "Picks the next number",
+    "title": "tpl:rests_T-rests#c0text",
+    "width": 560,
+    "x": 2352,
+    "y": 243
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "Picks the next number",
+    "title": "tpl:rests_T-rests#c0text",
+    "width": 560,
+    "x": 2352,
+    "y": 243
+   },
+   "mural_id": "ca0b512d-5a9f-4199-b53c-9c2a6b8729f4",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.c1text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "Lays out the file",
+    "title": "tpl:rests_T-rests#c1text",
+    "width": 560,
+    "x": 2352,
+    "y": 307
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "Lays out the file",
+    "title": "tpl:rests_T-rests#c1text",
+    "width": 560,
+    "x": 2352,
+    "y": 307
+   },
+   "mural_id": "cbd126b5-b5cf-4441-a2d9-7aa0e71a2c4c",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.c2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "Refuses a name in use",
+    "title": "tpl:rests_T-rests#c2text",
+    "width": 560,
+    "x": 2352,
+    "y": 371
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "Refuses a name in use",
+    "title": "tpl:rests_T-rests#c2text",
+    "width": 560,
+    "x": 2352,
+    "y": 371
+   },
+   "mural_id": "45b86423-40fd-4077-8c25-667366ca94cb",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.carrow": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-rests-rests",
+    "points": [
+     [
+      2076,
+      412
+     ],
+     [
+      2304,
+      412
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:rests_T-rests#carrow"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-rests-rests",
+    "points": [
+     [
+      2076,
+      412
+     ],
+     [
+      2304,
+      412
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:rests_T-rests#carrow"
+   },
+   "mural_id": "822d8db7-1f4d-440e-b771-2c62de0a6093",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319337318
+  },
+  "T-rests-rests.cbox": {
+   "board": {
+    "border_color": "#D4BBFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 395,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#cbox",
+    "width": 624,
+    "x": 2320,
+    "y": 72
+   },
+   "fields": {
+    "border_color": "#D4BBFFFF",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 395,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#cbox",
+    "width": 624,
+    "x": 2320,
+    "y": 72
+   },
+   "mural_id": "0e045ec2-b6fa-4807-a536-f77b2539edbc",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319333172
+  },
+  "T-rests-rests.chead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "The skill",
+    "title": "tpl:rests_T-rests#chead",
+    "width": 1180,
+    "x": 920,
+    "y": 0
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "The skill",
+    "title": "tpl:rests_T-rests#chead",
+    "width": 1180,
+    "x": 920,
+    "y": 0
+   },
+   "mural_id": "bdf46f79-b45d-462c-b0b8-0e221f215ec8",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.cmd": {
+   "board": {
+    "height": 115,
+    "parent": "T-rests-rests",
+    "title": "tpl:rests_T-rests#cmd",
+    "width": 560,
+    "x": 2352,
+    "y": 104
+   },
+   "fields": {
+    "file": "2026-10-29-friday-talk-icons/term-rests-cmdline.png@c8cd18ab63e4f92b",
+    "height": 115,
+    "parent": "T-rests-rests",
+    "title": "tpl:rests_T-rests#cmd",
+    "width": 560,
+    "x": 2352,
+    "y": 104
+   },
+   "mural_id": "eac65324-deb5-4731-897f-311c454cfccc",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319335720
+  },
+  "T-rests-rests.d0arrow": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-rests-rests",
+    "points": [
+     [
+      716,
+      182
+     ],
+     [
+      944,
+      498
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:rests_T-rests#d0arrow"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-rests-rests",
+    "points": [
+     [
+      716,
+      182
+     ],
+     [
+      944,
+      498
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:rests_T-rests#d0arrow"
+   },
+   "mural_id": "fba74bb0-f490-4896-8f2c-85a546316f30",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319337132
+  },
+  "T-rests-rests.d0box": {
+   "board": {
+    "border_color": "#491D8BFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 220,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#d0box",
+    "width": 700,
+    "x": 0,
+    "y": 72
+   },
+   "fields": {
+    "border_color": "#491D8BFF",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 220,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#d0box",
+    "width": 700,
+    "x": 0,
+    "y": 72
+   },
+   "mural_id": "f6acad41-9083-4abe-b0f5-fd663c22080d",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319333172
+  },
+  "T-rests-rests.d0head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "COR-006",
+    "title": "tpl:rests_T-rests#d0head",
+    "width": 620,
+    "x": 40,
+    "y": 96
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "COR-006",
+    "title": "tpl:rests_T-rests#d0head",
+    "width": 620,
+    "x": 40,
+    "y": 96
+   },
+   "mural_id": "81e9476a-fd20-40a8-86ea-91e7298d63b7",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.d0text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "A decision holds the why. A skill holds the steps.",
+    "title": "tpl:rests_T-rests#d0text",
+    "width": 620,
+    "x": 40,
+    "y": 168
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "A decision holds the why. A skill holds the steps.",
+    "title": "tpl:rests_T-rests#d0text",
+    "width": 620,
+    "x": 40,
+    "y": 168
+   },
+   "mural_id": "4688f62c-a497-4045-b0ee-386d410a41b0",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.d1arrow": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-rests-rests",
+    "points": [
+     [
+      716,
+      426
+     ],
+     [
+      944,
+      541
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:rests_T-rests#d1arrow"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-rests-rests",
+    "points": [
+     [
+      716,
+      426
+     ],
+     [
+      944,
+      541
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:rests_T-rests#d1arrow"
+   },
+   "mural_id": "60cd614b-dbab-49c4-8ce1-3ab353bbe6e9",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319337511
+  },
+  "T-rests-rests.d1box": {
+   "board": {
+    "border_color": "#491D8BFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 220,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#d1box",
+    "width": 700,
+    "x": 0,
+    "y": 316
+   },
+   "fields": {
+    "border_color": "#491D8BFF",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 220,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#d1box",
+    "width": 700,
+    "x": 0,
+    "y": 316
+   },
+   "mural_id": "907fe2cf-7072-47a0-9219-a6ee71bf6adf",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319333172
+  },
+  "T-rests-rests.d1head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "COR-008",
+    "title": "tpl:rests_T-rests#d1head",
+    "width": 620,
+    "x": 40,
+    "y": 340
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "COR-008",
+    "title": "tpl:rests_T-rests#d1head",
+    "width": 620,
+    "x": 40,
+    "y": 340
+   },
+   "mural_id": "8063ba46-0d87-4e36-b3b8-55e709a4ed95",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.d1text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "How commits and branches are named.",
+    "title": "tpl:rests_T-rests#d1text",
+    "width": 620,
+    "x": 40,
+    "y": 412
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "How commits and branches are named.",
+    "title": "tpl:rests_T-rests#d1text",
+    "width": 620,
+    "x": 40,
+    "y": 412
+   },
+   "mural_id": "07c2f956-06a5-4654-91b9-61636d432ed3",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.d2arrow": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-rests-rests",
+    "points": [
+     [
+      716,
+      670
+     ],
+     [
+      944,
+      584
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:rests_T-rests#d2arrow"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-rests-rests",
+    "points": [
+     [
+      716,
+      670
+     ],
+     [
+      944,
+      584
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:rests_T-rests#d2arrow"
+   },
+   "mural_id": "bb7e5267-e778-459a-a107-1f560e475467",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319337209
+  },
+  "T-rests-rests.d2box": {
+   "board": {
+    "border_color": "#491D8BFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 220,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#d2box",
+    "width": 700,
+    "x": 0,
+    "y": 560
+   },
+   "fields": {
+    "border_color": "#491D8BFF",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 220,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "",
+    "title": "tpl:rests_T-rests#d2box",
+    "width": 700,
+    "x": 0,
+    "y": 560
+   },
+   "mural_id": "26e9a0ad-22b6-47ab-ba0e-31600116a236",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319333172
+  },
+  "T-rests-rests.d2head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "COR-025",
+    "title": "tpl:rests_T-rests#d2head",
+    "width": 620,
+    "x": 40,
+    "y": 584
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "COR-025",
+    "title": "tpl:rests_T-rests#d2head",
+    "width": 620,
+    "x": 40,
+    "y": 584
+   },
+   "mural_id": "0c436468-e3ff-4ced-b0fb-71db725ebcb4",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.d2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "ADRs: the records about what you build.",
+    "title": "tpl:rests_T-rests#d2text",
+    "width": 620,
+    "x": 40,
+    "y": 656
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-rests-rests",
+    "text": "ADRs: the records about what you build.",
+    "title": "tpl:rests_T-rests#d2text",
+    "width": 620,
+    "x": 40,
+    "y": 656
+   },
+   "mural_id": "ac0eea1d-f5cb-44f8-9923-8051d0118516",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.follows": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "follows",
+    "title": "tpl:rests_T-rests#follows",
+    "width": 188,
+    "x": 724,
+    "y": 106
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "follows",
+    "title": "tpl:rests_T-rests#follows",
+    "width": 188,
+    "x": 724,
+    "y": 106
+   },
+   "mural_id": "b914243b-507f-4acf-b828-97487f291bdf",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.lhead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "The decisions it follows",
+    "title": "tpl:rests_T-rests#lhead",
+    "width": 700,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "The decisions it follows",
+    "title": "tpl:rests_T-rests#lhead",
+    "width": 700,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "262685f0-2b1d-4f1d-8681-9e4e83d23d29",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.rhead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "The command it runs",
+    "title": "tpl:rests_T-rests#rhead",
+    "width": 624,
+    "x": 2320,
+    "y": 0
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "The command it runs",
+    "title": "tpl:rests_T-rests#rhead",
+    "width": 624,
+    "x": 2320,
+    "y": 0
+   },
+   "mural_id": "e61d9574-60db-433c-99a8-0e7f848ac2c7",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.runs": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "runs",
+    "title": "tpl:rests_T-rests#runs",
+    "width": 188,
+    "x": 2124,
+    "y": 336
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-rests-rests",
+    "text": "runs",
+    "title": "tpl:rests_T-rests#runs",
+    "width": 188,
+    "x": 2124,
+    "y": 336
+   },
+   "mural_id": "26f1f6c3-cae5-4e4a-a0c6-05f6a2a64233",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests-rests.skill": {
+   "board": {
+    "height": 588,
+    "parent": "T-rests-rests",
+    "title": "tpl:rests_T-rests#skill",
+    "width": 1116,
+    "x": 952,
+    "y": 184
+   },
+   "fields": {
+    "file": "2026-10-29-friday-talk-icons/term-rests-skill.png@eda8a67793fee7f5",
+    "height": 588,
+    "parent": "T-rests-rests",
+    "title": "tpl:rests_T-rests#skill",
+    "width": 1116,
+    "x": 952,
+    "y": 184
+   },
+   "mural_id": "58c0bcff-ce2a-4990-b078-0424441c0c12",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319335632
+  },
+  "T-rests.bg": {
+   "board": {
+    "border_color": "#E0E0E0FF",
+    "border_style": "solid",
+    "border_width": 2,
+    "color": "#FFFFFFFF",
+    "height": 1800,
+    "ink": "#000000FF",
+    "parent": "T-rests",
+    "text": "",
+    "title": "tpl:slide#bg",
+    "width": 3200,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#E0E0E0FF",
+    "border_width": 2,
+    "color": "#FFFFFFFF",
+    "height": 1800,
+    "parent": "T-rests",
+    "text": "",
+    "title": "tpl:slide#bg",
+    "width": 3200,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "49ceba37-40bf-4aed-954b-7242fefcd0ef",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319333172
+  },
+  "T-rests.lead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 64,
+    "ink": "#525252FF",
+    "parent": "T-rests",
+    "text": "On the decisions it follows, and on the command it runs. The skill's first lines name both.",
+    "title": "tpl:slide#lead",
+    "width": 2192,
+    "x": 128,
+    "y": 320
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 64,
+    "ink": "#525252FF",
+    "parent": "T-rests",
+    "text": "On the decisions it follows, and on the command it runs. The skill's first lines name both.",
+    "title": "tpl:slide#lead",
+    "width": 2192,
+    "x": 128,
+    "y": 320
+   },
+   "mural_id": "8b32a04d-e876-4bfc-baa0-cafd5e8d5bf0",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests.num": {
+   "board": {
+    "align": "right",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 28,
+    "ink": "#525252FF",
+    "parent": "T-rests",
+    "text": "8 / 17",
+    "title": "tpl:slide#num",
+    "width": 688,
+    "x": 2384,
+    "y": 1664
+   },
+   "fields": {
+    "align": "right",
+    "font": "proxima-nova",
+    "font_size": 28,
+    "ink": "#525252FF",
+    "parent": "T-rests",
+    "text": "8 / 17",
+    "title": "tpl:slide#num",
+    "width": 688,
+    "x": 2384,
+    "y": 1664
+   },
+   "mural_id": "8d469499-d9cd-4766-9293-f8c5b8b0d8eb",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests.rests": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 28,
+    "ink": "#525252FF",
+    "parent": "T-rests",
+    "text": "In project-kit: all 14 skills name the decisions they follow. 13 of them also name the command they run.",
+    "title": "tpl:slide#rests",
+    "width": 2192,
+    "x": 128,
+    "y": 1664
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 28,
+    "ink": "#525252FF",
+    "parent": "T-rests",
+    "text": "In project-kit: all 14 skills name the decisions they follow. 13 of them also name the command they run.",
+    "title": "tpl:slide#rests",
+    "width": 2192,
+    "x": 128,
+    "y": 1664
+   },
+   "mural_id": "9e2e512a-d6f2-443d-8a8e-46e17fca4dc0",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
+  },
+  "T-rests.title": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 120,
+    "ink": "#161616FF",
+    "parent": "T-rests",
+    "text": "What a skill rests on",
+    "title": "tpl:slide#title",
+    "width": 2944,
+    "x": 128,
+    "y": 128
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 120,
+    "ink": "#161616FF",
+    "parent": "T-rests",
+    "text": "What a skill rests on",
+    "title": "tpl:slide#title",
+    "width": 2944,
+    "x": 128,
+    "y": 128
+   },
+   "mural_id": "21216932-887c-4194-be83-8906c1f80858",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793319334408
   },
   "T-se": {
    "board": {
@@ -51128,7 +53239,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-se",
-    "text": "14 / 16",
+    "text": "15 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -51140,7 +53251,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-se",
-    "text": "14 / 16",
+    "text": "15 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -51174,7 +53285,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317595956
+   "updatedOn": 1793319339763
   },
   "T-se.rests": {
    "board": {
@@ -52651,7 +54762,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "7 / 16",
+    "text": "7 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -52663,7 +54774,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "7 / 16",
+    "text": "7 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -52697,7 +54808,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317594855
+   "updatedOn": 1793319340908
   },
   "T-sessions.rests": {
    "board": {
@@ -52817,11 +54928,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 1,
+    "outline": 2,
     "show_title": false,
     "title": "T-skills",
     "width": 3200,
-    "x": -646,
+    "x": 2954,
     "y": 6641
    },
    "fields": {
@@ -52829,14 +54940,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 1,
+    "outline": 2,
     "show_title": false,
     "title": "T-skills",
     "width": 3200,
-    "x": -646,
+    "x": 2954,
     "y": 6641
    },
-   "mural_id": "e2877a41-395a-4533-b39e-849aee538f78",
+   "mural_id": "bcf5e350-33dd-4e42-af43-79c513086a2c",
    "tracked": [
     "title",
     "text",
@@ -52864,7 +54975,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231751504
+   "updatedOn": 1793319328376
   },
   "T-skills-checklist": {
    "board": {
@@ -52893,7 +55004,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "db1b4cc5-f29c-4ee5-a72e-41019ee38e2b",
+   "mural_id": "afb72963-01cd-400c-9218-a9bf4d5f6e1e",
    "tracked": [
     "title",
     "text",
@@ -52921,7 +55032,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318488129
+   "updatedOn": 1793319329430
   },
   "T-skills-checklist.arrow": {
    "board": {
@@ -52963,7 +55074,7 @@
     "tip": "end",
     "title": "tpl:checklist_T-skills#arrow"
    },
-   "mural_id": "8c500621-fe54-46e5-ae3e-f84cda99830c",
+   "mural_id": "910faa64-f1ed-4079-82b3-051a2a17a922",
    "tracked": [
     "title",
     "text",
@@ -52991,7 +55102,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318491968
+   "updatedOn": 1793319337387
   },
   "T-skills-checklist.cmd": {
    "board": {
@@ -53011,7 +55122,7 @@
     "x": 1460,
     "y": 362
    },
-   "mural_id": "ea693257-40cd-4460-8479-5a9ab6cfac8e",
+   "mural_id": "28563f9a-32be-4c57-a453-26c5fb6ad974",
    "tracked": [
     "title",
     "text",
@@ -53039,7 +55150,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318490916
+   "updatedOn": 1793319335723
   },
   "T-skills-checklist.lhead": {
    "board": {
@@ -53066,7 +55177,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "cb013536-8459-4f9d-8d6b-dc7c58277f95",
+   "mural_id": "649c38e0-6700-4b10-9276-de6ea61b7609",
    "tracked": [
     "title",
     "text",
@@ -53094,7 +55205,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r0box": {
    "board": {
@@ -53124,7 +55235,7 @@
     "x": 0,
     "y": 72
    },
-   "mural_id": "4917aa07-7caf-44aa-a7c5-ab4afa063c82",
+   "mural_id": "3f31ff21-07e4-4f43-9ef8-866f77816438",
    "tracked": [
     "title",
     "text",
@@ -53152,7 +55263,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r0num": {
    "board": {
@@ -53179,7 +55290,7 @@
     "x": 24,
     "y": 78
    },
-   "mural_id": "abd25f3c-08cb-4d93-a2f1-02719db86b35",
+   "mural_id": "24aea0b7-af05-45df-85b1-3903d788bbd1",
    "tracked": [
     "title",
     "text",
@@ -53207,7 +55318,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r0text": {
    "board": {
@@ -53234,7 +55345,7 @@
     "x": 96,
     "y": 81
    },
-   "mural_id": "78b05101-3b82-4533-aa08-6941be4240af",
+   "mural_id": "44532e93-a458-4b8c-8f24-4a24e215165a",
    "tracked": [
     "title",
     "text",
@@ -53262,7 +55373,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r1box": {
    "board": {
@@ -53292,7 +55403,7 @@
     "x": 0,
     "y": 150
    },
-   "mural_id": "f7822407-a645-4d28-8590-6f68c402cc59",
+   "mural_id": "b4802bad-a345-476d-b92e-418d0f75f4aa",
    "tracked": [
     "title",
     "text",
@@ -53320,7 +55431,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r1num": {
    "board": {
@@ -53347,7 +55458,7 @@
     "x": 24,
     "y": 156
    },
-   "mural_id": "8ad9a819-7146-42cc-ad38-b8f3c0128118",
+   "mural_id": "9c149cd6-63c2-4e11-8614-96fce5e9db2e",
    "tracked": [
     "title",
     "text",
@@ -53375,7 +55486,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r1text": {
    "board": {
@@ -53402,7 +55513,7 @@
     "x": 96,
     "y": 159
    },
-   "mural_id": "39e5f447-b2b7-43d1-aa46-0457f9fb6340",
+   "mural_id": "d35609d0-c456-49d2-ad08-8e8fc6c73f88",
    "tracked": [
     "title",
     "text",
@@ -53430,7 +55541,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r2box": {
    "board": {
@@ -53460,7 +55571,7 @@
     "x": 0,
     "y": 228
    },
-   "mural_id": "efe5d4e8-f7e4-4c19-853d-918280c2a19f",
+   "mural_id": "aa02c22d-c4d4-4b38-954c-26cfdba44715",
    "tracked": [
     "title",
     "text",
@@ -53488,7 +55599,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r2num": {
    "board": {
@@ -53515,7 +55626,7 @@
     "x": 24,
     "y": 234
    },
-   "mural_id": "027accee-142b-41df-bd35-6885d74dda1d",
+   "mural_id": "0987bd1d-d05c-4481-86f8-503ec9aa473b",
    "tracked": [
     "title",
     "text",
@@ -53543,7 +55654,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r2text": {
    "board": {
@@ -53570,7 +55681,7 @@
     "x": 96,
     "y": 237
    },
-   "mural_id": "b08f3029-f9d6-405f-b65b-5ea0fe80f62f",
+   "mural_id": "52362310-10db-4642-8b4f-03be980895c0",
    "tracked": [
     "title",
     "text",
@@ -53598,7 +55709,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r3box": {
    "board": {
@@ -53628,7 +55739,7 @@
     "x": 0,
     "y": 306
    },
-   "mural_id": "8b4ad4a1-9069-49ff-bc73-970c9ea7d9be",
+   "mural_id": "3f2a54d1-5a25-4cb0-aa7f-f72a153ee026",
    "tracked": [
     "title",
     "text",
@@ -53656,7 +55767,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r3num": {
    "board": {
@@ -53683,7 +55794,7 @@
     "x": 24,
     "y": 312
    },
-   "mural_id": "b503592f-610a-4366-9940-ddc0a49d8597",
+   "mural_id": "a7888436-d2d5-489c-bb2c-89e070b88b79",
    "tracked": [
     "title",
     "text",
@@ -53711,7 +55822,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r3text": {
    "board": {
@@ -53738,7 +55849,7 @@
     "x": 96,
     "y": 315
    },
-   "mural_id": "45318d93-ee93-4086-94b2-fad5f5c6fe3e",
+   "mural_id": "dc28469d-353f-4d58-a587-cf634cdd5b7f",
    "tracked": [
     "title",
     "text",
@@ -53766,7 +55877,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r4box": {
    "board": {
@@ -53796,7 +55907,7 @@
     "x": 0,
     "y": 384
    },
-   "mural_id": "9ad81760-5b67-4393-a977-f4238a985a43",
+   "mural_id": "c8abdeea-2834-48db-be8b-6a47752b289d",
    "tracked": [
     "title",
     "text",
@@ -53824,7 +55935,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r4note": {
    "board": {
@@ -53852,7 +55963,7 @@
     "x": 780,
     "y": 390
    },
-   "mural_id": "c1edb4f4-70fa-4886-8968-d6e3b3e9840c",
+   "mural_id": "c5f8e1fa-2342-4b35-bbd1-24e5b10df66c",
    "tracked": [
     "title",
     "text",
@@ -53880,7 +55991,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r4num": {
    "board": {
@@ -53907,7 +56018,7 @@
     "x": 24,
     "y": 390
    },
-   "mural_id": "66591c25-ca68-42d1-b773-8bd8ac86278a",
+   "mural_id": "47133d71-790b-47e2-bc5d-88fa6f91f839",
    "tracked": [
     "title",
     "text",
@@ -53935,7 +56046,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r4text": {
    "board": {
@@ -53962,7 +56073,7 @@
     "x": 96,
     "y": 393
    },
-   "mural_id": "016688b9-7d60-4cab-9573-a4980e0d8c31",
+   "mural_id": "6c74c3c7-ab36-4734-997d-b2095a629ebb",
    "tracked": [
     "title",
     "text",
@@ -53990,7 +56101,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r5box": {
    "board": {
@@ -54020,7 +56131,7 @@
     "x": 0,
     "y": 462
    },
-   "mural_id": "0000e854-561d-4e49-a3cd-9752f110496a",
+   "mural_id": "fc1889ab-f747-4a2f-828e-7480ecc619bf",
    "tracked": [
     "title",
     "text",
@@ -54048,7 +56159,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r5num": {
    "board": {
@@ -54075,7 +56186,7 @@
     "x": 24,
     "y": 468
    },
-   "mural_id": "5c2a30c7-a03f-4f9a-b666-5da65786bebb",
+   "mural_id": "6a843df0-5b8b-46c5-a912-2ac5697253ef",
    "tracked": [
     "title",
     "text",
@@ -54103,7 +56214,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r5text": {
    "board": {
@@ -54130,7 +56241,7 @@
     "x": 96,
     "y": 471
    },
-   "mural_id": "126ddd35-ac25-45d0-9fba-c1a038713a57",
+   "mural_id": "426adb85-290a-4c97-8b91-752561874fa1",
    "tracked": [
     "title",
     "text",
@@ -54158,7 +56269,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r6box": {
    "board": {
@@ -54188,7 +56299,7 @@
     "x": 0,
     "y": 540
    },
-   "mural_id": "e7b78b16-95f7-4f0f-973d-277b3a515886",
+   "mural_id": "cd84f2ef-185f-4d10-a97f-44c69d74c02c",
    "tracked": [
     "title",
     "text",
@@ -54216,7 +56327,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r6num": {
    "board": {
@@ -54243,7 +56354,7 @@
     "x": 24,
     "y": 546
    },
-   "mural_id": "22336d58-123c-45f4-a80e-c6507cb0b2db",
+   "mural_id": "458c77b0-4806-4c5b-9a8d-227dccef695f",
    "tracked": [
     "title",
     "text",
@@ -54271,7 +56382,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r6text": {
    "board": {
@@ -54298,7 +56409,7 @@
     "x": 96,
     "y": 549
    },
-   "mural_id": "724057cc-32a7-426d-8e76-7e2c24eaf059",
+   "mural_id": "d3482af2-1da3-4e4c-b660-8748c3c1db64",
    "tracked": [
     "title",
     "text",
@@ -54326,7 +56437,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r7box": {
    "board": {
@@ -54356,7 +56467,7 @@
     "x": 0,
     "y": 618
    },
-   "mural_id": "ba3c469a-a9c8-4912-baa6-35d3d64ffac9",
+   "mural_id": "eb543f5b-b370-44e5-b52b-0fe4d08f42ec",
    "tracked": [
     "title",
     "text",
@@ -54384,7 +56495,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r7num": {
    "board": {
@@ -54411,7 +56522,7 @@
     "x": 24,
     "y": 624
    },
-   "mural_id": "b30f20fb-5815-407e-854c-6f6d92bab5c5",
+   "mural_id": "a0226d82-df83-4eab-b125-4f7b5563f574",
    "tracked": [
     "title",
     "text",
@@ -54439,7 +56550,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r7text": {
    "board": {
@@ -54466,7 +56577,7 @@
     "x": 96,
     "y": 627
    },
-   "mural_id": "051b828b-e8d9-45fa-9a86-d058688ce1b4",
+   "mural_id": "55b0361d-552d-4ed4-9865-c3b546191f07",
    "tracked": [
     "title",
     "text",
@@ -54494,7 +56605,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r8box": {
    "board": {
@@ -54524,7 +56635,7 @@
     "x": 0,
     "y": 696
    },
-   "mural_id": "d4ea05a0-6cd8-46b6-9636-6b25a3082a90",
+   "mural_id": "31e9a8a3-2139-4def-a120-d31fea0ff842",
    "tracked": [
     "title",
     "text",
@@ -54552,7 +56663,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-checklist.r8num": {
    "board": {
@@ -54579,7 +56690,7 @@
     "x": 24,
     "y": 702
    },
-   "mural_id": "d25ec467-a398-4207-a53d-d04ba7a176ad",
+   "mural_id": "b6d2391c-6a28-4a38-884b-1435bc39e1c1",
    "tracked": [
     "title",
     "text",
@@ -54607,7 +56718,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.r8text": {
    "board": {
@@ -54634,7 +56745,7 @@
     "x": 96,
     "y": 705
    },
-   "mural_id": "b3cfc816-7d6e-455c-800e-06deff80c845",
+   "mural_id": "8fab3632-26de-4228-9f65-467095db8cb0",
    "tracked": [
     "title",
     "text",
@@ -54662,7 +56773,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-checklist.rhead": {
    "board": {
@@ -54689,7 +56800,7 @@
     "x": 1460,
     "y": 290
    },
-   "mural_id": "27d295e6-c0ac-4bac-8811-0bbdfa8a2c1a",
+   "mural_id": "c9461e71-231e-4be3-acb2-81c62bbbb6a7",
    "tracked": [
     "title",
     "text",
@@ -54717,7 +56828,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills-limit": {
    "board": {
@@ -54746,7 +56857,7 @@
     "x": 128,
     "y": 1445
    },
-   "mural_id": "1213814d-5874-4811-bf8d-1aa784777402",
+   "mural_id": "d6386b74-75f8-4405-a8b3-31925937a10d",
    "tracked": [
     "title",
     "text",
@@ -54774,7 +56885,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318488174
+   "updatedOn": 1793319329426
   },
   "T-skills-limit.bar": {
    "board": {
@@ -54804,7 +56915,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "37482a63-dfca-4caa-b3af-f2295eb95542",
+   "mural_id": "2f88f288-dd9b-4a5b-ab00-94213073945d",
    "tracked": [
     "title",
     "text",
@@ -54832,7 +56943,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-limit.bg": {
    "board": {
@@ -54862,7 +56973,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "3d463e28-b02a-4384-bda7-7577afd385e7",
+   "mural_id": "4e34b174-9d64-42cc-bc47-5f9ef16f330d",
    "tracked": [
     "title",
     "text",
@@ -54890,7 +57001,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489020
+   "updatedOn": 1793319333172
   },
   "T-skills-limit.text": {
    "board": {
@@ -54917,7 +57028,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "3b18b0c2-2a01-4597-a5cf-1d8e680bb888",
+   "mural_id": "76de8132-dcf2-4153-933c-ffc2fc22ef37",
    "tracked": [
     "title",
     "text",
@@ -54945,7 +57056,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318489948
+   "updatedOn": 1793319334408
   },
   "T-skills.bg": {
    "board": {
@@ -54974,7 +57085,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "73b55f2d-d3b1-4146-a8c1-45d210348b29",
+   "mural_id": "e8ae1e30-4a3c-41df-9336-aa8eb0de53a8",
    "tracked": [
     "title",
     "text",
@@ -55002,7 +57113,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793319333172
   },
   "T-skills.lead": {
    "board": {
@@ -55012,7 +57123,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-skills",
-    "text": "A skill tells the agent how to do one kind of task, step by step. Its command does the steps that must be exact.",
+    "text": "The agent follows the steps in order. At step 5 it runs the command, so the number and the layout are always right.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -55023,13 +57134,13 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-skills",
-    "text": "A skill tells the agent how to do one kind of task, step by step. Its command does the steps that must be exact.",
+    "text": "The agent follows the steps in order. At step 5 it runs the command, so the number and the layout are always right.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
     "y": 320
    },
-   "mural_id": "8f480834-3c2b-4c39-a7ab-25c48c2624ec",
+   "mural_id": "c7e0a97f-beed-4f23-88d5-35412e7ae4fe",
    "tracked": [
     "title",
     "text",
@@ -55057,7 +57168,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318492298
+   "updatedOn": 1793319334408
   },
   "T-skills.num": {
    "board": {
@@ -55067,7 +57178,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-skills",
-    "text": "8 / 16",
+    "text": "9 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -55079,13 +57190,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-skills",
-    "text": "8 / 16",
+    "text": "9 / 17",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "4bd955a6-d559-4f31-be8a-b81e005ddd2f",
+   "mural_id": "6a638d4d-3587-4eb3-af40-2dc85e2ef4b9",
    "tracked": [
     "title",
     "text",
@@ -55113,7 +57224,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793317595226
+   "updatedOn": 1793319334408
   },
   "T-skills.rests": {
    "board": {
@@ -55140,7 +57251,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "1fb76551-0e86-418c-843c-79a44551be80",
+   "mural_id": "8d366325-4f23-413f-833c-82d3ad2e57fd",
    "tracked": [
     "title",
     "text",
@@ -55168,7 +57279,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318491919
+   "updatedOn": 1793319334408
   },
   "T-skills.title": {
    "board": {
@@ -55178,7 +57289,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-skills",
-    "text": "Skills and their commands",
+    "text": "One skill, step by step",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -55189,13 +57300,13 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-skills",
-    "text": "Skills and their commands",
+    "text": "One skill, step by step",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
     "y": 128
    },
-   "mural_id": "b15bad1f-8c5f-4bca-8b6b-27a02ebfe650",
+   "mural_id": "094e153f-b408-4bb9-baa8-32ae6f8bdea5",
    "tracked": [
     "title",
     "text",
@@ -55223,7 +57334,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793318491909
+   "updatedOn": 1793319334408
   }
  }
 }

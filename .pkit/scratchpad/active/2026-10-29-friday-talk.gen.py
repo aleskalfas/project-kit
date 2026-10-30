@@ -657,6 +657,78 @@ def checklist(pid, y, v):
     return {f"{pid}-checklist": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
 
+def rests(pid, y, v):
+    """What a skill rests on, left to right in the pyramid's colours: the decisions it follows (cards, the
+    darkest), the skill's first lines (a terminal in a band of the skills layer), the command it runs (a box of
+    the commands layer). An arrow from each card to the line naming it, and one from the command's line to the
+    command. One instance of a template made for this slide."""
+    W = SPAN16
+    lw, gap, cw = 700, 220, 1180
+    cx = lw + gap
+    rx = cx + cw + gap
+    rw = W - rx
+    fs = v.get("font_size", 28)
+    HEAD = 72
+    pad = 32
+    file, th = terminal_png(f"{pid}-skill".removeprefix("T-"), v["terminal"], cw - 2 * pad, fs)
+    line_h = round(fs * 1.53)
+    first = 36 + line_h - round(line_h * 0.3) - fs * 0.35  # the middle of the terminal's first line
+    band_head = 80
+    t_top = HEAD + pad + band_head
+    band_h = pad + band_head + th + pad
+    cards, CH, CG = v["decisions"], v.get("card_h", 200), 24
+    left_h = HEAD + len(cards) * CH + (len(cards) - 1) * CG
+    cmd = v["command"]
+    cfile, ch = terminal_png(f"{pid}-cmdline".removeprefix("T-"), cmd["terminal"], rw - 2 * pad, fs)
+    ROW = 64
+    box_h = pad + ch + 24 + len(cmd["does"]) * ROW + pad
+    H = max(left_h, HEAD + band_h, HEAD + box_h)
+    parts = {}
+
+    def shape(key, x, top, w, h, fill):
+        parts[key] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": round(top), "width": w, "height": h,
+                      "color": fill, "border_color": fill, "border_width": 1, "ink": "@text_primary"}
+
+    def text(key, s, style, x, top, w, h, ink="@text_primary"):
+        parts[key] = {"type": "text", "text": md(s), "style": style, "ink": ink, "x": x, "y": round(top), "width": w, "height": h}
+
+    text("lhead", v["left_head"], "@style.key", 0, 0, lw, 56)
+    text("chead", v["center_head"], "@style.key", cx, 0, cw, 56)
+    text("rhead", v["right_head"], "@style.key", rx, 0, rw, 56)
+    for i, c in enumerate(cards):
+        top = HEAD + i * (CH + CG)
+        shape(f"d{i}box", 0, top, lw, CH, v.get("decision_fill", "#491D8BFF"))
+        text(f"d{i}head", c["head"], "@style.tile_heading", 40, top + 24, lw - 80, 64, "@text_on_color")
+        text(f"d{i}text", c["text"], "@style.body", 40, top + 96, lw - 80, CH - 120, "@text_on_color")
+    shape("band", cx, HEAD, cw, band_h, v.get("skill_fill", "#BE95FFFF"))
+    text("bandhead", v["skill_head"], "@style.tile_heading", cx + pad, HEAD + pad, cw - 2 * pad, 64)
+    parts["skill"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": cx + pad, "y": t_top, "width": cw - 2 * pad, "height": th}
+    shape("cbox", rx, HEAD, rw, box_h, v.get("command_fill", "#D4BBFFFF"))
+    parts["cmd"] = {"type": "image", "file": f"{ICONS_DIR}/{cfile}.png", "x": rx + pad, "y": HEAD + pad, "width": rw - 2 * pad, "height": ch}
+    for i, d in enumerate(cmd["does"]):
+        text(f"c{i}text", d, "@style.body", rx + pad, HEAD + pad + ch + 24 + i * ROW, rw - 2 * pad, 50)
+
+    def line_mid(i):
+        return t_top + first + i * line_h
+
+    def arrow(key, p1, p2):
+        parts[key] = {"type": "arrow", "points": [[round(p1[0]), round(p1[1])], [round(p2[0]), round(p2[1])]], "arrow_type": "straight",
+                      "tip": "end", "color": "@role_code", "border_width": 6, "border_style": "solid"}
+
+    for i, c in enumerate(cards):
+        arrow(f"d{i}arrow", (lw + 16, HEAD + i * (CH + CG) + CH / 2), (cx + pad - 8, line_mid(c["line"])))
+    arrow("carrow", (cx + cw - pad + 8, line_mid(cmd["line"])), (rx - 16, line_mid(cmd["line"])))
+    text("follows", v.get("follows", "follows"), "@style.key", lw + 24, HEAD + CH / 2 - 76, gap - 32, 56)
+    text("runs", v.get("runs", "runs"), "@style.key", cx + cw + 24, line_mid(cmd["line"]) - 76, gap - 32, 56)
+    name = f"rests_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "What a skill rests on, drawn for one slide by the slide generator: the decisions it follows, its first lines, the command it runs.",
+        "root": {**CLEAR_AREA, "width": W, "height": H},
+        "parts": parts,
+    }
+    return {f"{pid}-rests": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
 def ideas(pid, y, v):
     """Where ideas start: a conversation, the scratchpad note that keeps it, and what the note becomes, the
     products large on the right, the first (records) dark like the pyramid's apex, dropped small below. A box
@@ -1057,6 +1129,8 @@ def build_slide(s, n, total):
             add(rules(pid, y, v))
         elif kind == "checklist":
             add(checklist(pid, y, v))
+        elif kind == "rests":
+            add(rests(pid, y, v))
         elif kind == "ties":
             add(ties(pid, y, v))
         elif kind == "story":
