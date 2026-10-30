@@ -1,0 +1,77 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/constraints/REQ-007-offline-same-answer.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - moved-c65929ef6b08.yaml
+    revalidated:
+      at: 2026-10-30T10:12:21Z
+      outcome: unchanged
+      unchanged-because: Two package tests now set a component's version on the line they find, not the number the repository carries; no command, and no test of offline, read-only, deterministic answers, changes.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T201801Z-6d5e4a2f.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+    revalidated:
+      at: 2026-10-30T10:12:24Z
+      outcome: unchanged
+      unchanged-because: The dry-run tests take the adapter's next version from the project's record, not a fixed number; what each dry run lists and that it writes nothing are asserted as before.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-010-stop-under-another-version.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261027T133722Z-42862485.yaml
+    revalidated:
+      at: 2026-10-30T10:12:28Z
+      outcome: unchanged
+      unchanged-because: The upgrade test records both of the project's states at 1.149.0, so it is behind the pkit whatever version the repository carries; the stop and its tests are unchanged.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+    revalidated:
+      at: 2026-10-30T10:12:31Z
+      outcome: unchanged
+      unchanged-because: The tests set the project's recorded states and the adapter's version themselves, not from the repository's live numbers; what a transition records and completes is asserted as before.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261027T133722Z-42862485.yaml
+    revalidated:
+      at: 2026-10-30T10:12:34Z
+      outcome: unchanged
+      unchanged-because: The order test still asserts the pin is written last; only the adapter version it stages now comes from the project's record, not a fixed 0.7.0.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+    revalidated:
+      at: 2026-10-30T10:12:38Z
+      outcome: unchanged
+      unchanged-because: The compatibility tests now record the project behind their fake source, so the check runs and refuses before any write as before, whatever version the repository carries.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+    revalidated:
+      at: 2026-10-30T10:12:41Z
+      outcome: unchanged
+      unchanged-because: The dry-run collision test still lists each collision and asks nothing; only the adapter's version is taken from the project's record, not a fixed number.
+  - artefact: tech-docs/analysis/core/requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md
+    read:
+      - 20261025T143937Z-48590796.yaml
+      - 20261025T221340Z-215a759f.yaml
+    revalidated:
+      at: 2026-10-30T10:12:44Z
+      outcome: unchanged
+      unchanged-because: No test of how the CLI is installed changes; the change only lets upgrade tests set the versions their case needs rather than read the repository's.
