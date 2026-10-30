@@ -1,0 +1,503 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-operational-rule
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200836Z-0e9bee72.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:57:30Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set; COR-068 point 6 gains how a capability's rules are cited; the adapters README gains how a capability's rules reach a session and a third harness requirement. Each operational rule is still loaded through the harness's include and numbered in a file of the system or the project, and core and project rules keep their meaning. #2261's trim, merged into this change is answered beside it: “Read with #2262's answer: the trim rewords the rules and lowers OPS's budget, and #2262 gave the set and project-kit's plain file their budgets. Neither changes what an operational rule is: an instruction every session loads, kept as backbone:RS-OPS-0NN with its origin and status, and cited by layer and number as before.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, the trim rewords the rules and lowers OPS's budget, rules 23 and 24 join the set at 4.0.0, and #2262 gave the set and the plain file their budgets. None changes what an operational rule is: an instruction every session loads, kept as backbone:RS-OPS-0NN with its origin and status, and cited by layer and number.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-017-backbone-migration-safe.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:57:34Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 5 on safe migrations is untouched. #2261's trim, merged into this change is answered beside it: “Core rule 5 keeps its meaning: a migration detects state already migrated and exits cleanly, and a backbone migration acts only on a positive sign and never deletes by a path's name or position, saying so in the release's notes where it adds a missing default, as the requirement states.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, the trim keeps core rule 5's meaning: a migration exits cleanly on state already migrated, and a backbone migration acts only on a positive sign and never deletes by a path's name or position, its release notes naming a default it may restore. Rules 23 and 24 say nothing of migrations, so the requirement holds.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T030318Z-e822997a.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:57:37Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 20 on who decides an answer is untouched. #2261's trim, merged into this change is answered beside it: “Core rule 20 still has the writer write each answer the person accepted, as the use case cites it beside COR-050 point 3; the trim keeps that requirement.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core rule 20, trimmed, still has the writer write each answer the person accepted, as the use case cites it beside COR-050 point 3, and rules 23 and 24 change none of it, so deciding the unasked answers holds.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-001-build-under-conventions.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T235716Z-019daf66.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183129Z-d1c2e7b6.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023222Z-8e258fcb.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+    revalidated:
+      at: 2026-10-30T03:57:41Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; project rule 2 keeps project-kit's own gates and points to software-engineering's rule for what a builder runs. In project-kit the agent still runs the tests of what it changed and leaves the full suite to the pre-push hook and CI, as project rule 2 still says. #2261's trim, merged into this change is answered beside it: “Each core and project rule the use case cites keeps its requirement: rule 2's accepted records, 8's pause, 14 and 15's permission model, 19's own repository, 21's one retry, 22's lookup, and project rules 2 and 4, which the trim leaves or only shortens.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. Main's change since, the check run as three parallel parts behind one checks job, is answered beside it: “Read with main's trim of the rules, merged here: every rule the use case cites keeps its requirement. The trim only shortens core rules 2, 8, 14, 15, 17, 19, 21 and 22 and project rule 4, and this change rewords project rule 2, which now gives the suite as some 20 800 tests and says that the pre-push hook runs check.sh whole and CI in parallel parts; the agent still runs the tests of what it changed and leaves the full suite to the hook and CI.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds. #2274's change since, core rule 24 on main, updated the document to name the rule it adds, and this change leaves that text as it is. Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-agent-workspace
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:57:44Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 16 on the agent workspace is untouched, so the definition holds. #2261's trim, merged into this change is answered beside it: “Core rule 16 still asks an agent to keep its intermediate files in the workspace, write there with the file tools and remove what it no longer needs, so the term's example of a pull request's body written there with a file tool holds.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core rule 16, trimmed, still sends intermediate files to the agent workspace, written there with the file tools and removed when no longer needed, and rules 23 and 24 ask nothing of them, so the term's distinction from the harness's scratch directory holds.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-040-accept-through-review.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261029T233222Z-05a7bfb9.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:57:47Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; cli.py adds `pkit rule-sets loaded` and has the capability verbs render the capabilities' rules index and print what they newly bind; rule_sets.py lifts the refusal of a capability's loaded set and adds the delivery check and the import-token, preface and orphaned-file findings. Accepting a rule through review is unchanged; the reach walk still routes through no loaded set. #2261's trim, merged into this change is answered beside it: “Read with #2262's answer: the trim states COR-066's acceptance in core rule 2 and the decisions README, and #2262 gives a loaded set a budget that pkit rule-sets altered lists when a change raises it. The budget changes nothing in accepting a rule through the merge authoriser's review, and the acceptance wording is the staleness the kept deferrals name until #2191.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, the trim states COR-066's acceptance in core rule 2 and the decisions README, the staleness the kept deferrals name until #2191; rule 24 adds the rule sets' rules on what a change owns, which the merge authoriser's review still judges, and reach's optional paths, left out as steps 2 and 6 run it, answer as before.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/decisions/README.md
+          reason: "The decisions README's gate now says a person accepts a record, not a one-line flip, against the use case's assumption that who accepts a decision record is open and its variant 1a landing a rule proposed. #2191 realizes COR-066, and this use case follows it there."
+        - anchor:
+            kind: path
+            value: .pkit/rules/core.md
+          reason: "Core rule 2 now says a person accepts a proposal within its change and an agent writes accepted only once that person has, against the use case's assumption that the gate asks only for a reviewed status flip. #2191 realizes COR-066, and this use case follows it there."
+  - artefact: .pkit/adapters/claude-code/README.md
+    read:
+      - 20261026T123904Z-0482f880.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:57:50Z
+      outcome: updated
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:57:53Z
+      outcome: unchanged
+      unchanged-because: "This change: Since it was last checked, the CLI reference's Surface table gave pkit rule-sets reach its paths and now adds rule-sets loaded, and its sync section the index's render; core.md gained rule 23 on decision records, then how the layers' rules stand, rule 9's pointer to COR-008 and its closing; visibility.py renders a private project's region again; ADR-066 point 12 gains a probe fact. The rows of grant, revoke, profile activate and enable, the workspace rule's text and the permission model are as they were, so the README holds. #2261's trim, merged into this change is answered beside it: “Core rule 16 keeps its requirement in fewer words: intermediate files go in the agent workspace, a worktree's own in a worktree, and nowhere else outside the repository, so the README's “workspace rule in .pkit/rules/core.md“ still says what the rule asks.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core rule 16 keeps its requirement in fewer words, rules 23 and 24 ask nothing of the workspace or the permission model, and the CLI reference's Surface table changes only in reach's paths. The permissions commands and the workspace and permission-layer rules the README walks through hold.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: .pkit/rules/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T200836Z-0e9bee72.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:57:57Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T194318Z-acf93b7b.yaml
+      - 20261029T200836Z-0e9bee72.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:58:00Z
+      outcome: unchanged
+      unchanged-because: "This change: the adapters README gains how a capability's rules reach a session and a third harness requirement; ops.md and core.md gain the layers' sentence, rule 9's pointer and the closing; the rules README gains the index; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; COR-014's scoping section gains that a rule binding only with a capability goes to its loaded set; COR-068 point 3 gains that a capability's loaded file travels with it. Sync still refreshes core.md and leaves project.md, and the merge still prints its exists line where CLAUDE.md holds core's include and the index's line. #2261's trim, merged into this change is answered beside it: “Read with #2262's answer: core.md is trimmed and its budget lowered, and #2262 gave OPS its budget and the rules README a section on it. core.md is still generated from OPS in the source repository and refreshed by sync, and both files are still included, so the use case's steps and variant 4a hold.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core.md is trimmed, holds rules 23 and 24 and has its budget lowered, and the rules README names the new rules and the budget. core.md is still generated from OPS in the source repository and refreshed by sync, and both rules files are still included in the instruction file, so the use case holds, variant 4a included.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:58:03Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; install.py renders the capabilities' rules index, lists the core rules a first install binds, renders the private region again and leaves the source's index out of the rules area's copy; status.py adds the rules index's line to the adapter's section; sync.py stops on a file at the index's path that is no index, renders the index and the private region among derivable state, and says what its copy newly binds; upgrade.py adds the index's marker test to step 1 and says what the copy newly binds; ADR-065 point 11 gains the index's row among derivable state. The agent workspace, its exclude line and core rule 16 are unchanged. #2261's trim, merged into this change is answered beside it: “Core rule 16 still alone asks an agent to keep intermediate files in the workspace and nowhere else outside the repository, and to remove what it no longer needs, as the use case's assumption and step 6 say.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core rule 16, trimmed, still alone asks an agent to keep intermediate files in the workspace and nowhere else outside the repository, and to remove what it no longer needs; rules 23 and 24 ask nothing of them, so the use case holds.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:58:06Z
+      outcome: unchanged
+      unchanged-because: "This change: Since it was last checked, cli.py gave pkit rule-sets reach optional paths and now adds rule-sets loaded, with the capability verbs rendering the capabilities' rules index and printing what they newly bind; core.md gained rule 23 on decision records, then how the layers' rules stand, rule 9's pointer to COR-008 and its closing. The commands that would change another repository keep their names, options and output, and core rule 19 keeps its number and its text, so being asked before such a change holds. #2261's trim, merged into this change is answered beside it: “Read with #2262's answer on cli.py: core rule 19, trimmed, still has an agent change no other repository without the user's confirmation for that change, and cli.py changes only in the rule-sets commands' help, so being asked before such a change holds.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core rule 19, trimmed, still has an agent change no other repository without the user's confirmation for that change, reach gains only optional paths, and rules 23 and 24 act in the session's own repository, so being asked before such a change holds.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-002-answer-stale.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+    revalidated:
+      at: 2026-10-30T03:58:09Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 20 on answers is untouched. #2261's trim, merged into this change is answered beside it: “Core rule 20 still has an agent write the answers its change owes and leaves any other answer to a person's accepted words or the named delegate, so the use case's account of who decides an answer no change owes holds.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. Main's change since, the check run as three parallel parts behind one checks job, is answered beside it: “Read with main's trim of core rule 20, merged here: the change check now runs in the remainder's job of checks.yml, with PKIT_CHECK_BASE the commit the deciding job pinned on the pull request's target and PKIT_CHECK_HEAD its head, so step 9 holds. The trimmed rule 20 still has an agent write the answers its change owes, and leaves any other answer to a person's accepted words or the named delegate, as the use case says.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core rule 20, trimmed, still has an agent write the answers its change owes and leaves any other answer to a person's accepted words or the named delegate, and rules 23 and 24 add no answer a change owes, so the use case holds.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-007-resolve-debt.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+    revalidated:
+      at: 2026-10-30T03:58:13Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file. Core rule 20 and the whole-repository check are untouched. #2261's trim, merged into this change is answered beside it: “Core rule 20 still leaves an answer no change of the writer's own owes to the person, shown word for word, or to the delegate the default branch names, as the use case says.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. Main's change since, the check run as three parallel parts behind one checks job, is answered beside it: “Read with main's trim of core rule 20, merged here: ADR-055 point 5's refined clause concerns only the required check's unit, the aggregator whole or in its parts behind one job, and the whole-repository check and friction-report.yml that the use case rests on are unchanged. The trimmed rule 20 still leaves an answer no change of the writer's own owes to the person, shown word for word, or to the delegate the default branch names.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core rule 20, trimmed, still leaves an answer no change of the writer's owes to the person, shown word for word, or to the delegate the default branch names, and rules 23 and 24 change none of it, so resolving debt holds as the use case says.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-034-land-change.md
+    read:
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:58:17Z
+      outcome: unchanged
+      unchanged-because: "This change: Since it was last checked, cli.py gave pkit rule-sets reach optional paths and now adds rule-sets loaded and the capability verbs' index render and binding lines; core.md gained rule 23 on decision records, then how the layers' rules stand, rule 9's pointer to COR-008 for branch naming and its closing. pkit pull-request read, land and delete-branch keep their names, options and output, and core rule 20 keeps its number and its text, so landing a change on the default branch holds. #2261's trim, merged into this change is answered beside it: “Read with #2262's answer on cli.py: core rule 20, trimmed, still has the reviewer check the answers before a direct commit where the project chose one, and block it on one that does not hold, and cli.py only rewords the rule-sets help, so landing a change holds.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, core rule 20, trimmed, still has the reviewer check the answers before a direct commit where the project chose one and block it on one that does not hold; rule 24 is kept before the last commit and judged at merge, and reach gains only optional paths, so landing a change holds.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-037-record-decision.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261029T233222Z-05a7bfb9.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+    revalidated:
+      at: 2026-10-30T03:58:20Z
+      outcome: unchanged
+      unchanged-because: "This change: Since it was last checked, cli.py gave pkit rule-sets reach optional paths and now adds rule-sets loaded and the capability verbs' index render; core.md gained rule 23, which brings COR-065 point 3 into every session, then how the layers' rules stand, rule 9's pointer and its closing; ownership.py answers the capabilities' rules index as no synced copy. pkit new decision, decisions validate and check-diff keep their names, options and output, the record is still drafted through the skill and left proposed for a person to accept, and core rule 2's gate holds as written. #2261's trim, merged into this change is answered beside it: “Read with #2262's answer on cli.py: the trim states in core rule 2 and the decisions README that a person accepts a record within its change, the staleness the kept deferrals name until #2191, and cli.py only rewords the rule-sets commands' help, so nothing else recording a decision relies on changed.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, the trim states in core rule 2 and the decisions README that a person accepts a record within its change, the staleness the kept deferrals name until #2191; rule 23 brings COR-065 point 3 into core.md, so an agent meets this use case's trigger as it works, and rule 24 and reach's paths change no step of recording a decision.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/decisions/README.md
+          reason: "The decisions README's gate now says a person accepts a record in its change before it lands, while step 9 and the postconditions still end with the record proposed, accepted later through UC-040. #2191 realizes COR-066, and this use case follows it there."
+        - anchor:
+            kind: record
+            value: COR-025
+          reason: "COR-025 is now partially superseded by COR-066 for landing ADRs proposed. This use case still ends with a record, an ADR included, committed as proposed and accepted later through UC-040. Main's later answer on this use case changes none of this. #2191 realizes COR-066, and this use case follows it there."
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T000132Z-0dc26ad9.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T014708Z-85b0316d.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023909Z-f4e226f7.yaml
+      - 20261030T032026Z-24c4a75b.yaml
+    revalidated:
+      at: 2026-10-30T03:58:23Z
+      outcome: unchanged
+      unchanged-because: "This change: core.md's preface gains how the layers' rules stand, core rule 9 points to COR-008 for branch naming, and its closing says a capability's rules sit in its loaded file; visibility.py adds a render of pkit's private region from the footprint where the region is present. The journey's change, check and merge steps rest on core rules that are unchanged. #2261's trim, merged into this change is answered beside it: “The journey needs the record accepted before the change builds on it, which the trimmed core rule 2 still asks, now saying that a person accepts it within its change; no step of the journey relies on the wording the trim removed.” Read together, none of these changes undoes what another's answer relies on, so with all of them the document still holds. Main's change since, the check run as three parallel parts behind one checks job, is answered beside it: “Read with main's trim of core rule 2, merged here: ADR-055 point 5's refined clause makes the required unit the aggregator, whole or in its parts behind one job named checks, so the journey's needs from UC-006, a CI job made a required status, and from the whole-repository check hold. The trimmed rule 2 still has the record accepted before the change builds on it, now by a person within its change.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds. #2274's change since, core rule 24 on main, is answered beside it: “Read together, the trimmed core rule 2 still has a record accepted before the change builds on it, now by a person within its change; rule 23 asks the same order of the record a choice needs, and rule 24 is kept by the writer before its last commit and judged by the rule-set reviewer at merge. No step of the journey rests on wording the trim removed.” Read together, neither change undoes what the other's answer relies on, so with both the document still holds."
+  - artefact: README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261026T231200Z-bee02fb0.yaml
+      - 20261026T232755Z-11d7cf08.yaml
+      - 20261027T004723Z-978890f5.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T121707Z-8f426b0f.yaml
+      - 20261027T133722Z-42862485.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T125249Z-3beb67a4.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T011911Z-672c9608.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T023128Z-752860d8.yaml
+    revalidated:
+      at: 2026-10-30T03:58:26Z
+      outcome: updated
