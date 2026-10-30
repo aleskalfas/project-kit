@@ -278,6 +278,49 @@ def test_a_script_and_its_lib_from_one_call_share_their_modules() -> None:
     assert again is not backbone
 
 
+#: project-management's `_lib` folder. A test may put it on the import path, to import a
+#: module of it by path, as `friction_answers`' tests do.
+PM_LIB = CAPABILITIES / "project-management" / "scripts" / "_lib"
+
+#: What `friction_answers` imports in both forms, by path first: under these top-level
+#: names, or as `_lib.<name>`.
+BOTH_FORMS = ("default_branch", "provenance")
+
+
+def test_a_lib_folder_left_on_the_path_leaves_no_copy_behind(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The order that made `friction_answers`' tests start a real `pkit` (#2353), in one
+    test. An earlier test left project-management's `_lib` folder on the import path,
+    and a load of `friction_answers` then left its `default_branch` in `sys.modules`.
+    That copy held the loaded `_lib.backbone`, which the load took out, so a later
+    route missed it. Now the loaded modules import their siblings from the call's own
+    `_lib`, and leave nothing behind."""
+    monkeypatch.syspath_prepend(str(PM_LIB))
+    for name in BOTH_FORMS:
+        monkeypatch.delitem(sys.modules, name, raising=False)
+    fa, backbone = load("project-management", "friction_answers", "backbone")
+    assert fa.default_branch.__name__ == "_lib.default_branch"
+    assert fa.default_branch.backbone is backbone
+    assert [name for name in BOTH_FORMS if name in sys.modules] == []
+    assert str(PM_LIB) in sys.path
+
+
+def test_a_copy_an_earlier_test_left_is_neither_shared_nor_disturbed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A `default_branch` an earlier test imported by path stays in `sys.modules`. The
+    loaded `friction_answers` does not take it, since its calls would not reach the
+    backbone the test routes, and it is still there after the load."""
+    earlier = ModuleType("default_branch")
+    earlier.__file__ = str(PM_LIB / "default_branch.py")
+    monkeypatch.setitem(sys.modules, "default_branch", earlier)
+    fa, backbone = load("project-management", "friction_answers", "backbone")
+    assert fa.default_branch is not earlier
+    assert fa.default_branch.backbone is backbone
+    assert sys.modules["default_branch"] is earlier
+
+
 def test_a_script_s_main_runs_as_its_process_ran(tmp_path: Path) -> None:
     """`sys.argv`, the exit code and the two streams as a process gives them, from the
     directory given; the caller's directory and `sys.argv` left as they were."""
