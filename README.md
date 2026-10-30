@@ -111,8 +111,8 @@ $ grep @.pkit CLAUDE.md
 @.pkit/rules/core.md
 @.pkit/rules/capabilities.md
 @.pkit/rules/project.md
-$ grep -o "Only act on .accepted. decisions" .pkit/rules/core.md
-Only act on `accepted` decisions
+$ grep -o "Act only on accepted decisions and rules" .pkit/rules/core.md
+Act only on accepted decisions and rules
 $ pkit new decision project use-postgres
 warning: the default branch 'main' is read from the local branch 'main': this repository has no remote to read the shared one from, and a local branch can lag it or carry work nobody pushed (COR-054 point 2)
 Stamped: .pkit/decisions/project/PRJ-001-use-postgres.md

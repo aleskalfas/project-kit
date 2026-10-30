@@ -32,11 +32,11 @@ process:
 
 # `rule-sets.plain-file-budget` — the budget, in words, of project-kit's own
 # rules, `.pkit/rules/project.md`, kept as a plain file (COR-069 point 3):
-# `pkit validate` fails the file past it. Set at the file's count when the
-# check landed, with no room above it (ADR-077 point 7), so the next growth is
-# a raise a person authorises (COR-069 point 4).
+# `pkit validate` fails the file past it. Lowered by the trim (#2261) to the
+# trimmed file's 290 words with room for about 50 more (COR-069 point 4); a
+# growth past it is a raise a person authorises.
 rule-sets:
-  plain-file-budget: 406
+  plain-file-budget: 340
 
 # `friction` — anchors and friction (COR-050 point 14). `enforcing` from the
 # day the check exists (ADR-055 point 5).

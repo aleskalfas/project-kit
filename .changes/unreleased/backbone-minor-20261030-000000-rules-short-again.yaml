@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  The core rules every session loads are short again: each says what it
+  requires, in a sentence or two, and points to the record, README or issue
+  its reason lives in, and the detail those already hold leaves `core.md`.
+  Rule 2 now says what COR-066 decides: a person accepts a proposal within
+  the change that proposes it, an agent writes `accepted` only once that
+  person has, the change does not land until then, and the person sees what
+  the change makes accepted. The preface says where a rule's reason lives, in
+  place of the section of umbrella references. No other rule's meaning
+  changes, and no rule is renumbered. The set `OPS` moves to its next major,
+  since rule 2 is tightened. No migration: `core.md` keeps its path, and a
+  project receives it by sync as before.

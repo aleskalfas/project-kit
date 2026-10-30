@@ -107,13 +107,13 @@ Seven categories:
 - **When a step fails** — retry once a step that failed for a cause outside your own work, then stop and report.
 - **Before changing files** — look up the accepted records their anchors lead to, and read those tied to them directly; and before a choice later work will build on, draft the record that decides it, for a person to accept.
 
-Each rule is terse — one statement plus a pointer to the COR / area README that owns the rationale, or, where none does, to the issue that decided the rule. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository. A loaded set's statements and prose hold no token outside code that opens with the harness's import form, such as a bare `@name`, since a session that loads the file could read it as an import of its own; validation refuses one.
+Each rule is terse: what it requires, in as few sentences as it needs, and a pointer to the record or area README that owns its reason, or to the issue that decided it. A rule that cites neither leaves its reason to its origin in the set, as `core.md`'s preface says. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository. A loaded set's statements and prose hold no token outside code that opens with the harness's import form, such as a bare `@name`, since a session that loads the file could read it as an import of its own; validation refuses one.
 
 `core.md` itself follows core rule 13 (the `@`-include authoring convention): no top-level heading, opens with an italic preface, sections start at H2. The host `CLAUDE.md` owns the H1 and places the `@<path>` line after its intro paragraph, so the included sections become natural sub-sections of the host. This pattern applies to any future kit-shipped file intended for `@`-include.
 
 ## What does NOT go in `core.md`
 
-- **Rationale.** That lives in the cited COR / PRJ / area README. A rule none of them holds cites the issue that decided it. The rules file points; it does not re-state.
+- **Rationale.** That lives in the cited COR / PRJ / area README. A rule none of them holds cites the issue that decided it, or leaves its reason to its origin in the set. The rules file points; it does not re-state.
 - **Project-kit-internal mechanics.** Things like the project-kit's own version-bump policy (PRJ-002) belong in the project's own records and CLAUDE.md, not in the kit-shipped rules adopters receive. The rules file uses project-neutral phrasing — adopters never see project-kit-specific content there.
 - **Adopter-specific rules.** Those go in the adopter's `project.md`.
 - **A rule that binds only where a capability is installed.** That goes in the capability's loaded set, not in core's, whose rules bind in every project, and not in the capability's documentation, which no session loads (COR-070 point 5).

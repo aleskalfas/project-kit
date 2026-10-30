@@ -165,9 +165,9 @@ def test_core_md_carries_no_data_and_no_h1() -> None:
     assert not text.startswith("---")
     assert "origin:" not in text and "status: accepted" not in text
     assert not re.search(r"^# ", text, re.M)
-    assert text.startswith("*Operational rules and tool hygiene")
+    assert text.startswith("*Operational rules shipped by the methodology core")
     assert (
-        "where the set is authored, by `pkit rule-sets generate`. A project that receives "
+        "where the set is authored, by `pkit rule-sets generate`; a project that receives "
         "them by sync edits neither (core rule 1)."
     ) in text
 
