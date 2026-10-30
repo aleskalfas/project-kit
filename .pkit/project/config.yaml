@@ -30,6 +30,14 @@ process:
     enabled: true
     committed: false
 
+# `rule-sets.plain-file-budget` — the budget, in words, of project-kit's own
+# rules, `.pkit/rules/project.md`, kept as a plain file (COR-069 point 3):
+# `pkit validate` fails the file past it. Set at the file's count when the
+# check landed, with no room above it (ADR-077 point 7), so the next growth is
+# a raise a person authorises (COR-069 point 4).
+rule-sets:
+  plain-file-budget: 406
+
 # `friction` — anchors and friction (COR-050 point 14). `enforcing` from the
 # day the check exists (ADR-055 point 5).
 friction:

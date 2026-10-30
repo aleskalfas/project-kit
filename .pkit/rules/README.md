@@ -12,8 +12,11 @@ pkit:
         - src/project_kit/install.py
         - src/project_kit/loaded_rule_sets.py
         - src/project_kit/loaded_rules.py
-      record: [COR-001, COR-014, "COR-051#6", "COR-064#1", "COR-064#2", COR-068, COR-070, ADR-075, ADR-076]
-      artefact: [".pkit/schemas/README.md#rule-set-files"]
+      record: [COR-001, COR-014, "COR-051#6", "COR-064#1", "COR-064#2", COR-068, COR-069, COR-070, ADR-075, ADR-076, ADR-077]
+      artefact:
+        - .pkit/schemas/README.md#rule-set-files
+        - .pkit/cli/README.md#rule-sets-altered---base-ref---head-rev---json
+        - .pkit/cli/README.md#configuration-file
 ---
 
 # Rules
@@ -71,14 +74,24 @@ The kit's rules are a *loaded rule set*: a rule set whose accepted rules bind on
 - **It is generated.** `pkit rule-sets generate` writes `core.md` from `OPS` where the set is authored, in the methodology's source. A change to a rule regenerates the file in the same change, and `pkit validate` fails there on a `core.md` that differs from its set. In your project the two arrive together by sync. You neither generate nor edit `core.md`, and the command refuses to.
 - **Citations of a rule** by layer and number, such as "core rule 19", or by id are read by `pkit validate`. One that names a missing, superseded or withdrawn rule is a warning (the CLI reference, `validate`).
 
+## Each rules file's budget
+
+Every session reads `core.md` and `project.md` whole, so every word in them is paid for in every session. Each may have a budget, the most words it may hold ([COR-069](../decisions/core/COR-069-rules-word-budget.md)). `pkit validate` reports each file's count against its budget in every project, and fails a file past its budget where its owner can shorten it. How a word is counted, and what the check says, are the CLI reference's (`validate`, the `rule-sets` member).
+
+- **`core.md`'s budget** is `budget` in `OPS`'s front matter, beside `loaded: true` (the schemas README, "Rule-set files"). A component's loaded set must give one. You receive the file and its budget by sync, and are never failed for it: you see its count, and what it costs each session.
+- **Your `project.md`'s budget,** while it is a plain file, is `rule-sets.plain-file-budget` in `.pkit/project/config.yaml`, if you set one (the CLI reference, ["Configuration file"](../cli/README.md#configuration-file)). Without the key, the file has no budget, and nothing is checked. No install or upgrade sets it: a budget you set bounds the size you chose.
+- **Raising a budget is a person's decision.** A new rule that needs room raises the budget in the change in which a person accepts the rule. Any other raise lands only in a change a person authorises. An agent whose change would take a file past its budget trims the file instead, or brings the raise to that person. `pkit rule-sets altered` lists each budget a change raises, so whoever reviews the change sees it (the CLI reference, `rule-sets altered`).
+- **Lowering one** is any change's to make. A budget is a ceiling, not a target: a change that trims a file may lower its budget, keeping what room it chooses.
+
 ## Converting your `project.md` into a loaded set
 
 Your `project.md` is a plain file. It is loaded as it stands, and nothing checks its numbers or its origins, nor a citation such as "project rule 4" (COR-068 point 7). You may convert it into a loaded set of your own, when you choose:
 
 1. Write the set as a rule-set file in `rule-sets/` under your internal documentation root (`docs/rule-sets/` by default). Give it a name of its own and `loaded: true`, and copy your rules into it, one section per rule, `### RS-<SET>-NNN — Title`, keeping each rule's number. The folder, its default and the form of a rule's heading are the schemas reference's, [Rule-set files](../schemas/README.md#rule-set-files).
-2. Give each rule its origin: the record that decides it, or the decider's words (COR-051 point 5). Only you know who decided each rule and why, so no command or migration converts the file for you.
-3. Run `pkit rule-sets generate`. It writes `.pkit/rules/project.md` from your set.
-4. Run `pkit validate`. From then on it fails on a `project.md` out of step with your set, and reads each citation of your rules by "project rule N".
+2. If your configuration sets `rule-sets.plain-file-budget`, move its value into the set as `budget`, beside `loaded: true`, and remove the key. Its budget then sits beside the rules that need its room, and `pkit validate` warns of a key left behind, which bounds nothing.
+3. Give each rule its origin: the record that decides it, or the decider's words (COR-051 point 5). Only you know who decided each rule and why, so no command or migration converts the file for you.
+4. Run `pkit rule-sets generate`. It writes `.pkit/rules/project.md` from your set, and prints its count against the set's budget.
+5. Run `pkit validate`. From then on it fails on a `project.md` out of step with your set, and reads each citation of your rules by "project rule N".
 
 A project has one loaded set of its own, beside the kit's. It takes no scope, inheritance or extension point: its rules bind on sessions' work, not on files.
 

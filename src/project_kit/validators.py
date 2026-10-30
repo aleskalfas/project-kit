@@ -330,8 +330,8 @@ _BACKBONE_MEMBERS: tuple[tuple[str, Callable[[Path], Outcome], str], ...] = (
     (
         "rule-sets",
         _rule_sets,
-        "every rule-set file: shape, ids, origins, inheritance, and how each loaded file "
-        "reaches a session",
+        "every rule-set file and every rules file: shape, ids, origins, inheritance, "
+        "loaded files, their budgets and how each reaches a session",
     ),
     ("refs", _refs, "the reference graph across agents, skills and hooks"),
     ("process", _process, "every process definition resolves, its states in one detection mode"),

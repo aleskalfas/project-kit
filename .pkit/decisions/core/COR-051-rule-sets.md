@@ -33,7 +33,7 @@ Rules serve four needs: instructions for whoever writes an artefact, criteria fo
 ### 2. A rule set is a collection of artefacts
 
 A rule set is one file. In the terms of the anchors-and-friction record (COR-050), it is a collection file whose entries are rules, and each rule is an artefact in its own right. A loaded set has no scope, inherits no set and is inherited by none (refinement per COR-068).
-- **Its front matter holds the data,** in the file and never in a sidecar (refinement per COR-063):
+- **Its front matter holds the data,** in the file and never in a sidecar (refinement per COR-063). A loaded set's holds the budget of the file it generates too (refinement per COR-069):
   - the rule set's name and version;
   - what it inherits (point 7);
   - which artefacts it selects for its rules (its *scope*, below);

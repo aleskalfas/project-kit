@@ -80,7 +80,7 @@ COR-068 leaves open:
 
 ### 6. The `loaded` marker, and what validation refuses on a loaded set
 
-- **The marker:** `loaded: true` at the top of a set's front matter. Without it, a set is an ordinary one.
+- **The marker:** `loaded: true` at the top of a set's front matter. Without it, a set is an ordinary one. A loaded set gives its loaded file's budget as `budget` beside it (refinement per [ADR-077](ADR-077-rules-budget-realised.md) point 1).
 - **The schema refuses, on a set marked loaded,** what the file alone shows:
   - `scope`, `inherits` and `checks`
   - `offers` or `fills` on any rule
