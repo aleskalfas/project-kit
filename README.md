@@ -243,6 +243,7 @@ Answer in English.
 
 An upgrade's migrations may also write a file of yours, and a starter file you deleted comes back (COR-059). [The mental model](#the-mental-model) lists every such way. Put your own rules in `.pkit/rules/project.md`, since an edit to a methodology file is lost at the next sync.
 
+<a id="compared-with-a-hand-kept-setup"></a>
 ## Compared with a hand-kept setup and plugins
 
 Without project-kit, you keep a setup by hand, or build it from Claude Code plugins. You can also use plugins beside project-kit.
