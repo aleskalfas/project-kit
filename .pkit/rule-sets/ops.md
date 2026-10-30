@@ -2,7 +2,7 @@
 rule-set: OPS
 loaded: true
 budget: 2300
-version: 4.0.0
+version: 5.0.0
 rules:
   RS-OPS-001:
     status: accepted
