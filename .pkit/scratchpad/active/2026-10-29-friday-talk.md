@@ -21,7 +21,7 @@ The work moves to another clone from here. Everything it needs is on branch `doc
 - `2026-10-29-friday-talk.gen.py`: turns the slides file into instances of the board's templates in the board map. It also renders each terminal panel to a PNG (see "The deck's style").
 - `2026-10-29-friday-talk.board.yaml` and `….board.yaml.state.json`: the board map and its sync state, which the mural-boards skill (`~/.claude/skills/mural-boards`, user-level, on this machine) pushes. Both are committed so another clone continues the sync.
 - `2026-10-29-friday-talk-icons/`: Carbon pictograms recoloured to the board's roles, and the rendered terminal panels (`term-*.png`).
-- `2026-10-29-friday-talk-tools/`: `stray_duplicates.py` (finds and deletes duplicates the board tool leaves), `make_row_icons.py` (recolours Carbon pictograms), `mural_fonts.py` (lists the fonts Mural accepts).
+- `2026-10-29-friday-talk-tools/`: `stray_duplicates.py` (finds and deletes duplicates the board tool leaves), `make_row_icons.py` (recolours Carbon pictograms), `mural_fonts.py` (lists the fonts Mural accepts), `export_pdf.py` (writes the talk as PDFs, see below).
 
 **The loop for one change.** With `A=.pkit/scratchpad/active` and `M=$A/2026-10-29-friday-talk.board.yaml`:
 
@@ -33,6 +33,8 @@ The work moves to another clone from here. Everything it needs is on branch `doc
 6. Commit (signed) and push the branch.
 
 Build and push without waiting for the maintainer's yes (the maintainer, 30 October: "don't wait for my accept and push all what you do"). A proposal is still written down, as the report of what was built, so the maintainer can correct it on the board.
+
+**PDFs of the talk.** Mural exports only the whole board, as one page, so `uv run --no-project --with pyyaml --with jsonschema --with pymupdf python $A/2026-10-29-friday-talk-tools/export_pdf.py ~/.claude/skills/mural-boards/scripts/mural_boards.py $M .agent-workspace/pdf` exports it through the API and cuts it into one PDF per language: `….en.pdf` and `….cs.pdf`, one page per slide in the board's row order, the Czech divider left out. Each page keeps only its own slide's text and images, as vector, so text stays searchable. It prints the fit it found; a title offset over 12 pt stops it. It shows the board as it is, edits made on the board included, so run it after the last push. `--pdf <file>` reuses an export already downloaded.
 
 **What the board tool taught.**
 
