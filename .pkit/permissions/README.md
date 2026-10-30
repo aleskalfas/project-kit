@@ -11,6 +11,7 @@ pkit:
         - .pkit/schemas/privilege-catalog.schema.json
         - .pkit/schemas/permission-grants.schema.json
         - .pkit/schemas/permission-profile.schema.json
+        - .pkit/schemas/permission-config.schema.json
         - .pkit/adapters/claude-code/permission-hook.py
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - .pkit/adapters/claude-code/settings/core/settings.json
@@ -130,12 +131,12 @@ A grant matches a segment's words as the shell reads them. A deny matches more f
 The hook resolves the subject for every PreToolUse call, in this order:
 
 1. **`agent_type` present in the payload** → `agent:<agent_type>`. Claude Code sets this for spawned Task subagents.
-2. **`agent_type` absent, and `.claude/settings.json` <!-- unanchored: named as the file the anchored hook reads, which sync generates under .claude/, a folder anchoring leaves out --> has `agent: X`** → `agent:X`. The main session runs as that agent, so all of the agent's grants apply, allow and deny. A missing, unreadable or malformed `settings.json` silently falls back to rule 3.
+2. **`agent_type` absent, and `.claude/settings.json` <!-- unanchored: named as the file the hook reads, and the rule rests on the anchored hook --> has `agent: X`** → `agent:X`. The main session runs as that agent, so all of the agent's grants apply, allow and deny. A missing, unreadable or malformed `settings.json` silently falls back to rule 3.
 3. **`agent_type` absent, and no `agent` key in `settings.json`** → `operator`.
 
 **Implication:** in a session with a configured default agent, the operator's `!`-typed command is also bound to that agent's grants.
 
-**A session started with `--agent`:** the runs of project-management's `review-pr` name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json` <!-- unanchored: named as the file rule 2 reads, which sync generates under .claude/, a folder anchoring leaves out -->, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
+**A session started with `--agent`:** the runs of project-management's `review-pr` name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json` <!-- unanchored: named as the file rule 2 reads, and the statement rests on the anchored hook -->, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
 
 **A confined run,** such as a fixer's, loads no project settings. So the hook is not registered there at all ("The rules of an agent run" below).
 
@@ -446,7 +447,7 @@ The diagnostic loop is opt-in and recommend-only. It records each call the hook 
   - **The log,** `.pkit/permissions/project/diagnose-log.jsonl`, is capped in size and drops its oldest entries first. It redacts each command's tail by default, and keeps the hook's reason for each abstain beside the command.
   - **Both files are ignored by git,** through the `.pkit/.gitignore` that pkit owns and renders.
 - **The report's groups.** The report groups the raw command text, to order and explain its recommendations. The groups are advisory for ranking only, and never authorize a change.
-- **Nothing applied.** The loop applies no fix. Writing a new catalog privilege is never a fix, and stays the operator's task.
+- **Nothing applied.** The loop applies no fix. Writing a new catalog privilege is never an automatic fix, and stays the operator's task.
 
 <a id="two-sharpening-axes-on-the-report-issue-317"></a>
 

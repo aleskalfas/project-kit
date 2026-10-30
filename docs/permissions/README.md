@@ -6,9 +6,10 @@ pkit:
     anchors:
       path:
         - .pkit/skills/core/capability-author.md
+        - .pkit/permissions/decide.py
         - .pkit/permissions/project/grants.yaml
         - .pkit/adapters/claude-code/settings/project/settings.json
-      record: [COR-028, COR-047, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-016, ADR-021, ADR-025, ADR-032]
+      record: [COR-028, COR-047, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-016, ADR-021, ADR-025, ADR-032, ADR-060]
       artefact:
         - ACT-operator
         - UC-027
@@ -22,6 +23,7 @@ pkit:
         - .pkit/permissions/README.md#the-read-only-text-filters-and-uv-run
         - .pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip
         - .pkit/permissions/README.md#what-keeps-a-grant-from-allowing
+        - .pkit/permissions/README.md#a-redirection-that-writes-no-file
         - .pkit/permissions/README.md#denies-and-what-an-abstain-says
         - .pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command
         - .pkit/permissions/README.md#scope-enforcement
@@ -171,7 +173,7 @@ flowchart TD
 - **The hook.** The harness passes each tool call to the hook before the call runs, once you turn enforcement on ("Turning it on" below). The hook gives the harness the verdict, and nothing for an abstain. Claude Code's hook prints the verdict as JSON ([the adapter's README, "Live permission enforcement"](../../.pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
 - **The decision core** reads the permission model at each call, and gives one verdict. The model holds the guardrails, and the grants of the active profile, of your project and of each installed capability ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)). The guardrails deny recursive deletion, `sudo` and rewriting published history to every agent and to you ([the reference, "Privileges and how they are recognized"](../../.pkit/permissions/README.md#privileges-and-how-they-are-recognized)).
 - **Allow** runs the call with no prompt. **Deny** refuses it, and the harness asks nobody. A deny wins over every allow, whatever the order of the grants.
-- **Abstain** leaves the call to the harness's native rules, its native rules: the allows and denies in its settings, which it enforces itself. The adapter writes them from its baseline and from the model (COR-028 point 2). A call they neither allow nor deny goes to the harness's permission mode, which may ask you.
+- **Abstain** leaves the call to the harness's native rules: the allows and denies in its settings, which it enforces itself. The adapter writes them from its baseline and from the model (COR-028 point 2). A call they neither allow nor deny goes to the harness's permission mode, which may ask you.
 - **What else decides.** Where no grant covers a call, the posture decides: the default, `lenient`, abstains, and `strict` denies. A fault in the hook gives an abstain. The harness's native denies still refuse the forms of the guardrails' commands they name ([the reference, "Grants and verdicts"](../../.pkit/permissions/README.md#grants-and-verdicts)).
 - **The CLI reads the same model** as the hook, so `explain` shows what the hook decides on ([the same section](../../.pkit/permissions/README.md#grants-and-verdicts)).
 - **When the hook asks.** Claude Code's hook asks you rather than abstain in two cases:
@@ -186,9 +188,12 @@ A command can prompt although each program in it would run unasked on its own. T
   - **`echo`:** the usual way to answer a confirmation from a pipe, as in `echo y | pkit …`
   - **`printf`:** its `-v` sets a shell variable
   - **`jq`:** its expressions hold a `|`, where the core cuts a command into parts, and some of its options read files no check sees
-- **A person's confirmation never comes from a pipe.** Leaving `echo` out does not keep a pipe from feeding `pkit`, as in `basename y | pkit …`. A `pkit` confirmation that guards a person's decision reads no answer from a pipe all the same ([the CLI reference, "Standard flags"](../../.pkit/cli/README.md#standard-flags)).
-- **A `$` keeps every grant from allowing.** The core never sees an expansion's value. Some forms, such as `${X@P}` and `$[…]`, run it as code ([the reference, "What keeps a grant from allowing"](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)).
-- **So does an assignment written with a quote or a backslash.** The core never matches an assignment's value, so removing its quotes would make no match more accurate. Write a program's setting unquoted where you can, as in `GH_HOST=x gh pr list`, which a grant on `gh` allows ([the same section](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)).
+- **A `$` keeps every grant from allowing.** The core never sees an expansion's value. Some forms, such as `${X@P}` and `$[…]`, evaluate it as code ([the reference, "What keeps a grant from allowing"](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)).
+- **So does an assignment written with a quote or a backslash.** The core never matches an assignment's value, so removing its quotes would make no match more accurate. A program's setting written unquoted, as in `GH_HOST=x gh pr list`, is allowed by a grant on `gh` ([the same section](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)).
+- **A leading `cd` is never stripped from a command the core cannot read.** The core then decides the command whole, as `cd {a,b} && git status`, so the strip never hides what the `cd` word runs ([the reference, "Compound commands"](../../.pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)).
+- **An assignment that changes a program's configuration keeps a deny from telling.** The configuration may set a forced refspec or an alias. So the core abstains on `HOME=/tmp/x git status` ([the reference, "A deny holds against the forms of its command"](../../.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
+- **`&>` and `&>>` count only last in their segment.** The dash shell reads their `&` as running the command in the background ([the reference, "A redirection that writes no file"](../../.pkit/permissions/README.md#a-redirection-that-writes-no-file)).
+- **A `pkit` confirmation that guards a person's decision reads no answer from a pipe** ([the CLI reference, "Standard flags"](../../.pkit/cli/README.md#standard-flags)). Leaving `echo` out does not keep a pipe from feeding `pkit`, as in `basename y | pkit …`.
 
 ## Turning it on
 
@@ -301,7 +306,7 @@ The report's headline counts the real prompts: the logged calls for which the re
 - **`uv run pytest`** matches no allow rule, so the report counts it as genuinely missing, and recommends granting a privilege. The next task grants it.
 - **`gh pr list | jq .`** matches allow rules part by part, but not as a whole. So the report counts it as allowlisted-but-compound, and recommends single commands or a named command of your project. Why `jq` is no text filter is in "Why some commands still prompt" above.
 - **Nothing is applied.** You act on each recommendation yourself ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)).
-- **No argument in the log's reasons.** The log keeps the hook's reason for each abstain beside the redacted command ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)). That reason names at most the program, never its arguments, so the redaction holds ([the reference, "Denies, and what an abstain says"](../../.pkit/permissions/README.md#denies-and-what-an-abstain-says)).
+- **The core's reasons keep the log's redaction.** The log keeps the hook's reason for each abstain beside the redacted command ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)). The core's reason for an uncovered part names at most its program, never its arguments. Its reason for an untrusted construct names only the kinds of construct ([the reference, "Denies, and what an abstain says"](../../.pkit/permissions/README.md#denies-and-what-an-abstain-says)).
 
 ### Allow a command
 
