@@ -816,36 +816,108 @@ slides:
     deploys them again with your paths. You can also set an agent''s model and effort in overlay.yaml.'
 - id: permissions
   part: P2
-  title: Permissions you write down
-  message: What agents may do is your project's written rules, not the tool's guesses.
-  problem: 'The AI tool decides action by action: nobody can see its rules, and every role is treated the same.'
-  does:
-  - 'Always refused, whatever is granted: rm -rf, sudo, force-push'
-  - Some raw commands refused, so agents use the ones that check
-  - A scratch folder agents never have to ask about
-  show: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent said no'
+  title: Where permissions come from
+  message: From rules your project writes down as data. Your AI tool applies them to every call, so they hold when an 
+    agent forgets them.
+  problem: ''
+  does: []
+  show: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands, which validate the
+    issue first.'
   visual:
-    kind: compare
-    left:
-      space: user
-      space_label: The tool's auto mode
-      heading: A guess per action
-      k1: Who decides
-      v1: the model, each time
-      k2: Visible
-      v2: 'no'
-    right:
-      space: tech
-      space_label: pkit's permissions
-      heading: Rules you write down
-      k1: Who decides
-      v1: your project, once
-      k2: Visible
-      v2: 'yes: pkit permissions explain'
-  limit: The rules stop ordinary commands, not a determined workaround; the OS sandbox is off on macOS.
-  minutes: 2
-  notes: Fewer prompts is mostly the tool's job now. pkit adds fixed rules, limits per role, and steering onto the 
-    checked path.
+    kind: map
+    head_h: 136
+    row_h: 112
+    columns:
+    - head: The rule
+      text: decided by COR-028
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: Written as data
+      text: in files you can read
+      fill: '#BE95FFFF'
+    - head: Your AI tool gets
+      text: and applies itself
+      fill: '#D4BBFFFF'
+    - head: What a call meets
+      text: every time
+      fill: '#E8DAFFFF'
+    rows:
+    - [{head: Guardrails, text: for you and every agent}, 'rm -r, sudo and force-push, denied to all', A deny in its 
+        settings, 'Refused, in every mode']
+    - [{head: An agent's own tools, text: in the agent's file}, 'critic: Read, Glob, Grep, WebFetch', That agent's list 
+        of tools, 'No command run, no file written']
+    - [{head: One agent's rule, text: from project-management}, 'project-manager: no raw gh changes', 'The hook, before each
+        call', 'Refused, so it uses pkit''s commands']
+    why:
+      head: Why pkit writes permissions down
+      items:
+      - A rule an agent reads is advice. A rule your AI tool applies is not.
+      - Written down, every rule can be read and reviewed, like any change.
+      - Its own settings bind every agent alike. The hook decides per agent.
+      - pkit's commands hold gates that raw commands skip. The agent cannot go around them.
+  limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can slip past.
+  minutes: 1
+  notes: 'COR-028 decides that what may run is data: grants of privileges to agents, in files. A catalog names the privileges,
+    three profiles ship ready (read-only, non-destructive and autonomous), and your project adds its own grants. pkit writes
+    them into your AI tool''s settings, and an optional hook checks each call before it runs. An agent is limited in three
+    places. The guardrails bind everyone, you included. Its own file lists its tools, and your AI tool enforces that list
+    for that agent alone. A rule for one agent needs the hook. pkit''s six agents have no rule of their own: their tools are
+    their limit. The one rule for a single agent ships with the project-management add-on. Its project-manager agent is refused
+    the raw gh commands that change issues and pull requests. It must use pkit''s commands, which validate the issue, hold
+    the close gate and the approval gate, and so cannot be skipped by habit. The add-on brings that rule with it, with nothing
+    to set up. A deny is a speed bump, not a security boundary: a wrapper such as bash -c or uv run can slip past it, so the
+    real gates live inside pkit''s commands.'
+- id: permday1
+  part: P2
+  title: Permissions on day one
+  message: A fresh install refuses destructive commands and allows routine ones, so the prompts you still see are worth 
+    reading.
+  problem: ''
+  does: []
+  show: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37 routine ones allowed.'
+  visual:
+    kind: wired
+    font_size: 26
+    note_w: 1000
+    panels:
+    - head: Your AI tool's settings, after install
+      terminal:
+      - [['# .claude/settings.json', comment]]
+      - [['"deny": [', output]]
+      - [['  "Bash(rm -rf:*)", "Bash(sudo:*)",', del]]
+      - [['  "Bash(git push --force:*)",', del]]
+      - [['  "Bash(git reset --hard:*)", …', del]]
+      - [['"allow": [', output]]
+      - [['  "Bash(git:*)", "Bash(gh:*)", "Bash(pkit:*)",', add]]
+      - [['  "Read", "Edit", "Skill(decision-author)", …', add]]
+    - head: What pkit says about it
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' permissions explain', args]]
+      - [['all  (every agent and the operator)', output]]
+      - [['  deny  destructive-fs        guardrail', del]]
+      - [['  deny  privilege-escalation  guardrail', del]]
+      - [['  deny  vcs-history-rewrite   guardrail', del]]
+    ties:
+    - head: Refused for all
+      text: Recursive delete, sudo and force-push, for you and every agent, in every mode.
+    - head: Routine, unasked
+      text: Reading, git, gh, pkit and pkit's skills run without a prompt.
+    - head: Kept current
+      text: Each upgrade merges pkit's rules in again, and keeps yours.
+    note:
+      icon: step-question-important
+      head: Agents working with nobody watching?
+      command: $ pkit permissions setup autonomy
+      body: It adds a profile, the hook and the OS sandbox, except on macOS, and checks the result.
+  limit: 'Without the hook, a rule for one agent is not applied: the settings bind every agent alike.'
+  minutes: 1
+  notes: 'Everything here was read from a fresh install. pkit''s settings for your AI tool arrive merged into .claude/settings.json,
+    beside your own entries. They refuse 14 forms of recursive delete, sudo, force-push and git reset --hard, and allow 37
+    routine commands and tools, pkit''s skills among them. pkit permissions explain shows the three guardrails, which no grant
+    can allow around. Rules for one agent need the hook. pkit permissions setup autonomy activates a profile, registers the
+    hook, sets up the OS sandbox except on macOS, and runs probes until the result holds. Without the model, you either allow
+    a command for every agent, or answer dozens of prompts a session, approved unread, until a prompt no longer stops a dangerous
+    command.'
 - id: checked
   part: P2
   title: Checked every time

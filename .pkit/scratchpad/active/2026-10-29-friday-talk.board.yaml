@@ -5081,6 +5081,730 @@ templates:
         y: 508
         width: 504
         height: 230
+  map_T-permissions:
+    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the
+      slide generator.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 842.0
+    parts:
+      h0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 664
+        height: 136
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      h0head:
+        type: text
+        text: The rule
+        style: '@style.tile_heading'
+        ink: '@text_on_color'
+        x: 32
+        y: 16
+        width: 600
+        height: 64
+      h0text:
+        type: text
+        text: decided by COR-028
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 84
+        width: 600
+        height: 50
+      h1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 0
+        width: 664
+        height: 136
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      h1head:
+        type: text
+        text: Written as data
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 792
+        y: 16
+        width: 600
+        height: 64
+      h1text:
+        type: text
+        text: in files you can read
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 84
+        width: 600
+        height: 50
+      h1arrow:
+        type: arrow
+        points:
+        - - 680
+          - 68
+        - - 744
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      h2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 0
+        width: 664
+        height: 136
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      h2head:
+        type: text
+        text: Your AI tool gets
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 1552
+        y: 16
+        width: 600
+        height: 64
+      h2text:
+        type: text
+        text: and applies itself
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 84
+        width: 600
+        height: 50
+      h2arrow:
+        type: arrow
+        points:
+        - - 1440
+          - 68
+        - - 1504
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      h3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 0
+        width: 664
+        height: 136
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      h3head:
+        type: text
+        text: What a call meets
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 2312
+        y: 16
+        width: 600
+        height: 64
+      h3text:
+        type: text
+        text: every time
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 84
+        width: 600
+        height: 50
+      h3arrow:
+        type: arrow
+        points:
+        - - 2200
+          - 68
+        - - 2264
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      r0c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 160
+        width: 664
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c0head:
+        type: text
+        text: Guardrails
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 162
+        width: 600
+        height: 56
+      r0c0text:
+        type: text
+        text: for you and every agent
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 218
+        width: 600
+        height: 50
+      r0c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 160
+        width: 664
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c1text:
+        type: text
+        text: rm -r, sudo and force-push, denied to all
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 162
+        width: 600
+        height: 100
+      r0c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 160
+        width: 664
+        height: 112
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c2text:
+        type: text
+        text: A deny in its settings
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 187
+        width: 600
+        height: 50
+      r0c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 160
+        width: 664
+        height: 112
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c3text:
+        type: text
+        text: Refused, in every mode
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 187
+        width: 600
+        height: 50
+      r1c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 288
+        width: 664
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c0head:
+        type: text
+        text: An agent's own tools
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 290
+        width: 600
+        height: 56
+      r1c0text:
+        type: text
+        text: in the agent's file
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 346
+        width: 600
+        height: 50
+      r1c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 288
+        width: 664
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c1text:
+        type: text
+        text: 'critic: Read, Glob, Grep, WebFetch'
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 290
+        width: 600
+        height: 100
+      r1c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 288
+        width: 664
+        height: 112
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c2text:
+        type: text
+        text: That agent's list of tools
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 315
+        width: 600
+        height: 50
+      r1c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 288
+        width: 664
+        height: 112
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c3text:
+        type: text
+        text: No command run, no file written
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 315
+        width: 600
+        height: 50
+      r2c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 416
+        width: 664
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2c0head:
+        type: text
+        text: One agent's rule
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 418
+        width: 600
+        height: 56
+      r2c0text:
+        type: text
+        text: from project-management
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 474
+        width: 600
+        height: 50
+      r2c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 416
+        width: 664
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2c1text:
+        type: text
+        text: 'project-manager: no raw gh changes'
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 418
+        width: 600
+        height: 100
+      r2c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 416
+        width: 664
+        height: 112
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2c2text:
+        type: text
+        text: The hook, before each call
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 443
+        width: 600
+        height: 50
+      r2c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 416
+        width: 664
+        height: 112
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2c3text:
+        type: text
+        text: Refused, so it uses pkit's commands
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 418
+        width: 600
+        height: 100
+      whyhead:
+        type: text
+        text: Why pkit writes permissions down
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 568
+        width: 2944
+        height: 56
+      w0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 636
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w0bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 636
+        width: 664
+        height: 8
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      w0text:
+        type: text
+        text: A rule an agent reads is advice. A rule your AI tool applies is not.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 668
+        width: 600
+        height: 150.0
+      w1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 636
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w1bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 636
+        width: 664
+        height: 8
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      w1text:
+        type: text
+        text: Written down, every rule can be read and reviewed, like any change.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 668
+        width: 600
+        height: 150.0
+      w2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 636
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w2bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 636
+        width: 664
+        height: 8
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      w2text:
+        type: text
+        text: Its own settings bind every agent alike. The hook decides per agent.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 668
+        width: 600
+        height: 150.0
+      w3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 636
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w3bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 636
+        width: 664
+        height: 8
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      w3text:
+        type: text
+        text: pkit's commands hold gates that raw commands skip. The agent cannot go around them.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 668
+        width: 600
+        height: 150.0
+  wired_T-permday1:
+    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card
+      per tie.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 888
+    parts:
+      p0head:
+        type: text
+        text: Your AI tool's settings, after install
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 0
+        width: 1412
+        height: 56
+      p0img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-permday1-p0.png
+        x: 0
+        y: 68
+        width: 1412
+        height: 392
+      p1head:
+        type: text
+        text: What pkit says about it
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1532
+        y: 0
+        width: 1412
+        height: 56
+      p1img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-permday1-p1.png
+        x: 1532
+        y: 68
+        width: 1412
+        height: 272
+      t0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 508
+        width: 584
+        height: 380
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t0head:
+        type: text
+        text: Refused for all
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 40
+        y: 544
+        width: 504
+        height: 64
+      t0text:
+        type: text
+        text: Recursive delete, sudo and force-push, for you and every agent, in every mode.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 40
+        y: 628
+        width: 504
+        height: 230
+      t1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 648
+        y: 508
+        width: 584
+        height: 380
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t1head:
+        type: text
+        text: Routine, unasked
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 688
+        y: 544
+        width: 504
+        height: 64
+      t1text:
+        type: text
+        text: Reading, git, gh, pkit and pkit's skills run without a prompt.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 688
+        y: 628
+        width: 504
+        height: 230
+      t2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1296
+        y: 508
+        width: 584
+        height: 380
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t2head:
+        type: text
+        text: Kept current
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 1336
+        y: 544
+        width: 504
+        height: 64
+      t2text:
+        type: text
+        text: Each upgrade merges pkit's rules in again, and keeps yours.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1336
+        y: 628
+        width: 504
+        height: 230
 instances:
   L01:
     template: slide
@@ -5541,7 +6265,7 @@ instances:
     lead: Your AI agent works fast, and forgets everything your project decided.
     rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
     n: 1
-    total: 19
+    total: 20
     override:
       rests:
         text: 'The question: how do you make it work your project''s way, without a heavy framework?'
@@ -5906,7 +6630,7 @@ instances:
     lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
     rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
     n: 2
-    total: 19
+    total: 20
     override:
       rests:
         text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
@@ -6277,7 +7001,7 @@ instances:
     rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
       later.
     n: 3
-    total: 19
+    total: 20
     override:
       rests:
         text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
@@ -6381,7 +7105,7 @@ instances:
       records, issues or docs.
     rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
-    total: 19
+    total: 20
     override:
       rests:
         text: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
@@ -6444,7 +7168,7 @@ instances:
     rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
       one'
     n: 5
-    total: 19
+    total: 20
     override:
       rests:
         text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
@@ -6668,7 +7392,7 @@ instances:
     rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
       merged with its code.'
     n: 6
-    total: 19
+    total: 20
     override:
       rests:
         text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
@@ -6839,7 +7563,7 @@ instances:
     rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
       generated from the rules.'
     n: 7
-    total: 19
+    total: 20
     override:
       rests:
         text: 'This week: each rule got a permanent id and a status. The file every session loads is now
@@ -7017,7 +7741,7 @@ instances:
       exact part.
     rests: 'In project-kit: pkit ships 11 skills, each with its command.'
     n: 8
-    total: 19
+    total: 20
     override:
       rests:
         text: 'In project-kit: pkit ships 11 skills, each with its command.'
@@ -7110,7 +7834,7 @@ instances:
     rests: Every session holds only each skill's short description. The steps load when the task comes
       up.
     n: 9
-    total: 19
+    total: 20
     override:
       rests:
         text: Every session holds only each skill's short description. The steps load when the task comes
@@ -7183,7 +7907,7 @@ instances:
     rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
       it follows.'
     n: 10
-    total: 19
+    total: 20
     override:
       rests:
         text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
@@ -7275,7 +7999,7 @@ instances:
     lead: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
     rests: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
     n: 11
-    total: 19
+    total: 20
     override:
       rests:
         text: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
@@ -7339,7 +8063,7 @@ instances:
     rests: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
       17 skills and agents.'
     n: 12
-    total: 19
+    total: 20
     override:
       rests:
         text: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
@@ -7428,16 +8152,17 @@ instances:
       text: 177c4828-d0a8-4adf-8316-d7d29c7d250e
   T-permissions:
     template: slide
-    title: Permissions you write down
-    lead: What agents may do is your project's written rules, not the tool's guesses.
-    rests: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent
-      said no'
+    title: Where permissions come from
+    lead: From rules your project writes down as data. Your AI tool applies them to every call, so they
+      hold when an agent forgets them.
+    rests: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
+      which validate the issue first.'
     n: 13
-    total: 19
+    total: 20
     override:
       rests:
-        text: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that
-          agent said no'
+        text: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
+          which validate the issue first.'
     mural_ids:
       root: 84de8304-8df1-426d-b15f-37a6204c6305
       bg: 4a81da47-14fd-4a64-ba48-a067fa933667
@@ -7445,150 +8170,246 @@ instances:
       lead: d5a6c497-3bdf-40cf-a5b0-597a437ed2fd
       rests: b6b611e6-9934-4c7b-9513-c9f6208a5c3a
       num: bb54d0e2-4501-4fa1-89cc-7c4b02c163cf
-  T-permissions-problem:
-    template: callout
+  T-permissions-map:
+    template: map_T-permissions
     parent: T-permissions
-    title: The problem
-    body: 'The AI tool decides action by action: nobody can see its rules, and every role is treated the
-      same.'
     x: 128
     y: 576
     mural_ids:
-      root: 88e12938-13ec-4d10-8e30-9985d57e0566
-      bg: 1b12d057-7f53-4147-9e77-0bf4f1bf889c
-      bar: ffd2e9a9-9e53-45ca-afdf-dd4f3a0187f3
-      title: 338df02a-f636-48e4-88ce-0beaac1f8bfc
-      body: 1c4a1eb0-4d37-4874-b0b7-cbf2ea025a8d
-  T-permissions-cmp1:
-    template: compare
-    parent: T-permissions
-    space: user
-    space_label: The tool's auto mode
-    heading: A guess per action
-    k1: Who decides
-    v1: the model, each time
-    k2: Visible
-    v2: 'no'
-    x: 128
-    y: 800
-    mural_ids:
-      root: 9a3023c7-17eb-4ed6-8e55-cf7677f80add
-      spacetag: 75871378-acd1-43f8-8cc2-831340ded1d3
-      d1: 9558badf-4665-447e-82b1-5cb67e1149ca
-      d2: dd9995e7-6bc3-4fea-ac92-5432df4eac87
-      heading: f936af97-6b02-4ca3-b85c-6de6a32856a6
-      k1: 31d259d3-bd99-4885-8486-6eb4a840696d
-      v1: a0e4a6f2-9d06-4cb4-b5af-4cdcbf8b2735
-      k2: bec7d96e-da80-4c2d-834c-d929923dd931
-      v2: 8d8c6223-54e2-4a1b-9b53-145502b81e71
-  T-permissions-cmp2:
-    template: compare
-    parent: T-permissions
-    space: tech
-    space_label: pkit's permissions
-    heading: Rules you write down
-    k1: Who decides
-    v1: your project, once
-    k2: Visible
-    v2: 'yes: pkit permissions explain'
-    x: 1632
-    y: 800
-    mural_ids:
-      root: 5601ca43-a084-4af3-881b-a049f48453ed
-      spacetag: 7f84cd17-c846-47df-a2f0-bea7df09ee4b
-      d1: 736c45e7-9b8b-4da8-8310-f573d9359a61
-      d2: bb8cb8d8-cb31-4234-8404-07d030896b01
-      heading: 68d01974-900d-4f9f-a8e7-54c6b5c2ab8d
-      k1: 0a3e6abb-10c9-475a-944f-5578d735000a
-      v1: 3d0ae94c-abf5-4dbf-958b-ab1e644129ed
-      k2: eac40ce0-8d6d-4f9e-9bd2-62d9e3294534
-      v2: c8398feb-8888-4df8-9d5e-7970eaccdee6
+      root: c6f7b903-aed2-4601-9d47-41de68886304
+      h0box: eb9ac9be-cfff-471c-863c-dd14882f9f6c
+      h1box: 166e6153-eeef-43ce-b072-f00c498f8f84
+      h2box: 6dfdde4a-96b5-4d86-9727-03332d5456f2
+      h3box: 057cd622-56d4-47e4-b120-07beb7b5843c
+      r0c0box: 7070c865-83e8-418d-bfb9-898240bb469a
+      r0c1box: bb215252-927b-477c-b594-4570bfcc3a9b
+      r0c2box: f06adac4-49fe-4d3e-b50b-b719708be944
+      r0c3box: 3e5422cb-28d5-4eaf-b19d-a94fa07a62b8
+      r1c0box: bd32b91e-c918-4bcb-860f-ef4a438b9fc5
+      r1c1box: 6c0d8e67-a948-4ce0-8691-e0e3719c5e0f
+      r1c2box: 71ca07e1-ae1f-4285-86aa-ae8a5b94d654
+      r1c3box: 965631e4-7aa1-45e2-bd5b-80412b29e033
+      r2c0box: c88572fb-206b-4e35-980c-ca16b4785991
+      r2c1box: fea5cdd2-e534-4af4-bd8e-4bdf3c329155
+      r2c2box: f58bf4c0-bbcf-447b-9238-ba08813f64f0
+      r2c3box: 50627bfb-362e-4973-b0e2-84b0849acc63
+      w0box: f49deb08-ebcc-4366-be93-732843e5a690
+      w0bar: d4e8e51f-e6a0-4c7d-b8fb-30bd80d0d778
+      w1box: 23c7d6ee-c592-4621-860c-550db0c99cc0
+      w1bar: 78ed7f47-00f1-4477-bb85-6a545cf14ab9
+      w2box: a081b9cb-d0be-4d1c-ae1f-d250d19ad482
+      w2bar: e5b99b7f-bf5e-45d4-9931-adffc5bc7433
+      w3box: ebf2be8a-67ec-41ae-8a4e-4d3e4bec846b
+      w3bar: 847e5410-6ec8-4660-bfb2-30d3ec4d7f85
+      h0head: b1631a6b-e257-4413-b365-db58faab7a44
+      h0text: 1a50964a-e9a4-4bda-8459-32e90f897024
+      h1head: 1ed98976-7df9-4e68-868e-d1d7529848f0
+      h1text: 78a11909-f6e8-495f-92f9-fd4bee41ae41
+      h2head: 95e1a55a-14bb-4010-a02e-08d5d93d85f5
+      h2text: d3406bc6-5682-4f3a-9dcd-35e076c9cb75
+      h3head: a591d46e-2ece-4db8-946d-542726f0217f
+      h3text: d6dd399c-df31-4a14-a4cd-e837ea714e61
+      r0c0head: b9e2e91a-4a11-4974-8fba-ff4dde542b31
+      r0c0text: a3578fea-3c40-4ba2-96f5-1e443bfecde7
+      r0c1text: ad58329e-06c7-4bc1-94e4-91d1af509b62
+      r0c2text: fefeefbb-8f1c-4684-bfb6-f7351a4c32e9
+      r0c3text: 4f0670bf-c68d-4057-8aa9-c7128f153082
+      r1c0head: 9b4bf711-246d-4bc0-b023-652fc7c9e099
+      r1c0text: b58b51bf-8ee3-43bb-81ca-257de77586a3
+      r1c1text: d1fad85f-56ba-4da2-91f5-ee44327e3de7
+      r1c2text: 30c502d1-940a-40a5-bf4c-dbdc3bf665c5
+      r1c3text: bcc8b4b5-e8f8-4db4-912f-29a1b18e936e
+      r2c0head: 387b3bfe-2eb8-49ac-a580-18b9bfebaa95
+      r2c0text: 20e5c398-969e-4d38-82d8-8da6f2e13c99
+      r2c1text: 143e4be4-0a53-471d-b586-12f773fc2f38
+      r2c2text: 28fcab98-fcd4-4578-b02c-9efe22df42a5
+      r2c3text: 5e568810-f7db-46c7-8fd0-9628df4f9e42
+      whyhead: ee4cbdf7-5bd6-436d-846f-9d5251850b38
+      w0text: 1583a278-18ce-45f9-8653-debaa38df4a4
+      w1text: af55142f-0e46-42c2-ae56-201ed2c74053
+      w2text: c2b6702e-47cf-47a1-b48d-f14f5829dc14
+      w3text: ae348aeb-a9eb-4f5b-bbaa-e03cf3c91c7b
+      h1arrow: 9f1d9c6e-5e76-411d-aaa0-42b08e9faa88
+      h2arrow: d644bca2-003a-4eff-854a-e95faf95c20d
+      h3arrow: 70a34c9d-e566-4bbb-bbbb-4990adfd3153
   T-permissions-limit:
     template: notice
     parent: T-permissions
-    text: 'Limit: The rules stop ordinary commands, not a determined workaround; the OS sandbox is off
-      on macOS.'
+    text: 'Limit: A deny stops the forms of a command pkit can tell. A command hidden behind another can
+      slip past.'
     x: 128
-    y: 1424
+    y: 1466.0
     mural_ids:
-      root: a44d5b71-fe05-41eb-ab4b-df76ba51e8cc
-      bg: cbf1d6da-fc12-42f1-bf13-daaaad2ea13b
-      bar: 61446245-b619-4afc-b007-26532fc2aa8d
-      text: 505cf43d-c60a-4bac-bf54-e42839ed1de1
+      root: 359d032b-34e8-4377-b660-ec8c03915702
+      bg: 9794d5b9-b6c2-4160-a3f0-63ce2b0ae112
+      bar: 1c807fdd-d286-4bf2-9b45-54086f1ec741
+      text: 79cf7592-0a53-4397-81f1-acb00b000e1c
+  T-permday1:
+    template: slide
+    title: Permissions on day one
+    lead: A fresh install refuses destructive commands and allows routine ones, so the prompts you still
+      see are worth reading.
+    rests: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37
+      routine ones allowed.'
+    n: 14
+    total: 20
+    override:
+      rests:
+        text: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused,
+          37 routine ones allowed.'
+    mural_ids:
+      root: 63873b04-242c-403f-bcd9-8d01a61ddcf9
+      bg: 9fe4bdf7-7e6e-4390-a4ae-9af784241109
+      title: f740a422-6c34-4bb3-92c0-c9f69e37474b
+      lead: 357ef049-8658-492e-a804-8a6ad0188f54
+      rests: 3e6decbd-59a5-4061-8073-6885c0495ce6
+      num: 6fee4bef-c627-426f-b98e-592b220741e5
+  T-permday1-wired:
+    template: wired_T-permday1
+    parent: T-permday1
+    x: 128
+    y: 576
+    mural_ids:
+      root: d5f2a705-eedb-452d-80df-c4514aea2785
+      t0box: 2a7f5b1a-dbe1-40ef-8658-98db44f57299
+      t1box: 20371bcb-1a10-4d39-82a2-fa673bce88b6
+      t2box: f18db4c6-3169-4ff6-bbb3-8950e707de7c
+      p0head: 3a4303e6-a416-4f40-9813-72ff245d3546
+      p1head: 813bef80-d09d-4955-b9a1-9a737457b0c8
+      t0head: 2ffe46be-f73a-43ea-8a92-75837f20f297
+      t0text: bc8572ff-22f3-483e-b04d-0c38596e4be3
+      t1head: d1d2a528-7925-4773-bb02-e3fa04ba8818
+      t1text: 38e36d37-8558-4e4a-972c-02015f338e25
+      t2head: 3f9af9dd-e189-4ddc-86ee-637ef381fb60
+      t2text: d620fb7c-1709-4eaa-8b69-532645a26d72
+      p0img: c0fdc4b7-88ee-404d-b824-ef2b76b18ae2
+      p1img: 749af10e-66fa-4447-99b1-cb5d937714ef
+  T-permday1-hl:
+    template: highlight
+    parent: T-permday1
+    x: 2072
+    y: 1084
+    icon: step-question-important
+    head: Agents working with nobody watching?
+    body: It adds a profile, the hook and the OS sandbox, except on macOS, and checks the result.
+    override:
+      root:
+        width: 1000
+      bg:
+        width: 1000
+      head:
+        width: 820
+      body:
+        width: 820
+    mural_ids:
+      root: d525227d-7e8e-432a-9cca-f933a04e54af
+      bg: 28192076-4bd2-4dda-9e18-d42e6c043c3b
+      bar: aa5b159d-8f46-4c67-8c7c-01d7e9ab4f85
+      head: de26d27f-4f73-484b-ab5b-00cbf81045c7
+      body: 7dd3384a-21df-4c3f-8a50-a5986302ec3b
+      icon: ef480862-80fc-4184-8dc4-492b0a9659a6
+  T-permday1-hl-cmd:
+    template: term_image
+    parent: T-permday1-hl
+    x: 140
+    y: 116
+    file: term-permday1-hl-cmd
+    override:
+      root:
+        width: 820
+        height: 118
+      img:
+        width: 820
+        height: 118
+    mural_ids:
+      root: 0677bb06-c5cf-4972-bd41-edba822d7577
+      img: c35222d7-bcc6-4426-8bde-3f9ecf002374
+  T-permday1-limit:
+    template: notice
+    parent: T-permday1
+    text: 'Limit: Without the hook, a rule for one agent is not applied: the settings bind every agent
+      alike.'
+    x: 128
+    y: 1512
+    mural_ids:
+      root: 8816cd98-99ad-4f78-953e-0f08189284b5
+      bg: ce6b4ce0-8b0e-48d2-aeae-6c078007012c
+      bar: 886c8f4e-4fc8-4f9f-91e9-a78bf7590974
+      text: b2a8d1f8-5146-48db-9832-f2b160b09aa5
   T-checked:
     template: slide
     title: Checked every time
     lead: An agent follows the ties between files without doubting them, so every tie is checked on every
       change.
     rests: In project-kit, this check runs before every push and on every pull request
-    n: 14
-    total: 19
+    n: 15
+    total: 20
     override:
       rests:
         text: In project-kit, this check runs before every push and on every pull request
     mural_ids:
-      root: b433d796-7535-48e6-b27d-ef241f2b80c7
-      bg: 2449003d-096f-4c9e-8233-ca9071ff71fb
-      title: c13a0709-0707-42cc-b864-cc442d45be9a
-      lead: a3265907-0db8-4462-89a6-7fdf6e5b4b38
-      rests: c6f7b8ae-0477-4339-baaf-4b87bd29cc3f
-      num: ed271f4f-ea74-4c46-a842-02255797c5ec
+      root: 14016646-a1a7-4e73-9d07-c023b4d80e9f
+      bg: db4d1b04-7d3a-440b-9ff3-fac0431521bc
+      title: c15a94f9-bc36-4383-9617-d657aa87c35b
+      lead: 5cf76092-3baf-4b89-9de8-69ae3112bf63
+      rests: a7d3070a-4884-425a-b790-677dda8269c4
+      num: d7311c7c-6e06-464d-906e-e6932f4f1a9c
   T-checked-ties:
     template: ties_T-checked
     parent: T-checked
     x: 128
     y: 576
     mural_ids:
-      root: e3470008-2efb-4885-a310-9b0903ed4f48
-      cbox: a5d276e5-2c20-4f4d-84d7-7163e6665fa8
-      c1box: 24c6a9f9-90ba-4223-a78b-fdf91b5fbf68
-      l0box: 8202bca9-8d28-4f7a-a009-3df54bdace1a
-      l1box: eca2b7c8-c734-4c74-ad7a-0d14a6e2cb56
-      l2box: 44389458-8723-4e83-8261-9728cfb9231a
-      l3box: 43ea553c-c637-499f-8387-8be101e790a5
-      l4box: cdd9b509-d84f-4e3c-8125-9fd6688e5a11
-      l5box: 47a66ca8-956f-4249-9d2e-c977f5035f7c
-      l6box: 3388b98b-8674-4b73-a52d-cf0a0e7c7496
-      r0box: aea65336-b36e-44fe-a790-bb9b2b3e9d53
-      r1box: 829655d9-e0a9-40ac-868c-142d727b107b
-      r2box: cea97927-4021-4b94-a288-3a52dd29bd34
-      r3box: ff871e1f-ee06-4d84-afcb-72d3f47a3855
-      r4box: 523c9e35-a281-4382-a12f-9cd5b578c5ed
-      r5box: 915c774f-0505-4de4-a5d1-9b17230665a5
-      lhead: b407d40f-f2a0-4418-9769-ff10c43c6563
-      rhead: 72b22d9c-fc2f-4079-9d31-261825f2033e
-      chead: aac1dfff-f3b8-48ea-8e64-799c9d34070d
-      cpath: 0c3ee570-a1cb-4705-b063-579e2e885493
-      c1head: 9a46b4fb-5481-4a30-94b3-1317fc255808
-      c1path: 8cb7b39b-694e-434c-9e79-be769399681d
-      l0text: 696f714b-ed50-4904-b8f4-bf8f604810b4
-      l1text: 0f240ddf-d938-4e65-ab10-3b6ef497e6da
-      l2text: 990bc416-080e-4ab5-80ee-ddf135f16d9a
-      l3text: d97aa393-aa32-48b1-b6a8-19bf980cc962
-      l4text: 1f8f9d7b-fa80-49cf-ac52-d8bfc6ceeab2
-      l5text: 99ed3ef7-89fb-4f77-9318-9ec94de1529a
-      l6text: 24794207-0920-4f96-97ee-8528fbcc6e06
-      l6note: 01a98481-7a78-417b-bc5b-7a22cf888220
-      r0text: 836b7cd3-fc53-4646-83ec-3eb7044651a4
-      r1text: a7764e82-a627-4f3b-b567-956ee6b72548
-      r2text: 11fd8d22-898a-4cfd-80a8-fd4b8f3f454d
-      r3text: 320c0f9b-f5e0-4afa-84aa-f3075b9c5dab
-      r4text: 860ee07f-24be-4515-bd40-2d2f7ebf856c
-      r5text: 3622f0bb-5fb3-473d-af47-30f829aadb6e
-      l0tie: b5145811-820c-43cc-8dad-97bbd355b0ef
-      l1tie: 0a2927b7-3b34-4b88-9304-c64f3b888a30
-      l2tie: 5f21d897-ddff-42f4-9f9f-8d36a1d0ffc6
-      l3tie: 5dfede35-bf60-49db-a954-e4951ad27dd1
-      l4tie: a4ef9aeb-85e4-4a93-add2-737a7d19d131
-      l5tie: 0a6a1f83-a04c-4fab-bf7a-e5008f9c01c7
-      l6tie: f7c4b24a-befe-4ad6-bd7b-d4e9144bba74
-      l6tie1: e4576979-0be1-458d-8967-0663e63eaf2e
-      r0tie: 3e1c9446-24ac-4d09-8bd9-86f3ca664f5a
-      r1tie: 245d5747-f718-4cac-b20a-fdf1b397b0de
-      r2tie: 85c05645-9a32-4d2f-ab6c-10d9faae0ca7
-      r3tie: f5178bb1-745d-45a0-b4fc-e437de5adaf3
-      r4tie: f3d1c70a-cf4e-421c-b210-69758c49b7c4
-      r5tie: e81908e1-935a-4ed1-8944-7006c3b603cd
+      root: 64f3a85b-99ee-43f7-b8f1-8d2e7e15cced
+      cbox: 7f9749fb-6ebf-4e55-be4b-c77305c93907
+      c1box: 66cff0e9-3e99-442f-8acd-ab25213f0668
+      l0box: a6d8c9bf-dec1-4bea-8458-fb9f8db1ae83
+      l1box: 491d8260-18f3-4328-ad83-99552497b767
+      l2box: 373ff2a7-6c27-4558-8157-3fb891798346
+      l3box: dbb43722-e594-45e1-b2cd-8760aa839861
+      l4box: 2efbbe54-2108-4442-8592-b93f56e3f74f
+      l5box: 1a42e7e8-7739-4657-ab36-89d1d796109b
+      l6box: 8f1f2a88-203c-4bbb-a31e-3041a6fb006a
+      r0box: d27e3a83-4551-40ac-b56d-be8c5b9f19ac
+      r1box: d8ba7b25-85de-44d6-8ff0-f5bf0b6e3734
+      r2box: e6dceb1c-8b0f-4dde-8d41-e8c5dc66f33d
+      r3box: f39a5a87-d524-4369-a928-07e0a8ddee6d
+      r4box: a134f666-632c-43cb-a482-3c732186eaaf
+      r5box: 2bd65848-1d48-4bdf-8ba4-7bb838c5e8c7
+      lhead: d2fae81d-7332-4000-92be-68811157b50c
+      rhead: 22feb2c7-7a7f-44aa-9093-18ae240aa96a
+      chead: a19f281b-0fcb-49b9-8ada-230981f64224
+      cpath: 0f39b605-7ed6-4c41-bb99-0e1a11803e0f
+      c1head: 62316501-54c9-4fbc-8366-b5f7b6b426ca
+      c1path: e471e810-5558-4b8e-803d-3e937266100e
+      l0text: a3f60ac9-93e6-4caf-88e8-f2be6fba7768
+      l1text: 3ae95306-001e-40dc-80e0-cb3fbd263252
+      l2text: 343c8ed8-8e01-4e06-b98e-af4be8be0df7
+      l3text: f90a7781-8479-403d-96b3-be888ca9ee9e
+      l4text: 2b0c96c2-8cf1-41c4-819d-c62b0108e5c3
+      l5text: 66023c00-dbbb-468a-94ba-b833d36d16cb
+      l6text: c9d475f2-f3d7-4c18-af31-17fb9f811bad
+      l6note: 8ce899ce-a610-4178-ad52-c37a89e264f6
+      r0text: eb1a8757-8645-431f-bf4c-8a5d48bb6af5
+      r1text: 6887d325-4650-4333-a381-9308d55ffa17
+      r2text: ed4987b3-52af-4083-bd0b-b5eef1570e69
+      r3text: 92c18d40-787a-4210-85bf-d9e81d3f4ca0
+      r4text: 089a1636-ba90-4cb2-b5c1-890612140522
+      r5text: d3330585-1c56-4af1-961c-4e5a3c67a4bb
+      l0tie: be22f805-7ef9-41aa-b5b3-118525d05fe8
+      l1tie: f1496a54-c1e2-4d25-99c2-08a4110bab93
+      l2tie: 285ba7f9-9053-4d1a-ac74-8d54c79c8b2c
+      l3tie: 2307636e-59a2-4d30-8753-5f206ad035f9
+      l4tie: 2ad4acd1-c9bb-4f91-9940-9e58ba0e7fdb
+      l5tie: 3c4f628c-ed75-477e-a4f7-4b107af7f3f0
+      l6tie: 6bacc71f-cc8b-49a7-895e-a88576bef127
+      l6tie1: 1764b641-e3b2-4c74-bc82-ce6bb0543738
+      r0tie: 43659af7-8893-4d6a-85b6-5e7478333899
+      r1tie: 7ce8f20a-2175-4d54-871a-8b90f4e326ad
+      r2tie: 255ff571-cfab-4e72-acd1-9f9a9a6aa85d
+      r3tie: e1157b63-e047-4ec8-9d94-ca6184eb7d78
+      r4tie: ca93d9d7-310b-4afa-8bb5-0de39a4ae3ef
+      r5tie: e5d0a453-79e2-4d5b-bcc9-91a2bfa6bdfa
   T-checked-check:
     template: term_image
     parent: T-checked
@@ -7603,8 +8424,8 @@ instances:
         width: 920
         height: 479
     mural_ids:
-      root: deec41d7-f4ab-4143-99a1-c98816611fde
-      img: 62c34352-bad2-4b46-b669-4c3a4a788dfb
+      root: 04816dd3-5873-4b6b-9bbe-24618c1068aa
+      img: 03951e1b-4738-4ea4-9213-f4b7f650785f
   T-checked-limit:
     template: notice
     parent: T-checked
@@ -7612,29 +8433,29 @@ instances:
     x: 128
     y: 1264
     mural_ids:
-      root: 8e3cce32-27b9-44de-9d76-ff48847263d3
-      bg: 6a590f4a-7b2b-45db-aa56-d8d5de21bd54
-      bar: c85bb040-5af7-432f-be83-74c772b88831
-      text: 1fcb9e02-d414-49d1-9ab7-e68171d3e909
+      root: 45f7d601-a17b-480a-aa7d-d8dbdd13e85e
+      bg: 07e090a8-fa28-4e91-9017-af89a32c2a5c
+      bar: ef76aeef-c82e-4638-925a-b338d912a202
+      text: 590ee0c7-f432-4e0e-bb33-806065ac9689
   T-docs:
     template: slide
     title: Docs that know when they're wrong
     lead: When code changes, the documents that depend on it are named, not found later by accident.
     rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it
       wasn''t'
-    n: 15
-    total: 19
+    n: 16
+    total: 20
     override:
       rests:
         text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed
           it wasn''t'
     mural_ids:
-      root: f86c47df-eb1b-4d38-b66f-ead7c99d781a
-      bg: 7e969a58-997b-42f4-851e-18bf72a1d8a9
-      title: 0b20c825-4d64-45b9-b73a-8fe4d971858c
-      lead: 22662f99-7d50-4d68-ab5a-3cf313cdca58
-      rests: 9c0cadd3-371c-4585-8ff4-03024dd457d8
-      num: 386051b9-c8a7-4ff8-99ea-4c949d9e3c4c
+      root: 0fc29b99-3fbe-456e-8232-4077c601e942
+      bg: 04419dc1-bc79-4f2f-9b7e-ab00b5d0f0a6
+      title: 67679065-fa19-49e4-9f11-740ce2b62887
+      lead: 85bdd099-3dda-4525-b941-741ea591affb
+      rests: bb7e7daa-d58c-4bb8-9c6a-345e820c0635
+      num: d16e1a1f-28b6-4cb1-a8df-6353f5ff0731
   T-docs-problem:
     template: callout
     parent: T-docs
@@ -7643,11 +8464,11 @@ instances:
     x: 128
     y: 576
     mural_ids:
-      root: 09a7cfc0-010a-49db-af0c-f588eb02359a
-      bg: 8ac0d3c9-56eb-40ab-8f74-10af5c882088
-      bar: 8300e916-a2ad-4dab-9608-8c065285f99c
-      title: b809ba84-6072-4782-8765-6cd8883d8a79
-      body: ab655891-4b0e-4ebb-b806-f8119528bfc4
+      root: 346cf49b-7297-4ea3-b84a-030d5a175050
+      bg: a423c0a1-aa87-42d9-b4ad-ef2225ee2308
+      bar: 1b93790e-8b10-49eb-98ac-1103bf949b51
+      title: aa6e5d95-4030-4b6c-bfec-fc39666591d0
+      body: 09ab087b-f6cc-4b5b-817a-4a2bff256aab
   T-docs-d1:
     template: step
     parent: T-docs
@@ -7663,10 +8484,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: 1a9427e4-0145-42a9-b3d3-d2a9ae93259e
-      bg: dcc70f32-1f26-48e3-8a90-382980501d60
-      tag: fce73631-ebaf-4c3d-b8db-c807160dc12a
-      text: ab6459af-5595-4626-a031-2e4237c9f35e
+      root: d4f0c5f1-1ae1-4699-b3e3-61d921ce911d
+      bg: bed8deb4-c2cb-466c-aa8f-2cf5d19d5083
+      tag: 632c90dd-0d40-4a89-8d57-f8b379d95dc6
+      text: 655772ae-80f6-427b-a6bc-699896042325
   T-docs-d2:
     template: step
     parent: T-docs
@@ -7682,10 +8503,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: ecc44547-3d5d-4cd1-b185-caab380b2fb6
-      bg: 0ac5da9c-50de-416f-a085-3444bc99db92
-      tag: 4386c093-76ee-43bf-a82d-f8f7c6127a57
-      text: 38dc5945-03bb-4cb9-85e1-e461b3aaa6e9
+      root: 0179d4f1-51e0-42e8-8398-12d3d0bcbfcc
+      bg: 7a87357c-3a57-4e22-9721-2b53a9c08648
+      tag: bb0e0c88-363a-43c3-a76a-abb983b10624
+      text: f7f92ace-f95c-4f85-bec2-95caaf286e50
   T-docs-d3:
     template: step
     parent: T-docs
@@ -7701,10 +8522,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: c5bad942-f760-48d9-8228-84e2b4f6b0be
-      bg: 95b2527e-f989-437b-9aab-399b4c67b1a4
-      tag: b278661a-c703-4ad3-a81e-55f432c5e2b9
-      text: fea2ef8f-57c3-4a57-a7c7-08162f196e81
+      root: bcfab3cb-b013-41ec-8d42-a4fd8dc89da8
+      bg: 54ae5fe2-0266-4d51-aa3e-8831dab4a1a5
+      tag: 780c5934-c10e-4eb0-a703-faf11bba1012
+      text: 3bc77dfd-2530-4554-8b1f-1dff4cf0d6ba
   T-docs-code:
     template: code
     parent: T-docs
@@ -7721,9 +8542,9 @@ instances:
       text:
         height: 288
     mural_ids:
-      root: d2fd99a8-5a7c-4f2e-b5c8-f899c29f70f0
-      bg: 88bf232e-b30f-4735-95a4-bf2cd47e3cad
-      text: 0c85a38d-8d59-4eba-833b-5f57f2bdc0c6
+      root: 0ac77de2-89b6-4db0-a06a-c4ae3fd28627
+      bg: 37923802-d05a-426c-888e-2e138ed503c5
+      text: cc0c5167-d5dd-44ab-bbd8-2ed14895bca9
   T-docs-limit:
     template: notice
     parent: T-docs
@@ -7731,10 +8552,10 @@ instances:
     x: 128
     y: 1516.0
     mural_ids:
-      root: 31cd0f12-064a-46e9-8959-0055c4f94843
-      bg: 8aa7a4c8-e40d-4ca3-a502-fed46a092ee0
-      bar: 0e309ccd-7ad7-48de-9985-b50e953722c4
-      text: a8967911-2e0a-4852-ae32-f3d10828b628
+      root: 023eac1f-a073-4cdf-8c7d-267ae9dd385d
+      bg: 6b695014-8bd8-4750-aa8a-7386427e394d
+      bar: 2ca5e308-7c70-4f7c-ba7c-9e052a426b86
+      text: a162d4ab-07b3-499d-bca6-1ea354de84c2
   T-part-P3:
     template: section
     part: '4'
@@ -7752,8 +8573,8 @@ instances:
     title: project-management
     lead: You talk to one agent; it plans the work and runs builders in parallel.
     rests: 'This week, in one evening: six builders, four pull requests merged'
-    n: 16
-    total: 19
+    n: 17
+    total: 20
     override:
       rests:
         text: 'This week, in one evening: six builders, four pull requests merged'
@@ -8043,8 +8864,8 @@ instances:
       to wire.
     rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
       before merge'
-    n: 17
-    total: 19
+    n: 18
+    total: 20
     override:
       rests:
         text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
@@ -8255,8 +9076,8 @@ instances:
       run, still being shaped.
     rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until
       you decide'
-    n: 18
-    total: 19
+    n: 19
+    total: 20
     override:
       rests:
         text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes
@@ -8514,8 +9335,8 @@ instances:
     title: Questions?
     lead: Everything shown is in project-kit's own repository, built with pkit itself.
     rests: github.com/aleskalfas/project-kit
-    n: 19
-    total: 19
+    n: 20
+    total: 20
     override:
       rests:
         text: github.com/aleskalfas/project-kit
@@ -8597,6 +9418,7 @@ layouts:
   - T-agents
   - T-agentswired
   - T-permissions
+  - T-permday1
   - T-checked
   - T-docs
   origin:
