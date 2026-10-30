@@ -77,9 +77,7 @@ A file holds a line when one of its lines is exactly the line once the spaces an
 
 Every write goes through the file: the new content is written into the existing `CLAUDE.md`, never moved over it. A `CLAUDE.md` that is a link keeps its link, and the lines reach the file it links to. Its mode stays, and a file whose lines end in CRLF gets its new lines in CRLF too. Adopter content is never clobbered.
 
-The primitive reads `CLAUDE.md` alone. A project that moved core's include into a file `CLAUDE.md` imports, such as `AGENTS.md`, finds core's include and the index's line added to `CLAUDE.md` as well. In a repository holding only `AGENTS.md`, the primitive creates a `CLAUDE.md`, which Claude Code reads in place of `AGENTS.md`; that is left for a follow-up.
-
-Its copy of the index's line is the one `loaded_rules:` renders in the adapter's `package.yaml` (below), kept in the shell since a primitive is given no `pkit` to ask. A test holds the two equal.
+The primitive reads `CLAUDE.md` alone. A project that moved core's include into a file `CLAUDE.md` imports, such as `AGENTS.md`, finds core's include and the index's line added to `CLAUDE.md` as well. In a repository holding only `AGENTS.md`, the primitive creates a `CLAUDE.md`, which Claude Code reads in place of `AGENTS.md`. That is left for a follow-up.
 
 `merge-claude-md.sh` is an adapter primitive: `pkit init` and `pkit sync` invoke it (alongside `merge-settings.sh`, `deploy-skills.sh`, `deploy-agents.sh`) so the wiring is maintained automatically. Running it by hand is always safe.
 

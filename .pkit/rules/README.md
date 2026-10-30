@@ -61,7 +61,7 @@ A capability may ship operational rules of its own, as one loaded rule set in it
 `.pkit/rules/capabilities.md` is how a session reaches each installed capability's loaded file (ADR-076 point 2). The backbone renders it whole for your project, from the capabilities your manifest registers and the form your adapter declares (`pkit rule-sets loaded` lists the same answer). It opens with a marker line, an HTML comment the harness drops, then holds one entry per registered capability that ships a loaded set, by the capabilities' names. It holds no rules of its own, and nothing else.
 
 - **Rendered** at first install, sync, upgrade, and each capability's install, register, upgrade and uninstall. It is committed with `.pkit/`, so every checkout that holds `core.md` holds it too.
-- **Nobody edits it.** A hand edit is overwritten at the next render, and `pkit validate` fails it until then. A file at its path without the marker is not the index: sync and upgrade refuse to run until you move it.
+- **Nobody edits it.** A hand edit is overwritten at the next render, and `pkit validate` fails it until then. A file at its path that holds text but not the marker is not the index: sync and upgrade refuse to run until you move it. An empty file there is rendered over.
 - **Reached by one line** your `CLAUDE.md` keeps after core's include, `@.pkit/rules/capabilities.md`, which the adapter's merge inserts wherever it is absent. The line never needs removing: uninstalling a capability changes the index alone.
 - **Checked.** `pkit validate` fails an index out of step with the registered capabilities, an entry whose file is missing, and a `CLAUDE.md` without the line (the CLI reference, `validate`).
 
