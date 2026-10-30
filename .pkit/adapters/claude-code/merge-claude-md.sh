@@ -144,7 +144,7 @@ fi
 # ── Holds core's include: keep the index's line directly after it ─────────
 if holds "$CLAUDE_MD" "$CORE_INCLUDE"; then
     if holds "$CLAUDE_MD" "$INDEX_INCLUDE"; then
-        status "exists" "CLAUDE.md (already includes $CORE_INCLUDE and $INDEX_INCLUDE)"
+        status "exists" "CLAUDE.md (already includes $CORE_INCLUDE)"
         exit 0
     fi
     TMP=$(mktemp)
