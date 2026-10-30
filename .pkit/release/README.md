@@ -1188,15 +1188,19 @@ writers rewrite them by (a `package.yaml`'s `version:` line and a
 `requires_backbone:` range the broaden widens or a declared floor raises, a
 `requires_capabilities` entry's `version:` range a declared floor raises or a
 declared bound widens, the
-manifest's `backbone_version:`). A diff that is *only* those writes, and more
-than the consumed changesets, is the release itself, not a new surface change,
-and passes the surface check with no `skip-changeset` label. The signal is the
-content rather than the branch name, so it is self-contained (works locally
+manifest's `backbone_version:`). A release PR may also carry the answers its
+writes need, in answer files the diff adds: an answer file is no surface, so it
+may stand beside the writes, though it shows no release on its own. A diff that
+is *only* those writes and the answer files it adds, and more than the consumed
+changesets and those answer files, is the release itself, not a new surface
+change, and passes the surface check with no `skip-changeset` label. The signal
+is the content rather than the branch name, so it is self-contained (works locally
 and in CI, on any branch, in any adopter's repo) and a branch named `release/*`
 does not produce it; CI raises no hatch for one. It is strict — a single stray
-file or line outside the list (a `src/` edit riding along, a manifest line
-beside `backbone_version`, a `requires_backbone` range the release never
-writes, such as `"*"`) makes the diff no longer the release, so the guard
+file or line outside the list (a `src/` edit riding along, a document, an
+answer file the diff edits or removes, a manifest line beside
+`backbone_version`, a `requires_backbone` range the release never writes, such
+as `"*"`) makes the diff no longer the release, so the guard
 runs normally and the exemption can never smuggle real surface through. A write
 the release step gains joins the list in the same change; otherwise the guard
 fails the next release PR that makes it.

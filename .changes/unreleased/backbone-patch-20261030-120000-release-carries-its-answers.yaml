@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit release check` recognises a release pull request that carries the
+  answers its writes need (#2381). A release's version bumps edit files that
+  documents anchor to, so `pkit friction check` asks the release pull request
+  for answers; the answer files it adds to the project's friction answers
+  folder no longer make its diff an ordinary change, which had the changeset
+  guard refuse the release's own writes. An answer file is no surface, so it
+  marks no release on its own, and an answer file the diff edits or removes, or
+  any other file beside the release's writes, still makes the diff no release.
