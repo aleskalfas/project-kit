@@ -64,6 +64,7 @@ def test_shipped_config_schema_is_draft_2020_12_without_a_version_key() -> None:
         "connections",
         "process",
         "repository",
+        "rule-sets",
         "project",
     }
 

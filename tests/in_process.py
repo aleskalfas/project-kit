@@ -232,8 +232,20 @@ def _scripts_of(capability: str | Path) -> Path:
     return CAPABILITIES / capability / "scripts" if isinstance(capability, str) else capability
 
 
+def _from_a_lib(module: object) -> bool:
+    """Whether `module` was loaded from a file in a capability's `_lib` folder."""
+    return Path(getattr(module, "__file__", None) or "").parent.name == "_lib"
+
+
 def _ours() -> list[str]:
-    return [name for name in sys.modules if name == "_lib" or name.startswith("_lib.")]
+    """The `_lib` package and its modules in `sys.modules`, and any module of a `_lib`
+    imported by path under a top-level name, such as `default_branch`. A module that
+    imports its siblings in both forms takes such a copy first."""
+    return [
+        name
+        for name, module in list(sys.modules.items())
+        if name == "_lib" or name.startswith("_lib.") or ("." not in name and _from_a_lib(module))
+    ]
 
 
 def load(capability: str | Path, *names: str) -> tuple[ModuleType, ...]:
@@ -246,11 +258,15 @@ def load(capability: str | Path, *names: str) -> tuple[ModuleType, ...]:
     and its `_lib` in `sys.modules`, only while they load. Both are left after as they
     were, so another capability's `_lib` loads later, and one loaded before keeps working.
     Each call imports afresh: the modules of one call share their `_lib`, and two calls
-    share nothing. A script is known by `_script_<capability>_<name>`."""
+    share nothing. A script is known by `_script_<capability>_<name>`.
+
+    While they load, no `_lib` folder is on the import path, and no module of a `_lib`
+    imported by path is in `sys.modules`. So a module that imports its siblings by path
+    first takes them from the call's `_lib`, whatever an earlier test left (#2353)."""
     scripts = _scripts_of(capability)
     saved = {name: sys.modules.pop(name) for name in _ours()}
     path = list(sys.path)
-    sys.path.insert(0, str(scripts))
+    sys.path[:] = [str(scripts), *(entry for entry in path if Path(entry).name != "_lib")]
     try:
         return tuple(
             _script(scripts, name) if name.endswith(".py") else _lib(name) for name in names
