@@ -13,7 +13,8 @@ a release that would leave a range excluding a dependency's version, generates
 the changelog, which states each raised floor and widened bound, deletes the consumed
 changesets, and (for a backbone bump) cuts the tag via the existing
 `tag_version` (PRJ-004). The files it writes are one list, `release_writes`,
-which the changeset guard recognises a release diff by.
+which the changeset guard recognises a release diff by, beside the answer files
+a release PR adds for the answers its writes need.
 
 Cutover note (PRJ-002 D-implications): this module *adds* the release-
 authority path; it does not retire `pkit version bump`. Both broaden
@@ -41,7 +42,13 @@ import click
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
-from project_kit import command_runner, pull_request_landing, session_guard, versioning
+from project_kit import (
+    answer_files,
+    command_runner,
+    pull_request_landing,
+    session_guard,
+    versioning,
+)
 from project_kit.changesets import (
     BACKBONE,
     CAPABILITY_BOUND_FIELD,
@@ -127,7 +134,8 @@ _LIST_ITEM_RE = re.compile(r"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S")
 #
 # `pkit release apply` writes the files `release_writes` names and nothing else,
 # and the changeset guard recognises a release diff as those files and nothing
-# else (`is_release_diff`). The list is made of what the writers write through:
+# else (`is_release_diff`), save the answer files a release PR adds for the
+# answers its writes need (#2381). The list is made of what the writers write through:
 # the version files `discover_components` finds, the self-host manifest, the
 # changelog and the changesets directory, and the pattern of each line rewritten
 # in place — the version and manifest lines below, and versioning.py's
@@ -183,6 +191,10 @@ def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
     - `CHANGELOG.md`, created or prepended;
     - the consumed changesets, deleted — in every release, but a diff deleting
       only changesets is none.
+
+    The answer files a release PR adds for the answers its writes need are not
+    among them: the release step writes no answer, and `is_release_diff` admits
+    those files beside the list.
     """
     repo_root = source_kit.parent
     package_lines = (
@@ -2064,8 +2076,13 @@ def _matches_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
 # and naming a branch `release/*` does not produce it. The signal is
 # intentionally strict: if *any* changed file or line falls outside the list
 # (e.g. a stray `src/` edit), the diff is NOT the release itself and the guard
-# runs normally — so the exemption can never smuggle real surface through. It
-# waives the surface check only, never the floor tie (`GuardResult.ok`).
+# runs normally — so the exemption can never smuggle real surface through. The
+# one file beside the list is an answer file the diff adds
+# (`answer_files.is_answer_file`): a release's version bumps edit files that
+# documents anchor to, so `pkit friction check` asks the release PR for answers,
+# and an answer file is no surface (#2381). It does not mark a release on its
+# own, and an answer file the diff edits or removes is outside the list. The
+# exemption waives the surface check only, never the floor tie (`GuardResult.ok`).
 
 
 def _diff_name_status(repo_root: Path, base: str) -> list[tuple[str, str]]:
@@ -2124,22 +2141,27 @@ def _changes_only(
 
 
 def is_release_diff(source_kit: Path, base: str) -> bool:
-    """True when the diff vs `base` is only what `pkit release apply` writes.
+    """True when the diff vs `base` is only what `pkit release apply` writes,
+    and the answer files it adds for the answers those writes need.
 
     Every changed file must be one the release writes (`release_writes`), with a
     status that write leaves, and — for a file the release rewrites in place —
-    only the lines it rewrites (verified line-by-line); and the diff must write
-    more than the consumed changesets it deletes.
+    only the lines it rewrites (verified line-by-line), or an answer file the
+    diff adds (`answer_files.is_answer_file`, status `A`); and the diff must
+    write more than the consumed changesets it deletes and the answer files it
+    adds.
 
     Any other change (a `src/` edit, a doc, a new file under a component subtree,
-    a package.yaml line beside its version and floor) makes the answer False —
-    the diff is then treated as an ordinary PR and the surface guard runs. An
-    empty diff is not a release.
+    a package.yaml line beside its version and floor, an answer file edited or
+    removed) makes the answer False — the diff is then treated as an ordinary PR
+    and the surface guard runs. An empty diff is not a release.
     """
     repo_root = source_kit.parent
     writes = release_writes(source_kit)
     marked = False  # a write that shows a release, not only consumed changesets
     for status, path in _diff_name_status(repo_root, base):
+        if status == "A" and answer_files.is_answer_file(path):
+            continue  # the answers the release's writes need: no surface, no release
         write = next((w for w in writes if w.covers(status, path)), None)
         if write is None:
             return False  # anything else ⇒ not the release itself
