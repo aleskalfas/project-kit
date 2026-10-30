@@ -153,11 +153,14 @@ def regenerate_derivable_state(ctx: install.InstallContext) -> None:
       (`.claude/settings.json`, `CLAUDE.md`), then deploy of skills and agents
     - `.pkit/.gitignore`, rendered at the core tier from the runtime-ignore
       declarations of the backbone and every installed component (ADR-009 rule 7)
+    - pkit's region of the local exclude file, from the footprint, where the project
+      is private (ADR-009 point 3)
     - the agent workspace and its line in the local exclude file (#1043)
     - each registered query command's environment, resolved once, online (#1092)
     """
     install.run_installed_adapter_primitives(ctx)
     install._render_runtime_ignore(ctx)
+    install.refresh_private_region(ctx)
     install.ensure_agent_workspace(ctx)
     install.provision_query_commands(ctx)
 

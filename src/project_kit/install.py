@@ -702,6 +702,7 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
     run_installed_adapter_primitives(ctx)
 
     _render_runtime_ignore(ctx)
+    refresh_private_region(ctx)
     ensure_agent_workspace(ctx)
     provision_query_commands(ctx)
     _record_install_completion(ctx)
@@ -754,6 +755,18 @@ def _render_runtime_ignore(ctx: InstallContext) -> None:
     from project_kit import visibility
 
     click.echo(visibility.render_runtime_ignore(ctx.target_root, dry_run=ctx.dry_run))
+
+
+def refresh_private_region(ctx: InstallContext) -> None:
+    """Re-render pkit's region of the local exclude file from the footprint, where the
+    project is private (ADR-009 point 3): a component the step installed may declare
+    footprint the region did not hold. A project that is not private, or not a git
+    repository, is left as it is."""
+    from project_kit import visibility
+
+    line = visibility.refresh_private_region(ctx.target_root, dry_run=ctx.dry_run)
+    if line is not None:
+        click.echo(line)
 
 
 def _record_install_target(ctx: InstallContext) -> None:
