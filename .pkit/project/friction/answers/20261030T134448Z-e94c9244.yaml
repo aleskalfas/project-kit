@@ -1,0 +1,101 @@
+answers:
+  - artefact: .pkit/permissions/README.md
+    read:
+      - 20261025T184613Z-9d79be7e.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T205903Z-e24c1d98.yaml
+      - 20261029T214105Z-6d4acdb2.yaml
+      - 20261029T232522Z-a89c563d.yaml
+      - 20261029T232851Z-c9a3cab5.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T020452Z-4df9e51f.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T025331Z-db698932.yaml
+      - 20261030T035142Z-02c0aabb.yaml
+      - 20261030T035730Z-0b8984fd.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-30T13:44:48Z
+      outcome: unchanged
+      unchanged-because: The page rests on the CLI reference's surface for the commands the permission model lets an agent run, and it names no pkit release publish-notes. The change only says, in that command's row, what notes it publishes past a Release's limit and what its dry run prints, so no statement of the page moves.
+  - artefact: docs/permissions/README.md
+    read:
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T153341Z-24f161e4.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T041520Z-4151420a.yaml
+      - 20261030T080123Z-b80177f4.yaml
+      - 20261030T081026Z-b375f362.yaml
+    revalidated:
+      at: 2026-10-30T13:44:52Z
+      outcome: unchanged
+      unchanged-because: The page rests on the CLI reference's surface for the commands it tells a user about, and it names no pkit release publish-notes. The change only says, in that command's row, what notes it publishes past a Release's limit and what its dry run prints, so no statement of the page moves.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T171020Z-c09fc17f.yaml
+      - 20261025T201139Z-9bd98545.yaml
+      - 20261025T221340Z-215a759f.yaml
+      - 20261026T013021Z-befdc31c.yaml
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T023123Z-f6757834.yaml
+      - 20261026T035946Z-0b04b7b2.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T045013Z-eef6b424.yaml
+      - 20261026T045038Z-b7e19c0d.yaml
+      - 20261026T072909Z-e57fba53.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T130337Z-545da416.yaml
+      - 20261027T174238Z-54d4142e.yaml
+      - 20261027T183952Z-aaeeba47.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T213538Z-054672e7.yaml
+      - 20261028T213618Z-92ef8f0a.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T120045Z-41f81fef.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T160126Z-db1afcf4.yaml
+      - 20261029T200438Z-d6088a66.yaml
+      - 20261029T220759Z-23fa4920.yaml
+      - 20261029T232301Z-458b49d2.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T015800Z-03fb2099.yaml
+      - 20261030T021146Z-55d06b63.yaml
+      - 20261030T030614Z-db9a0a3b.yaml
+      - 20261030T041520Z-4151420a.yaml
+    revalidated:
+      at: 2026-10-30T13:46:14Z
+      outcome: updated
