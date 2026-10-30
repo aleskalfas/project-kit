@@ -8,9 +8,21 @@ name: checks
 # The whole-repository friction report, which gates nothing, is its own
 # workflow: friction-report.yml.
 #
+# A full run runs the aggregator as three parts side by side, each a job of its
+# own (ADR-078): two slices of the suite's parallel pass, `check.sh --shard 1/2`
+# and `--shard 2/2`, cut where the committed times balance them, and the
+# remainder, `check.sh --rest`: every other line, with the tests marked
+# `serial`. The aggregator defines the parts, so the hook's whole run is their
+# union. A job before them decides the form and pins the base, and nothing
+# else. One job named `checks`, the status `main` requires, runs last, whatever
+# became of the others, and passes only when every part its form requires
+# said that it passed. Each part names its own failures in its job's summary,
+# and `checks`'s summary lists every part with how it ended and how long it took.
+#
 # On a pull request whose only changes since its most recent full run, which
-# passed, are answers, the job runs the short check instead: the aggregator
-# without its test suite (ADR-067). Every other run, and every doubt, is full.
+# passed, are answers, the remainder's job runs the short check instead: the
+# aggregator without its test suite, and no slice starts (ADR-067). Every other
+# run, and every doubt, is full.
 
 on:
   pull_request:
@@ -27,19 +39,139 @@ on:
   push:
     branches: [main]
 
+# Only a run for a new head cancels (ADR-078 point 9). The runs on one pull
+# request share a group, and a `synchronize` run, the first attempt for a new
+# head, cancels the run still going in it. A run for the same head — a label, a
+# reopening, a re-run — waits for the run going to end, and a newer one takes
+# the place of one that waits, which has started no job. A run on `main` or in
+# the merge queue takes a group of its own, keyed on its run's id, so nothing
+# cancels it or drops it while it waits.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('checks-pr-{0}', github.event.pull_request.number) || format('checks-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.run_attempt == '1' }}
+
 jobs:
-  checks:
+  # Decides the form, full or short, and pins the base every part reads; nothing
+  # else (ADR-078 point 2). It runs only what the decision needs: it neither
+  # sets up the project nor runs any check. It alone may read the record of runs
+  # and the pull requests. A deciding job that fails before it names the form
+  # starts no part, and `checks` fails.
+  decide:
+    name: decide the form
     runs-on: ubuntu-latest
-    # Read only: the checkout, and what the step that decides the short check
-    # reads (ADR-067) — the record of this workflow's runs, and the pull
-    # request's branch and events.
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: read
       pull-requests: read
+    outputs:
+      form: ${{ steps.named.outputs.form }}
+      mode: ${{ steps.form.outputs.mode }}
+      outcome: ${{ steps.form.outcome }}
+      base: ${{ steps.base.outputs.sha }}
     steps:
       # The token stays out of the clone's configuration, so no later step that
       # runs the project's code holds it, but the deciding step.
+      - name: Checkout (full history so the base resolves)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      # One commit, named once, for every part, so a base that moves while the
+      # parts run moves none of them (ADR-078 point 2). On a pull request, the
+      # first parent of the merge this run checks out: the base GitHub merged the
+      # change onto. In the merge queue, the commit the queued merge is built on
+      # (`main`, or the merge queued ahead of this one). On a push, the pushed
+      # commit itself, so the change checks see no diff.
+      - name: Pin the base
+        id: base
+        env:
+          PKIT_QUEUE_BASE: ${{ github.event.merge_group.base_sha }}
+          PKIT_PUSHED: ${{ github.sha }}
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) base=HEAD^1 ;;
+            merge_group) base=$PKIT_QUEUE_BASE ;;
+            *) base=$PKIT_PUSHED ;;
+          esac
+          sha=$(git rev-parse --verify --quiet "$base^{commit}")
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      # Full or short (ADR-067). Only a pull request may run the short check:
+      # the step below names the form, and every job and step that reads it gates
+      # on the event itself. The decider says `short` where GitHub's record shows
+      # the most recent full run on the pull request passed, and `pkit friction
+      # since` says only answers changed since that run's head. On a pull request
+      # the decider, and the `pkit` it asks, are the base's, checked out beside
+      # this tree, run in the base's tree and reading this tree's history, so
+      # neither is the pull request's own code. The steps above ran the pull
+      # request's code, and what they set for later steps is trusted as its
+      # workflow is. A base with no decider leaves the run full. On any other
+      # event this tree's decider only says why the run is full. The decider
+      # writes `mode=short` last, and only then. A failure here fails nothing:
+      # with no answer, the run is full, and `checks` says so in its summary. Of
+      # the steps that run the project's code, only this one holds the token.
+      - name: Decide the full run or the short check
+        id: form
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PKIT_DECIDER_BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            exec uv run python scripts/short_check.py
+          fi
+          decider="$RUNNER_TEMP/decider"
+          git worktree add --detach --quiet "$decider" "refs/remotes/origin/$PKIT_DECIDER_BASE"
+          if [ ! -f "$decider/scripts/short_check.py" ]; then
+            printf '### `checks`: the full run\n\nThe base holds no decider of the short check (ADR-067).\n' >> "$GITHUB_STEP_SUMMARY"
+            echo mode=full >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          exec uv run --project "$decider" --frozen python "$decider/scripts/short_check.py"
+
+      # The form the parts run: short only where a pull request's decider said
+      # so, full on every other event and with no answer (ADR-067 point 6).
+      - name: Name the form
+        id: named
+        env:
+          PKIT_FORM_MODE: ${{ steps.form.outputs.mode }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] && [ "$PKIT_FORM_MODE" = short ]; then
+            echo form=short >> "$GITHUB_OUTPUT"
+          else
+            echo form=full >> "$GITHUB_OUTPUT"
+          fi
+
+  # The remainder: in the full form, every line of the aggregator but the suite's
+  # parallel pass, with the tests marked `serial` (`check.sh --rest`), beside the
+  # slices; in the short form, the short check (`check.sh --short`). And on a
+  # pull request, in both forms, the changeset guard. Each step that runs the
+  # aggregator times it, names its failures in the job's summary and says that
+  # it passed, last (`scripts/ci_parts.py`).
+  rest:
+    name: the remainder
+    needs: decide
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      # Exactly one of the two steps runs. Were both to run, their two
+      # attestations side by side would match neither form, and `checks` fails.
+      passed: ${{ steps.rest.outputs.passed }}${{ steps.short.outputs.passed }}
+      seconds: ${{ steps.rest.outputs.seconds || steps.short.outputs.seconds }}
+      guard: ${{ steps.guard.outputs.passed }}
+    steps:
       - name: Checkout (full history so the migration-diff base ref resolves)
         uses: actions/checkout@v4
         with:
@@ -63,75 +195,31 @@ jobs:
       # fresh runner needs them provisioned first (#1092). `uv run pkit` routes
       # to this checkout's own dispatcher.
       - name: Sync (provisions the query commands)
+        id: sync
         run: uv run pkit sync
 
-      # Full or short (ADR-067). Only a pull request may run the short check:
-      # the two steps below gate on the event themselves. The decider says
-      # `short` where GitHub's record shows the most recent full run on the pull
-      # request passed, and `pkit friction since` says only answers changed
-      # since that run's head. On a pull request the decider, and the `pkit` it
-      # asks, are the base's, checked out beside this tree, run in the base's
-      # tree and reading this tree's history, so neither is the pull request's
-      # own code. The steps above ran the pull request's code, and what they
-      # set for later steps is trusted as its workflow is. A base with no
-      # decider leaves the run full. On any other event this tree's
-      # decider only says why the run is full. The decider writes `mode=short`
-      # last, and only then. A failure here fails nothing: with no answer, the
-      # run is full, and the full run's step says so in the job's summary. Of
-      # the steps that run the project's code, only this one holds the token.
-      - name: Decide the full run or the short check
-        id: form
-        continue-on-error: true
+      - name: Run the remainder of the aggregator
+        id: rest
+        if: github.event_name != 'pull_request' || needs.decide.outputs.form != 'short'
         env:
-          GH_TOKEN: ${{ github.token }}
-          PKIT_DECIDER_BASE: ${{ github.event.pull_request.base.ref }}
-        run: |
-          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
-            exec uv run python scripts/short_check.py
-          fi
-          decider="$RUNNER_TEMP/decider"
-          git worktree add --detach --quiet "$decider" "refs/remotes/origin/$PKIT_DECIDER_BASE"
-          if [ ! -f "$decider/scripts/short_check.py" ]; then
-            printf '### `checks`: the full run\n\nThe base holds no decider of the short check (ADR-067).\n' >> "$GITHUB_STEP_SUMMARY"
-            echo mode=full >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          exec uv run --project "$decider" --frozen python "$decider/scripts/short_check.py"
-
-      - name: Run the check aggregator
-        if: github.event_name != 'pull_request' || steps.form.outputs.mode != 'short'
-        env:
-          # PR: diff against the PR base. Merge queue: against the commit the
-          # queued merge is built on (`merge_group.base_sha` — `main`, or the
-          # merge queued ahead of this one), so the diff is this pull request's
-          # alone and the base is never outdated. Push to main: against main
-          # (no-op diff).
-          PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
+          # The base the deciding job pinned, which the diff-scoped checks read.
+          PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
           # PR: the pull request's own head, a parent of the merge GitHub checks
           # out, so the change check judges what each answer read against the
           # tree it was written in (ADR-068 point 6). Empty on a merge queue and
           # on a push, which the check reads as unset: HEAD.
           PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
-          # The deciding step's answer, and how that step ended. With no answer,
-          # as when it failed before the decider started, nothing has said in
-          # the job's summary which form ran, so this step says it (ADR-067).
-          PKIT_FORM_MODE: ${{ steps.form.outputs.mode }}
-          PKIT_FORM_OUTCOME: ${{ steps.form.outcome }}
-        run: |
-          if [ -z "$PKIT_FORM_MODE" ]; then
-            printf '### `checks`: the full run\n\nThe step that decides the short check gave no answer (it ended in `%s`), so the run is full (ADR-067).\n' "$PKIT_FORM_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
-          fi
-          ./scripts/check.sh
+        run: python scripts/ci_parts.py run --rest
 
       # Every line of the aggregator but the test suite, of which it runs only
-      # the tests marked `answers` (ADR-067). Its name is the mark the deciding
-      # step reads on earlier runs, with the step above's: keep both.
-      - name: Run the short check
-        if: github.event_name == 'pull_request' && steps.form.outputs.mode == 'short'
+      # the tests marked `answers` (ADR-067).
+      - name: Run the aggregator's short check
+        id: short
+        if: github.event_name == 'pull_request' && needs.decide.outputs.form == 'short'
         env:
-          PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
+          PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
           PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: ./scripts/check.sh --short
+        run: python scripts/ci_parts.py run --short
 
       # Changeset guard (PRJ-002). PR-scoped: it needs the PR base ref and the
       # PR labels (the `skip-changeset` escape hatch), neither of which a local
@@ -156,8 +244,169 @@ jobs:
       # It does not run on the queue's merge: a merge group carries no pull
       # request labels to read the escape hatch from, and the guard has already
       # judged the pull request's diff, which the queued merge does not change.
+      # It runs in both forms, after the aggregator whatever became of it, so
+      # one run names every failure; it says that it passed, last.
       - name: Changeset guard (surface change ⇒ changeset; floor ⇒ its component)
-        if: github.event_name == 'pull_request'
+        id: guard
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.sync.outcome == 'success' }}
         env:
           PKIT_CHANGESET_SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') && '1' || '' }}
-        run: uv run pkit release check --base "origin/${{ github.event.pull_request.base.ref }}"
+          PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
+        run: |
+          uv run pkit release check --base "$PKIT_CHECK_BASE"
+          echo "passed=changeset guard" >> "$GITHUB_OUTPUT"
+
+  # The slices: each runs its share of the suite's parallel pass, and nothing
+  # else, only in the full form (ADR-078 points 1 and 5). Each reports its cut —
+  # the digest of the tests collected, how many they are and how many its share
+  # ran — and keeps each test's time as an artifact, from which the maintainer
+  # writes the table of test times (tests/README.md, "Running the suite"). The
+  # two jobs differ only in which slice they run.
+  slice-1:
+    name: slice 1 of 2
+    needs: decide
+    if: github.event_name != 'pull_request' || needs.decide.outputs.form != 'short'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      passed: ${{ steps.part.outputs.passed }}
+      digest: ${{ steps.part.outputs.digest }}
+      collected: ${{ steps.part.outputs.collected }}
+      share: ${{ steps.part.outputs.share }}
+      listed: ${{ steps.part.outputs.listed }}
+      unlisted: ${{ steps.part.outputs.unlisted }}
+      seconds: ${{ steps.part.outputs.seconds }}
+    steps:
+      - name: Checkout (full history, as the whole run has it)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      - name: Sync (provisions the query commands)
+        run: uv run pkit sync
+
+      - name: Run slice 1 of 2 of the suite
+        id: part
+        env:
+          PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
+          PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/ci_parts.py run --shard 1/2
+
+      - name: Keep the slice's test times
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-times-1-of-2
+          path: ${{ runner.temp }}/test-reports/parallel/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  slice-2:
+    name: slice 2 of 2
+    needs: decide
+    if: github.event_name != 'pull_request' || needs.decide.outputs.form != 'short'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      passed: ${{ steps.part.outputs.passed }}
+      digest: ${{ steps.part.outputs.digest }}
+      collected: ${{ steps.part.outputs.collected }}
+      share: ${{ steps.part.outputs.share }}
+      listed: ${{ steps.part.outputs.listed }}
+      unlisted: ${{ steps.part.outputs.unlisted }}
+      seconds: ${{ steps.part.outputs.seconds }}
+    steps:
+      - name: Checkout (full history, as the whole run has it)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project (clean resolve)
+        run: uv sync
+
+      - name: Sync (provisions the query commands)
+        run: uv run pkit sync
+
+      - name: Run slice 2 of 2 of the suite
+        id: part
+        env:
+          PKIT_CHECK_BASE: ${{ needs.decide.outputs.base }}
+          PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/ci_parts.py run --shard 2/2
+
+      - name: Keep the slice's test times
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-times-2-of-2
+          path: ${{ runner.temp }}/test-reports/parallel/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # The one status `main` requires, on a pull request, in the merge queue and on
+  # a push (ADR-078 point 3). It runs last, whatever became of the jobs before
+  # it, the run's cancellation included: GitHub counts a required check whose
+  # job was skipped as passing. It runs nothing of the aggregator, and judges
+  # the outputs each part handed on, not their conclusions alone, since a job
+  # ends in success with a step its condition skipped.
+  #
+  # Its two steps hold the two forms, under the names the decider of the short
+  # check reads on earlier runs (`scripts/short_check.py`, ADR-067 point 3,
+  # ADR-078 point 4): keep both. Exactly one runs. The full form's step runs in
+  # every case but a pull request's short form, a deciding job that named no
+  # form included, and fails there, since the parts it requires never started.
+  checks:
+    needs: [decide, rest, slice-1, slice-2]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Run the check aggregator
+        if: always() && (github.event_name != 'pull_request' || needs.decide.outputs.form != 'short')
+        env:
+          PKIT_NEEDS: ${{ toJSON(needs) }}
+        run: python scripts/ci_parts.py verdict full --slices 2
+
+      - name: Run the short check
+        if: always() && github.event_name == 'pull_request' && needs.decide.outputs.form == 'short'
+        env:
+          PKIT_NEEDS: ${{ toJSON(needs) }}
+        run: python scripts/ci_parts.py verdict short

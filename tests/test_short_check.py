@@ -347,6 +347,66 @@ def test_a_run_that_cannot_be_told_makes_the_run_full(tmp_path: Path, job: dict[
     assert decision.mode == sc.FULL
 
 
+def _parts(checks: dict[str, Any]) -> list[dict[str, Any]]:
+    """A run's jobs as the layout of ADR-078 has them: the deciding job, the parts, each
+    with steps of its own, and `checks`, whose two steps hold the two forms."""
+    part_steps = [{"name": "Set up job", "conclusion": "success"}]
+    return [
+        {**_job(name="decide the form"), "steps": part_steps},
+        {**_job(name="the remainder"), "steps": part_steps},
+        {**_job(name="slice 1 of 2"), "steps": part_steps},
+        {**_job(name="slice 2 of 2"), "steps": part_steps},
+        checks,
+    ]
+
+
+class PartsGitHub(GitHub):
+    """Answers each run's jobs as the layout of ADR-078 has them."""
+
+    def __call__(self, path: str) -> Any:
+        answer = super().__call__(path)
+        if isinstance(answer, dict) and "jobs" in answer:
+            return {"jobs": _parts(answer["jobs"][0])}
+        return answer
+
+
+@pytest.mark.parametrize(
+    ("checks", "mode"),
+    [
+        (FULL_PASSED, sc.SHORT),
+        (FULL_FAILED, sc.FULL),
+        (_job(full="failure", short="skipped", conclusion="failure"), sc.FULL),
+    ],
+    ids=["a-full-run-that-passed", "a-full-run-that-failed", "no-form-named"],
+)
+def test_a_run_whose_parts_ran_in_jobs_of_their_own_reads_by_its_checks_job(
+    tmp_path: Path, checks: dict[str, Any], mode: str
+) -> None:
+    """`checks` holds each form in a step named as the step that ran it in one job did,
+    so a run of either layout reads alike (ADR-078 point 4). A run whose deciding job
+    named no form ran the full form's step, which failed: a full run that did not pass."""
+    github = PartsGitHub(
+        *_pairs((_run(95, OLDER), {**checks, "head_sha": OLDER}), (_run(90), FULL_PASSED))
+    )
+
+    decision = _decide(tmp_path, github, Since(_since_document(since=OLDER)))
+
+    assert decision.mode == mode, decision.why
+    if mode == sc.SHORT:
+        assert decision.basis is not None and decision.basis.number == 95
+
+
+def test_a_short_run_of_parts_is_passed_over(tmp_path: Path) -> None:
+    github = PartsGitHub(
+        *_pairs((_run(95, OLDER), {**SHORT_PASSED, "head_sha": OLDER}), (_run(90), FULL_PASSED))
+    )
+
+    decision = _decide(tmp_path, github, Since())
+
+    assert decision.mode == sc.SHORT
+    assert decision.basis is not None and decision.basis.number == 90
+
+
 def test_no_full_run_on_the_pull_request_makes_the_run_full(tmp_path: Path) -> None:
     decision = _decide(tmp_path, _github((_run(95), SHORT_PASSED)), Since())
 
