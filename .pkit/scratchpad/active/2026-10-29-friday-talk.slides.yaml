@@ -24,7 +24,7 @@ parts:
   summary: Why pkit exists, how to install it, and how its parts fit together.
 - id: P1
   title: From idea to rule
-  summary: Where ideas start, your decisions, and what every session is told.
+  summary: Where ideas start, your decisions, what every session is told, and rules a program applies.
 - id: P2
   title: How the agent works
   summary: Procedures, roles, and what each agent may do.
@@ -580,6 +580,63 @@ slides:
     and a rule on when a decision record starts (#2258). Next: each installed capability brings its own rules, loaded while
     it is installed (#2269, shown with the capabilities), and the rules trimmed to a sentence or two each (#2261). Today:
     22 rules, about 2,800 words, in every session.'
+- id: schemas
+  part: P1
+  title: Where schemas and processes come from
+  message: From decisions exact enough for a program. pkit writes them down as data, and a command applies them the same
+    way every time.
+  problem: ''
+  does: []
+  show: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked, and pkit process status says
+    why.'
+  visual:
+    kind: map
+    chip_font: 32
+    columns:
+    - head: The decision
+      text: says why
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: Written as data
+      text: says exactly what
+      fill: '#6929C4FF'
+      ink: '@text_on_color'
+    - head: Applied by
+      text: a command
+      fill: '#BE95FFFF'
+      cell: chip
+    - head: What it refuses
+      text: every time
+      fill: '#E8DAFFFF'
+    rows:
+    - [{head: COR-018, text: Schemas}, 'EPIC titles: [EPIC], then the area it covers', pkit pm create-issue, 'A title in the
+        wrong form, before it is filed']
+    - [{head: COR-033, text: Processes}, 'Review → Done: you say yes, and the merge is the gate', pkit process can-move, 'Done
+        with no merge, whoever asks']
+    head_h: 136
+    row_h: 112
+    why:
+      head: Why pkit writes rules as data
+      items:
+      - The decision keeps the why. The data keeps the exact rule, in one place.
+      - Change a rule, and you change a line of data, not code and prompts.
+      - An agent can forget a rule it reads. A command applies it every time.
+      - One engine checks every process. A gate never passes on an agent's word.
+  limit: 'pkit brings the engine, not a process: the one in use today comes with the project-management add-on.'
+  minutes: 1
+  notes: 'Some decisions are exact enough for a program: a title format, which moves an issue may make. pkit writes those
+    as data, a YAML file with a schema that says what the file must look like (COR-018). The decision keeps the why, the
+    data keeps the exact rule, and the code only applies it. COR-018 weighed two other places: rules written into the code,
+    where every change edits the code, and rules read from the decisions'' prose, which breaks. A process is staged work
+    written the same way: its states, the moves between them, and the gate on each move (COR-033). pkit has one engine
+    for every process, so each discipline does not build its own copy that drifts. The engine answers three questions the
+    same way every time: where is this issue, may it move, is it valid. A gate passes on a check, or on a record made by
+    someone other than the agent it gates, never on the agent''s own word (COR-033 point 4). The examples come from the
+    project-management add-on, met on the install slide: create-issue checks the title against titles.yaml before it files
+    the issue, and Review to Done needs your merge. A log of each move is optional and off by default (COR-033 point 7).
+    What comes with pkit: the engine and pkit process commands, the process skill for a definition''s shape, the process-author
+    agent for its gates (COR-044), and pkit process new for a process of your own. pkit validate checks every schema and
+    every process definition. Your own data files can name the schema they follow, and pkit validate checks them too (COR-023).'
 - id: skillsfrom
   part: P2
   title: Where skills come from
@@ -1112,7 +1169,7 @@ slides:
       head: Reviewers, then merge
       text: Reviewers check each result; on your yes, the agent merges it.
   limit: 'GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual.'
-  minutes: 3
+  minutes: 2
   notes: 'Underneath: a structure (EPIC, Feature, Task), a lifecycle with gates, merging with reviewers, planning a batch
     of work in one approval, fixers after a merge, a board. Parallel agents in separate clones also exist, still experimental
     (the last slide). Like every capability, it brings its own decision records (DEC), kept beside pkit''s and yours, and

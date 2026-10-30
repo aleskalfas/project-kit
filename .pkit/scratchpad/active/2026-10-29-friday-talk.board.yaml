@@ -5940,6 +5940,498 @@ templates:
         y: 588
         width: 504
         height: 230
+  map_T-schemas:
+    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the
+      slide generator.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 714.0
+    parts:
+      h0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 0
+        width: 664
+        height: 136
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      h0head:
+        type: text
+        text: The decision
+        style: '@style.tile_heading'
+        ink: '@text_on_color'
+        x: 32
+        y: 16
+        width: 600
+        height: 64
+      h0text:
+        type: text
+        text: says why
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 84
+        width: 600
+        height: 50
+      h1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 0
+        width: 664
+        height: 136
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+        border_width: 1
+        ink: '@text_primary'
+      h1head:
+        type: text
+        text: Written as data
+        style: '@style.tile_heading'
+        ink: '@text_on_color'
+        x: 792
+        y: 16
+        width: 600
+        height: 64
+      h1text:
+        type: text
+        text: says exactly what
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 792
+        y: 84
+        width: 600
+        height: 50
+      h1arrow:
+        type: arrow
+        points:
+        - - 680
+          - 68
+        - - 744
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      h2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 0
+        width: 664
+        height: 136
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      h2head:
+        type: text
+        text: Applied by
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 1552
+        y: 16
+        width: 600
+        height: 64
+      h2text:
+        type: text
+        text: a command
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 84
+        width: 600
+        height: 50
+      h2arrow:
+        type: arrow
+        points:
+        - - 1440
+          - 68
+        - - 1504
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      h3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 0
+        width: 664
+        height: 136
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      h3head:
+        type: text
+        text: What it refuses
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 2312
+        y: 16
+        width: 600
+        height: 64
+      h3text:
+        type: text
+        text: every time
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 84
+        width: 600
+        height: 50
+      h3arrow:
+        type: arrow
+        points:
+        - - 2200
+          - 68
+        - - 2264
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      r0c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 160
+        width: 664
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c0head:
+        type: text
+        text: COR-018
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 162
+        width: 600
+        height: 56
+      r0c0text:
+        type: text
+        text: Schemas
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 218
+        width: 600
+        height: 50
+      r0c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 160
+        width: 664
+        height: 112
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c1text:
+        type: text
+        text: 'EPIC titles: [EPIC], then the area it covers'
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 792
+        y: 162
+        width: 600
+        height: 100
+      r0c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 160
+        width: 664
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c2chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-schemas-r0.png
+        x: 1552
+        y: 178
+        width: 432
+        height: 76
+      r0c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 160
+        width: 664
+        height: 112
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c3text:
+        type: text
+        text: A title in the wrong form, before it is filed
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 162
+        width: 600
+        height: 100
+      r1c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 288
+        width: 664
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c0head:
+        type: text
+        text: COR-033
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 290
+        width: 600
+        height: 56
+      r1c0text:
+        type: text
+        text: Processes
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 346
+        width: 600
+        height: 50
+      r1c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 288
+        width: 664
+        height: 112
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c1text:
+        type: text
+        text: 'Review → Done: you say yes, and the merge is the gate'
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 792
+        y: 290
+        width: 600
+        height: 100
+      r1c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 288
+        width: 664
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c2chip:
+        type: image
+        file: 2026-10-29-friday-talk-icons/chip-schemas-r1.png
+        x: 1552
+        y: 306
+        width: 451
+        height: 76
+      r1c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 288
+        width: 664
+        height: 112
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c3text:
+        type: text
+        text: Done with no merge, whoever asks
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 290
+        width: 600
+        height: 100
+      whyhead:
+        type: text
+        text: Why pkit writes rules as data
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 440
+        width: 2944
+        height: 56
+      w0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 508
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w0bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 508
+        width: 664
+        height: 8
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      w0text:
+        type: text
+        text: The decision keeps the why. The data keeps the exact rule, in one place.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 540
+        width: 600
+        height: 150.0
+      w1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 508
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w1bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 508
+        width: 664
+        height: 8
+        color: '#6929C4FF'
+        border_color: '#6929C4FF'
+        border_width: 1
+        ink: '@text_primary'
+      w1text:
+        type: text
+        text: Change a rule, and you change a line of data, not code and prompts.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 540
+        width: 600
+        height: 150.0
+      w2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 508
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w2bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 508
+        width: 664
+        height: 8
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      w2text:
+        type: text
+        text: An agent can forget a rule it reads. A command applies it every time.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 540
+        width: 600
+        height: 150.0
+      w3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 508
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w3bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 508
+        width: 664
+        height: 8
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      w3text:
+        type: text
+        text: One engine checks every process. A gate never passes on an agent's word.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 540
+        width: 600
+        height: 150.0
 instances:
   L01:
     template: slide
@@ -6400,7 +6892,7 @@ instances:
     lead: Your AI agent works fast, and forgets everything your project decided.
     rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
     n: 1
-    total: 21
+    total: 22
     override:
       rests:
         text: 'The question: how do you make it work your project''s way, without a heavy framework?'
@@ -6765,7 +7257,7 @@ instances:
     lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
     rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
     n: 2
-    total: 21
+    total: 22
     override:
       rests:
         text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
@@ -7136,7 +7628,7 @@ instances:
     rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
       later.
     n: 3
-    total: 21
+    total: 22
     override:
       rests:
         text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
@@ -7225,7 +7717,7 @@ instances:
     template: section
     part: '2'
     title: From idea to rule
-    summary: Where ideas start, your decisions, and what every session is told.
+    summary: Where ideas start, your decisions, what every session is told, and rules a program applies.
     mural_ids:
       root: 7f14984f-94fe-444f-b8ce-d300d207ae60
       bg: 016e7298-0ccf-43d8-8893-e94aa50442ce
@@ -7240,7 +7732,7 @@ instances:
       records, issues or docs.
     rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
-    total: 21
+    total: 22
     override:
       rests:
         text: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
@@ -7303,7 +7795,7 @@ instances:
     rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
       one'
     n: 5
-    total: 21
+    total: 22
     override:
       rests:
         text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
@@ -7527,7 +8019,7 @@ instances:
     rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
       merged with its code.'
     n: 6
-    total: 21
+    total: 22
     override:
       rests:
         text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
@@ -7698,7 +8190,7 @@ instances:
     rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
       generated from the rules.'
     n: 7
-    total: 21
+    total: 22
     override:
       rests:
         text: 'This week: each rule got a permanent id and a status. The file every session loads is now
@@ -7857,6 +8349,91 @@ instances:
       bg: b0935e86-0ca4-4f1f-b60d-d806fcd1dd55
       bar: f2213a49-12d8-4e9f-9220-2e2037336669
       text: a1a454d6-ab69-451a-85f8-f2694907f945
+  T-schemas:
+    template: slide
+    title: Where schemas and processes come from
+    lead: From decisions exact enough for a program. pkit writes them down as data, and a command applies
+      them the same way every time.
+    rests: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked, and pkit
+      process status says why.'
+    n: 8
+    total: 22
+    override:
+      rests:
+        text: 'In project-kit today: Feature #2270 cannot close while 7 of its boxes are unticked, and
+          pkit process status says why.'
+    mural_ids:
+      root: f71db6bd-fb45-4564-98fa-3b49c81a093f
+      bg: 60fdbdb1-830a-4aab-9ed7-2fda5f8ff29b
+      title: b3d77c0a-f995-4bd8-be9f-831219df33e1
+      lead: 97b72ccf-1340-442f-a45b-1e89cf48d4f2
+      rests: 7fb40c27-4735-4bdb-8e11-9ca8b0ed71d2
+      num: e8af797f-bef1-4ea0-ba76-2ea1940cd24e
+  T-schemas-map:
+    template: map_T-schemas
+    parent: T-schemas
+    x: 128
+    y: 576
+    mural_ids:
+      root: 6d79eb6b-c524-451d-8ff5-b07a364ee6e4
+      h0box: 0037a233-5fe5-49e2-9750-30f4dffcb252
+      h1box: 1bd4b54f-8fe3-4dc7-8253-52cef72410bb
+      h2box: 8b55655f-4c0f-4a9c-a187-f40f6c30ca37
+      h3box: 74e925ed-8c0b-49d5-98f8-a3bb6f4d5b9a
+      r0c0box: 88f1ffbf-f71d-49de-8895-3ec093c1fbb3
+      r0c1box: acbaaff4-3bf9-4ac1-b7d6-4a6e16915e6d
+      r0c2box: 9f5ef383-276f-4b55-9098-8bd4d0faa45c
+      r0c3box: 8c74cf05-30ba-42ae-9b1f-9d3c241a94b3
+      r1c0box: 849f700e-d3fe-4430-80e1-b40b181e2405
+      r1c1box: 93d3e49b-bf16-4a36-b823-95c2e96d3250
+      r1c2box: c874e8f7-c901-4ecc-9582-dfc33eb05640
+      r1c3box: c3337d97-b7c5-4236-b480-9a8c7f791021
+      w0box: dbf3c429-d477-4a1d-a9f8-78ea29ae36e9
+      w0bar: cfcba88c-d403-4c92-9630-de41275b6397
+      w1box: 7fdb7765-f39e-4171-ac0a-400ee8c15acd
+      w1bar: 3952234a-4dc0-4d5f-9bb8-99d59a8cb236
+      w2box: f8d61e6e-1939-4dd1-888b-1c288d90514a
+      w2bar: db6400c3-7fbc-455e-a8d6-6544b5c7190a
+      w3box: 50a98b16-b605-4efe-9a5e-89196a7b5912
+      w3bar: 9a5956a3-3130-431d-9d2b-d8d700069d92
+      h0head: b8c0c1a9-a907-4394-9a03-7bbbe841e55f
+      h0text: 40315e6b-046b-409b-82e3-77ad937d2002
+      h1head: 3806fef6-88f3-4c2b-af0e-bda308acf24f
+      h1text: 6989ce30-a0ca-4538-9d4d-3a911de0f114
+      h2head: 0717022b-aec4-42c5-9de6-9274c14173a8
+      h2text: 13e63c95-6f65-459a-879a-8c699af090d6
+      h3head: c413897d-2f16-4bc7-b20a-c41c5be3818b
+      h3text: 9cef9857-c1da-4251-a7d5-cda4ff93e696
+      r0c0head: e785248c-b2e8-423f-9439-f4bd59a9500a
+      r0c0text: a0554d46-ae3d-4ce9-8f79-bfd42902746e
+      r0c1text: ee4e25a6-b253-418b-88a5-10384f02fcff
+      r0c3text: 47b05873-1c44-47d0-a49a-d17909a674db
+      r1c0head: 0c2e73d8-3b10-4762-b418-78f12ea5e8c1
+      r1c0text: 0903025d-7ab5-4d33-9a21-4ac90fb0a3cc
+      r1c1text: 2298629a-ae3f-47ed-b96e-1d6769295593
+      r1c3text: 0b868d8e-931c-4b33-9e1f-d57763cbfe05
+      whyhead: d9dc5f11-2242-4232-bad2-676fe647ac2f
+      w0text: b2d86d58-977d-4296-aa28-90c376523c0f
+      w1text: 1289ae52-1814-4694-b686-9befbaec129b
+      w2text: 02672204-fc20-462a-bf10-b5e1c93984e2
+      w3text: 9a48cbc5-54d4-40ea-9674-bf3d2706039c
+      r0c2chip: ac39530d-5a20-410d-a04a-d991978c4389
+      r1c2chip: a2ac5081-9ee0-4fe1-a6e8-e8d6b5a92c82
+      h1arrow: 4200f6fb-2a19-45e9-9695-875c304f5d16
+      h2arrow: 1704d6a1-61cd-4331-a430-84bb3a97d384
+      h3arrow: 8cb9bdfc-2fb6-4425-b791-1f6c6ba8348c
+  T-schemas-limit:
+    template: notice
+    parent: T-schemas
+    text: 'Limit: pkit brings the engine, not a process: the one in use today comes with the project-management
+      add-on.'
+    x: 128
+    y: 1338.0
+    mural_ids:
+      root: 563f7399-679d-478e-87e9-89b1788d536b
+      bg: 176cbe37-ccdd-4982-8dd5-ca67358b4c72
+      bar: 02c59234-96d2-42d3-bcad-d77bc1c31c24
+      text: e97cc5a4-b1ef-494c-b4ad-ccce0aece7bc
   T-part-P2:
     template: section
     part: '3'
@@ -7875,8 +8452,8 @@ instances:
     lead: Each kind of file pkit's decisions define gets a skill for the choices, and a command for the
       exact part.
     rests: 'In project-kit: pkit ships 11 skills, each with its command.'
-    n: 8
-    total: 21
+    n: 9
+    total: 22
     override:
       rests:
         text: 'In project-kit: pkit ships 11 skills, each with its command.'
@@ -7968,8 +8545,8 @@ instances:
       are always right.
     rests: Every session holds only each skill's short description. The steps load when the task comes
       up.
-    n: 9
-    total: 21
+    n: 10
+    total: 22
     override:
       rests:
         text: Every session holds only each skill's short description. The steps load when the task comes
@@ -8041,8 +8618,8 @@ instances:
       only the tools it needs.'
     rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
       it follows.'
-    n: 10
-    total: 21
+    n: 11
+    total: 22
     override:
       rests:
         text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
@@ -8133,8 +8710,8 @@ instances:
     title: One piece of work, and who sees it
     lead: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
     rests: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
-    n: 11
-    total: 21
+    n: 12
+    total: 22
     override:
       rests:
         text: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
@@ -8197,8 +8774,8 @@ instances:
       and checks every tie.
     rests: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
       17 skills and agents.'
-    n: 12
-    total: 21
+    n: 13
+    total: 22
     override:
       rests:
         text: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
@@ -8292,8 +8869,8 @@ instances:
       hold when an agent forgets them.
     rests: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
       which validate the issue first.'
-    n: 13
-    total: 21
+    n: 14
+    total: 22
     override:
       rests:
         text: 'In project-kit: the project-manager agent is refused raw gh changes, and uses pkit''s commands,
@@ -8386,8 +8963,8 @@ instances:
       see are worth reading.
     rests: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused, 37
       routine ones allowed.'
-    n: 14
-    total: 21
+    n: 15
+    total: 22
     override:
       rests:
         text: 'In a fresh install, before you write any rule: 14 forms of 4 dangerous commands refused,
@@ -8490,8 +9067,8 @@ instances:
       doubts them.
     rests: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
       its own: 16 in project-kit.'
-    n: 15
-    total: 21
+    n: 16
+    total: 22
     override:
       rests:
         text: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings
@@ -8581,8 +9158,8 @@ instances:
     lead: Rename a file, and the documents tied to it are named before the change merges.
     rests: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by the
       project.'
-    n: 16
-    total: 21
+    n: 17
+    total: 22
     override:
       rests:
         text: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by
@@ -8683,8 +9260,8 @@ instances:
     lead: When code changes, the documents that depend on it are named, not found later by accident.
     rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it
       wasn''t'
-    n: 17
-    total: 21
+    n: 18
+    total: 22
     override:
       rests:
         text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed
@@ -8813,8 +9390,8 @@ instances:
     title: project-management
     lead: You talk to one agent; it plans the work and runs builders in parallel.
     rests: 'This week, in one evening: six builders, four pull requests merged'
-    n: 18
-    total: 21
+    n: 19
+    total: 22
     override:
       rests:
         text: 'This week, in one evening: six builders, four pull requests merged'
@@ -9104,8 +9681,8 @@ instances:
       to wire.
     rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
       before merge'
-    n: 19
-    total: 21
+    n: 20
+    total: 22
     override:
       rests:
         text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
@@ -9316,8 +9893,8 @@ instances:
       run, still being shaped.
     rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until
       you decide'
-    n: 20
-    total: 21
+    n: 21
+    total: 22
     override:
       rests:
         text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes
@@ -9575,8 +10152,8 @@ instances:
     title: Questions?
     lead: Everything shown is in project-kit's own repository, built with pkit itself.
     rests: github.com/aleskalfas/project-kit
-    n: 21
-    total: 21
+    n: 22
+    total: 22
     override:
       rests:
         text: github.com/aleskalfas/project-kit
@@ -9646,6 +10223,7 @@ layouts:
   - T-decisions
   - T-found
   - T-sessions
+  - T-schemas
   origin:
   - -4246
   - 3941
