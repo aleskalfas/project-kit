@@ -289,9 +289,7 @@ def test_core_s_include_only_in_code_is_refused_and_reported(
 
 def test_core_s_include_in_code_and_in_prose_is_not_refused(adapter_tree: Path) -> None:
     """A mention outside code that holds no line is no refusal: the block is inserted."""
-    _claude_md(adapter_tree).write_text(
-        f"# Mine\n\nSee {CORE} and `{CORE}`.\n", encoding="utf-8"
-    )
+    _claude_md(adapter_tree).write_text(f"# Mine\n\nSee {CORE} and `{CORE}`.\n", encoding="utf-8")
     result = _run_script(adapter_tree)
     assert "refused" not in result.stdout
     assert INDEX in _lines(adapter_tree)
