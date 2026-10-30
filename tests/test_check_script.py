@@ -53,7 +53,9 @@ runs the suite or pyright: the stub records every command it is handed; its
 lets it go; its `python` is this interpreter, so a slot is taken with a real
 lock, except for the ratchet, the prose lint, the deployed agents' check, the
 console fences and the contents lists, which exit as the test says; the
-numbering check exits as the test says too; every other command passes.
+numbering check exits as the test says too; every other command passes. It runs
+without the caller's `PKIT_TEST_WORKERS` and `PKIT_TEST_REPORTS`; a slice in CI
+sets the second on the very run these tests are part of.
 """
 
 from __future__ import annotations
@@ -122,6 +124,12 @@ WAIT_SECONDS = 20
 #: The parallel pass as a local run, which names no count of workers, hands it to `uv`.
 PARALLEL_PASS = "pytest -q -n auto --durations=30 -m not serial"
 
+#: What `check.sh` reads from its caller's environment to shape its passes. The run of
+#: the suite these tests are part of may carry either: a contributor's count of
+#: workers, or the folder a slice in CI reports into (`scripts/ci_parts.py`). So the
+#: `check.sh` under test sees one only where a test sets it.
+CALLERS_TEST_SETTINGS = ("PKIT_TEST_WORKERS", "PKIT_TEST_REPORTS")
+
 
 class Checkout:
     """A git checkout carrying `scripts/check.sh`, and the stub `uv` it runs."""
@@ -141,7 +149,7 @@ class Checkout:
         self.release = root / "release"
         self.cache = root / "cache"
         self.env = {
-            **{k: v for k, v in os.environ.items() if k != "PKIT_TEST_WORKERS"},
+            **{k: v for k, v in os.environ.items() if k not in CALLERS_TEST_SETTINGS},
             "PATH": f"{stub_bin}{os.pathsep}{os.environ.get('PATH', '')}",
             "XDG_CACHE_HOME": str(self.cache),
             "STUB_LOG": str(self.log),
