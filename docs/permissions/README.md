@@ -180,9 +180,9 @@ flowchart TD
 
 ### Why some commands still prompt
 
-A command can prompt although each program in it would run unasked on its own. The decision core allows a command only where a grant covers each of its parts ([the reference, "Compound commands"](../../.pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)). The core must also be able to tell what each part runs ([the reference, "What keeps a grant from allowing"](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)). These are the reasons behind some of these rules:
+A command can prompt although each program in it would run unasked on its own. The decision core allows a command only where a grant covers each of its parts ([the reference, "Compound commands"](../../.pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)). The core must also be able to tell what each part runs ([the reference, "What keeps a grant from allowing"](../../.pkit/permissions/README.md#what-keeps-a-grant-from-allowing)). These are the reasons behind some of these rules, and what still guards a person's decision:
 
-- **Some programs are no text filters.** Every shipped profile grants `text-filter`, programs whose only effect is their output, such as `grep` ([the reference, "The read-only text filters and `uv run`"](../../.pkit/permissions/README.md#the-read-only-text-filters-and-uv-run)). It leaves out these three, each for its reason:
+- **Some programs are no text filters.** Every shipped profile grants `text-filter`, which covers programs whose only effect is their output, such as `grep` ([the reference, "The read-only text filters and `uv run`"](../../.pkit/permissions/README.md#the-read-only-text-filters-and-uv-run)). `text-filter` leaves out these three, each for its reason:
   - **`echo`:** the usual way to answer a confirmation from a pipe, as in `echo y | pkit …`
   - **`printf`:** its `-v` sets a shell variable
   - **`jq`:** its expressions hold a `|`, where the core cuts a command into parts, and some of its options read files no check sees
@@ -301,7 +301,7 @@ The report's headline counts the real prompts: the logged calls for which the re
 - **`uv run pytest`** matches no allow rule, so the report counts it as genuinely missing, and recommends granting a privilege. The next task grants it.
 - **`gh pr list | jq .`** matches allow rules part by part, but not as a whole. So the report counts it as allowlisted-but-compound, and recommends single commands or a named command of your project. Why `jq` is no text filter is in "Why some commands still prompt" above.
 - **Nothing is applied.** You act on each recommendation yourself ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)).
-- **No argument in the log's reasons.** The log keeps the hook's reason for each abstain beside the redacted command ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)). That reason names the program, never its arguments, so the reason undoes none of the redaction ([the reference, "Denies, and what an abstain says"](../../.pkit/permissions/README.md#denies-and-what-an-abstain-says)).
+- **No argument in the log's reasons.** The log keeps the hook's reason for each abstain beside the redacted command ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)). That reason names at most the program, never its arguments, so the redaction holds ([the reference, "Denies, and what an abstain says"](../../.pkit/permissions/README.md#denies-and-what-an-abstain-says)).
 
 ### Allow a command
 
