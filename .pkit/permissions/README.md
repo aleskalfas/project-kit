@@ -167,8 +167,6 @@ Two prefix-strips apply before matching:
   - **The remainder is decided like any command.** An untrusted construct keeps every grant from allowing the remainder, as such a construct does anywhere in a command (below). So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through. So does a redirect into the agent workspace, as in `cd /x && cat > .agent-workspace/body.md <<'EOF'`, since the workspace grant covers the file tools only.
   - **A pipe is decided segment by segment.** The `cd` strip does not touch pipes, and `|` is not a `cd` separator. So `cd /x && gh … | sh` decides exactly as the bare `gh … | sh` does, and both abstain, since every segment needs its own allow (below).
 
-The widenings taken are the leading-`cd` strip and the removal of a redirection that writes no file (below).
-
 **Every segment needs its own allow.** The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's native rules, and a strict posture denies it instead.
 
 So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py` abstain, as does `python3 x.py` on the line after `gh pr list`. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed.
@@ -321,7 +319,9 @@ This grant allows `researcher` to fetch from `docs.python.org` or any subdomain 
 
 A scope confines a privilege: a scoped allow denies the privilege outside its scope. The agent workspace's folder is no grant scope, but part of its privilege's recognizer, `recognize.path` ("The agent workspace" below).
 
-### Deny/negation scopes are intentionally unsupported
+<a id="denynegation-scopes-are-intentionally-unsupported"></a>
+
+### Negation scopes are rejected
 
 A negation glob, such as `!*.ru`, in a grant's scope is rejected: each call the grant covers is denied, with a reason that says why. It is neither silently accepted nor partly enforced.
 
@@ -369,7 +369,7 @@ The capability denies both to its `project-manager` agent, and routes the agent 
 
 ### Where the deny lives
 
-The deny is a grant that the project-management capability contributes, in `.pkit/capabilities/project-management/permissions/grants.yaml`. It is no manual grant in `.pkit/permissions/project/grants.yaml`, which stays empty for this policy. The model takes such grants from each capability that the manifest's `components:` list registers. A capability folder the manifest does not register contributes nothing (install-state-as-gate).
+The deny is a grant that the project-management capability contributes, in `.pkit/capabilities/project-management/permissions/grants.yaml`. It is no manual grant in `.pkit/permissions/project/grants.yaml`, which stays empty for this policy. The model takes such grants from each capability that the manifest's `components:` list registers. A capability folder the manifest does not register contributes nothing.
 
 `pkit permissions overview` lists the deny under "CAPABILITY-CONTRIBUTED DENIES".
 
@@ -412,7 +412,7 @@ The scaffold's guidance captures two footguns:
 
 ## The rules of an agent run
 
-A command that starts agents with nobody watching may confine each run to rules of its own. The capability that ships the command declares them, and the privileges they name, in `.pkit/capabilities/<cap>/permissions/runs.yaml`, beside its grants fragment. The file keys them by the command whose runs they bind, and its shape is `.pkit/schemas/permission-runs.schema.json`. project-management's `fix-drift` is the first such command ([its README, "The rules of a fixer's run"](../capabilities/project-management/README.md#the-rules-of-a-fixers-run)).
+A command that starts agents with nobody watching may confine each run to rules of its own. The capability that ships the command declares them, and the privileges they name, in `.pkit/capabilities/<cap>/permissions/runs.yaml`, beside its grants fragment. The file keys them by the command whose runs they bind, and its shape is `.pkit/schemas/permission-runs.schema.json`. project-management's `fix-drift` is one such command ([its README, "The rules of a fixer's run"](../capabilities/project-management/README.md#the-rules-of-a-fixers-run)).
 
 **In the model, a run's rules are denies,** for every subject, `all`. One rule denies every call that none of the privileges the run needs recognizes. The run's other rules are a floor of denies. A deny prevails over every allow, the shared baseline's included, so a run may do only what the first deny leaves open, whatever else allows.
 
@@ -443,7 +443,7 @@ The diagnostic loop is opt-in and recommend-only. It records each call the hook 
 - **What the log holds.** The hook observes only its own abstain, not whether the harness then prompted. So the log holds a superset of real prompts. The report states its coverage, never a predicted fall in the number of prompts.
 - **Arm, disarm and report, in the CLI:** `pkit permissions diagnose on`, `off`, `status` and `report`.
   - **The marker,** `.pkit/permissions/project/diagnose.yaml`, carries a time to live, so a session expires by itself.
-  - **The log,** `.pkit/permissions/project/diagnose-log.jsonl`, is capped in size and drops its oldest entries first. It redacts each command's tail by default.
+  - **The log,** `.pkit/permissions/project/diagnose-log.jsonl`, is capped in size and drops its oldest entries first. It redacts each command's tail by default, and keeps the hook's reason for each abstain beside the command.
   - **Both files are ignored by git,** through the `.pkit/.gitignore` that pkit owns and renders.
 - **The report's groups.** The report groups the raw command text, to order and explain its recommendations. The groups are advisory for ranking only, and never authorize a change.
 - **Nothing applied.** The loop applies no fix. Writing a new catalog privilege is never a fix, and stays the operator's task.
@@ -462,7 +462,7 @@ The report adds two static axes. They turn raw counts of abstains into counts of
   - **Allowlisted-but-compound:** a command of shell shape whose every segment matches alone. It is an allowlisted command defeated only by compounding. The report recommends eliminating it at its source, by a decomposition or a butter verb. A butter verb is one clean command for the job, as `pkit project-management show-issue` replaces a piped `gh issue view`.
   - **Genuinely-missing:** a real allowlist gap: an uncovered segment head, a bare uncovered command, or an un-allowed tool.
   - **The headline** carries the split, and the line of the shell-shape group is tagged with it.
-- **Scope and honesty.** Both axes are static over redacted text, so a `Bash(<prefix>:*)` longer than the head the redaction keeps cannot match as a prefix. They leave `deny` patterns out of scope: a logged record is one the hook abstained on, never one it denied. The numbers promise no fall in live prompts.
+- **Limits.** Both axes are static over redacted text, so a `Bash(<prefix>:*)` longer than the head the redaction keeps cannot match as a prefix. They leave `deny` patterns out of scope: a logged record is one the hook abstained on, never one it denied.
 
 ### A prompt for the agent workspace is a defect
 
