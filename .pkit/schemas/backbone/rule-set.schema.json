@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rule-set.schema.json",
   "title": "A rule-set file's front matter",
-  "description": "A backbone file schema (ADR-056): the data of one rule set (COR-051 point 2) — its name, whether it is loaded (COR-068), its own version, what it inherits, its scope, one entry per rule carrying the rule's machine fields, and the parts of its rules that checks enforce. The statements are the file's body, one section per rule headed by its id. The join between data and prose, the id rules, origins, successors and inheritance are checked by `project_kit.rule_sets` on top of this shape; inside each rule entry the methodology's container (`pkit`) is read by the container schema and rule (`container.schema.json`, COR-053 point 10). Bound by location — a Markdown file in a place declared to hold rule sets — never by a field. The shape is backbone-owned: it carries no version of its own and is migrated when it changes (COR-010). The `version` key is the rule set's own version, the one inheritors pin.",
+  "description": "A backbone file schema (ADR-056): the data of one rule set (COR-051 point 2) — its name, whether it is loaded (COR-068) and a loaded set's budget (COR-069), its own version, what it inherits, its scope, one entry per rule carrying the rule's machine fields, and the parts of its rules that checks enforce. The statements are the file's body, one section per rule headed by its id. The join between data and prose, the id rules, origins, successors and inheritance are checked by `project_kit.rule_sets` on top of this shape; inside each rule entry the methodology's container (`pkit`) is read by the container schema and rule (`container.schema.json`, COR-053 point 10). Bound by location — a Markdown file in a place declared to hold rule sets — never by a field. The shape is backbone-owned: it carries no version of its own and is migrated when it changes (COR-010). The `version` key is the rule set's own version, the one inheritors pin.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,6 +18,11 @@
     "loaded": {
       "description": "`true` makes the set a loaded one (COR-068 point 1): its accepted rules bind on the work of the agent sessions that load the file generated from it, not on artefacts. A loaded set takes no `scope`, `inherits` or `checks`, and none of its rules `offers` or `fills` an extension point. Without it, or with `false`, the set is an ordinary one. Which component's folder may hold a loaded set, one to a component, and that no set inherits one are checked in Python.",
       "type": "boolean"
+    },
+    "budget": {
+      "description": "A loaded set's budget: the most words its loaded file, the file a session loads, may hold (COR-069 points 1 and 2; ADR-077 point 1). A word is a run of characters none of which has Unicode's White_Space property, and the whole file is counted. Only a loaded set takes it; an ordinary set generates no file a session loads. It is none of a rule's fields, so changing it changes no rule and needs no new major. That a component's loaded set gives one where it is authored, and that its file holds no more words, are checked in Python.",
+      "type": "integer",
+      "minimum": 1
     },
     "version": {
       "description": "The rule set's own version, semantic-versioned; not its component's. Its major is what an inheriting set pins. A major is required when an accepted rule is withdrawn, superseded or tightened, when an offered extension point is removed, or when a new accepted rule is added (COR-051 point 7).",
@@ -94,6 +99,15 @@
               }
             }
           }
+        }
+      }
+    },
+    "ordinary": {
+      "title": "What an ordinary set refuses (COR-069 point 2; ADR-077 point 1)",
+      "description": "An ordinary set generates no file a session loads, so it takes no budget.",
+      "properties": {
+        "budget": {
+          "not": {}
         }
       }
     },
@@ -346,5 +360,8 @@
   },
   "then": {
     "$ref": "#/$defs/loaded"
+  },
+  "else": {
+    "$ref": "#/$defs/ordinary"
   }
 }

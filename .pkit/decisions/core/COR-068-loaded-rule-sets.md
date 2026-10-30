@@ -22,7 +22,7 @@ A rule set does two jobs, then. One is a rule's identity and history: its id, st
 
 ### 1. A loaded rule set
 
-A *loaded* rule set is a rule set whose rules bind on the work of the agent sessions that load it, not on artefacts (refinement of COR-051 point 1).
+A *loaded* rule set is a rule set whose rules bind on the work of the agent sessions that load it, not on artefacts (refinement of COR-051 point 1). It may give its loaded file a budget in words, and a component's must (refinement per COR-069).
 - **It has no scope,** inherits no set and is inherited by none, so no route reaches it (refinement of COR-051 point 2). Without inheritance, it offers and fills no extension point. It declares no part a check enforces, since a check enforces a part only where a rule binds on an artefact.
 - **One loaded set to a component,** and one to a project, so a citation by core or project and a number names one rule.
 - **What else of COR-051 holds:** the file's shape of data in front matter and prose in the body, ids (point 3), statuses and the gate (point 4), origins and their validation (point 5), method and project sets and how each is cited (point 6).

@@ -33,14 +33,20 @@ MODULE_PATH = SCRIPTS / "_lib" / "board_fields.py"
 
 @pytest.fixture(scope="module")
 def bf():
-    if str(SCRIPTS / "_lib") not in sys.path:
-        sys.path.insert(0, str(SCRIPTS / "_lib"))
+    # `_lib` on the import path for this module's tests alone: left there, it outlived
+    # them, and a later load took copies of its modules by path from it (#2353).
+    lib = str(SCRIPTS / "_lib")
+    added = lib not in sys.path
+    if added:
+        sys.path.insert(0, lib)
     spec = importlib.util.spec_from_file_location("pm_board_fields_under_test", MODULE_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["pm_board_fields_under_test"] = module
     spec.loader.exec_module(module)
-    return module
+    yield module
+    if added:
+        sys.path.remove(lib)
 
 
 BOARD_CONFIG = {
