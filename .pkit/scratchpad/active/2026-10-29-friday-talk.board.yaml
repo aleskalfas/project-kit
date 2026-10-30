@@ -8280,7 +8280,7 @@ templates:
       border_color: '#FFFFFF00'
       border_width: 1
       width: 2944
-      height: 872.0
+      height: 904.0
     parts:
       pbox:
         type: shape
@@ -8289,7 +8289,7 @@ templates:
         x: 880
         y: 0
         width: 800
-        height: 624
+        height: 656
         color: '@role_addon_bg'
         border_color: '@role_addon'
         border_width: 4
@@ -8309,7 +8309,7 @@ templates:
         x: 912
         y: 100
         width: 408
-        height: 76
+        height: 48
       s0box:
         type: shape
         shape: rectangle
@@ -8317,7 +8317,7 @@ templates:
         x: 912
         y: 176
         width: 736
-        height: 120
+        height: 136
         color: '@background'
         border_color: '@role_neutral'
         border_width: 2
@@ -8326,16 +8326,16 @@ templates:
         type: image
         file: 2026-10-29-friday-talk-icons/chip-connect-s0.png
         x: 936
-        y: 188
-        width: 134
-        height: 76
+        y: 192
+        width: 178
+        height: 48
       s0text:
         type: text
-        text: which agent fixes each document
+        text: the docs a change must update
         style: '@style.body'
         ink: '@text_primary'
         x: 936
-        y: 238
+        y: 252
         width: 688
         height: 50
       s1box:
@@ -8343,9 +8343,9 @@ templates:
         shape: rectangle
         text: ''
         x: 912
-        y: 320
+        y: 332
         width: 736
-        height: 120
+        height: 136
         color: '@background'
         border_color: '@role_neutral'
         border_width: 2
@@ -8354,16 +8354,16 @@ templates:
         type: image
         file: 2026-10-29-friday-talk-icons/chip-connect-s1.png
         x: 936
-        y: 332
-        width: 178
-        height: 76
+        y: 348
+        width: 134
+        height: 48
       s1text:
         type: text
-        text: the use cases to plan from
+        text: which agent fixes each document
         style: '@style.body'
         ink: '@text_primary'
         x: 936
-        y: 382
+        y: 408
         width: 688
         height: 50
       s2box:
@@ -8371,9 +8371,9 @@ templates:
         shape: rectangle
         text: ''
         x: 912
-        y: 464
+        y: 488
         width: 736
-        height: 120
+        height: 136
         color: '@background'
         border_color: '@role_neutral'
         border_width: 2
@@ -8382,16 +8382,16 @@ templates:
         type: image
         file: 2026-10-29-friday-talk-icons/chip-connect-s2.png
         x: 936
-        y: 476
+        y: 504
         width: 178
-        height: 76
+        height: 48
       s2text:
         type: text
-        text: the docs a change must update
+        text: the use cases to plan from
         style: '@style.body'
         ink: '@text_primary'
         x: 936
-        y: 526
+        y: 564
         width: 688
         height: 50
       c0box:
@@ -8399,7 +8399,7 @@ templates:
         shape: rectangle
         text: ''
         x: 0
-        y: 50
+        y: 66
         width: 620
         height: 230
         color: '@role_addon_bg'
@@ -8412,32 +8412,32 @@ templates:
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 32
-        y: 70
+        y: 86
         width: 556
         height: 64
       c0role:
         type: image
         file: 2026-10-29-friday-talk-icons/chip-connect-c0.png
         x: 32
-        y: 142
+        y: 158
         width: 322
-        height: 76
+        height: 48
       c0text:
         type: text
         text: docs for each reader
         style: '@style.body'
         ink: '@text_primary'
         x: 32
-        y: 202
+        y: 222
         width: 556
         height: 50
       c0a0:
         type: arrow
         points:
         - - 628
-          - 145
+          - 157
         - - 904
-          - 236
+          - 244
         arrow_type: straight
         tip: end
         color: '@role_code'
@@ -8447,9 +8447,9 @@ templates:
         type: arrow
         points:
         - - 628
-          - 185
+          - 205
         - - 904
-          - 524
+          - 384
         arrow_type: straight
         tip: end
         color: '@role_code'
@@ -8460,7 +8460,7 @@ templates:
         shape: rectangle
         text: ''
         x: 0
-        y: 344
+        y: 360
         width: 620
         height: 230
         color: '@role_addon_bg'
@@ -8473,32 +8473,32 @@ templates:
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 32
-        y: 364
+        y: 380
         width: 556
         height: 64
       c1role:
         type: image
         file: 2026-10-29-friday-talk-icons/chip-connect-c1.png
         x: 32
-        y: 436
+        y: 452
         width: 250
-        height: 76
+        height: 48
       c1text:
         type: text
         text: what the software must do
         style: '@style.body'
         ink: '@text_primary'
         x: 32
-        y: 496
+        y: 516
         width: 556
         height: 50
       c1a0:
         type: arrow
         points:
         - - 628
-          - 439
+          - 451
         - - 904
-          - 236
+          - 416
         arrow_type: straight
         tip: end
         color: '@role_code'
@@ -8508,9 +8508,9 @@ templates:
         type: arrow
         points:
         - - 628
-          - 479
+          - 499
         - - 904
-          - 380
+          - 556
         arrow_type: straight
         tip: end
         color: '@role_code'
@@ -8538,7 +8538,7 @@ templates:
         style: '@style.key'
         ink: '@text_primary'
         x: 0
-        y: 656
+        y: 688
         width: 2944
         height: 56
       w0box:
@@ -8546,7 +8546,7 @@ templates:
         shape: rectangle
         text: ''
         x: 0
-        y: 724
+        y: 756
         width: 939
         height: 148.0
         color: '@role_neutral_bg'
@@ -8558,7 +8558,7 @@ templates:
         shape: rectangle
         text: ''
         x: 0
-        y: 724
+        y: 756
         width: 939
         height: 8
         color: '@role_code'
@@ -8571,7 +8571,7 @@ templates:
         style: '@style.body'
         ink: '@text_primary'
         x: 32
-        y: 756
+        y: 788
         width: 875
         height: 92.0
       w1box:
@@ -8579,7 +8579,7 @@ templates:
         shape: rectangle
         text: ''
         x: 1003
-        y: 724
+        y: 756
         width: 939
         height: 148.0
         color: '@role_neutral_bg'
@@ -8591,7 +8591,7 @@ templates:
         shape: rectangle
         text: ''
         x: 1003
-        y: 724
+        y: 756
         width: 939
         height: 8
         color: '@role_code'
@@ -8604,7 +8604,7 @@ templates:
         style: '@style.body'
         ink: '@text_primary'
         x: 1035
-        y: 756
+        y: 788
         width: 875
         height: 92.0
       w2box:
@@ -8612,7 +8612,7 @@ templates:
         shape: rectangle
         text: ''
         x: 2006
-        y: 724
+        y: 756
         width: 939
         height: 148.0
         color: '@role_neutral_bg'
@@ -8624,7 +8624,7 @@ templates:
         shape: rectangle
         text: ''
         x: 2006
-        y: 724
+        y: 756
         width: 939
         height: 8
         color: '@role_code'
@@ -8637,7 +8637,7 @@ templates:
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
-        y: 756
+        y: 788
         width: 875
         height: 92.0
 instances:
@@ -12132,54 +12132,54 @@ instances:
     x: 128
     y: 576
     mural_ids:
-      root: f8aec4b0-6033-4ed7-b744-0c43d5718ee5
-      pbox: d381c177-27b9-4e85-8017-e4771c60c33d
-      s0box: 03c53b14-da25-406c-9636-e35b2f37d28b
-      s1box: 1c8fcfc6-3fd7-48d6-af10-3b34cf2afb03
-      s2box: 020738e5-c6d9-4ba9-b161-b2a5e10eda00
-      c0box: 147b528b-c346-4cf2-b6b9-ce81b3dc9d08
-      c1box: 0f25a019-65f3-4b09-a204-18a5fddbb750
-      w0box: cf358806-8500-403c-9c5c-f42262f5e938
-      w0bar: 269ac8e9-1be3-475f-97f2-f08a668665c1
-      w1box: 2a429dd3-50db-43d4-a7e7-9a912890619a
-      w1bar: 111e3a8d-509b-4508-97c1-09bc4cc32dff
-      w2box: d4ca2374-8c91-486b-bf2e-6e17b616ec8b
-      w2bar: d3299846-f954-4539-a451-cdf638067120
-      pname: 9c51f26f-8e6d-4be7-84c2-8c40bea7cbef
-      s0text: feeb42c7-02c3-4d85-ba6a-e74f26d57f79
-      s1text: 9000b982-cbab-46a0-b8e8-794c2142a893
-      s2text: 9c8c1d50-cf18-4780-9a7a-b9f6b3fd016a
-      c0name: 4b31e28b-7453-4d2d-9361-f560a3239303
-      c0text: 0aabb417-88cb-4cfe-9743-882e03372d61
-      c1name: c520c7e2-4435-401c-81e8-4488794ca81a
-      c1text: dd3fbcca-9dcc-444e-aac5-a96ba4530c3b
-      thead: 9a78c178-f4da-4ada-8452-378532a89f7e
-      whyhead: 9bd3d2dd-ad7f-478b-9952-26edb14c74d3
-      w0text: 4a83fc12-c7e2-444c-a0a6-fe72c6a92e40
-      w1text: 3527b594-4119-46c3-b694-34b3665bf374
-      w2text: 5844c027-fca5-456d-8162-d4ea31abda29
-      prole: e950d467-0a80-4c4a-a652-ac9d917138eb
-      s0chip: 43861200-40c3-4a69-a256-d09efad03a15
-      s1chip: bdd32421-e6e0-4372-aec3-93014689f23e
-      s2chip: b9b24100-358c-4059-a085-31c3728c1afb
-      c0role: 9a40f0c4-a821-4578-8fdd-a480e50040c7
-      c1role: 027f8e88-f021-4128-8dde-b7d6045824b5
-      timg: 1c93503a-dcee-4834-b777-116a14bec9c4
-      c0a0: e41a130e-802d-496f-97c2-24a71e08d4ec
-      c0a1: 0bcf994c-2901-400a-a277-d8a1d92604b9
-      c1a0: f90f1b4f-7e61-45b4-b4c3-64ecc81a9f85
-      c1a1: 26d4b994-cfef-4bd0-b162-2192800e19d9
+      root: ee39d344-8bce-44e6-82b4-fbe20e84cec1
+      pbox: c9b529be-f19b-4843-b4f4-01d488f53612
+      s0box: 1b403a62-e9e4-4068-922f-ac8411283c7b
+      s1box: 468e4094-2e12-4c7c-8861-a50a6dc98296
+      s2box: 898a3c52-5203-4692-bd9d-00b778faa2d9
+      c0box: fd2a006f-bc3d-4ccf-a3c1-3a58fe0eb608
+      c1box: c89c1dc6-8015-4199-8cd7-342ae4522fd8
+      w0box: 252d1cfe-d1d7-4bec-9ac3-d54e538e04d8
+      w0bar: fedb5ae4-8d05-4138-a079-5831c534052c
+      w1box: 92f782f5-716b-4f74-b227-9c69973803d8
+      w1bar: cdd40f02-0253-4851-9349-713e03da8eca
+      w2box: 1e1b175f-1852-4eb1-98f8-d532bb99ab57
+      w2bar: 4106f8f4-5d87-4d69-980c-0682da2a0936
+      pname: f6f4aa74-4ade-45aa-ac3d-29f12d3ac66a
+      s0text: be525a22-25db-42bf-87cf-5896facaba66
+      s1text: 46ebf73f-161c-4c03-9004-966c294f902e
+      s2text: 597bfc69-5f21-44d7-965c-91e36703c717
+      c0name: eff8c347-b574-449f-94dc-43e60c138e86
+      c0text: 43837481-3d67-43a4-a42e-7931c4c4fd56
+      c1name: d2b8ea08-36f3-440e-bb4d-e209d7bba07c
+      c1text: 1c969f47-b5e5-45f8-add3-8de218ef2f01
+      thead: e1cb109e-1766-42ef-ac8c-2867303d348f
+      whyhead: 99002f6d-0896-4661-bcc6-029fa990fb65
+      w0text: bc2a5694-918c-4c09-b825-aa8b6637fddd
+      w1text: ac5f1e37-5cc5-488f-b869-c4d13a6f5ed7
+      w2text: 66482806-370d-4642-8cb5-27623d0c78e1
+      prole: fe5b90be-908b-458e-a505-ee2fa57f0486
+      s0chip: 71a2d2f8-c1f0-4d8c-bd3e-20ea661ffda2
+      s1chip: da37c212-68fa-41f4-86db-1065753959c7
+      s2chip: 9d2bb0ee-619f-40a5-ae03-dfb126bbfc87
+      c0role: 23517574-4641-4301-bc8c-ff4e35093627
+      c1role: 24b9f91d-9b98-4caf-a190-e280eadcd111
+      timg: 4c92cc19-4b78-420d-a25b-e34ba4c30469
+      c0a0: fd9b394b-0ed1-4bb1-8b6c-e12e13dc906c
+      c0a1: 815dbb8e-78ec-43ab-889d-410f5c0881db
+      c1a0: d5ae7b70-382b-4e9e-ae99-a8b83f714b69
+      c1a1: 4a9d23b1-3a5a-4458-bfcc-614520c0a3b9
   T-connect-limit:
     template: notice
     parent: T-connect
     text: 'Limit: Each role has one add-on so far, so swapping one for another is designed, not yet shown.'
     x: 128
-    y: 1496.0
+    y: 1528.0
     mural_ids:
-      root: 69496934-c52e-498d-a1ba-4df93ab33476
-      bg: f58ae599-312a-4127-908f-6ed829f6e73b
-      bar: bd796631-88ff-4016-aae3-2ce63e2feb0d
-      text: 43b22e48-d5f3-4688-8028-157c2be2c54a
+      root: 9a50b62b-76ca-496f-86cb-dca9192f99ed
+      bg: a861bf96-ce2b-41b7-8e43-c40d14d47c9d
+      bar: 0515c98d-2236-4bc5-9d6a-97d5320dc487
+      text: 2e4fc685-0da9-43c7-a6d3-173360e8a7a8
   T-questions:
     template: slide
     title: Questions?

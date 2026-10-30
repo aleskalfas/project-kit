@@ -506,7 +506,7 @@ KIND_TONES = {"core": ("role_neutral_bg", "role_neutral"), "yours": ("role_peopl
 GROUP_GAP = 192
 
 
-def chip_png(name, text, font_size=CHIP_FONT):
+def chip_png(name, text, font_size=CHIP_FONT, h=None):
     """A path in the deck's terminal style, as a one-line chip: a light panel, IBM Plex Mono, near-black text.
     Mural has no monospace font, so the chip is an image beside the map. Returns the file and its size."""
     import html as htmllib
@@ -514,7 +514,7 @@ def chip_png(name, text, font_size=CHIP_FONT):
     from pathlib import Path
 
     w = round(2 * CHIP_PAD + len(text) * 0.6 * font_size)
-    h = CHIP_H
+    h = h or CHIP_H
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">'
            f'<rect x="1" y="1" width="{w - 2}" height="{h - 2}" fill="#F4F4F4" stroke="#E0E0E0" stroke-width="2"/>'
            f'<text x="{CHIP_PAD}" y="{round(h / 2 + font_size * 0.36)}" font-family="IBM Plex Mono" font-size="{font_size}" '
@@ -847,7 +847,8 @@ def sockets(pid, y, v):
     CW_, PX, PW = 620, 880, 800
     TX = 1744
     TW = SPAN16 - TX
-    SLOT_H, SLOT_G = 120, 24
+    SLOT_H, SLOT_G = 136, 20
+    CF, CHH = 24, 48  # the chips' font and height: a chip as tall as its text needs, so nothing below it is covered
     parts = {}
 
     def shape(key, x, top, w, h, fill, line, bw=1):
@@ -859,20 +860,21 @@ def sockets(pid, y, v):
 
     prov = v["provider"]
     slots = prov["slots"]
-    PH = 176 + len(slots) * (SLOT_H + SLOT_G) - SLOT_G + 40
+    PH = 176 + len(slots) * (SLOT_H + SLOT_G) - SLOT_G + 32
     shape("pbox", PX, 0, PW, PH, "@role_addon_bg", "@role_addon", 4)
     text("pname", prov["name"], "@style.tile_heading", PX + 32, 24, PW - 64, 64)
-    file, cw_, ch_ = chip_png(f"{pid}-prole".removeprefix("T-"), "plays " + prov["role"], 24)
+    file, cw_, ch_ = chip_png(f"{pid}-prole".removeprefix("T-"), "plays " + prov["role"], CF, CHH)
     parts["prole"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": PX + 32, "y": 100, "width": cw_, "height": ch_}
     slot_mid = {}
     for i, sl in enumerate(slots):
         top = 176 + i * (SLOT_H + SLOT_G)
         shape(f"s{i}box", PX + 32, top, PW - 64, SLOT_H, "@background", "@role_neutral", 2)
-        file, cw_, ch_ = chip_png(f"{pid}-s{i}".removeprefix("T-"), sl["id"], 24)
-        parts[f"s{i}chip"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": PX + 56, "y": top + 12, "width": cw_, "height": ch_}
-        text(f"s{i}text", sl["text"], "@style.body", PX + 56, top + 62, PW - 112, 50)
+        file, cw_, ch_ = chip_png(f"{pid}-s{i}".removeprefix("T-"), sl["id"], CF, CHH)
+        parts[f"s{i}chip"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": PX + 56, "y": top + 16, "width": cw_, "height": ch_}
+        text(f"s{i}text", sl["text"], "@style.body", PX + 56, top + 16 + CHH + 12, PW - 112, 50)
         slot_mid[sl["id"]] = top + SLOT_H / 2
     contribs = v["contributors"]
+    incoming = {sl["id"]: [i for i, c in enumerate(contribs) if sl["id"] in c["to"]] for sl in slots}
     BH = 230
     gap = 64
     total = len(contribs) * BH + (len(contribs) - 1) * gap
@@ -881,12 +883,16 @@ def sockets(pid, y, v):
         top = c0 + i * (BH + gap)
         shape(f"c{i}box", 0, top, CW_, BH, "@role_addon_bg", "@role_addon", 2)
         text(f"c{i}name", c["name"], "@style.tile_heading", 32, top + 20, CW_ - 64, 64)
-        file, cw_, ch_ = chip_png(f"{pid}-c{i}".removeprefix("T-"), c["role"], 24)
+        file, cw_, ch_ = chip_png(f"{pid}-c{i}".removeprefix("T-"), c["role"], CF, CHH)
         parts[f"c{i}role"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": 32, "y": round(top + 92), "width": cw_, "height": ch_}
-        text(f"c{i}text", c["text"], "@style.body", 32, top + 152, CW_ - 64, 50)
+        text(f"c{i}text", c["text"], "@style.body", 32, top + 92 + CHH + 16, CW_ - 64, 50)
         for j, target in enumerate(c["to"]):
-            sy = top + BH / 2 + (j - (len(c["to"]) - 1) / 2) * 40
-            parts[f"c{i}a{j}"] = {"type": "arrow", "points": [[CW_ + 8, round(sy)], [PX + 32 - 8, round(slot_mid[target])]],
+            # Each arrow leaves its contributor and reaches its slot at its own height, top to bottom in order,
+            # so arrows into one slot meet it side by side and no two cross.
+            sy = top + BH / 2 + (j - (len(c["to"]) - 1) / 2) * 48
+            k, ins = incoming[target].index(i), len(incoming[target])
+            ty = slot_mid[target] + (k - (ins - 1) / 2) * 32
+            parts[f"c{i}a{j}"] = {"type": "arrow", "points": [[CW_ + 8, round(sy)], [PX + 32 - 8, round(ty)]],
                                   "arrow_type": "straight", "tip": "end", "color": "@role_code", "border_width": 6, "border_style": "solid"}
     text("thead", v["terminal_head"], "@style.key", TX, 0, TW, 56)
     tfile, th = terminal_png(f"{pid}-term".removeprefix("T-"), v["terminal"], TW, fs)
