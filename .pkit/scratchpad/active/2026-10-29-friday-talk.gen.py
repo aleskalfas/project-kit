@@ -732,6 +732,53 @@ def table_map(pid, y, v):
     return {f"{pid}-map": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
 
+def wired(pid, y, v):
+    """What comes wired: terminals side by side, joined by a sign between them (pkit's file + your file = what
+    your tool gets); under them a card per tie, and the yellow note last in that row. The terminals and cards are
+    one instance of a template made for this slide; the note is the deck's highlight."""
+    panels, signs = v["panels"], v.get("signs", [])
+    n = len(panels)
+    aw = 120
+    pw = round((SPAN16 - (n - 1) * aw) / n)
+    fs = v.get("font_size", 26)
+    imgs = [terminal_png(f"{pid}-p{i}".removeprefix("T-"), p["terminal"], pw, fs) for i, p in enumerate(panels)]
+    th = max(h for _, h in imgs)
+    HEAD = 68
+    parts = {}
+    for i, (p, (file, h)) in enumerate(zip(panels, imgs)):
+        x = i * (pw + aw)
+        parts[f"p{i}head"] = {"type": "text", "text": md(p["head"]), "style": "@style.key", "ink": "@text_primary", "x": x, "y": 0, "width": pw, "height": 56}
+        parts[f"p{i}img"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": x, "y": HEAD, "width": pw, "height": h}
+        if i and i - 1 < len(signs):
+            parts[f"p{i}sign"] = {"type": "text", "text": signs[i - 1], "style": "@style.heading", "ink": "@role_code", "align": "center",
+                                  "x": x - aw, "y": round(HEAD + th / 2 - 44), "width": aw, "height": 88}
+    row2 = HEAD + th + 48
+    ties, note = v["ties"], v.get("note")
+    nw = v.get("note_w", 0) if note else 0
+    cw = round((SPAN16 - (nw + GUT if note else 0) - (len(ties) - 1) * GUT) / len(ties))
+    CH = 380
+    for i, t in enumerate(ties):
+        x = i * (cw + GUT)
+        parts[f"t{i}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": x, "y": row2, "width": cw, "height": CH,
+                             "color": "@role_code_bg", "border_color": "@role_code", "border_width": 2, "ink": "@text_primary"}
+        parts[f"t{i}head"] = {"type": "text", "text": md(t["head"]), "style": "@style.tile_heading", "ink": "@text_primary",
+                              "x": x + 40, "y": row2 + 36, "width": cw - 80, "height": 64}
+        parts[f"t{i}text"] = {"type": "text", "text": md(t["text"]), "style": "@style.body", "ink": "@text_primary",
+                              "x": x + 40, "y": row2 + 120, "width": cw - 80, "height": CH - 150}
+    H = row2 + CH
+    name = f"wired_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "What comes wired, drawn for one slide by the slide generator: files side by side, and a card per tie.",
+        "root": {**CLEAR_AREA, "width": SPAN16, "height": H},
+        "parts": parts,
+    }
+    out = {f"{pid}-wired": {"template": name, "parent": pid, "x": MARGIN, "y": y}}
+    if note:
+        d, _ = highlight(pid, MARGIN + len(ties) * (cw + GUT), y + row2, nw, note)
+        out.update(d)
+    return out, H
+
+
 ROLE_TONES = {"pkit": ("@role_code_bg", "@role_code"), "yours": ("@role_people_bg", "@role_people")}
 
 
@@ -1201,6 +1248,8 @@ def build_slide(s, n, total):
             add(table_map(pid, y, v))
         elif kind == "roles":
             add(roles(pid, y, v))
+        elif kind == "wired":
+            add(wired(pid, y, v))
         elif kind == "ties":
             add(ties(pid, y, v))
         elif kind == "story":

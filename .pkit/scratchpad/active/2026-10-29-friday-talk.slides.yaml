@@ -755,6 +755,65 @@ slides:
     check the change. methodology-reviewer checks how records and skills are written. convention-compliance-reviewer checks
     commits, branches and who owns which file. rule-set-reviewer checks the rules on the files the change touches. Only you
     accept a decision or let a change merge (COR-064 point 6).'
+- id: agentswired
+  part: P2
+  title: What every agent comes with
+  message: Each agent arrives tied to its decisions and pointed at your folders. pkit fills in your paths and checks 
+    every tie.
+  problem: ''
+  does: []
+  show: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked 17 skills and agents.'
+  visual:
+    kind: wired
+    font_size: 26
+    note_w: 1000
+    signs: ['+', '→']
+    panels:
+    - head: pkit's agent
+      terminal:
+      - [['# .pkit/agents/core/architect.md', comment]]
+      - [['gates: ', output], ['[COR-024, COR-025, COR-014]', pkit]]
+      - [['owns:', output]]
+      - [['  - ', output], ['<architecture-docs>', pkit]]
+      - [['  - ', output], ['<adr-records>', pkit]]
+    - head: Your paths
+      terminal:
+      - [['# .pkit/agents/project/overlay.yaml', comment]]
+      - [['architecture-docs:', output]]
+      - [['  - ', output], [README.md, yours]]
+      - [['adr-records:', output]]
+      - [['  - ', output], [docs/architecture/decisions/, yours]]
+    - head: The agent your AI tool gets
+      terminal:
+      - [['# .claude/agents/architect.md', comment]]
+      - [['gates: ', output], ['[COR-024, COR-025, COR-014]', pkit]]
+      - [['owns:', output]]
+      - [['  - ', output], [README.md, yours]]
+      - [['  - ', output], [docs/architecture/decisions/, yours]]
+    ties:
+    - head: Its decisions
+      text: Its first lines name the decisions it follows and the documents it reads.
+    - head: Checked
+      text: pkit validate checks every name, and that no two agents own the same file.
+    - head: Kept current
+      text: Each upgrade deploys it again, with your paths.
+    note:
+      icon: step-question-important
+      head: Do you have to wire it?
+      command: '$ pkit sync   # after you change overlay.yaml'
+      body: No. A fresh install fills in default paths, and all six agents are ready at once.
+  limit: You never edit pkit's agents. For a different role, you write your own in .pkit/agents/project/.
+  minutes: 1
+  notes: 'Nothing here is wired by hand. On install and on every sync, pkit copies its agents into your AI tool''s folder,
+    .claude/agents/, beside your own. Each agent names the decisions it follows and the documents it reads in its first lines.
+    The architect follows COR-024, COR-025 and COR-014, and reads COR-006, COR-007 and COR-013. Where an agent needs a path
+    of your project, its file holds a placeholder, such as adr-records. The deploy fills it in from your overlay.yaml, which
+    a sync never changes. A fresh install writes default paths into that file, so all six agents work at once. An agent whose
+    required path you remove is left out, and pkit agents says why. pkit agents adopt creates a missing folder and records
+    it. pkit validate checks that each agent names every decision and document it cites, and that no two agents own the same
+    file. Agents also work through pkit''s own skills and commands. process-author changes a process only through the process
+    skill. rule-set-reviewer reads the rules through pkit rule-sets altered. Each upgrade replaces pkit''s agent files and
+    deploys them again with your paths. You can also set an agent''s model and effort in overlay.yaml.'
 - id: permissions
   part: P2
   title: Permissions you write down
@@ -896,7 +955,7 @@ slides:
     code: "# trial run: the greeting in cli.py changed\n$ pkit friction check\n  ACT-cli-user     depends on cli.py\n  UC-001\
       \           depends on cli.py\n  docs/usage.md    depends on cli.py\n3 documents to answer for\n"
   limit: Only documents that declare what they depend on are covered; the rest go stale as before.
-  minutes: 2.5
+  minutes: 2
   notes: Probably pkit's most distinctive idea. 50 deferred answers in project-kit today, all visible.
 - id: pm
   part: P3
@@ -926,7 +985,7 @@ slides:
       head: Reviewers, then merge
       text: Reviewers check each result; on your yes, the agent merges it.
   limit: 'GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual.'
-  minutes: 4
+  minutes: 3.5
   notes: 'Underneath: a structure (EPIC, Feature, Task), a lifecycle with gates, merging with reviewers, planning a batch
     of work in one approval, fixers after a merge, a board. Parallel agents in separate clones also exist, still experimental
     (the last slide). Like every capability, it brings its own decision records (DEC), kept beside pkit''s and yours, and

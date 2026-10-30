@@ -4910,6 +4910,177 @@ templates:
         y: 668
         width: 600
         height: 150.0
+  wired_T-agentswired:
+    note: 'What comes wired, drawn for one slide by the slide generator: files side by side, and a card
+      per tie.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 768
+    parts:
+      p0head:
+        type: text
+        text: pkit's agent
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 0
+        width: 901
+        height: 56
+      p0img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-agentswired-p0.png
+        x: 0
+        y: 68
+        width: 901
+        height: 272
+      p1head:
+        type: text
+        text: Your paths
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 1021
+        y: 0
+        width: 901
+        height: 56
+      p1img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-agentswired-p1.png
+        x: 1021
+        y: 68
+        width: 901
+        height: 272
+      p1sign:
+        type: text
+        text: +
+        style: '@style.heading'
+        ink: '@role_code'
+        align: center
+        x: 901
+        y: 160
+        width: 120
+        height: 88
+      p2head:
+        type: text
+        text: The agent your AI tool gets
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 2042
+        y: 0
+        width: 901
+        height: 56
+      p2img:
+        type: image
+        file: 2026-10-29-friday-talk-icons/term-agentswired-p2.png
+        x: 2042
+        y: 68
+        width: 901
+        height: 272
+      p2sign:
+        type: text
+        text: →
+        style: '@style.heading'
+        ink: '@role_code'
+        align: center
+        x: 1922
+        y: 160
+        width: 120
+        height: 88
+      t0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 388
+        width: 584
+        height: 380
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t0head:
+        type: text
+        text: Its decisions
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 40
+        y: 424
+        width: 504
+        height: 64
+      t0text:
+        type: text
+        text: Its first lines name the decisions it follows and the documents it reads.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 40
+        y: 508
+        width: 504
+        height: 230
+      t1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 648
+        y: 388
+        width: 584
+        height: 380
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t1head:
+        type: text
+        text: Checked
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 688
+        y: 424
+        width: 504
+        height: 64
+      t1text:
+        type: text
+        text: pkit validate checks every name, and that no two agents own the same file.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 688
+        y: 508
+        width: 504
+        height: 230
+      t2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1296
+        y: 388
+        width: 584
+        height: 380
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      t2head:
+        type: text
+        text: Kept current
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 1336
+        y: 424
+        width: 504
+        height: 64
+      t2text:
+        type: text
+        text: Each upgrade deploys it again, with your paths.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1336
+        y: 508
+        width: 504
+        height: 230
 instances:
   L01:
     template: slide
@@ -5370,7 +5541,7 @@ instances:
     lead: Your AI agent works fast, and forgets everything your project decided.
     rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
     n: 1
-    total: 18
+    total: 19
     override:
       rests:
         text: 'The question: how do you make it work your project''s way, without a heavy framework?'
@@ -5735,7 +5906,7 @@ instances:
     lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
     rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
     n: 2
-    total: 18
+    total: 19
     override:
       rests:
         text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
@@ -6106,7 +6277,7 @@ instances:
     rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
       later.
     n: 3
-    total: 18
+    total: 19
     override:
       rests:
         text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
@@ -6210,7 +6381,7 @@ instances:
       records, issues or docs.
     rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
-    total: 18
+    total: 19
     override:
       rests:
         text: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
@@ -6273,7 +6444,7 @@ instances:
     rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
       one'
     n: 5
-    total: 18
+    total: 19
     override:
       rests:
         text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
@@ -6497,7 +6668,7 @@ instances:
     rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
       merged with its code.'
     n: 6
-    total: 18
+    total: 19
     override:
       rests:
         text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
@@ -6668,7 +6839,7 @@ instances:
     rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
       generated from the rules.'
     n: 7
-    total: 18
+    total: 19
     override:
       rests:
         text: 'This week: each rule got a permanent id and a status. The file every session loads is now
@@ -6846,7 +7017,7 @@ instances:
       exact part.
     rests: 'In project-kit: pkit ships 11 skills, each with its command.'
     n: 8
-    total: 18
+    total: 19
     override:
       rests:
         text: 'In project-kit: pkit ships 11 skills, each with its command.'
@@ -6939,7 +7110,7 @@ instances:
     rests: Every session holds only each skill's short description. The steps load when the task comes
       up.
     n: 9
-    total: 18
+    total: 19
     override:
       rests:
         text: Every session holds only each skill's short description. The steps load when the task comes
@@ -7012,7 +7183,7 @@ instances:
     rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
       it follows.'
     n: 10
-    total: 18
+    total: 19
     override:
       rests:
         text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
@@ -7104,7 +7275,7 @@ instances:
     lead: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
     rests: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
     n: 11
-    total: 18
+    total: 19
     override:
       rests:
         text: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
@@ -7160,25 +7331,120 @@ instances:
       bg: 19c76ecc-a25b-4495-b1b9-f2804ef25b70
       bar: c219eb31-7135-442a-bce7-3be669f538e4
       text: dda9f923-b138-4338-969b-3610de872ead
+  T-agentswired:
+    template: slide
+    title: What every agent comes with
+    lead: Each agent arrives tied to its decisions and pointed at your folders. pkit fills in your paths
+      and checks every tie.
+    rests: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
+      17 skills and agents.'
+    n: 12
+    total: 19
+    override:
+      rests:
+        text: 'In a fresh install: all 6 agents deployed at once, with default paths. pkit validate checked
+          17 skills and agents.'
+    mural_ids:
+      root: 9976f024-9f08-4bcb-822f-f35a572f941b
+      bg: e259d0ee-f22f-4221-9cf0-825243d9e524
+      title: 312fd08d-bf65-459f-9d20-0e788068b10c
+      lead: bdd332a4-366d-437c-9f15-d1ec36198f07
+      rests: 6101c941-a5d0-4f5a-9e7d-b8b0d645c367
+      num: d4ad5e9f-cf6c-4484-b0d4-d38472d852d5
+  T-agentswired-wired:
+    template: wired_T-agentswired
+    parent: T-agentswired
+    x: 128
+    y: 576
+    mural_ids:
+      root: f5b9217b-0226-44c5-8745-697ce27144dd
+      t0box: abd9e22c-efe8-4f7d-ba45-f722256531cf
+      t1box: f516d502-9cd2-4953-b82c-3e03ad560826
+      t2box: 1bf82dc1-7211-49c8-b23d-136f9f54dc09
+      p0head: ca8c9da4-4935-4750-949b-32201f7f7ea4
+      p1head: d0a0ff5b-3186-4996-9b47-74bc87b94929
+      p1sign: 6b044e9e-8927-40b3-a107-28f435728bb1
+      p2head: bec609b9-e2f5-4a98-bf07-2a8beb655324
+      p2sign: a32d9f59-c6a0-4880-8344-7056cdaa8193
+      t0head: 65a21033-6416-4db8-8bff-d9221bebcd9f
+      t0text: a4b0b88f-499c-42ad-a609-85e604e4840c
+      t1head: 03a27675-056d-44b1-ae40-15365e799a10
+      t1text: 9af9c73b-f6fc-400a-ac4b-219db51af1ce
+      t2head: de934d35-c193-407c-b6b5-495f5fdb52c0
+      t2text: 4dc1726b-7441-4fbb-bbdf-d60e5502cad2
+      p0img: 5417ad28-8903-4b6b-96aa-f33b54f8116b
+      p1img: 4d13059f-3912-410d-85d2-b6629bfb419b
+      p2img: 99e27295-6f53-40d7-9656-cbd6cc9f988b
+  T-agentswired-hl:
+    template: highlight
+    parent: T-agentswired
+    x: 2072
+    y: 964
+    icon: step-question-important
+    head: Do you have to wire it?
+    body: No. A fresh install fills in default paths, and all six agents are ready at once.
+    override:
+      root:
+        width: 1000
+      bg:
+        width: 1000
+      head:
+        width: 820
+      body:
+        width: 820
+    mural_ids:
+      root: ac7bc537-a113-49d7-a4bd-ae5c38357c1f
+      bg: 0ee0a598-0db7-44a7-9cdc-1b4f130d2eaf
+      bar: f3cf44d0-fe9f-4fe7-8208-ea472d8683d9
+      head: 7b83ae04-9faf-45d8-9cf6-2fbc85d4ef40
+      body: ab165d50-bb10-4981-a1cb-36b601456cfc
+      icon: 205e48d4-be75-4360-ad4d-cad9e691b49f
+  T-agentswired-hl-cmd:
+    template: term_image
+    parent: T-agentswired-hl
+    x: 140
+    y: 116
+    file: term-agentswired-hl-cmd
+    override:
+      root:
+        width: 820
+        height: 118
+      img:
+        width: 820
+        height: 118
+    mural_ids:
+      root: 2302ee36-d1c5-4750-b79c-ea2d8c169553
+      img: 4be00fcc-147a-4f57-aa62-0cda0443471e
+  T-agentswired-limit:
+    template: notice
+    parent: T-agentswired
+    text: 'Limit: You never edit pkit''s agents. For a different role, you write your own in .pkit/agents/project/.'
+    x: 128
+    y: 1392
+    mural_ids:
+      root: 6eee44ca-02c7-4e9e-8d16-661927281180
+      bg: 275051ee-4dc8-40e3-958d-eb48bb2d897c
+      bar: 754ce369-6bdc-4f12-8687-02a58c63e8d4
+      text: 177c4828-d0a8-4adf-8316-d7d29c7d250e
   T-permissions:
     template: slide
     title: Permissions you write down
     lead: What agents may do is your project's written rules, not the tool's guesses.
     rests: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent
       said no'
-    n: 12
-    total: 18
+    n: 13
+    total: 19
     override:
       rests:
         text: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that
           agent said no'
     mural_ids:
-      root: 20aea2b6-246c-402e-8b90-ff125d3da80a
-      bg: 5b280777-9444-45d5-8dbc-8a700ef91c86
-      title: f803bd17-75e1-4172-943c-6a0da20b6132
-      lead: 16dedf06-67a0-4419-afc1-838748eab9d7
-      rests: d2e6d8cb-7631-4b24-ad8c-322f6f89aa57
-      num: ebe320dd-7785-45b1-84aa-591c82ba9f97
+      root: 84de8304-8df1-426d-b15f-37a6204c6305
+      bg: 4a81da47-14fd-4a64-ba48-a067fa933667
+      title: cb914002-5306-4f37-bef8-f0d47bcb86b7
+      lead: d5a6c497-3bdf-40cf-a5b0-597a437ed2fd
+      rests: b6b611e6-9934-4c7b-9513-c9f6208a5c3a
+      num: bb54d0e2-4501-4fa1-89cc-7c4b02c163cf
   T-permissions-problem:
     template: callout
     parent: T-permissions
@@ -7188,11 +7454,11 @@ instances:
     x: 128
     y: 576
     mural_ids:
-      root: 7a521a9c-26da-4605-a8dd-a3d0e0c1e971
-      bg: b0808f3a-e1a5-48d5-bbee-79e2067751ab
-      bar: 23c1d0a0-1ffc-41d5-9f83-e4858a2dd3f5
-      title: 0f684460-0dab-4579-bf8f-aab3b8aea3e7
-      body: 26608305-410d-43dd-b55d-9cc20a982a58
+      root: 88e12938-13ec-4d10-8e30-9985d57e0566
+      bg: 1b12d057-7f53-4147-9e77-0bf4f1bf889c
+      bar: ffd2e9a9-9e53-45ca-afdf-dd4f3a0187f3
+      title: 338df02a-f636-48e4-88ce-0beaac1f8bfc
+      body: 1c4a1eb0-4d37-4874-b0b7-cbf2ea025a8d
   T-permissions-cmp1:
     template: compare
     parent: T-permissions
@@ -7206,15 +7472,15 @@ instances:
     x: 128
     y: 800
     mural_ids:
-      root: db47d29b-0a90-430e-a824-3f4e87444b7d
-      spacetag: cc488d14-8c66-45cc-a60e-a48ad08f9a02
-      d1: 2f829224-ae60-4870-a59d-77c20739b5c9
-      d2: 71fea844-72a4-47b4-8f59-d258f57404bb
-      heading: 4c233443-6844-4efc-aa80-b8be451cf491
-      k1: d7069d57-3172-4982-93cd-04223b85f827
-      v1: a806136c-36e3-493a-820c-272c82cf4404
-      k2: 9c630b9b-08de-4c2f-9209-138d83f7fc56
-      v2: b30e071a-bc68-4625-a30d-b131ed64fae4
+      root: 9a3023c7-17eb-4ed6-8e55-cf7677f80add
+      spacetag: 75871378-acd1-43f8-8cc2-831340ded1d3
+      d1: 9558badf-4665-447e-82b1-5cb67e1149ca
+      d2: dd9995e7-6bc3-4fea-ac92-5432df4eac87
+      heading: f936af97-6b02-4ca3-b85c-6de6a32856a6
+      k1: 31d259d3-bd99-4885-8486-6eb4a840696d
+      v1: a0e4a6f2-9d06-4cb4-b5af-4cdcbf8b2735
+      k2: bec7d96e-da80-4c2d-834c-d929923dd931
+      v2: 8d8c6223-54e2-4a1b-9b53-145502b81e71
   T-permissions-cmp2:
     template: compare
     parent: T-permissions
@@ -7228,15 +7494,15 @@ instances:
     x: 1632
     y: 800
     mural_ids:
-      root: 3bd30d74-7ebf-4d32-9f29-420221f742b8
-      spacetag: 16110b24-cbb1-4a94-b9c2-531628fe0571
-      d1: ca5e4426-c008-4b55-a03f-012e77e67a24
-      d2: a2e84dae-6dab-4f0b-81d6-0f4f7b7385c2
-      heading: 075656e5-6f90-4bc0-be6e-0cbff91bd6c0
-      k1: 8a346781-60a6-498e-a2b7-3e28c4550590
-      v1: e1ed5ba6-13a7-4380-8338-1f5e55353e8f
-      k2: a2e2db89-2685-4446-be7e-5a4968d53fe2
-      v2: cc148497-10c2-4632-b7fc-e8d8c34a773e
+      root: 5601ca43-a084-4af3-881b-a049f48453ed
+      spacetag: 7f84cd17-c846-47df-a2f0-bea7df09ee4b
+      d1: 736c45e7-9b8b-4da8-8310-f573d9359a61
+      d2: bb8cb8d8-cb31-4234-8404-07d030896b01
+      heading: 68d01974-900d-4f9f-a8e7-54c6b5c2ab8d
+      k1: 0a3e6abb-10c9-475a-944f-5578d735000a
+      v1: 3d0ae94c-abf5-4dbf-958b-ab1e644129ed
+      k2: eac40ce0-8d6d-4f9e-9bd2-62d9e3294534
+      v2: c8398feb-8888-4df8-9d5e-7970eaccdee6
   T-permissions-limit:
     template: notice
     parent: T-permissions
@@ -7245,84 +7511,84 @@ instances:
     x: 128
     y: 1424
     mural_ids:
-      root: 4f02b87a-9a77-4a95-bb18-636215dc1e94
-      bg: 93f4dcf1-1539-408e-b20e-e51f42f91aa3
-      bar: 20b456dc-b23e-4cbb-9447-fbcbc49b7d96
-      text: 0d71b54d-62b1-454d-8869-1ec9d7d3e645
+      root: a44d5b71-fe05-41eb-ab4b-df76ba51e8cc
+      bg: cbf1d6da-fc12-42f1-bf13-daaaad2ea13b
+      bar: 61446245-b619-4afc-b007-26532fc2aa8d
+      text: 505cf43d-c60a-4bac-bf54-e42839ed1de1
   T-checked:
     template: slide
     title: Checked every time
     lead: An agent follows the ties between files without doubting them, so every tie is checked on every
       change.
     rests: In project-kit, this check runs before every push and on every pull request
-    n: 13
-    total: 18
+    n: 14
+    total: 19
     override:
       rests:
         text: In project-kit, this check runs before every push and on every pull request
     mural_ids:
-      root: 35104249-d740-4ad1-a9b7-4be103d3c85b
-      bg: f5c3d671-61ed-4508-88f0-36fb1fef614e
-      title: 047a3878-49cf-441c-b39f-bc2559d4c955
-      lead: 86f83248-e086-46ed-984a-208b38ce4336
-      rests: 468cd582-fcc3-4e8f-ada0-4de9b8a78f4b
-      num: 6b1f9034-01ee-46a3-92a6-895504173245
+      root: b433d796-7535-48e6-b27d-ef241f2b80c7
+      bg: 2449003d-096f-4c9e-8233-ca9071ff71fb
+      title: c13a0709-0707-42cc-b864-cc442d45be9a
+      lead: a3265907-0db8-4462-89a6-7fdf6e5b4b38
+      rests: c6f7b8ae-0477-4339-baaf-4b87bd29cc3f
+      num: ed271f4f-ea74-4c46-a842-02255797c5ec
   T-checked-ties:
     template: ties_T-checked
     parent: T-checked
     x: 128
     y: 576
     mural_ids:
-      root: 1dd9fdc0-2941-41c1-a452-83ba2959de64
-      cbox: 4a5b280e-b48e-4b58-96cd-4b4ec65d6960
-      c1box: 95e98a17-9ba9-4491-aded-fe4b2bc6f905
-      l0box: 4bece7d4-aa80-48f1-b567-ea87ca46a319
-      l1box: 4400f9c7-01fb-4911-ad20-38e684bf7e43
-      l2box: 7fa5076f-da4c-40e0-9179-7bd3cc1bfd43
-      l3box: 45a904fc-4d48-4af8-b3ce-ae02eb707d86
-      l4box: e55b1ccf-c4fd-40b4-82f0-2b358b850ce1
-      l5box: 62b466e6-5bc9-4a97-8b8e-4c4bb5ff0d7e
-      l6box: 9636f5be-22a4-46e9-97b6-50600866516d
-      r0box: f6ff1fb3-736e-4859-aaca-5c6351591226
-      r1box: ca6dbe5f-75d2-47e4-bc01-521a0c1adc72
-      r2box: 9ab89c83-e471-4e1a-a60c-e62af306d1a6
-      r3box: 26961662-b37e-4202-bbb9-36c5afe5bb1d
-      r4box: eb5d3716-1062-4c8f-9bc2-359095baf711
-      r5box: 4492da1a-4568-49cd-b9e1-55bc9c63219f
-      lhead: f40f6bc4-d5b1-4edd-815a-1868ab363700
-      rhead: d4345a5f-2f20-404b-ac00-f7cf7ed0295f
-      chead: 7bd0f4f9-0e27-4aaa-93ab-5a7700c86de9
-      cpath: 05fd1f15-ba48-4456-bd90-adf4b93f66a8
-      c1head: 12d625f5-27cb-4c87-a31a-4405b80b38af
-      c1path: 1a09e517-2cd6-418e-b72a-d66ec384cb13
-      l0text: 5fe97a57-491c-4ad1-9fe0-18afe379b1c7
-      l1text: fe281a27-9b9d-4773-8205-53e8d33ccae3
-      l2text: 44d20099-cc6d-447e-9efc-4f3384243664
-      l3text: 19af8e7b-4410-4c3a-8a8b-82e2630d3fb4
-      l4text: b3b91b75-7321-492a-b295-daac50ec0fae
-      l5text: 5e977c31-33b1-4021-b36c-eeeec908c634
-      l6text: 1be3544c-03a3-400c-a533-cd0400f47fed
-      l6note: f628072e-50f3-4f6e-9c2c-000153c40cb2
-      r0text: 2f79faee-8843-487a-afdb-6b56345ecb5d
-      r1text: c7622b92-702e-458d-b0ff-6da0fbbb75a2
-      r2text: 34b5607b-bdf8-4c67-b6da-59f176f045a1
-      r3text: d74d4b72-4768-49a6-984c-90b0b595cf2d
-      r4text: 874642c3-a627-4b1d-ace4-d387c1de21da
-      r5text: 51692244-e46d-46ff-be83-493bb5e5e5ad
-      l0tie: cf873c84-71b6-4b5e-bc8a-de0d2a7a0de3
-      l1tie: 44ff3153-80b8-42b6-b5ee-d6433859aad1
-      l2tie: 72e2425f-af8d-4ddc-b6e1-851ffc358463
-      l3tie: a9ab7c45-e78e-4bd3-b70f-f2107e0354eb
-      l4tie: 6309333e-24ea-453e-84de-c4f1ac81efb4
-      l5tie: 5a6971c6-7eec-4791-8a6c-cf169b4177b5
-      l6tie: f2d172c4-01eb-479f-a4bb-a309e843ea13
-      l6tie1: 147c76b1-2620-4dc9-ae4a-70aef9d2a14a
-      r0tie: 4477ea1b-7a32-4d6d-b15c-793634c6689d
-      r1tie: 6cd2f8d1-e785-4458-9672-87d422ff2f55
-      r2tie: 342a6035-d6d1-4024-aefb-228d7584f8ec
-      r3tie: 8b6f5035-bb6d-4375-abf1-f9a6fafb2ebb
-      r4tie: 6c750f62-c7f7-4601-b6a3-b26b0e9e25ec
-      r5tie: 827a0f56-c756-413f-8952-5018027fd7c8
+      root: e3470008-2efb-4885-a310-9b0903ed4f48
+      cbox: a5d276e5-2c20-4f4d-84d7-7163e6665fa8
+      c1box: 24c6a9f9-90ba-4223-a78b-fdf91b5fbf68
+      l0box: 8202bca9-8d28-4f7a-a009-3df54bdace1a
+      l1box: eca2b7c8-c734-4c74-ad7a-0d14a6e2cb56
+      l2box: 44389458-8723-4e83-8261-9728cfb9231a
+      l3box: 43ea553c-c637-499f-8387-8be101e790a5
+      l4box: cdd9b509-d84f-4e3c-8125-9fd6688e5a11
+      l5box: 47a66ca8-956f-4249-9d2e-c977f5035f7c
+      l6box: 3388b98b-8674-4b73-a52d-cf0a0e7c7496
+      r0box: aea65336-b36e-44fe-a790-bb9b2b3e9d53
+      r1box: 829655d9-e0a9-40ac-868c-142d727b107b
+      r2box: cea97927-4021-4b94-a288-3a52dd29bd34
+      r3box: ff871e1f-ee06-4d84-afcb-72d3f47a3855
+      r4box: 523c9e35-a281-4382-a12f-9cd5b578c5ed
+      r5box: 915c774f-0505-4de4-a5d1-9b17230665a5
+      lhead: b407d40f-f2a0-4418-9769-ff10c43c6563
+      rhead: 72b22d9c-fc2f-4079-9d31-261825f2033e
+      chead: aac1dfff-f3b8-48ea-8e64-799c9d34070d
+      cpath: 0c3ee570-a1cb-4705-b063-579e2e885493
+      c1head: 9a46b4fb-5481-4a30-94b3-1317fc255808
+      c1path: 8cb7b39b-694e-434c-9e79-be769399681d
+      l0text: 696f714b-ed50-4904-b8f4-bf8f604810b4
+      l1text: 0f240ddf-d938-4e65-ab10-3b6ef497e6da
+      l2text: 990bc416-080e-4ab5-80ee-ddf135f16d9a
+      l3text: d97aa393-aa32-48b1-b6a8-19bf980cc962
+      l4text: 1f8f9d7b-fa80-49cf-ac52-d8bfc6ceeab2
+      l5text: 99ed3ef7-89fb-4f77-9318-9ec94de1529a
+      l6text: 24794207-0920-4f96-97ee-8528fbcc6e06
+      l6note: 01a98481-7a78-417b-bc5b-7a22cf888220
+      r0text: 836b7cd3-fc53-4646-83ec-3eb7044651a4
+      r1text: a7764e82-a627-4f3b-b567-956ee6b72548
+      r2text: 11fd8d22-898a-4cfd-80a8-fd4b8f3f454d
+      r3text: 320c0f9b-f5e0-4afa-84aa-f3075b9c5dab
+      r4text: 860ee07f-24be-4515-bd40-2d2f7ebf856c
+      r5text: 3622f0bb-5fb3-473d-af47-30f829aadb6e
+      l0tie: b5145811-820c-43cc-8dad-97bbd355b0ef
+      l1tie: 0a2927b7-3b34-4b88-9304-c64f3b888a30
+      l2tie: 5f21d897-ddff-42f4-9f9f-8d36a1d0ffc6
+      l3tie: 5dfede35-bf60-49db-a954-e4951ad27dd1
+      l4tie: a4ef9aeb-85e4-4a93-add2-737a7d19d131
+      l5tie: 0a6a1f83-a04c-4fab-bf7a-e5008f9c01c7
+      l6tie: f7c4b24a-befe-4ad6-bd7b-d4e9144bba74
+      l6tie1: e4576979-0be1-458d-8967-0663e63eaf2e
+      r0tie: 3e1c9446-24ac-4d09-8bd9-86f3ca664f5a
+      r1tie: 245d5747-f718-4cac-b20a-fdf1b397b0de
+      r2tie: 85c05645-9a32-4d2f-ab6c-10d9faae0ca7
+      r3tie: f5178bb1-745d-45a0-b4fc-e437de5adaf3
+      r4tie: f3d1c70a-cf4e-421c-b210-69758c49b7c4
+      r5tie: e81908e1-935a-4ed1-8944-7006c3b603cd
   T-checked-check:
     template: term_image
     parent: T-checked
@@ -7337,8 +7603,8 @@ instances:
         width: 920
         height: 479
     mural_ids:
-      root: f30def74-4c36-4083-b98f-632247df1dc0
-      img: 7e28f171-c89e-4d0b-93a6-f48327cae010
+      root: deec41d7-f4ab-4143-99a1-c98816611fde
+      img: 62c34352-bad2-4b46-b669-4c3a4a788dfb
   T-checked-limit:
     template: notice
     parent: T-checked
@@ -7346,29 +7612,29 @@ instances:
     x: 128
     y: 1264
     mural_ids:
-      root: 842840ce-4765-4139-bb0c-d797dc74539a
-      bg: d12584f6-ece2-4fc3-a269-6f6cf514da00
-      bar: 1edd638d-9899-4c27-870d-854fa2db8aef
-      text: be4c3366-ca0e-4913-93ff-082962e67451
+      root: 8e3cce32-27b9-44de-9d76-ff48847263d3
+      bg: 6a590f4a-7b2b-45db-aa56-d8d5de21bd54
+      bar: c85bb040-5af7-432f-be83-74c772b88831
+      text: 1fcb9e02-d414-49d1-9ab7-e68171d3e909
   T-docs:
     template: slide
     title: Docs that know when they're wrong
     lead: When code changes, the documents that depend on it are named, not found later by accident.
     rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it
       wasn''t'
-    n: 14
-    total: 18
+    n: 15
+    total: 19
     override:
       rests:
         text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed
           it wasn''t'
     mural_ids:
-      root: c6dea7d4-5b44-4a7a-9777-f80cf2767025
-      bg: 666ebb24-9dba-4052-98d4-12e732e0a6fd
-      title: aa085d97-1970-4128-b494-914f712251eb
-      lead: f394d5cb-77d5-4847-8a64-3c22c9238288
-      rests: 8e5505f6-ae53-4967-9363-24ea3feeefb2
-      num: 31f619bb-6abd-4412-b2d6-06502e8fcf18
+      root: f86c47df-eb1b-4d38-b66f-ead7c99d781a
+      bg: 7e969a58-997b-42f4-851e-18bf72a1d8a9
+      title: 0b20c825-4d64-45b9-b73a-8fe4d971858c
+      lead: 22662f99-7d50-4d68-ab5a-3cf313cdca58
+      rests: 9c0cadd3-371c-4585-8ff4-03024dd457d8
+      num: 386051b9-c8a7-4ff8-99ea-4c949d9e3c4c
   T-docs-problem:
     template: callout
     parent: T-docs
@@ -7377,11 +7643,11 @@ instances:
     x: 128
     y: 576
     mural_ids:
-      root: 531bd74b-ee2e-4d7c-82a5-1267e8305776
-      bg: afc4aa80-fee0-4710-a155-df30b74034f3
-      bar: a93df8e0-e223-4438-97cb-8d6f28308339
-      title: d92187c3-8b01-41dd-ad95-db333dbd4d44
-      body: 30eb9904-0862-412e-948c-8a1407f591e1
+      root: 09a7cfc0-010a-49db-af0c-f588eb02359a
+      bg: 8ac0d3c9-56eb-40ab-8f74-10af5c882088
+      bar: 8300e916-a2ad-4dab-9608-8c065285f99c
+      title: b809ba84-6072-4782-8765-6cd8883d8a79
+      body: ab655891-4b0e-4ebb-b806-f8119528bfc4
   T-docs-d1:
     template: step
     parent: T-docs
@@ -7397,10 +7663,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: cb0b4f7b-d7c6-4991-8ea4-159cb6d46bf2
-      bg: c87314cb-2e70-4f9f-9fd2-c6515767082c
-      tag: 8d5f6928-ba43-4677-8a78-89bf474ba3f3
-      text: 75df681f-39ca-4da4-9bca-f0fd3dd943a3
+      root: 1a9427e4-0145-42a9-b3d3-d2a9ae93259e
+      bg: dcc70f32-1f26-48e3-8a90-382980501d60
+      tag: fce73631-ebaf-4c3d-b8db-c807160dc12a
+      text: ab6459af-5595-4626-a031-2e4237c9f35e
   T-docs-d2:
     template: step
     parent: T-docs
@@ -7416,10 +7682,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: 48733b6d-a260-48bb-8b34-2d16a5fc3bd2
-      bg: c4bbe03d-6ebf-4c77-95fd-f5b4f3229388
-      tag: 7043a596-24aa-42aa-959a-79583e5746ba
-      text: 6d0985d4-e0b4-42d5-9d1e-4c2a30be34d5
+      root: ecc44547-3d5d-4cd1-b185-caab380b2fb6
+      bg: 0ac5da9c-50de-416f-a085-3444bc99db92
+      tag: 4386c093-76ee-43bf-a82d-f8f7c6127a57
+      text: 38dc5945-03bb-4cb9-85e1-e461b3aaa6e9
   T-docs-d3:
     template: step
     parent: T-docs
@@ -7435,10 +7701,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: efb6da77-0196-4842-9302-51def80872c3
-      bg: e536213c-4aff-4327-a219-f98de911be3c
-      tag: a0fb124b-1346-4937-ae1c-4260e341b07b
-      text: a151e332-51df-43e9-9718-c3b01536ca8a
+      root: c5bad942-f760-48d9-8228-84e2b4f6b0be
+      bg: 95b2527e-f989-437b-9aab-399b4c67b1a4
+      tag: b278661a-c703-4ad3-a81e-55f432c5e2b9
+      text: fea2ef8f-57c3-4a57-a7c7-08162f196e81
   T-docs-code:
     template: code
     parent: T-docs
@@ -7455,9 +7721,9 @@ instances:
       text:
         height: 288
     mural_ids:
-      root: 3581ba2d-bb2e-419e-ba9b-86a40991e9fe
-      bg: 65b2b86d-2e30-4301-88b7-c671d80e1b3b
-      text: f1ab9f59-9145-4727-a454-6667a3cb57d3
+      root: d2fd99a8-5a7c-4f2e-b5c8-f899c29f70f0
+      bg: 88bf232e-b30f-4735-95a4-bf2cd47e3cad
+      text: 0c85a38d-8d59-4eba-833b-5f57f2bdc0c6
   T-docs-limit:
     template: notice
     parent: T-docs
@@ -7465,10 +7731,10 @@ instances:
     x: 128
     y: 1516.0
     mural_ids:
-      root: 350701e2-5879-40a7-986e-0cc5dc7e5b14
-      bg: 42454068-1e87-424d-9aac-17d3e6420c97
-      bar: fd8206f2-5e21-4c94-95ee-6a023560a23a
-      text: 1d4a7640-76f3-4e96-a6b0-c60f4f136d73
+      root: 31cd0f12-064a-46e9-8959-0055c4f94843
+      bg: 8aa7a4c8-e40d-4ca3-a502-fed46a092ee0
+      bar: 0e309ccd-7ad7-48de-9985-b50e953722c4
+      text: a8967911-2e0a-4852-ae32-f3d10828b628
   T-part-P3:
     template: section
     part: '4'
@@ -7486,8 +7752,8 @@ instances:
     title: project-management
     lead: You talk to one agent; it plans the work and runs builders in parallel.
     rests: 'This week, in one evening: six builders, four pull requests merged'
-    n: 15
-    total: 18
+    n: 16
+    total: 19
     override:
       rests:
         text: 'This week, in one evening: six builders, four pull requests merged'
@@ -7777,8 +8043,8 @@ instances:
       to wire.
     rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
       before merge'
-    n: 16
-    total: 18
+    n: 17
+    total: 19
     override:
       rests:
         text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
@@ -7989,8 +8255,8 @@ instances:
       run, still being shaped.
     rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until
       you decide'
-    n: 17
-    total: 18
+    n: 18
+    total: 19
     override:
       rests:
         text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes
@@ -8248,8 +8514,8 @@ instances:
     title: Questions?
     lead: Everything shown is in project-kit's own repository, built with pkit itself.
     rests: github.com/aleskalfas/project-kit
-    n: 18
-    total: 18
+    n: 19
+    total: 19
     override:
       rests:
         text: github.com/aleskalfas/project-kit
@@ -8329,6 +8595,7 @@ layouts:
   - T-skills
   - T-agentsfrom
   - T-agents
+  - T-agentswired
   - T-permissions
   - T-checked
   - T-docs
