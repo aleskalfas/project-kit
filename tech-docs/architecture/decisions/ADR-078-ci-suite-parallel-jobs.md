@@ -1,7 +1,7 @@
 ---
 id: ADR-078
 title: A full run of the required check runs the aggregator as three parallel parts, behind one job named checks
-status: proposed
+status: accepted
 date: 2026-10-30
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
