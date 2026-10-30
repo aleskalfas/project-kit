@@ -310,8 +310,8 @@ Defined in [TERM-operational-rule](../glossary.md#term-operational-rule--operati
 **Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). So a repository keeps its own instructions in a file of its own (COR-014). A citation by number names another [rule](../glossary.md#term-rule--rule) when the rules are renumbered, and nothing says so ([COR-068](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md)). So the [system](../glossary.md#term-system--system)'s rules are kept as a loaded [rule set](../glossary.md#term-rule-set--rule-set), with a permanent id for each (COR-068).
 
 An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include. It is cited by its number in its file, such as core rule 8.
-- **The system's rules:** each is a rule of the [backbone](../glossary.md#term-backbone--backbone)'s loaded set `OPS`, so core rule 8 is `backbone:RS-OPS-008`. The file a session loads is generated from the set ([COR-068 point 3](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
-- **A repository's own rules:** a plain file, loaded as it stands, until the repository keeps them as a loaded set of its own ([COR-068 point 7](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#7-a-projects-rules-not-yet-in-a-set)).
+- **Core rules:** each is a rule of the [backbone](../glossary.md#term-backbone--backbone)'s loaded set `OPS`, so core rule 8 is `backbone:RS-OPS-008`. The file a session loads is generated from the set ([COR-068 point 3](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#3-the-loaded-file-is-generated-from-the-set-where-the-set-is-authored)).
+- **Project rules:** a plain file, loaded as it stands, until the repository keeps them as a loaded set of its own ([COR-068 point 7](../../../../.pkit/decisions/core/COR-068-loaded-rule-sets.md#7-a-projects-rules-not-yet-in-a-set)).
 
 **Attributes:**
 
