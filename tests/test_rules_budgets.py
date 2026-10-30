@@ -133,16 +133,29 @@ def test_the_white_space_named_is_unicode_s_property() -> None:
 # --- the first budgets ----------------------------------------------------------------
 
 
+CAPABILITY_LOADED = {
+    ".pkit/capabilities/project-management/rules.md": "project-management:PM",
+    ".pkit/capabilities/software-engineering/rules.md": "software-engineering:SWE",
+}
+
+
 def test_ops_and_project_kit_s_project_md_are_within_their_budgets() -> None:
-    """Core's set gives its budget, and project-kit sets its own file's, each at the
-    file's size when the check landed (ADR-077 point 7), so the check holds here."""
+    """Core's set gives its budget, each capability set that ships one gives its own,
+    and project-kit sets its own file's (ADR-077 point 7), so the check holds here.
+    The files are counted in the order a session reads them: core's, each registered
+    capability's, then the project's (COR-070 point 1)."""
     budgets = budget_check(REPO)
+    paths = [str(file.path) for file in budgets.files]
+    assert paths == [CORE_LOADED, *CAPABILITY_LOADED, PROJECT_LOADED]
     by_path = {str(file.path): file for file in budgets.files}
-    assert set(by_path) == {CORE_LOADED, PROJECT_LOADED}
     core, project = by_path[CORE_LOADED], by_path[PROJECT_LOADED]
     assert core.rule_set is not None and core.rule_set.citation == "backbone:OPS"
     assert core.checked and project.checked and project.rule_set is None
-    for file in (core, project):
+    for path, citation in CAPABILITY_LOADED.items():
+        capability = by_path[path]
+        assert capability.rule_set is not None and capability.rule_set.citation == citation
+        assert capability.checked, path
+    for file in budgets.files:
         assert file.budget is not None and file.words is not None
         assert file.words <= file.budget, file.path
     assert core.words == lr.word_count((REPO / CORE_LOADED).read_text(encoding="utf-8"))
@@ -209,6 +222,24 @@ def test_a_project_is_never_failed_for_a_file_it_receives(adopter: AdopterRepo) 
         if line.startswith(f"rules file {CORE_LOADED}")
     ]
     assert re.fullmatch(rf"rules file {CORE_LOADED}: \d+ word\(s\), budget 10, \d+ over\.", line)
+
+
+def test_an_installed_capability_s_file_is_counted_and_never_failed_where_received(
+    adopter: AdopterRepo,
+) -> None:
+    """A registered capability's loaded file is a rules file, counted between core's and
+    the project's (COR-069 point 1; COR-070 point 1). The project receives it by install,
+    so past its budget it is reported and fails nothing (COR-055 point 1)."""
+    adopter.install_capabilities("project-management", "software-engineering")
+    loaded = ".pkit/capabilities/software-engineering/rules.md"
+    swe = adopter.root / ".pkit/capabilities/software-engineering/rule-sets/swe.md"
+    swe.write_text(with_budget(swe.read_text(encoding="utf-8"), 10), encoding="utf-8")
+    assert findings(adopter.root, Kind.RULES_FILE_OVER_BUDGET) == []
+    lines = rs.summary_lines(rs.validate_rule_sets(adopter.root))
+    files = [line.split(":")[0] for line in lines if line.startswith("rules file ")]
+    assert files.index(f"rules file {CORE_LOADED}") < files.index(f"rules file {loaded}")
+    (line,) = [line for line in lines if line.startswith(f"rules file {loaded}")]
+    assert re.fullmatch(rf"rules file {loaded}: \d+ word\(s\), budget 10, \d+ over\.", line)
 
 
 def test_a_component_s_loaded_set_without_a_budget_fails_where_authored(

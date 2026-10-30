@@ -409,11 +409,12 @@ def check_budgets(target_root: Path, discovery: rs.RuleSetDiscovery) -> BudgetCh
     """Each rules file a session loads here with its count and its budget, and what
     validation's `rule-sets` member finds on them (COR-069 point 5; ADR-077 point 4).
 
-    The rules files: the loaded file of the first loaded set of the backbone and of the
-    project, by path, and the project's plain rules file where the project has no loaded
-    set of its own and keeps one. A capability's loaded set has no loaded file (COR-068
-    point 4), and a deployed copy of a loaded file is counted as the file it copies, so
-    neither is a rules file here. Each is reported in every project.
+    The rules files, in the order a session reads them: the loaded file of the first
+    loaded set of the backbone, of each capability the backbone manifest registers
+    (COR-070 point 1; ADR-076 point 1), and of the project, by path, and the project's
+    plain rules file where the project has no loaded set of its own and keeps one. A
+    delivered copy or an index entry is counted as the file it reaches, so neither is a
+    rules file here (COR-069 point 1). Each is reported in every project.
 
     The findings, in this order:
 
@@ -437,7 +438,10 @@ def check_budgets(target_root: Path, discovery: rs.RuleSetDiscovery) -> BudgetCh
     key_budget = plain_file_budget(fd.configuration_at(target_root))
     own = first_loaded(discovery, None)
     files: list[RulesFile] = []
-    for rule_set in (first_loaded(discovery, fd.BACKBONE_COMPONENT), own):
+    capabilities = [
+        first_loaded(discovery, name) for name in fd.installed_capability_names(target_root)
+    ]
+    for rule_set in (first_loaded(discovery, fd.BACKBONE_COMPONENT), *capabilities, own):
         loaded_file = None if rule_set is None else loaded_file_of(rule_set)
         if rule_set is None or loaded_file is None:
             continue
