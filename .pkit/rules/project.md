@@ -1,14 +1,14 @@
-*Project-specific operational rules for project-kit-the-project. Loaded into the host `CLAUDE.md` alongside `core.md`. Tied to project-kit's specific tooling and structure; not propagated to adopters (each adopter authors their own `project.md` for rules that fail universal applicability per COR-014).*
+*project-kit's own operational rules, loaded beside `core.md`. Each fails universal applicability (COR-014), so none reaches an adopter.*
 
 ## Tool hygiene
 
-1. **Run `pkit` from the project root.** The dispatcher resolves the project root via `git rev-parse --show-toplevel` (with a CWD-walk fallback); staying at root avoids ambiguity in path resolution. Specific to pkit's CWD-resolution behaviour, so this rule lives here rather than in core.
+1. **Run `pkit` from the project root,** since it resolves the root from the working directory (the CLI README, "Installing pkit on PATH").
 2. **While building, run the tests of what you changed; the full suite is the pre-push hook's and CI's.** A builder runs the test modules for the files it changed plus the fast gates — `uv run pkit validate`, `uv run pkit friction check`, `uv run pkit migrations check-diff`, `uv run pkit decisions check-diff`, `uv run pkit release check` — and leaves the full suite to `scripts/check.sh`, which the pre-push hook runs whole and CI in parallel parts (ADR-078). CI skips the suite on a pull request whose only changes since a passing full run are answers (ADR-067). The suite is some 20 800 tests; six builders each running it on one machine took most of an hour to learn what CI reported in minutes ([project-kit#1182](https://github.com/aleskalfas/project-kit/issues/1182)). `check.sh` runs it in parallel workers, at most two full suites at once on a machine (`tests/README.md`, "Running the suite"). Specific to project-kit's own suite and check aggregator, so this rule lives here rather than in core.
 
 ## Writing
 
-3. **Write the analysis by `ANA`, and software-analysis's templates and structures by `WRITE`.** Whoever writes the analysis under `tech-docs/analysis/` follows the accepted rules of `ANA`, project-kit's rules for its analysis (`tech-docs/rule-sets/analysis.md`), and of `WRITE`, project-kit's general writing rules (`tech-docs/rule-sets/writing.md`). Whoever writes software-analysis's templates, or the structures its kinds declare (software-analysis DEC-001 point 1), follows `WRITE` (ADR-055 point 3). Where a rule of `WRITE` would carry project-kit's own vocabulary or style into that shipped text, universal applicability wins (COR-014). Examples are project-kit's glossary terms and its labels. The shipped text stays fit for any adopter. Specific to project-kit's own writing rules, so this rule lives here rather than in core.
+3. **Write the analysis under `tech-docs/analysis/` by `ANA` (`tech-docs/rule-sets/analysis.md`) and `WRITE` (`tech-docs/rule-sets/writing.md`), and software-analysis's templates and the structures its kinds declare by `WRITE`;** where a rule of `WRITE` would carry project-kit's own vocabulary or style into that shipped text, universal applicability wins (ADR-055 points 3 and 4; COR-014).
 
 ## Commits
 
-4. **Sign every commit you make in this repository, and never switch its signing off.** If a commit fails to sign, wait a minute before the one retry core rule 21 allows. Signing is project-kit's own policy, so this rule lives here rather than in core ([project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648#issuecomment-6247728164)).
+4. **Sign every commit you make in this repository, and never switch signing off;** if a commit fails to sign, wait a minute before the one retry core rule 21 allows (project-kit#1648).

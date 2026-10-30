@@ -184,7 +184,7 @@ Supersession is always within a single namespace.
 
 ## The acceptance gate
 
-Implementation work — code, content, tooling, downstream decisions — depends only on **accepted** decisions. Proposed records are draft hypotheses, useful for discussion but not authoritative. Authoring work that would cite a still-proposed record violates the gate; either accept the record first (a one-line status flip and a commit) or pause the implementation. A person accepts a record in the change that proposes it, before work in that change rests on it, and an agent writes `accepted` only once a person has. Work in that change, or in a change built on it that lands no earlier, may then rest on the record ([COR-066](core/COR-066-accepted-before-landing.md) point 1).
+Implementation work — code, content, tooling, downstream decisions — depends only on **accepted** decisions. Proposed records are draft hypotheses, useful for discussion but not authoritative. Authoring work that would cite a still-proposed record violates the gate; either a person accepts the record first or the implementation pauses. A person accepts a record in the change that proposes it, before work in that change rests on it, and an agent writes `accepted` only once a person has. Work in that change, or in a change built on it that lands no earlier, may then rest on the record ([COR-066](core/COR-066-accepted-before-landing.md) point 1).
 
 The gate applies to every kind of dependent work:
 
@@ -192,7 +192,7 @@ The gate applies to every kind of dependent work:
 - **Docs** describing systems built on a decision wait until that decision is accepted.
 - **Skills and agents** that automate work depending on a decision verify acceptance before running. The mechanism for declaring and verifying decision dependencies is part of each artifact area's own README (e.g. `.pkit/skills/README.md`, `.pkit/agents/README.md`).
 
-Acceptance is intentionally cheap — flipping `proposed → accepted` is one line and one commit. The friction is not in the flip; it's in the requirement that everyone look at the record and agree before depending on it.
+Acceptance is intentionally cheap: once a person has accepted a record, writing `accepted` is one line in the change that proposes it. The friction is not in the line; it's in the requirement that a person read the record and agree before anything depends on it.
 
 ## Finding the records a path leads to
 
