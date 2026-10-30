@@ -15,6 +15,7 @@ pkit:
       artefact:
         - .pkit/schemas/README.md#rule-set-files
         - .pkit/cli/README.md#rule-sets-altered---base-ref---head-rev---json
+        - .pkit/cli/README.md#configuration-file
 ---
 
 # Rules
@@ -50,7 +51,7 @@ The kit's rules are a *loaded rule set*: a rule set whose accepted rules bind on
 Every session reads `core.md` and `project.md` whole, so every word in them is paid for in every session. Each may have a budget, the most words it may hold ([COR-069](../decisions/core/COR-069-rules-word-budget.md)). `pkit validate` reports each file's count against its budget in every project, and fails a file past its budget where its owner can shorten it. How a word is counted, and what the check says, are the CLI reference's (`validate`, the `rule-sets` member).
 
 - **`core.md`'s budget** is `budget` in `OPS`'s front matter, beside `loaded: true` (the schemas README, "Rule-set files"). A component's loaded set must give one. You receive the file and its budget by sync, and are never failed for it: you see its count, and what it costs each session.
-- **Your `project.md`'s budget,** while it is a plain file, is `rule-sets.plain-file-budget` in `.pkit/project/config.yaml`, if you set one (the CLI reference, "Configuration file"). Without the key, the file has no budget, and nothing is checked. No install or upgrade sets it: a budget you set bounds the size you chose.
+- **Your `project.md`'s budget,** while it is a plain file, is `rule-sets.plain-file-budget` in `.pkit/project/config.yaml`, if you set one (the CLI reference, ["Configuration file"](../cli/README.md#configuration-file)). Without the key, the file has no budget, and nothing is checked. No install or upgrade sets it: a budget you set bounds the size you chose.
 - **Raising a budget is a person's decision.** A new rule that needs room raises the budget in the change in which a person accepts the rule. Any other raise lands only in a change a person authorises. An agent whose change would take a file past its budget trims the file instead, or brings the raise to that person. `pkit rule-sets altered` lists each budget a change raises, so whoever reviews the change sees it (the CLI reference, `rule-sets altered`).
 - **Lowering one** is any change's to make. A budget is a ceiling, not a target: a change that trims a file may lower its budget, keeping what room it chooses.
 
