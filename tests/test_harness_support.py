@@ -98,6 +98,26 @@ def test_the_confined_runs_version_bound_is_the_runners_tested_range() -> None:
     assert answer["harness_versions"] == list(runner.TESTED_RANGE)
 
 
+def test_that_a_session_loads_the_rules_is_reported_indeterminate() -> None:
+    """Whether a session holds every layer's loaded files shows only while it runs, so a
+    report run from outside every session resolves it indeterminate, never satisfied
+    (COR-070 point 6; ADR-076 point 7). Claude Code's answer is at a cost, vouches for no
+    version until a session is observed, and names its runner's gap apart, with #2352."""
+    (requirement,) = [
+        r for r in harness_support.requirements(REPO) if r.id == "session-loads-rules"
+    ]
+    assert requirement.observation_point == "interposed-runtime"
+    document = harness_support.load_declaration(REPO, "claude-code")
+    assert document is not None
+    answer = document["requirements"]["session-loads-rules"]
+    assert (answer["grade"], answer["harness_versions"]) == ("at-cost", [])
+    assert "omitClaudeMd" in answer["cost"] and "#2352" not in answer["cost"]
+    assert "#2352" in answer["evidence"]
+    (report,) = harness_support.report(REPO, ["claude-code"])
+    (result,) = [r for r in report.results if r.requirement.id == "session-loads-rules"]
+    assert result.result == harness_support.INDETERMINATE
+
+
 # --- resolution -------------------------------------------------------------------------
 
 
