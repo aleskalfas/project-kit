@@ -27,11 +27,14 @@ parts:
   summary: Where ideas start, your decisions, and what every session is told.
 - id: P2
   title: How the agent works
-  summary: Procedures, roles, permissions, the checks, and documents that stay true.
+  summary: Procedures, roles, and what each agent may do.
 - id: P3
+  title: Staying consistent
+  summary: What pkit checks, and documents that stay true.
+- id: P4
   title: What you install
   summary: 'Capabilities: optional add-ons for your kind of work, and how they connect.'
-- id: P4
+- id: P5
   title: Over time
   summary: How pkit improves without breaking your work, and what comes next.
 slides:
@@ -66,7 +69,7 @@ slides:
         role: code
         icon: row-conventions
         head: Write your conventions down
-        text: every session loads them, and agents follow them · Parts 2, 4
+        text: every session loads them, and agents follow them · Parts 2, 5
     - left:
         role: neutral
         icon: row-doc
@@ -76,7 +79,7 @@ slides:
         role: code
         icon: row-link
         head: Tie each doc to what it depends on
-        text: each change rechecks the docs it affects · Part 3
+        text: each change rechecks the docs it affects · Part 4
     - left:
         role: neutral
         icon: row-unguarded
@@ -918,13 +921,65 @@ slides:
     hook, sets up the OS sandbox except on macOS, and runs probes until the result holds. Without the model, you either allow
     a command for every agent, or answer dozens of prompts a session, approved unread, until a prompt no longer stops a dangerous
     command.'
-- id: checked
-  part: P2
-  title: Checked every time
-  message: An agent follows the ties between files without doubting them, so every tie is checked on every change.
+- id: checks
+  part: P3
+  title: What pkit checks, and why
+  message: The whole project, and each change before it merges. An agent acts on what files say, and never doubts them.
   problem: ''
   does: []
-  show: In project-kit, this check runs before every push and on every pull request
+  show: 'In a fresh install, pkit validate runs 12 checks with nothing to set up. Each add-on brings its own: 16 in project-kit.'
+  visual:
+    kind: wired
+    font_size: 26
+    note_w: 1000
+    panels:
+    - head: The whole project
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' validate', args]]
+      - [['  manifests · schemas · configuration', output]]
+      - [['  packages · connections · versions', output]]
+      - [['  decisions · friction · rule-sets', output]]
+      - [['  refs · process · data', output]]
+      - [['  12 validator(s) ran; 0 error(s)', output]]
+      - [['  All checks passed.', add]]
+    - head: Each change, before it merges
+      terminal:
+      - [['$ ', prompt], [pkit, command], [' friction check', args]]
+      - [['  # a document tied to what changed,', comment]]
+      - [['  # with no answer', comment]]
+      - [['$ ', prompt], [pkit, command], [' decisions check-diff', args]]
+      - [['  # a record or a point numbered', comment]]
+      - [['  # twice, or renumbered', comment]]
+    ties:
+    - head: People forget
+      text: A change updates one file. What depends on it is somewhere else.
+    - head: Reviews miss it
+      text: A review reads the change in front of it, not the file it left stale.
+    - head: Agents trust files
+      text: An agent acts on what a file says. A check finds what it never questions.
+    note:
+      icon: step-question-important
+      head: On every push?
+      command: $ pkit validate && pkit friction check
+      body: pkit adds no git hook or CI. Put both in yours, as project-kit does.
+  limit: 'A check finds what is broken or unanswered. Whether a document is still right, a reviewer judges.'
+  minutes: 1
+  notes: 'Two kinds of check. pkit validate checks the project as it stands: each part of pkit registers its own check, and
+    each installed add-on adds its own, 12 in a fresh install and 16 in project-kit. Among them: every data file against
+    its schema, every record''s shape, every skill and agent naming what it cites. The change checks judge a diff against
+    its base. The friction check asks each document tied to a changed file for an answer: updated, still true with why,
+    or fixed later (COR-050). The decision check refuses a record or a point that takes an id twice or loses one (COR-058).
+    The reasons are COR-050''s: people forget to update what depends on what they changed, and a review looks at the change
+    in front of it, while the stale description is usually somewhere else. Read from a fresh install on 30 October: pkit
+    adds no git hook and no CI, and the change check stays dormant until the project says where its documents live. Every
+    session gets a rule that tells agents to run the change check and answer it before they commit (core rule 20).'
+- id: checked
+  part: P3
+  title: One tie, checked
+  message: Rename a file, and the documents tied to it are named before the change merges.
+  problem: ''
+  does: []
+  show: 'In project-kit: this check runs in the pre-push hook and on every pull request, wired by the project.'
   visual:
     kind: ties
     center:
@@ -1013,7 +1068,7 @@ slides:
     in a throwaway copy of the repository. A tie that is already dead on main is reported by the whole-repository check, pkit
     friction check --all.'
 - id: docs
-  part: P2
+  part: P3
   title: Docs that know when they're wrong
   message: When code changes, the documents that depend on it are named, not found later by accident.
   problem: Documentation goes stale silently, and you find out when someone acts on it.
@@ -1030,7 +1085,7 @@ slides:
   minutes: 2
   notes: Probably pkit's most distinctive idea. 50 deferred answers in project-kit today, all visible.
 - id: pm
-  part: P3
+  part: P4
   title: project-management
   message: You talk to one agent; it plans the work and runs builders in parallel.
   problem: ''
@@ -1057,13 +1112,13 @@ slides:
       head: Reviewers, then merge
       text: Reviewers check each result; on your yes, the agent merges it.
   limit: 'GitHub only, and large: 62 records, 88 commands; you meet it through the agent, not the manual.'
-  minutes: 3.5
+  minutes: 3
   notes: 'Underneath: a structure (EPIC, Feature, Task), a lifecycle with gates, merging with reviewers, planning a batch
     of work in one approval, fixers after a merge, a board. Parallel agents in separate clones also exist, still experimental
     (the last slide). Like every capability, it brings its own decision records (DEC), kept beside pkit''s and yours, and
     replaced by its upgrades.'
 - id: se
-  part: P3
+  part: P4
   title: software-engineering
   message: The builder follows your conventions; its three reviewers join every code merge with nothing to wire.
   problem: An AI writes in its default style, and the code is merged on a glance, or reviewed by its author.
@@ -1088,7 +1143,7 @@ slides:
   notes: 'Capabilities never name each other: one fills a slot another defines. Swap one for another that fills the same slot,
     and nothing connected notices.'
 - id: current
-  part: P4
+  part: P5
   title: Over time
   message: Improvements arrive by one command and never overwrite your files, and three new things already run, still 
     being shaped.
@@ -1131,7 +1186,7 @@ slides:
   notes: 'One version for pkit''s core, one per capability. pkit upgrade replaces only pkit''s files; pkit pin holds a version;
     pkit report sends what hurts upstream. The three cards: Experimental: say so.'
 - id: questions
-  part: P4
+  part: P5
   title: Questions?
   message: Everything shown is in project-kit's own repository, built with pkit itself.
   problem: ''
@@ -1140,5 +1195,5 @@ slides:
   visual:
     kind: none
   limit: ''
-  minutes: 2
+  minutes: 1.5
   notes: ''
