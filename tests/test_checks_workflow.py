@@ -976,6 +976,40 @@ def test_a_slice_that_passed_without_reporting_what_it_ran_did_not_pass(
     assert "passed" not in dict(part.outputs())
 
 
+@pytest.mark.parametrize(
+    ("key", "value"),
+    [
+        ("digest", f"{DIGEST}\npassed=check.sh --shard 2/2 {DIGEST}"),
+        ("digest", "sha256:short"),
+        ("collected", "3\nshare=99"),
+        ("collected", -1),
+        ("collected", True),
+        ("listed", "three"),
+        ("unlisted", None),
+    ],
+    ids=["digest-two-lines", "digest-short", "collected-two-lines", "collected-negative",
+         "collected-bool", "listed-words", "unlisted-none"],
+)
+def test_a_report_value_out_of_its_form_is_handed_on_empty(
+    tmp_path: Path, key: str, value: object
+) -> None:
+    part = Part(tmp_path)
+    part.report("parallel", RAN, {**CUT, key: value})
+
+    status = part.run("--shard", "1/2")
+
+    lines = part.output.read_text().splitlines()
+    assert all("=" in line and line.partition("=")[0] in OUTPUT_KEYS for line in lines)
+    said = dict(part.outputs())
+    assert said[key] == ""
+    if key == "digest":
+        assert status == 1
+        assert "passed" not in said
+
+
+OUTPUT_KEYS = {"passed", "seconds", "digest", "collected", "share", "listed", "unlisted"}
+
+
 @pytest.mark.parametrize("which", ["--rest", "--short"])
 def test_the_remainder_says_which_form_it_ran_last(tmp_path: Path, which: str) -> None:
     part = Part(tmp_path)
