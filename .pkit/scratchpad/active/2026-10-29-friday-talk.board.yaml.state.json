@@ -33505,7 +33505,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-fits-s51",
-    "text": "Each layer carries out the decisions above it.",
+    "text": "Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them before it changes anything.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -33516,7 +33516,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-fits-s51",
-    "text": "Each layer carries out the decisions above it.",
+    "text": "Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them before it changes anything.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -33550,7 +33550,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303481928
+   "updatedOn": 1793320774619
   },
   "T-fits-s52": {
    "board": {
@@ -33788,7 +33788,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-fits-s52",
-    "text": "If a layer and a decision disagree, look for the mistake in the layer first. A decision changes only when you accept a new one.",
+    "text": "If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. Only you change a decision.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -33799,7 +33799,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-fits-s52",
-    "text": "If a layer and a decision disagree, look for the mistake in the layer first. A decision changes only when you accept a new one.",
+    "text": "If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. Only you change a decision.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -33833,7 +33833,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793315951008
+   "updatedOn": 1793320774721
   },
   "T-fits.bg": {
    "board": {
@@ -34785,7 +34785,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-found-card2",
-    "text": "You see the record and its tie in the pull request, before it merges.",
+    "text": "You see it before it merges, while it is cheapest to change.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -34796,7 +34796,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-found-card2",
-    "text": "You see the record and its tie in the pull request, before it merges.",
+    "text": "You see it before it merges, while it is cheapest to change.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -34830,7 +34830,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793320774777
   },
   "T-found-card3": {
    "board": {
@@ -35116,7 +35116,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-found-card3",
-    "text": "Before changing a file, the agent looks up its records.",
+    "text": "It starts with none of your reasons, so it looks up the records first.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -35127,7 +35127,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-found-card3",
-    "text": "Before changing a file, the agent looks up its records.",
+    "text": "It starts with none of your reasons, so it looks up the records first.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -35161,7 +35161,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793311980282
+   "updatedOn": 1793320775246
   },
   "T-found-l1": {
    "board": {
@@ -38813,7 +38813,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "Install the tool once, then add pkit to each project with one command. Every file it adds is either pkit's or yours.",
+    "text": "Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's files, never yours.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -38824,7 +38824,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "Install the tool once, then add pkit to each project with one command. Every file it adds is either pkit's or yours.",
+    "text": "Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's files, never yours.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -38858,7 +38858,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793303481928
+   "updatedOn": 1793320826419
   },
   "T-install.num": {
    "board": {
@@ -52596,7 +52596,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "A few short rules on how to work, pkit's and yours. Each rule names the decision behind it.",
+    "text": "A few short rules on how to work, pkit's and yours. Records are too many to load, so each rule names the one behind it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -52607,7 +52607,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "A few short rules on how to work, pkit's and yours. Each rule names the decision behind it.",
+    "text": "A few short rules on how to work, pkit's and yours. Records are too many to load, so each rule names the one behind it.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -52641,7 +52641,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793315138069
+   "updatedOn": 1793320774870
   },
   "T-sessions.num": {
    "board": {
@@ -55463,7 +55463,7 @@
     "title": "T-skillsfrom-limit",
     "width": 2944,
     "x": 128,
-    "y": 1440
+    "y": 1516
    },
    "fields": {
     "border_color": "#FFFFFF00",
@@ -55475,9 +55475,9 @@
     "title": "T-skillsfrom-limit",
     "width": 2944,
     "x": 128,
-    "y": 1440
+    "y": 1516
    },
-   "mural_id": "49bc80f7-2f41-4da0-81a6-f653647f1320",
+   "mural_id": "98c329a6-ed2d-4fa8-9881-7670af02b9c5",
    "tracked": [
     "title",
     "text",
@@ -55505,7 +55505,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320248829
+   "updatedOn": 1793320567793
   },
   "T-skillsfrom-limit.bar": {
    "board": {
@@ -55535,7 +55535,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "7336d3ac-0009-4b91-a913-003f64f5bee5",
+   "mural_id": "d14bcf9f-cdf1-4862-9d7a-29b02d4a5463",
    "tracked": [
     "title",
     "text",
@@ -55563,7 +55563,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-limit.bg": {
    "board": {
@@ -55593,7 +55593,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "f7613676-d7aa-4124-857f-34ad92911d42",
+   "mural_id": "f78018c6-04bf-4d51-b7b4-75c0fbcd2fca",
    "tracked": [
     "title",
     "text",
@@ -55621,7 +55621,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-limit.text": {
    "board": {
@@ -55648,7 +55648,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "b0a82285-8467-4bcf-8beb-9a1cd993ed18",
+   "mural_id": "48ab5052-948b-4be7-86ae-b5b51b10749f",
    "tracked": [
     "title",
     "text",
@@ -55676,7 +55676,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map": {
    "board": {
@@ -55685,7 +55685,7 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 816,
+    "height": 892,
     "parent": "T-skillsfrom",
     "show_title": false,
     "title": "T-skillsfrom-map",
@@ -55697,7 +55697,7 @@
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 816,
+    "height": 892,
     "parent": "T-skillsfrom",
     "show_title": false,
     "title": "T-skillsfrom-map",
@@ -55705,7 +55705,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "522febf8-1ede-44ca-87be-4bccba2f954a",
+   "mural_id": "cfda947a-e510-449f-99d9-74b848cdf064",
    "tracked": [
     "title",
     "text",
@@ -55733,62 +55733,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320248791
-  },
-  "T-skillsfrom-map.caption": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-skillsfrom-map",
-    "text": "And 7 more pairs: areas, adapters, storyboards, schemas, processes, capabilities and reports.",
-    "title": "tpl:map_T-skillsfrom#caption",
-    "width": 2944,
-    "x": 0,
-    "y": 760
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#525252FF",
-    "parent": "T-skillsfrom-map",
-    "text": "And 7 more pairs: areas, adapters, storyboards, schemas, processes, capabilities and reports.",
-    "title": "tpl:map_T-skillsfrom#caption",
-    "width": 2944,
-    "x": 0,
-    "y": 760
-   },
-   "mural_id": "e183825c-a895-47cb-aa11-c2287821443f",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320567807
   },
   "T-skillsfrom-map.h0box": {
    "board": {
@@ -55796,7 +55741,7 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 152,
+    "height": 136,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
@@ -55809,7 +55754,7 @@
     "border_color": "#491D8BFF",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 152,
+    "height": 136,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
@@ -55818,7 +55763,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "33b2d2e2-8d7b-4a65-9a84-fe4f9720f046",
+   "mural_id": "57d17d4a-32ba-44be-9771-f5241f07618e",
    "tracked": [
     "title",
     "text",
@@ -55846,7 +55791,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.h0head": {
    "board": {
@@ -55860,7 +55805,7 @@
     "title": "tpl:map_T-skillsfrom#h0head",
     "width": 600,
     "x": 32,
-    "y": 24
+    "y": 16
    },
    "fields": {
     "font": "proxima-nova",
@@ -55871,9 +55816,9 @@
     "title": "tpl:map_T-skillsfrom#h0head",
     "width": 600,
     "x": 32,
-    "y": 24
+    "y": 16
    },
-   "mural_id": "a7252e6b-e586-4b3e-b29f-86b8cb771623",
+   "mural_id": "42ffb267-fa40-49ed-b8fb-eead2701c071",
    "tracked": [
     "title",
     "text",
@@ -55901,7 +55846,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.h0text": {
    "board": {
@@ -55915,7 +55860,7 @@
     "title": "tpl:map_T-skillsfrom#h0text",
     "width": 600,
     "x": 32,
-    "y": 92
+    "y": 84
    },
    "fields": {
     "font": "proxima-nova",
@@ -55926,9 +55871,9 @@
     "title": "tpl:map_T-skillsfrom#h0text",
     "width": 600,
     "x": 32,
-    "y": 92
+    "y": 84
    },
-   "mural_id": "e656f3d7-3fca-42be-9b2c-94a804080bc6",
+   "mural_id": "e74f13b2-69b5-4537-b120-e192bd36c6f4",
    "tracked": [
     "title",
     "text",
@@ -55956,7 +55901,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.h1arrow": {
    "board": {
@@ -55968,11 +55913,11 @@
     "points": [
      [
       680,
-      76
+      68
      ],
      [
       744,
-      76
+      68
      ]
     ],
     "text": "",
@@ -55988,17 +55933,17 @@
     "points": [
      [
       680,
-      76
+      68
      ],
      [
       744,
-      76
+      68
      ]
     ],
     "tip": "end",
     "title": "tpl:map_T-skillsfrom#h1arrow"
    },
-   "mural_id": "223ac5a7-bf04-439a-b990-aa698de25238",
+   "mural_id": "bc6d3864-121a-42b4-9d77-4ff5ce580ba4",
    "tracked": [
     "title",
     "text",
@@ -56026,7 +55971,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320252980
+   "updatedOn": 1793320571456
   },
   "T-skillsfrom-map.h1box": {
    "board": {
@@ -56034,7 +55979,7 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 152,
+    "height": 136,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
@@ -56047,7 +55992,7 @@
     "border_color": "#BE95FFFF",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 152,
+    "height": 136,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
@@ -56056,7 +56001,7 @@
     "x": 760,
     "y": 0
    },
-   "mural_id": "600d06fd-e8e4-4e90-b3a0-6f2f57b827f6",
+   "mural_id": "31515cc7-f8b0-430a-9082-a35d10cedb53",
    "tracked": [
     "title",
     "text",
@@ -56084,7 +56029,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.h1head": {
    "board": {
@@ -56098,7 +56043,7 @@
     "title": "tpl:map_T-skillsfrom#h1head",
     "width": 600,
     "x": 792,
-    "y": 24
+    "y": 16
    },
    "fields": {
     "font": "proxima-nova",
@@ -56109,9 +56054,9 @@
     "title": "tpl:map_T-skillsfrom#h1head",
     "width": 600,
     "x": 792,
-    "y": 24
+    "y": 16
    },
-   "mural_id": "4876ed1e-908b-495a-a395-8d8c23ddc198",
+   "mural_id": "c2be3e5f-a22e-449f-b088-54ea49b13fb2",
    "tracked": [
     "title",
     "text",
@@ -56139,7 +56084,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.h1text": {
    "board": {
@@ -56153,7 +56098,7 @@
     "title": "tpl:map_T-skillsfrom#h1text",
     "width": 600,
     "x": 792,
-    "y": 92
+    "y": 84
    },
    "fields": {
     "font": "proxima-nova",
@@ -56164,9 +56109,9 @@
     "title": "tpl:map_T-skillsfrom#h1text",
     "width": 600,
     "x": 792,
-    "y": 92
+    "y": 84
    },
-   "mural_id": "d8d3612f-da14-4062-9590-d871af5563f5",
+   "mural_id": "9301331e-e1dc-4051-b934-80fa961b27a9",
    "tracked": [
     "title",
     "text",
@@ -56194,7 +56139,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.h2arrow": {
    "board": {
@@ -56206,11 +56151,11 @@
     "points": [
      [
       1440,
-      76
+      68
      ],
      [
       1504,
-      76
+      68
      ]
     ],
     "text": "",
@@ -56226,17 +56171,17 @@
     "points": [
      [
       1440,
-      76
+      68
      ],
      [
       1504,
-      76
+      68
      ]
     ],
     "tip": "end",
     "title": "tpl:map_T-skillsfrom#h2arrow"
    },
-   "mural_id": "8286e172-ba1c-4b05-93d2-b0385d5e24e0",
+   "mural_id": "30123767-9828-4dcd-b70d-0cbe4eab22f9",
    "tracked": [
     "title",
     "text",
@@ -56264,7 +56209,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320252999
+   "updatedOn": 1793320571519
   },
   "T-skillsfrom-map.h2box": {
    "board": {
@@ -56272,7 +56217,7 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#D4BBFFFF",
-    "height": 152,
+    "height": 136,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
@@ -56285,7 +56230,7 @@
     "border_color": "#D4BBFFFF",
     "border_width": 1,
     "color": "#D4BBFFFF",
-    "height": 152,
+    "height": 136,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
@@ -56294,7 +56239,7 @@
     "x": 1520,
     "y": 0
    },
-   "mural_id": "a28364a1-f93c-4318-8eaf-d415ab4a2d52",
+   "mural_id": "b0b763f0-69a8-414c-8943-21942ff2d531",
    "tracked": [
     "title",
     "text",
@@ -56322,7 +56267,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.h2head": {
    "board": {
@@ -56336,7 +56281,7 @@
     "title": "tpl:map_T-skillsfrom#h2head",
     "width": 600,
     "x": 1552,
-    "y": 24
+    "y": 16
    },
    "fields": {
     "font": "proxima-nova",
@@ -56347,9 +56292,9 @@
     "title": "tpl:map_T-skillsfrom#h2head",
     "width": 600,
     "x": 1552,
-    "y": 24
+    "y": 16
    },
-   "mural_id": "92799bac-0c9f-49d2-9d95-fdf275616cc1",
+   "mural_id": "cb06e706-5402-4f55-80c1-93fc79993f78",
    "tracked": [
     "title",
     "text",
@@ -56377,7 +56322,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.h2text": {
    "board": {
@@ -56391,7 +56336,7 @@
     "title": "tpl:map_T-skillsfrom#h2text",
     "width": 600,
     "x": 1552,
-    "y": 92
+    "y": 84
    },
    "fields": {
     "font": "proxima-nova",
@@ -56402,9 +56347,9 @@
     "title": "tpl:map_T-skillsfrom#h2text",
     "width": 600,
     "x": 1552,
-    "y": 92
+    "y": 84
    },
-   "mural_id": "d9497520-89e1-4a53-8bc5-06bcff20169c",
+   "mural_id": "03cee10d-5f1e-499a-90f7-e7be20fc73d0",
    "tracked": [
     "title",
     "text",
@@ -56432,7 +56377,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.h3arrow": {
    "board": {
@@ -56444,11 +56389,11 @@
     "points": [
      [
       2200,
-      76
+      68
      ],
      [
       2264,
-      76
+      68
      ]
     ],
     "text": "",
@@ -56464,17 +56409,17 @@
     "points": [
      [
       2200,
-      76
+      68
      ],
      [
       2264,
-      76
+      68
      ]
     ],
     "tip": "end",
     "title": "tpl:map_T-skillsfrom#h3arrow"
    },
-   "mural_id": "023d7fe5-7387-4722-b6dd-0f096d907cc3",
+   "mural_id": "3c4371a1-d599-4779-b0e6-d7b7abfcda65",
    "tracked": [
     "title",
     "text",
@@ -56502,7 +56447,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320253018
+   "updatedOn": 1793320571605
   },
   "T-skillsfrom-map.h3box": {
    "board": {
@@ -56510,7 +56455,7 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#E8DAFFFF",
-    "height": 152,
+    "height": 136,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
@@ -56523,7 +56468,7 @@
     "border_color": "#E8DAFFFF",
     "border_width": 1,
     "color": "#E8DAFFFF",
-    "height": 152,
+    "height": 136,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
@@ -56532,7 +56477,7 @@
     "x": 2280,
     "y": 0
    },
-   "mural_id": "684b9b63-d57c-42bc-ad66-26aea0b86f0f",
+   "mural_id": "b98420e3-d0a0-45c5-946e-9034ea8ca582",
    "tracked": [
     "title",
     "text",
@@ -56560,7 +56505,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.h3head": {
    "board": {
@@ -56574,7 +56519,7 @@
     "title": "tpl:map_T-skillsfrom#h3head",
     "width": 600,
     "x": 2312,
-    "y": 24
+    "y": 16
    },
    "fields": {
     "font": "proxima-nova",
@@ -56585,9 +56530,9 @@
     "title": "tpl:map_T-skillsfrom#h3head",
     "width": 600,
     "x": 2312,
-    "y": 24
+    "y": 16
    },
-   "mural_id": "bc0821db-f68e-4ed4-b2c7-749fd509c7c7",
+   "mural_id": "815559c2-46dc-4f8b-b60d-8f9e24a2c84e",
    "tracked": [
     "title",
     "text",
@@ -56615,7 +56560,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.h3text": {
    "board": {
@@ -56629,7 +56574,7 @@
     "title": "tpl:map_T-skillsfrom#h3text",
     "width": 600,
     "x": 2312,
-    "y": 92
+    "y": 84
    },
    "fields": {
     "font": "proxima-nova",
@@ -56640,9 +56585,9 @@
     "title": "tpl:map_T-skillsfrom#h3text",
     "width": 600,
     "x": 2312,
-    "y": 92
+    "y": 84
    },
-   "mural_id": "721b7e0c-0ed3-4c5e-98f3-6bc634342f47",
+   "mural_id": "57180bba-1532-479b-9250-ce93c4c25efa",
    "tracked": [
     "title",
     "text",
@@ -56670,7 +56615,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r0c0box": {
    "board": {
@@ -56678,29 +56623,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r0c0box",
     "width": 664,
     "x": 0,
-    "y": 176
+    "y": 160
    },
    "fields": {
     "border_color": "#491D8BFF",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r0c0box",
     "width": 664,
     "x": 0,
-    "y": 176
+    "y": 160
    },
-   "mural_id": "8cd759ad-b181-478b-929f-b444c8f610e2",
+   "mural_id": "75cbad46-120e-47db-b784-c4d4570625d7",
    "tracked": [
     "title",
     "text",
@@ -56728,7 +56673,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r0c0head": {
    "board": {
@@ -56742,7 +56687,7 @@
     "title": "tpl:map_T-skillsfrom#r0c0head",
     "width": 600,
     "x": 32,
-    "y": 188
+    "y": 162
    },
    "fields": {
     "font": "proxima-nova",
@@ -56753,9 +56698,9 @@
     "title": "tpl:map_T-skillsfrom#r0c0head",
     "width": 600,
     "x": 32,
-    "y": 188
+    "y": 162
    },
-   "mural_id": "1003f628-ad2c-480c-bc81-6d87cfab58fe",
+   "mural_id": "1964dd2c-8682-4f12-a4fc-0b7eddb2792e",
    "tracked": [
     "title",
     "text",
@@ -56783,7 +56728,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r0c0text": {
    "board": {
@@ -56797,7 +56742,7 @@
     "title": "tpl:map_T-skillsfrom#r0c0text",
     "width": 600,
     "x": 32,
-    "y": 242
+    "y": 218
    },
    "fields": {
     "font": "proxima-nova",
@@ -56808,9 +56753,9 @@
     "title": "tpl:map_T-skillsfrom#r0c0text",
     "width": 600,
     "x": 32,
-    "y": 242
+    "y": 218
    },
-   "mural_id": "86cd5870-263b-428f-8911-22c9d15a64e2",
+   "mural_id": "3a6233e3-f768-4f33-892a-42c532a0f046",
    "tracked": [
     "title",
     "text",
@@ -56838,7 +56783,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r0c1box": {
    "board": {
@@ -56846,29 +56791,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r0c1box",
     "width": 664,
     "x": 760,
-    "y": 176
+    "y": 160
    },
    "fields": {
     "border_color": "#BE95FFFF",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r0c1box",
     "width": 664,
     "x": 760,
-    "y": 176
+    "y": 160
    },
-   "mural_id": "ded4c9f5-db33-46f9-9f9d-9c7e267db285",
+   "mural_id": "ad18b412-7424-4621-b8bb-22a0035d2342",
    "tracked": [
     "title",
     "text",
@@ -56896,7 +56841,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r0c1text": {
    "board": {
@@ -56910,7 +56855,7 @@
     "title": "tpl:map_T-skillsfrom#r0c1text",
     "width": 600,
     "x": 792,
-    "y": 211
+    "y": 187
    },
    "fields": {
     "font": "proxima-nova",
@@ -56921,9 +56866,9 @@
     "title": "tpl:map_T-skillsfrom#r0c1text",
     "width": 600,
     "x": 792,
-    "y": 211
+    "y": 187
    },
-   "mural_id": "8dd91dab-f9ba-46c2-9cf5-ac80ed2add59",
+   "mural_id": "1cd03459-b581-41e1-99df-5e5dddc9f3bb",
    "tracked": [
     "title",
     "text",
@@ -56951,7 +56896,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r0c2box": {
    "board": {
@@ -56959,29 +56904,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#D4BBFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r0c2box",
     "width": 664,
     "x": 1520,
-    "y": 176
+    "y": 160
    },
    "fields": {
     "border_color": "#D4BBFFFF",
     "border_width": 1,
     "color": "#D4BBFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r0c2box",
     "width": 664,
     "x": 1520,
-    "y": 176
+    "y": 160
    },
-   "mural_id": "b9d6f0f0-d1e1-4a67-8bab-507e4540f7d3",
+   "mural_id": "50baa960-2615-4f03-bf5e-75d89e94a1b9",
    "tracked": [
     "title",
     "text",
@@ -57009,7 +56954,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r0c2chip": {
    "board": {
@@ -57018,7 +56963,7 @@
     "title": "tpl:map_T-skillsfrom#r0c2chip",
     "width": 413,
     "x": 1552,
-    "y": 202
+    "y": 178
    },
    "fields": {
     "file": "2026-10-29-friday-talk-icons/chip-skillsfrom-r0.png@fa31392bb42370a1",
@@ -57027,9 +56972,9 @@
     "title": "tpl:map_T-skillsfrom#r0c2chip",
     "width": 413,
     "x": 1552,
-    "y": 202
+    "y": 178
    },
-   "mural_id": "51fe3a4e-2625-4c1f-aaf4-e0273f4264e6",
+   "mural_id": "81135856-c7bd-4060-bf84-421287fc4493",
    "tracked": [
     "title",
     "text",
@@ -57057,7 +57002,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320251804
+   "updatedOn": 1793320570467
   },
   "T-skillsfrom-map.r0c3box": {
    "board": {
@@ -57065,29 +57010,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#E8DAFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r0c3box",
     "width": 664,
     "x": 2280,
-    "y": 176
+    "y": 160
    },
    "fields": {
     "border_color": "#E8DAFFFF",
     "border_width": 1,
     "color": "#E8DAFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r0c3box",
     "width": 664,
     "x": 2280,
-    "y": 176
+    "y": 160
    },
-   "mural_id": "75ea9467-5c6c-4849-9ae5-6f0893a2ca9e",
+   "mural_id": "173b3fe8-2113-43d1-b9a5-4f7b873203b1",
    "tracked": [
     "title",
     "text",
@@ -57115,7 +57060,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r0c3text": {
    "board": {
@@ -57129,7 +57074,7 @@
     "title": "tpl:map_T-skillsfrom#r0c3text",
     "width": 600,
     "x": 2312,
-    "y": 211
+    "y": 187
    },
    "fields": {
     "font": "proxima-nova",
@@ -57140,9 +57085,9 @@
     "title": "tpl:map_T-skillsfrom#r0c3text",
     "width": 600,
     "x": 2312,
-    "y": 211
+    "y": 187
    },
-   "mural_id": "a37bf2e5-788f-4b39-8688-7cbfad871a16",
+   "mural_id": "eed61d38-4c4a-49cc-a895-3c42972ff8ce",
    "tracked": [
     "title",
     "text",
@@ -57170,7 +57115,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r1c0box": {
    "board": {
@@ -57178,29 +57123,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r1c0box",
     "width": 664,
     "x": 0,
-    "y": 320
+    "y": 288
    },
    "fields": {
     "border_color": "#491D8BFF",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r1c0box",
     "width": 664,
     "x": 0,
-    "y": 320
+    "y": 288
    },
-   "mural_id": "f83e06cf-daa5-4925-924f-2d0d603f3c55",
+   "mural_id": "d5ad86f4-c5d2-4db1-892e-f0a4e78f8c17",
    "tracked": [
     "title",
     "text",
@@ -57228,7 +57173,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r1c0head": {
    "board": {
@@ -57242,7 +57187,7 @@
     "title": "tpl:map_T-skillsfrom#r1c0head",
     "width": 600,
     "x": 32,
-    "y": 332
+    "y": 290
    },
    "fields": {
     "font": "proxima-nova",
@@ -57253,9 +57198,9 @@
     "title": "tpl:map_T-skillsfrom#r1c0head",
     "width": 600,
     "x": 32,
-    "y": 332
+    "y": 290
    },
-   "mural_id": "effa7fdb-caa3-46aa-8690-b2fb6e69abd9",
+   "mural_id": "b4ef0c39-242b-4991-b7ef-0a52ed4fce2c",
    "tracked": [
     "title",
     "text",
@@ -57283,7 +57228,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r1c0text": {
    "board": {
@@ -57297,7 +57242,7 @@
     "title": "tpl:map_T-skillsfrom#r1c0text",
     "width": 600,
     "x": 32,
-    "y": 386
+    "y": 346
    },
    "fields": {
     "font": "proxima-nova",
@@ -57308,9 +57253,9 @@
     "title": "tpl:map_T-skillsfrom#r1c0text",
     "width": 600,
     "x": 32,
-    "y": 386
+    "y": 346
    },
-   "mural_id": "ad2b0ac7-e001-4005-8063-87f7e5ce936a",
+   "mural_id": "69071735-a4ff-4390-86c9-ba9d2cda1a8a",
    "tracked": [
     "title",
     "text",
@@ -57338,7 +57283,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r1c1box": {
    "board": {
@@ -57346,29 +57291,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r1c1box",
     "width": 664,
     "x": 760,
-    "y": 320
+    "y": 288
    },
    "fields": {
     "border_color": "#BE95FFFF",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r1c1box",
     "width": 664,
     "x": 760,
-    "y": 320
+    "y": 288
    },
-   "mural_id": "90567a28-8c9c-45d5-a187-72e212e9490b",
+   "mural_id": "5eff8d14-8b4f-4364-a932-e6a90b587f90",
    "tracked": [
     "title",
     "text",
@@ -57396,7 +57341,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r1c1text": {
    "board": {
@@ -57410,7 +57355,7 @@
     "title": "tpl:map_T-skillsfrom#r1c1text",
     "width": 600,
     "x": 792,
-    "y": 355
+    "y": 315
    },
    "fields": {
     "font": "proxima-nova",
@@ -57421,9 +57366,9 @@
     "title": "tpl:map_T-skillsfrom#r1c1text",
     "width": 600,
     "x": 792,
-    "y": 355
+    "y": 315
    },
-   "mural_id": "a6d0544b-19ee-4768-94c5-d1afae1a0646",
+   "mural_id": "856700e2-1a4b-49bc-9043-b2d2e8cd20e2",
    "tracked": [
     "title",
     "text",
@@ -57451,7 +57396,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r1c2box": {
    "board": {
@@ -57459,29 +57404,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#D4BBFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r1c2box",
     "width": 664,
     "x": 1520,
-    "y": 320
+    "y": 288
    },
    "fields": {
     "border_color": "#D4BBFFFF",
     "border_width": 1,
     "color": "#D4BBFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r1c2box",
     "width": 664,
     "x": 1520,
-    "y": 320
+    "y": 288
    },
-   "mural_id": "148b3310-dab8-43a8-a1ad-ff6dce1754f3",
+   "mural_id": "df002b1d-0504-4396-b23c-2b5df6184c4b",
    "tracked": [
     "title",
     "text",
@@ -57509,7 +57454,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r1c2chip": {
    "board": {
@@ -57518,7 +57463,7 @@
     "title": "tpl:map_T-skillsfrom#r1c2chip",
     "width": 374,
     "x": 1552,
-    "y": 346
+    "y": 306
    },
    "fields": {
     "file": "2026-10-29-friday-talk-icons/chip-skillsfrom-r1.png@8b11656a386ed7b5",
@@ -57527,9 +57472,9 @@
     "title": "tpl:map_T-skillsfrom#r1c2chip",
     "width": 374,
     "x": 1552,
-    "y": 346
+    "y": 306
    },
-   "mural_id": "d352861c-ea19-4f42-941e-dfddd67469f9",
+   "mural_id": "6c4c44af-deb0-4b94-bdeb-4114f71d2d2f",
    "tracked": [
     "title",
     "text",
@@ -57557,7 +57502,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320251657
+   "updatedOn": 1793320570554
   },
   "T-skillsfrom-map.r1c3box": {
    "board": {
@@ -57565,29 +57510,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#E8DAFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r1c3box",
     "width": 664,
     "x": 2280,
-    "y": 320
+    "y": 288
    },
    "fields": {
     "border_color": "#E8DAFFFF",
     "border_width": 1,
     "color": "#E8DAFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r1c3box",
     "width": 664,
     "x": 2280,
-    "y": 320
+    "y": 288
    },
-   "mural_id": "8baf809c-5bbb-4642-9adf-1bd127c6adf6",
+   "mural_id": "856727dd-ae7a-45d6-92f6-cd5857acf750",
    "tracked": [
     "title",
     "text",
@@ -57615,7 +57560,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r1c3text": {
    "board": {
@@ -57629,7 +57574,7 @@
     "title": "tpl:map_T-skillsfrom#r1c3text",
     "width": 600,
     "x": 2312,
-    "y": 330
+    "y": 290
    },
    "fields": {
     "font": "proxima-nova",
@@ -57640,9 +57585,9 @@
     "title": "tpl:map_T-skillsfrom#r1c3text",
     "width": 600,
     "x": 2312,
-    "y": 330
+    "y": 290
    },
-   "mural_id": "6c92ff10-dbb3-4164-8214-4dca6bb78780",
+   "mural_id": "2cd1d952-9062-4eb6-8bb6-e48f89961465",
    "tracked": [
     "title",
     "text",
@@ -57670,7 +57615,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r2c0box": {
    "board": {
@@ -57678,29 +57623,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r2c0box",
     "width": 664,
     "x": 0,
-    "y": 464
+    "y": 416
    },
    "fields": {
     "border_color": "#491D8BFF",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r2c0box",
     "width": 664,
     "x": 0,
-    "y": 464
+    "y": 416
    },
-   "mural_id": "7329ec43-126a-4395-93ab-bd0956fa356c",
+   "mural_id": "a3c1082b-a5f3-49d8-b658-d6f85ff52946",
    "tracked": [
     "title",
     "text",
@@ -57728,7 +57673,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r2c0head": {
    "board": {
@@ -57742,7 +57687,7 @@
     "title": "tpl:map_T-skillsfrom#r2c0head",
     "width": 600,
     "x": 32,
-    "y": 476
+    "y": 418
    },
    "fields": {
     "font": "proxima-nova",
@@ -57753,9 +57698,9 @@
     "title": "tpl:map_T-skillsfrom#r2c0head",
     "width": 600,
     "x": 32,
-    "y": 476
+    "y": 418
    },
-   "mural_id": "e5bd572c-0553-4890-b5fd-e689ac590497",
+   "mural_id": "c617e51a-00a8-4396-84f2-f4946b8d0463",
    "tracked": [
     "title",
     "text",
@@ -57783,7 +57728,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r2c0text": {
    "board": {
@@ -57797,7 +57742,7 @@
     "title": "tpl:map_T-skillsfrom#r2c0text",
     "width": 600,
     "x": 32,
-    "y": 530
+    "y": 474
    },
    "fields": {
     "font": "proxima-nova",
@@ -57808,9 +57753,9 @@
     "title": "tpl:map_T-skillsfrom#r2c0text",
     "width": 600,
     "x": 32,
-    "y": 530
+    "y": 474
    },
-   "mural_id": "5c1711ae-afef-419d-aca1-609dabdd5805",
+   "mural_id": "feb151bd-9c9f-4749-86ce-7a7ef9305a45",
    "tracked": [
     "title",
     "text",
@@ -57838,7 +57783,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r2c1box": {
    "board": {
@@ -57846,29 +57791,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r2c1box",
     "width": 664,
     "x": 760,
-    "y": 464
+    "y": 416
    },
    "fields": {
     "border_color": "#BE95FFFF",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r2c1box",
     "width": 664,
     "x": 760,
-    "y": 464
+    "y": 416
    },
-   "mural_id": "a61227ac-9b0d-4c4a-a012-1c88ac8381d3",
+   "mural_id": "b4d7e87e-bead-482d-afcc-bdb0d9566157",
    "tracked": [
     "title",
     "text",
@@ -57896,7 +57841,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r2c1text": {
    "board": {
@@ -57910,7 +57855,7 @@
     "title": "tpl:map_T-skillsfrom#r2c1text",
     "width": 600,
     "x": 792,
-    "y": 499
+    "y": 443
    },
    "fields": {
     "font": "proxima-nova",
@@ -57921,9 +57866,9 @@
     "title": "tpl:map_T-skillsfrom#r2c1text",
     "width": 600,
     "x": 792,
-    "y": 499
+    "y": 443
    },
-   "mural_id": "a986d975-a5d6-4150-8c7c-17a2171b7c1a",
+   "mural_id": "ca2e383a-717d-40e8-9135-e6bd2f3251f3",
    "tracked": [
     "title",
     "text",
@@ -57951,7 +57896,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom-map.r2c2box": {
    "board": {
@@ -57959,29 +57904,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#D4BBFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r2c2box",
     "width": 664,
     "x": 1520,
-    "y": 464
+    "y": 416
    },
    "fields": {
     "border_color": "#D4BBFFFF",
     "border_width": 1,
     "color": "#D4BBFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r2c2box",
     "width": 664,
     "x": 1520,
-    "y": 464
+    "y": 416
    },
-   "mural_id": "b18a8cd6-5ef4-46a1-8e7a-7cd267205e77",
+   "mural_id": "0bcdfb13-faa2-472b-9c4e-0067d0995ae9",
    "tracked": [
     "title",
     "text",
@@ -58009,7 +57954,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r2c2chip": {
    "board": {
@@ -58018,7 +57963,7 @@
     "title": "tpl:map_T-skillsfrom#r2c2chip",
     "width": 317,
     "x": 1552,
-    "y": 490
+    "y": 434
    },
    "fields": {
     "file": "2026-10-29-friday-talk-icons/chip-skillsfrom-r2.png@d235d2ba24be9404",
@@ -58027,9 +57972,9 @@
     "title": "tpl:map_T-skillsfrom#r2c2chip",
     "width": 317,
     "x": 1552,
-    "y": 490
+    "y": 434
    },
-   "mural_id": "a1c8d6f5-b14e-4098-8e9a-42dc530e6750",
+   "mural_id": "55a2996e-8355-40fa-9de3-473f08449092",
    "tracked": [
     "title",
     "text",
@@ -58057,7 +58002,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320251665
+   "updatedOn": 1793320570558
   },
   "T-skillsfrom-map.r2c3box": {
    "board": {
@@ -58065,29 +58010,29 @@
     "border_style": "solid",
     "border_width": 1,
     "color": "#E8DAFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r2c3box",
     "width": 664,
     "x": 2280,
-    "y": 464
+    "y": 416
    },
    "fields": {
     "border_color": "#E8DAFFFF",
     "border_width": 1,
     "color": "#E8DAFFFF",
-    "height": 128,
+    "height": 112,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
     "title": "tpl:map_T-skillsfrom#r2c3box",
     "width": 664,
     "x": 2280,
-    "y": 464
+    "y": 416
    },
-   "mural_id": "4435f1a5-5a1f-46d5-a404-a4f6b2368e1f",
+   "mural_id": "88ae64f5-e00f-4d92-a266-e3f76746cc4f",
    "tracked": [
     "title",
     "text",
@@ -58115,7 +58060,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
   "T-skillsfrom-map.r2c3text": {
    "board": {
@@ -58129,7 +58074,7 @@
     "title": "tpl:map_T-skillsfrom#r2c3text",
     "width": 600,
     "x": 2312,
-    "y": 499
+    "y": 443
    },
    "fields": {
     "font": "proxima-nova",
@@ -58140,9 +58085,9 @@
     "title": "tpl:map_T-skillsfrom#r2c3text",
     "width": 600,
     "x": 2312,
-    "y": 499
+    "y": 443
    },
-   "mural_id": "864b603e-04a2-48a5-b359-ec0fa26b6291",
+   "mural_id": "aafcfc21-2d0b-4ee7-a548-87a0209ae54c",
    "tracked": [
     "title",
     "text",
@@ -58170,37 +58115,37 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
-  "T-skillsfrom-map.r3c0box": {
+  "T-skillsfrom-map.w0bar": {
    "board": {
     "border_color": "#491D8BFF",
     "border_style": "solid",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 128,
+    "height": 8,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
-    "title": "tpl:map_T-skillsfrom#r3c0box",
+    "title": "tpl:map_T-skillsfrom#w0bar",
     "width": 664,
     "x": 0,
-    "y": 608
+    "y": 636
    },
    "fields": {
     "border_color": "#491D8BFF",
     "border_width": 1,
     "color": "#491D8BFF",
-    "height": 128,
+    "height": 8,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
-    "title": "tpl:map_T-skillsfrom#r3c0box",
+    "title": "tpl:map_T-skillsfrom#w0bar",
     "width": 664,
     "x": 0,
-    "y": 608
+    "y": 636
    },
-   "mural_id": "cf19b5c7-f63e-497a-a0bf-d3f96550d746",
+   "mural_id": "9763f960-df5a-4640-9a32-d1973fd5d610",
    "tracked": [
     "title",
     "text",
@@ -58228,34 +58173,37 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
-  "T-skillsfrom-map.r3c0head": {
+  "T-skillsfrom-map.w0box": {
    "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 40,
-    "ink": "#FFFFFFFF",
+    "border_color": "#F4F4F4FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 256,
+    "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
-    "text": "COR-010",
-    "title": "tpl:map_T-skillsfrom#r3c0head",
-    "width": 600,
-    "x": 32,
-    "y": 620
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w0box",
+    "width": 664,
+    "x": 0,
+    "y": 636
    },
    "fields": {
-    "font": "proxima-nova",
-    "font_size": 40,
-    "ink": "#FFFFFFFF",
+    "border_color": "#F4F4F4FF",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 256,
+    "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
-    "text": "COR-010",
-    "title": "tpl:map_T-skillsfrom#r3c0head",
-    "width": 600,
-    "x": 32,
-    "y": 620
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w0box",
+    "width": 664,
+    "x": 0,
+    "y": 636
    },
-   "mural_id": "f7b20481-77bd-4977-b39d-e2b721bfe077",
+   "mural_id": "4f5e86f2-d69e-4bcb-a783-0ef750bf450a",
    "tracked": [
     "title",
     "text",
@@ -58283,34 +58231,34 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320568606
   },
-  "T-skillsfrom-map.r3c0text": {
+  "T-skillsfrom-map.w0text": {
    "board": {
     "align": "left",
     "color": "#FFFFFF00",
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#FFFFFFFF",
+    "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
-    "text": "Migrations",
-    "title": "tpl:map_T-skillsfrom#r3c0text",
+    "text": "The reason lives in one place. The skill points to it and never copies it.",
+    "title": "tpl:map_T-skillsfrom#w0text",
     "width": 600,
     "x": 32,
-    "y": 674
+    "y": 668
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
-    "ink": "#FFFFFFFF",
+    "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
-    "text": "Migrations",
-    "title": "tpl:map_T-skillsfrom#r3c0text",
+    "text": "The reason lives in one place. The skill points to it and never copies it.",
+    "title": "tpl:map_T-skillsfrom#w0text",
     "width": 600,
     "x": 32,
-    "y": 674
+    "y": 668
    },
-   "mural_id": "cd025163-3e44-41e6-9a07-cb96ef37ca1b",
+   "mural_id": "2a5b4b7e-dba8-4466-b841-86836d10c13d",
    "tracked": [
     "title",
     "text",
@@ -58338,37 +58286,37 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
   },
-  "T-skillsfrom-map.r3c1box": {
+  "T-skillsfrom-map.w1bar": {
    "board": {
     "border_color": "#BE95FFFF",
     "border_style": "solid",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 128,
+    "height": 8,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
-    "title": "tpl:map_T-skillsfrom#r3c1box",
+    "title": "tpl:map_T-skillsfrom#w1bar",
     "width": 664,
     "x": 760,
-    "y": 608
+    "y": 636
    },
    "fields": {
     "border_color": "#BE95FFFF",
     "border_width": 1,
     "color": "#BE95FFFF",
-    "height": 128,
+    "height": 8,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
-    "title": "tpl:map_T-skillsfrom#r3c1box",
+    "title": "tpl:map_T-skillsfrom#w1bar",
     "width": 664,
     "x": 760,
-    "y": 608
+    "y": 636
    },
-   "mural_id": "0b290028-38e6-48e8-b699-0b95a8348697",
+   "mural_id": "6143c694-91fd-493e-abeb-c80ff64a62c8",
    "tracked": [
     "title",
     "text",
@@ -58396,92 +58344,37 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
-  "T-skillsfrom-map.r3c1text": {
+  "T-skillsfrom-map.w1box": {
    "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 40,
-    "ink": "#161616FF",
-    "parent": "T-skillsfrom-map",
-    "text": "migration-author",
-    "title": "tpl:map_T-skillsfrom#r3c1text",
-    "width": 600,
-    "x": 792,
-    "y": 643
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 40,
-    "ink": "#161616FF",
-    "parent": "T-skillsfrom-map",
-    "text": "migration-author",
-    "title": "tpl:map_T-skillsfrom#r3c1text",
-    "width": 600,
-    "x": 792,
-    "y": 643
-   },
-   "mural_id": "8d9268bc-daa9-40cf-b831-5bc419e7c88b",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793320250588
-  },
-  "T-skillsfrom-map.r3c2box": {
-   "board": {
-    "border_color": "#D4BBFFFF",
+    "border_color": "#F4F4F4FF",
     "border_style": "solid",
     "border_width": 1,
-    "color": "#D4BBFFFF",
-    "height": 128,
+    "color": "#F4F4F4FF",
+    "height": 256,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
-    "title": "tpl:map_T-skillsfrom#r3c2box",
+    "title": "tpl:map_T-skillsfrom#w1box",
     "width": 664,
-    "x": 1520,
-    "y": 608
+    "x": 760,
+    "y": 636
    },
    "fields": {
-    "border_color": "#D4BBFFFF",
+    "border_color": "#F4F4F4FF",
     "border_width": 1,
-    "color": "#D4BBFFFF",
-    "height": 128,
+    "color": "#F4F4F4FF",
+    "height": 256,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
     "text": "",
-    "title": "tpl:map_T-skillsfrom#r3c2box",
+    "title": "tpl:map_T-skillsfrom#w1box",
     "width": 664,
-    "x": 1520,
-    "y": 608
+    "x": 760,
+    "y": 636
    },
-   "mural_id": "5a3b1fdb-d81c-4d57-827a-6d3e0068a768",
+   "mural_id": "b9289210-e69d-47bd-a7c5-dde67991ebf3",
    "tracked": [
     "title",
     "text",
@@ -58509,115 +58402,9 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320249630
+   "updatedOn": 1793320568606
   },
-  "T-skillsfrom-map.r3c2chip": {
-   "board": {
-    "height": 76,
-    "parent": "T-skillsfrom-map",
-    "title": "tpl:map_T-skillsfrom#r3c2chip",
-    "width": 394,
-    "x": 1552,
-    "y": 634
-   },
-   "fields": {
-    "file": "2026-10-29-friday-talk-icons/chip-skillsfrom-r3.png@e5ba902131cb4fd3",
-    "height": 76,
-    "parent": "T-skillsfrom-map",
-    "title": "tpl:map_T-skillsfrom#r3c2chip",
-    "width": 394,
-    "x": 1552,
-    "y": 634
-   },
-   "mural_id": "c8c53e2c-2c6b-4d4b-8b3f-b464a8a75281",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793320251767
-  },
-  "T-skillsfrom-map.r3c3box": {
-   "board": {
-    "border_color": "#E8DAFFFF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#E8DAFFFF",
-    "height": 128,
-    "ink": "#161616FF",
-    "parent": "T-skillsfrom-map",
-    "text": "",
-    "title": "tpl:map_T-skillsfrom#r3c3box",
-    "width": 664,
-    "x": 2280,
-    "y": 608
-   },
-   "fields": {
-    "border_color": "#E8DAFFFF",
-    "border_width": 1,
-    "color": "#E8DAFFFF",
-    "height": 128,
-    "ink": "#161616FF",
-    "parent": "T-skillsfrom-map",
-    "text": "",
-    "title": "tpl:map_T-skillsfrom#r3c3box",
-    "width": 664,
-    "x": 2280,
-    "y": 608
-   },
-   "mural_id": "0d2cd2ab-b2ac-4a85-87e1-1854ecdf88d9",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793320249630
-  },
-  "T-skillsfrom-map.r3c3text": {
+  "T-skillsfrom-map.w1text": {
    "board": {
     "align": "left",
     "color": "#FFFFFF00",
@@ -58625,24 +58412,24 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
-    "text": "A script that upgrades installed projects",
-    "title": "tpl:map_T-skillsfrom#r3c3text",
+    "text": "A command cannot pick a name or write the body. Without a skill, agents skipped the writing rules.",
+    "title": "tpl:map_T-skillsfrom#w1text",
     "width": 600,
-    "x": 2312,
-    "y": 618
+    "x": 792,
+    "y": 668
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-skillsfrom-map",
-    "text": "A script that upgrades installed projects",
-    "title": "tpl:map_T-skillsfrom#r3c3text",
+    "text": "A command cannot pick a name or write the body. Without a skill, agents skipped the writing rules.",
+    "title": "tpl:map_T-skillsfrom#w1text",
     "width": 600,
-    "x": 2312,
-    "y": 618
+    "x": 792,
+    "y": 668
    },
-   "mural_id": "ae9401cf-bc11-4aca-92cc-67967c4f7be4",
+   "mural_id": "37eff0c8-aad9-43d2-80b9-1fbe4cde3f67",
    "tracked": [
     "title",
     "text",
@@ -58670,7 +58457,404 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320569573
+  },
+  "T-skillsfrom-map.w2bar": {
+   "board": {
+    "border_color": "#D4BBFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w2bar",
+    "width": 664,
+    "x": 1520,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#D4BBFFFF",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w2bar",
+    "width": 664,
+    "x": 1520,
+    "y": 636
+   },
+   "mural_id": "428566b5-efad-4081-93aa-980641060463",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793320568606
+  },
+  "T-skillsfrom-map.w2box": {
+   "board": {
+    "border_color": "#F4F4F4FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 256,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w2box",
+    "width": 664,
+    "x": 1520,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#F4F4F4FF",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 256,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w2box",
+    "width": 664,
+    "x": 1520,
+    "y": 636
+   },
+   "mural_id": "eed2e6b9-490a-4333-a735-a777b96906b5",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793320568606
+  },
+  "T-skillsfrom-map.w2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "An agent can miscount. A record written by hand once got a wrong number.",
+    "title": "tpl:map_T-skillsfrom#w2text",
+    "width": 600,
+    "x": 1552,
+    "y": 668
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "An agent can miscount. A record written by hand once got a wrong number.",
+    "title": "tpl:map_T-skillsfrom#w2text",
+    "width": 600,
+    "x": 1552,
+    "y": 668
+   },
+   "mural_id": "67e630cf-5100-47e0-99e3-750f62eb12a0",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793320569573
+  },
+  "T-skillsfrom-map.w3bar": {
+   "board": {
+    "border_color": "#E8DAFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w3bar",
+    "width": 664,
+    "x": 2280,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#E8DAFFFF",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w3bar",
+    "width": 664,
+    "x": 2280,
+    "y": 636
+   },
+   "mural_id": "d9a7da27-b82a-46fa-924d-a1f2b1b0da11",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793320568606
+  },
+  "T-skillsfrom-map.w3box": {
+   "board": {
+    "border_color": "#F4F4F4FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 256,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w3box",
+    "width": 664,
+    "x": 2280,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#F4F4F4FF",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 256,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-skillsfrom#w3box",
+    "width": 664,
+    "x": 2280,
+    "y": 636
+   },
+   "mural_id": "80940843-1e3b-46b6-98e6-2d128dfe783d",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793320568606
+  },
+  "T-skillsfrom-map.w3text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "Every file of a kind has the same shape, whoever writes it.",
+    "title": "tpl:map_T-skillsfrom#w3text",
+    "width": 600,
+    "x": 2312,
+    "y": 668
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "Every file of a kind has the same shape, whoever writes it.",
+    "title": "tpl:map_T-skillsfrom#w3text",
+    "width": 600,
+    "x": 2312,
+    "y": 668
+   },
+   "mural_id": "57e8abc3-eae0-4abf-819f-f59f02cc7053",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793320569573
+  },
+  "T-skillsfrom-map.whyhead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "Why pkit splits the work this way",
+    "title": "tpl:map_T-skillsfrom#whyhead",
+    "width": 2944,
+    "x": 0,
+    "y": 568
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-skillsfrom-map",
+    "text": "Why pkit splits the work this way",
+    "title": "tpl:map_T-skillsfrom#whyhead",
+    "width": 2944,
+    "x": 0,
+    "y": 568
+   },
+   "mural_id": "16825f22-5b42-44ea-95f0-8a6ba4f18bb6",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793320569573
   },
   "T-skillsfrom.bg": {
    "board": {
@@ -58737,7 +58921,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-skillsfrom",
-    "text": "pkit's decisions define kinds of file. Each kind gets a skill that writes it as decided, and a command that creates it.",
+    "text": "Each kind of file pkit's decisions define gets a skill for the choices, and a command for the exact part.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -58748,7 +58932,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-skillsfrom",
-    "text": "pkit's decisions define kinds of file. Each kind gets a skill that writes it as decided, and a command that creates it.",
+    "text": "Each kind of file pkit's decisions define gets a skill for the choices, and a command for the exact part.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -58782,7 +58966,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793320571647
   },
   "T-skillsfrom.num": {
    "board": {

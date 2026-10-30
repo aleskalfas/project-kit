@@ -663,15 +663,23 @@ MAP_HEAD_H, MAP_ROW, MAP_GAP, MAP_ARROW = 152, 128, 16, 96
 def table_map(pid, y, v):
     """Columns as the pyramid's layers, side by side in their colours, read left to right: a head per column
     (its name and what it does), then a row per example, a command cell holding its command as a chip in the
-    terminal style. Arrows join the heads. A caption under the rows. One instance of a template made for
+    terminal style. Arrows join the heads. Under the rows, a caption, or a row of reasons (`why`): a heading,
+    then a box under each column, the column's colour as a bar on top. One instance of a template made for
     this slide."""
     cols, rows = v["columns"], v["rows"]
     n = len(cols)
     cw = round((SPAN16 - (n - 1) * MAP_ARROW) / n)
     xs = [i * (cw + MAP_ARROW) for i in range(n)]
-    rows_top = MAP_HEAD_H + 24
-    cap_top = rows_top + len(rows) * MAP_ROW + (len(rows) - 1) * MAP_GAP + 24
+    HEAD_H, ROW = v.get("head_h", MAP_HEAD_H), v.get("row_h", MAP_ROW)
+    rows_top = HEAD_H + 24
+    cap_top = rows_top + len(rows) * ROW + (len(rows) - 1) * MAP_GAP + 24
     H = cap_top + (56 if v.get("caption") else 0)
+    why = v.get("why")
+    if why:
+        why_top = cap_top + 16
+        lines = max(-(-text_w(t) // (cw - 64)) for t in why["items"])
+        why_h = 32 + lines * 50 + 24
+        H = why_top + 68 + why_h
     parts = {}
 
     def shape(key, x, top, w, h, fill):
@@ -683,31 +691,38 @@ def table_map(pid, y, v):
 
     for i, c in enumerate(cols):
         ink = c.get("ink", "@text_primary")
-        shape(f"h{i}box", xs[i], 0, cw, MAP_HEAD_H, c["fill"])
-        text(f"h{i}head", c["head"], "@style.tile_heading", xs[i] + 32, 24, cw - 64, 64, ink)
-        text(f"h{i}text", c["text"], "@style.body", xs[i] + 32, 92, cw - 64, 50, ink)
+        shape(f"h{i}box", xs[i], 0, cw, HEAD_H, c["fill"])
+        text(f"h{i}head", c["head"], "@style.tile_heading", xs[i] + 32, HEAD_H / 2 - 52, cw - 64, 64, ink)
+        text(f"h{i}text", c["text"], "@style.body", xs[i] + 32, HEAD_H / 2 + 16, cw - 64, 50, ink)
         if i:
-            parts[f"h{i}arrow"] = {"type": "arrow", "points": [[xs[i] - MAP_ARROW + 16, MAP_HEAD_H // 2], [xs[i] - 16, MAP_HEAD_H // 2]],
+            parts[f"h{i}arrow"] = {"type": "arrow", "points": [[xs[i] - MAP_ARROW + 16, HEAD_H // 2], [xs[i] - 16, HEAD_H // 2]],
                                    "arrow_type": "straight", "tip": "end", "color": "@role_code", "border_width": 6, "border_style": "solid"}
     for r, row in enumerate(rows):
-        top = rows_top + r * (MAP_ROW + MAP_GAP)
+        top = rows_top + r * (ROW + MAP_GAP)
         for i, (c, cell) in enumerate(zip(cols, row)):
             ink = c.get("ink", "@text_primary")
             key = f"r{r}c{i}"
-            shape(f"{key}box", xs[i], top, cw, MAP_ROW, c["fill"])
+            shape(f"{key}box", xs[i], top, cw, ROW, c["fill"])
             if c.get("cell") == "chip":
                 file, w, h = chip_png(f"{pid}-r{r}".removeprefix("T-"), cell, v.get("chip_font", 32))
-                parts[f"{key}chip"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": xs[i] + 32, "y": round(top + (MAP_ROW - h) / 2),
+                parts[f"{key}chip"] = {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": xs[i] + 32, "y": round(top + (ROW - h) / 2),
                                        "width": w, "height": h}
             elif isinstance(cell, dict):
-                text(f"{key}head", cell["head"], "@style.key", xs[i] + 32, top + 12, cw - 64, 56, ink)
-                text(f"{key}text", cell["text"], "@style.body", xs[i] + 32, top + 66, cw - 64, 50, ink)
+                text(f"{key}head", cell["head"], "@style.key", xs[i] + 32, top + ROW / 2 - 54, cw - 64, 56, ink)
+                text(f"{key}text", cell["text"], "@style.body", xs[i] + 32, top + ROW / 2 + 2, cw - 64, 50, ink)
             else:
                 lines = 1 if text_w(cell) <= cw - 64 else 2
                 style = "@style.key" if c.get("cell") == "name" else "@style.body"
-                text(f"{key}text", cell, style, xs[i] + 32, top + (MAP_ROW - lines * 50) / 2 - 4, cw - 64, lines * 50, ink)
+                text(f"{key}text", cell, style, xs[i] + 32, top + (ROW - lines * 50) / 2 - 4, cw - 64, lines * 50, ink)
     if v.get("caption"):
         text("caption", v["caption"], "@style.body", 0, cap_top, SPAN16, 50, "@text_secondary")
+    if why:
+        text("whyhead", why["head"], "@style.key", 0, why_top, SPAN16, 56, "@text_primary")
+        for i, (c, t) in enumerate(zip(cols, why["items"])):
+            top = why_top + 68
+            shape(f"w{i}box", xs[i], top, cw, why_h, "@role_neutral_bg")
+            shape(f"w{i}bar", xs[i], top, cw, 8, c["fill"])
+            text(f"w{i}text", t, "@style.body", xs[i] + 32, top + 32, cw - 64, why_h - 56, "@text_primary")
     name = f"map_{pid}"
     EXTRA_TEMPLATES[name] = {
         "note": "Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the slide generator.",

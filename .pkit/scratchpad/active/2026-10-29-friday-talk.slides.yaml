@@ -133,13 +133,14 @@ slides:
       h: 300
       w: 600
     - head: Carried out
-      text: Each layer carries out the decisions above it.
+      text: Each layer carries out the decisions above it. The reasons stay in one place, where an agent reads them 
+        before it changes anything.
       arrow: down
       at: 0
       h: 440
     - head: Checked
-      text: If a layer and a decision disagree, look for the mistake in the layer first. A decision changes only when 
-        you accept a new one.
+      text: If a layer and a decision disagree, the layer is checked first, so decisions never drift to match the code. 
+        Only you change a decision.
       arrow: up
       at: 492
       h: 440
@@ -153,7 +154,7 @@ slides:
 - id: install
   part: P0
   title: Install pkit
-  message: Install the tool once, then add pkit to each project with one command. Every file it adds is either pkit's or
+  message: Install the tool once, then add pkit to each project with one command. Upgrades replace pkit's files, never 
     yours.
   problem: ''
   does: []
@@ -470,7 +471,7 @@ slides:
         +     record: [PRJ-002]
     - role: people
       head: You accept it
-      text: You see the record and its tie in the pull request, before it merges.
+      text: You see it before it merges, while it is cheapest to change.
       terminal: |-
         # the pull request, before it merges:
           .pkit/decisions/project/PRJ-002-….md
@@ -482,7 +483,7 @@ slides:
         +     record: [PRJ-002]
     - role: agents
       head: A later session finds it
-      text: Before changing a file, the agent looks up its records.
+      text: It starts with none of your reasons, so it looks up the records first.
       terminal: |-
         $ pkit refs records-for .pkit/release/README.md
         6 records tied directly:
@@ -505,7 +506,8 @@ slides:
 - id: sessions
   part: P1
   title: What every session is told
-  message: A few short rules on how to work, pkit's and yours. Each rule names the decision behind it.
+  message: A few short rules on how to work, pkit's and yours. Records are too many to load, so each rule names the one 
+    behind it.
   problem: ''
   does: []
   show: 'This week: each rule got a permanent id and a status. The file every session loads is now generated from the rules.'
@@ -578,8 +580,7 @@ slides:
 - id: skillsfrom
   part: P2
   title: Where skills come from
-  message: pkit's decisions define kinds of file. Each kind gets a skill that writes it as decided, and a command that 
-    creates it.
+  message: Each kind of file pkit's decisions define gets a skill for the choices, and a command for the exact part.
   problem: ''
   does: []
   show: 'In project-kit: pkit ships 11 skills, each with its command.'
@@ -607,16 +608,24 @@ slides:
     - [{head: COR-006, text: Decision records}, decision-author, pkit new decision, 'The next number, proposed until you accept
         it']
     - [{head: COR-013, text: Agents}, agent-author, pkit new agent, An agent file in pkit's shape]
-    - [{head: COR-010, text: Migrations}, migration-author, pkit new migration, A script that upgrades installed 
-        projects]
-    caption: 'And 7 more pairs: areas, adapters, storyboards, schemas, processes, capabilities and reports.'
+    head_h: 136
+    row_h: 112
+    why:
+      head: Why pkit splits the work this way
+      items:
+      - The reason lives in one place. The skill points to it and never copies it.
+      - A command cannot pick a name or write the body. Without a skill, agents skipped the writing rules.
+      - An agent can miscount. A record written by hand once got a wrong number.
+      - Every file of a kind has the same shape, whoever writes it.
   limit: pkit's skills cover only pkit's own files. For work that keeps coming back in your project, you write your own.
   minutes: 1
   notes: 'Skills in pkit are not written at random. pkit''s decisions define kinds of file: scratchpad notes, decision records,
-    agents, migrations and more. Each kind has a skill and a command. The skill holds the choices: which kind, a good name,
-    the body, and your review. The command holds the exact part: the next number, the file''s layout, and a name not yet taken.
-    COR-005 says that every command for creating files ships with its skill, in the same change. COR-007 says that work which
-    comes back two or three times gets a tool. A skill names the decisions it follows in its first lines, and pkit validate
+    agents, migrations and more. Each kind has a skill and a command. 11 such pairs ship with pkit. Why the split: a decision
+    holds the reason, in one place, and a skill points to it instead of copying it (COR-006). A command cannot make the choices:
+    which kind, a good name, the body, and your review. When no skill existed, agents skipped the writing rules (COR-005).
+    A skill alone is not enough either: an agent can miscount, and a record written by hand once got a wrong number (COR-005,
+    PR #16). So numbers, layout and names go in a command. Work that comes back two or three times gets a tool, so it costs
+    less and comes out the same each time (COR-007). A skill names the decisions it follows in its first lines, and pkit validate
     checks those names. Your own skills go in .pkit/skills/project/, beside pkit''s, and a sync never changes them.'
 - id: skills
   part: P2
