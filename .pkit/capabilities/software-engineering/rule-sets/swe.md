@@ -4,8 +4,8 @@ loaded: true
 version: 1.0.0
 rules:
   RS-SWE-001:
-    status: proposed
-    origin: {why: "A builder that runs the whole suite on its change waits on what the project's own gate reports anyway, and builders working side by side each wait on it, so a builder runs the tests of what it changes and the project's fast checks, and leaves the full suite to that gate where the project has one (decided on project-kit#2269, with project-kit#1182 as the evidence)."}
+    status: accepted
+    origin: {date: 2026-10-30, by: "Aleš Kalfas", why: "A builder that runs the whole suite on its change waits on what the project's own gate reports anyway, and builders working side by side each wait on it, so a builder runs the tests of what it changes and the project's fast checks, and leaves the full suite to that gate where the project has one (decided on project-kit#2269, with project-kit#1182 as the evidence)."}
     pkit:
       friction:
         unanchored-because: "A rule about how a session tests its own change while it builds; no record decides it and no file carries it out."

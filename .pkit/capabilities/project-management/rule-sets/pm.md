@@ -4,13 +4,13 @@ loaded: true
 version: 1.0.0
 rules:
   RS-PM-001:
-    status: proposed
+    status: accepted
     origin: {decision: "project-management:DEC-013"}
     pkit:
       friction:
         anchors: {record: ["project-management:DEC-013", "COR-009#3"]}
   RS-PM-003:
-    status: proposed
+    status: accepted
     origin: {decision: "project-management:DEC-012"}
     pkit:
       friction:
