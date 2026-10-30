@@ -37,16 +37,16 @@ pkit:
 
 # JRN-007 — Upgrade one capability, and re-pin its rule set
 
-**Goal:** Upgrade one capability on its own, and re-pin each rule set that inherits its method set once I have reviewed the new major.
+**Goal:** Upgrade one capability on its own, and re-pin each rule set that inherits its method rule set once I have reviewed the new major.
 
 **Steps:**
 
 1. [UC-054](../use-cases/050-adopt/UC-054-upgrade-capability.md) — Upgrade one capability on its own
-   - **Needs from [UC-023](../use-cases/020-set-up/UC-023-add-or-remove-capability.md) (outside this journey):** the [capability](../../glossary.md#term-capability--capability), recorded in the [manifest](../../glossary.md#term-manifest--manifest) at its [version](../../glossary.md#term-version--version). Its [install](../../glossary.md#term-install--install) may have created a [rule set](../../glossary.md#term-rule-set--rule-set) of the [project](../../glossary.md#term-project--project)'s own, which inherits the capability's method set at the major it had then ([COR-017](../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
+   - **Needs from [UC-023](../use-cases/020-set-up/UC-023-add-or-remove-capability.md) (outside this journey):** the [capability](../../glossary.md#term-capability--capability), recorded in the [manifest](../../glossary.md#term-manifest--manifest) at its [version](../../glossary.md#term-version--version). Its [install](../../glossary.md#term-install--install) may have created a [rule set](../../glossary.md#term-rule-set--rule-set) of the [project](../../glossary.md#term-project--project)'s own. That set inherits the capability's method rule set, and pins the major the method rule set had then ([COR-017](../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
    - **Needs from [UC-048](../use-cases/050-adopt/UC-048-install-cli.md) (outside this journey):** a CLI that ships the capability newer than the manifest records, at the [backbone](../../glossary.md#term-backbone--backbone) version the project records. A CLI installed from a tag ships a newer version of a capability only with the backbone's next [release](../../glossary.md#term-release--release) ([ADR-065 point 12](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#12-a-version-identifies-content-only-for-a-tagged-install)). So under such a CLI, this step finishes an upgrade of the capability that stopped before its end.
 2. [UC-053](../use-cases/050-adopt/UC-053-repin-rule-set.md) — Re-pin an inherited rule set once I have reviewed its new major
    - **Needs from step 1 (UC-054):** the method rule set's new major, copied in with the capability's new version. `pkit status` shows each rule set's pin that the new major leaves behind, and `pkit validate` fails on each set that holds one ([COR-051 point 7](../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). Where the project's merges wait on [validation](../../glossary.md#term-validation--validation), the capability's upgrade lands only once the re-pin rides in its [change](../../glossary.md#term-change--change).
-   - **Needs from [UC-038](../use-cases/030-change/UC-038-author-rule-sets.md) (outside this journey):** a rule set the project authored that inherits the method set. Either such a set or the one UC-023 created is enough. No command moves a rule set's pin, so each pin moves only when the adopter edits it (COR-051 point 7).
+   - **Needs from [UC-038](../use-cases/030-change/UC-038-author-rule-sets.md) (outside this journey):** a rule set the project authored that inherits the method rule set. Either such a set or the one UC-023 created is enough. No command moves a rule set's pin, so each pin moves only when the adopter edits it (COR-051 point 7).
 
 **Variants:**
 

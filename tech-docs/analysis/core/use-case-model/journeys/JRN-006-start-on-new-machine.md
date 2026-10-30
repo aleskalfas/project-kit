@@ -61,6 +61,6 @@ pkit:
 
 **Minimal guarantees:**
 
-- Under another CLI [version](../../glossary.md#term-version--version) than the [project](../../glossary.md#term-project--project) records, or over an incomplete [version transition](../../glossary.md#term-version-transition--version-transition), [sync](../../glossary.md#term-sync--sync) writes nothing ([ADR-065 point 7](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#7-syncs-guard-stops-a-command-that-would-propagate-under-another-version)).
+- Where the CLI is at another [release](../../glossary.md#term-release--release) than the [project](../../glossary.md#term-project--project) records, or where a [version transition](../../glossary.md#term-version-transition--version-transition) is incomplete, [sync](../../glossary.md#term-sync--sync) writes nothing ([ADR-065 point 7](../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#7-syncs-guard-stops-a-command-that-would-propagate-under-another-version)).
 - Installing or updating the CLI acts on no project ([COR-059 point 5](../../../../../.pkit/decisions/core/COR-059-version-transition.md#5-the-one-operation-rule-governs-operations-on-a-project)).
 - A [version pin](../../glossary.md#term-version-pin--version-pin) that cannot be fetched never fails a command in the router, and the [system](../../glossary.md#term-system--system) says which CLI ran instead ([ADR-039 D2](../../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#d2--graceful-degradation-is-mandatory)).
