@@ -1,0 +1,6 @@
+component: living-docs
+kind: none
+body: >
+  project-kit's own README captures Claude Code's plugins overview and plugin
+  manifest reference as two sources in living-docs' project tier (#2057). The
+  project tier is this repository's own and never ships, so no surface moves.
