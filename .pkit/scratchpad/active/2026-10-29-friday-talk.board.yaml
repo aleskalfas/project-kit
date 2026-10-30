@@ -8819,7 +8819,7 @@ templates:
         height: 64
       p1text:
         type: text
-        text: '14 issues: plán jedné velké feature'
+        text: '14 issues: rozplánovaná velká feature'
         style: '@style.body'
         ink: '@text_primary'
         x: 1880
@@ -9026,7 +9026,7 @@ templates:
         height: 378
       g1head:
         type: text
-        text: 'Proces: jeden druh schématu'
+        text: 'Proces: zvláštní druh schématu'
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 2006
@@ -9039,7 +9039,7 @@ templates:
         text: ''
         x: 2006
         y: 72
-        width: 763
+        width: 755
         height: 52
         color: '#FCF4D6FF'
         border_color: '#FCF4D6FF'
@@ -9059,12 +9059,12 @@ templates:
         ink: '@text_primary'
       g1tagtext:
         type: text
-        text: 'Příklad z doplňku: není v jádře pkitu'
+        text: 'Příklad z add-onu: není v jádře pkitu'
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
         y: 73
-        width: 715
+        width: 707
         height: 50
       p2head:
         type: text
@@ -9084,7 +9084,7 @@ templates:
         height: 378
       bhead:
         type: text
-        text: Co přináší jádro pkitu, aby to žádný doplněk ani projekt nestavěl znovu
+        text: Co dodá jádro pkitu, takže to žádný add-on ani projekt nemusí stavět znovu
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -9393,7 +9393,7 @@ templates:
         height: 56
       cardtext:
         type: text
-        text: uzavře se, až je vše zaškrtnuté
+        text: uzavře se, až bude vše zaškrtnuté
         style: '@style.body'
         ink: '@text_primary'
         x: 1264
@@ -9432,7 +9432,7 @@ templates:
         height: 92
       p0head:
         type: text
-        text: Přechod ve workflow.yaml doplňku
+        text: Přechod ve workflow.yaml add-onu
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -9448,7 +9448,7 @@ templates:
         height: 344
       p0caption:
         type: text
-        text: Jeho tvar dává jádro pkitu, stejný pro každý proces.
+        text: Tvar souboru určuje jádro pkitu, pro každý proces stejně.
         style: '@style.caption'
         ink: '@text_secondary'
         x: 0
@@ -9515,7 +9515,7 @@ templates:
         height: 92
       p2item1:
         type: text
-        text: Přechod potřebuje svou kontrolu nebo vaše ano, nikdy jen slovo agenta.
+        text: Přechod projde jen po kontrole nebo s vaším ano. Slovo agenta nestačí.
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
@@ -9524,7 +9524,7 @@ templates:
         height: 92
       p2item2:
         type: text
-        text: Doplněk zapisuje každý přechod přes engine pkitu a žádný vlastní nepostavil.
+        text: Add-on si vlastní engine nepsal. Každý přechod za něj provede engine pkitu.
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
@@ -9567,7 +9567,7 @@ templates:
         height: 64
       h0text:
         type: text
-        text: určí druh souboru
+        text: zavede druh souboru
         style: '@style.body'
         ink: '@text_on_color'
         x: 32
@@ -9597,7 +9597,7 @@ templates:
         height: 64
       h1text:
         type: text
-        text: píše ho podle rozhodnutí
+        text: píše podle rozhodnutí
         style: '@style.body'
         ink: '@text_primary'
         x: 792
@@ -9814,7 +9814,7 @@ templates:
         height: 56
       r1c0text:
         type: text
-        text: Rozhodnutí
+        text: Záznamy o rozhodnutí
         style: '@style.body'
         ink: '@text_on_color'
         x: 32
@@ -9875,7 +9875,7 @@ templates:
         ink: '@text_primary'
       r1c3text:
         type: text
-        text: Další číslo, navržené, dokud ho neschválíte
+        text: Záznam s dalším číslem čeká, až ho schválíte
         style: '@style.body'
         ink: '@text_primary'
         x: 2312
@@ -9966,13 +9966,13 @@ templates:
         ink: '@text_primary'
       r2c3text:
         type: text
-        text: Soubor agenta v tvaru pkitu
+        text: Soubor agenta podle vzoru pkitu
         style: '@style.body'
         ink: '@text_primary'
         x: 2312
-        y: 443
+        y: 418
         width: 600
-        height: 50
+        height: 100
       whyhead:
         type: text
         text: Proč pkit práci takhle dělí
@@ -10008,7 +10008,7 @@ templates:
         ink: '@text_primary'
       w0text:
         type: text
-        text: Důvod je na jednom místě. Skill na něj odkazuje a nikdy ho nekopíruje.
+        text: Důvod je zapsaný na jednom místě. Skill na něj odkazuje a nikdy ho nekopíruje.
         style: '@style.body'
         ink: '@text_primary'
         x: 32
@@ -10041,7 +10041,7 @@ templates:
         ink: '@text_primary'
       w1text:
         type: text
-        text: Příkaz nevybere jméno ani nenapíše obsah. Bez skillu agenti vynechávali pravidla psaní.
+        text: Příkaz nevybere název ani nenapíše obsah. Bez skillu agenti pravidla psaní vynechávali.
         style: '@style.body'
         ink: '@text_primary'
         x: 792
@@ -10074,7 +10074,7 @@ templates:
         ink: '@text_primary'
       w2text:
         type: text
-        text: Agent se může přepočítat. Ručně psaný záznam jednou dostal špatné číslo.
+        text: Agent se může přepočítat. Záznam psaný ručně jednou dostal špatné číslo.
         style: '@style.body'
         ink: '@text_primary'
         x: 1552
@@ -10265,7 +10265,7 @@ templates:
         height: 56
       r3text:
         type: text
-        text: Přečíst tvar záznamu
+        text: Přečíst strukturu záznamu
         style: '@style.body'
         ink: '@text_primary'
         x: 96
@@ -10295,7 +10295,7 @@ templates:
         height: 56
       r4text:
         type: text
-        text: Vybrat krátké jméno
+        text: Vybrat krátký název
         style: '@style.body'
         ink: '@text_primary'
         x: 96
@@ -10395,7 +10395,7 @@ templates:
         height: 56
       r7text:
         type: text
-        text: Ověřit ho proti pravidlům
+        text: Zkontrolovat podle pravidel
         style: '@style.body'
         ink: '@text_primary'
         x: 96
@@ -10455,7 +10455,7 @@ templates:
         height: 56
       r9text:
         type: text
-        text: Commit, až ho schválíte
+        text: Commitnout, až ho schválíte
         style: '@style.body'
         ink: '@text_primary'
         x: 96
@@ -10510,7 +10510,7 @@ templates:
         height: 64
       h0text:
         type: text
-        text: určí roli
+        text: zavede roli
         style: '@style.body'
         ink: '@text_on_color'
         x: 32
@@ -10573,7 +10573,7 @@ templates:
         ink: '@text_primary'
       h2head:
         type: text
-        text: Jeho limit
+        text: Jeho meze
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 1552
@@ -10729,7 +10729,7 @@ templates:
         ink: '@text_primary'
       r0c3text:
         type: text
-        text: Mezery návrhu, než ho přečtete
+        text: Díry v návrhu, než ho přečtete
         style: '@style.body'
         ink: '@text_primary'
         x: 2312
@@ -10852,7 +10852,7 @@ templates:
         height: 56
       r2c0text:
         type: text
-        text: Reviewer pro pravidla
+        text: Jeden reviewer na pravidla
         style: '@style.body'
         ink: '@text_on_color'
         x: 32
@@ -11120,7 +11120,7 @@ templates:
         ink: '@text_primary'
       s0tagtext:
         type: text
-        text: jen povolené nástroje
+        text: povolené nástroje
         style: '@style.body'
         ink: '@text_on_color'
         x: 52
@@ -11213,7 +11213,7 @@ templates:
         height: 120
       s2job:
         type: text
-        text: Když návrh zasahuje celý systém, ověří, že do něj zapadá.
+        text: Když se návrh týká celého systému, ověří, že do něj zapadá.
         style: '@style.body'
         ink: '@text_primary'
         x: 1242
@@ -11415,7 +11415,7 @@ templates:
         height: 88
       p2head:
         type: text
-        text: Agent pro váš AI nástroj
+        text: Co dostane váš AI nástroj
         style: '@style.key'
         ink: '@text_primary'
         x: 2042
@@ -11462,7 +11462,7 @@ templates:
         height: 64
       t0text:
         type: text
-        text: Jeho první řádky jmenují rozhodnutí, kterými se řídí, a dokumenty, které čte.
+        text: V prvních řádcích jmenuje rozhodnutí, kterými se řídí, a dokumenty, které čte.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
@@ -11492,7 +11492,7 @@ templates:
         height: 64
       t1text:
         type: text
-        text: pkit validate ověří každé jméno a že žádní dva agenti nevlastní stejný soubor.
+        text: pkit validate ověří každé jméno i to, že dva agenti nevlastní stejný soubor.
         style: '@style.body'
         ink: '@text_primary'
         x: 688
@@ -11522,7 +11522,7 @@ templates:
         height: 64
       t2text:
         type: text
-        text: Každý upgrade ho nasadí znovu, s vašimi cestami.
+        text: Každý upgrade agenta nasadí znovu, s vašimi cestami.
         style: '@style.body'
         ink: '@text_primary'
         x: 1336
@@ -11565,7 +11565,7 @@ templates:
         height: 64
       h0text:
         type: text
-        text: rozhodlo COR-028
+        text: jak rozhodlo COR-028
         style: '@style.body'
         ink: '@text_on_color'
         x: 32
@@ -11877,7 +11877,7 @@ templates:
         ink: '@text_primary'
       r1c3text:
         type: text
-        text: Žádný příkaz, žádný zápis souboru
+        text: Nespustí příkaz, nezapíše soubor
         style: '@style.body'
         ink: '@text_primary'
         x: 2312
@@ -11928,7 +11928,7 @@ templates:
         ink: '@text_primary'
       r2c1text:
         type: text
-        text: 'project-manager: žádné změny přes gh'
+        text: 'project-manager: žádné změny přímým gh'
         style: '@style.body'
         ink: '@text_primary'
         x: 792
@@ -12012,7 +12012,7 @@ templates:
         ink: '@text_primary'
       w0text:
         type: text
-        text: Pravidlo, které agent čte, je rada. Pravidlo, které uplatní AI nástroj, ne.
+        text: Pravidlo, které agent čte, je rada. Pravidlo, které uplatní AI nástroj, už ne.
         style: '@style.body'
         ink: '@text_primary'
         x: 32
@@ -12045,7 +12045,7 @@ templates:
         ink: '@text_primary'
       w1text:
         type: text
-        text: Zapsané pravidlo jde přečíst a zrevidovat jako každou změnu.
+        text: Zapsané pravidlo se dá přečíst a projít v review jako každá jiná změna.
         style: '@style.body'
         ink: '@text_primary'
         x: 792
@@ -12078,7 +12078,7 @@ templates:
         ink: '@text_primary'
       w2text:
         type: text
-        text: Nastavení nástroje platí pro všechny stejně. Hook rozhoduje u každého agenta.
+        text: Nastavení platí pro všechny agenty stejně. Hook rozhoduje u každého zvlášť.
         style: '@style.body'
         ink: '@text_primary'
         x: 1552
@@ -12111,7 +12111,7 @@ templates:
         ink: '@text_primary'
       w3text:
         type: text
-        text: Příkazy pkitu mají brány, které přímé příkazy přeskočí. Agent je neobejde.
+        text: Příkazy pkitu mají kontroly, které přímé příkazy přeskočí. Agent je neobejde.
         style: '@style.body'
         ink: '@text_primary'
         x: 2312
@@ -12186,7 +12186,7 @@ templates:
         height: 64
       t0text:
         type: text
-        text: Rekurzivní mazání, sudo a force-push, pro vás i každého agenta, v každém režimu.
+        text: Rekurzivní mazání, sudo a force-push nespustí nikdo, ani vy, v žádném režimu.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
@@ -12246,7 +12246,7 @@ templates:
         height: 64
       t2text:
         type: text
-        text: Každý upgrade znovu doplní pravidla pkitu a ta vaše ponechá.
+        text: Každý upgrade znovu doplní pravidla pkitu a vaše nechá, jak jsou.
         style: '@style.body'
         ink: '@text_primary'
         x: 1336
@@ -12321,7 +12321,7 @@ templates:
         height: 64
       t0text:
         type: text
-        text: Změna upraví jeden soubor. Co na něm závisí, je jinde.
+        text: Změna upraví jeden soubor. To, co na něm závisí, leží jinde.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
@@ -12351,7 +12351,7 @@ templates:
         height: 64
       t1text:
         type: text
-        text: Review čte změnu, kterou má před sebou, ne soubor, který zastaral.
+        text: Reviewer čte jen samotnou změnu. Soubor, který kvůli ní zastaral, nevidí.
         style: '@style.body'
         ink: '@text_primary'
         x: 688
@@ -12381,7 +12381,7 @@ templates:
         height: 64
       t2text:
         type: text
-        text: Agent jedná podle souboru. Kontrola najde, co agent nikdy nezpochybní.
+        text: Agent jedná podle souboru. Kontrola ověří i to, o čem agent nepochybuje.
         style: '@style.body'
         ink: '@text_primary'
         x: 1336
@@ -12698,7 +12698,7 @@ templates:
         height: 50
       l6note:
         type: text
-        text: 'přejmenován: last_tag.py'
+        text: přejmenován na last_tag.py
         style: '@style.caption'
         ink: '@text_error'
         x: 0
@@ -12941,7 +12941,7 @@ templates:
     parts:
       lhead:
         type: text
-        text: Kontrola jmenuje dokument
+        text: Kontrola na dokument upozorní
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -12957,7 +12957,7 @@ templates:
         height: 480
       rhead:
         type: text
-        text: Změna k němu dá jednu ze tří odpovědí
+        text: Změna odpoví jedním ze tří způsobů
         style: '@style.key'
         ink: '@text_primary'
         x: 1264
@@ -13041,7 +13041,7 @@ templates:
         ink: '@text_primary'
       a1text:
         type: text
-        text: Nic v něm nepřestalo platit. Odpověď řekne proč.
+        text: V dokumentu nic nepřestalo platit. Odpověď řekne proč.
         style: '@style.body'
         ink: '@text_primary'
         x: 1596
@@ -13083,7 +13083,7 @@ templates:
         ink: '@text_primary'
       a2text:
         type: text
-        text: Odpověď jmenuje issue, které ho opraví.
+        text: Odpověď uvede issue, které dokument opraví.
         style: '@style.body'
         ink: '@text_primary'
         x: 1596
@@ -13132,7 +13132,7 @@ templates:
         ink: '@text_primary'
       w0text:
         type: text
-        text: Ne každá změna dokument zneplatní. Odpověď řekne, jak to je.
+        text: Ne každá změna dokument zneplatní. Odpověď to rozliší.
         style: '@style.body'
         ink: '@text_primary'
         x: 32
@@ -13165,7 +13165,7 @@ templates:
         ink: '@text_primary'
       w1text:
         type: text
-        text: Každou odpověď ověří reviewer, takže „stále platí“ chce skutečný důvod.
+        text: Každou odpověď ověří reviewer. „Stále platí“ tak musí mít pádný důvod.
         style: '@style.body'
         ink: '@text_primary'
         x: 1035
@@ -13198,7 +13198,7 @@ templates:
         ink: '@text_primary'
       w2text:
         type: text
-        text: Otevřená mezera zůstává v evidenci i s issue, které ji uzavře.
+        text: Odložená oprava zůstane v evidenci i s issue, které ji vyřeší.
         style: '@style.body'
         ink: '@text_primary'
         x: 2038
@@ -13276,7 +13276,7 @@ templates:
         ink: '@text_primary'
       addontagtext:
         type: text
-        text: 'Doplněk (COR-017): jedna složka k instalaci'
+        text: 'Add-on (COR-017): jedna složka k instalaci'
         style: '@style.key'
         ink: '@text_primary'
         x: 768
@@ -13529,7 +13529,7 @@ templates:
         height: 76
       thead:
         type: text
-        text: Jeden příkaz ho zapojí; výstup z čerstvé instalace
+        text: Jediný příkaz ho zapojí (výpis z čisté instalace)
         style: '@style.key'
         ink: '@text_primary'
         x: 1784
@@ -13545,7 +13545,7 @@ templates:
         height: 514
       whyhead:
         type: text
-        text: Proč má pkit doplňky
+        text: Proč má pkit add-ony
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -13611,7 +13611,7 @@ templates:
         ink: '@text_primary'
       w1text:
         type: text
-        text: Doplněk dostane každý upgrade, stejně jako jádro. Ruční kopie ne.
+        text: Add-on dostane každý upgrade jako jádro. Kopie souborů ne.
         style: '@style.body'
         ink: '@text_primary'
         x: 784
@@ -13677,7 +13677,7 @@ templates:
         ink: '@text_primary'
       w3text:
         type: text
-        text: Vzniká jen z potřeby, která se ve skutečné práci vracela.
+        text: Add-on vzniká jen z potřeby, která se v praxi opakovaně vracela.
         style: '@style.body'
         ink: '@text_primary'
         x: 2288
@@ -13698,8 +13698,8 @@ templates:
     parts:
       text:
         type: text
-        text: 'Proč oba konce držíte vy: jen vy můžete tým zavázat k plánu nebo k merge. Práci mezi tím
-          odvede agent.'
+        text: 'Proč rozhodujete na začátku i na konci: plán a merge za tým schvalujete jen vy. Práci mezi
+          tím udělá agent.'
         style: '@style.key'
         ink: '@role_people'
         x: 0
@@ -13753,7 +13753,7 @@ templates:
         height: 56
       c0text:
         type: text
-        text: Skill pm, agent project-manager a pm-reviewer pro každý pull request.
+        text: Skill pm, agent project-manager a pm-reviewer, který projde každý pull request.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
@@ -13837,7 +13837,7 @@ templates:
         height: 56
       c2text:
         type: text
-        text: Každý přechod kontroluje engine pkitu.
+        text: Každý přechod ověří engine pkitu.
         style: '@style.body'
         ink: '@text_primary'
         x: 1544
@@ -13917,7 +13917,7 @@ templates:
         height: 378
       p1head:
         type: text
-        text: Jeho seznam pro merge
+        text: Kdo musí schválit merge
         style: '@style.key'
         ink: '@text_primary'
         x: 1021
@@ -13990,7 +13990,7 @@ templates:
         height: 64
       t0text:
         type: text
-        text: Napíšete je jednou. Vývojářský agent je čte jako první. Zůstanou vaše i bez doplňku.
+        text: Napíšete je jednou a builder si je přečte nejdřív. Zůstanou vaše i bez add-onu.
         style: '@style.body'
         ink: '@text_primary'
         x: 40
@@ -14020,7 +14020,7 @@ templates:
         height: 64
       t1text:
         type: text
-        text: Dřív pkit kód nekontroloval. Do merge tak prošla změna se dvěma bezpečnostními dírami.
+        text: Dřív pkit kód nekontroloval. Mergla se tak i změna se dvěma bezpečnostními dírami.
         style: '@style.body'
         ink: '@text_primary'
         x: 792
@@ -14050,7 +14050,7 @@ templates:
         height: 64
       t2text:
         type: text
-        text: Každý reviewer blokuje jen kvůli chybě, kterou umí ukázat. Zbytek je rada.
+        text: Reviewer blokuje, jen když umí chybu ukázat. Všechno ostatní je rada.
         style: '@style.body'
         ink: '@text_primary'
         x: 1544
@@ -14204,7 +14204,7 @@ templates:
         height: 48
       s2text:
         type: text
-        text: případy užití pro plánování
+        text: případy užití k plánování
         style: '@style.body'
         ink: '@text_primary'
         x: 936
@@ -14335,7 +14335,7 @@ templates:
         border_style: solid
       thead:
         type: text
-        text: Co ukáže pkit status v project-kitu
+        text: Co vypíše pkit status v project-kitu
         style: '@style.key'
         ink: '@text_primary'
         x: 1744
@@ -14351,7 +14351,7 @@ templates:
         height: 446
       whyhead:
         type: text
-        text: Proč pkit propojuje doplňky takhle
+        text: Proč pkit propojuje add-ony takhle
         style: '@style.key'
         ink: '@text_primary'
         x: 0
@@ -14384,7 +14384,7 @@ templates:
         ink: '@text_primary'
       w0text:
         type: text
-        text: Doplněk vyměníte za jiný ve stejné roli. Zbytek zůstane, jak je.
+        text: Add-on vyměníte za jiný ve stejné roli. Zbytek zůstane, jak je.
         style: '@style.body'
         ink: '@text_primary'
         x: 32
@@ -14417,7 +14417,7 @@ templates:
         ink: '@text_primary'
       w1text:
         type: text
-        text: Instalujete jen to, co potřebujete. Prázdný slot nevadí.
+        text: Instalujete jen to, co potřebujete. Prázdný slot ničemu nevadí.
         style: '@style.body'
         ink: '@text_primary'
         x: 1035
@@ -18022,7 +18022,7 @@ instances:
       text: 1f2ab6ee-32ba-4db4-bb67-5de2e0be85b3
   T-cs-cover:
     template: talk_cover
-    title: Vývoj s AI tak, jak rozhodl váš projekt
+    title: Vývoj s AI podle rozhodnutí vašeho projektu
     subtitle: project-kit (pkit)
     author: Aleš Kalfas
     link: github.com/aleskalfas/project-kit
@@ -18054,13 +18054,13 @@ instances:
   T-cs-opening:
     template: slide
     title: Proč pkit?
-    lead: Váš AI agent pracuje rychle a zapomíná všechno, co váš projekt rozhodl.
-    rests: 'Otázka: jak ho přimět pracovat podle vašeho projektu, bez těžkopádného frameworku?'
+    lead: Váš AI agent pracuje rychle, ale zapomíná všechno, co jste v projektu rozhodli.
+    rests: 'Otázka: jak ho přimět pracovat po vašem, a to bez těžkopádného frameworku?'
     n: 1
     total: 24
     override:
       rests:
-        text: 'Otázka: jak ho přimět pracovat podle vašeho projektu, bez těžkopádného frameworku?'
+        text: 'Otázka: jak ho přimět pracovat po vašem, a to bez těžkopádného frameworku?'
     mural_ids:
       root: 93e23ec0-77ae-43f5-a99a-a92212123348
       bg: 75620006-cac3-4b6c-b65c-e45bcb2b8c11
@@ -18073,7 +18073,7 @@ instances:
     parent: T-cs-opening
     role: neutral
     head: Rozhodnutí zůstávají v chatech a v hlavách lidí
-    text: takže je agent nemůže znát a rozhoduje znovu
+    text: takže o nich agent neví a rozhoduje znovu
     x: 128
     y: 576
     override:
@@ -18160,7 +18160,7 @@ instances:
     parent: T-cs-opening
     role: neutral
     head: Konvence nejsou sepsané
-    text: takže se agent řídí svými zvyky
+    text: takže se agent řídí vlastními zvyky
     x: 128
     y: 816
     override:
@@ -18334,7 +18334,7 @@ instances:
     parent: T-cs-opening
     role: neutral
     head: Nikdo neřekne, co agent smí
-    text: takže nástroj hádá, akci po akci
+    text: takže nástroj u každé akce hádá
     x: 128
     y: 1296
     override:
@@ -18387,7 +18387,7 @@ instances:
     parent: T-cs-opening
     role: code
     head: Zapište, co agent smí
-    text: rozhodne to jednou váš projekt, stejně pro každou session · Část 3
+    text: rozhodnete jednou za celý projekt, v každé session stejně · Část 3
     x: 1648
     y: 1296
     override:
@@ -18419,13 +18419,14 @@ instances:
   T-cs-fits:
     template: slide
     title: Jak je pkit poskládaný
-    lead: 'Z pěti vrstev, od vašich rozhodnutí až po váš kód: každá provádí to, co určí vrstvy nad ní.'
-    rests: 'Tento týden: pkit toto pořadí zapsal jako vlastní rozhodnutí, COR-065'
+    lead: Skládá se z pěti vrstev, od vašich rozhodnutí až po váš kód. Každá vrstva provádí to, co určují
+      vrstvy nad ní.
+    rests: 'Tento týden: pkit zapsal toto pořadí jako své vlastní rozhodnutí, COR-065'
     n: 2
     total: 24
     override:
       rests:
-        text: 'Tento týden: pkit toto pořadí zapsal jako vlastní rozhodnutí, COR-065'
+        text: 'Tento týden: pkit zapsal toto pořadí jako své vlastní rozhodnutí, COR-065'
     mural_ids:
       root: bfcd980f-3de5-43f6-8bdd-afb6df736738
       bg: 12b65c33-25a8-4e16-be02-06b5ce58d324
@@ -18438,7 +18439,7 @@ instances:
     parent: T-cs-fits
     role: neutral
     head: Rozhodnutí
-    text: Co jste schválili, a proč.
+    text: Co jste schválili a proč.
     x: 920
     y: 576
     override:
@@ -18478,7 +18479,7 @@ instances:
     parent: T-cs-fits
     role: neutral
     head: Pracovní pravidla · schémata · procesy
-    text: Přesně co dělat, pro každou session a nástroj.
+    text: Co přesně má dělat každá session i nástroj.
     x: 780
     y: 766
     override:
@@ -18558,7 +18559,7 @@ instances:
     parent: T-cs-fits
     role: neutral
     head: Příkazy a kontroly pkitu
-    text: Provádějí, co je rozhodnuto, a kontrolují každou změnu.
+    text: Provádějí, co jste rozhodli, a kontrolují každou změnu.
     x: 500
     y: 1146
     override:
@@ -18637,8 +18638,8 @@ instances:
     template: stage
     parent: T-cs-fits
     role: code
-    head: Kde začínají nápady
-    text: V rozhovoru, a když to trvá déle, v poznámce ve scratchpadu.
+    head: Kde vznikají nápady
+    text: V rozhovoru. A když nápad potřebuje víc času, v poznámce ve scratchpadu.
     x: 128
     y: 576
     override:
@@ -18687,8 +18688,8 @@ instances:
     template: stage
     parent: T-cs-fits
     role: neutral
-    head: Provedeno
-    text: Každá vrstva provádí rozhodnutí nad sebou. Důvody zůstávají na jednom místě, kde si je agent
+    head: Provádění
+    text: Každá vrstva provádí rozhodnutí nad sebou. Důvody zůstávají na jednom místě. Agent si je tam
       přečte dřív, než cokoli změní.
     x: 2352
     y: 576
@@ -18738,9 +18739,9 @@ instances:
     template: stage
     parent: T-cs-fits
     role: neutral
-    head: Ověřeno
-    text: Když vrstva nesedí s rozhodnutím, nejdřív se prověří vrstva, takže se rozhodnutí nikdy nepřizpůsobí
-      kódu. Rozhodnutí měníte jen vy.
+    head: Kontrola
+    text: Když vrstva nesedí s rozhodnutím, nejdřív se prověří vrstva. Rozhodnutí se tak nikdy nepřizpůsobí
+      kódu. Změnit ho můžete jen vy.
     x: 2352
     y: 1068
     override:
@@ -18789,14 +18790,15 @@ instances:
     template: slide
     title: Instalace pkitu
     lead: Nástroj nainstalujete jednou, pak pkit přidáte do každého projektu jedním příkazem. Upgrade
-      nahradí soubory pkitu, nikdy vaše.
-    rests: pkit status ukáže, co pkit v projektu nastavil. Volitelné doplňky (capabilities) přijdou později.
+      mění jen soubory pkitu.
+    rests: pkit status ukáže, co pkit v projektu nastavil. Volitelné add-ony (capabilities) přijdou na
+      řadu později.
     n: 3
     total: 24
     override:
       rests:
-        text: pkit status ukáže, co pkit v projektu nastavil. Volitelné doplňky (capabilities) přijdou
-          později.
+        text: pkit status ukáže, co pkit v projektu nastavil. Volitelné add-ony (capabilities) přijdou
+          na řadu později.
     mural_ids:
       root: e68e4cfc-1c91-4db3-ba67-aa2398e0f911
       bg: 47ad74c9-312f-4b2d-b734-1f23530d33d1
@@ -18826,9 +18828,9 @@ instances:
     x: 128
     y: 1016
     icon: step-lock-important
-    head: Nechcete pkit ve svém repozitáři?
-    body: pkit zůstane jen ve vašem klonu, skrytý gitovým souborem exclude. Nic z něj se necommitne a
-      agent ho přesto používá celý.
+    head: Nechcete mít pkit v repozitáři?
+    body: pkit zůstane jen ve vašem klonu a git ho díky souboru exclude ignoruje. Nic z něj se necommitne,
+      a agent ho přesto používá celý.
     override:
       root:
         width: 1440
@@ -18876,13 +18878,12 @@ instances:
         height: 1032
     mural_ids:
       root: eab68e81-0ef4-4792-87b4-6e0c5983a8a9
-      img: 2dbb2101-e55e-45ef-8cf2-85ea7f9c19a3
+      img: ff9141e8-b2e1-493d-8e9d-06eea300edc8
   T-cs-part-P1:
     template: section
     part: '2'
     title: Od nápadu k pravidlu
-    summary: Kde začínají nápady, vaše rozhodnutí, co se dozví každá session a pravidla, která uplatňuje
-      program.
+    summary: Kde vznikají nápady, vaše rozhodnutí, co se dozví každá session a pravidla, která hlídá program.
     override:
       eyebrow:
         text: Část 2
@@ -18895,15 +18896,15 @@ instances:
       summary: 970b400c-179c-4454-ad8a-d15e00f3dc08
   T-cs-ideas:
     template: slide
-    title: Kde začínají nápady
-    lead: V rozhovoru. Poznámka ve scratchpadu uchová vaši dohodu i po konci session, než z ní vzejdou
-      záznamy, issues či dokumenty.
-    rests: 'V project-kitu: 28 hotových poznámek, z nich vzešlo 41 záznamů, 31 issues a 15 dokumentů'
+    title: Kde vznikají nápady
+    lead: V rozhovoru. Dohodu uchová i po konci session poznámka ve scratchpadu. Pak z ní vzniknou záznamy,
+      issues či dokumenty.
+    rests: 'V project-kitu: z 28 hotových poznámek vzniklo 41 záznamů, 31 issues a 15 dokumentů'
     n: 4
     total: 24
     override:
       rests:
-        text: 'V project-kitu: 28 hotových poznámek, z nich vzešlo 41 záznamů, 31 issues a 15 dokumentů'
+        text: 'V project-kitu: z 28 hotových poznámek vzniklo 41 záznamů, 31 issues a 15 dokumentů'
     mural_ids:
       root: 08b4378c-0725-49ea-ae16-6bc285b2cd89
       bg: 5713c8b4-93aa-4d75-a7d2-8085e5028ca1
@@ -18938,16 +18939,16 @@ instances:
       droptext: f713a2fb-dcca-430b-a843-2b9b0af6b1b0
       conversationicon: d28836c9-1df4-420c-9bff-320d8b8b2f22
       noteicon: f15db3ba-5554-483b-a7cd-2ecf64ea4e19
-      notepic: 9262da3c-5f14-447a-bf5c-749e9264e348
       a1: afd6ba46-de4e-40ef-9aac-31d4cc2d82d7
       b0: 360dae7a-921c-4608-bcaa-819877b2731b
       b1: 729b20dc-6a77-413b-b92d-49d96ec0511c
       b2: 7a202863-f5c9-407f-9806-b23cf9aefce0
       b3: bfbbf5a5-c7aa-45e9-9345-b7aa4ab0229d
+      notepic: 6faf3b1a-06c8-439a-9241-fcad58db93f2
   T-cs-ideas-limit:
     template: notice
     parent: T-cs-ideas
-    text: 'Omezení: Poznámku za vás nikdo nenapíše: co zůstane jen v rozhovoru, zmizí spolu s ním.'
+    text: 'Omezení: Poznámka se sama nenapíše. Co zůstane jen v rozhovoru, zmizí spolu s ním.'
     x: 128
     y: 1388
     mural_ids:
@@ -18958,14 +18959,15 @@ instances:
   T-cs-decisions:
     template: slide
     title: Záznamy o rozhodnutí
-    lead: Záznam o rozhodnutí uchová jednu volbu a důvod, proč padla. Místo, kde leží, říká, čeho se týká
-      a kdo ho smí měnit.
-    rests: 'Tento týden: nový záznam COR-065 nahradil větu z COR-006, aniž by se starý záznam upravoval'
+    lead: Záznam o rozhodnutí uchová jednu volbu i její důvod. Podle toho, kde leží, poznáte, čeho se
+      týká a kdo ho smí měnit.
+    rests: 'Tento týden: nový záznam COR-065 nahradil větu z COR-006, aniž by kdokoli sáhl do toho starého'
     n: 5
     total: 24
     override:
       rests:
-        text: 'Tento týden: nový záznam COR-065 nahradil větu z COR-006, aniž by se starý záznam upravoval'
+        text: 'Tento týden: nový záznam COR-065 nahradil větu z COR-006, aniž by kdokoli sáhl do toho
+          starého'
     mural_ids:
       root: 034c3203-cea6-4aab-8b80-bbfc2bfbff45
       bg: ab1a06c2-076d-4812-a495-b2316fbc7112
@@ -19027,7 +19029,7 @@ instances:
     head: Principy pkitu
     text: Jak metodika funguje, stejně v každém projektu.
     path: core/COR-065-records-and-projection.md
-    why: 'Odděleně od vašich: každý upgrade je nahradí, takže je nikdy neupravujete.'
+    why: Leží odděleně od vašich. Každý upgrade je nahradí, proto je nikdy neupravujete.
     bg: role_code_bg
     tone: role_code
     override:
@@ -19059,9 +19061,9 @@ instances:
     y: 770
     tag: PRJ
     head: Váš způsob práce
-    text: Jak pracuje váš tým, ve volbách, které pkit nechává na vás.
+    text: Jak pracuje váš tým tam, kde pkit volbu nechává na vás.
     path: project/PRJ-002-version-bump-policy.md
-    why: 'Jen vaše: sem žádný upgrade nikdy nepíše.'
+    why: Patří jen vám. Upgrade sem nikdy nic nezapíše.
     bg: role_people_bg
     tone: role_people
     override:
@@ -19091,7 +19093,7 @@ instances:
     parent: T-cs-decisions
     x: 2176
     y: 576
-    head: Co stavíte, ve složce, kterou zvolíte
+    head: Co stavíte, ve složce, kterou si zvolíte
     override:
       root:
         width: 896
@@ -19140,7 +19142,7 @@ instances:
     head: Vaše architektura
     text: 'Jak je postavený váš systém: struktura, technologie a hranice.'
     path: ADR-001-project-root-resolution.md
-    why: Leží u dokumentace vašeho systému, kde je drží jeho architekt.
+    why: Leží u dokumentace vašeho systému, kde se o ně stará architekt.
     bg: role_architecture_bg
     tone: role_architecture
     override:
@@ -19168,8 +19170,8 @@ instances:
   T-cs-decisions-limit:
     template: notice
     parent: T-cs-decisions
-    text: 'Omezení: Napsat a zrevidovat záznam stojí čas: vyplatí se jen u voleb, na kterých staví další
-      práce.'
+    text: 'Omezení: Napsat a zrevidovat záznam zabere čas. Vyplatí se jen u rozhodnutí, na kterých stojí
+      další práce.'
     x: 128
     y: 1418
     mural_ids:
@@ -19179,17 +19181,17 @@ instances:
       text: b74bb884-b32f-4909-871d-cc0fda4d5cbe
   T-cs-found:
     template: slide
-    title: Rozhodnuto, později nalezeno
-    lead: Rozhodnutí schválíte dřív, než na něm začne stavět práce. Později ho agent najde, než změní
+    title: Rozhodnete jednou, agent to pak najde
+    lead: Rozhodnutí schválíte, než na něm začne stavět práce. Později ho agent najde dřív, než změní
       soubory, kterých se týká.
-    rests: 'Tento týden: ADR-075 rozhodl, jak vznikají pravidla, která každá session načítá. Byl schválen
-      a mergnut spolu se svým kódem.'
+    rests: 'Tento týden: ADR-075 určil, jak vznikají pravidla, která načítá každá session. Schválený se
+      mergnul spolu se svým kódem.'
     n: 6
     total: 24
     override:
       rests:
-        text: 'Tento týden: ADR-075 rozhodl, jak vznikají pravidla, která každá session načítá. Byl schválen
-          a mergnut spolu se svým kódem.'
+        text: 'Tento týden: ADR-075 určil, jak vznikají pravidla, která načítá každá session. Schválený
+          se mergnul spolu se svým kódem.'
     mural_ids:
       root: 1f112df3-26f1-4dbc-879a-ddb9a2b8ed4d
       bg: 193ceeb8-fb09-42fd-a4ba-ed69025d8ad1
@@ -19201,8 +19203,8 @@ instances:
     template: step_card
     parent: T-cs-found
     role: agents
-    head: Agent ho navrhne
-    text: Napíše záznam a naváže na něj příručku k vydávání.
+    head: Agent napíše návrh
+    text: Připraví záznam a naváže na něj příručku k vydávání.
     file: term-cs-found-step1
     x: 128
     y: 576
@@ -19254,7 +19256,7 @@ instances:
     parent: T-cs-found
     role: people
     head: Vy ho schválíte
-    text: Vidíte ho před mergem, kdy je jeho změna nejlevnější.
+    text: Uvidíte ho ještě před mergem, dokud je změna nejlevnější.
     file: term-cs-found-step2
     x: 1141
     y: 576
@@ -19306,7 +19308,7 @@ instances:
     parent: T-cs-found
     role: agents
     head: Pozdější session ho najde
-    text: Nezná žádný z vašich důvodů, a tak nejdřív vyhledá záznamy.
+    text: Vaše důvody nezná, a tak si nejdřív vyhledá záznamy.
     file: term-cs-found-step3
     x: 2154
     y: 576
@@ -19339,7 +19341,7 @@ instances:
   T-cs-found-limit:
     template: notice
     parent: T-cs-found
-    text: 'Omezení: Najdou se jen záznamy navázané na soubor, přímo nebo přes dokument, který na něm závisí.'
+    text: 'Omezení: Najde se jen záznam navázaný na soubor, nebo na dokument, který na tom souboru závisí.'
     x: 128
     y: 1425
     mural_ids:
@@ -19350,16 +19352,16 @@ instances:
   T-cs-sessions:
     template: slide
     title: Co se dozví každá session
-    lead: Pár krátkých pravidel, jak pracovat, pkitu i vašich. Záznamů je moc na načtení, a tak každé
-      pravidlo uvádí ten, ze kterého vychází.
-    rests: 'Tento týden: každé pravidlo dostalo trvalé id a stav. Soubor, který každá session načítá,
-      se teď z pravidel generuje.'
+    lead: Pár krátkých pravidel od pkitu i od vás. Celé záznamy by se nevešly, a tak každé pravidlo odkazuje
+      na svůj záznam.
+    rests: 'Tento týden: každé pravidlo dostalo trvalé id a stav. Soubor, který načítá každá session,
+      se z nich teď generuje.'
     n: 7
     total: 24
     override:
       rests:
-        text: 'Tento týden: každé pravidlo dostalo trvalé id a stav. Soubor, který každá session načítá,
-          se teď z pravidel generuje.'
+        text: 'Tento týden: každé pravidlo dostalo trvalé id a stav. Soubor, který načítá každá session,
+          se z nich teď generuje.'
     mural_ids:
       root: 39728b04-2758-46ad-b320-e68c7add66c1
       bg: d2877c72-d90e-48ef-b05b-7661479249f7
@@ -19411,8 +19413,8 @@ instances:
     template: stage
     parent: T-cs-sessions
     role: neutral
-    head: Pravidlo pro každou session (pravidlo 22)
-    text: Než změníte soubory, přečtěte si záznamy za nimi.
+    head: Pravidlo 22, které dostane každá session
+    text: Než změníte soubory, přečtěte si jejich záznamy.
     x: 248
     y: 794
     override:
@@ -19502,7 +19504,7 @@ instances:
         height: 459
     mural_ids:
       root: 7b136ca7-c00c-49a1-8464-a83d301d5b18
-      img: 0e1a1049-09e2-466a-b503-7d285ae4ce06
+      img: 433204c8-04cd-46f9-9f72-5b26a3bd07ca
   T-cs-sessions-limit:
     template: notice
     parent: T-cs-sessions
@@ -19518,15 +19520,15 @@ instances:
     template: slide
     title: Jak vypadají schémata a procesy
     lead: 'Schéma tvoří dva soubory: pravidlo jako data a tvar, který ta data musí mít. Proces je schéma
-      ze stavů a přechodů.'
-    rests: 'V čerstvé instalaci: 8 vlastních schémat pkitu a tvar, který musí mít každý proces. pkit validate
-      je zkontroluje všechny.'
+      stavů a přechodů.'
+    rests: 'V čisté instalaci: 8 schémat pkitu a tvar, který musí mít každý proces. Všechno to zkontroluje
+      pkit validate.'
     n: 8
     total: 24
     override:
       rests:
-        text: 'V čerstvé instalaci: 8 vlastních schémat pkitu a tvar, který musí mít každý proces. pkit
-          validate je zkontroluje všechny.'
+        text: 'V čisté instalaci: 8 schémat pkitu a tvar, který musí mít každý proces. Všechno to zkontroluje
+          pkit validate.'
     mural_ids:
       root: 413d9109-0e0a-48ea-8a9d-958b64b53cc0
       bg: c60fedff-0d93-4e73-80ac-cb6a6d8c3ad3
@@ -19555,13 +19557,13 @@ instances:
       bhead: 6e489204-081e-4fd1-8f3b-09ee029d9656
       p0img: 4bb14eb2-6677-4b40-9075-a78748bda280
       p1img: 4bf0c133-3f27-4e96-86cb-232be111db3e
-      p2img: 150dff9b-da3d-4e68-8d54-d4d34d08a08f
-      b0img: 13136127-d87b-4e0d-b2af-53eeb1144509
-      b1img: 7bfc7fac-74e4-4c7c-b633-757dbe0bc930
+      p2img: ee7e5499-0fce-4df9-bdf4-f06287a33627
+      b0img: dac430a3-b033-41f8-92c8-82d781e541dd
+      b1img: 2e24678a-d752-407b-b5db-d8f86d194813
   T-cs-schemaslook-limit:
     template: notice
     parent: T-cs-schemaslook
-    text: 'Omezení: pkit validate kontroluje, že soubor má svůj tvar, ne že je pravidlo v něm správné.'
+    text: 'Omezení: pkit validate ověří jen tvar souboru. Jestli je pravidlo v něm správné, neověří.'
     x: 128
     y: 1506
     mural_ids:
@@ -19571,15 +19573,15 @@ instances:
       text: 3c211c82-f241-493d-9fa2-a9936b9c52b2
   T-cs-schemas:
     template: slide
-    title: Jak doplněk používá proces
-    lead: project-management přináší workflow pro issues. Každý přechod kontroluje engine pkitu, takže
-      doplněk vlastní engine nepsal.
-    rests: 'V project-kitu dnes: Feature #2270 nejde uzavřít, dokud 7 jejích políček není zaškrtnutých.'
+    title: Jak add-on používá proces
+    lead: project-management přináší workflow pro issues. Každý přechod ověří engine pkitu, takže add-on
+      nemusel psát vlastní engine.
+    rests: 'V project-kitu dnes: Feature #2270 nejde uzavřít, dokud v ní zbývá 7 nezaškrtnutých políček.'
     n: 9
     total: 24
     override:
       rests:
-        text: 'V project-kitu dnes: Feature #2270 nejde uzavřít, dokud 7 jejích políček není zaškrtnutých.'
+        text: 'V project-kitu dnes: Feature #2270 nejde uzavřít, dokud v ní zbývá 7 nezaškrtnutých políček.'
     mural_ids:
       root: 9e0472a5-8c11-48a0-b3e2-8a3f2603fd53
       bg: c9991b28-bc75-47bb-a768-665d48cc1af8
@@ -19627,17 +19629,18 @@ instances:
       p2item0: 13a74a13-2858-4668-9077-bfbfce0679e2
       p2item1: dc653294-cb8c-4ad6-8b90-5d2db32e8c26
       p2item2: 9bb389f4-7c0a-4a1d-9b1b-da7c0c7c970d
-      p0img: 481e3b7f-b323-46e4-9150-00a1b4b43199
       p1img: 17a4e680-fdd4-4c7b-ae08-04c07791f3e0
       m1arrow: c6bc96cf-14ab-43aa-8c77-b91c0304c07b
       m2arrow: e92cf753-cb87-4b9b-a184-867e0a5e7298
       m3arrow: be110cba-8f98-49e9-b788-19fd656c3aaf
       m4arrow: 65457436-84a8-46bc-ab97-247be1651d7d
       cardarrow: 47f8e81d-9248-4fc2-bf02-c345d23a4f28
+      p0img: e8afa579-0465-4c43-b12e-83334a20b0cb
   T-cs-schemas-limit:
     template: notice
     parent: T-cs-schemas
-    text: 'Omezení: pkit přináší engine, ne proces: ten, který se dnes používá, přichází s doplňkem project-management.'
+    text: 'Omezení: pkit dodává engine, ale žádný proces. Ten jediný, který se dnes používá, přináší add-on
+      project-management.'
     x: 128
     y: 1482
     mural_ids:
@@ -19663,14 +19666,14 @@ instances:
   T-cs-skillsfrom:
     template: slide
     title: Odkud se berou skilly
-    lead: Každý druh souboru, který určují rozhodnutí pkitu, dostane skill pro úsudek a příkaz pro to,
-      co musí být přesné.
-    rests: 'V project-kitu: pkit dodává 11 skillů, každý se svým příkazem.'
+    lead: Z rozhodnutí pkitu, která zavádějí druhy souborů. Co vyžaduje úsudek, řeší skill. Co musí být
+      přesné, udělá příkaz.
+    rests: 'V project-kitu: pkit dodává 11 skillů a každý má svůj příkaz.'
     n: 10
     total: 24
     override:
       rests:
-        text: 'V project-kitu: pkit dodává 11 skillů, každý se svým příkazem.'
+        text: 'V project-kitu: pkit dodává 11 skillů a každý má svůj příkaz.'
     mural_ids:
       root: 381380a5-4056-4285-9bdc-77a22276f80a
       bg: 5179626f-9e63-47c0-b8d8-1839f8aac318
@@ -19743,7 +19746,7 @@ instances:
   T-cs-skillsfrom-limit:
     template: notice
     parent: T-cs-skillsfrom
-    text: 'Omezení: Skilly pkitu pokrývají jen vlastní soubory pkitu. Na práci, která se ve vašem projektu
+    text: 'Omezení: Skilly pkitu pokrývají jen jeho vlastní soubory. Na práci, která se ve vašem projektu
       opakuje, si napíšete vlastní.'
     x: 128
     y: 1466.0
@@ -19755,14 +19758,14 @@ instances:
   T-cs-skills:
     template: slide
     title: Skill krok za krokem
-    lead: Agent prochází kroky popořadě. V kroku 6 spustí příkaz, takže číslo i struktura souboru vždy
+    lead: Agent prochází kroky popořadě. V kroku 6 spustí příkaz, takže číslo i struktura souboru vždycky
       sedí.
-    rests: Každá session drží jen krátký popis každého skillu. Kroky se načtou, až na úkol dojde.
+    rests: Session zná ze skillů jen jejich krátké popisy. Kroky si načte, až na úkol dojde.
     n: 11
     total: 24
     override:
       rests:
-        text: Každá session drží jen krátký popis každého skillu. Kroky se načtou, až na úkol dojde.
+        text: Session zná ze skillů jen jejich krátké popisy. Kroky si načte, až na úkol dojde.
     mural_ids:
       root: d009d4aa-469c-4eef-bd94-da5539c378bd
       bg: 335ddadd-ecb4-480b-9f92-1bd63d2d2b55
@@ -19810,12 +19813,12 @@ instances:
       r8text: cd9a077a-196b-4d48-afa1-d035164738ff
       r9num: ad7bf3c2-b3f1-4897-b4f2-444fc2c5434d
       r9text: 934dbf4f-9b5e-4693-8a8a-61bbad1adef2
-      cmd: 99681ad9-7197-44ce-b720-0767e7e40263
       arrow: 3c2afede-e512-4a97-9ef2-27ef31dd8174
+      cmd: 58b37d1b-78e8-4ad6-96f4-7d5b82425b3c
   T-cs-skills-limit:
     template: notice
     parent: T-cs-skills
-    text: 'Omezení: Nic nekontroluje, že agent skill použil: příkaz soubor vytvoří tak i tak.'
+    text: 'Omezení: Nic nekontroluje, jestli agent skill použil. Příkaz vytvoří soubor i bez skillu.'
     x: 128
     y: 1523
     mural_ids:
@@ -19826,15 +19829,15 @@ instances:
   T-cs-agentsfrom:
     template: slide
     title: Odkud se berou agenti
-    lead: 'Když se stejný druh kontroly opakuje, rozhodnutí pro něj určí roli: jednu práci a jen nástroje,
-      které potřebuje.'
-    rests: 'V project-kitu: pkit dodává 6 agentů, každý je soubor se svou prací, nástroji a rozhodnutími,
+    lead: Když se stejná kontrola pořád vrací, rozhodnutí z ní udělá roli. Ta má jednu práci a jen nástroje,
+      které potřebuje.
+    rests: 'V project-kitu: pkit dodává 6 agentů. Každý je soubor se svou prací, nástroji a rozhodnutími,
       kterými se řídí.'
     n: 12
     total: 24
     override:
       rests:
-        text: 'V project-kitu: pkit dodává 6 agentů, každý je soubor se svou prací, nástroji a rozhodnutími,
+        text: 'V project-kitu: pkit dodává 6 agentů. Každý je soubor se svou prací, nástroji a rozhodnutími,
           kterými se řídí.'
     mural_ids:
       root: bd3149ec-ee14-4854-817e-ee3eb2b3c686
@@ -19908,8 +19911,8 @@ instances:
   T-cs-agentsfrom-limit:
     template: notice
     parent: T-cs-agentsfrom
-    text: 'Omezení: Nástroje agenta vynucuje AI nástroj. Které soubory smí měnit, je pravidlo, kterým
-      se řídí, ne zámek.'
+    text: 'Omezení: Které nástroje agent smí, hlídá AI nástroj. Které soubory smí měnit, je jen pravidlo,
+      které dodržuje. Zámek to není.'
     x: 128
     y: 1466.0
     mural_ids:
@@ -19919,16 +19922,15 @@ instances:
       text: 68254baa-c5be-4eea-ba6f-935ae1199fb0
   T-cs-agents:
     template: slide
-    title: Jedna práce a kdo ji uvidí
-    lead: 'Každá role vidí práci ve svou chvíli: critic před vámi, revieweři na změně.'
-    rests: Vlastní agenti pkitu radí a nikdy neblokují. Doplňky přinesou agenty, kteří umí zablokovat
-      merge.
+    title: Kdo práci uvidí a kdy
+    lead: Každá role ji vidí ve svou chvíli. Critic vidí návrh dřív než vy. Revieweři kontrolují až hotovou
+      změnu.
+    rests: Agenti jádra pkitu radí a nikdy neblokují. Add-ony přinášejí agenty, kteří umí merge zablokovat.
     n: 13
     total: 24
     override:
       rests:
-        text: Vlastní agenti pkitu radí a nikdy neblokují. Doplňky přinesou agenty, kteří umí zablokovat
-          merge.
+        text: Agenti jádra pkitu radí a nikdy neblokují. Add-ony přinášejí agenty, kteří umí merge zablokovat.
     mural_ids:
       root: 686b40d6-f5d6-478a-88da-c62ed1f9f50c
       bg: 20489db9-2f1e-4635-bd9a-cc84bf716eb9
@@ -19984,16 +19986,16 @@ instances:
   T-cs-agentswired:
     template: slide
     title: S čím přichází každý agent
-    lead: Každý agent přijde navázaný na svá rozhodnutí a nasměrovaný na vaše složky. pkit doplní vaše
-      cesty a zkontroluje každou vazbu.
-    rests: 'V čerstvé instalaci: všech 6 agentů nasazeno najednou, s výchozími cestami. pkit validate
-      zkontroloval 17 skillů a agentů.'
+    lead: S vazbami na svá rozhodnutí a s cestami do vašich složek. Cesty doplní pkit sám a každou vazbu
+      zkontroluje.
+    rests: V čisté instalaci pkit nasadil všech 6 agentů najednou, s výchozími cestami. pkit validate
+      zkontroloval 17 skillů a agentů.
     n: 14
     total: 24
     override:
       rests:
-        text: 'V čerstvé instalaci: všech 6 agentů nasazeno najednou, s výchozími cestami. pkit validate
-          zkontroloval 17 skillů a agentů.'
+        text: V čisté instalaci pkit nasadil všech 6 agentů najednou, s výchozími cestami. pkit validate
+          zkontroloval 17 skillů a agentů.
     mural_ids:
       root: ae336e56-fcc4-499a-bde9-30b822da0e80
       bg: 39575e41-e0bb-4060-b1f7-b353d3636a23
@@ -20031,8 +20033,8 @@ instances:
     x: 2072
     y: 964
     icon: step-question-important
-    head: Musíte ho zapojit?
-    body: Ne. Čerstvá instalace doplní výchozí cesty a všech šest agentů je hned připraveno.
+    head: Musíte agenty zapojit?
+    body: Ne. Čistá instalace doplní výchozí cesty a všech šest agentů hned funguje.
     override:
       root:
         width: 1000
@@ -20068,7 +20070,7 @@ instances:
   T-cs-agentswired-limit:
     template: notice
     parent: T-cs-agentswired
-    text: 'Omezení: Agenty pkitu nikdy neupravujete. Pro jinou roli si napíšete vlastního v .pkit/agents/project/.'
+    text: 'Omezení: Agenty pkitu nikdy neupravujete. Na jinou roli si napíšete vlastního agenta do .pkit/agents/project/.'
     x: 128
     y: 1392
     mural_ids:
@@ -20079,16 +20081,16 @@ instances:
   T-cs-permissions:
     template: slide
     title: Odkud se berou oprávnění
-    lead: Z pravidel, která projekt zapíše jako data. AI nástroj je uplatní na každé volání, i když na
-      ně agent zapomene.
-    rests: 'V project-kitu: agent project-manager má zakázané změny přímo přes gh, a tak používá příkazy
-      pkitu, které nejdřív ověří issue.'
+    lead: Z pravidel, která projekt zapíše jako data. AI nástroj je uplatní při každém volání, i když
+      na ně agent zapomene.
+    rests: 'V project-kitu: agent project-manager nesmí nic měnit přímým příkazem gh. Používá příkazy
+      pkitu, které issue nejdřív ověří.'
     n: 15
     total: 24
     override:
       rests:
-        text: 'V project-kitu: agent project-manager má zakázané změny přímo přes gh, a tak používá příkazy
-          pkitu, které nejdřív ověří issue.'
+        text: 'V project-kitu: agent project-manager nesmí nic měnit přímým příkazem gh. Používá příkazy
+          pkitu, které issue nejdřív ověří.'
     mural_ids:
       root: 05b6f4b0-9c17-4bbd-a277-b27017b83559
       bg: c109328c-8c21-4c30-b1d4-6466c27f890f
@@ -20161,7 +20163,7 @@ instances:
   T-cs-permissions-limit:
     template: notice
     parent: T-cs-permissions
-    text: 'Omezení: Zákaz zastaví ty podoby příkazu, které pkit rozpozná. Příkaz schovaný za jiným může
+    text: 'Omezení: Zákaz zastaví jen ty podoby příkazu, které pkit pozná. Příkaz schovaný za jiným může
       proklouznout.'
     x: 128
     y: 1466.0
@@ -20173,16 +20175,16 @@ instances:
   T-cs-permday1:
     template: slide
     title: Oprávnění od prvního dne
-    lead: Čerstvá instalace odmítá destruktivní příkazy a povoluje běžné, takže dotazy, které ještě uvidíte,
+    lead: Čistá instalace odmítá destruktivní příkazy a povoluje běžné. Zbylé dotazy na povolení proto
       stojí za přečtení.
-    rests: 'V čerstvé instalaci, než napíšete jakékoli pravidlo: 14 podob 4 nebezpečných příkazů odmítnuto,
-      37 běžných povoleno.'
+    rests: Čistá instalace, ještě bez vašich pravidel, odmítne 14 podob 4 nebezpečných příkazů a povolí
+      37 běžných.
     n: 16
     total: 24
     override:
       rests:
-        text: 'V čerstvé instalaci, než napíšete jakékoli pravidlo: 14 podob 4 nebezpečných příkazů odmítnuto,
-          37 běžných povoleno.'
+        text: Čistá instalace, ještě bez vašich pravidel, odmítne 14 podob 4 nebezpečných příkazů a povolí
+          37 běžných.
     mural_ids:
       root: 938dc171-9f40-48c8-b20d-95fda7a7442b
       bg: 15643c69-3d65-4a13-81e7-0ef3f4a01284
@@ -20253,8 +20255,8 @@ instances:
   T-cs-permday1-limit:
     template: notice
     parent: T-cs-permday1
-    text: 'Omezení: Bez hooku se pravidlo pro jednoho agenta neuplatní: nastavení platí pro všechny agenty
-      stejně.'
+    text: 'Omezení: Bez hooku nejde pravidlo uplatnit jen na jednoho agenta. Nastavení platí pro všechny
+      agenty stejně.'
     x: 128
     y: 1512
     mural_ids:
@@ -20266,7 +20268,7 @@ instances:
     template: section
     part: '4'
     title: Udržet vše v souladu
-    summary: Co pkit kontroluje a dokumenty, které stále platí.
+    summary: Co pkit kontroluje a dokumenty, které nezastarají.
     override:
       eyebrow:
         text: Část 4
@@ -20280,16 +20282,15 @@ instances:
   T-cs-checks:
     template: slide
     title: Co pkit kontroluje a proč
-    lead: Celý projekt a každou změnu před mergem. Agent jedná podle toho, co je v souborech, a nikdy
-      o tom nepochybuje.
-    rests: 'V čerstvé instalaci spustí pkit validate 12 kontrol bez jakéhokoli nastavení. Každý doplněk
-      přidá své: v project-kitu 16.'
+    lead: Celý projekt a každou změnu před mergem. Agent totiž slepě věří všemu, co najde v souborech.
+    rests: Hned po instalaci spustí pkit validate 12 kontrol a nemusíte nic nastavovat. Každý add-on přidá
+      další, v project-kitu je jich 16.
     n: 17
     total: 24
     override:
       rests:
-        text: 'V čerstvé instalaci spustí pkit validate 12 kontrol bez jakéhokoli nastavení. Každý doplněk
-          přidá své: v project-kitu 16.'
+        text: Hned po instalaci spustí pkit validate 12 kontrol a nemusíte nic nastavovat. Každý add-on
+          přidá další, v project-kitu je jich 16.
     mural_ids:
       root: cfe5dc90-deca-45b1-91da-aa1f244a76e6
       bg: ef26360d-2162-4193-9984-b9b9b963bef5
@@ -20316,15 +20317,15 @@ instances:
       t2head: fa50bcc6-637e-4063-9272-5b07cc6f085b
       t2text: d4a97f68-1753-4bd4-9b55-4324270104f1
       p0img: ec1b4c0a-336b-4e8c-9c25-2be76b94a8bd
-      p1img: 4b831a2d-8a47-4ea7-9396-5591f0c0892d
+      p1img: eb935006-6fd6-4787-a571-822dfa5ed4c8
   T-cs-checks-hl:
     template: highlight
     parent: T-cs-checks
     x: 2072
     y: 1044
     icon: step-question-important
-    head: Při každém push?
-    body: pkit nepřidá git hook ani CI. Zapojte oba příkazy do svých, jako project-kit.
+    head: Při každém pushi?
+    body: pkit nepřidá git hook ani CI. Zapojte si oba příkazy sami, jako project-kit.
     override:
       root:
         width: 1000
@@ -20360,7 +20361,7 @@ instances:
   T-cs-checks-limit:
     template: notice
     parent: T-cs-checks
-    text: 'Omezení: Kontrola najde, co je rozbité nebo bez odpovědi. Zda dokument stále platí, posoudí
+    text: 'Omezení: Kontrola najde, co je rozbité nebo bez odpovědi. Jestli dokument stále platí, posoudí
       reviewer.'
     x: 128
     y: 1472
@@ -20372,15 +20373,15 @@ instances:
   T-cs-checked:
     template: slide
     title: Vazba pod kontrolou
-    lead: Přejmenujte soubor a kontrola vyjmenuje navázané dokumenty ještě před mergem.
-    rests: 'V project-kitu: tahle kontrola běží v pre-push hooku a na každém pull requestu, zapojil ji
-      projekt.'
+    lead: Přejmenujte soubor a kontrola vám ještě před mergem řekne, které dokumenty jsou na něj navázané.
+    rests: V project-kitu běží tahle kontrola v pre-push hooku a na každém pull requestu. Zapojil ji tam
+      sám projekt.
     n: 18
     total: 24
     override:
       rests:
-        text: 'V project-kitu: tahle kontrola běží v pre-push hooku a na každém pull requestu, zapojil
-          ji projekt.'
+        text: V project-kitu běží tahle kontrola v pre-push hooku a na každém pull requestu. Zapojil ji
+          tam sám projekt.
     mural_ids:
       root: 896c5b4b-c7d8-4983-8190-bc4e6f2bf9fd
       bg: 8d4abb00-927b-4f5c-b0ff-7528997ff230
@@ -20459,11 +20460,11 @@ instances:
         height: 479
     mural_ids:
       root: 290e03ba-f733-4f60-bca7-a12f933e3f77
-      img: 58f6fa82-b777-4fe6-8f6f-575cdfb9f7d4
+      img: 9fcafa22-b944-44a7-8b16-f1b662c8e649
   T-cs-checked-limit:
     template: notice
     parent: T-cs-checked
-    text: 'Omezení: Kontroluje, že každá vazba někam vede, ne že dokument stále platí.'
+    text: 'Omezení: Kontrola ověří, že každá vazba někam vede. Jestli dokument stále platí, nepozná.'
     x: 128
     y: 1264
     mural_ids:
@@ -20473,9 +20474,9 @@ instances:
       text: 693b4263-f4b1-4a4d-a0ad-52bc39974584
   T-cs-docs:
     template: slide
-    title: Dokumentace, která ví, že neplatí
-    lead: 'Když se změní něco, na čem dokument závisí, změna k němu musí dát odpověď: upraveno, stále
-      platí, nebo odloženo.'
+    title: Dokumentace, která pozná, že už neplatí
+    lead: 'Když se změní to, na čem dokument závisí, musí se k tomu změna vyjádřit: upraveno, stále platí,
+      nebo odloženo.'
     rests: V project-kitu dnes čeká 21 odpovědí „odloženo“. pkit friction debt vypíše každou i s důvodem.
     n: 19
     total: 24
@@ -20525,7 +20526,7 @@ instances:
   T-cs-docs-limit:
     template: notice
     parent: T-cs-docs
-    text: 'Omezení: Pokryté jsou jen dokumenty, které vyjmenujete, i s tím, na čem závisí. Ostatní zastarají
+    text: 'Omezení: Kontrola hlídá jen dokumenty, které vyjmenujete i s tím, na čem závisí. Ostatní zastarávají
       jako dřív.'
     x: 128
     y: 1510.0
@@ -20538,7 +20539,7 @@ instances:
     template: section
     part: '5'
     title: Co si doinstalujete
-    summary: 'Doplňky (capabilities): volitelné části pro váš druh práce a jak se propojují.'
+    summary: Volitelné add-ony (capabilities) podle druhu vaší práce a jak se propojují.
     override:
       eyebrow:
         text: Část 5
@@ -20551,16 +20552,15 @@ instances:
       summary: 726e712b-1c70-4163-85d4-59b71fb8b304
   T-cs-addons:
     template: slide
-    title: Proč jsou některé části pkitu doplňky
-    lead: Jádro pkitu má jen to, co potřebuje každý projekt. Zbytek jsou doplňky (capabilities), které
-      si vyberete.
-    rests: pkit 1.149 dodává 4 doplňky, další 3 míří do verze 2.0. Do čerstvé instalace se jeden nainstaloval
+    title: Proč jsou některé části pkitu add-ony
+    lead: V jádru pkitu je jen to, co potřebuje každý projekt. Zbytek si vyberete jako add-ony (capabilities).
+    rests: pkit 1.149 dodává 4 add-ony, další 3 přijdou s verzí 2.0. Jeden se do čistého projektu nainstaloval
       jedním příkazem za 8 sekund.
     n: 20
     total: 24
     override:
       rests:
-        text: pkit 1.149 dodává 4 doplňky, další 3 míří do verze 2.0. Do čerstvé instalace se jeden nainstaloval
+        text: pkit 1.149 dodává 4 add-ony, další 3 přijdou s verzí 2.0. Jeden se do čistého projektu nainstaloval
           jedním příkazem za 8 sekund.
     mural_ids:
       root: c44eb722-87bb-4f5b-b88c-d211a521d51d
@@ -20624,8 +20624,7 @@ instances:
   T-cs-addons-limit:
     template: notice
     parent: T-cs-addons
-    text: 'Omezení: Některé doplňky potřebují nejdřív jiný. software-engineering se bez project-management
-      nenainstaluje.'
+    text: 'Omezení: Některé add-ony závisí na jiných: software-engineering se bez project-management nenainstaluje.'
     x: 128
     y: 1502.0
     mural_ids:
@@ -20635,9 +20634,9 @@ instances:
       text: fab88831-a38a-449f-b30c-21445d523300
   T-cs-pm:
     template: slide
-    title: Co přidává project-management
-    lead: Jednoho agenta, který práci zapíše, naplánuje a souběžně spustí vývojářské agenty. Vy schválíte
-      plán i každý merge.
+    title: Co přináší project-management
+    lead: Jednoho agenta, který založí issues, naplánuje práci a souběžně spustí buildery. Vy schválíte
+      plán a každý merge.
     rests: 'V project-kitu 29. října: 22 mergnutých pull requestů, až 7 otevřených najednou, každý s verdikty
       svých reviewerů.'
     n: 21
@@ -20703,7 +20702,7 @@ instances:
     parent: T-cs-pm
     role: addon
     head: project-manager
-    text: Založí issues, naplánuje Tasky a na každý spustí vývojářského agenta.
+    text: Založí issues, naplánuje Tasky a na každý spustí buildera.
     x: 736
     y: 576
     override:
@@ -20781,7 +20780,7 @@ instances:
     template: artefact
     parent: T-cs-pm
     icon: agents
-    text: 'Vývojář: Task A'
+    text: 'Builder: Task A'
     x: 1344
     y: 576
     override:
@@ -20800,7 +20799,7 @@ instances:
     template: artefact
     parent: T-cs-pm
     icon: agents
-    text: 'Vývojář: Task B'
+    text: 'Builder: Task B'
     x: 1344
     y: 752
     override:
@@ -20819,7 +20818,7 @@ instances:
     template: artefact
     parent: T-cs-pm
     icon: agents
-    text: 'Vývojář: Task C'
+    text: 'Builder: Task C'
     x: 1344
     y: 928
     override:
@@ -20992,8 +20991,8 @@ instances:
   T-cs-pm-limit:
     template: notice
     parent: T-cs-pm
-    text: 'Omezení: Jen pro GitHub a velký: 63 záznamů o rozhodnutí a 88 příkazů. Poznáte ho přes agenta,
-      ne z manuálu.'
+    text: 'Omezení: Umí jen GitHub a je velký: 63 záznamů o rozhodnutí a 88 příkazů. Stačí ale mluvit
+      s agentem, manuál číst nemusíte.'
     x: 128
     y: 1484
     mural_ids:
@@ -21003,9 +21002,9 @@ instances:
       text: 92dbd149-76d7-4cb5-91c3-b1373cd00685
   T-cs-se:
     template: slide
-    title: Co přidává software-engineering
-    lead: Vývojářského agenta, který se řídí vašimi konvencemi, a tři reviewery jeho kódu u každého merge,
-      který mění kód.
+    title: Co přináší software-engineering
+    lead: Buildera, který dodržuje vaše konvence, a tři reviewery, kteří zkontrolují každou změnu kódu
+      před mergem.
     rests: 'V project-kitu 29. října: 21 z 22 mergů měnilo kód a každý z nich prošel reviewery kódu, bezpečnosti
       a dokumentace.'
     n: 22
@@ -21051,7 +21050,7 @@ instances:
   T-cs-se-limit:
     template: notice
     parent: T-cs-se
-    text: 'Omezení: Bez sepsaných konvencí se vývojářský agent i jeho revieweři řídí obecnou dobrou praxí.'
+    text: 'Omezení: Když konvence sepsané nemáte, builder i revieweři se drží obecné dobré praxe.'
     x: 128
     y: 1448
     mural_ids:
@@ -21061,15 +21060,15 @@ instances:
       text: 4b5a4b47-33cb-4b99-809c-5c19e50b07d5
   T-cs-connect:
     template: slide
-    title: Jak doplňky spolupracují
-    lead: Přes sloty s názvem role, nikdy doplňku. Doplněk, který něco potřebuje, otevře slot; vyplnit
-      ho může kterýkoli jiný.
-    rests: 'V project-kitu: 3 role, každou hraje jeden doplněk, a 6 slotů, z toho 4 vyplněné.'
+    title: Jak add-ony spolupracují
+    lead: Add-on nikdy nejmenuje jiný add-on, jen roli. Když něco potřebuje, otevře slot. Vyplnit ho může
+      kterýkoli jiný.
+    rests: 'V project-kitu: 3 role, každou hraje jeden add-on. Ze 6 slotů jsou 4 vyplněné.'
     n: 23
     total: 24
     override:
       rests:
-        text: 'V project-kitu: 3 role, každou hraje jeden doplněk, a 6 slotů, z toho 4 vyplněné.'
+        text: 'V project-kitu: 3 role, každou hraje jeden add-on. Ze 6 slotů jsou 4 vyplněné.'
     mural_ids:
       root: f8562f0d-6623-4973-8787-193bdf57aa0d
       bg: e0c2d4b1-9b5d-4c66-9359-22593465b08c
@@ -21123,7 +21122,7 @@ instances:
   T-cs-connect-limit:
     template: notice
     parent: T-cs-connect
-    text: 'Omezení: Každou roli zatím hraje jen jeden doplněk, takže výměna je navržená, ale ještě nevyzkoušená.'
+    text: 'Omezení: Každou roli zatím hraje jen jeden add-on. Výměna je tedy navržená, ale ještě nevyzkoušená.'
     x: 128
     y: 1528.0
     mural_ids:
@@ -21134,7 +21133,7 @@ instances:
   T-cs-questions:
     template: slide
     title: Otázky?
-    lead: Vše ukázané najdete v repozitáři project-kitu, který se vyvíjí se samotným pkitem.
+    lead: Všechno, co jste viděli, je v repozitáři project-kitu. Ten se vyvíjí právě pomocí pkitu.
     rests: github.com/aleskalfas/project-kit
     n: 24
     total: 24

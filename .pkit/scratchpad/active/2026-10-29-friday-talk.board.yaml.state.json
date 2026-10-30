@@ -37532,7 +37532,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-limit",
-    "text": "Omezen\u00ed: N\u011bkter\u00e9 dopl\u0148ky pot\u0159ebuj\u00ed nejd\u0159\u00edv jin\u00fd. software-engineering se bez project-management nenainstaluje.",
+    "text": "Omezen\u00ed: N\u011bkter\u00e9 add-ony z\u00e1vis\u00ed na jin\u00fdch: software-engineering se bez project-management nenainstaluje.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -37543,7 +37543,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-limit",
-    "text": "Omezen\u00ed: N\u011bkter\u00e9 dopl\u0148ky pot\u0159ebuj\u00ed nejd\u0159\u00edv jin\u00fd. software-engineering se bez project-management nenainstaluje.",
+    "text": "Omezen\u00ed: N\u011bkter\u00e9 add-ony z\u00e1vis\u00ed na jin\u00fdch: software-engineering se bez project-management nenainstaluje.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -37577,7 +37577,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332823750
   },
   "T-cs-addons-slice": {
    "board": {
@@ -37760,7 +37760,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Dopln\u011bk (COR-017): jedna slo\u017eka k instalaci",
+    "text": "Add-on (COR-017): jedna slo\u017eka k instalaci",
     "title": "tpl:slice_T-cs-addons#addontagtext",
     "width": 936,
     "x": 768,
@@ -37771,7 +37771,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Dopln\u011bk (COR-017): jedna slo\u017eka k instalaci",
+    "text": "Add-on (COR-017): jedna slo\u017eka k instalaci",
     "title": "tpl:slice_T-cs-addons#addontagtext",
     "width": 936,
     "x": 768,
@@ -37805,7 +37805,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332823232
   },
   "T-cs-addons-slice.coretag": {
    "board": {
@@ -39314,7 +39314,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Jeden p\u0159\u00edkaz ho zapoj\u00ed; v\u00fdstup z \u010derstv\u00e9 instalace",
+    "text": "Jedin\u00fd p\u0159\u00edkaz ho zapoj\u00ed (v\u00fdpis z \u010dist\u00e9 instalace)",
     "title": "tpl:slice_T-cs-addons#thead",
     "width": 1160,
     "x": 1784,
@@ -39325,7 +39325,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Jeden p\u0159\u00edkaz ho zapoj\u00ed; v\u00fdstup z \u010derstv\u00e9 instalace",
+    "text": "Jedin\u00fd p\u0159\u00edkaz ho zapoj\u00ed (v\u00fdpis z \u010dist\u00e9 instalace)",
     "title": "tpl:slice_T-cs-addons#thead",
     "width": 1160,
     "x": 1784,
@@ -39359,7 +39359,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332823987
   },
   "T-cs-addons-slice.timg": {
    "board": {
@@ -39704,7 +39704,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Dopln\u011bk dostane ka\u017ed\u00fd upgrade, stejn\u011b jako j\u00e1dro. Ru\u010dn\u00ed kopie ne.",
+    "text": "Add-on dostane ka\u017ed\u00fd upgrade jako j\u00e1dro. Kopie soubor\u016f ne.",
     "title": "tpl:slice_T-cs-addons#w1text",
     "width": 624,
     "x": 784,
@@ -39715,7 +39715,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Dopln\u011bk dostane ka\u017ed\u00fd upgrade, stejn\u011b jako j\u00e1dro. Ru\u010dn\u00ed kopie ne.",
+    "text": "Add-on dostane ka\u017ed\u00fd upgrade jako j\u00e1dro. Kopie soubor\u016f ne.",
     "title": "tpl:slice_T-cs-addons#w1text",
     "width": 624,
     "x": 784,
@@ -39749,7 +39749,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332823357
   },
   "T-cs-addons-slice.w2bar": {
    "board": {
@@ -40046,7 +40046,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Vznik\u00e1 jen z pot\u0159eby, kter\u00e1 se ve skute\u010dn\u00e9 pr\u00e1ci vracela.",
+    "text": "Add-on vznik\u00e1 jen z pot\u0159eby, kter\u00e1 se v praxi opakovan\u011b vracela.",
     "title": "tpl:slice_T-cs-addons#w3text",
     "width": 624,
     "x": 2288,
@@ -40057,7 +40057,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Vznik\u00e1 jen z pot\u0159eby, kter\u00e1 se ve skute\u010dn\u00e9 pr\u00e1ci vracela.",
+    "text": "Add-on vznik\u00e1 jen z pot\u0159eby, kter\u00e1 se v praxi opakovan\u011b vracela.",
     "title": "tpl:slice_T-cs-addons#w3text",
     "width": 624,
     "x": 2288,
@@ -40091,7 +40091,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332824015
   },
   "T-cs-addons-slice.whyhead": {
    "board": {
@@ -40101,7 +40101,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Pro\u010d m\u00e1 pkit dopl\u0148ky",
+    "text": "Pro\u010d m\u00e1 pkit add-ony",
     "title": "tpl:slice_T-cs-addons#whyhead",
     "width": 2944,
     "x": 0,
@@ -40112,7 +40112,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-addons-slice",
-    "text": "Pro\u010d m\u00e1 pkit dopl\u0148ky",
+    "text": "Pro\u010d m\u00e1 pkit add-ony",
     "title": "tpl:slice_T-cs-addons#whyhead",
     "width": 2944,
     "x": 0,
@@ -40146,7 +40146,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332824190
   },
   "T-cs-addons.bg": {
    "board": {
@@ -40213,7 +40213,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-addons",
-    "text": "J\u00e1dro pkitu m\u00e1 jen to, co pot\u0159ebuje ka\u017ed\u00fd projekt. Zbytek jsou dopl\u0148ky (capabilities), kter\u00e9 si vyberete.",
+    "text": "V j\u00e1dru pkitu je jen to, co pot\u0159ebuje ka\u017ed\u00fd projekt. Zbytek si vyberete jako add-ony (capabilities).",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -40224,7 +40224,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-addons",
-    "text": "J\u00e1dro pkitu m\u00e1 jen to, co pot\u0159ebuje ka\u017ed\u00fd projekt. Zbytek jsou dopl\u0148ky (capabilities), kter\u00e9 si vyberete.",
+    "text": "V j\u00e1dru pkitu je jen to, co pot\u0159ebuje ka\u017ed\u00fd projekt. Zbytek si vyberete jako add-ony (capabilities).",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -40258,7 +40258,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332823151
   },
   "T-cs-addons.num": {
    "board": {
@@ -40324,7 +40324,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-addons",
-    "text": "pkit 1.149 dod\u00e1v\u00e1 4 dopl\u0148ky, dal\u0161\u00ed 3 m\u00ed\u0159\u00ed do verze 2.0. Do \u010derstv\u00e9 instalace se jeden nainstaloval jedn\u00edm p\u0159\u00edkazem za 8 sekund.",
+    "text": "pkit 1.149 dod\u00e1v\u00e1 4 add-ony, dal\u0161\u00ed 3 p\u0159ijdou s verz\u00ed 2.0. Jeden se do \u010dist\u00e9ho projektu nainstaloval jedn\u00edm p\u0159\u00edkazem za 8 sekund.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -40335,7 +40335,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-addons",
-    "text": "pkit 1.149 dod\u00e1v\u00e1 4 dopl\u0148ky, dal\u0161\u00ed 3 m\u00ed\u0159\u00ed do verze 2.0. Do \u010derstv\u00e9 instalace se jeden nainstaloval jedn\u00edm p\u0159\u00edkazem za 8 sekund.",
+    "text": "pkit 1.149 dod\u00e1v\u00e1 4 add-ony, dal\u0161\u00ed 3 p\u0159ijdou s verz\u00ed 2.0. Jeden se do \u010dist\u00e9ho projektu nainstaloval jedn\u00edm p\u0159\u00edkazem za 8 sekund.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -40369,7 +40369,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332824112
   },
   "T-cs-addons.title": {
    "board": {
@@ -40379,7 +40379,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-addons",
-    "text": "Pro\u010d jsou n\u011bkter\u00e9 \u010d\u00e1sti pkitu dopl\u0148ky",
+    "text": "Pro\u010d jsou n\u011bkter\u00e9 \u010d\u00e1sti pkitu add-ony",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -40390,7 +40390,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-addons",
-    "text": "Pro\u010d jsou n\u011bkter\u00e9 \u010d\u00e1sti pkitu dopl\u0148ky",
+    "text": "Pro\u010d jsou n\u011bkter\u00e9 \u010d\u00e1sti pkitu add-ony",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -40424,7 +40424,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822939
   },
   "T-cs-agents": {
    "board": {
@@ -41002,7 +41002,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-agents-roles",
-    "text": "jen povolen\u00e9 n\u00e1stroje",
+    "text": "povolen\u00e9 n\u00e1stroje",
     "title": "tpl:roles_T-cs-agents#s0tagtext",
     "width": 421,
     "x": 52,
@@ -41013,7 +41013,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-agents-roles",
-    "text": "jen povolen\u00e9 n\u00e1stroje",
+    "text": "povolen\u00e9 n\u00e1stroje",
     "title": "tpl:roles_T-cs-agents#s0tagtext",
     "width": 421,
     "x": 52,
@@ -41047,7 +41047,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332816595
   },
   "T-cs-agents-roles.s1arrow": {
    "board": {
@@ -41536,7 +41536,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agents-roles",
-    "text": "Kdy\u017e n\u00e1vrh zasahuje cel\u00fd syst\u00e9m, ov\u011b\u0159\u00ed, \u017ee do n\u011bj zapad\u00e1.",
+    "text": "Kdy\u017e se n\u00e1vrh t\u00fdk\u00e1 cel\u00e9ho syst\u00e9mu, ov\u011b\u0159\u00ed, \u017ee do n\u011bj zapad\u00e1.",
     "title": "tpl:roles_T-cs-agents#s2job",
     "width": 461,
     "x": 1242,
@@ -41547,7 +41547,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agents-roles",
-    "text": "Kdy\u017e n\u00e1vrh zasahuje cel\u00fd syst\u00e9m, ov\u011b\u0159\u00ed, \u017ee do n\u011bj zapad\u00e1.",
+    "text": "Kdy\u017e se n\u00e1vrh t\u00fdk\u00e1 cel\u00e9ho syst\u00e9mu, ov\u011b\u0159\u00ed, \u017ee do n\u011bj zapad\u00e1.",
     "title": "tpl:roles_T-cs-agents#s2job",
     "width": 461,
     "x": 1242,
@@ -41581,7 +41581,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332816656
   },
   "T-cs-agents-roles.s2name": {
    "board": {
@@ -42405,7 +42405,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-agents",
-    "text": "Ka\u017ed\u00e1 role vid\u00ed pr\u00e1ci ve svou chv\u00edli: critic p\u0159ed v\u00e1mi, reviewe\u0159i na zm\u011bn\u011b.",
+    "text": "Ka\u017ed\u00e1 role ji vid\u00ed ve svou chv\u00edli. Critic vid\u00ed n\u00e1vrh d\u0159\u00edv ne\u017e vy. Reviewe\u0159i kontroluj\u00ed a\u017e hotovou zm\u011bnu.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -42416,7 +42416,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-agents",
-    "text": "Ka\u017ed\u00e1 role vid\u00ed pr\u00e1ci ve svou chv\u00edli: critic p\u0159ed v\u00e1mi, reviewe\u0159i na zm\u011bn\u011b.",
+    "text": "Ka\u017ed\u00e1 role ji vid\u00ed ve svou chv\u00edli. Critic vid\u00ed n\u00e1vrh d\u0159\u00edv ne\u017e vy. Reviewe\u0159i kontroluj\u00ed a\u017e hotovou zm\u011bnu.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -42450,7 +42450,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332816238
   },
   "T-cs-agents.num": {
    "board": {
@@ -42516,7 +42516,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-agents",
-    "text": "Vlastn\u00ed agenti pkitu rad\u00ed a nikdy neblokuj\u00ed. Dopl\u0148ky p\u0159inesou agenty, kte\u0159\u00ed um\u00ed zablokovat merge.",
+    "text": "Agenti j\u00e1dra pkitu rad\u00ed a nikdy neblokuj\u00ed. Add-ony p\u0159in\u00e1\u0161ej\u00ed agenty, kte\u0159\u00ed um\u00ed merge zablokovat.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -42527,7 +42527,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-agents",
-    "text": "Vlastn\u00ed agenti pkitu rad\u00ed a nikdy neblokuj\u00ed. Dopl\u0148ky p\u0159inesou agenty, kte\u0159\u00ed um\u00ed zablokovat merge.",
+    "text": "Agenti j\u00e1dra pkitu rad\u00ed a nikdy neblokuj\u00ed. Add-ony p\u0159in\u00e1\u0161ej\u00ed agenty, kte\u0159\u00ed um\u00ed merge zablokovat.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -42561,7 +42561,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332816425
   },
   "T-cs-agents.title": {
    "board": {
@@ -42571,7 +42571,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-agents",
-    "text": "Jedna pr\u00e1ce a kdo ji uvid\u00ed",
+    "text": "Kdo pr\u00e1ci uvid\u00ed a kdy",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -42582,7 +42582,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-agents",
-    "text": "Jedna pr\u00e1ce a kdo ji uvid\u00ed",
+    "text": "Kdo pr\u00e1ci uvid\u00ed a kdy",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -42616,7 +42616,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332816078
   },
   "T-cs-agentsfrom": {
    "board": {
@@ -42856,7 +42856,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-agentsfrom-limit",
-    "text": "Omezen\u00ed: N\u00e1stroje agenta vynucuje AI n\u00e1stroj. Kter\u00e9 soubory sm\u00ed m\u011bnit, je pravidlo, kter\u00fdm se \u0159\u00edd\u00ed, ne z\u00e1mek.",
+    "text": "Omezen\u00ed: Kter\u00e9 n\u00e1stroje agent sm\u00ed, hl\u00edd\u00e1 AI n\u00e1stroj. Kter\u00e9 soubory sm\u00ed m\u011bnit, je jen pravidlo, kter\u00e9 dodr\u017euje. Z\u00e1mek to nen\u00ed.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -42867,7 +42867,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-agentsfrom-limit",
-    "text": "Omezen\u00ed: N\u00e1stroje agenta vynucuje AI n\u00e1stroj. Kter\u00e9 soubory sm\u00ed m\u011bnit, je pravidlo, kter\u00fdm se \u0159\u00edd\u00ed, ne z\u00e1mek.",
+    "text": "Omezen\u00ed: Kter\u00e9 n\u00e1stroje agent sm\u00ed, hl\u00edd\u00e1 AI n\u00e1stroj. Kter\u00e9 soubory sm\u00ed m\u011bnit, je jen pravidlo, kter\u00e9 dodr\u017euje. Z\u00e1mek to nen\u00ed.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -42901,7 +42901,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332973761
   },
   "T-cs-agentsfrom-map": {
    "board": {
@@ -43081,7 +43081,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-agentsfrom-map",
-    "text": "ur\u010d\u00ed roli",
+    "text": "zavede roli",
     "title": "tpl:map_T-cs-agentsfrom#h0text",
     "width": 600,
     "x": 32,
@@ -43092,7 +43092,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-agentsfrom-map",
-    "text": "ur\u010d\u00ed roli",
+    "text": "zavede roli",
     "title": "tpl:map_T-cs-agentsfrom#h0text",
     "width": 600,
     "x": 32,
@@ -43126,7 +43126,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815748
   },
   "T-cs-agentsfrom-map.h1arrow": {
    "board": {
@@ -43502,7 +43502,7 @@
     "font_size": 48,
     "ink": "#161616FF",
     "parent": "T-cs-agentsfrom-map",
-    "text": "Jeho limit",
+    "text": "Jeho meze",
     "title": "tpl:map_T-cs-agentsfrom#h2head",
     "width": 600,
     "x": 1552,
@@ -43513,7 +43513,7 @@
     "font_size": 48,
     "ink": "#161616FF",
     "parent": "T-cs-agentsfrom-map",
-    "text": "Jeho limit",
+    "text": "Jeho meze",
     "title": "tpl:map_T-cs-agentsfrom#h2head",
     "width": 600,
     "x": 1552,
@@ -43547,7 +43547,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815863
   },
   "T-cs-agentsfrom-map.h2text": {
    "board": {
@@ -44302,7 +44302,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentsfrom-map",
-    "text": "Mezery n\u00e1vrhu, ne\u017e ho p\u0159e\u010dtete",
+    "text": "D\u00edry v n\u00e1vrhu, ne\u017e ho p\u0159e\u010dtete",
     "title": "tpl:map_T-cs-agentsfrom#r0c3text",
     "width": 600,
     "x": 2312,
@@ -44313,7 +44313,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentsfrom-map",
-    "text": "Mezery n\u00e1vrhu, ne\u017e ho p\u0159e\u010dtete",
+    "text": "D\u00edry v n\u00e1vrhu, ne\u017e ho p\u0159e\u010dtete",
     "title": "tpl:map_T-cs-agentsfrom#r0c3text",
     "width": 600,
     "x": 2312,
@@ -44347,7 +44347,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815935
   },
   "T-cs-agentsfrom-map.r1c0box": {
    "board": {
@@ -44977,7 +44977,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-agentsfrom-map",
-    "text": "Reviewer pro pravidla",
+    "text": "Jeden reviewer na pravidla",
     "title": "tpl:map_T-cs-agentsfrom#r2c0text",
     "width": 600,
     "x": 32,
@@ -44988,7 +44988,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-agentsfrom-map",
-    "text": "Reviewer pro pravidla",
+    "text": "Jeden reviewer na pravidla",
     "title": "tpl:map_T-cs-agentsfrom#r2c0text",
     "width": 600,
     "x": 32,
@@ -45022,7 +45022,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815991
   },
   "T-cs-agentsfrom-map.r2c1box": {
    "board": {
@@ -46167,7 +46167,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-agentsfrom",
-    "text": "Kdy\u017e se stejn\u00fd druh kontroly opakuje, rozhodnut\u00ed pro n\u011bj ur\u010d\u00ed roli: jednu pr\u00e1ci a jen n\u00e1stroje, kter\u00e9 pot\u0159ebuje.",
+    "text": "Kdy\u017e se stejn\u00e1 kontrola po\u0159\u00e1d vrac\u00ed, rozhodnut\u00ed z n\u00ed ud\u011bl\u00e1 roli. Ta m\u00e1 jednu pr\u00e1ci a jen n\u00e1stroje, kter\u00e9 pot\u0159ebuje.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -46178,7 +46178,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-agentsfrom",
-    "text": "Kdy\u017e se stejn\u00fd druh kontroly opakuje, rozhodnut\u00ed pro n\u011bj ur\u010d\u00ed roli: jednu pr\u00e1ci a jen n\u00e1stroje, kter\u00e9 pot\u0159ebuje.",
+    "text": "Kdy\u017e se stejn\u00e1 kontrola po\u0159\u00e1d vrac\u00ed, rozhodnut\u00ed z n\u00ed ud\u011bl\u00e1 roli. Ta m\u00e1 jednu pr\u00e1ci a jen n\u00e1stroje, kter\u00e9 pot\u0159ebuje.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -46212,7 +46212,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815430
   },
   "T-cs-agentsfrom.num": {
    "board": {
@@ -46278,7 +46278,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-agentsfrom",
-    "text": "V project-kitu: pkit dod\u00e1v\u00e1 6 agent\u016f, ka\u017ed\u00fd je soubor se svou prac\u00ed, n\u00e1stroji a rozhodnut\u00edmi, kter\u00fdmi se \u0159\u00edd\u00ed.",
+    "text": "V project-kitu: pkit dod\u00e1v\u00e1 6 agent\u016f. Ka\u017ed\u00fd je soubor se svou prac\u00ed, n\u00e1stroji a rozhodnut\u00edmi, kter\u00fdmi se \u0159\u00edd\u00ed.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -46289,7 +46289,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-agentsfrom",
-    "text": "V project-kitu: pkit dod\u00e1v\u00e1 6 agent\u016f, ka\u017ed\u00fd je soubor se svou prac\u00ed, n\u00e1stroji a rozhodnut\u00edmi, kter\u00fdmi se \u0159\u00edd\u00ed.",
+    "text": "V project-kitu: pkit dod\u00e1v\u00e1 6 agent\u016f. Ka\u017ed\u00fd je soubor se svou prac\u00ed, n\u00e1stroji a rozhodnut\u00edmi, kter\u00fdmi se \u0159\u00edd\u00ed.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -46323,7 +46323,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815610
   },
   "T-cs-agentsfrom.title": {
    "board": {
@@ -46723,7 +46723,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-hl",
-    "text": "Ne. \u010cerstv\u00e1 instalace dopln\u00ed v\u00fdchoz\u00ed cesty a v\u0161ech \u0161est agent\u016f je hned p\u0159ipraveno.",
+    "text": "Ne. \u010cist\u00e1 instalace dopln\u00ed v\u00fdchoz\u00ed cesty a v\u0161ech \u0161est agent\u016f hned funguje.",
     "title": "tpl:highlight#body",
     "width": 820,
     "x": 140,
@@ -46734,7 +46734,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-hl",
-    "text": "Ne. \u010cerstv\u00e1 instalace dopln\u00ed v\u00fdchoz\u00ed cesty a v\u0161ech \u0161est agent\u016f je hned p\u0159ipraveno.",
+    "text": "Ne. \u010cist\u00e1 instalace dopln\u00ed v\u00fdchoz\u00ed cesty a v\u0161ech \u0161est agent\u016f hned funguje.",
     "title": "tpl:highlight#body",
     "width": 820,
     "x": 140,
@@ -46768,7 +46768,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332817632
   },
   "T-cs-agentswired-hl.head": {
    "board": {
@@ -46778,7 +46778,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-hl",
-    "text": "Mus\u00edte ho zapojit?",
+    "text": "Mus\u00edte agenty zapojit?",
     "title": "tpl:highlight#head",
     "width": 820,
     "x": 140,
@@ -46789,7 +46789,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-hl",
-    "text": "Mus\u00edte ho zapojit?",
+    "text": "Mus\u00edte agenty zapojit?",
     "title": "tpl:highlight#head",
     "width": 820,
     "x": 140,
@@ -46823,7 +46823,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332817581
   },
   "T-cs-agentswired-hl.icon": {
    "board": {
@@ -47054,7 +47054,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-limit",
-    "text": "Omezen\u00ed: Agenty pkitu nikdy neupravujete. Pro jinou roli si nap\u00ed\u0161ete vlastn\u00edho v .pkit/agents/project/.",
+    "text": "Omezen\u00ed: Agenty pkitu nikdy neupravujete. Na jinou roli si nap\u00ed\u0161ete vlastn\u00edho agenta do .pkit/agents/project/.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -47065,7 +47065,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-limit",
-    "text": "Omezen\u00ed: Agenty pkitu nikdy neupravujete. Pro jinou roli si nap\u00ed\u0161ete vlastn\u00edho v .pkit/agents/project/.",
+    "text": "Omezen\u00ed: Agenty pkitu nikdy neupravujete. Na jinou roli si nap\u00ed\u0161ete vlastn\u00edho agenta do .pkit/agents/project/.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -47099,7 +47099,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332817912
   },
   "T-cs-agentswired-wired": {
    "board": {
@@ -47428,7 +47428,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-wired",
-    "text": "Agent pro v\u00e1\u0161 AI n\u00e1stroj",
+    "text": "Co dostane v\u00e1\u0161 AI n\u00e1stroj",
     "title": "tpl:wired_T-cs-agentswired#p2head",
     "width": 901,
     "x": 2042,
@@ -47439,7 +47439,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-wired",
-    "text": "Agent pro v\u00e1\u0161 AI n\u00e1stroj",
+    "text": "Co dostane v\u00e1\u0161 AI n\u00e1stroj",
     "title": "tpl:wired_T-cs-agentswired#p2head",
     "width": 901,
     "x": 2042,
@@ -47473,7 +47473,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332817393
   },
   "T-cs-agentswired-wired.p2img": {
    "board": {
@@ -47700,7 +47700,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-wired",
-    "text": "Jeho prvn\u00ed \u0159\u00e1dky jmenuj\u00ed rozhodnut\u00ed, kter\u00fdmi se \u0159\u00edd\u00ed, a dokumenty, kter\u00e9 \u010dte.",
+    "text": "V prvn\u00edch \u0159\u00e1dc\u00edch jmenuje rozhodnut\u00ed, kter\u00fdmi se \u0159\u00edd\u00ed, a dokumenty, kter\u00e9 \u010dte.",
     "title": "tpl:wired_T-cs-agentswired#t0text",
     "width": 504,
     "x": 40,
@@ -47711,7 +47711,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-wired",
-    "text": "Jeho prvn\u00ed \u0159\u00e1dky jmenuj\u00ed rozhodnut\u00ed, kter\u00fdmi se \u0159\u00edd\u00ed, a dokumenty, kter\u00e9 \u010dte.",
+    "text": "V prvn\u00edch \u0159\u00e1dc\u00edch jmenuje rozhodnut\u00ed, kter\u00fdmi se \u0159\u00edd\u00ed, a dokumenty, kter\u00e9 \u010dte.",
     "title": "tpl:wired_T-cs-agentswired#t0text",
     "width": 504,
     "x": 40,
@@ -47745,7 +47745,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332817643
   },
   "T-cs-agentswired-wired.t1box": {
    "board": {
@@ -47868,7 +47868,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-wired",
-    "text": "pkit validate ov\u011b\u0159\u00ed ka\u017ed\u00e9 jm\u00e9no a \u017ee \u017e\u00e1dn\u00ed dva agenti nevlastn\u00ed stejn\u00fd soubor.",
+    "text": "pkit validate ov\u011b\u0159\u00ed ka\u017ed\u00e9 jm\u00e9no i to, \u017ee dva agenti nevlastn\u00ed stejn\u00fd soubor.",
     "title": "tpl:wired_T-cs-agentswired#t1text",
     "width": 504,
     "x": 688,
@@ -47879,7 +47879,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-wired",
-    "text": "pkit validate ov\u011b\u0159\u00ed ka\u017ed\u00e9 jm\u00e9no a \u017ee \u017e\u00e1dn\u00ed dva agenti nevlastn\u00ed stejn\u00fd soubor.",
+    "text": "pkit validate ov\u011b\u0159\u00ed ka\u017ed\u00e9 jm\u00e9no i to, \u017ee dva agenti nevlastn\u00ed stejn\u00fd soubor.",
     "title": "tpl:wired_T-cs-agentswired#t1text",
     "width": 504,
     "x": 688,
@@ -47913,7 +47913,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332817097
   },
   "T-cs-agentswired-wired.t2box": {
    "board": {
@@ -48036,7 +48036,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-wired",
-    "text": "Ka\u017ed\u00fd upgrade ho nasad\u00ed znovu, s va\u0161imi cestami.",
+    "text": "Ka\u017ed\u00fd upgrade agenta nasad\u00ed znovu, s va\u0161imi cestami.",
     "title": "tpl:wired_T-cs-agentswired#t2text",
     "width": 504,
     "x": 1336,
@@ -48047,7 +48047,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-agentswired-wired",
-    "text": "Ka\u017ed\u00fd upgrade ho nasad\u00ed znovu, s va\u0161imi cestami.",
+    "text": "Ka\u017ed\u00fd upgrade agenta nasad\u00ed znovu, s va\u0161imi cestami.",
     "title": "tpl:wired_T-cs-agentswired#t2text",
     "width": 504,
     "x": 1336,
@@ -48081,7 +48081,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332817237
   },
   "T-cs-agentswired.bg": {
    "board": {
@@ -48148,7 +48148,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-agentswired",
-    "text": "Ka\u017ed\u00fd agent p\u0159ijde nav\u00e1zan\u00fd na sv\u00e1 rozhodnut\u00ed a nasm\u011brovan\u00fd na va\u0161e slo\u017eky. pkit dopln\u00ed va\u0161e cesty a zkontroluje ka\u017edou vazbu.",
+    "text": "S vazbami na sv\u00e1 rozhodnut\u00ed a s cestami do va\u0161ich slo\u017eek. Cesty dopln\u00ed pkit s\u00e1m a ka\u017edou vazbu zkontroluje.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -48159,7 +48159,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-agentswired",
-    "text": "Ka\u017ed\u00fd agent p\u0159ijde nav\u00e1zan\u00fd na sv\u00e1 rozhodnut\u00ed a nasm\u011brovan\u00fd na va\u0161e slo\u017eky. pkit dopln\u00ed va\u0161e cesty a zkontroluje ka\u017edou vazbu.",
+    "text": "S vazbami na sv\u00e1 rozhodnut\u00ed a s cestami do va\u0161ich slo\u017eek. Cesty dopln\u00ed pkit s\u00e1m a ka\u017edou vazbu zkontroluje.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -48193,7 +48193,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332816795
   },
   "T-cs-agentswired.num": {
    "board": {
@@ -48259,7 +48259,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-agentswired",
-    "text": "V \u010derstv\u00e9 instalaci: v\u0161ech 6 agent\u016f nasazeno najednou, s v\u00fdchoz\u00edmi cestami. pkit validate zkontroloval 17 skill\u016f a agent\u016f.",
+    "text": "V \u010dist\u00e9 instalaci pkit nasadil v\u0161ech 6 agent\u016f najednou, s v\u00fdchoz\u00edmi cestami. pkit validate zkontroloval 17 skill\u016f a agent\u016f.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -48270,7 +48270,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-agentswired",
-    "text": "V \u010derstv\u00e9 instalaci: v\u0161ech 6 agent\u016f nasazeno najednou, s v\u00fdchoz\u00edmi cestami. pkit validate zkontroloval 17 skill\u016f a agent\u016f.",
+    "text": "V \u010dist\u00e9 instalaci pkit nasadil v\u0161ech 6 agent\u016f najednou, s v\u00fdchoz\u00edmi cestami. pkit validate zkontroloval 17 skill\u016f a agent\u016f.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -48304,7 +48304,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332817403
   },
   "T-cs-agentswired.title": {
    "board": {
@@ -48485,7 +48485,7 @@
     "y": 0
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-checked-check.png@26a1df0c3992aa87",
+    "file": "2026-10-29-friday-talk-icons/term-cs-checked-check.png@25367c12345b48e3",
     "height": 479,
     "parent": "T-cs-checked-check",
     "title": "tpl:term_image#img",
@@ -48493,7 +48493,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "58f6fa82-b777-4fe6-8f6f-575cdfb9f7d4",
+   "mural_id": "9fcafa22-b944-44a7-8b16-f1b662c8e649",
    "tracked": [
     "title",
     "text",
@@ -48521,7 +48521,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331093519
+   "updatedOn": 1793332803802
   },
   "T-cs-checked-limit": {
    "board": {
@@ -48704,7 +48704,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-checked-limit",
-    "text": "Omezen\u00ed: Kontroluje, \u017ee ka\u017ed\u00e1 vazba n\u011bkam vede, ne \u017ee dokument st\u00e1le plat\u00ed.",
+    "text": "Omezen\u00ed: Kontrola ov\u011b\u0159\u00ed, \u017ee ka\u017ed\u00e1 vazba n\u011bkam vede. Jestli dokument st\u00e1le plat\u00ed, nepozn\u00e1.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -48715,7 +48715,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-checked-limit",
-    "text": "Omezen\u00ed: Kontroluje, \u017ee ka\u017ed\u00e1 vazba n\u011bkam vede, ne \u017ee dokument st\u00e1le plat\u00ed.",
+    "text": "Omezen\u00ed: Kontrola ov\u011b\u0159\u00ed, \u017ee ka\u017ed\u00e1 vazba n\u011bkam vede. Jestli dokument st\u00e1le plat\u00ed, nepozn\u00e1.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -48749,7 +48749,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332821448
   },
   "T-cs-checked-ties": {
    "board": {
@@ -50308,7 +50308,7 @@
     "font_size": 28,
     "ink": "#DA1E28FF",
     "parent": "T-cs-checked-ties",
-    "text": "p\u0159ejmenov\u00e1n: last_tag.py",
+    "text": "p\u0159ejmenov\u00e1n na last_tag.py",
     "title": "tpl:ties_T-cs-checked#l6note",
     "width": 540,
     "x": 0,
@@ -50319,7 +50319,7 @@
     "font_size": 28,
     "ink": "#DA1E28FF",
     "parent": "T-cs-checked-ties",
-    "text": "p\u0159ejmenov\u00e1n: last_tag.py",
+    "text": "p\u0159ejmenov\u00e1n na last_tag.py",
     "title": "tpl:ties_T-cs-checked#l6note",
     "width": 540,
     "x": 0,
@@ -50353,7 +50353,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332821469
   },
   "T-cs-checked-ties.l6text": {
    "board": {
@@ -51823,7 +51823,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-checked",
-    "text": "P\u0159ejmenujte soubor a kontrola vyjmenuje nav\u00e1zan\u00e9 dokumenty je\u0161t\u011b p\u0159ed mergem.",
+    "text": "P\u0159ejmenujte soubor a kontrola v\u00e1m je\u0161t\u011b p\u0159ed mergem \u0159ekne, kter\u00e9 dokumenty jsou na n\u011bj nav\u00e1zan\u00e9.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -51834,7 +51834,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-checked",
-    "text": "P\u0159ejmenujte soubor a kontrola vyjmenuje nav\u00e1zan\u00e9 dokumenty je\u0161t\u011b p\u0159ed mergem.",
+    "text": "P\u0159ejmenujte soubor a kontrola v\u00e1m je\u0161t\u011b p\u0159ed mergem \u0159ekne, kter\u00e9 dokumenty jsou na n\u011bj nav\u00e1zan\u00e9.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -51868,7 +51868,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332821287
   },
   "T-cs-checked.num": {
    "board": {
@@ -51934,7 +51934,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-checked",
-    "text": "V project-kitu: tahle kontrola b\u011b\u017e\u00ed v pre-push hooku a na ka\u017ed\u00e9m pull requestu, zapojil ji projekt.",
+    "text": "V project-kitu b\u011b\u017e\u00ed tahle kontrola v pre-push hooku a na ka\u017ed\u00e9m pull requestu. Zapojil ji tam s\u00e1m projekt.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -51945,7 +51945,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-checked",
-    "text": "V project-kitu: tahle kontrola b\u011b\u017e\u00ed v pre-push hooku a na ka\u017ed\u00e9m pull requestu, zapojil ji projekt.",
+    "text": "V project-kitu b\u011b\u017e\u00ed tahle kontrola v pre-push hooku a na ka\u017ed\u00e9m pull requestu. Zapojil ji tam s\u00e1m projekt.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -51979,7 +51979,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332821525
   },
   "T-cs-checked.title": {
    "board": {
@@ -52379,7 +52379,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-checks-hl",
-    "text": "pkit nep\u0159id\u00e1 git hook ani CI. Zapojte oba p\u0159\u00edkazy do sv\u00fdch, jako project-kit.",
+    "text": "pkit nep\u0159id\u00e1 git hook ani CI. Zapojte si oba p\u0159\u00edkazy sami, jako project-kit.",
     "title": "tpl:highlight#body",
     "width": 820,
     "x": 140,
@@ -52390,7 +52390,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-checks-hl",
-    "text": "pkit nep\u0159id\u00e1 git hook ani CI. Zapojte oba p\u0159\u00edkazy do sv\u00fdch, jako project-kit.",
+    "text": "pkit nep\u0159id\u00e1 git hook ani CI. Zapojte si oba p\u0159\u00edkazy sami, jako project-kit.",
     "title": "tpl:highlight#body",
     "width": 820,
     "x": 140,
@@ -52424,7 +52424,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332820770
   },
   "T-cs-checks-hl.head": {
    "board": {
@@ -52434,7 +52434,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-checks-hl",
-    "text": "P\u0159i ka\u017ed\u00e9m push?",
+    "text": "P\u0159i ka\u017ed\u00e9m pushi?",
     "title": "tpl:highlight#head",
     "width": 820,
     "x": 140,
@@ -52445,7 +52445,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-checks-hl",
-    "text": "P\u0159i ka\u017ed\u00e9m push?",
+    "text": "P\u0159i ka\u017ed\u00e9m pushi?",
     "title": "tpl:highlight#head",
     "width": 820,
     "x": 140,
@@ -52479,7 +52479,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332820756
   },
   "T-cs-checks-hl.icon": {
    "board": {
@@ -52710,7 +52710,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-checks-limit",
-    "text": "Omezen\u00ed: Kontrola najde, co je rozbit\u00e9 nebo bez odpov\u011bdi. Zda dokument st\u00e1le plat\u00ed, posoud\u00ed reviewer.",
+    "text": "Omezen\u00ed: Kontrola najde, co je rozbit\u00e9 nebo bez odpov\u011bdi. Jestli dokument st\u00e1le plat\u00ed, posoud\u00ed reviewer.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -52721,7 +52721,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-checks-limit",
-    "text": "Omezen\u00ed: Kontrola najde, co je rozbit\u00e9 nebo bez odpov\u011bdi. Zda dokument st\u00e1le plat\u00ed, posoud\u00ed reviewer.",
+    "text": "Omezen\u00ed: Kontrola najde, co je rozbit\u00e9 nebo bez odpov\u011bdi. Jestli dokument st\u00e1le plat\u00ed, posoud\u00ed reviewer.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -52755,7 +52755,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332821306
   },
   "T-cs-checks-wired": {
    "board": {
@@ -52982,7 +52982,7 @@
     "y": 68
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-checks-p1.png@9cb926d71323754d",
+    "file": "2026-10-29-friday-talk-icons/term-cs-checks-p1.png@103fce26ebea81b2",
     "height": 312,
     "parent": "T-cs-checks-wired",
     "title": "tpl:wired_T-cs-checks#p1img",
@@ -52990,7 +52990,7 @@
     "x": 1532,
     "y": 68
    },
-   "mural_id": "4b831a2d-8a47-4ea7-9396-5591f0c0892d",
+   "mural_id": "eb935006-6fd6-4787-a571-822dfa5ed4c8",
    "tracked": [
     "title",
     "text",
@@ -53018,7 +53018,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331093100
+   "updatedOn": 1793332803863
   },
   "T-cs-checks-wired.t0box": {
    "board": {
@@ -53141,7 +53141,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-checks-wired",
-    "text": "Zm\u011bna uprav\u00ed jeden soubor. Co na n\u011bm z\u00e1vis\u00ed, je jinde.",
+    "text": "Zm\u011bna uprav\u00ed jeden soubor. To, co na n\u011bm z\u00e1vis\u00ed, le\u017e\u00ed jinde.",
     "title": "tpl:wired_T-cs-checks#t0text",
     "width": 504,
     "x": 40,
@@ -53152,7 +53152,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-checks-wired",
-    "text": "Zm\u011bna uprav\u00ed jeden soubor. Co na n\u011bm z\u00e1vis\u00ed, je jinde.",
+    "text": "Zm\u011bna uprav\u00ed jeden soubor. To, co na n\u011bm z\u00e1vis\u00ed, le\u017e\u00ed jinde.",
     "title": "tpl:wired_T-cs-checks#t0text",
     "width": 504,
     "x": 40,
@@ -53186,7 +53186,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332820527
   },
   "T-cs-checks-wired.t1box": {
    "board": {
@@ -53309,7 +53309,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-checks-wired",
-    "text": "Review \u010dte zm\u011bnu, kterou m\u00e1 p\u0159ed sebou, ne soubor, kter\u00fd zastaral.",
+    "text": "Reviewer \u010dte jen samotnou zm\u011bnu. Soubor, kter\u00fd kv\u016fli n\u00ed zastaral, nevid\u00ed.",
     "title": "tpl:wired_T-cs-checks#t1text",
     "width": 504,
     "x": 688,
@@ -53320,7 +53320,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-checks-wired",
-    "text": "Review \u010dte zm\u011bnu, kterou m\u00e1 p\u0159ed sebou, ne soubor, kter\u00fd zastaral.",
+    "text": "Reviewer \u010dte jen samotnou zm\u011bnu. Soubor, kter\u00fd kv\u016fli n\u00ed zastaral, nevid\u00ed.",
     "title": "tpl:wired_T-cs-checks#t1text",
     "width": 504,
     "x": 688,
@@ -53354,7 +53354,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332820639
   },
   "T-cs-checks-wired.t2box": {
    "board": {
@@ -53477,7 +53477,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-checks-wired",
-    "text": "Agent jedn\u00e1 podle souboru. Kontrola najde, co agent nikdy nezpochybn\u00ed.",
+    "text": "Agent jedn\u00e1 podle souboru. Kontrola ov\u011b\u0159\u00ed i to, o \u010dem agent nepochybuje.",
     "title": "tpl:wired_T-cs-checks#t2text",
     "width": 504,
     "x": 1336,
@@ -53488,7 +53488,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-checks-wired",
-    "text": "Agent jedn\u00e1 podle souboru. Kontrola najde, co agent nikdy nezpochybn\u00ed.",
+    "text": "Agent jedn\u00e1 podle souboru. Kontrola ov\u011b\u0159\u00ed i to, o \u010dem agent nepochybuje.",
     "title": "tpl:wired_T-cs-checks#t2text",
     "width": 504,
     "x": 1336,
@@ -53522,7 +53522,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332820641
   },
   "T-cs-checks.bg": {
    "board": {
@@ -53589,7 +53589,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-checks",
-    "text": "Cel\u00fd projekt a ka\u017edou zm\u011bnu p\u0159ed mergem. Agent jedn\u00e1 podle toho, co je v souborech, a nikdy o tom nepochybuje.",
+    "text": "Cel\u00fd projekt a ka\u017edou zm\u011bnu p\u0159ed mergem. Agent toti\u017e slep\u011b v\u011b\u0159\u00ed v\u0161emu, co najde v souborech.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -53600,7 +53600,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-checks",
-    "text": "Cel\u00fd projekt a ka\u017edou zm\u011bnu p\u0159ed mergem. Agent jedn\u00e1 podle toho, co je v souborech, a nikdy o tom nepochybuje.",
+    "text": "Cel\u00fd projekt a ka\u017edou zm\u011bnu p\u0159ed mergem. Agent toti\u017e slep\u011b v\u011b\u0159\u00ed v\u0161emu, co najde v souborech.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -53634,7 +53634,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819993
   },
   "T-cs-checks.num": {
    "board": {
@@ -53700,7 +53700,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-checks",
-    "text": "V \u010derstv\u00e9 instalaci spust\u00ed pkit validate 12 kontrol bez jak\u00e9hokoli nastaven\u00ed. Ka\u017ed\u00fd dopln\u011bk p\u0159id\u00e1 sv\u00e9: v project-kitu 16.",
+    "text": "Hned po instalaci spust\u00ed pkit validate 12 kontrol a nemus\u00edte nic nastavovat. Ka\u017ed\u00fd add-on p\u0159id\u00e1 dal\u0161\u00ed, v project-kitu je jich 16.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -53711,7 +53711,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-checks",
-    "text": "V \u010derstv\u00e9 instalaci spust\u00ed pkit validate 12 kontrol bez jak\u00e9hokoli nastaven\u00ed. Ka\u017ed\u00fd dopln\u011bk p\u0159id\u00e1 sv\u00e9: v project-kitu 16.",
+    "text": "Hned po instalaci spust\u00ed pkit validate 12 kontrol a nemus\u00edte nic nastavovat. Ka\u017ed\u00fd add-on p\u0159id\u00e1 dal\u0161\u00ed, v project-kitu je jich 16.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -53745,7 +53745,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332820463
   },
   "T-cs-checks.title": {
    "board": {
@@ -54040,7 +54040,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-limit",
-    "text": "Omezen\u00ed: Ka\u017edou roli zat\u00edm hraje jen jeden dopln\u011bk, tak\u017ee v\u00fdm\u011bna je navr\u017een\u00e1, ale je\u0161t\u011b nevyzkou\u0161en\u00e1.",
+    "text": "Omezen\u00ed: Ka\u017edou roli zat\u00edm hraje jen jeden add-on. V\u00fdm\u011bna je tedy navr\u017een\u00e1, ale je\u0161t\u011b nevyzkou\u0161en\u00e1.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -54051,7 +54051,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-limit",
-    "text": "Omezen\u00ed: Ka\u017edou roli zat\u00edm hraje jen jeden dopln\u011bk, tak\u017ee v\u00fdm\u011bna je navr\u017een\u00e1, ale je\u0161t\u011b nevyzkou\u0161en\u00e1.",
+    "text": "Omezen\u00ed: Ka\u017edou roli zat\u00edm hraje jen jeden add-on. V\u00fdm\u011bna je tedy navr\u017een\u00e1, ale je\u0161t\u011b nevyzkou\u0161en\u00e1.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -54085,7 +54085,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332827547
   },
   "T-cs-connect-sockets": {
    "board": {
@@ -55453,7 +55453,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "p\u0159\u00edpady u\u017eit\u00ed pro pl\u00e1nov\u00e1n\u00ed",
+    "text": "p\u0159\u00edpady u\u017eit\u00ed k pl\u00e1nov\u00e1n\u00ed",
     "title": "tpl:sockets_T-cs-connect#s2text",
     "width": 688,
     "x": 936,
@@ -55464,7 +55464,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "p\u0159\u00edpady u\u017eit\u00ed pro pl\u00e1nov\u00e1n\u00ed",
+    "text": "p\u0159\u00edpady u\u017eit\u00ed k pl\u00e1nov\u00e1n\u00ed",
     "title": "tpl:sockets_T-cs-connect#s2text",
     "width": 688,
     "x": 936,
@@ -55498,7 +55498,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332827185
   },
   "T-cs-connect-sockets.thead": {
    "board": {
@@ -55508,7 +55508,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Co uk\u00e1\u017ee pkit status v project-kitu",
+    "text": "Co vyp\u00ed\u0161e pkit status v project-kitu",
     "title": "tpl:sockets_T-cs-connect#thead",
     "width": 1200,
     "x": 1744,
@@ -55519,7 +55519,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Co uk\u00e1\u017ee pkit status v project-kitu",
+    "text": "Co vyp\u00ed\u0161e pkit status v project-kitu",
     "title": "tpl:sockets_T-cs-connect#thead",
     "width": 1200,
     "x": 1744,
@@ -55553,7 +55553,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332827271
   },
   "T-cs-connect-sockets.timg": {
    "board": {
@@ -55727,7 +55727,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Dopln\u011bk vym\u011bn\u00edte za jin\u00fd ve stejn\u00e9 roli. Zbytek z\u016fstane, jak je.",
+    "text": "Add-on vym\u011bn\u00edte za jin\u00fd ve stejn\u00e9 roli. Zbytek z\u016fstane, jak je.",
     "title": "tpl:sockets_T-cs-connect#w0text",
     "width": 875,
     "x": 32,
@@ -55738,7 +55738,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Dopln\u011bk vym\u011bn\u00edte za jin\u00fd ve stejn\u00e9 roli. Zbytek z\u016fstane, jak je.",
+    "text": "Add-on vym\u011bn\u00edte za jin\u00fd ve stejn\u00e9 roli. Zbytek z\u016fstane, jak je.",
     "title": "tpl:sockets_T-cs-connect#w0text",
     "width": 875,
     "x": 32,
@@ -55772,7 +55772,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332827416
   },
   "T-cs-connect-sockets.w1bar": {
    "board": {
@@ -55898,7 +55898,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Instalujete jen to, co pot\u0159ebujete. Pr\u00e1zdn\u00fd slot nevad\u00ed.",
+    "text": "Instalujete jen to, co pot\u0159ebujete. Pr\u00e1zdn\u00fd slot ni\u010demu nevad\u00ed.",
     "title": "tpl:sockets_T-cs-connect#w1text",
     "width": 875,
     "x": 1035,
@@ -55909,7 +55909,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Instalujete jen to, co pot\u0159ebujete. Pr\u00e1zdn\u00fd slot nevad\u00ed.",
+    "text": "Instalujete jen to, co pot\u0159ebujete. Pr\u00e1zdn\u00fd slot ni\u010demu nevad\u00ed.",
     "title": "tpl:sockets_T-cs-connect#w1text",
     "width": 875,
     "x": 1035,
@@ -55943,7 +55943,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332827461
   },
   "T-cs-connect-sockets.w2bar": {
    "board": {
@@ -56124,7 +56124,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Pro\u010d pkit propojuje dopl\u0148ky takhle",
+    "text": "Pro\u010d pkit propojuje add-ony takhle",
     "title": "tpl:sockets_T-cs-connect#whyhead",
     "width": 2944,
     "x": 0,
@@ -56135,7 +56135,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-connect-sockets",
-    "text": "Pro\u010d pkit propojuje dopl\u0148ky takhle",
+    "text": "Pro\u010d pkit propojuje add-ony takhle",
     "title": "tpl:sockets_T-cs-connect#whyhead",
     "width": 2944,
     "x": 0,
@@ -56169,7 +56169,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332827374
   },
   "T-cs-connect.bg": {
    "board": {
@@ -56236,7 +56236,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-connect",
-    "text": "P\u0159es sloty s n\u00e1zvem role, nikdy dopl\u0148ku. Dopln\u011bk, kter\u00fd n\u011bco pot\u0159ebuje, otev\u0159e slot; vyplnit ho m\u016f\u017ee kter\u00fdkoli jin\u00fd.",
+    "text": "Add-on nikdy nejmenuje jin\u00fd add-on, jen roli. Kdy\u017e n\u011bco pot\u0159ebuje, otev\u0159e slot. Vyplnit ho m\u016f\u017ee kter\u00fdkoli jin\u00fd.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -56247,7 +56247,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-connect",
-    "text": "P\u0159es sloty s n\u00e1zvem role, nikdy dopl\u0148ku. Dopln\u011bk, kter\u00fd n\u011bco pot\u0159ebuje, otev\u0159e slot; vyplnit ho m\u016f\u017ee kter\u00fdkoli jin\u00fd.",
+    "text": "Add-on nikdy nejmenuje jin\u00fd add-on, jen roli. Kdy\u017e n\u011bco pot\u0159ebuje, otev\u0159e slot. Vyplnit ho m\u016f\u017ee kter\u00fdkoli jin\u00fd.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -56281,7 +56281,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332826645
   },
   "T-cs-connect.num": {
    "board": {
@@ -56347,7 +56347,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-connect",
-    "text": "V project-kitu: 3 role, ka\u017edou hraje jeden dopln\u011bk, a 6 slot\u016f, z toho 4 vypln\u011bn\u00e9.",
+    "text": "V project-kitu: 3 role, ka\u017edou hraje jeden add-on. Ze 6 slot\u016f jsou 4 vypln\u011bn\u00e9.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -56358,7 +56358,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-connect",
-    "text": "V project-kitu: 3 role, ka\u017edou hraje jeden dopln\u011bk, a 6 slot\u016f, z toho 4 vypln\u011bn\u00e9.",
+    "text": "V project-kitu: 3 role, ka\u017edou hraje jeden add-on. Ze 6 slot\u016f jsou 4 vypln\u011bn\u00e9.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -56392,7 +56392,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332827212
   },
   "T-cs-connect.title": {
    "board": {
@@ -56402,7 +56402,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-connect",
-    "text": "Jak dopl\u0148ky spolupracuj\u00ed",
+    "text": "Jak add-ony spolupracuj\u00ed",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -56413,7 +56413,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-connect",
-    "text": "Jak dopl\u0148ky spolupracuj\u00ed",
+    "text": "Jak add-ony spolupracuj\u00ed",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -56447,7 +56447,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332826593
   },
   "T-cs-cover": {
    "board": {
@@ -56793,7 +56793,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-cover",
-    "text": "V\u00fdvoj s AI tak, jak rozhodl v\u00e1\u0161 projekt",
+    "text": "V\u00fdvoj s AI podle rozhodnut\u00ed va\u0161eho projektu",
     "title": "tpl:talk_cover#title",
     "width": 2944,
     "x": 128,
@@ -56804,7 +56804,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-cover",
-    "text": "V\u00fdvoj s AI tak, jak rozhodl v\u00e1\u0161 projekt",
+    "text": "V\u00fdvoj s AI podle rozhodnut\u00ed va\u0161eho projektu",
     "title": "tpl:talk_cover#title",
     "width": 2944,
     "x": 128,
@@ -56838,7 +56838,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332805311
   },
   "T-cs-cover.version": {
    "board": {
@@ -57584,7 +57584,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-col1",
-    "text": "Odd\u011blen\u011b od va\u0161ich: ka\u017ed\u00fd upgrade je nahrad\u00ed, tak\u017ee je nikdy neupravujete.",
+    "text": "Le\u017e\u00ed odd\u011blen\u011b od va\u0161ich. Ka\u017ed\u00fd upgrade je nahrad\u00ed, proto je nikdy neupravujete.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -57595,7 +57595,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-col1",
-    "text": "Odd\u011blen\u011b od va\u0161ich: ka\u017ed\u00fd upgrade je nahrad\u00ed, tak\u017ee je nikdy neupravujete.",
+    "text": "Le\u017e\u00ed odd\u011blen\u011b od va\u0161ich. Ka\u017ed\u00fd upgrade je nahrad\u00ed, proto je nikdy neupravujete.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -57629,7 +57629,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809197
   },
   "T-cs-decisions-col2": {
    "board": {
@@ -57978,7 +57978,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-decisions-col2",
-    "text": "Jak pracuje v\u00e1\u0161 t\u00fdm, ve volb\u00e1ch, kter\u00e9 pkit nech\u00e1v\u00e1 na v\u00e1s.",
+    "text": "Jak pracuje v\u00e1\u0161 t\u00fdm tam, kde pkit volbu nech\u00e1v\u00e1 na v\u00e1s.",
     "title": "tpl:kind#text",
     "width": 816,
     "x": 40,
@@ -57989,7 +57989,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-decisions-col2",
-    "text": "Jak pracuje v\u00e1\u0161 t\u00fdm, ve volb\u00e1ch, kter\u00e9 pkit nech\u00e1v\u00e1 na v\u00e1s.",
+    "text": "Jak pracuje v\u00e1\u0161 t\u00fdm tam, kde pkit volbu nech\u00e1v\u00e1 na v\u00e1s.",
     "title": "tpl:kind#text",
     "width": 816,
     "x": 40,
@@ -58023,7 +58023,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809548
   },
   "T-cs-decisions-col2.why": {
    "board": {
@@ -58033,7 +58033,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-col2",
-    "text": "Jen va\u0161e: sem \u017e\u00e1dn\u00fd upgrade nikdy nep\u00ed\u0161e.",
+    "text": "Pat\u0159\u00ed jen v\u00e1m. Upgrade sem nikdy nic nezap\u00ed\u0161e.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -58044,7 +58044,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-col2",
-    "text": "Jen va\u0161e: sem \u017e\u00e1dn\u00fd upgrade nikdy nep\u00ed\u0161e.",
+    "text": "Pat\u0159\u00ed jen v\u00e1m. Upgrade sem nikdy nic nezap\u00ed\u0161e.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -58078,7 +58078,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809122
   },
   "T-cs-decisions-col3": {
    "board": {
@@ -58482,7 +58482,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-col3",
-    "text": "Le\u017e\u00ed u dokumentace va\u0161eho syst\u00e9mu, kde je dr\u017e\u00ed jeho architekt.",
+    "text": "Le\u017e\u00ed u dokumentace va\u0161eho syst\u00e9mu, kde se o n\u011b star\u00e1 architekt.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -58493,7 +58493,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-col3",
-    "text": "Le\u017e\u00ed u dokumentace va\u0161eho syst\u00e9mu, kde je dr\u017e\u00ed jeho architekt.",
+    "text": "Le\u017e\u00ed u dokumentace va\u0161eho syst\u00e9mu, kde se o n\u011b star\u00e1 architekt.",
     "title": "tpl:kind#why",
     "width": 816,
     "x": 40,
@@ -58527,7 +58527,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809196
   },
   "T-cs-decisions-grp1": {
    "board": {
@@ -58706,7 +58706,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-grp2",
-    "text": "Co stav\u00edte, ve slo\u017ece, kterou zvol\u00edte",
+    "text": "Co stav\u00edte, ve slo\u017ece, kterou si zvol\u00edte",
     "title": "tpl:kind_group#head",
     "width": 896,
     "x": 0,
@@ -58717,7 +58717,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-grp2",
-    "text": "Co stav\u00edte, ve slo\u017ece, kterou zvol\u00edte",
+    "text": "Co stav\u00edte, ve slo\u017ece, kterou si zvol\u00edte",
     "title": "tpl:kind_group#head",
     "width": 896,
     "x": 0,
@@ -58751,7 +58751,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809079
   },
   "T-cs-decisions-limit": {
    "board": {
@@ -58934,7 +58934,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-limit",
-    "text": "Omezen\u00ed: Napsat a zrevidovat z\u00e1znam stoj\u00ed \u010das: vyplat\u00ed se jen u voleb, na kter\u00fdch stav\u00ed dal\u0161\u00ed pr\u00e1ce.",
+    "text": "Omezen\u00ed: Napsat a zrevidovat z\u00e1znam zabere \u010das. Vyplat\u00ed se jen u rozhodnut\u00ed, na kter\u00fdch stoj\u00ed dal\u0161\u00ed pr\u00e1ce.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -58945,7 +58945,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-decisions-limit",
-    "text": "Omezen\u00ed: Napsat a zrevidovat z\u00e1znam stoj\u00ed \u010das: vyplat\u00ed se jen u voleb, na kter\u00fdch stav\u00ed dal\u0161\u00ed pr\u00e1ce.",
+    "text": "Omezen\u00ed: Napsat a zrevidovat z\u00e1znam zabere \u010das. Vyplat\u00ed se jen u rozhodnut\u00ed, na kter\u00fdch stoj\u00ed dal\u0161\u00ed pr\u00e1ce.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -58979,7 +58979,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809564
   },
   "T-cs-decisions-path1": {
    "board": {
@@ -59256,7 +59256,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-decisions",
-    "text": "Z\u00e1znam o rozhodnut\u00ed uchov\u00e1 jednu volbu a d\u016fvod, pro\u010d padla. M\u00edsto, kde le\u017e\u00ed, \u0159\u00edk\u00e1, \u010deho se t\u00fdk\u00e1 a kdo ho sm\u00ed m\u011bnit.",
+    "text": "Z\u00e1znam o rozhodnut\u00ed uchov\u00e1 jednu volbu i jej\u00ed d\u016fvod. Podle toho, kde le\u017e\u00ed, pozn\u00e1te, \u010deho se t\u00fdk\u00e1 a kdo ho sm\u00ed m\u011bnit.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -59267,7 +59267,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-decisions",
-    "text": "Z\u00e1znam o rozhodnut\u00ed uchov\u00e1 jednu volbu a d\u016fvod, pro\u010d padla. M\u00edsto, kde le\u017e\u00ed, \u0159\u00edk\u00e1, \u010deho se t\u00fdk\u00e1 a kdo ho sm\u00ed m\u011bnit.",
+    "text": "Z\u00e1znam o rozhodnut\u00ed uchov\u00e1 jednu volbu i jej\u00ed d\u016fvod. Podle toho, kde le\u017e\u00ed, pozn\u00e1te, \u010deho se t\u00fdk\u00e1 a kdo ho sm\u00ed m\u011bnit.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -59301,7 +59301,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809670
   },
   "T-cs-decisions.num": {
    "board": {
@@ -59367,7 +59367,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-decisions",
-    "text": "Tento t\u00fdden: nov\u00fd z\u00e1znam COR-065 nahradil v\u011btu z COR-006, ani\u017e by se star\u00fd z\u00e1znam upravoval",
+    "text": "Tento t\u00fdden: nov\u00fd z\u00e1znam COR-065 nahradil v\u011btu z COR-006, ani\u017e by kdokoli s\u00e1hl do toho star\u00e9ho",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -59378,7 +59378,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-decisions",
-    "text": "Tento t\u00fdden: nov\u00fd z\u00e1znam COR-065 nahradil v\u011btu z COR-006, ani\u017e by se star\u00fd z\u00e1znam upravoval",
+    "text": "Tento t\u00fdden: nov\u00fd z\u00e1znam COR-065 nahradil v\u011btu z COR-006, ani\u017e by kdokoli s\u00e1hl do toho star\u00e9ho",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -59412,7 +59412,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809535
   },
   "T-cs-decisions.title": {
    "board": {
@@ -60099,7 +60099,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Nic v n\u011bm nep\u0159estalo platit. Odpov\u011b\u010f \u0159ekne pro\u010d.",
+    "text": "V dokumentu nic nep\u0159estalo platit. Odpov\u011b\u010f \u0159ekne pro\u010d.",
     "title": "tpl:answers_T-cs-docs#a1text",
     "width": 1316,
     "x": 1596,
@@ -60110,7 +60110,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Nic v n\u011bm nep\u0159estalo platit. Odpov\u011b\u010f \u0159ekne pro\u010d.",
+    "text": "V dokumentu nic nep\u0159estalo platit. Odpov\u011b\u010f \u0159ekne pro\u010d.",
     "title": "tpl:answers_T-cs-docs#a1text",
     "width": 1316,
     "x": 1596,
@@ -60144,7 +60144,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822355
   },
   "T-cs-docs-answers.a2box": {
    "board": {
@@ -60325,7 +60325,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Odpov\u011b\u010f jmenuje issue, kter\u00e9 ho oprav\u00ed.",
+    "text": "Odpov\u011b\u010f uvede issue, kter\u00e9 dokument oprav\u00ed.",
     "title": "tpl:answers_T-cs-docs#a2text",
     "width": 1316,
     "x": 1596,
@@ -60336,7 +60336,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Odpov\u011b\u010f jmenuje issue, kter\u00e9 ho oprav\u00ed.",
+    "text": "Odpov\u011b\u010f uvede issue, kter\u00e9 dokument oprav\u00ed.",
     "title": "tpl:answers_T-cs-docs#a2text",
     "width": 1316,
     "x": 1596,
@@ -60370,7 +60370,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822341
   },
   "T-cs-docs-answers.lhead": {
    "board": {
@@ -60380,7 +60380,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Kontrola jmenuje dokument",
+    "text": "Kontrola na dokument upozorn\u00ed",
     "title": "tpl:answers_T-cs-docs#lhead",
     "width": 1200,
     "x": 0,
@@ -60391,7 +60391,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Kontrola jmenuje dokument",
+    "text": "Kontrola na dokument upozorn\u00ed",
     "title": "tpl:answers_T-cs-docs#lhead",
     "width": 1200,
     "x": 0,
@@ -60425,7 +60425,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332821667
   },
   "T-cs-docs-answers.limg": {
    "board": {
@@ -60483,7 +60483,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Zm\u011bna k n\u011bmu d\u00e1 jednu ze t\u0159\u00ed odpov\u011bd\u00ed",
+    "text": "Zm\u011bna odpov\u00ed jedn\u00edm ze t\u0159\u00ed zp\u016fsob\u016f",
     "title": "tpl:answers_T-cs-docs#rhead",
     "width": 1680,
     "x": 1264,
@@ -60494,7 +60494,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Zm\u011bna k n\u011bmu d\u00e1 jednu ze t\u0159\u00ed odpov\u011bd\u00ed",
+    "text": "Zm\u011bna odpov\u00ed jedn\u00edm ze t\u0159\u00ed zp\u016fsob\u016f",
     "title": "tpl:answers_T-cs-docs#rhead",
     "width": 1680,
     "x": 1264,
@@ -60528,7 +60528,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822085
   },
   "T-cs-docs-answers.rimg": {
    "board": {
@@ -60702,7 +60702,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Ne ka\u017ed\u00e1 zm\u011bna dokument zneplatn\u00ed. Odpov\u011b\u010f \u0159ekne, jak to je.",
+    "text": "Ne ka\u017ed\u00e1 zm\u011bna dokument zneplatn\u00ed. Odpov\u011b\u010f to rozli\u0161\u00ed.",
     "title": "tpl:answers_T-cs-docs#w0text",
     "width": 875,
     "x": 32,
@@ -60713,7 +60713,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Ne ka\u017ed\u00e1 zm\u011bna dokument zneplatn\u00ed. Odpov\u011b\u010f \u0159ekne, jak to je.",
+    "text": "Ne ka\u017ed\u00e1 zm\u011bna dokument zneplatn\u00ed. Odpov\u011b\u010f to rozli\u0161\u00ed.",
     "title": "tpl:answers_T-cs-docs#w0text",
     "width": 875,
     "x": 32,
@@ -60747,7 +60747,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822310
   },
   "T-cs-docs-answers.w1bar": {
    "board": {
@@ -60873,7 +60873,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Ka\u017edou odpov\u011b\u010f ov\u011b\u0159\u00ed reviewer, tak\u017ee \u201est\u00e1le plat\u00ed\u201c chce skute\u010dn\u00fd d\u016fvod.",
+    "text": "Ka\u017edou odpov\u011b\u010f ov\u011b\u0159\u00ed reviewer. \u201eSt\u00e1le plat\u00ed\u201c tak mus\u00ed m\u00edt p\u00e1dn\u00fd d\u016fvod.",
     "title": "tpl:answers_T-cs-docs#w1text",
     "width": 875,
     "x": 1035,
@@ -60884,7 +60884,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Ka\u017edou odpov\u011b\u010f ov\u011b\u0159\u00ed reviewer, tak\u017ee \u201est\u00e1le plat\u00ed\u201c chce skute\u010dn\u00fd d\u016fvod.",
+    "text": "Ka\u017edou odpov\u011b\u010f ov\u011b\u0159\u00ed reviewer. \u201eSt\u00e1le plat\u00ed\u201c tak mus\u00ed m\u00edt p\u00e1dn\u00fd d\u016fvod.",
     "title": "tpl:answers_T-cs-docs#w1text",
     "width": 875,
     "x": 1035,
@@ -60918,7 +60918,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822360
   },
   "T-cs-docs-answers.w2bar": {
    "board": {
@@ -61044,7 +61044,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Otev\u0159en\u00e1 mezera z\u016fst\u00e1v\u00e1 v evidenci i s issue, kter\u00e9 ji uzav\u0159e.",
+    "text": "Odlo\u017een\u00e1 oprava z\u016fstane v evidenci i s issue, kter\u00e9 ji vy\u0159e\u0161\u00ed.",
     "title": "tpl:answers_T-cs-docs#w2text",
     "width": 875,
     "x": 2038,
@@ -61055,7 +61055,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-docs-answers",
-    "text": "Otev\u0159en\u00e1 mezera z\u016fst\u00e1v\u00e1 v evidenci i s issue, kter\u00e9 ji uzav\u0159e.",
+    "text": "Odlo\u017een\u00e1 oprava z\u016fstane v evidenci i s issue, kter\u00e9 ji vy\u0159e\u0161\u00ed.",
     "title": "tpl:answers_T-cs-docs#w2text",
     "width": 875,
     "x": 2038,
@@ -61089,7 +61089,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822593
   },
   "T-cs-docs-answers.whyhead": {
    "board": {
@@ -61327,7 +61327,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-docs-limit",
-    "text": "Omezen\u00ed: Pokryt\u00e9 jsou jen dokumenty, kter\u00e9 vyjmenujete, i s t\u00edm, na \u010dem z\u00e1vis\u00ed. Ostatn\u00ed zastaraj\u00ed jako d\u0159\u00edv.",
+    "text": "Omezen\u00ed: Kontrola hl\u00edd\u00e1 jen dokumenty, kter\u00e9 vyjmenujete i s t\u00edm, na \u010dem z\u00e1vis\u00ed. Ostatn\u00ed zastar\u00e1vaj\u00ed jako d\u0159\u00edv.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -61338,7 +61338,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-docs-limit",
-    "text": "Omezen\u00ed: Pokryt\u00e9 jsou jen dokumenty, kter\u00e9 vyjmenujete, i s t\u00edm, na \u010dem z\u00e1vis\u00ed. Ostatn\u00ed zastaraj\u00ed jako d\u0159\u00edv.",
+    "text": "Omezen\u00ed: Kontrola hl\u00edd\u00e1 jen dokumenty, kter\u00e9 vyjmenujete i s t\u00edm, na \u010dem z\u00e1vis\u00ed. Ostatn\u00ed zastar\u00e1vaj\u00ed jako d\u0159\u00edv.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -61372,7 +61372,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822533
   },
   "T-cs-docs.bg": {
    "board": {
@@ -61439,7 +61439,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-docs",
-    "text": "Kdy\u017e se zm\u011bn\u00ed n\u011bco, na \u010dem dokument z\u00e1vis\u00ed, zm\u011bna k n\u011bmu mus\u00ed d\u00e1t odpov\u011b\u010f: upraveno, st\u00e1le plat\u00ed, nebo odlo\u017eeno.",
+    "text": "Kdy\u017e se zm\u011bn\u00ed to, na \u010dem dokument z\u00e1vis\u00ed, mus\u00ed se k tomu zm\u011bna vyj\u00e1d\u0159it: upraveno, st\u00e1le plat\u00ed, nebo odlo\u017eeno.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -61450,7 +61450,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-docs",
-    "text": "Kdy\u017e se zm\u011bn\u00ed n\u011bco, na \u010dem dokument z\u00e1vis\u00ed, zm\u011bna k n\u011bmu mus\u00ed d\u00e1t odpov\u011b\u010f: upraveno, st\u00e1le plat\u00ed, nebo odlo\u017eeno.",
+    "text": "Kdy\u017e se zm\u011bn\u00ed to, na \u010dem dokument z\u00e1vis\u00ed, mus\u00ed se k tomu zm\u011bna vyj\u00e1d\u0159it: upraveno, st\u00e1le plat\u00ed, nebo odlo\u017eeno.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -61484,7 +61484,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332821834
   },
   "T-cs-docs.num": {
    "board": {
@@ -61605,7 +61605,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-docs",
-    "text": "Dokumentace, kter\u00e1 v\u00ed, \u017ee neplat\u00ed",
+    "text": "Dokumentace, kter\u00e1 pozn\u00e1, \u017ee u\u017e neplat\u00ed",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -61616,7 +61616,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-docs",
-    "text": "Dokumentace, kter\u00e1 v\u00ed, \u017ee neplat\u00ed",
+    "text": "Dokumentace, kter\u00e1 pozn\u00e1, \u017ee u\u017e neplat\u00ed",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -61650,7 +61650,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332821675
   },
   "T-cs-fits": {
    "board": {
@@ -62327,7 +62327,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-fits-s1",
-    "text": "Co jste schv\u00e1lili, a pro\u010d.",
+    "text": "Co jste schv\u00e1lili a pro\u010d.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -62339,7 +62339,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-fits-s1",
-    "text": "Co jste schv\u00e1lili, a pro\u010d.",
+    "text": "Co jste schv\u00e1lili a pro\u010d.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -62373,7 +62373,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806601
   },
   "T-cs-fits-s2": {
    "board": {
@@ -62612,7 +62612,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-fits-s2",
-    "text": "P\u0159esn\u011b co d\u011blat, pro ka\u017edou session a n\u00e1stroj.",
+    "text": "Co p\u0159esn\u011b m\u00e1 d\u011blat ka\u017ed\u00e1 session i n\u00e1stroj.",
     "title": "tpl:stage#text",
     "width": 936,
     "x": 32,
@@ -62624,7 +62624,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-fits-s2",
-    "text": "P\u0159esn\u011b co d\u011blat, pro ka\u017edou session a n\u00e1stroj.",
+    "text": "Co p\u0159esn\u011b m\u00e1 d\u011blat ka\u017ed\u00e1 session i n\u00e1stroj.",
     "title": "tpl:stage#text",
     "width": 936,
     "x": 32,
@@ -62658,7 +62658,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806297
   },
   "T-cs-fits-s3": {
    "board": {
@@ -63182,7 +63182,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-fits-s4",
-    "text": "Prov\u00e1d\u011bj\u00ed, co je rozhodnuto, a kontroluj\u00ed ka\u017edou zm\u011bnu.",
+    "text": "Prov\u00e1d\u011bj\u00ed, co jste rozhodli, a kontroluj\u00ed ka\u017edou zm\u011bnu.",
     "title": "tpl:stage#text",
     "width": 1496,
     "x": 32,
@@ -63194,7 +63194,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-fits-s4",
-    "text": "Prov\u00e1d\u011bj\u00ed, co je rozhodnuto, a kontroluj\u00ed ka\u017edou zm\u011bnu.",
+    "text": "Prov\u00e1d\u011bj\u00ed, co jste rozhodli, a kontroluj\u00ed ka\u017edou zm\u011bnu.",
     "title": "tpl:stage#text",
     "width": 1496,
     "x": 32,
@@ -63228,7 +63228,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806380
   },
   "T-cs-fits-s5": {
    "board": {
@@ -63696,7 +63696,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-fits-s50",
-    "text": "Kde za\u010d\u00ednaj\u00ed n\u00e1pady",
+    "text": "Kde vznikaj\u00ed n\u00e1pady",
     "title": "tpl:stage#head",
     "width": 496,
     "x": 72,
@@ -63707,7 +63707,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-fits-s50",
-    "text": "Kde za\u010d\u00ednaj\u00ed n\u00e1pady",
+    "text": "Kde vznikaj\u00ed n\u00e1pady",
     "title": "tpl:stage#head",
     "width": 496,
     "x": 72,
@@ -63741,7 +63741,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806393
   },
   "T-cs-fits-s50.text": {
    "board": {
@@ -63751,7 +63751,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-fits-s50",
-    "text": "V rozhovoru, a kdy\u017e to trv\u00e1 d\u00e9le, v pozn\u00e1mce ve scratchpadu.",
+    "text": "V rozhovoru. A kdy\u017e n\u00e1pad pot\u0159ebuje v\u00edc \u010dasu, v pozn\u00e1mce ve scratchpadu.",
     "title": "tpl:stage#text",
     "width": 536,
     "x": 32,
@@ -63762,7 +63762,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-fits-s50",
-    "text": "V rozhovoru, a kdy\u017e to trv\u00e1 d\u00e9le, v pozn\u00e1mce ve scratchpadu.",
+    "text": "V rozhovoru. A kdy\u017e n\u00e1pad pot\u0159ebuje v\u00edc \u010dasu, v pozn\u00e1mce ve scratchpadu.",
     "title": "tpl:stage#text",
     "width": 536,
     "x": 32,
@@ -63796,7 +63796,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806442
   },
   "T-cs-fits-s51": {
    "board": {
@@ -63979,7 +63979,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-fits-s51",
-    "text": "Provedeno",
+    "text": "Prov\u00e1d\u011bn\u00ed",
     "title": "tpl:stage#head",
     "width": 616,
     "x": 72,
@@ -63990,7 +63990,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-fits-s51",
-    "text": "Provedeno",
+    "text": "Prov\u00e1d\u011bn\u00ed",
     "title": "tpl:stage#head",
     "width": 616,
     "x": 72,
@@ -64024,7 +64024,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806561
   },
   "T-cs-fits-s51.text": {
    "board": {
@@ -64034,7 +64034,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-fits-s51",
-    "text": "Ka\u017ed\u00e1 vrstva prov\u00e1d\u00ed rozhodnut\u00ed nad sebou. D\u016fvody z\u016fst\u00e1vaj\u00ed na jednom m\u00edst\u011b, kde si je agent p\u0159e\u010dte d\u0159\u00edv, ne\u017e cokoli zm\u011bn\u00ed.",
+    "text": "Ka\u017ed\u00e1 vrstva prov\u00e1d\u00ed rozhodnut\u00ed nad sebou. D\u016fvody z\u016fst\u00e1vaj\u00ed na jednom m\u00edst\u011b. Agent si je tam p\u0159e\u010dte d\u0159\u00edv, ne\u017e cokoli zm\u011bn\u00ed.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -64045,7 +64045,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-fits-s51",
-    "text": "Ka\u017ed\u00e1 vrstva prov\u00e1d\u00ed rozhodnut\u00ed nad sebou. D\u016fvody z\u016fst\u00e1vaj\u00ed na jednom m\u00edst\u011b, kde si je agent p\u0159e\u010dte d\u0159\u00edv, ne\u017e cokoli zm\u011bn\u00ed.",
+    "text": "Ka\u017ed\u00e1 vrstva prov\u00e1d\u00ed rozhodnut\u00ed nad sebou. D\u016fvody z\u016fst\u00e1vaj\u00ed na jednom m\u00edst\u011b. Agent si je tam p\u0159e\u010dte d\u0159\u00edv, ne\u017e cokoli zm\u011bn\u00ed.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -64079,7 +64079,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806806
   },
   "T-cs-fits-s52": {
    "board": {
@@ -64262,7 +64262,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-fits-s52",
-    "text": "Ov\u011b\u0159eno",
+    "text": "Kontrola",
     "title": "tpl:stage#head",
     "width": 616,
     "x": 72,
@@ -64273,7 +64273,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-fits-s52",
-    "text": "Ov\u011b\u0159eno",
+    "text": "Kontrola",
     "title": "tpl:stage#head",
     "width": 616,
     "x": 72,
@@ -64307,7 +64307,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332807026
   },
   "T-cs-fits-s52.text": {
    "board": {
@@ -64317,7 +64317,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-fits-s52",
-    "text": "Kdy\u017e vrstva nesed\u00ed s rozhodnut\u00edm, nejd\u0159\u00edv se prov\u011b\u0159\u00ed vrstva, tak\u017ee se rozhodnut\u00ed nikdy nep\u0159izp\u016fsob\u00ed k\u00f3du. Rozhodnut\u00ed m\u011bn\u00edte jen vy.",
+    "text": "Kdy\u017e vrstva nesed\u00ed s rozhodnut\u00edm, nejd\u0159\u00edv se prov\u011b\u0159\u00ed vrstva. Rozhodnut\u00ed se tak nikdy nep\u0159izp\u016fsob\u00ed k\u00f3du. Zm\u011bnit ho m\u016f\u017eete jen vy.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -64328,7 +64328,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-fits-s52",
-    "text": "Kdy\u017e vrstva nesed\u00ed s rozhodnut\u00edm, nejd\u0159\u00edv se prov\u011b\u0159\u00ed vrstva, tak\u017ee se rozhodnut\u00ed nikdy nep\u0159izp\u016fsob\u00ed k\u00f3du. Rozhodnut\u00ed m\u011bn\u00edte jen vy.",
+    "text": "Kdy\u017e vrstva nesed\u00ed s rozhodnut\u00edm, nejd\u0159\u00edv se prov\u011b\u0159\u00ed vrstva. Rozhodnut\u00ed se tak nikdy nep\u0159izp\u016fsob\u00ed k\u00f3du. Zm\u011bnit ho m\u016f\u017eete jen vy.",
     "title": "tpl:stage#text",
     "width": 656,
     "x": 32,
@@ -64362,7 +64362,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332807088
   },
   "T-cs-fits.bg": {
    "board": {
@@ -64429,7 +64429,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-fits",
-    "text": "Z p\u011bti vrstev, od va\u0161ich rozhodnut\u00ed a\u017e po v\u00e1\u0161 k\u00f3d: ka\u017ed\u00e1 prov\u00e1d\u00ed to, co ur\u010d\u00ed vrstvy nad n\u00ed.",
+    "text": "Skl\u00e1d\u00e1 se z p\u011bti vrstev, od va\u0161ich rozhodnut\u00ed a\u017e po v\u00e1\u0161 k\u00f3d. Ka\u017ed\u00e1 vrstva prov\u00e1d\u00ed to, co ur\u010duj\u00ed vrstvy nad n\u00ed.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -64440,7 +64440,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-fits",
-    "text": "Z p\u011bti vrstev, od va\u0161ich rozhodnut\u00ed a\u017e po v\u00e1\u0161 k\u00f3d: ka\u017ed\u00e1 prov\u00e1d\u00ed to, co ur\u010d\u00ed vrstvy nad n\u00ed.",
+    "text": "Skl\u00e1d\u00e1 se z p\u011bti vrstev, od va\u0161ich rozhodnut\u00ed a\u017e po v\u00e1\u0161 k\u00f3d. Ka\u017ed\u00e1 vrstva prov\u00e1d\u00ed to, co ur\u010duj\u00ed vrstvy nad n\u00ed.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -64474,7 +64474,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332805740
   },
   "T-cs-fits.num": {
    "board": {
@@ -64540,7 +64540,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-fits",
-    "text": "Tento t\u00fdden: pkit toto po\u0159ad\u00ed zapsal jako vlastn\u00ed rozhodnut\u00ed, COR-065",
+    "text": "Tento t\u00fdden: pkit zapsal toto po\u0159ad\u00ed jako sv\u00e9 vlastn\u00ed rozhodnut\u00ed, COR-065",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -64551,7 +64551,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-fits",
-    "text": "Tento t\u00fdden: pkit toto po\u0159ad\u00ed zapsal jako vlastn\u00ed rozhodnut\u00ed, COR-065",
+    "text": "Tento t\u00fdden: pkit zapsal toto po\u0159ad\u00ed jako sv\u00e9 vlastn\u00ed rozhodnut\u00ed, COR-065",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -64585,7 +64585,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806167
   },
   "T-cs-fits.title": {
    "board": {
@@ -64880,7 +64880,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-found-card1",
-    "text": "Agent ho navrhne",
+    "text": "Agent nap\u00ed\u0161e n\u00e1vrh",
     "title": "tpl:step_card#head",
     "width": 813,
     "x": 72,
@@ -64891,7 +64891,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-found-card1",
-    "text": "Agent ho navrhne",
+    "text": "Agent nap\u00ed\u0161e n\u00e1vrh",
     "title": "tpl:step_card#head",
     "width": 813,
     "x": 72,
@@ -64925,7 +64925,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332810011
   },
   "T-cs-found-card1.img": {
    "board": {
@@ -64983,7 +64983,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-found-card1",
-    "text": "Nap\u00ed\u0161e z\u00e1znam a nav\u00e1\u017ee na n\u011bj p\u0159\u00edru\u010dku k vyd\u00e1v\u00e1n\u00ed.",
+    "text": "P\u0159iprav\u00ed z\u00e1znam a nav\u00e1\u017ee na n\u011bj p\u0159\u00edru\u010dku k vyd\u00e1v\u00e1n\u00ed.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -64994,7 +64994,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-found-card1",
-    "text": "Nap\u00ed\u0161e z\u00e1znam a nav\u00e1\u017ee na n\u011bj p\u0159\u00edru\u010dku k vyd\u00e1v\u00e1n\u00ed.",
+    "text": "P\u0159iprav\u00ed z\u00e1znam a nav\u00e1\u017ee na n\u011bj p\u0159\u00edru\u010dku k vyd\u00e1v\u00e1n\u00ed.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -65028,7 +65028,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332810325
   },
   "T-cs-found-card2": {
    "board": {
@@ -65314,7 +65314,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-found-card2",
-    "text": "Vid\u00edte ho p\u0159ed mergem, kdy je jeho zm\u011bna nejlevn\u011bj\u0161\u00ed.",
+    "text": "Uvid\u00edte ho je\u0161t\u011b p\u0159ed mergem, dokud je zm\u011bna nejlevn\u011bj\u0161\u00ed.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -65325,7 +65325,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-found-card2",
-    "text": "Vid\u00edte ho p\u0159ed mergem, kdy je jeho zm\u011bna nejlevn\u011bj\u0161\u00ed.",
+    "text": "Uvid\u00edte ho je\u0161t\u011b p\u0159ed mergem, dokud je zm\u011bna nejlevn\u011bj\u0161\u00ed.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -65359,7 +65359,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332810452
   },
   "T-cs-found-card3": {
    "board": {
@@ -65645,7 +65645,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-found-card3",
-    "text": "Nezn\u00e1 \u017e\u00e1dn\u00fd z va\u0161ich d\u016fvod\u016f, a tak nejd\u0159\u00edv vyhled\u00e1 z\u00e1znamy.",
+    "text": "Va\u0161e d\u016fvody nezn\u00e1, a tak si nejd\u0159\u00edv vyhled\u00e1 z\u00e1znamy.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -65656,7 +65656,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-found-card3",
-    "text": "Nezn\u00e1 \u017e\u00e1dn\u00fd z va\u0161ich d\u016fvod\u016f, a tak nejd\u0159\u00edv vyhled\u00e1 z\u00e1znamy.",
+    "text": "Va\u0161e d\u016fvody nezn\u00e1, a tak si nejd\u0159\u00edv vyhled\u00e1 z\u00e1znamy.",
     "title": "tpl:step_card#text",
     "width": 853,
     "x": 32,
@@ -65690,7 +65690,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332810457
   },
   "T-cs-found-l1": {
    "board": {
@@ -66127,7 +66127,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-found-limit",
-    "text": "Omezen\u00ed: Najdou se jen z\u00e1znamy nav\u00e1zan\u00e9 na soubor, p\u0159\u00edmo nebo p\u0159es dokument, kter\u00fd na n\u011bm z\u00e1vis\u00ed.",
+    "text": "Omezen\u00ed: Najde se jen z\u00e1znam nav\u00e1zan\u00fd na soubor, nebo na dokument, kter\u00fd na tom souboru z\u00e1vis\u00ed.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -66138,7 +66138,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-found-limit",
-    "text": "Omezen\u00ed: Najdou se jen z\u00e1znamy nav\u00e1zan\u00e9 na soubor, p\u0159\u00edmo nebo p\u0159es dokument, kter\u00fd na n\u011bm z\u00e1vis\u00ed.",
+    "text": "Omezen\u00ed: Najde se jen z\u00e1znam nav\u00e1zan\u00fd na soubor, nebo na dokument, kter\u00fd na tom souboru z\u00e1vis\u00ed.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -66172,7 +66172,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332810703
   },
   "T-cs-found.bg": {
    "board": {
@@ -66239,7 +66239,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-found",
-    "text": "Rozhodnut\u00ed schv\u00e1l\u00edte d\u0159\u00edv, ne\u017e na n\u011bm za\u010dne stav\u011bt pr\u00e1ce. Pozd\u011bji ho agent najde, ne\u017e zm\u011bn\u00ed soubory, kter\u00fdch se t\u00fdk\u00e1.",
+    "text": "Rozhodnut\u00ed schv\u00e1l\u00edte, ne\u017e na n\u011bm za\u010dne stav\u011bt pr\u00e1ce. Pozd\u011bji ho agent najde d\u0159\u00edv, ne\u017e zm\u011bn\u00ed soubory, kter\u00fdch se t\u00fdk\u00e1.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -66250,7 +66250,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-found",
-    "text": "Rozhodnut\u00ed schv\u00e1l\u00edte d\u0159\u00edv, ne\u017e na n\u011bm za\u010dne stav\u011bt pr\u00e1ce. Pozd\u011bji ho agent najde, ne\u017e zm\u011bn\u00ed soubory, kter\u00fdch se t\u00fdk\u00e1.",
+    "text": "Rozhodnut\u00ed schv\u00e1l\u00edte, ne\u017e na n\u011bm za\u010dne stav\u011bt pr\u00e1ce. Pozd\u011bji ho agent najde d\u0159\u00edv, ne\u017e zm\u011bn\u00ed soubory, kter\u00fdch se t\u00fdk\u00e1.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -66284,7 +66284,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332810233
   },
   "T-cs-found.num": {
    "board": {
@@ -66350,7 +66350,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-found",
-    "text": "Tento t\u00fdden: ADR-075 rozhodl, jak vznikaj\u00ed pravidla, kter\u00e1 ka\u017ed\u00e1 session na\u010d\u00edt\u00e1. Byl schv\u00e1len a mergnut spolu se sv\u00fdm k\u00f3dem.",
+    "text": "Tento t\u00fdden: ADR-075 ur\u010dil, jak vznikaj\u00ed pravidla, kter\u00e1 na\u010d\u00edt\u00e1 ka\u017ed\u00e1 session. Schv\u00e1len\u00fd se mergnul spolu se sv\u00fdm k\u00f3dem.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -66361,7 +66361,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-found",
-    "text": "Tento t\u00fdden: ADR-075 rozhodl, jak vznikaj\u00ed pravidla, kter\u00e1 ka\u017ed\u00e1 session na\u010d\u00edt\u00e1. Byl schv\u00e1len a mergnut spolu se sv\u00fdm k\u00f3dem.",
+    "text": "Tento t\u00fdden: ADR-075 ur\u010dil, jak vznikaj\u00ed pravidla, kter\u00e1 na\u010d\u00edt\u00e1 ka\u017ed\u00e1 session. Schv\u00e1len\u00fd se mergnul spolu se sv\u00fdm k\u00f3dem.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -66395,7 +66395,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332809928
   },
   "T-cs-found.title": {
    "board": {
@@ -66405,7 +66405,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-found",
-    "text": "Rozhodnuto, pozd\u011bji nalezeno",
+    "text": "Rozhodnete jednou, agent to pak najde",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -66416,7 +66416,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-found",
-    "text": "Rozhodnuto, pozd\u011bji nalezeno",
+    "text": "Rozhodnete jednou, agent to pak najde",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -66450,7 +66450,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332810355
   },
   "T-cs-ideas": {
    "board": {
@@ -67416,7 +67416,7 @@
     "y": 412
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-ideas-note.png@64491cb7578fe5ab",
+    "file": "2026-10-29-friday-talk-icons/term-cs-ideas-note.png@695162571de2bc58",
     "height": 232,
     "parent": "T-cs-ideas-ideas",
     "title": "tpl:ideas_T-cs-ideas#notepic",
@@ -67424,7 +67424,7 @@
     "x": 760,
     "y": 412
    },
-   "mural_id": "9262da3c-5f14-447a-bf5c-749e9264e348",
+   "mural_id": "6faf3b1a-06c8-439a-9241-fcad58db93f2",
    "tracked": [
     "title",
     "text",
@@ -67452,7 +67452,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331088278
+   "updatedOn": 1793332802784
   },
   "T-cs-ideas-ideas.notetext": {
    "board": {
@@ -67798,7 +67798,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-ideas-ideas",
-    "text": "14 issues: pl\u00e1n jedn\u00e9 velk\u00e9 feature",
+    "text": "14 issues: rozpl\u00e1novan\u00e1 velk\u00e1 feature",
     "title": "tpl:ideas_T-cs-ideas#p1text",
     "width": 1024,
     "x": 1880,
@@ -67809,7 +67809,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-ideas-ideas",
-    "text": "14 issues: pl\u00e1n jedn\u00e9 velk\u00e9 feature",
+    "text": "14 issues: rozpl\u00e1novan\u00e1 velk\u00e1 feature",
     "title": "tpl:ideas_T-cs-ideas#p1text",
     "width": 1024,
     "x": 1880,
@@ -67843,7 +67843,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332808292
   },
   "T-cs-ideas-ideas.p2box": {
    "board": {
@@ -68249,7 +68249,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-ideas-limit",
-    "text": "Omezen\u00ed: Pozn\u00e1mku za v\u00e1s nikdo nenap\u00ed\u0161e: co z\u016fstane jen v rozhovoru, zmiz\u00ed spolu s n\u00edm.",
+    "text": "Omezen\u00ed: Pozn\u00e1mka se sama nenap\u00ed\u0161e. Co z\u016fstane jen v rozhovoru, zmiz\u00ed spolu s n\u00edm.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -68260,7 +68260,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-ideas-limit",
-    "text": "Omezen\u00ed: Pozn\u00e1mku za v\u00e1s nikdo nenap\u00ed\u0161e: co z\u016fstane jen v rozhovoru, zmiz\u00ed spolu s n\u00edm.",
+    "text": "Omezen\u00ed: Pozn\u00e1mka se sama nenap\u00ed\u0161e. Co z\u016fstane jen v rozhovoru, zmiz\u00ed spolu s n\u00edm.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -68294,7 +68294,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332808644
   },
   "T-cs-ideas.bg": {
    "board": {
@@ -68361,7 +68361,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-ideas",
-    "text": "V rozhovoru. Pozn\u00e1mka ve scratchpadu uchov\u00e1 va\u0161i dohodu i po konci session, ne\u017e z n\u00ed vzejdou z\u00e1znamy, issues \u010di dokumenty.",
+    "text": "V rozhovoru. Dohodu uchov\u00e1 i po konci session pozn\u00e1mka ve scratchpadu. Pak z n\u00ed vzniknou z\u00e1znamy, issues \u010di dokumenty.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -68372,7 +68372,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-ideas",
-    "text": "V rozhovoru. Pozn\u00e1mka ve scratchpadu uchov\u00e1 va\u0161i dohodu i po konci session, ne\u017e z n\u00ed vzejdou z\u00e1znamy, issues \u010di dokumenty.",
+    "text": "V rozhovoru. Dohodu uchov\u00e1 i po konci session pozn\u00e1mka ve scratchpadu. Pak z n\u00ed vzniknou z\u00e1znamy, issues \u010di dokumenty.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -68406,7 +68406,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332807831
   },
   "T-cs-ideas.num": {
    "board": {
@@ -68472,7 +68472,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-ideas",
-    "text": "V project-kitu: 28 hotov\u00fdch pozn\u00e1mek, z nich vze\u0161lo 41 z\u00e1znam\u016f, 31 issues a 15 dokument\u016f",
+    "text": "V project-kitu: z 28 hotov\u00fdch pozn\u00e1mek vzniklo 41 z\u00e1znam\u016f, 31 issues a 15 dokument\u016f",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -68483,7 +68483,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-ideas",
-    "text": "V project-kitu: 28 hotov\u00fdch pozn\u00e1mek, z nich vze\u0161lo 41 z\u00e1znam\u016f, 31 issues a 15 dokument\u016f",
+    "text": "V project-kitu: z 28 hotov\u00fdch pozn\u00e1mek vzniklo 41 z\u00e1znam\u016f, 31 issues a 15 dokument\u016f",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -68517,7 +68517,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332808263
   },
   "T-cs-ideas.title": {
    "board": {
@@ -68527,7 +68527,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-ideas",
-    "text": "Kde za\u010d\u00ednaj\u00ed n\u00e1pady",
+    "text": "Kde vznikaj\u00ed n\u00e1pady",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -68538,7 +68538,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-ideas",
-    "text": "Kde za\u010d\u00ednaj\u00ed n\u00e1pady",
+    "text": "Kde vznikaj\u00ed n\u00e1pady",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -68572,7 +68572,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332808291
   },
   "T-cs-install": {
    "board": {
@@ -68917,7 +68917,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-install-hl",
-    "text": "pkit z\u016fstane jen ve va\u0161em klonu, skryt\u00fd gitov\u00fdm souborem exclude. Nic z n\u011bj se necommitne a agent ho p\u0159esto pou\u017e\u00edv\u00e1 cel\u00fd.",
+    "text": "pkit z\u016fstane jen ve va\u0161em klonu a git ho d\u00edky souboru exclude ignoruje. Nic z n\u011bj se necommitne, a agent ho p\u0159esto pou\u017e\u00edv\u00e1 cel\u00fd.",
     "title": "tpl:highlight#body",
     "width": 1260,
     "x": 140,
@@ -68928,7 +68928,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-install-hl",
-    "text": "pkit z\u016fstane jen ve va\u0161em klonu, skryt\u00fd gitov\u00fdm souborem exclude. Nic z n\u011bj se necommitne a agent ho p\u0159esto pou\u017e\u00edv\u00e1 cel\u00fd.",
+    "text": "pkit z\u016fstane jen ve va\u0161em klonu a git ho d\u00edky souboru exclude ignoruje. Nic z n\u011bj se necommitne, a agent ho p\u0159esto pou\u017e\u00edv\u00e1 cel\u00fd.",
     "title": "tpl:highlight#body",
     "width": 1260,
     "x": 140,
@@ -68962,7 +68962,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332808235
   },
   "T-cs-install-hl.head": {
    "board": {
@@ -68972,7 +68972,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-install-hl",
-    "text": "Nechcete pkit ve sv\u00e9m repozit\u00e1\u0159i?",
+    "text": "Nechcete m\u00edt pkit v repozit\u00e1\u0159i?",
     "title": "tpl:highlight#head",
     "width": 1260,
     "x": 140,
@@ -68983,7 +68983,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-install-hl",
-    "text": "Nechcete pkit ve sv\u00e9m repozit\u00e1\u0159i?",
+    "text": "Nechcete m\u00edt pkit v repozit\u00e1\u0159i?",
     "title": "tpl:highlight#head",
     "width": 1260,
     "x": 140,
@@ -69017,7 +69017,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332808111
   },
   "T-cs-install-hl.icon": {
    "board": {
@@ -69134,7 +69134,7 @@
     "y": 0
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-install-listing.png@aa035dcb9a3cc85f",
+    "file": "2026-10-29-friday-talk-icons/term-cs-install-listing.png@271c25f8b46f3dee",
     "height": 1032,
     "parent": "T-cs-install-listing",
     "title": "tpl:term_image#img",
@@ -69142,7 +69142,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "2dbb2101-e55e-45ef-8cf2-85ea7f9c19a3",
+   "mural_id": "ff9141e8-b2e1-493d-8e9d-06eea300edc8",
    "tracked": [
     "title",
     "text",
@@ -69170,7 +69170,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331088084
+   "updatedOn": 1793332802720
   },
   "T-cs-install-term": {
    "board": {
@@ -69342,7 +69342,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-install",
-    "text": "N\u00e1stroj nainstalujete jednou, pak pkit p\u0159id\u00e1te do ka\u017ed\u00e9ho projektu jedn\u00edm p\u0159\u00edkazem. Upgrade nahrad\u00ed soubory pkitu, nikdy va\u0161e.",
+    "text": "N\u00e1stroj nainstalujete jednou, pak pkit p\u0159id\u00e1te do ka\u017ed\u00e9ho projektu jedn\u00edm p\u0159\u00edkazem. Upgrade m\u011bn\u00ed jen soubory pkitu.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -69353,7 +69353,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-install",
-    "text": "N\u00e1stroj nainstalujete jednou, pak pkit p\u0159id\u00e1te do ka\u017ed\u00e9ho projektu jedn\u00edm p\u0159\u00edkazem. Upgrade nahrad\u00ed soubory pkitu, nikdy va\u0161e.",
+    "text": "N\u00e1stroj nainstalujete jednou, pak pkit p\u0159id\u00e1te do ka\u017ed\u00e9ho projektu jedn\u00edm p\u0159\u00edkazem. Upgrade m\u011bn\u00ed jen soubory pkitu.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -69387,7 +69387,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332807172
   },
   "T-cs-install.num": {
    "board": {
@@ -69453,7 +69453,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-install",
-    "text": "pkit status uk\u00e1\u017ee, co pkit v projektu nastavil. Voliteln\u00e9 dopl\u0148ky (capabilities) p\u0159ijdou pozd\u011bji.",
+    "text": "pkit status uk\u00e1\u017ee, co pkit v projektu nastavil. Voliteln\u00e9 add-ony (capabilities) p\u0159ijdou na \u0159adu pozd\u011bji.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -69464,7 +69464,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-install",
-    "text": "pkit status uk\u00e1\u017ee, co pkit v projektu nastavil. Voliteln\u00e9 dopl\u0148ky (capabilities) p\u0159ijdou pozd\u011bji.",
+    "text": "pkit status uk\u00e1\u017ee, co pkit v projektu nastavil. Voliteln\u00e9 add-ony (capabilities) p\u0159ijdou na \u0159adu pozd\u011bji.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -69498,7 +69498,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332807270
   },
   "T-cs-install.title": {
    "board": {
@@ -70346,7 +70346,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-opening-s1",
-    "text": "tak\u017ee je agent nem\u016f\u017ee zn\u00e1t a rozhoduje znovu",
+    "text": "tak\u017ee o nich agent nev\u00ed a rozhoduje znovu",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -70357,7 +70357,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-opening-s1",
-    "text": "tak\u017ee je agent nem\u016f\u017ee zn\u00e1t a rozhoduje znovu",
+    "text": "tak\u017ee o nich agent nev\u00ed a rozhoduje znovu",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -70391,7 +70391,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332805567
   },
   "T-cs-opening-s2": {
    "board": {
@@ -70892,7 +70892,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-opening-s3",
-    "text": "tak\u017ee se agent \u0159\u00edd\u00ed sv\u00fdmi zvyky",
+    "text": "tak\u017ee se agent \u0159\u00edd\u00ed vlastn\u00edmi zvyky",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -70903,7 +70903,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-opening-s3",
-    "text": "tak\u017ee se agent \u0159\u00edd\u00ed sv\u00fdmi zvyky",
+    "text": "tak\u017ee se agent \u0159\u00edd\u00ed vlastn\u00edmi zvyky",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -70937,7 +70937,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332805525
   },
   "T-cs-opening-s4": {
    "board": {
@@ -71984,7 +71984,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-opening-s7",
-    "text": "tak\u017ee n\u00e1stroj h\u00e1d\u00e1, akci po akci",
+    "text": "tak\u017ee n\u00e1stroj u ka\u017ed\u00e9 akce h\u00e1d\u00e1",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -71995,7 +71995,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-opening-s7",
-    "text": "tak\u017ee n\u00e1stroj h\u00e1d\u00e1, akci po akci",
+    "text": "tak\u017ee n\u00e1stroj u ka\u017ed\u00e9 akce h\u00e1d\u00e1",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -72029,7 +72029,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332806013
   },
   "T-cs-opening-s8": {
    "board": {
@@ -72257,7 +72257,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-opening-s8",
-    "text": "rozhodne to jednou v\u00e1\u0161 projekt, stejn\u011b pro ka\u017edou session \u00b7 \u010c\u00e1st 3",
+    "text": "rozhodnete jednou za cel\u00fd projekt, v ka\u017ed\u00e9 session stejn\u011b \u00b7 \u010c\u00e1st 3",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -72268,7 +72268,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-opening-s8",
-    "text": "rozhodne to jednou v\u00e1\u0161 projekt, stejn\u011b pro ka\u017edou session \u00b7 \u010c\u00e1st 3",
+    "text": "rozhodnete jednou za cel\u00fd projekt, v ka\u017ed\u00e9 session stejn\u011b \u00b7 \u010c\u00e1st 3",
     "title": "tpl:pstage#text",
     "width": 1272,
     "x": 120,
@@ -72302,7 +72302,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332805597
   },
   "T-cs-opening.bg": {
    "board": {
@@ -72369,7 +72369,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-opening",
-    "text": "V\u00e1\u0161 AI agent pracuje rychle a zapom\u00edn\u00e1 v\u0161echno, co v\u00e1\u0161 projekt rozhodl.",
+    "text": "V\u00e1\u0161 AI agent pracuje rychle, ale zapom\u00edn\u00e1 v\u0161echno, co jste v projektu rozhodli.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -72380,7 +72380,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-opening",
-    "text": "V\u00e1\u0161 AI agent pracuje rychle a zapom\u00edn\u00e1 v\u0161echno, co v\u00e1\u0161 projekt rozhodl.",
+    "text": "V\u00e1\u0161 AI agent pracuje rychle, ale zapom\u00edn\u00e1 v\u0161echno, co jste v projektu rozhodli.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -72414,7 +72414,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332805653
   },
   "T-cs-opening.num": {
    "board": {
@@ -72480,7 +72480,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-opening",
-    "text": "Ot\u00e1zka: jak ho p\u0159im\u011bt pracovat podle va\u0161eho projektu, bez t\u011b\u017ekop\u00e1dn\u00e9ho frameworku?",
+    "text": "Ot\u00e1zka: jak ho p\u0159im\u011bt pracovat po va\u0161em, a to bez t\u011b\u017ekop\u00e1dn\u00e9ho frameworku?",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -72491,7 +72491,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-opening",
-    "text": "Ot\u00e1zka: jak ho p\u0159im\u011bt pracovat podle va\u0161eho projektu, bez t\u011b\u017ekop\u00e1dn\u00e9ho frameworku?",
+    "text": "Ot\u00e1zka: jak ho p\u0159im\u011bt pracovat po va\u0161em, a to bez t\u011b\u017ekop\u00e1dn\u00e9ho frameworku?",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -72525,7 +72525,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332805462
   },
   "T-cs-opening.title": {
    "board": {
@@ -73156,7 +73156,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-part-P1",
-    "text": "Kde za\u010d\u00ednaj\u00ed n\u00e1pady, va\u0161e rozhodnut\u00ed, co se dozv\u00ed ka\u017ed\u00e1 session a pravidla, kter\u00e1 uplat\u0148uje program.",
+    "text": "Kde vznikaj\u00ed n\u00e1pady, va\u0161e rozhodnut\u00ed, co se dozv\u00ed ka\u017ed\u00e1 session a pravidla, kter\u00e1 hl\u00edd\u00e1 program.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -73167,7 +73167,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-part-P1",
-    "text": "Kde za\u010d\u00ednaj\u00ed n\u00e1pady, va\u0161e rozhodnut\u00ed, co se dozv\u00ed ka\u017ed\u00e1 session a pravidla, kter\u00e1 uplat\u0148uje program.",
+    "text": "Kde vznikaj\u00ed n\u00e1pady, va\u0161e rozhodnut\u00ed, co se dozv\u00ed ka\u017ed\u00e1 session a pravidla, kter\u00e1 hl\u00edd\u00e1 program.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -73201,7 +73201,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332808066
   },
   "T-cs-part-P1.title": {
    "board": {
@@ -73832,7 +73832,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-part-P3",
-    "text": "Co pkit kontroluje a dokumenty, kter\u00e9 st\u00e1le plat\u00ed.",
+    "text": "Co pkit kontroluje a dokumenty, kter\u00e9 nezastaraj\u00ed.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -73843,7 +73843,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-part-P3",
-    "text": "Co pkit kontroluje a dokumenty, kter\u00e9 st\u00e1le plat\u00ed.",
+    "text": "Co pkit kontroluje a dokumenty, kter\u00e9 nezastaraj\u00ed.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -73877,7 +73877,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332820388
   },
   "T-cs-part-P3.title": {
    "board": {
@@ -74170,7 +74170,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-part-P4",
-    "text": "Dopl\u0148ky (capabilities): voliteln\u00e9 \u010d\u00e1sti pro v\u00e1\u0161 druh pr\u00e1ce a jak se propojuj\u00ed.",
+    "text": "Voliteln\u00e9 add-ony (capabilities) podle druhu va\u0161\u00ed pr\u00e1ce a jak se propojuj\u00ed.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -74181,7 +74181,7 @@
     "font_size": 64,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-part-P4",
-    "text": "Dopl\u0148ky (capabilities): voliteln\u00e9 \u010d\u00e1sti pro v\u00e1\u0161 druh pr\u00e1ce a jak se propojuj\u00ed.",
+    "text": "Voliteln\u00e9 add-ony (capabilities) podle druhu va\u0161\u00ed pr\u00e1ce a jak se propojuj\u00ed.",
     "title": "tpl:section#summary",
     "width": 2192,
     "x": 128,
@@ -74215,7 +74215,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332822671
   },
   "T-cs-part-P4.title": {
    "board": {
@@ -74946,7 +74946,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-permday1-limit",
-    "text": "Omezen\u00ed: Bez hooku se pravidlo pro jednoho agenta neuplatn\u00ed: nastaven\u00ed plat\u00ed pro v\u0161echny agenty stejn\u011b.",
+    "text": "Omezen\u00ed: Bez hooku nejde pravidlo uplatnit jen na jednoho agenta. Nastaven\u00ed plat\u00ed pro v\u0161echny agenty stejn\u011b.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -74957,7 +74957,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-permday1-limit",
-    "text": "Omezen\u00ed: Bez hooku se pravidlo pro jednoho agenta neuplatn\u00ed: nastaven\u00ed plat\u00ed pro v\u0161echny agenty stejn\u011b.",
+    "text": "Omezen\u00ed: Bez hooku nejde pravidlo uplatnit jen na jednoho agenta. Nastaven\u00ed plat\u00ed pro v\u0161echny agenty stejn\u011b.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -74991,7 +74991,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332820436
   },
   "T-cs-permday1-wired": {
    "board": {
@@ -75377,7 +75377,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permday1-wired",
-    "text": "Rekurzivn\u00ed maz\u00e1n\u00ed, sudo a force-push, pro v\u00e1s i ka\u017ed\u00e9ho agenta, v ka\u017ed\u00e9m re\u017eimu.",
+    "text": "Rekurzivn\u00ed maz\u00e1n\u00ed, sudo a force-push nespust\u00ed nikdo, ani vy, v \u017e\u00e1dn\u00e9m re\u017eimu.",
     "title": "tpl:wired_T-cs-permday1#t0text",
     "width": 504,
     "x": 40,
@@ -75388,7 +75388,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permday1-wired",
-    "text": "Rekurzivn\u00ed maz\u00e1n\u00ed, sudo a force-push, pro v\u00e1s i ka\u017ed\u00e9ho agenta, v ka\u017ed\u00e9m re\u017eimu.",
+    "text": "Rekurzivn\u00ed maz\u00e1n\u00ed, sudo a force-push nespust\u00ed nikdo, ani vy, v \u017e\u00e1dn\u00e9m re\u017eimu.",
     "title": "tpl:wired_T-cs-permday1#t0text",
     "width": 504,
     "x": 40,
@@ -75422,7 +75422,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819773
   },
   "T-cs-permday1-wired.t1box": {
    "board": {
@@ -75713,7 +75713,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permday1-wired",
-    "text": "Ka\u017ed\u00fd upgrade znovu dopln\u00ed pravidla pkitu a ta va\u0161e ponech\u00e1.",
+    "text": "Ka\u017ed\u00fd upgrade znovu dopln\u00ed pravidla pkitu a va\u0161e nech\u00e1, jak jsou.",
     "title": "tpl:wired_T-cs-permday1#t2text",
     "width": 504,
     "x": 1336,
@@ -75724,7 +75724,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permday1-wired",
-    "text": "Ka\u017ed\u00fd upgrade znovu dopln\u00ed pravidla pkitu a ta va\u0161e ponech\u00e1.",
+    "text": "Ka\u017ed\u00fd upgrade znovu dopln\u00ed pravidla pkitu a va\u0161e nech\u00e1, jak jsou.",
     "title": "tpl:wired_T-cs-permday1#t2text",
     "width": 504,
     "x": 1336,
@@ -75758,7 +75758,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819795
   },
   "T-cs-permday1.bg": {
    "board": {
@@ -75825,7 +75825,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-permday1",
-    "text": "\u010cerstv\u00e1 instalace odm\u00edt\u00e1 destruktivn\u00ed p\u0159\u00edkazy a povoluje b\u011b\u017en\u00e9, tak\u017ee dotazy, kter\u00e9 je\u0161t\u011b uvid\u00edte, stoj\u00ed za p\u0159e\u010dten\u00ed.",
+    "text": "\u010cist\u00e1 instalace odm\u00edt\u00e1 destruktivn\u00ed p\u0159\u00edkazy a povoluje b\u011b\u017en\u00e9. Zbyl\u00e9 dotazy na povolen\u00ed proto stoj\u00ed za p\u0159e\u010dten\u00ed.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -75836,7 +75836,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-permday1",
-    "text": "\u010cerstv\u00e1 instalace odm\u00edt\u00e1 destruktivn\u00ed p\u0159\u00edkazy a povoluje b\u011b\u017en\u00e9, tak\u017ee dotazy, kter\u00e9 je\u0161t\u011b uvid\u00edte, stoj\u00ed za p\u0159e\u010dten\u00ed.",
+    "text": "\u010cist\u00e1 instalace odm\u00edt\u00e1 destruktivn\u00ed p\u0159\u00edkazy a povoluje b\u011b\u017en\u00e9. Zbyl\u00e9 dotazy na povolen\u00ed proto stoj\u00ed za p\u0159e\u010dten\u00ed.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -75870,7 +75870,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819502
   },
   "T-cs-permday1.num": {
    "board": {
@@ -75936,7 +75936,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-permday1",
-    "text": "V \u010derstv\u00e9 instalaci, ne\u017e nap\u00ed\u0161ete jak\u00e9koli pravidlo: 14 podob 4 nebezpe\u010dn\u00fdch p\u0159\u00edkaz\u016f odm\u00edtnuto, 37 b\u011b\u017en\u00fdch povoleno.",
+    "text": "\u010cist\u00e1 instalace, je\u0161t\u011b bez va\u0161ich pravidel, odm\u00edtne 14 podob 4 nebezpe\u010dn\u00fdch p\u0159\u00edkaz\u016f a povol\u00ed 37 b\u011b\u017en\u00fdch.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -75947,7 +75947,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-permday1",
-    "text": "V \u010derstv\u00e9 instalaci, ne\u017e nap\u00ed\u0161ete jak\u00e9koli pravidlo: 14 podob 4 nebezpe\u010dn\u00fdch p\u0159\u00edkaz\u016f odm\u00edtnuto, 37 b\u011b\u017en\u00fdch povoleno.",
+    "text": "\u010cist\u00e1 instalace, je\u0161t\u011b bez va\u0161ich pravidel, odm\u00edtne 14 podob 4 nebezpe\u010dn\u00fdch p\u0159\u00edkaz\u016f a povol\u00ed 37 b\u011b\u017en\u00fdch.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -75981,7 +75981,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819790
   },
   "T-cs-permday1.title": {
    "board": {
@@ -76276,7 +76276,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-limit",
-    "text": "Omezen\u00ed: Z\u00e1kaz zastav\u00ed ty podoby p\u0159\u00edkazu, kter\u00e9 pkit rozpozn\u00e1. P\u0159\u00edkaz schovan\u00fd za jin\u00fdm m\u016f\u017ee proklouznout.",
+    "text": "Omezen\u00ed: Z\u00e1kaz zastav\u00ed jen ty podoby p\u0159\u00edkazu, kter\u00e9 pkit pozn\u00e1. P\u0159\u00edkaz schovan\u00fd za jin\u00fdm m\u016f\u017ee proklouznout.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -76287,7 +76287,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-limit",
-    "text": "Omezen\u00ed: Z\u00e1kaz zastav\u00ed ty podoby p\u0159\u00edkazu, kter\u00e9 pkit rozpozn\u00e1. P\u0159\u00edkaz schovan\u00fd za jin\u00fdm m\u016f\u017ee proklouznout.",
+    "text": "Omezen\u00ed: Z\u00e1kaz zastav\u00ed jen ty podoby p\u0159\u00edkazu, kter\u00e9 pkit pozn\u00e1. P\u0159\u00edkaz schovan\u00fd za jin\u00fdm m\u016f\u017ee proklouznout.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -76321,7 +76321,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819271
   },
   "T-cs-permissions-map": {
    "board": {
@@ -76501,7 +76501,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-permissions-map",
-    "text": "rozhodlo COR-028",
+    "text": "jak rozhodlo COR-028",
     "title": "tpl:map_T-cs-permissions#h0text",
     "width": 600,
     "x": 32,
@@ -76512,7 +76512,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-permissions-map",
-    "text": "rozhodlo COR-028",
+    "text": "jak rozhodlo COR-028",
     "title": "tpl:map_T-cs-permissions#h0text",
     "width": 600,
     "x": 32,
@@ -76546,7 +76546,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332818289
   },
   "T-cs-permissions-map.h1arrow": {
    "board": {
@@ -78229,7 +78229,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "\u017d\u00e1dn\u00fd p\u0159\u00edkaz, \u017e\u00e1dn\u00fd z\u00e1pis souboru",
+    "text": "Nespust\u00ed p\u0159\u00edkaz, nezap\u00ed\u0161e soubor",
     "title": "tpl:map_T-cs-permissions#r1c3text",
     "width": 600,
     "x": 2312,
@@ -78240,7 +78240,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "\u017d\u00e1dn\u00fd p\u0159\u00edkaz, \u017e\u00e1dn\u00fd z\u00e1pis souboru",
+    "text": "Nespust\u00ed p\u0159\u00edkaz, nezap\u00ed\u0161e soubor",
     "title": "tpl:map_T-cs-permissions#r1c3text",
     "width": 600,
     "x": 2312,
@@ -78274,7 +78274,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332818883
   },
   "T-cs-permissions-map.r2c0box": {
    "board": {
@@ -78510,7 +78510,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "project-manager: \u017e\u00e1dn\u00e9 zm\u011bny p\u0159es gh",
+    "text": "project-manager: \u017e\u00e1dn\u00e9 zm\u011bny p\u0159\u00edm\u00fdm gh",
     "title": "tpl:map_T-cs-permissions#r2c1text",
     "width": 600,
     "x": 792,
@@ -78521,7 +78521,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "project-manager: \u017e\u00e1dn\u00e9 zm\u011bny p\u0159es gh",
+    "text": "project-manager: \u017e\u00e1dn\u00e9 zm\u011bny p\u0159\u00edm\u00fdm gh",
     "title": "tpl:map_T-cs-permissions#r2c1text",
     "width": 600,
     "x": 792,
@@ -78555,7 +78555,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332818963
   },
   "T-cs-permissions-map.r2c2box": {
    "board": {
@@ -78907,7 +78907,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "Pravidlo, kter\u00e9 agent \u010dte, je rada. Pravidlo, kter\u00e9 uplatn\u00ed AI n\u00e1stroj, ne.",
+    "text": "Pravidlo, kter\u00e9 agent \u010dte, je rada. Pravidlo, kter\u00e9 uplatn\u00ed AI n\u00e1stroj, u\u017e ne.",
     "title": "tpl:map_T-cs-permissions#w0text",
     "width": 600,
     "x": 32,
@@ -78918,7 +78918,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "Pravidlo, kter\u00e9 agent \u010dte, je rada. Pravidlo, kter\u00e9 uplatn\u00ed AI n\u00e1stroj, ne.",
+    "text": "Pravidlo, kter\u00e9 agent \u010dte, je rada. Pravidlo, kter\u00e9 uplatn\u00ed AI n\u00e1stroj, u\u017e ne.",
     "title": "tpl:map_T-cs-permissions#w0text",
     "width": 600,
     "x": 32,
@@ -78952,7 +78952,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819049
   },
   "T-cs-permissions-map.w1bar": {
    "board": {
@@ -79078,7 +79078,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "Zapsan\u00e9 pravidlo jde p\u0159e\u010d\u00edst a zrevidovat jako ka\u017edou zm\u011bnu.",
+    "text": "Zapsan\u00e9 pravidlo se d\u00e1 p\u0159e\u010d\u00edst a proj\u00edt v review jako ka\u017ed\u00e1 jin\u00e1 zm\u011bna.",
     "title": "tpl:map_T-cs-permissions#w1text",
     "width": 600,
     "x": 792,
@@ -79089,7 +79089,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "Zapsan\u00e9 pravidlo jde p\u0159e\u010d\u00edst a zrevidovat jako ka\u017edou zm\u011bnu.",
+    "text": "Zapsan\u00e9 pravidlo se d\u00e1 p\u0159e\u010d\u00edst a proj\u00edt v review jako ka\u017ed\u00e1 jin\u00e1 zm\u011bna.",
     "title": "tpl:map_T-cs-permissions#w1text",
     "width": 600,
     "x": 792,
@@ -79123,7 +79123,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332818492
   },
   "T-cs-permissions-map.w2bar": {
    "board": {
@@ -79249,7 +79249,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "Nastaven\u00ed n\u00e1stroje plat\u00ed pro v\u0161echny stejn\u011b. Hook rozhoduje u ka\u017ed\u00e9ho agenta.",
+    "text": "Nastaven\u00ed plat\u00ed pro v\u0161echny agenty stejn\u011b. Hook rozhoduje u ka\u017ed\u00e9ho zvl\u00e1\u0161\u0165.",
     "title": "tpl:map_T-cs-permissions#w2text",
     "width": 600,
     "x": 1552,
@@ -79260,7 +79260,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "Nastaven\u00ed n\u00e1stroje plat\u00ed pro v\u0161echny stejn\u011b. Hook rozhoduje u ka\u017ed\u00e9ho agenta.",
+    "text": "Nastaven\u00ed plat\u00ed pro v\u0161echny agenty stejn\u011b. Hook rozhoduje u ka\u017ed\u00e9ho zvl\u00e1\u0161\u0165.",
     "title": "tpl:map_T-cs-permissions#w2text",
     "width": 600,
     "x": 1552,
@@ -79294,7 +79294,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332818712
   },
   "T-cs-permissions-map.w3bar": {
    "board": {
@@ -79420,7 +79420,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "P\u0159\u00edkazy pkitu maj\u00ed br\u00e1ny, kter\u00e9 p\u0159\u00edm\u00e9 p\u0159\u00edkazy p\u0159esko\u010d\u00ed. Agent je neobejde.",
+    "text": "P\u0159\u00edkazy pkitu maj\u00ed kontroly, kter\u00e9 p\u0159\u00edm\u00e9 p\u0159\u00edkazy p\u0159esko\u010d\u00ed. Agent je neobejde.",
     "title": "tpl:map_T-cs-permissions#w3text",
     "width": 600,
     "x": 2312,
@@ -79431,7 +79431,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-permissions-map",
-    "text": "P\u0159\u00edkazy pkitu maj\u00ed br\u00e1ny, kter\u00e9 p\u0159\u00edm\u00e9 p\u0159\u00edkazy p\u0159esko\u010d\u00ed. Agent je neobejde.",
+    "text": "P\u0159\u00edkazy pkitu maj\u00ed kontroly, kter\u00e9 p\u0159\u00edm\u00e9 p\u0159\u00edkazy p\u0159esko\u010d\u00ed. Agent je neobejde.",
     "title": "tpl:map_T-cs-permissions#w3text",
     "width": 600,
     "x": 2312,
@@ -79465,7 +79465,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819118
   },
   "T-cs-permissions-map.whyhead": {
    "board": {
@@ -79587,7 +79587,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-permissions",
-    "text": "Z pravidel, kter\u00e1 projekt zap\u00ed\u0161e jako data. AI n\u00e1stroj je uplatn\u00ed na ka\u017ed\u00e9 vol\u00e1n\u00ed, i kdy\u017e na n\u011b agent zapomene.",
+    "text": "Z pravidel, kter\u00e1 projekt zap\u00ed\u0161e jako data. AI n\u00e1stroj je uplatn\u00ed p\u0159i ka\u017ed\u00e9m vol\u00e1n\u00ed, i kdy\u017e na n\u011b agent zapomene.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -79598,7 +79598,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-permissions",
-    "text": "Z pravidel, kter\u00e1 projekt zap\u00ed\u0161e jako data. AI n\u00e1stroj je uplatn\u00ed na ka\u017ed\u00e9 vol\u00e1n\u00ed, i kdy\u017e na n\u011b agent zapomene.",
+    "text": "Z pravidel, kter\u00e1 projekt zap\u00ed\u0161e jako data. AI n\u00e1stroj je uplatn\u00ed p\u0159i ka\u017ed\u00e9m vol\u00e1n\u00ed, i kdy\u017e na n\u011b agent zapomene.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -79632,7 +79632,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331254621
+   "updatedOn": 1793332818034
   },
   "T-cs-permissions.num": {
    "board": {
@@ -79698,7 +79698,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-permissions",
-    "text": "V project-kitu: agent project-manager m\u00e1 zak\u00e1zan\u00e9 zm\u011bny p\u0159\u00edmo p\u0159es gh, a tak pou\u017e\u00edv\u00e1 p\u0159\u00edkazy pkitu, kter\u00e9 nejd\u0159\u00edv ov\u011b\u0159\u00ed issue.",
+    "text": "V project-kitu: agent project-manager nesm\u00ed nic m\u011bnit p\u0159\u00edm\u00fdm p\u0159\u00edkazem gh. Pou\u017e\u00edv\u00e1 p\u0159\u00edkazy pkitu, kter\u00e9 issue nejd\u0159\u00edv ov\u011b\u0159\u00ed.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -79709,7 +79709,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-permissions",
-    "text": "V project-kitu: agent project-manager m\u00e1 zak\u00e1zan\u00e9 zm\u011bny p\u0159\u00edmo p\u0159es gh, a tak pou\u017e\u00edv\u00e1 p\u0159\u00edkazy pkitu, kter\u00e9 nejd\u0159\u00edv ov\u011b\u0159\u00ed issue.",
+    "text": "V project-kitu: agent project-manager nesm\u00ed nic m\u011bnit p\u0159\u00edm\u00fdm p\u0159\u00edkazem gh. Pou\u017e\u00edv\u00e1 p\u0159\u00edkazy pkitu, kter\u00e9 issue nejd\u0159\u00edv ov\u011b\u0159\u00ed.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -79743,7 +79743,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332819072
   },
   "T-cs-permissions.title": {
    "board": {
@@ -79922,7 +79922,7 @@
     "font_size": 40,
     "ink": "#0043CEFF",
     "parent": "T-cs-pm-caption",
-    "text": "Pro\u010d oba konce dr\u017e\u00edte vy: jen vy m\u016f\u017eete t\u00fdm zav\u00e1zat k pl\u00e1nu nebo k merge. Pr\u00e1ci mezi t\u00edm odvede agent.",
+    "text": "Pro\u010d rozhodujete na za\u010d\u00e1tku i na konci: pl\u00e1n a merge za t\u00fdm schvalujete jen vy. Pr\u00e1ci mezi t\u00edm ud\u011bl\u00e1 agent.",
     "title": "tpl:caption_T-cs-pm#text",
     "width": 2944,
     "x": 0,
@@ -79933,7 +79933,7 @@
     "font_size": 40,
     "ink": "#0043CEFF",
     "parent": "T-cs-pm-caption",
-    "text": "Pro\u010d oba konce dr\u017e\u00edte vy: jen vy m\u016f\u017eete t\u00fdm zav\u00e1zat k pl\u00e1nu nebo k merge. Pr\u00e1ci mezi t\u00edm odvede agent.",
+    "text": "Pro\u010d rozhodujete na za\u010d\u00e1tku i na konci: pl\u00e1n a merge za t\u00fdm schvalujete jen vy. Pr\u00e1ci mezi t\u00edm ud\u011bl\u00e1 agent.",
     "title": "tpl:caption_T-cs-pm#text",
     "width": 2944,
     "x": 0,
@@ -79967,7 +79967,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332824995
   },
   "T-cs-pm-f1": {
    "board": {
@@ -80140,7 +80140,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-pm-f1",
-    "text": "V\u00fdvoj\u00e1\u0159: Task A",
+    "text": "Builder: Task A",
     "title": "tpl:artefact#text",
     "width": 400,
     "x": 96,
@@ -80151,7 +80151,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-pm-f1",
-    "text": "V\u00fdvoj\u00e1\u0159: Task A",
+    "text": "Builder: Task A",
     "title": "tpl:artefact#text",
     "width": 400,
     "x": 96,
@@ -80185,7 +80185,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332825652
   },
   "T-cs-pm-f2": {
    "board": {
@@ -80358,7 +80358,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-pm-f2",
-    "text": "V\u00fdvoj\u00e1\u0159: Task B",
+    "text": "Builder: Task B",
     "title": "tpl:artefact#text",
     "width": 400,
     "x": 96,
@@ -80369,7 +80369,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-pm-f2",
-    "text": "V\u00fdvoj\u00e1\u0159: Task B",
+    "text": "Builder: Task B",
     "title": "tpl:artefact#text",
     "width": 400,
     "x": 96,
@@ -80403,7 +80403,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332825515
   },
   "T-cs-pm-f3": {
    "board": {
@@ -80576,7 +80576,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-pm-f3",
-    "text": "V\u00fdvoj\u00e1\u0159: Task C",
+    "text": "Builder: Task C",
     "title": "tpl:artefact#text",
     "width": 400,
     "x": 96,
@@ -80587,7 +80587,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-pm-f3",
-    "text": "V\u00fdvoj\u00e1\u0159: Task C",
+    "text": "Builder: Task C",
     "title": "tpl:artefact#text",
     "width": 400,
     "x": 96,
@@ -80621,7 +80621,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332825625
   },
   "T-cs-pm-l1": {
    "board": {
@@ -81820,7 +81820,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-pm-limit",
-    "text": "Omezen\u00ed: Jen pro GitHub a velk\u00fd: 63 z\u00e1znam\u016f o rozhodnut\u00ed a 88 p\u0159\u00edkaz\u016f. Pozn\u00e1te ho p\u0159es agenta, ne z manu\u00e1lu.",
+    "text": "Omezen\u00ed: Um\u00ed jen GitHub a je velk\u00fd: 63 z\u00e1znam\u016f o rozhodnut\u00ed a 88 p\u0159\u00edkaz\u016f. Sta\u010d\u00ed ale mluvit s agentem, manu\u00e1l \u010d\u00edst nemus\u00edte.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -81831,7 +81831,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-pm-limit",
-    "text": "Omezen\u00ed: Jen pro GitHub a velk\u00fd: 63 z\u00e1znam\u016f o rozhodnut\u00ed a 88 p\u0159\u00edkaz\u016f. Pozn\u00e1te ho p\u0159es agenta, ne z manu\u00e1lu.",
+    "text": "Omezen\u00ed: Um\u00ed jen GitHub a je velk\u00fd: 63 z\u00e1znam\u016f o rozhodnut\u00ed a 88 p\u0159\u00edkaz\u016f. Sta\u010d\u00ed ale mluvit s agentem, manu\u00e1l \u010d\u00edst nemus\u00edte.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -81865,7 +81865,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332825104
   },
   "T-cs-pm-s1": {
    "board": {
@@ -82386,7 +82386,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-pm-s2",
-    "text": "Zalo\u017e\u00ed issues, napl\u00e1nuje Tasky a na ka\u017ed\u00fd spust\u00ed v\u00fdvoj\u00e1\u0159sk\u00e9ho agenta.",
+    "text": "Zalo\u017e\u00ed issues, napl\u00e1nuje Tasky a na ka\u017ed\u00fd spust\u00ed buildera.",
     "title": "tpl:stage#text",
     "width": 448,
     "x": 32,
@@ -82397,7 +82397,7 @@
     "font_size": 36,
     "ink": "#525252FF",
     "parent": "T-cs-pm-s2",
-    "text": "Zalo\u017e\u00ed issues, napl\u00e1nuje Tasky a na ka\u017ed\u00fd spust\u00ed v\u00fdvoj\u00e1\u0159sk\u00e9ho agenta.",
+    "text": "Zalo\u017e\u00ed issues, napl\u00e1nuje Tasky a na ka\u017ed\u00fd spust\u00ed buildera.",
     "title": "tpl:stage#text",
     "width": 448,
     "x": 32,
@@ -82431,7 +82431,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332824656
   },
   "T-cs-pm-s3": {
    "board": {
@@ -83235,7 +83235,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-pm-tcards",
-    "text": "Skill pm, agent project-manager a pm-reviewer pro ka\u017ed\u00fd pull request.",
+    "text": "Skill pm, agent project-manager a pm-reviewer, kter\u00fd projde ka\u017ed\u00fd pull request.",
     "title": "tpl:cards_T-cs-pm#c0text",
     "width": 616,
     "x": 40,
@@ -83246,7 +83246,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-pm-tcards",
-    "text": "Skill pm, agent project-manager a pm-reviewer pro ka\u017ed\u00fd pull request.",
+    "text": "Skill pm, agent project-manager a pm-reviewer, kter\u00fd projde ka\u017ed\u00fd pull request.",
     "title": "tpl:cards_T-cs-pm#c0text",
     "width": 616,
     "x": 40,
@@ -83280,7 +83280,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332825468
   },
   "T-cs-pm-tcards.c1bar": {
    "board": {
@@ -83687,7 +83687,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-pm-tcards",
-    "text": "Ka\u017ed\u00fd p\u0159echod kontroluje engine pkitu.",
+    "text": "Ka\u017ed\u00fd p\u0159echod ov\u011b\u0159\u00ed engine pkitu.",
     "title": "tpl:cards_T-cs-pm#c2text",
     "width": 616,
     "x": 1544,
@@ -83698,7 +83698,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-pm-tcards",
-    "text": "Ka\u017ed\u00fd p\u0159echod kontroluje engine pkitu.",
+    "text": "Ka\u017ed\u00fd p\u0159echod ov\u011b\u0159\u00ed engine pkitu.",
     "title": "tpl:cards_T-cs-pm#c2text",
     "width": 616,
     "x": 1544,
@@ -83732,7 +83732,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332826663
   },
   "T-cs-pm-tcards.c3bar": {
    "board": {
@@ -84025,7 +84025,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-pm",
-    "text": "Jednoho agenta, kter\u00fd pr\u00e1ci zap\u00ed\u0161e, napl\u00e1nuje a soub\u011b\u017en\u011b spust\u00ed v\u00fdvoj\u00e1\u0159sk\u00e9 agenty. Vy schv\u00e1l\u00edte pl\u00e1n i ka\u017ed\u00fd merge.",
+    "text": "Jednoho agenta, kter\u00fd zalo\u017e\u00ed issues, napl\u00e1nuje pr\u00e1ci a soub\u011b\u017en\u011b spust\u00ed buildery. Vy schv\u00e1l\u00edte pl\u00e1n a ka\u017ed\u00fd merge.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -84036,7 +84036,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-pm",
-    "text": "Jednoho agenta, kter\u00fd pr\u00e1ci zap\u00ed\u0161e, napl\u00e1nuje a soub\u011b\u017en\u011b spust\u00ed v\u00fdvoj\u00e1\u0159sk\u00e9 agenty. Vy schv\u00e1l\u00edte pl\u00e1n i ka\u017ed\u00fd merge.",
+    "text": "Jednoho agenta, kter\u00fd zalo\u017e\u00ed issues, napl\u00e1nuje pr\u00e1ci a soub\u011b\u017en\u011b spust\u00ed buildery. Vy schv\u00e1l\u00edte pl\u00e1n a ka\u017ed\u00fd merge.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -84070,7 +84070,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332824334
   },
   "T-cs-pm.num": {
    "board": {
@@ -84191,7 +84191,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-pm",
-    "text": "Co p\u0159id\u00e1v\u00e1 project-management",
+    "text": "Co p\u0159in\u00e1\u0161\u00ed project-management",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -84202,7 +84202,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-pm",
-    "text": "Co p\u0159id\u00e1v\u00e1 project-management",
+    "text": "Co p\u0159in\u00e1\u0161\u00ed project-management",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -84236,7 +84236,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332824253
   },
   "T-cs-questions": {
    "board": {
@@ -84360,7 +84360,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-questions",
-    "text": "V\u0161e uk\u00e1zan\u00e9 najdete v repozit\u00e1\u0159i project-kitu, kter\u00fd se vyv\u00edj\u00ed se samotn\u00fdm pkitem.",
+    "text": "V\u0161echno, co jste vid\u011bli, je v repozit\u00e1\u0159i project-kitu. Ten se vyv\u00edj\u00ed pr\u00e1v\u011b pomoc\u00ed pkitu.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -84371,7 +84371,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-questions",
-    "text": "V\u0161e uk\u00e1zan\u00e9 najdete v repozit\u00e1\u0159i project-kitu, kter\u00fd se vyv\u00edj\u00ed se samotn\u00fdm pkitem.",
+    "text": "V\u0161echno, co jste vid\u011bli, je v repozit\u00e1\u0159i project-kitu. Ten se vyv\u00edj\u00ed pr\u00e1v\u011b pomoc\u00ed pkitu.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -84405,7 +84405,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332827675
   },
   "T-cs-questions.num": {
    "board": {
@@ -84878,7 +84878,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "uzav\u0159e se, a\u017e je v\u0161e za\u0161krtnut\u00e9",
+    "text": "uzav\u0159e se, a\u017e bude v\u0161e za\u0161krtnut\u00e9",
     "title": "tpl:board_T-cs-schemas#cardtext",
     "width": 416,
     "x": 1264,
@@ -84889,7 +84889,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "uzav\u0159e se, a\u017e je v\u0161e za\u0161krtnut\u00e9",
+    "text": "uzav\u0159e se, a\u017e bude v\u0161e za\u0161krtnut\u00e9",
     "title": "tpl:board_T-cs-schemas#cardtext",
     "width": 416,
     "x": 1264,
@@ -84923,7 +84923,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332812669
   },
   "T-cs-schemas-board.m1arrow": {
    "board": {
@@ -85437,7 +85437,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-schemas-board",
-    "text": "Jeho tvar d\u00e1v\u00e1 j\u00e1dro pkitu, stejn\u00fd pro ka\u017ed\u00fd proces.",
+    "text": "Tvar souboru ur\u010duje j\u00e1dro pkitu, pro ka\u017ed\u00fd proces stejn\u011b.",
     "title": "tpl:board_T-cs-schemas#p0caption",
     "width": 939,
     "x": 0,
@@ -85448,7 +85448,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-schemas-board",
-    "text": "Jeho tvar d\u00e1v\u00e1 j\u00e1dro pkitu, stejn\u00fd pro ka\u017ed\u00fd proces.",
+    "text": "Tvar souboru ur\u010duje j\u00e1dro pkitu, pro ka\u017ed\u00fd proces stejn\u011b.",
     "title": "tpl:board_T-cs-schemas#p0caption",
     "width": 939,
     "x": 0,
@@ -85482,7 +85482,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332812396
   },
   "T-cs-schemas-board.p0head": {
    "board": {
@@ -85492,7 +85492,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "P\u0159echod ve workflow.yaml dopl\u0148ku",
+    "text": "P\u0159echod ve workflow.yaml add-onu",
     "title": "tpl:board_T-cs-schemas#p0head",
     "width": 939,
     "x": 0,
@@ -85503,7 +85503,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "P\u0159echod ve workflow.yaml dopl\u0148ku",
+    "text": "P\u0159echod ve workflow.yaml add-onu",
     "title": "tpl:board_T-cs-schemas#p0head",
     "width": 939,
     "x": 0,
@@ -85537,7 +85537,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332812198
   },
   "T-cs-schemas-board.p0img": {
    "board": {
@@ -85549,7 +85549,7 @@
     "y": 462
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-schemas-p0.png@d619e8614c848607",
+    "file": "2026-10-29-friday-talk-icons/term-cs-schemas-p0.png@fc1584c548cff61a",
     "height": 344,
     "parent": "T-cs-schemas-board",
     "title": "tpl:board_T-cs-schemas#p0img",
@@ -85557,7 +85557,7 @@
     "x": 0,
     "y": 462
    },
-   "mural_id": "481e3b7f-b323-46e4-9150-00a1b4b43199",
+   "mural_id": "e8afa579-0465-4c43-b12e-83334a20b0cb",
    "tracked": [
     "title",
     "text",
@@ -85585,7 +85585,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331091089
+   "updatedOn": 1793332803010
   },
   "T-cs-schemas-board.p1head": {
    "board": {
@@ -85924,7 +85924,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "P\u0159echod pot\u0159ebuje svou kontrolu nebo va\u0161e ano, nikdy jen slovo agenta.",
+    "text": "P\u0159echod projde jen po kontrole nebo s va\u0161\u00edm ano. Slovo agenta nesta\u010d\u00ed.",
     "title": "tpl:board_T-cs-schemas#p2item1",
     "width": 875,
     "x": 2038,
@@ -85935,7 +85935,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "P\u0159echod pot\u0159ebuje svou kontrolu nebo va\u0161e ano, nikdy jen slovo agenta.",
+    "text": "P\u0159echod projde jen po kontrole nebo s va\u0161\u00edm ano. Slovo agenta nesta\u010d\u00ed.",
     "title": "tpl:board_T-cs-schemas#p2item1",
     "width": 875,
     "x": 2038,
@@ -85969,7 +85969,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332812836
   },
   "T-cs-schemas-board.p2item2": {
    "board": {
@@ -85979,7 +85979,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "Dopln\u011bk zapisuje ka\u017ed\u00fd p\u0159echod p\u0159es engine pkitu a \u017e\u00e1dn\u00fd vlastn\u00ed nepostavil.",
+    "text": "Add-on si vlastn\u00ed engine nepsal. Ka\u017ed\u00fd p\u0159echod za n\u011bj provede engine pkitu.",
     "title": "tpl:board_T-cs-schemas#p2item2",
     "width": 875,
     "x": 2038,
@@ -85990,7 +85990,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-board",
-    "text": "Dopln\u011bk zapisuje ka\u017ed\u00fd p\u0159echod p\u0159es engine pkitu a \u017e\u00e1dn\u00fd vlastn\u00ed nepostavil.",
+    "text": "Add-on si vlastn\u00ed engine nepsal. Ka\u017ed\u00fd p\u0159echod za n\u011bj provede engine pkitu.",
     "title": "tpl:board_T-cs-schemas#p2item2",
     "width": 875,
     "x": 2038,
@@ -86024,7 +86024,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332812968
   },
   "T-cs-schemas-board.refusedhead": {
    "board": {
@@ -87172,7 +87172,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-limit",
-    "text": "Omezen\u00ed: pkit p\u0159in\u00e1\u0161\u00ed engine, ne proces: ten, kter\u00fd se dnes pou\u017e\u00edv\u00e1, p\u0159ich\u00e1z\u00ed s dopl\u0148kem project-management.",
+    "text": "Omezen\u00ed: pkit dod\u00e1v\u00e1 engine, ale \u017e\u00e1dn\u00fd proces. Ten jedin\u00fd, kter\u00fd se dnes pou\u017e\u00edv\u00e1, p\u0159in\u00e1\u0161\u00ed add-on project-management.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -87183,7 +87183,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemas-limit",
-    "text": "Omezen\u00ed: pkit p\u0159in\u00e1\u0161\u00ed engine, ne proces: ten, kter\u00fd se dnes pou\u017e\u00edv\u00e1, p\u0159ich\u00e1z\u00ed s dopl\u0148kem project-management.",
+    "text": "Omezen\u00ed: pkit dod\u00e1v\u00e1 engine, ale \u017e\u00e1dn\u00fd proces. Ten jedin\u00fd, kter\u00fd se dnes pou\u017e\u00edv\u00e1, p\u0159in\u00e1\u0161\u00ed add-on project-management.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -87217,7 +87217,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332813182
   },
   "T-cs-schemas.bg": {
    "board": {
@@ -87284,7 +87284,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-schemas",
-    "text": "project-management p\u0159in\u00e1\u0161\u00ed workflow pro issues. Ka\u017ed\u00fd p\u0159echod kontroluje engine pkitu, tak\u017ee dopln\u011bk vlastn\u00ed engine nepsal.",
+    "text": "project-management p\u0159in\u00e1\u0161\u00ed workflow pro issues. Ka\u017ed\u00fd p\u0159echod ov\u011b\u0159\u00ed engine pkitu, tak\u017ee add-on nemusel ps\u00e1t vlastn\u00ed engine.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -87295,7 +87295,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-schemas",
-    "text": "project-management p\u0159in\u00e1\u0161\u00ed workflow pro issues. Ka\u017ed\u00fd p\u0159echod kontroluje engine pkitu, tak\u017ee dopln\u011bk vlastn\u00ed engine nepsal.",
+    "text": "project-management p\u0159in\u00e1\u0161\u00ed workflow pro issues. Ka\u017ed\u00fd p\u0159echod ov\u011b\u0159\u00ed engine pkitu, tak\u017ee add-on nemusel ps\u00e1t vlastn\u00ed engine.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -87329,7 +87329,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332813431
   },
   "T-cs-schemas.num": {
    "board": {
@@ -87395,7 +87395,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-schemas",
-    "text": "V project-kitu dnes: Feature #2270 nejde uzav\u0159\u00edt, dokud 7 jej\u00edch pol\u00ed\u010dek nen\u00ed za\u0161krtnut\u00fdch.",
+    "text": "V project-kitu dnes: Feature #2270 nejde uzav\u0159\u00edt, dokud v n\u00ed zb\u00fdv\u00e1 7 neza\u0161krtnut\u00fdch pol\u00ed\u010dek.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -87406,7 +87406,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-schemas",
-    "text": "V project-kitu dnes: Feature #2270 nejde uzav\u0159\u00edt, dokud 7 jej\u00edch pol\u00ed\u010dek nen\u00ed za\u0161krtnut\u00fdch.",
+    "text": "V project-kitu dnes: Feature #2270 nejde uzav\u0159\u00edt, dokud v n\u00ed zb\u00fdv\u00e1 7 neza\u0161krtnut\u00fdch pol\u00ed\u010dek.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -87440,7 +87440,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332813188
   },
   "T-cs-schemas.title": {
    "board": {
@@ -87450,7 +87450,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-schemas",
-    "text": "Jak dopln\u011bk pou\u017e\u00edv\u00e1 proces",
+    "text": "Jak add-on pou\u017e\u00edv\u00e1 proces",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -87461,7 +87461,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-schemas",
-    "text": "Jak dopln\u011bk pou\u017e\u00edv\u00e1 proces",
+    "text": "Jak add-on pou\u017e\u00edv\u00e1 proces",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -87495,7 +87495,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332812681
   },
   "T-cs-schemaslook": {
    "board": {
@@ -87621,7 +87621,7 @@
     "y": 674
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-schemaslook-b0.png@89b5dc8a23dc0900",
+    "file": "2026-10-29-friday-talk-icons/term-cs-schemaslook-b0.png@d1abe7ca11cb0643",
     "height": 208,
     "parent": "T-cs-schemaslook-files",
     "title": "tpl:files_T-cs-schemaslook#b0img",
@@ -87629,7 +87629,7 @@
     "x": 0,
     "y": 674
    },
-   "mural_id": "13136127-d87b-4e0d-b2af-53eeb1144509",
+   "mural_id": "dac430a3-b033-41f8-92c8-82d781e541dd",
    "tracked": [
     "title",
     "text",
@@ -87657,7 +87657,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331091198
+   "updatedOn": 1793332802939
   },
   "T-cs-schemaslook-files.b1img": {
    "board": {
@@ -87669,7 +87669,7 @@
     "y": 674
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-schemaslook-b1.png@af15b986db11dfec",
+    "file": "2026-10-29-friday-talk-icons/term-cs-schemaslook-b1.png@6aabff45945c87c1",
     "height": 208,
     "parent": "T-cs-schemaslook-files",
     "title": "tpl:files_T-cs-schemaslook#b1img",
@@ -87677,7 +87677,7 @@
     "x": 1504,
     "y": 674
    },
-   "mural_id": "7bfc7fac-74e4-4c7c-b633-757dbe0bc930",
+   "mural_id": "2e24678a-d752-407b-b5db-d8f86d194813",
    "tracked": [
     "title",
     "text",
@@ -87705,7 +87705,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331090118
+   "updatedOn": 1793332802963
   },
   "T-cs-schemaslook-files.bhead": {
    "board": {
@@ -87715,7 +87715,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "Co p\u0159in\u00e1\u0161\u00ed j\u00e1dro pkitu, aby to \u017e\u00e1dn\u00fd dopln\u011bk ani projekt nestav\u011bl znovu",
+    "text": "Co dod\u00e1 j\u00e1dro pkitu, tak\u017ee to \u017e\u00e1dn\u00fd add-on ani projekt nemus\u00ed stav\u011bt znovu",
     "title": "tpl:files_T-cs-schemaslook#bhead",
     "width": 2944,
     "x": 0,
@@ -87726,7 +87726,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "Co p\u0159in\u00e1\u0161\u00ed j\u00e1dro pkitu, aby to \u017e\u00e1dn\u00fd dopln\u011bk ani projekt nestav\u011bl znovu",
+    "text": "Co dod\u00e1 j\u00e1dro pkitu, tak\u017ee to \u017e\u00e1dn\u00fd add-on ani projekt nemus\u00ed stav\u011bt znovu",
     "title": "tpl:files_T-cs-schemaslook#bhead",
     "width": 2944,
     "x": 0,
@@ -87760,7 +87760,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332811914
   },
   "T-cs-schemaslook-files.g0head": {
    "board": {
@@ -87996,7 +87996,7 @@
     "font_size": 48,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "Proces: jeden druh sch\u00e9matu",
+    "text": "Proces: zvl\u00e1\u0161tn\u00ed druh sch\u00e9matu",
     "title": "tpl:files_T-cs-schemaslook#g1head",
     "width": 939,
     "x": 2006,
@@ -88007,7 +88007,7 @@
     "font_size": 48,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "Proces: jeden druh sch\u00e9matu",
+    "text": "Proces: zvl\u00e1\u0161tn\u00ed druh sch\u00e9matu",
     "title": "tpl:files_T-cs-schemaslook#g1head",
     "width": 939,
     "x": 2006,
@@ -88041,7 +88041,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332811306
   },
   "T-cs-schemaslook-files.g1tag": {
    "board": {
@@ -88054,7 +88054,7 @@
     "parent": "T-cs-schemaslook-files",
     "text": "",
     "title": "tpl:files_T-cs-schemaslook#g1tag",
-    "width": 763,
+    "width": 755,
     "x": 2006,
     "y": 72
    },
@@ -88067,7 +88067,7 @@
     "parent": "T-cs-schemaslook-files",
     "text": "",
     "title": "tpl:files_T-cs-schemaslook#g1tag",
-    "width": 763,
+    "width": 755,
     "x": 2006,
     "y": 72
    },
@@ -88099,7 +88099,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331081728
+   "updatedOn": 1793332811462
   },
   "T-cs-schemaslook-files.g1tagbar": {
    "board": {
@@ -88167,9 +88167,9 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "P\u0159\u00edklad z dopl\u0148ku: nen\u00ed v j\u00e1d\u0159e pkitu",
+    "text": "P\u0159\u00edklad z add-onu: nen\u00ed v j\u00e1d\u0159e pkitu",
     "title": "tpl:files_T-cs-schemaslook#g1tagtext",
-    "width": 715,
+    "width": 707,
     "x": 2038,
     "y": 73
    },
@@ -88178,9 +88178,9 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-files",
-    "text": "P\u0159\u00edklad z dopl\u0148ku: nen\u00ed v j\u00e1d\u0159e pkitu",
+    "text": "P\u0159\u00edklad z add-onu: nen\u00ed v j\u00e1d\u0159e pkitu",
     "title": "tpl:files_T-cs-schemaslook#g1tagtext",
-    "width": 715,
+    "width": 707,
     "x": 2038,
     "y": 73
    },
@@ -88212,7 +88212,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332811554
   },
   "T-cs-schemaslook-files.p0head": {
    "board": {
@@ -88485,7 +88485,7 @@
     "y": 200
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-schemaslook-p2.png@51e1afbce3653998",
+    "file": "2026-10-29-friday-talk-icons/term-cs-schemaslook-p2.png@e126e6506714db58",
     "height": 378,
     "parent": "T-cs-schemaslook-files",
     "title": "tpl:files_T-cs-schemaslook#p2img",
@@ -88493,7 +88493,7 @@
     "x": 2006,
     "y": 200
    },
-   "mural_id": "150dff9b-da3d-4e68-8d54-d4d34d08a08f",
+   "mural_id": "ee7e5499-0fce-4df9-bdf4-f06287a33627",
    "tracked": [
     "title",
     "text",
@@ -88521,7 +88521,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331089306
+   "updatedOn": 1793332802864
   },
   "T-cs-schemaslook-limit": {
    "board": {
@@ -88704,7 +88704,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-limit",
-    "text": "Omezen\u00ed: pkit validate kontroluje, \u017ee soubor m\u00e1 sv\u016fj tvar, ne \u017ee je pravidlo v n\u011bm spr\u00e1vn\u00e9.",
+    "text": "Omezen\u00ed: pkit validate ov\u011b\u0159\u00ed jen tvar souboru. Jestli je pravidlo v n\u011bm spr\u00e1vn\u00e9, neov\u011b\u0159\u00ed.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -88715,7 +88715,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-schemaslook-limit",
-    "text": "Omezen\u00ed: pkit validate kontroluje, \u017ee soubor m\u00e1 sv\u016fj tvar, ne \u017ee je pravidlo v n\u011bm spr\u00e1vn\u00e9.",
+    "text": "Omezen\u00ed: pkit validate ov\u011b\u0159\u00ed jen tvar souboru. Jestli je pravidlo v n\u011bm spr\u00e1vn\u00e9, neov\u011b\u0159\u00ed.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -88749,7 +88749,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332812651
   },
   "T-cs-schemaslook.bg": {
    "board": {
@@ -88816,7 +88816,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-schemaslook",
-    "text": "Sch\u00e9ma tvo\u0159\u00ed dva soubory: pravidlo jako data a tvar, kter\u00fd ta data mus\u00ed m\u00edt. Proces je sch\u00e9ma ze stav\u016f a p\u0159echod\u016f.",
+    "text": "Sch\u00e9ma tvo\u0159\u00ed dva soubory: pravidlo jako data a tvar, kter\u00fd ta data mus\u00ed m\u00edt. Proces je sch\u00e9ma stav\u016f a p\u0159echod\u016f.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -88827,7 +88827,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-schemaslook",
-    "text": "Sch\u00e9ma tvo\u0159\u00ed dva soubory: pravidlo jako data a tvar, kter\u00fd ta data mus\u00ed m\u00edt. Proces je sch\u00e9ma ze stav\u016f a p\u0159echod\u016f.",
+    "text": "Sch\u00e9ma tvo\u0159\u00ed dva soubory: pravidlo jako data a tvar, kter\u00fd ta data mus\u00ed m\u00edt. Proces je sch\u00e9ma stav\u016f a p\u0159echod\u016f.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -88861,7 +88861,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332811173
   },
   "T-cs-schemaslook.num": {
    "board": {
@@ -88927,7 +88927,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-schemaslook",
-    "text": "V \u010derstv\u00e9 instalaci: 8 vlastn\u00edch sch\u00e9mat pkitu a tvar, kter\u00fd mus\u00ed m\u00edt ka\u017ed\u00fd proces. pkit validate je zkontroluje v\u0161echny.",
+    "text": "V \u010dist\u00e9 instalaci: 8 sch\u00e9mat pkitu a tvar, kter\u00fd mus\u00ed m\u00edt ka\u017ed\u00fd proces. V\u0161echno to zkontroluje pkit validate.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -88938,7 +88938,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-schemaslook",
-    "text": "V \u010derstv\u00e9 instalaci: 8 vlastn\u00edch sch\u00e9mat pkitu a tvar, kter\u00fd mus\u00ed m\u00edt ka\u017ed\u00fd proces. pkit validate je zkontroluje v\u0161echny.",
+    "text": "V \u010dist\u00e9 instalaci: 8 sch\u00e9mat pkitu a tvar, kter\u00fd mus\u00ed m\u00edt ka\u017ed\u00fd proces. V\u0161echno to zkontroluje pkit validate.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -88972,7 +88972,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332811248
   },
   "T-cs-schemaslook.title": {
    "board": {
@@ -89267,7 +89267,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-se-limit",
-    "text": "Omezen\u00ed: Bez sepsan\u00fdch konvenc\u00ed se v\u00fdvoj\u00e1\u0159sk\u00fd agent i jeho reviewe\u0159i \u0159\u00edd\u00ed obecnou dobrou prax\u00ed.",
+    "text": "Omezen\u00ed: Kdy\u017e konvence sepsan\u00e9 nem\u00e1te, builder i reviewe\u0159i se dr\u017e\u00ed obecn\u00e9 dobr\u00e9 praxe.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -89278,7 +89278,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-se-limit",
-    "text": "Omezen\u00ed: Bez sepsan\u00fdch konvenc\u00ed se v\u00fdvoj\u00e1\u0159sk\u00fd agent i jeho reviewe\u0159i \u0159\u00edd\u00ed obecnou dobrou prax\u00ed.",
+    "text": "Omezen\u00ed: Kdy\u017e konvence sepsan\u00e9 nem\u00e1te, builder i reviewe\u0159i se dr\u017e\u00ed obecn\u00e9 dobr\u00e9 praxe.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -89312,7 +89312,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332826485
   },
   "T-cs-se-wired": {
    "board": {
@@ -89482,7 +89482,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "Jeho seznam pro merge",
+    "text": "Kdo mus\u00ed schv\u00e1lit merge",
     "title": "tpl:wired_T-cs-se#p1head",
     "width": 901,
     "x": 1021,
@@ -89493,7 +89493,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "Jeho seznam pro merge",
+    "text": "Kdo mus\u00ed schv\u00e1lit merge",
     "title": "tpl:wired_T-cs-se#p1head",
     "width": 901,
     "x": 1021,
@@ -89527,7 +89527,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332825999
   },
   "T-cs-se-wired.p1img": {
    "board": {
@@ -89913,7 +89913,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "Nap\u00ed\u0161ete je jednou. V\u00fdvoj\u00e1\u0159sk\u00fd agent je \u010dte jako prvn\u00ed. Z\u016fstanou va\u0161e i bez dopl\u0148ku.",
+    "text": "Nap\u00ed\u0161ete je jednou a builder si je p\u0159e\u010dte nejd\u0159\u00edv. Z\u016fstanou va\u0161e i bez add-onu.",
     "title": "tpl:wired_T-cs-se#t0text",
     "width": 608,
     "x": 40,
@@ -89924,7 +89924,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "Nap\u00ed\u0161ete je jednou. V\u00fdvoj\u00e1\u0159sk\u00fd agent je \u010dte jako prvn\u00ed. Z\u016fstanou va\u0161e i bez dopl\u0148ku.",
+    "text": "Nap\u00ed\u0161ete je jednou a builder si je p\u0159e\u010dte nejd\u0159\u00edv. Z\u016fstanou va\u0161e i bez add-onu.",
     "title": "tpl:wired_T-cs-se#t0text",
     "width": 608,
     "x": 40,
@@ -89958,7 +89958,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332826318
   },
   "T-cs-se-wired.t1box": {
    "board": {
@@ -90081,7 +90081,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "D\u0159\u00edv pkit k\u00f3d nekontroloval. Do merge tak pro\u0161la zm\u011bna se dv\u011bma bezpe\u010dnostn\u00edmi d\u00edrami.",
+    "text": "D\u0159\u00edv pkit k\u00f3d nekontroloval. Mergla se tak i zm\u011bna se dv\u011bma bezpe\u010dnostn\u00edmi d\u00edrami.",
     "title": "tpl:wired_T-cs-se#t1text",
     "width": 608,
     "x": 792,
@@ -90092,7 +90092,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "D\u0159\u00edv pkit k\u00f3d nekontroloval. Do merge tak pro\u0161la zm\u011bna se dv\u011bma bezpe\u010dnostn\u00edmi d\u00edrami.",
+    "text": "D\u0159\u00edv pkit k\u00f3d nekontroloval. Mergla se tak i zm\u011bna se dv\u011bma bezpe\u010dnostn\u00edmi d\u00edrami.",
     "title": "tpl:wired_T-cs-se#t1text",
     "width": 608,
     "x": 792,
@@ -90126,7 +90126,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332826302
   },
   "T-cs-se-wired.t2box": {
    "board": {
@@ -90249,7 +90249,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "Ka\u017ed\u00fd reviewer blokuje jen kv\u016fli chyb\u011b, kterou um\u00ed uk\u00e1zat. Zbytek je rada.",
+    "text": "Reviewer blokuje, jen kdy\u017e um\u00ed chybu uk\u00e1zat. V\u0161echno ostatn\u00ed je rada.",
     "title": "tpl:wired_T-cs-se#t2text",
     "width": 608,
     "x": 1544,
@@ -90260,7 +90260,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-se-wired",
-    "text": "Ka\u017ed\u00fd reviewer blokuje jen kv\u016fli chyb\u011b, kterou um\u00ed uk\u00e1zat. Zbytek je rada.",
+    "text": "Reviewer blokuje, jen kdy\u017e um\u00ed chybu uk\u00e1zat. V\u0161echno ostatn\u00ed je rada.",
     "title": "tpl:wired_T-cs-se#t2text",
     "width": 608,
     "x": 1544,
@@ -90294,7 +90294,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332826410
   },
   "T-cs-se-wired.t3box": {
    "board": {
@@ -90529,7 +90529,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-se",
-    "text": "V\u00fdvoj\u00e1\u0159sk\u00e9ho agenta, kter\u00fd se \u0159\u00edd\u00ed va\u0161imi konvencemi, a t\u0159i reviewery jeho k\u00f3du u ka\u017ed\u00e9ho merge, kter\u00fd m\u011bn\u00ed k\u00f3d.",
+    "text": "Buildera, kter\u00fd dodr\u017euje va\u0161e konvence, a t\u0159i reviewery, kte\u0159\u00ed zkontroluj\u00ed ka\u017edou zm\u011bnu k\u00f3du p\u0159ed mergem.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -90540,7 +90540,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-se",
-    "text": "V\u00fdvoj\u00e1\u0159sk\u00e9ho agenta, kter\u00fd se \u0159\u00edd\u00ed va\u0161imi konvencemi, a t\u0159i reviewery jeho k\u00f3du u ka\u017ed\u00e9ho merge, kter\u00fd m\u011bn\u00ed k\u00f3d.",
+    "text": "Buildera, kter\u00fd dodr\u017euje va\u0161e konvence, a t\u0159i reviewery, kte\u0159\u00ed zkontroluj\u00ed ka\u017edou zm\u011bnu k\u00f3du p\u0159ed mergem.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -90574,7 +90574,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332825801
   },
   "T-cs-se.num": {
    "board": {
@@ -90695,7 +90695,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-se",
-    "text": "Co p\u0159id\u00e1v\u00e1 software-engineering",
+    "text": "Co p\u0159in\u00e1\u0161\u00ed software-engineering",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -90706,7 +90706,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-cs-se",
-    "text": "Co p\u0159id\u00e1v\u00e1 software-engineering",
+    "text": "Co p\u0159in\u00e1\u0161\u00ed software-engineering",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -90740,7 +90740,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332825740
   },
   "T-cs-sessions": {
    "board": {
@@ -91094,7 +91094,7 @@
     "y": 0
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-sessions-loads.png@c0b3b53949f42d9f",
+    "file": "2026-10-29-friday-talk-icons/term-cs-sessions-loads.png@3a1ec17c5307711a",
     "height": 459,
     "parent": "T-cs-sessions-loads",
     "title": "tpl:term_image#img",
@@ -91102,7 +91102,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "0e1a1049-09e2-466a-b503-7d285ae4ce06",
+   "mural_id": "433204c8-04cd-46f9-9f72-5b26a3bd07ca",
    "tracked": [
     "title",
     "text",
@@ -91130,7 +91130,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331089064
+   "updatedOn": 1793332802848
   },
   "T-cs-sessions-s1": {
    "board": {
@@ -91598,7 +91598,7 @@
     "font_size": 40,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-sessions-s2",
-    "text": "Pravidlo pro ka\u017edou session (pravidlo 22)",
+    "text": "Pravidlo 22, kter\u00e9 dostane ka\u017ed\u00e1 session",
     "title": "tpl:stage#head",
     "width": 1176,
     "x": 32,
@@ -91610,7 +91610,7 @@
     "font_size": 40,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-sessions-s2",
-    "text": "Pravidlo pro ka\u017edou session (pravidlo 22)",
+    "text": "Pravidlo 22, kter\u00e9 dostane ka\u017ed\u00e1 session",
     "title": "tpl:stage#head",
     "width": 1176,
     "x": 32,
@@ -91644,7 +91644,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332811028
   },
   "T-cs-sessions-s2.text": {
    "board": {
@@ -91654,7 +91654,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-sessions-s2",
-    "text": "Ne\u017e zm\u011bn\u00edte soubory, p\u0159e\u010dt\u011bte si z\u00e1znamy za nimi.",
+    "text": "Ne\u017e zm\u011bn\u00edte soubory, p\u0159e\u010dt\u011bte si jejich z\u00e1znamy.",
     "title": "tpl:stage#text",
     "width": 1176,
     "x": 32,
@@ -91666,7 +91666,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-sessions-s2",
-    "text": "Ne\u017e zm\u011bn\u00edte soubory, p\u0159e\u010dt\u011bte si z\u00e1znamy za nimi.",
+    "text": "Ne\u017e zm\u011bn\u00edte soubory, p\u0159e\u010dt\u011bte si jejich z\u00e1znamy.",
     "title": "tpl:stage#text",
     "width": 1176,
     "x": 32,
@@ -91700,7 +91700,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332811112
   },
   "T-cs-sessions-s3": {
    "board": {
@@ -92052,7 +92052,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-sessions",
-    "text": "P\u00e1r kr\u00e1tk\u00fdch pravidel, jak pracovat, pkitu i va\u0161ich. Z\u00e1znam\u016f je moc na na\u010dten\u00ed, a tak ka\u017ed\u00e9 pravidlo uv\u00e1d\u00ed ten, ze kter\u00e9ho vych\u00e1z\u00ed.",
+    "text": "P\u00e1r kr\u00e1tk\u00fdch pravidel od pkitu i od v\u00e1s. Cel\u00e9 z\u00e1znamy by se neve\u0161ly, a tak ka\u017ed\u00e9 pravidlo odkazuje na sv\u016fj z\u00e1znam.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -92063,7 +92063,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-sessions",
-    "text": "P\u00e1r kr\u00e1tk\u00fdch pravidel, jak pracovat, pkitu i va\u0161ich. Z\u00e1znam\u016f je moc na na\u010dten\u00ed, a tak ka\u017ed\u00e9 pravidlo uv\u00e1d\u00ed ten, ze kter\u00e9ho vych\u00e1z\u00ed.",
+    "text": "P\u00e1r kr\u00e1tk\u00fdch pravidel od pkitu i od v\u00e1s. Cel\u00e9 z\u00e1znamy by se neve\u0161ly, a tak ka\u017ed\u00e9 pravidlo odkazuje na sv\u016fj z\u00e1znam.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -92097,7 +92097,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332973654
   },
   "T-cs-sessions.num": {
    "board": {
@@ -92163,7 +92163,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-sessions",
-    "text": "Tento t\u00fdden: ka\u017ed\u00e9 pravidlo dostalo trval\u00e9 id a stav. Soubor, kter\u00fd ka\u017ed\u00e1 session na\u010d\u00edt\u00e1, se te\u010f z pravidel generuje.",
+    "text": "Tento t\u00fdden: ka\u017ed\u00e9 pravidlo dostalo trval\u00e9 id a stav. Soubor, kter\u00fd na\u010d\u00edt\u00e1 ka\u017ed\u00e1 session, se z nich te\u010f generuje.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -92174,7 +92174,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-sessions",
-    "text": "Tento t\u00fdden: ka\u017ed\u00e9 pravidlo dostalo trval\u00e9 id a stav. Soubor, kter\u00fd ka\u017ed\u00e1 session na\u010d\u00edt\u00e1, se te\u010f z pravidel generuje.",
+    "text": "Tento t\u00fdden: ka\u017ed\u00e9 pravidlo dostalo trval\u00e9 id a stav. Soubor, kter\u00fd na\u010d\u00edt\u00e1 ka\u017ed\u00e1 session, se z nich te\u010f generuje.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -92208,7 +92208,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332810796
   },
   "T-cs-sessions.title": {
    "board": {
@@ -92459,7 +92459,7 @@
     "y": 440
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/term-cs-skills-cmd.png@9ad1415591c2e0e6",
+    "file": "2026-10-29-friday-talk-icons/term-cs-skills-cmd.png@c6da8eb4f6fd203e",
     "height": 459,
     "parent": "T-cs-skills-checklist",
     "title": "tpl:checklist_T-cs-skills#cmd",
@@ -92467,7 +92467,7 @@
     "x": 1460,
     "y": 440
    },
-   "mural_id": "99681ad9-7197-44ce-b720-0767e7e40263",
+   "mural_id": "58b37d1b-78e8-4ad6-96f4-7d5b82425b3c",
    "tracked": [
     "title",
     "text",
@@ -92495,7 +92495,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331091147
+   "updatedOn": 1793332803040
   },
   "T-cs-skills-checklist.lhead": {
    "board": {
@@ -93177,7 +93177,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skills-checklist",
-    "text": "P\u0159e\u010d\u00edst tvar z\u00e1znamu",
+    "text": "P\u0159e\u010d\u00edst strukturu z\u00e1znamu",
     "title": "tpl:checklist_T-cs-skills#r3text",
     "width": 1180,
     "x": 96,
@@ -93188,7 +93188,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skills-checklist",
-    "text": "P\u0159e\u010d\u00edst tvar z\u00e1znamu",
+    "text": "P\u0159e\u010d\u00edst strukturu z\u00e1znamu",
     "title": "tpl:checklist_T-cs-skills#r3text",
     "width": 1180,
     "x": 96,
@@ -93222,7 +93222,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332814802
   },
   "T-cs-skills-checklist.r4box": {
    "board": {
@@ -93345,7 +93345,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skills-checklist",
-    "text": "Vybrat kr\u00e1tk\u00e9 jm\u00e9no",
+    "text": "Vybrat kr\u00e1tk\u00fd n\u00e1zev",
     "title": "tpl:checklist_T-cs-skills#r4text",
     "width": 1180,
     "x": 96,
@@ -93356,7 +93356,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skills-checklist",
-    "text": "Vybrat kr\u00e1tk\u00e9 jm\u00e9no",
+    "text": "Vybrat kr\u00e1tk\u00fd n\u00e1zev",
     "title": "tpl:checklist_T-cs-skills#r4text",
     "width": 1180,
     "x": 96,
@@ -93390,7 +93390,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332814897
   },
   "T-cs-skills-checklist.r5box": {
    "board": {
@@ -93905,7 +93905,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skills-checklist",
-    "text": "Ov\u011b\u0159it ho proti pravidl\u016fm",
+    "text": "Zkontrolovat podle pravidel",
     "title": "tpl:checklist_T-cs-skills#r7text",
     "width": 1180,
     "x": 96,
@@ -93916,7 +93916,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skills-checklist",
-    "text": "Ov\u011b\u0159it ho proti pravidl\u016fm",
+    "text": "Zkontrolovat podle pravidel",
     "title": "tpl:checklist_T-cs-skills#r7text",
     "width": 1180,
     "x": 96,
@@ -93950,7 +93950,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815033
   },
   "T-cs-skills-checklist.r8box": {
    "board": {
@@ -94241,7 +94241,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skills-checklist",
-    "text": "Commit, a\u017e ho schv\u00e1l\u00edte",
+    "text": "Commitnout, a\u017e ho schv\u00e1l\u00edte",
     "title": "tpl:checklist_T-cs-skills#r9text",
     "width": 1180,
     "x": 96,
@@ -94252,7 +94252,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skills-checklist",
-    "text": "Commit, a\u017e ho schv\u00e1l\u00edte",
+    "text": "Commitnout, a\u017e ho schv\u00e1l\u00edte",
     "title": "tpl:checklist_T-cs-skills#r9text",
     "width": 1180,
     "x": 96,
@@ -94286,7 +94286,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815163
   },
   "T-cs-skills-checklist.rhead": {
    "board": {
@@ -94524,7 +94524,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-skills-limit",
-    "text": "Omezen\u00ed: Nic nekontroluje, \u017ee agent skill pou\u017eil: p\u0159\u00edkaz soubor vytvo\u0159\u00ed tak i tak.",
+    "text": "Omezen\u00ed: Nic nekontroluje, jestli agent skill pou\u017eil. P\u0159\u00edkaz vytvo\u0159\u00ed soubor i bez skillu.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -94535,7 +94535,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-skills-limit",
-    "text": "Omezen\u00ed: Nic nekontroluje, \u017ee agent skill pou\u017eil: p\u0159\u00edkaz soubor vytvo\u0159\u00ed tak i tak.",
+    "text": "Omezen\u00ed: Nic nekontroluje, jestli agent skill pou\u017eil. P\u0159\u00edkaz vytvo\u0159\u00ed soubor i bez skillu.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -94569,7 +94569,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815193
   },
   "T-cs-skills.bg": {
    "board": {
@@ -94636,7 +94636,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-skills",
-    "text": "Agent proch\u00e1z\u00ed kroky popo\u0159ad\u011b. V kroku 6 spust\u00ed p\u0159\u00edkaz, tak\u017ee \u010d\u00edslo i struktura souboru v\u017edy sed\u00ed.",
+    "text": "Agent proch\u00e1z\u00ed kroky popo\u0159ad\u011b. V kroku 6 spust\u00ed p\u0159\u00edkaz, tak\u017ee \u010d\u00edslo i struktura souboru v\u017edycky sed\u00ed.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -94647,7 +94647,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-skills",
-    "text": "Agent proch\u00e1z\u00ed kroky popo\u0159ad\u011b. V kroku 6 spust\u00ed p\u0159\u00edkaz, tak\u017ee \u010d\u00edslo i struktura souboru v\u017edy sed\u00ed.",
+    "text": "Agent proch\u00e1z\u00ed kroky popo\u0159ad\u011b. V kroku 6 spust\u00ed p\u0159\u00edkaz, tak\u017ee \u010d\u00edslo i struktura souboru v\u017edycky sed\u00ed.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -94681,7 +94681,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332814615
   },
   "T-cs-skills.num": {
    "board": {
@@ -94747,7 +94747,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-skills",
-    "text": "Ka\u017ed\u00e1 session dr\u017e\u00ed jen kr\u00e1tk\u00fd popis ka\u017ed\u00e9ho skillu. Kroky se na\u010dtou, a\u017e na \u00fakol dojde.",
+    "text": "Session zn\u00e1 ze skill\u016f jen jejich kr\u00e1tk\u00e9 popisy. Kroky si na\u010dte, a\u017e na \u00fakol dojde.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -94758,7 +94758,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-skills",
-    "text": "Ka\u017ed\u00e1 session dr\u017e\u00ed jen kr\u00e1tk\u00fd popis ka\u017ed\u00e9ho skillu. Kroky se na\u010dtou, a\u017e na \u00fakol dojde.",
+    "text": "Session zn\u00e1 ze skill\u016f jen jejich kr\u00e1tk\u00e9 popisy. Kroky si na\u010dte, a\u017e na \u00fakol dojde.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -94792,7 +94792,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332815139
   },
   "T-cs-skills.title": {
    "board": {
@@ -95087,7 +95087,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-limit",
-    "text": "Omezen\u00ed: Skilly pkitu pokr\u00fdvaj\u00ed jen vlastn\u00ed soubory pkitu. Na pr\u00e1ci, kter\u00e1 se ve va\u0161em projektu opakuje, si nap\u00ed\u0161ete vlastn\u00ed.",
+    "text": "Omezen\u00ed: Skilly pkitu pokr\u00fdvaj\u00ed jen jeho vlastn\u00ed soubory. Na pr\u00e1ci, kter\u00e1 se ve va\u0161em projektu opakuje, si nap\u00ed\u0161ete vlastn\u00ed.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -95098,7 +95098,7 @@
     "font_size": 40,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-limit",
-    "text": "Omezen\u00ed: Skilly pkitu pokr\u00fdvaj\u00ed jen vlastn\u00ed soubory pkitu. Na pr\u00e1ci, kter\u00e1 se ve va\u0161em projektu opakuje, si nap\u00ed\u0161ete vlastn\u00ed.",
+    "text": "Omezen\u00ed: Skilly pkitu pokr\u00fdvaj\u00ed jen jeho vlastn\u00ed soubory. Na pr\u00e1ci, kter\u00e1 se ve va\u0161em projektu opakuje, si nap\u00ed\u0161ete vlastn\u00ed.",
     "title": "tpl:notice#text",
     "width": 2864,
     "x": 40,
@@ -95132,7 +95132,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332814434
   },
   "T-cs-skillsfrom-map": {
    "board": {
@@ -95312,7 +95312,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "ur\u010d\u00ed druh souboru",
+    "text": "zavede druh souboru",
     "title": "tpl:map_T-cs-skillsfrom#h0text",
     "width": 600,
     "x": 32,
@@ -95323,7 +95323,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "ur\u010d\u00ed druh souboru",
+    "text": "zavede druh souboru",
     "title": "tpl:map_T-cs-skillsfrom#h0text",
     "width": 600,
     "x": 32,
@@ -95357,7 +95357,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332813558
   },
   "T-cs-skillsfrom-map.h1arrow": {
    "board": {
@@ -95550,7 +95550,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "p\u00ed\u0161e ho podle rozhodnut\u00ed",
+    "text": "p\u00ed\u0161e podle rozhodnut\u00ed",
     "title": "tpl:map_T-cs-skillsfrom#h1text",
     "width": 600,
     "x": 792,
@@ -95561,7 +95561,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "p\u00ed\u0161e ho podle rozhodnut\u00ed",
+    "text": "p\u00ed\u0161e podle rozhodnut\u00ed",
     "title": "tpl:map_T-cs-skillsfrom#h1text",
     "width": 600,
     "x": 792,
@@ -95595,7 +95595,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332813693
   },
   "T-cs-skillsfrom-map.h2arrow": {
    "board": {
@@ -96694,7 +96694,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "Rozhodnut\u00ed",
+    "text": "Z\u00e1znamy o rozhodnut\u00ed",
     "title": "tpl:map_T-cs-skillsfrom#r1c0text",
     "width": 600,
     "x": 32,
@@ -96705,7 +96705,7 @@
     "font_size": 36,
     "ink": "#FFFFFFFF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "Rozhodnut\u00ed",
+    "text": "Z\u00e1znamy o rozhodnut\u00ed",
     "title": "tpl:map_T-cs-skillsfrom#r1c0text",
     "width": 600,
     "x": 32,
@@ -96739,7 +96739,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332813762
   },
   "T-cs-skillsfrom-map.r1c1box": {
    "board": {
@@ -97026,7 +97026,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "Dal\u0161\u00ed \u010d\u00edslo, navr\u017een\u00e9, dokud ho neschv\u00e1l\u00edte",
+    "text": "Z\u00e1znam s dal\u0161\u00edm \u010d\u00edslem \u010dek\u00e1, a\u017e ho schv\u00e1l\u00edte",
     "title": "tpl:map_T-cs-skillsfrom#r1c3text",
     "width": 600,
     "x": 2312,
@@ -97037,7 +97037,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "Dal\u0161\u00ed \u010d\u00edslo, navr\u017een\u00e9, dokud ho neschv\u00e1l\u00edte",
+    "text": "Z\u00e1znam s dal\u0161\u00edm \u010d\u00edslem \u010dek\u00e1, a\u017e ho schv\u00e1l\u00edte",
     "title": "tpl:map_T-cs-skillsfrom#r1c3text",
     "width": 600,
     "x": 2312,
@@ -97071,7 +97071,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332813957
   },
   "T-cs-skillsfrom-map.r2c0box": {
    "board": {
@@ -97526,22 +97526,22 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "Soubor agenta v tvaru pkitu",
+    "text": "Soubor agenta podle vzoru pkitu",
     "title": "tpl:map_T-cs-skillsfrom#r2c3text",
     "width": 600,
     "x": 2312,
-    "y": 443
+    "y": 418
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "Soubor agenta v tvaru pkitu",
+    "text": "Soubor agenta podle vzoru pkitu",
     "title": "tpl:map_T-cs-skillsfrom#r2c3text",
     "width": 600,
     "x": 2312,
-    "y": 443
+    "y": 418
    },
    "mural_id": "708d70f4-f18c-4cfc-9bfa-76858906f910",
    "tracked": [
@@ -97571,7 +97571,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332814096
   },
   "T-cs-skillsfrom-map.w0bar": {
    "board": {
@@ -97697,7 +97697,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "D\u016fvod je na jednom m\u00edst\u011b. Skill na n\u011bj odkazuje a nikdy ho nekop\u00edruje.",
+    "text": "D\u016fvod je zapsan\u00fd na jednom m\u00edst\u011b. Skill na n\u011bj odkazuje a nikdy ho nekop\u00edruje.",
     "title": "tpl:map_T-cs-skillsfrom#w0text",
     "width": 600,
     "x": 32,
@@ -97708,7 +97708,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "D\u016fvod je na jednom m\u00edst\u011b. Skill na n\u011bj odkazuje a nikdy ho nekop\u00edruje.",
+    "text": "D\u016fvod je zapsan\u00fd na jednom m\u00edst\u011b. Skill na n\u011bj odkazuje a nikdy ho nekop\u00edruje.",
     "title": "tpl:map_T-cs-skillsfrom#w0text",
     "width": 600,
     "x": 32,
@@ -97742,7 +97742,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332814277
   },
   "T-cs-skillsfrom-map.w1bar": {
    "board": {
@@ -97868,7 +97868,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "P\u0159\u00edkaz nevybere jm\u00e9no ani nenap\u00ed\u0161e obsah. Bez skillu agenti vynech\u00e1vali pravidla psan\u00ed.",
+    "text": "P\u0159\u00edkaz nevybere n\u00e1zev ani nenap\u00ed\u0161e obsah. Bez skillu agenti pravidla psan\u00ed vynech\u00e1vali.",
     "title": "tpl:map_T-cs-skillsfrom#w1text",
     "width": 600,
     "x": 792,
@@ -97879,7 +97879,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "P\u0159\u00edkaz nevybere jm\u00e9no ani nenap\u00ed\u0161e obsah. Bez skillu agenti vynech\u00e1vali pravidla psan\u00ed.",
+    "text": "P\u0159\u00edkaz nevybere n\u00e1zev ani nenap\u00ed\u0161e obsah. Bez skillu agenti pravidla psan\u00ed vynech\u00e1vali.",
     "title": "tpl:map_T-cs-skillsfrom#w1text",
     "width": 600,
     "x": 792,
@@ -97913,7 +97913,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332814234
   },
   "T-cs-skillsfrom-map.w2bar": {
    "board": {
@@ -98039,7 +98039,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "Agent se m\u016f\u017ee p\u0159epo\u010d\u00edtat. Ru\u010dn\u011b psan\u00fd z\u00e1znam jednou dostal \u0161patn\u00e9 \u010d\u00edslo.",
+    "text": "Agent se m\u016f\u017ee p\u0159epo\u010d\u00edtat. Z\u00e1znam psan\u00fd ru\u010dn\u011b jednou dostal \u0161patn\u00e9 \u010d\u00edslo.",
     "title": "tpl:map_T-cs-skillsfrom#w2text",
     "width": 600,
     "x": 1552,
@@ -98050,7 +98050,7 @@
     "font_size": 36,
     "ink": "#161616FF",
     "parent": "T-cs-skillsfrom-map",
-    "text": "Agent se m\u016f\u017ee p\u0159epo\u010d\u00edtat. Ru\u010dn\u011b psan\u00fd z\u00e1znam jednou dostal \u0161patn\u00e9 \u010d\u00edslo.",
+    "text": "Agent se m\u016f\u017ee p\u0159epo\u010d\u00edtat. Z\u00e1znam psan\u00fd ru\u010dn\u011b jednou dostal \u0161patn\u00e9 \u010d\u00edslo.",
     "title": "tpl:map_T-cs-skillsfrom#w2text",
     "width": 600,
     "x": 1552,
@@ -98084,7 +98084,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332814954
   },
   "T-cs-skillsfrom-map.w3bar": {
    "board": {
@@ -98377,7 +98377,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-skillsfrom",
-    "text": "Ka\u017ed\u00fd druh souboru, kter\u00fd ur\u010duj\u00ed rozhodnut\u00ed pkitu, dostane skill pro \u00fasudek a p\u0159\u00edkaz pro to, co mus\u00ed b\u00fdt p\u0159esn\u00e9.",
+    "text": "Z rozhodnut\u00ed pkitu, kter\u00e1 zav\u00e1d\u011bj\u00ed druhy soubor\u016f. Co vy\u017eaduje \u00fasudek, \u0159e\u0161\u00ed skill. Co mus\u00ed b\u00fdt p\u0159esn\u00e9, ud\u011bl\u00e1 p\u0159\u00edkaz.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -98388,7 +98388,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-cs-skillsfrom",
-    "text": "Ka\u017ed\u00fd druh souboru, kter\u00fd ur\u010duj\u00ed rozhodnut\u00ed pkitu, dostane skill pro \u00fasudek a p\u0159\u00edkaz pro to, co mus\u00ed b\u00fdt p\u0159esn\u00e9.",
+    "text": "Z rozhodnut\u00ed pkitu, kter\u00e1 zav\u00e1d\u011bj\u00ed druhy soubor\u016f. Co vy\u017eaduje \u00fasudek, \u0159e\u0161\u00ed skill. Co mus\u00ed b\u00fdt p\u0159esn\u00e9, ud\u011bl\u00e1 p\u0159\u00edkaz.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -98422,7 +98422,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332973620
   },
   "T-cs-skillsfrom.num": {
    "board": {
@@ -98488,7 +98488,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-skillsfrom",
-    "text": "V project-kitu: pkit dod\u00e1v\u00e1 11 skill\u016f, ka\u017ed\u00fd se sv\u00fdm p\u0159\u00edkazem.",
+    "text": "V project-kitu: pkit dod\u00e1v\u00e1 11 skill\u016f a ka\u017ed\u00fd m\u00e1 sv\u016fj p\u0159\u00edkaz.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -98499,7 +98499,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-cs-skillsfrom",
-    "text": "V project-kitu: pkit dod\u00e1v\u00e1 11 skill\u016f, ka\u017ed\u00fd se sv\u00fdm p\u0159\u00edkazem.",
+    "text": "V project-kitu: pkit dod\u00e1v\u00e1 11 skill\u016f a ka\u017ed\u00fd m\u00e1 sv\u016fj p\u0159\u00edkaz.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -98533,7 +98533,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793331084533
+   "updatedOn": 1793332813502
   },
   "T-cs-skillsfrom.title": {
    "board": {
