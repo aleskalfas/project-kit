@@ -1,7 +1,7 @@
 ---
 rule-set: OPS
 loaded: true
-version: 2.0.0
+version: 2.1.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -143,7 +143,7 @@ rules:
         anchors: {record: ["COR-065#3", "COR-065#1", "COR-064#6", "COR-066#1"]}
 ---
 
-*Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync edits neither (core rule 1). The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
+*Operational rules and tool hygiene shipped by the methodology core, kept as the backbone's loaded rule set `OPS` (COR-068). The loaded file is generated from `.pkit/rule-sets/ops.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync edits neither (core rule 1). The host `CLAUDE.md` loads it via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. These rules are operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (core rule 13). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`. Every layer's rules bind at once: core's, each installed capability's and the project's. A capability's rules and a project's add to core's and never loosen them, and where two cannot both be kept, the upper layer's rule binds (COR-070).*
 
 ## Hard rules
 
@@ -271,4 +271,4 @@ Each rule cites the record or doc that owns its "why", or, where none does, the 
 
 ## Where these rules came from
 
-The split between this file and `.pkit/rules/project.md` is governed by COR-014's universal-applicability principle: rules that apply to any adopting project ship here; rules tied to a specific project's tooling live in the project namespace. Capability-specific operational rules (e.g. work-tracker conventions) live in the capability's own documentation.
+The split between this file and `.pkit/rules/project.md` is governed by COR-014's universal-applicability principle: rules that apply to any adopting project ship here; rules tied to a specific project's tooling live in the project namespace. A rule that binds only where a capability is installed, such as a work tracker's conventions, is kept in that capability's loaded file, which `.pkit/rules/capabilities.md` includes, not in its documentation (COR-070).
