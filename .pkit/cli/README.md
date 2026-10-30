@@ -24,6 +24,7 @@ pkit:
         - src/project_kit/merge.py
         - src/project_kit/settings_consolidate.py
         - src/project_kit/workspace.py
+        - src/project_kit/workspace_remove.py
         - src/project_kit/visibility.py
         - src/project_kit/versioning.py
         - src/project_kit/status.py
@@ -80,7 +81,7 @@ pkit:
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
         - .pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh
         - .pkit/adapters/claude-code/deploy-agents.sh
-      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, COR-068, COR-069, COR-070, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077]
+      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, COR-064, COR-068, COR-069, COR-070, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, "ADR-060#1", "ADR-060#2", "ADR-060#3", "ADR-060#4", "ADR-060#5", "ADR-060#10", ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#1", "ADR-068#3", "ADR-068#6", ADR-075, ADR-076, ADR-077]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/agents/README.md#provider-precedence
@@ -210,6 +211,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `scratchpad drop <slug>` | move a note from `active/` (or `reported/`) to `dropped/`, append `retired` to frontmatter | yes | no — refuses if no active or reported note matches |
 | `scratchpad reported <slug> <ref>...` | manually stamp an active note as sent through the report channel: move to lazily-created `reported/`, append `reported`/`reported_to`/`reported_hash` frontmatter (per COR-043; the automatic stamp happens on a successful `report` post — this gesture covers URL-first posts and retroactive marking). Refs are `owner/repo#N` or GitHub issue URLs (normalised) | yes | yes — appends refs to an already-reported note; duplicate refs are a no-op |
 | `scratchpad list` | list notes by state; reported notes resolve their refs' upstream state **live** via `gh` (pull-only, never stored; offline degrades to `state unknown`), flag divergence from the stamped hash (`modified since reported`), and print a retire prompt when every ref is closed — never auto-retiring (per COR-043) | no | yes (read-only) |
+| `workspace remove <path>... [--dry-run]` | remove each path from the agent workspace, `.agent-workspace/` at the checkout's root: a file, a link, or a folder with everything in it. Every path is tested first, and one refused path refuses the call, which then removes nothing (ADR-060 point 10; see "Workspace commands") | yes (`--dry-run`: no) | yes — a path already gone refuses nothing |
 | `status` | show how project-kit is wired in this project (paths, installed backbone version vs source, an incomplete transition and each component a transition would move, adapter, deployed skills, capabilities, rule-set pins behind their inherited set, the resolved connections per role and per point, data points, decision counts) | no | yes (read-only) |
 | `validate [--only <name>]... [--skip <name>]...` | run every registered validator — the backbone's twelve members and each installed component's — grouped by functionality through one renderer; exit non-zero on errors only, the one severity that fails (COR-055; the registry is ADR-058) | no | yes (read-only) |
 | `schemas validate [<path>]` | validate the schema YAMLs in the core schemas area (`.pkit/schemas/`) and every installed capability's `schemas/` against their JSON Schema companions + cross-file refs | no | yes (read-only) |
@@ -1279,6 +1281,34 @@ Lists every note grouped by state folder. For `reported/` notes it additionally 
 - **Resolves each ref's upstream state live** via `gh` — pull-only at the moment of asking, nothing stored or synced; offline or unresolvable degrades to `state unknown`, never blocking.
 - **Flags drift** — `[modified since reported]` when the current content diverges from the stamped hash. A warning, never a gate: reported notes are frozen by convention, and follow-up thinking belongs in a new note.
 - **Prompts retirement** when *all* of a note's refs are closed, printing the exact `pkit scratchpad done <slug> --produced <ref>...` command. It never auto-retires — retirement carries `produced` refs only a human can complete.
+
+## Workspace commands
+
+The agent workspace, `.agent-workspace/` at each checkout's root, holds the intermediate files agents write only to get their work done. `pkit init` and `pkit sync` create it and exclude it from version control (see `init`). The permission model grants it to every agent for the file tools, and to no shell command ([the permissions README, "The agent workspace"](../permissions/README.md#the-agent-workspace)). Files leave it through `workspace remove`, never through a shell `rm`.
+
+### `workspace remove <path>... [--dry-run]`
+
+Removes each path from the agent workspace: a file, a link, or a folder with everything in it. It tests every path before it removes any. One refused path refuses the whole call: nothing is removed, and each refused path is named with why (ADR-060 point 10).
+
+- **Paths as the shell expanded them.** Each path is read as the command receives it, against the directory it runs in. A pattern such as `.agent-workspace/*` is expanded by the shell, and the command tests what it matched. Write `--` before the paths where a file's name could read as an option.
+- **What lies inside.** A path is inside where the permission hook would place a file tool's target ([the permissions README, "The agent workspace", "What lies inside"](../permissions/README.md#the-agent-workspace)):
+  - in the `.agent-workspace/` of the checkout the command runs in, or of another working tree git registered for the same repository;
+  - reached through no symlinked `.agent-workspace`;
+  - with no repository or worktree nested between the folder and the path.
+
+  The tests are the running `pkit`'s own decision core, never the copy under the project root, which a branch may hold changed.
+- **The entry a removal changes.** The path's parent is resolved, and its last part is taken as written, any trailing slash dropped. A symlink given is removed as a link, never followed. A file with more than one link loses only the name given.
+- **What it refuses**, besides a path outside the folder, a missing one included:
+  - the folder itself, and a path whose last part is `.` or `..`;
+  - a path at or under a direct child of the folder named after a capability the manifest registers, in the checkout the command runs in or in the one holding the path. A capability keeps its lasting state under such a child, as project-management keeps its drift queue under `project-management/`. A pattern over the whole folder is therefore refused wherever such a child stands;
+  - a path in a nested repository or worktree, or a folder holding one anywhere below it. A worktree git registered is removed with `git worktree remove`, and a clone, or a worktree git no longer knows, by the operator, by hand.
+- **The root, and the cross-repository guard.** The root is the checkout the command runs in, resolved as every command resolves it, never one read from a variable such as `CLAUDE_PROJECT_DIR`. The guard runs first. A root in another repository than the session's anchor is asked about at a terminal, and refused without one. The command takes no confirmation with the call, since a file name a pattern expands to could carry one.
+- **No swap redirects it.** It opens each workspace folder once, through no symlink, and reaches each path from that handle part by part, following no link. A part that has turned into a link since the test stops that path, which is reported. Inside a folder it removes, a link is removed, never what it points at. It refuses to run where the platform's `shutil.rmtree` does not resist symlink attacks.
+- **A missing path inside** the folder is reported and refuses nothing, so the same call runs again.
+- **`--dry-run`** tests every path, says what would be removed, and removes nothing. In a dry run the guard asks nobody, and refuses a root in another repository.
+- **Exit status:** `0` when every path given is gone, `1` when the call is refused or a removal stopped partway, `2` on a usage error. An I/O error partway through a folder can leave it partly removed, and the command says so.
+
+The permission model decides it as it decides every `pkit` command. It runs with no prompt wherever a profile grants the `kit` privilege, and `read-only` denies it. The workspace privilege covers no shell command, this one included.
 
 ## Diagnostic commands
 

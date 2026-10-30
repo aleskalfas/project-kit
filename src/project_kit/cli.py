@@ -82,6 +82,7 @@ if TYPE_CHECKING:
         pull_request_landing,
         scratchpads,
         session_guard,
+        workspace_remove,
     )
     from project_kit import refs as refs_mod
     from project_kit.agents import stamp_new_agent
@@ -156,6 +157,7 @@ else:
     pull_request_landing = _OnFirstUse("project_kit.pull_request_landing")
     scratchpads = _OnFirstUse("project_kit.scratchpads")
     session_guard = _OnFirstUse("project_kit.session_guard")
+    workspace_remove = _OnFirstUse("project_kit.workspace_remove")
     refs_mod = _OnFirstUse("project_kit.refs")
     stamp_new_agent = _OnFirstUse("project_kit.agents", "stamp_new_agent")
     stamp_decision = _OnFirstUse("project_kit.decisions", "stamp_decision")
@@ -992,6 +994,75 @@ def _settled_base(
         raise click.ClickException(found.problem or f"the base {found.ref!r} cannot be compared.")
     _warn_settled(settled)
     return found
+
+
+@main.group("workspace")
+def workspace() -> None:
+    """The agent workspace, `.agent-workspace/` at each checkout's root, where
+    agents keep their intermediate files (core rule 16).
+
+    `pkit init` and `pkit sync` create it; `remove` takes files out of it.
+    Reference: `.pkit/cli/README.md`, "Workspace commands".
+    """
+
+
+@workspace.command("remove")
+@click.argument("paths", nargs=-1, required=True, metavar="PATH...")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Test every path and say what would be removed; remove nothing.",
+)
+def workspace_remove_command(paths: tuple[str, ...], dry_run: bool) -> None:
+    """Remove each PATH from the agent workspace, a folder with everything in it.
+
+    Each PATH is read as the shell expanded it, against the directory the
+    command runs in. Every path is tested before any is removed, and one
+    refused path refuses the call: nothing is removed, and each refused path
+    is named with why. Refused: a path outside the checkout's own
+    `.agent-workspace/`, the folder itself, a last part of `.` or `..`, a path
+    at or under a child of the folder named after a registered capability,
+    and a path in or holding a nested repository or worktree. A symlink given
+    is removed as a link, and a link inside a removed folder is never
+    followed. A path inside the folder that names nothing is reported and
+    refuses nothing. The root is the checkout the command runs in, and the
+    cross-repository guard runs first; it takes no confirmation with the call.
+    Exit 0 when every path is gone; 1 when the call is refused or a removal
+    stopped partway; 2 on a usage error.
+    """
+    problem = workspace_remove.unsafe_platform()
+    if problem is not None:
+        raise click.ClickException(problem)
+    cwd = Path(os.getcwd())
+    target_root = find_target_root(cwd)
+    if target_root is None:
+        raise click.ClickException("not in a project tree; nothing was removed.")
+    if not cwd.resolve().is_relative_to(target_root):
+        raise click.ClickException(
+            f"the project root git names, {target_root}, does not hold the directory the "
+            "command runs in; nothing was removed."
+        )
+    passage = session_guard.clear(target_root, confirmed=False, dry_run=dry_run)
+    if isinstance(passage, session_guard.Refusal):
+        raise click.ClickException(workspace_remove.guard_refusal(passage))
+    plan = workspace_remove.plan(paths, cwd=cwd, root=target_root)
+    if plan.refused:
+        for line in workspace_remove.refusal_lines(plan):
+            click.echo(line, err=True)
+        raise SystemExit(1)
+    if dry_run:
+        for line in workspace_remove.plan_lines(plan):
+            click.echo(line)
+        return
+    outcome = workspace_remove.remove(plan, passage)
+    said, stopped = workspace_remove.outcome_lines(plan, outcome)
+    for line in said:
+        click.echo(line)
+    for line in stopped:
+        click.echo(line, err=True)
+    if outcome.stopped:
+        raise SystemExit(1)
 
 
 @main.group("harness")

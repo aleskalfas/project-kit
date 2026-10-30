@@ -33,6 +33,7 @@ pkit:
         - ADR-061#6
         - ADR-047#1
         - ADR-047#2
+        - ADR-060#10
       artefact:
         - ACT-operator
         - ACT-ai-agent
@@ -74,13 +75,14 @@ pkit:
 - **1d.** The command changes files rather than the hosting service, such as `pkit new decision` or `pkit sync`. At its entry, before it reads anything, the command compares the two repositories as step 2 does ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)). The path goes on at step 3.
 
 > [!WARNING]
-> **Not built yet:** only the commands that write to the hosting service run the guard. So a command that only writes files changes the other repository with no question. The guarded commands are these:
+> **Not built yet:** besides `pkit workspace remove`, only the commands that write to the hosting service run the guard. So any other command that only writes files changes the other repository with no question. The guarded commands are these:
 >
 > - the `pkit pull-request` verbs that write
 > - `pkit version tag` and `untag` with `--push`
 > - `pkit release apply` with `--tag --push`
 > - `release merge`
 > - `release publish-notes`
+> - `pkit workspace remove`, which takes no confirmation with the call, so only a terminal confirms it ([ADR-060 point 10](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#10-removal-through-a-backbone-command-that-tests-its-own-paths))
 >
 > [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs the guard, and #1765 tracks it.
 

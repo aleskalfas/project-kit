@@ -2,7 +2,7 @@
 rule-set: OPS
 loaded: true
 budget: 2300
-version: 5.0.0
+version: 6.0.0
 rules:
   RS-OPS-001:
     status: accepted
@@ -220,7 +220,7 @@ Violating any of these breaks the methodology's invariants. Treat them as gates,
 
 ### RS-OPS-016 — Intermediate files stay in the agent workspace
 
-**Keep what you write only to get the work done in the agent workspace,** `.agent-workspace/` at the repository root or, in a worktree, the worktree's own, and nowhere else outside the repository. Write there with the file tools, since a shell redirect into it is judged like any other shell write, and remove what you no longer need (the permissions README, "The agent workspace"; project-kit#1043).
+**Keep what you write only to get the work done in the agent workspace,** `.agent-workspace/` at the repository root or, in a worktree, the worktree's own, and nowhere else outside the repository. Write there with the file tools, since a shell redirect into it is judged like any other shell write, and once done remove only what you wrote, with `pkit workspace remove`, never `rm`, since the folder is shared and capabilities keep lasting state under their own names (the permissions README, "The agent workspace"; project-kit#1043).
 
 ## Communicating with the user
 
