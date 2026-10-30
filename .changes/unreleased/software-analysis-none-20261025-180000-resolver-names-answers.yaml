@@ -1,6 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  The analysis-resolver's body says the commands it hands over write the
-  artefacts' answers, in the change where the person runs them, rather than
-  their `revalidated` blocks. No command changes.

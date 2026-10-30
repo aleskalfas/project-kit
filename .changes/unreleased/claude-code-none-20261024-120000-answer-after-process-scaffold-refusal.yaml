@@ -1,6 +1,0 @@
-component: claude-code
-kind: none
-body: >
-  The adapter's README carries an answer after pkit permissions scaffold
-  came to refuse a synced tree. Its text and the adapter's behaviour do not
-  change.

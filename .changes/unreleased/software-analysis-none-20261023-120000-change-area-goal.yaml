@@ -1,8 +1,0 @@
-component: software-analysis
-kind: none
-body: >
-  Internal. In project-kit's own settings for the capability, the goal of the
-  core's area 030-change now names recording a project's decisions and rules
-  beside checking, answering and landing each change to it (#1896). Only the
-  project-owned settings file changes, and nothing the capability ships
-  changes.

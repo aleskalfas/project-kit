@@ -1,3 +1,0 @@
-component: project-management
-kind: none
-body: Every `pkit` call the capability's `_lib` modules make with `subprocess.run` goes through one private function, `_lib/backbone.py`'s `_run`, so a test answers them in its own process; the streaming starts of `agent_runs` and `merge_queue` are left as they were. The calls, their arguments and the documents read are unchanged, and nothing an adopter sees moves.

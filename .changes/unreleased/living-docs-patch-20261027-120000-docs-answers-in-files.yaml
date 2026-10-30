@@ -1,7 +1,0 @@
-component: living-docs
-kind: patch
-body: >
-  The README no longer tells you to settle two branches' revalidations of one
-  page with `pkit friction resolve`. Each change writes its answers in answer
-  files of its own, so the branches never conflict over them, and the page is
-  debt until the next revalidation that reads both.

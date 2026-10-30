@@ -1,5 +1,0 @@
-component: backbone
-kind: none
-body: >
-  Core rules 14, 16 and 19 and the package schema's description no longer call
-  the backbone's permission model a capability. Only the wording changes.

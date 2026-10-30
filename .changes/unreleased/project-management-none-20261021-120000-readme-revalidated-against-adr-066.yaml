@@ -1,6 +1,0 @@
-component: project-management
-kind: none
-body: >
-  Internal. The capability's README is revalidated unchanged against ADR-066's
-  point 13, which now names the adapters' support declarations. Only its
-  friction block changes, and nothing you run or read changes.

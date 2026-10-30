@@ -2,9 +2,9 @@ schema_version: 1
 component:
   kind: capability
   name: software-analysis
-  version: 0.1.0
+  version: 0.2.0
 description: Software analysis — actors, use cases, journeys, glossary, domain-model views and requirements kept as anchored artefacts and kept true by revalidation as the software changes.
-requires_backbone: ">=1.149.0,<2.0.0"
+requires_backbone: ">=2.0.0,<2.1.0"
 # The review contribution (`review-contributions.yaml`, DEC-001 point 10) names
 # project-management's floor on ruled artefacts, which an older release
 # refuses. So an installed project-management must have the floor, and the
@@ -18,7 +18,7 @@ requires_backbone: ">=1.149.0,<2.0.0"
 # capability works without it (COR-030).
 requires_capabilities:
   - name: project-management
-    version: ">=0.54.0,<1.0.0"
+    version: ">=0.55.0,<1.0.0"
     optional: true
 aliases:
   - analysis

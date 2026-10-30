@@ -1,7 +1,0 @@
-component: living-docs
-kind: none
-body: >
-  The answers to friction of the README and of the `LDOC` rules move out of
-  their front matter into project-kit's own answer files, as COR-062 point 11
-  decides. A project that receives the rule set by sync then finds no answer
-  in a rule's block. The anchors and the text stay as they were.

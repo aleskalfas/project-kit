@@ -1,3 +1,0 @@
-component: project-management
-kind: none
-body: The new DEC-062 puts each axis on the board through the substrate map, with the board flag saying only that a board exists, and makes the board's Status the source of an open issue's position where a project's map puts state on its board, partially superseding DEC-051, DEC-006 and DEC-012. DEC-006, DEC-036, DEC-037 and DEC-051 are refined to agree. A design-ahead decision that #2271 builds, so no adopter-facing behaviour changes here.

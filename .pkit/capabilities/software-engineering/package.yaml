@@ -2,9 +2,9 @@ schema_version: 1
 component:
   kind: capability
   name: software-engineering
-  version: 0.2.0
+  version: 0.3.0
 description: Authoring code under a project's own conventions — ships the software-engineer producer agent and the code-review panel.
-requires_backbone: ">=1.0.0,<2.0.0"
+requires_backbone: ">=2.0.0,<2.1.0"
 # The code-review panel ([software-engineering:DEC-002]) registers its reviewers
 # through pm's reviewer-contribution socket and folds through pm's merge gate
 # (DEC-028/DEC-032), including the type axis + diff-touches-code floor of
@@ -12,4 +12,4 @@ requires_backbone: ">=1.0.0,<2.0.0"
 # versioned dependency.
 requires_capabilities:
   - name: project-management
-    version: ">=0.54.0,<1.0.0"
+    version: ">=0.55.0,<1.0.0"

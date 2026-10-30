@@ -1,5 +1,0 @@
-component: project-management
-kind: none
-body: >
-  project-kit's own configuration grants the living-docs and analysis-resolver
-  fixers. No adopter-facing change.

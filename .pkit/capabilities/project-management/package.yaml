@@ -2,14 +2,14 @@ schema_version: 2
 component:
   kind: capability
   name: project-management
-  version: 0.54.0
+  version: 0.55.0
 description: Project-management discipline realized from the pm-workflow methodology — issue hierarchy, state machine, body validation, naming conventions — encoded as schemas a methodology-agnostic engine (skills + agent) consumes at runtime.
 # The floor is the newest backbone this package needs: `pkit report link`
 # (shipped in v1.144.0), which create-issue --from-report invokes per DEC-048's
 # one-linker rule; and the backbone release that took over the process-journal
 # ignore line this package no longer declares — the changeset that dropped the
 # line raises the floor to it at that release (`requires_backbone: release`).
-requires_backbone: ">=1.144.0,<2.0.0"
+requires_backbone: ">=2.0.0,<2.1.0"
 aliases:
   - pm
 # Runtime-local files this capability owns under `.pkit/` (ADR-009 rule 7).
