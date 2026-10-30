@@ -732,6 +732,71 @@ def table_map(pid, y, v):
     return {f"{pid}-map": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
 
 
+ROLE_TONES = {"pkit": ("@role_code_bg", "@role_code"), "yours": ("@role_people_bg", "@role_people")}
+
+
+def roles(pid, y, v):
+    """One piece of work from left to right, a card per stop: who (name), what it does (job) and its limit as a
+    filled tag, arrows between the cards; under each card the reason for it, in a box with the card's colour as a
+    bar on top. Heights are the tallest stop's, so the rows line up. One instance of a template made for this slide."""
+    stops = v["stops"]
+    n = len(stops)
+    gap = 80
+    cw = round((SPAN16 - (n - 1) * gap) / n)
+    iw = cw - 64
+    xs = [i * (cw + gap) for i in range(n)]
+
+    def lines(s, size, w=iw):
+        return max(1, -(-text_w(s or "", size) // w))
+
+    HEAD = 72 if v.get("head") else 0
+    name_h = max(lines(s["name"], 48) for s in stops) * 60
+    job_h = max(lines(s["job"], 36) for s in stops) * 46
+    tag_h = max(lines(s.get("limit", ""), 36, iw - 40) for s in stops) * 46 + 20
+    card_h = 28 + name_h + 12 + job_h + 20 + tag_h + 28
+    why_lines = max(lines(s.get("why", ""), 36, iw - 60) for s in stops)  # a margin: wrapping breaks at words
+    why_top = HEAD + card_h + 24
+    why_h = 32 + why_lines * 46 + 24
+    H = why_top + why_h
+    parts = {}
+
+    def shape(key, x, top, w, h, fill, line, bw=2):
+        parts[key] = {"type": "shape", "shape": "rectangle", "text": "", "x": round(x), "y": round(top), "width": round(w), "height": round(h),
+                      "color": fill, "border_color": line, "border_width": bw, "ink": "@text_primary"}
+
+    def text(key, s, style, x, top, w, h, ink="@text_primary"):
+        parts[key] = {"type": "text", "text": md(s), "style": style, "ink": ink, "x": round(x), "y": round(top), "width": round(w), "height": round(h)}
+
+    if v.get("head"):
+        text("head", v["head"], "@style.key", 0, 0, SPAN16, 56)
+    for i, s in enumerate(stops):
+        bg, tone = ROLE_TONES[s.get("tone", "pkit")]
+        x = xs[i]
+        shape(f"s{i}box", x, HEAD, cw, card_h, bg, tone)
+        text(f"s{i}name", s["name"], "@style.tile_heading", x + 32, HEAD + 28, iw, name_h)
+        text(f"s{i}job", s["job"], "@style.body", x + 32, HEAD + 28 + name_h + 12, iw, job_h)
+        if s.get("limit"):
+            th = lines(s["limit"], 36, iw - 40) * 46 + 20
+            top = HEAD + card_h - 28 - tag_h
+            shape(f"s{i}tag", x + 32, top, iw, th, tone, tone, 1)
+            text(f"s{i}tagtext", s["limit"], "@style.body", x + 52, top + 10, iw - 40, th - 20, "@text_on_color")
+        if i:
+            mid = HEAD + 28 + name_h / 2
+            parts[f"s{i}arrow"] = {"type": "arrow", "points": [[xs[i] - gap + 12, round(mid)], [xs[i] - 12, round(mid)]], "arrow_type": "straight",
+                                   "tip": "end", "color": "@role_code", "border_width": 6, "border_style": "solid"}
+        if s.get("why"):
+            shape(f"w{i}box", x, why_top, cw, why_h, "@role_neutral_bg", "@role_neutral_bg", 1)
+            shape(f"w{i}bar", x, why_top, cw, 8, tone, tone, 1)
+            text(f"w{i}text", s["why"], "@style.body", x + 32, why_top + 32, iw, why_h - 56)
+    name = f"roles_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "One piece of work and who sees it, drawn for one slide by the slide generator: a card per stop, its limit, and the reason under it.",
+        "root": {**CLEAR_AREA, "width": SPAN16, "height": H},
+        "parts": parts,
+    }
+    return {f"{pid}-roles": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
 def ideas(pid, y, v):
     """Where ideas start: a conversation, the scratchpad note that keeps it, and what the note becomes, the
     products large on the right, the first (records) dark like the pyramid's apex, dropped small below. A box
@@ -1134,6 +1199,8 @@ def build_slide(s, n, total):
             add(checklist(pid, y, v))
         elif kind == "map":
             add(table_map(pid, y, v))
+        elif kind == "roles":
+            add(roles(pid, y, v))
         elif kind == "ties":
             add(ties(pid, y, v))
         elif kind == "story":

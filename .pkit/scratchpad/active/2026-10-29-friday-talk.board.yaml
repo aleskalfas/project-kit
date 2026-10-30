@@ -4026,6 +4026,442 @@ templates:
         y: 668
         width: 600
         height: 200.0
+  roles_T-agents:
+    note: 'One piece of work and who sees it, drawn for one slide by the slide generator: a card per stop,
+      its limit, and the reason under it.'
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 794.0
+    parts:
+      head:
+        type: text
+        text: One piece of work, and who sees it
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 0
+        width: 2944
+        height: 56
+      s0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 72
+        width: 525
+        height: 458
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      s0name:
+        type: text
+        text: The agent you talk to
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 32
+        y: 100
+        width: 461
+        height: 120
+      s0job:
+        type: text
+        text: Writes the draft.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 232
+        width: 461
+        height: 138
+      s0tag:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 32
+        y: 390
+        width: 461
+        height: 66
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      s0tagtext:
+        type: text
+        text: the tools you allow
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 52
+        y: 400
+        width: 421
+        height: 46
+      s1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 605
+        y: 72
+        width: 525
+        height: 458
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      s1name:
+        type: text
+        text: Critic
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 637
+        y: 100
+        width: 461
+        height: 120
+      s1job:
+        type: text
+        text: Opposes the draft before you see it.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 637
+        y: 232
+        width: 461
+        height: 138
+      s1tag:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 637
+        y: 390
+        width: 461
+        height: 66
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      s1tagtext:
+        type: text
+        text: reads only
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 657
+        y: 400
+        width: 421
+        height: 46
+      s1arrow:
+        type: arrow
+        points:
+        - - 537
+          - 160
+        - - 593
+          - 160
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      w1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 605
+        y: 554
+        width: 525
+        height: 240
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w1bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 605
+        y: 554
+        width: 525
+        height: 8
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      w1text:
+        type: text
+        text: The writer agrees with itself. A mistake caught here costs none of your time.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 637
+        y: 586
+        width: 461
+        height: 184
+      s2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1210
+        y: 72
+        width: 525
+        height: 458
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      s2name:
+        type: text
+        text: Architect
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 1242
+        y: 100
+        width: 461
+        height: 120
+      s2job:
+        type: text
+        text: When the draft touches the whole system, checks that it fits.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1242
+        y: 232
+        width: 461
+        height: 138
+      s2tag:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1242
+        y: 390
+        width: 461
+        height: 112
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      s2tagtext:
+        type: text
+        text: edits only architecture docs
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 1262
+        y: 400
+        width: 421
+        height: 92
+      s2arrow:
+        type: arrow
+        points:
+        - - 1142
+          - 160
+        - - 1198
+          - 160
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      w2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1210
+        y: 554
+        width: 525
+        height: 240
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w2bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1210
+        y: 554
+        width: 525
+        height: 8
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      w2text:
+        type: text
+        text: A change can look fine alone and still break the whole.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1242
+        y: 586
+        width: 461
+        height: 184
+      s3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1815
+        y: 72
+        width: 525
+        height: 458
+        color: '@role_people_bg'
+        border_color: '@role_people'
+        border_width: 2
+        ink: '@text_primary'
+      s3name:
+        type: text
+        text: You
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 1847
+        y: 100
+        width: 461
+        height: 120
+      s3job:
+        type: text
+        text: Decide.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1847
+        y: 232
+        width: 461
+        height: 138
+      s3arrow:
+        type: arrow
+        points:
+        - - 1747
+          - 160
+        - - 1803
+          - 160
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      w3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1815
+        y: 554
+        width: 525
+        height: 240
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w3bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1815
+        y: 554
+        width: 525
+        height: 8
+        color: '@role_people'
+        border_color: '@role_people'
+        border_width: 1
+        ink: '@text_primary'
+      w3text:
+        type: text
+        text: Only you accept a decision or let a change merge.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1847
+        y: 586
+        width: 461
+        height: 184
+      s4box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2420
+        y: 72
+        width: 525
+        height: 458
+        color: '@role_code_bg'
+        border_color: '@role_code'
+        border_width: 2
+        ink: '@text_primary'
+      s4name:
+        type: text
+        text: Three reviewers
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 2452
+        y: 100
+        width: 461
+        height: 120
+      s4job:
+        type: text
+        text: 'Check the change: its writing, its conventions, its rules.'
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2452
+        y: 232
+        width: 461
+        height: 138
+      s4tag:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2452
+        y: 390
+        width: 461
+        height: 112
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      s4tagtext:
+        type: text
+        text: never edit what they check
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 2472
+        y: 400
+        width: 421
+        height: 92
+      s4arrow:
+        type: arrow
+        points:
+        - - 2352
+          - 160
+        - - 2408
+          - 160
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      w4box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2420
+        y: 554
+        width: 525
+        height: 240
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w4bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2420
+        y: 554
+        width: 525
+        height: 8
+        color: '@role_code'
+        border_color: '@role_code'
+        border_width: 1
+        ink: '@text_primary'
+      w4text:
+        type: text
+        text: A reviewer that cannot edit stays independent.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2452
+        y: 586
+        width: 461
+        height: 184
 instances:
   L01:
     template: slide
@@ -6123,15 +6559,16 @@ instances:
   T-agents:
     template: slide
     title: 'Agents: roles with limits'
-    lead: 'No agent judges its own work: separate reviewers each catch one kind of failure.'
-    rests: 'This week: the critic changed two designs; reviewers caught two doc claims that were no longer
-      true'
+    lead: 'Each agent is a role: one job, and only the tools that job needs. The agent that writes a draft
+      never reviews it.'
+    rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
+      it follows.'
     n: 10
     total: 17
     override:
       rests:
-        text: 'This week: the critic changed two designs; reviewers caught two doc claims that were no
-          longer true'
+        text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
+          it follows.'
     mural_ids:
       root: 61f4844b-01f6-439c-a5b4-d0867abb45d0
       bg: 6859b53b-a62e-4bc3-81f0-d85f14bedd58
@@ -6139,139 +6576,64 @@ instances:
       lead: 7c4492ac-03a6-4106-8999-ec9460118d37
       rests: 45a8dcfe-9d33-4d7d-9e83-5da7c4ae9ce6
       num: 16d67334-67f2-43f8-9af1-98e063e1cd14
-  T-agents-problem:
-    template: callout
+  T-agents-roles:
+    template: roles_T-agents
     parent: T-agents
-    title: The problem
-    body: One agent doing everything judges its own work, and agrees with itself.
     x: 128
     y: 576
     mural_ids:
-      root: f9661855-0996-4754-9f2d-0836dfd48654
-      bg: 47088d47-137f-4fdf-a3fb-3041a78a058a
-      bar: 26f465a4-23ac-4444-88b9-61f7145f27bd
-      title: 60a51f26-10c9-44ab-99aa-bfa8cd095ef1
-      body: 45ffd0a3-2642-4807-84f3-143d6f8c2e0c
-  T-agents-a1:
-    template: actor
-    parent: T-agents
-    icon: people
-    name: 'You: decide'
-    role: people
-    x: 128
-    y: 800
-    mural_ids:
-      root: 1c17ca75-0bd9-4953-805e-b4506ab52241
-      ring: 8c381f24-4876-4e0f-8c22-ac24c190fdd4
-      name: f29e9864-2740-4ead-b3fc-4ee8381b0cfb
-      icon: 2753ea2e-fe3b-4711-9c58-79940ddd6f98
-  T-agents-a2:
-    template: actor
-    parent: T-agents
-    icon: agents
-    name: 'Builder: writes'
-    role: agents
-    x: 964
-    y: 800
-    mural_ids:
-      root: 6b4ec809-d3bc-412c-8eb2-34e1bc2072db
-      ring: e19b4c0c-6b45-4b27-8f55-70399c865101
-      name: 4409656d-7425-4c2f-80ba-29ee75379918
-      icon: 8cf73319-653b-46c5-8df9-f44117e3fe6e
-  T-agents-a3:
-    template: actor
-    parent: T-agents
-    icon: checks
-    name: 'Critic: reads only'
-    role: checks
-    x: 1800
-    y: 800
-    mural_ids:
-      root: 1bcf30c9-4c89-4b33-a30b-dbbc2e9becd2
-      ring: 91c177bd-5791-423d-8541-1fcb7cef8345
-      name: 2212368e-4e6f-4641-8c7b-da23310b09a6
-      icon: 7d6df452-185e-462f-8163-26f8f3ea1348
-  T-agents-a4:
-    template: actor
-    parent: T-agents
-    icon: checks
-    name: 'Reviewers: can block'
-    role: checks
-    x: 2636
-    y: 800
-    mural_ids:
-      root: 07e8d9e7-468c-4792-b4e1-b422685a17ae
-      ring: 3f59f92d-47d2-4971-84da-a9cb7a625f7a
-      name: a4de0a80-3bd3-4751-a4e8-19ad69d6bcba
-      icon: 15422530-7925-4109-aef5-373fda424d50
-  T-agents-d1:
-    template: step
-    parent: T-agents
-    ident: '1'
-    text: Each role gets only the tools it needs
-    x: 128
-    y: 1096
-    override:
-      root:
-        width: 939
-      bg:
-        width: 939
-      text:
-        width: 875
-    mural_ids:
-      root: 02baeaf4-3060-4b3f-b3c7-05221d57a9ff
-      bg: ae0502ff-34eb-4b1c-b73e-21ae8e4c5f64
-      tag: 00d5a2ea-de3d-4660-b15b-0d0857fabd81
-      text: 3233fef6-5a43-4c86-b1ba-d773e7c1784c
-  T-agents-d2:
-    template: step
-    parent: T-agents
-    ident: '2'
-    text: The critic opposes a draft before you see it
-    x: 1131
-    y: 1096
-    override:
-      root:
-        width: 939
-      bg:
-        width: 939
-      text:
-        width: 875
-    mural_ids:
-      root: bc88c4db-6f8b-496f-904b-f473732be0c7
-      bg: 96a256b9-7d1a-4482-84e5-35763ff65807
-      tag: 056da7bd-642b-4cee-b0c7-21f42e24593f
-      text: bde973c2-1555-4c92-b493-9bfae08d063a
-  T-agents-d3:
-    template: step
-    parent: T-agents
-    ident: '3'
-    text: Reviewers check every change before it merges
-    x: 2133
-    y: 1096
-    override:
-      root:
-        width: 939
-      bg:
-        width: 939
-      text:
-        width: 875
-    mural_ids:
-      root: 4d62c22c-3683-477a-b006-6731dfc7a578
-      bg: 47492483-f3e3-4075-9e7b-ac35166ba0c4
-      tag: 0dcd0aba-233e-4249-8ac8-9fb16d00c094
-      text: 316a6c55-8d03-40ea-a407-340cb7a3748b
+      root: 0c09260b-3bbf-4985-a405-350979bd086f
+      s0box: 7d3ea0b5-af21-4537-803c-b2a80f905b9d
+      s0tag: 7d01be6f-852a-43c7-bb1c-0a5b01867d18
+      s1box: 2d70561d-ee9c-42bb-bc78-9a02311c0c92
+      s1tag: d9997ab7-e47f-47dd-97d6-4ac037342baf
+      w1box: e926c67d-fd12-49e4-b358-762e475207d3
+      w1bar: 2641aff6-0682-4750-8a2f-c35ecea9bf1d
+      s2box: b296e93b-b191-4b9e-957a-5af5f95d01e9
+      s2tag: 1982a076-25f9-4d09-8382-6f3407c467d1
+      w2box: 8489b297-236f-4e68-b15c-f2748943bf00
+      w2bar: 2e500bac-d7b1-4cc6-ad01-e764149e0167
+      s3box: 38110dcb-ed17-4bfe-a5ee-ed896a9e0adf
+      w3box: 6b56a057-4bb1-455f-9812-5251218fa447
+      w3bar: fab39c5f-8c0f-4783-90a2-0ac1b7c89f09
+      s4box: 8cb074d3-6da2-4778-b588-1a60c66e21fa
+      s4tag: 6dfa2596-205e-46c1-952d-5a9a17dd05ac
+      w4box: 961d385c-6a21-401e-823a-84936dca1b07
+      w4bar: 0473702e-f33c-435b-9ee4-67b365948ca8
+      head: b5aa4088-ab86-421f-adbc-02972de33086
+      s0name: 20d349a4-d0c5-44f2-b1c7-de1bc2c43a27
+      s0job: a2cac454-4999-47dc-a551-8aef7c25dbb3
+      s0tagtext: de3d6eed-7e6f-446a-b14c-cc23d4c2854a
+      s1name: f54a84ff-bebf-45a8-accb-2833075b0f75
+      s1job: 5c9a3d48-37c0-452f-aea1-a97382a22946
+      s1tagtext: 9bbdea78-2e54-450f-a723-4cab89dd0c30
+      w1text: 4cf19c4f-e8f7-4144-88a0-6e8c20947378
+      s2name: 19755ff7-5631-42a4-b95d-9720b2c94478
+      s2job: 5e9264b5-fa14-4862-b611-423a03b48c92
+      s2tagtext: 74d8f132-0ba8-4c68-882a-f54be7e0ab85
+      w2text: 98a77197-04f0-4f1f-a3ab-703140be2f5d
+      s3name: 9c7b487a-e066-48ef-8857-242d36c29130
+      s3job: 78cd9e94-c230-41b9-a97a-0f3bc2bcdc29
+      w3text: 39e12ba6-7eb9-44a0-b9a3-15eebc3e7151
+      s4name: 549c1aee-fe12-47d3-b4d1-40a10d8d0946
+      s4job: 76668e5f-647b-465c-a154-0a28182b8d58
+      s4tagtext: df99e9ae-a47a-49f5-805f-058216d70e72
+      w4text: 4f03fe1f-262e-4066-95a5-5e3f940c865a
+      s1arrow: 567b5e3e-e0d3-4878-a1cb-a0acb299128d
+      s2arrow: b5d79580-6e5f-417c-bf9e-cc5a39a6d711
+      s3arrow: 433a9a2d-7bad-4a9e-88b0-5a006bbd3f92
+      s4arrow: 23599b57-2b99-4994-bc27-c15fccd7b489
   T-agents-limit:
     template: notice
     parent: T-agents
     text: 'Limit: Every review round costs several agent runs.'
     x: 128
-    y: 1454.0
+    y: 1418.0
     mural_ids:
-      root: 5a80f791-11f8-4f7a-80f1-69057a35a3c8
-      bg: 008af743-1f01-4bec-9b0e-5929a04b1c7e
-      bar: 5eb8d9f6-db52-4f7d-8f18-daa701c6e1fc
-      text: b500d928-dfe9-44ba-8895-fc5f533eb402
+      root: c08c2e5a-0565-473f-925f-07843ffcd24f
+      bg: 85f59b08-e52d-4a62-9028-1faf24b164b3
+      bar: 5191b7da-5b40-4c3a-9262-d5c7b04cb507
+      text: 1aad1285-e53d-4095-9166-5b9ed171db8d
   T-permissions:
     template: slide
     title: Permissions you write down

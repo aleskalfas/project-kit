@@ -675,32 +675,46 @@ slides:
 - id: agents
   part: P2
   title: 'Agents: roles with limits'
-  message: 'No agent judges its own work: separate reviewers each catch one kind of failure.'
-  problem: One agent doing everything judges its own work, and agrees with itself.
-  does:
-  - Each role gets only the tools it needs
-  - The critic opposes a draft before you see it
-  - Reviewers check every change before it merges
-  show: 'This week: the critic changed two designs; reviewers caught two doc claims that were no longer true'
+  message: 'Each agent is a role: one job, and only the tools that job needs. The agent that writes a draft never reviews
+    it.'
+  problem: ''
+  does: []
+  show: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.'
   visual:
-    kind: actors
-    actors:
-    - role: people
-      icon: people
-      name: 'You: decide'
-    - role: agents
-      icon: agents
-      name: 'Builder: writes'
-    - role: checks
-      icon: checks
-      name: 'Critic: reads only'
-    - role: checks
-      icon: checks
-      name: 'Reviewers: can block'
+    kind: roles
+    head: One piece of work, and who sees it
+    stops:
+    - name: The agent you talk to
+      job: Writes the draft.
+      limit: the tools you allow
+    - name: Critic
+      job: Opposes the draft before you see it.
+      limit: reads only
+      why: The writer agrees with itself. A mistake caught here costs none of your time.
+    - name: Architect
+      job: When the draft touches the whole system, checks that it fits.
+      limit: edits only architecture docs
+      why: A change can look fine alone and still break the whole.
+    - name: You
+      job: Decide.
+      tone: yours
+      why: Only you accept a decision or let a change merge.
+    - name: Three reviewers
+      job: 'Check the change: its writing, its conventions, its rules.'
+      limit: never edit what they check
+      why: A reviewer that cannot edit stays independent.
   limit: Every review round costs several agent runs.
   minutes: 2.5
-  notes: A builder is the agent that writes code. Each capability brings its own agents. An agent's behaviour is 
-    designed as scenarios first (storyboards).
+  notes: 'An agent is a role written as a file. The file gives its job, the tools it may use, the files it owns and the decisions
+    it follows. Each file has one owning agent (COR-013). pkit ships six agents. COR-024 names the critic and the architect.
+    The critic only reads, which keeps it independent. The architect may edit only the architecture docs and the architecture
+    decisions. Three reviewers check a change. methodology-reviewer checks how records and skills are written. convention-compliance-reviewer
+    checks commits, branches and who owns which file. rule-set-reviewer checks the rules that apply to the files the change
+    touches. The sixth, process-author, writes code, but only where you allow it. The reasons come from COR-024. The agent
+    that writes shows its draft while it is half done, so cheap mistakes reach your review. A change can look fine on its
+    own and still break the whole system. An agent''s time is cheap, and yours is not. pkit''s own agents advise and do not
+    block. Add-ons bring more agents, such as a builder that writes code and reviewers that block a merge. You create your
+    own with the agent-author skill and pkit new agent, in .pkit/agents/project/.'
 - id: permissions
   part: P2
   title: Permissions you write down
