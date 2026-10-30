@@ -14,6 +14,7 @@ pkit:
     anchors:
       path:
         - src/project_kit/workspace.py
+        - src/project_kit/workspace_remove.py
         - src/project_kit/status.py
         - src/project_kit/install.py
         - src/project_kit/sync.py
@@ -31,6 +32,7 @@ pkit:
         - ADR-060#5
         - ADR-060#7
         - ADR-060#9
+        - ADR-060#10
         - ADR-065#11
       artefact:
         - ACT-ai-agent
@@ -61,7 +63,7 @@ pkit:
 3. Every [profile](../../../glossary.md#term-profile--profile) the backbone ships grants that privilege to `all` ([ADR-060 point 5](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#5-granted-to-all-by-every-shipped-profile) and [ADR-005 point 5](../../../../../architecture/decisions/ADR-005-permission-profile-surface.md#5-shipped-tiers-nest-grants-are-over-catalog-privileges-shell-autonomy-rides-the-references)). So the code allows the write, and nobody is asked to confirm it.
 4. The agent passes the file to the command that needs it, such as `gh pr create --body-file .agent-workspace/pr-body.md`.
 5. The work is committed. Git leaves the folder out, since `pkit init`, `pkit sync` and `pkit upgrade` exclude it in the clone's local exclude file ([ADR-060 point 9](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#9-excluded-per-clone-the-committed-ignore-line-is-recommended-never-written) and [ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)).
-6. The agent removes the files it no longer needs (core rule 16).
+6. The agent removes the files it wrote and no longer needs with `pkit workspace remove`, as core rule 16 asks. The command tests each path after the shell expanded it, and removes the files, which lie inside the agent workspace ([ADR-060 point 10](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#10-removal-through-a-backbone-command-that-tests-its-own-paths)).
 
 **Variants:**
 
@@ -79,7 +81,13 @@ pkit:
 - **3c.** The hook defers the write to the harness all the same. Where a diagnostic session is on, `pkit permissions diagnose report` lists the deferral in its `workspace` group ([UC-033](UC-033-find-why-prompted.md)). The group is a defect, never a gap to allow around ([ADR-060 point 7](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#7-a-prompt-there-is-a-defect)).
 - **5a.** The clone has run none of `pkit init`, `pkit sync` and `pkit upgrade`, and the project's committed `.gitignore` lacks `/.agent-workspace/`. Git does not ignore the folder, so `git add -A` would stage its files. `pkit status` reports the folder `NOT excluded from git`, and `pkit init` recommends the `.gitignore` line ([ADR-060 point 9](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#9-excluded-per-clone-the-committed-ignore-line-is-recommended-never-written)).
 - **5b.** The project lies in no git repository. No commit carries anything, and `pkit sync` reports that there is nothing to exclude the folder from (`workspace.py`).
-- **6a.** The agent removes the files with a shell command, such as `rm`. The `workspace` privilege covers no shell command, so the code decides it on the command's own grants, and the harness may ask ([ADR-060 point 4](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#4-no-bash-exception)).
+- **6a.** The agent removes the files with a shell command, such as `rm`, not with `pkit workspace remove`. The `workspace` privilege covers no shell command, so the code decides it on the command's own grants, and the harness may ask ([ADR-060 point 4](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#4-no-bash-exception)).
+- **6b.** The command refuses a path the agent gives, so it removes nothing and names each refused path and why ([ADR-060 point 10](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#10-removal-through-a-backbone-command-that-tests-its-own-paths)). It refuses three kinds of path:
+  - one outside the folder, the folder itself, or one whose last part is `.` or `..`
+  - one at or under a child of the folder named after a [capability](../../../glossary.md#term-capability--capability) the [manifest](../../../glossary.md#term-manifest--manifest) registers, where that capability keeps its lasting state
+  - one in a repository or worktree nested in the folder, or a folder that holds one
+- **6c.** The checkout lies in another repository than the [session anchor](../../../glossary.md#term-session-anchor--session-anchor)'s. The cross-repository guard asks at a terminal, and refuses without one, so nothing is removed ([ADR-060 point 10](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#10-removal-through-a-backbone-command-that-tests-its-own-paths)).
+- **6d.** A path the agent gives lies inside the folder but names nothing. The command reports it, refuses nothing for it, and removes the other paths ([ADR-060 point 10](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#10-removal-through-a-backbone-command-that-tests-its-own-paths)).
 
 **Postconditions:** The agent's intermediate files lie in `.agent-workspace/`, written with nobody asked to confirm them, and no commit carries them.
 
@@ -88,4 +96,5 @@ pkit:
 - The `workspace` [privilege](../../../glossary.md#term-privilege--privilege) reaches no file outside the folder, and has no opinion there ([ADR-060 point 1](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#1-recognition-from-the-target-path-for-the-file-tools-only) and `decide.py`).
 - Another repository's [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace) never counts as this checkout's ([ADR-060 point 3](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#3-which-checkouts-count)).
 - `pkit init`, `pkit sync` and `pkit upgrade` add the exclude entry once, with a comment line above it, and edit no other line of the exclude file (`workspace.py`).
+- `pkit workspace remove` removes nothing unless every path given lies inside the agent workspace, and follows no symlink out of it ([ADR-060 point 10](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#10-removal-through-a-backbone-command-that-tests-its-own-paths) and `workspace_remove.py`).
 - A symlink at the folder's path is never adopted as the agent workspace ([ADR-060 point 2](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#2-the-folder-is-the-checkouts-own) and `workspace.py`).
