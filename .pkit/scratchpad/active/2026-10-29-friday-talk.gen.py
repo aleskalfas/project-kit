@@ -1536,6 +1536,23 @@ DIVIDER_TEMPLATE = {
 }
 
 
+TALK_COVER_TEMPLATE = {
+    "note": "The talk's cover, made by the slide generator: no logo; an accent bar, the title, the project as a subtitle in pkit's purple, the author, the project's address, and the version with its date.",
+    "root": {**CLEAR_AREA, "width": GRID_W, "height": 1800},
+    "parts": {
+        "bg": {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": 0, "width": GRID_W, "height": 1800,
+               "color": "@background", "border_color": "@border_subtle", "border_width": 2, "ink": "@text_primary"},
+        "bar": {"type": "shape", "shape": "rectangle", "text": "", "x": MARGIN, "y": 600, "width": 160, "height": 8,
+                "color": "@interactive", "border_color": "@interactive", "border_width": 1, "ink": "@text_primary"},
+        "title": {"type": "text", "text": "{title}", "style": "@style.title", "ink": "@text_primary", "x": MARGIN, "y": 640, "width": SPAN16, "height": 160},
+        "subtitle": {"type": "text", "text": "{subtitle}", "style": "@style.lead", "ink": "@role_code", "x": MARGIN, "y": 816, "width": SPAN16, "height": 96},
+        "author": {"type": "text", "text": "{author}", "style": "@style.key", "ink": "@text_secondary", "x": MARGIN, "y": 1000, "width": SPAN8, "height": 64},
+        "link": {"type": "text", "text": "{link}", "style": "@style.body", "ink": "@interactive", "x": MARGIN, "y": 1072, "width": SPAN8, "height": 56},
+        "version": {"type": "text", "text": "{version}", "style": "@style.caption", "ink": "@text_helper", "x": MARGIN, "y": 1640, "width": SPAN8, "height": 48},
+    },
+}
+
+
 def build_set(sl, prefix, labels, new, rows, order):
     """One version of the talk: its cover, then per part its section and its slides, each part a row."""
     talk = sl["talk"]
@@ -1543,10 +1560,8 @@ def build_set(sl, prefix, labels, new, rows, order):
     total = len(content)
     cover = f"{prefix}cover"
     new[cover] = {
-        "template": "cover", "project": talk.get("project", "project-kit"), "title": talk["title"], "author": talk["author"],
-        "date": talk["date"], "version": talk["version"],
-        "override": {"logo": {"file": "2026-10-29-friday-talk-icons/agents.png"},
-                     "version": {"text": labels["version"].format(version=talk["version"], date=talk["date"])}},
+        "template": "talk_cover", "title": talk["title"], "subtitle": talk.get("project", "project-kit (pkit)"),
+        "author": talk["author"], "link": talk["link"], "version": labels["version"].format(version=talk["version"], date=talk["date"]),
     }
     rows[cover] = [cover]
     order.append(cover)
@@ -1596,6 +1611,7 @@ def main(slides_path, board_path, cs_path=None):
     board["templates"]["kind"] = KIND_TEMPLATE
     board["templates"]["kind_group"] = GROUP_TEMPLATE
     board["templates"]["step_card"] = step_card_template(board["templates"]["stage"])
+    board["templates"]["talk_cover"] = TALK_COVER_TEMPLATE
     board["layouts"] = [lay for lay in board.get("layouts") or [] if not any(str(x).startswith("T-") for x in (lay.get("row") or lay.get("stack") or lay.get("grid") or []))]
     new, rows, order = {}, {}, []
     build_set(sl, "T-", LABELS["en"], new, rows, order)

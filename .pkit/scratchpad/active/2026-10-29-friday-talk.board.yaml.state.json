@@ -30853,7 +30853,6 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 0,
     "show_title": false,
     "title": "T-cover",
     "width": 3200,
@@ -30865,14 +30864,13 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 0,
     "show_title": false,
     "title": "T-cover",
     "width": 3200,
     "x": -4246,
     "y": -1459
    },
-   "mural_id": "9489c8ef-d65d-4ff0-845f-3990f06cac8b",
+   "mural_id": "4e14be7e-9553-4e30-896a-71688da80027",
    "tracked": [
     "title",
     "text",
@@ -30900,34 +30898,34 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231749773
+   "updatedOn": 1793329495814
   },
   "T-cover.author": {
    "board": {
     "align": "left",
     "color": "#FFFFFF00",
     "font": "proxima-nova",
-    "font_size": 64,
+    "font_size": 40,
     "ink": "#525252FF",
     "parent": "T-cover",
     "text": "Ale\u0161 Kalfas",
-    "title": "tpl:cover#author",
-    "width": 2192,
+    "title": "tpl:talk_cover#author",
+    "width": 1440,
     "x": 128,
-    "y": 896
+    "y": 1000
    },
    "fields": {
     "font": "proxima-nova",
-    "font_size": 64,
+    "font_size": 40,
     "ink": "#525252FF",
     "parent": "T-cover",
     "text": "Ale\u0161 Kalfas",
-    "title": "tpl:cover#author",
-    "width": 2192,
+    "title": "tpl:talk_cover#author",
+    "width": 1440,
     "x": 128,
-    "y": 896
+    "y": 1000
    },
-   "mural_id": "798141eb-b900-45c2-a7c3-4fca62e80d91",
+   "mural_id": "e74275c5-6f95-45b5-a72d-50c5f19c6fca",
    "tracked": [
     "title",
     "text",
@@ -30955,7 +30953,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231767520
+   "updatedOn": 1793329497488
   },
   "T-cover.bar": {
    "board": {
@@ -30967,10 +30965,10 @@
     "ink": "#161616FF",
     "parent": "T-cover",
     "text": "",
-    "title": "tpl:cover#bar",
-    "width": 124,
+    "title": "tpl:talk_cover#bar",
+    "width": 160,
     "x": 128,
-    "y": 640
+    "y": 600
    },
    "fields": {
     "border_color": "#0F62FEFF",
@@ -30980,12 +30978,12 @@
     "ink": "#161616FF",
     "parent": "T-cover",
     "text": "",
-    "title": "tpl:cover#bar",
-    "width": 124,
+    "title": "tpl:talk_cover#bar",
+    "width": 160,
     "x": 128,
-    "y": 640
+    "y": 600
    },
-   "mural_id": "ef18a5fb-818e-4cc9-955d-e6feae35964e",
+   "mural_id": "265ac546-8a57-4c68-b516-60f015d34b78",
    "tracked": [
     "title",
     "text",
@@ -31013,7 +31011,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793329496662
   },
   "T-cover.bg": {
    "board": {
@@ -31025,7 +31023,7 @@
     "ink": "#161616FF",
     "parent": "T-cover",
     "text": "",
-    "title": "tpl:cover#bg",
+    "title": "tpl:talk_cover#bg",
     "width": 3200,
     "x": 0,
     "y": 0
@@ -31038,12 +31036,12 @@
     "ink": "#161616FF",
     "parent": "T-cover",
     "text": "",
-    "title": "tpl:cover#bg",
+    "title": "tpl:talk_cover#bg",
     "width": 3200,
     "x": 0,
     "y": 0
    },
-   "mural_id": "d67550a5-4ecf-4303-8d92-09a8e916900f",
+   "mural_id": "644b749d-523a-4f4a-9ba6-272cb24cd1d2",
    "tracked": [
     "title",
     "text",
@@ -31071,27 +31069,34 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231765625
+   "updatedOn": 1793329496662
   },
-  "T-cover.logo": {
+  "T-cover.link": {
    "board": {
-    "height": 128,
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#0F62FEFF",
     "parent": "T-cover",
-    "title": "tpl:cover#logo",
-    "width": 262,
+    "text": "github.com/aleskalfas/project-kit",
+    "title": "tpl:talk_cover#link",
+    "width": 1440,
     "x": 128,
-    "y": 128
+    "y": 1072
    },
    "fields": {
-    "file": "2026-10-29-friday-talk-icons/agents.png@11d420acdac6b381",
-    "height": 128,
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#0F62FEFF",
     "parent": "T-cover",
-    "title": "tpl:cover#logo",
-    "width": 262,
+    "text": "github.com/aleskalfas/project-kit",
+    "title": "tpl:talk_cover#link",
+    "width": 1440,
     "x": 128,
-    "y": 128
+    "y": 1072
    },
-   "mural_id": "9fecce99-0175-4b3d-b521-c1ba3028dc35",
+   "mural_id": "4468f93f-cb5d-4829-a253-2fdbec9fb27b",
    "tracked": [
     "title",
     "text",
@@ -31119,34 +31124,34 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793231769573
+   "updatedOn": 1793329497488
   },
-  "T-cover.project": {
+  "T-cover.subtitle": {
    "board": {
     "align": "left",
     "color": "#FFFFFF00",
     "font": "proxima-nova",
     "font_size": 64,
-    "ink": "#161616FF",
+    "ink": "#6929C4FF",
     "parent": "T-cover",
     "text": "project-kit (pkit)",
-    "title": "tpl:cover#project",
-    "width": 1440,
-    "x": 454,
-    "y": 152
+    "title": "tpl:talk_cover#subtitle",
+    "width": 2944,
+    "x": 128,
+    "y": 816
    },
    "fields": {
     "font": "proxima-nova",
     "font_size": 64,
-    "ink": "#161616FF",
+    "ink": "#6929C4FF",
     "parent": "T-cover",
     "text": "project-kit (pkit)",
-    "title": "tpl:cover#project",
-    "width": 1440,
-    "x": 454,
-    "y": 152
+    "title": "tpl:talk_cover#subtitle",
+    "width": 2944,
+    "x": 128,
+    "y": 816
    },
-   "mural_id": "38b37749-eef3-4b11-9ac1-fa4d396eb46e",
+   "mural_id": "ad0f3a12-48b8-430b-9c51-4efd2126c4a4",
    "tracked": [
     "title",
     "text",
@@ -31174,7 +31179,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793232471294
+   "updatedOn": 1793329497488
   },
   "T-cover.title": {
    "board": {
@@ -31185,10 +31190,10 @@
     "ink": "#161616FF",
     "parent": "T-cover",
     "text": "Building with AI, the way your project decided",
-    "title": "tpl:cover#title",
+    "title": "tpl:talk_cover#title",
     "width": 2944,
     "x": 128,
-    "y": 704
+    "y": 640
    },
    "fields": {
     "font": "proxima-nova",
@@ -31196,12 +31201,12 @@
     "ink": "#161616FF",
     "parent": "T-cover",
     "text": "Building with AI, the way your project decided",
-    "title": "tpl:cover#title",
+    "title": "tpl:talk_cover#title",
     "width": 2944,
     "x": 128,
-    "y": 704
+    "y": 640
    },
-   "mural_id": "52457ebe-24cd-4bbb-ada2-0b9dcb924b84",
+   "mural_id": "23ca1183-6c90-4ecc-a47b-a20e3c0e8a2b",
    "tracked": [
     "title",
     "text",
@@ -31229,7 +31234,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793315950707
+   "updatedOn": 1793329497488
   },
   "T-cover.version": {
    "board": {
@@ -31240,10 +31245,10 @@
     "ink": "#6F6F6FFF",
     "parent": "T-cover",
     "text": "Version pkit 1.149 \u00b7 30 October 2026",
-    "title": "tpl:cover#version",
+    "title": "tpl:talk_cover#version",
     "width": 1440,
     "x": 128,
-    "y": 1664
+    "y": 1640
    },
    "fields": {
     "font": "proxima-nova",
@@ -31251,12 +31256,12 @@
     "ink": "#6F6F6FFF",
     "parent": "T-cover",
     "text": "Version pkit 1.149 \u00b7 30 October 2026",
-    "title": "tpl:cover#version",
+    "title": "tpl:talk_cover#version",
     "width": 1440,
     "x": 128,
-    "y": 1664
+    "y": 1640
    },
-   "mural_id": "047bfa3f-6c31-46a2-bf03-a6f95d5b4cbb",
+   "mural_id": "c6db8b2d-d8e1-498d-903e-3609acc797f0",
    "tracked": [
     "title",
     "text",
@@ -31284,7 +31289,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793232471449
+   "updatedOn": 1793329497488
   },
   "T-decisions": {
    "board": {
