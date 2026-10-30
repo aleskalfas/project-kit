@@ -4037,23 +4037,14 @@ templates:
       border_color: '#FFFFFF00'
       border_width: 1
       width: 2944
-      height: 794.0
+      height: 458.0
     parts:
-      head:
-        type: text
-        text: One piece of work, and who sees it
-        style: '@style.key'
-        ink: '@text_primary'
-        x: 0
-        y: 0
-        width: 2944
-        height: 56
       s0box:
         type: shape
         shape: rectangle
         text: ''
         x: 0
-        y: 72
+        y: 0
         width: 525
         height: 458
         color: '@role_code_bg'
@@ -4066,7 +4057,7 @@ templates:
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 32
-        y: 100
+        y: 28
         width: 461
         height: 120
       s0job:
@@ -4075,7 +4066,7 @@ templates:
         style: '@style.body'
         ink: '@text_primary'
         x: 32
-        y: 232
+        y: 160
         width: 461
         height: 138
       s0tag:
@@ -4083,7 +4074,7 @@ templates:
         shape: rectangle
         text: ''
         x: 32
-        y: 390
+        y: 318
         width: 461
         height: 66
         color: '@role_code'
@@ -4096,7 +4087,7 @@ templates:
         style: '@style.body'
         ink: '@text_on_color'
         x: 52
-        y: 400
+        y: 328
         width: 421
         height: 46
       s1box:
@@ -4104,7 +4095,7 @@ templates:
         shape: rectangle
         text: ''
         x: 605
-        y: 72
+        y: 0
         width: 525
         height: 458
         color: '@role_code_bg'
@@ -4117,7 +4108,7 @@ templates:
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 637
-        y: 100
+        y: 28
         width: 461
         height: 120
       s1job:
@@ -4126,7 +4117,7 @@ templates:
         style: '@style.body'
         ink: '@text_primary'
         x: 637
-        y: 232
+        y: 160
         width: 461
         height: 138
       s1tag:
@@ -4134,7 +4125,7 @@ templates:
         shape: rectangle
         text: ''
         x: 637
-        y: 390
+        y: 318
         width: 461
         height: 66
         color: '@role_code'
@@ -4147,60 +4138,27 @@ templates:
         style: '@style.body'
         ink: '@text_on_color'
         x: 657
-        y: 400
+        y: 328
         width: 421
         height: 46
       s1arrow:
         type: arrow
         points:
         - - 537
-          - 160
+          - 88
         - - 593
-          - 160
+          - 88
         arrow_type: straight
         tip: end
         color: '@role_code'
         border_width: 6
         border_style: solid
-      w1box:
-        type: shape
-        shape: rectangle
-        text: ''
-        x: 605
-        y: 554
-        width: 525
-        height: 240
-        color: '@role_neutral_bg'
-        border_color: '@role_neutral_bg'
-        border_width: 1
-        ink: '@text_primary'
-      w1bar:
-        type: shape
-        shape: rectangle
-        text: ''
-        x: 605
-        y: 554
-        width: 525
-        height: 8
-        color: '@role_code'
-        border_color: '@role_code'
-        border_width: 1
-        ink: '@text_primary'
-      w1text:
-        type: text
-        text: The writer agrees with itself. A mistake caught here costs none of your time.
-        style: '@style.body'
-        ink: '@text_primary'
-        x: 637
-        y: 586
-        width: 461
-        height: 184
       s2box:
         type: shape
         shape: rectangle
         text: ''
         x: 1210
-        y: 72
+        y: 0
         width: 525
         height: 458
         color: '@role_code_bg'
@@ -4213,7 +4171,7 @@ templates:
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 1242
-        y: 100
+        y: 28
         width: 461
         height: 120
       s2job:
@@ -4222,7 +4180,7 @@ templates:
         style: '@style.body'
         ink: '@text_primary'
         x: 1242
-        y: 232
+        y: 160
         width: 461
         height: 138
       s2tag:
@@ -4230,7 +4188,7 @@ templates:
         shape: rectangle
         text: ''
         x: 1242
-        y: 390
+        y: 318
         width: 461
         height: 112
         color: '@role_code'
@@ -4243,60 +4201,27 @@ templates:
         style: '@style.body'
         ink: '@text_on_color'
         x: 1262
-        y: 400
+        y: 328
         width: 421
         height: 92
       s2arrow:
         type: arrow
         points:
         - - 1142
-          - 160
+          - 88
         - - 1198
-          - 160
+          - 88
         arrow_type: straight
         tip: end
         color: '@role_code'
         border_width: 6
         border_style: solid
-      w2box:
-        type: shape
-        shape: rectangle
-        text: ''
-        x: 1210
-        y: 554
-        width: 525
-        height: 240
-        color: '@role_neutral_bg'
-        border_color: '@role_neutral_bg'
-        border_width: 1
-        ink: '@text_primary'
-      w2bar:
-        type: shape
-        shape: rectangle
-        text: ''
-        x: 1210
-        y: 554
-        width: 525
-        height: 8
-        color: '@role_code'
-        border_color: '@role_code'
-        border_width: 1
-        ink: '@text_primary'
-      w2text:
-        type: text
-        text: A change can look fine alone and still break the whole.
-        style: '@style.body'
-        ink: '@text_primary'
-        x: 1242
-        y: 586
-        width: 461
-        height: 184
       s3box:
         type: shape
         shape: rectangle
         text: ''
         x: 1815
-        y: 72
+        y: 0
         width: 525
         height: 458
         color: '@role_people_bg'
@@ -4309,7 +4234,7 @@ templates:
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 1847
-        y: 100
+        y: 28
         width: 461
         height: 120
       s3job:
@@ -4318,60 +4243,27 @@ templates:
         style: '@style.body'
         ink: '@text_primary'
         x: 1847
-        y: 232
+        y: 160
         width: 461
         height: 138
       s3arrow:
         type: arrow
         points:
         - - 1747
-          - 160
+          - 88
         - - 1803
-          - 160
+          - 88
         arrow_type: straight
         tip: end
         color: '@role_code'
         border_width: 6
         border_style: solid
-      w3box:
-        type: shape
-        shape: rectangle
-        text: ''
-        x: 1815
-        y: 554
-        width: 525
-        height: 240
-        color: '@role_neutral_bg'
-        border_color: '@role_neutral_bg'
-        border_width: 1
-        ink: '@text_primary'
-      w3bar:
-        type: shape
-        shape: rectangle
-        text: ''
-        x: 1815
-        y: 554
-        width: 525
-        height: 8
-        color: '@role_people'
-        border_color: '@role_people'
-        border_width: 1
-        ink: '@text_primary'
-      w3text:
-        type: text
-        text: Only you accept a decision or let a change merge.
-        style: '@style.body'
-        ink: '@text_primary'
-        x: 1847
-        y: 586
-        width: 461
-        height: 184
       s4box:
         type: shape
         shape: rectangle
         text: ''
         x: 2420
-        y: 72
+        y: 0
         width: 525
         height: 458
         color: '@role_code_bg'
@@ -4384,7 +4276,7 @@ templates:
         style: '@style.tile_heading'
         ink: '@text_primary'
         x: 2452
-        y: 100
+        y: 28
         width: 461
         height: 120
       s4job:
@@ -4393,7 +4285,7 @@ templates:
         style: '@style.body'
         ink: '@text_primary'
         x: 2452
-        y: 232
+        y: 160
         width: 461
         height: 138
       s4tag:
@@ -4401,7 +4293,7 @@ templates:
         shape: rectangle
         text: ''
         x: 2452
-        y: 390
+        y: 318
         width: 461
         height: 112
         color: '@role_code'
@@ -4414,54 +4306,610 @@ templates:
         style: '@style.body'
         ink: '@text_on_color'
         x: 2472
-        y: 400
+        y: 328
         width: 421
         height: 92
       s4arrow:
         type: arrow
         points:
         - - 2352
-          - 160
+          - 88
         - - 2408
-          - 160
+          - 88
         arrow_type: straight
         tip: end
         color: '@role_code'
         border_width: 6
         border_style: solid
-      w4box:
+  map_T-agentsfrom:
+    note: Columns as the pyramid's layers, side by side, a row per example; drawn for one slide by the
+      slide generator.
+    root:
+      type: area
+      title: '{id}'
+      show_title: false
+      color: '#FFFFFF00'
+      border_color: '#FFFFFF00'
+      border_width: 1
+      width: 2944
+      height: 842.0
+    parts:
+      h0box:
         type: shape
         shape: rectangle
         text: ''
-        x: 2420
-        y: 554
-        width: 525
-        height: 240
+        x: 0
+        y: 0
+        width: 664
+        height: 136
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      h0head:
+        type: text
+        text: The decision
+        style: '@style.tile_heading'
+        ink: '@text_on_color'
+        x: 32
+        y: 16
+        width: 600
+        height: 64
+      h0text:
+        type: text
+        text: names a role
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 84
+        width: 600
+        height: 50
+      h1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 0
+        width: 664
+        height: 136
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      h1head:
+        type: text
+        text: The agent
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 792
+        y: 16
+        width: 600
+        height: 64
+      h1text:
+        type: text
+        text: does one job
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 84
+        width: 600
+        height: 50
+      h1arrow:
+        type: arrow
+        points:
+        - - 680
+          - 68
+        - - 744
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      h2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 0
+        width: 664
+        height: 136
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      h2head:
+        type: text
+        text: Its limit
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 1552
+        y: 16
+        width: 600
+        height: 64
+      h2text:
+        type: text
+        text: only the tools it needs
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 84
+        width: 600
+        height: 50
+      h2arrow:
+        type: arrow
+        points:
+        - - 1440
+          - 68
+        - - 1504
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      h3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 0
+        width: 664
+        height: 136
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      h3head:
+        type: text
+        text: What it catches
+        style: '@style.tile_heading'
+        ink: '@text_primary'
+        x: 2312
+        y: 16
+        width: 600
+        height: 64
+      h3text:
+        type: text
+        text: so you do not have to
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 84
+        width: 600
+        height: 50
+      h3arrow:
+        type: arrow
+        points:
+        - - 2200
+          - 68
+        - - 2264
+          - 68
+        arrow_type: straight
+        tip: end
+        color: '@role_code'
+        border_width: 6
+        border_style: solid
+      r0c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 160
+        width: 664
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c0head:
+        type: text
+        text: COR-024
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 162
+        width: 600
+        height: 56
+      r0c0text:
+        type: text
+        text: A second opinion
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 218
+        width: 600
+        height: 50
+      r0c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 160
+        width: 664
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c1text:
+        type: text
+        text: critic
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 792
+        y: 187
+        width: 600
+        height: 50
+      r0c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 160
+        width: 664
+        height: 112
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c2text:
+        type: text
+        text: Reads only
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 187
+        width: 600
+        height: 50
+      r0c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 160
+        width: 664
+        height: 112
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r0c3text:
+        type: text
+        text: A draft's gaps, before you read it
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 162
+        width: 600
+        height: 100
+      r1c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 288
+        width: 664
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c0head:
+        type: text
+        text: COR-024
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 290
+        width: 600
+        height: 56
+      r1c0text:
+        type: text
+        text: A keeper of the whole system
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 346
+        width: 600
+        height: 50
+      r1c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 288
+        width: 664
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c1text:
+        type: text
+        text: architect
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 792
+        y: 315
+        width: 600
+        height: 50
+      r1c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 288
+        width: 664
+        height: 112
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c2text:
+        type: text
+        text: Edits only architecture docs
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 315
+        width: 600
+        height: 50
+      r1c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 288
+        width: 664
+        height: 112
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r1c3text:
+        type: text
+        text: A change that breaks the whole
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 315
+        width: 600
+        height: 50
+      r2c0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 416
+        width: 664
+        height: 112
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2c0head:
+        type: text
+        text: COR-057
+        style: '@style.key'
+        ink: '@text_on_color'
+        x: 32
+        y: 418
+        width: 600
+        height: 56
+      r2c0text:
+        type: text
+        text: One reviewer for the rules
+        style: '@style.body'
+        ink: '@text_on_color'
+        x: 32
+        y: 474
+        width: 600
+        height: 50
+      r2c1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 416
+        width: 664
+        height: 112
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2c1text:
+        type: text
+        text: rule-set-reviewer
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 792
+        y: 443
+        width: 600
+        height: 50
+      r2c2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 416
+        width: 664
+        height: 112
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2c2text:
+        type: text
+        text: Never edits what it checks
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 1552
+        y: 443
+        width: 600
+        height: 50
+      r2c3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 416
+        width: 664
+        height: 112
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      r2c3text:
+        type: text
+        text: A broken rule, with its line
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 443
+        width: 600
+        height: 50
+      whyhead:
+        type: text
+        text: Why pkit has agents
+        style: '@style.key'
+        ink: '@text_primary'
+        x: 0
+        y: 568
+        width: 2944
+        height: 56
+      w0box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 0
+        y: 636
+        width: 664
+        height: 206.0
         color: '@role_neutral_bg'
         border_color: '@role_neutral_bg'
         border_width: 1
         ink: '@text_primary'
-      w4bar:
+      w0bar:
         type: shape
         shape: rectangle
         text: ''
-        x: 2420
-        y: 554
-        width: 525
+        x: 0
+        y: 636
+        width: 664
         height: 8
-        color: '@role_code'
-        border_color: '@role_code'
+        color: '#491D8BFF'
+        border_color: '#491D8BFF'
         border_width: 1
         ink: '@text_primary'
-      w4text:
+      w0text:
+        type: text
+        text: A decision makes each check one role's job. By default, nobody watches the whole system.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 32
+        y: 668
+        width: 600
+        height: 150.0
+      w1box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 636
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w1bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 760
+        y: 636
+        width: 664
+        height: 8
+        color: '#BE95FFFF'
+        border_color: '#BE95FFFF'
+        border_width: 1
+        ink: '@text_primary'
+      w1text:
+        type: text
+        text: The agent that writes agrees with itself. A second agent does not.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 792
+        y: 668
+        width: 600
+        height: 150.0
+      w2box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 636
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w2bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 1520
+        y: 636
+        width: 664
+        height: 8
+        color: '#D4BBFFFF'
+        border_color: '#D4BBFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      w2text:
         type: text
         text: A reviewer that cannot edit stays independent.
         style: '@style.body'
         ink: '@text_primary'
-        x: 2452
-        y: 586
-        width: 461
-        height: 184
+        x: 1552
+        y: 668
+        width: 600
+        height: 150.0
+      w3box:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 636
+        width: 664
+        height: 206.0
+        color: '@role_neutral_bg'
+        border_color: '@role_neutral_bg'
+        border_width: 1
+        ink: '@text_primary'
+      w3bar:
+        type: shape
+        shape: rectangle
+        text: ''
+        x: 2280
+        y: 636
+        width: 664
+        height: 8
+        color: '#E8DAFFFF'
+        border_color: '#E8DAFFFF'
+        border_width: 1
+        ink: '@text_primary'
+      w3text:
+        type: text
+        text: Caught here, a mistake costs an agent's time, not yours.
+        style: '@style.body'
+        ink: '@text_primary'
+        x: 2312
+        y: 668
+        width: 600
+        height: 150.0
 instances:
   L01:
     template: slide
@@ -4922,7 +5370,7 @@ instances:
     lead: Your AI agent works fast, and forgets everything your project decided.
     rests: 'The question: how do you make it work your project''s way, without a heavy framework?'
     n: 1
-    total: 17
+    total: 18
     override:
       rests:
         text: 'The question: how do you make it work your project''s way, without a heavy framework?'
@@ -5287,7 +5735,7 @@ instances:
     lead: 'In five layers, from your decisions down to your code: each carries out the ones above it.'
     rests: 'This week: pkit wrote this order down as a decision of its own, COR-065'
     n: 2
-    total: 17
+    total: 18
     override:
       rests:
         text: 'This week: pkit wrote this order down as a decision of its own, COR-065'
@@ -5658,7 +6106,7 @@ instances:
     rests: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities, come
       later.
     n: 3
-    total: 17
+    total: 18
     override:
       rests:
         text: pkit status shows what pkit set up in a project. Optional add-ons, called capabilities,
@@ -5762,7 +6210,7 @@ instances:
       records, issues or docs.
     rests: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
     n: 4
-    total: 17
+    total: 18
     override:
       rests:
         text: 'In project-kit: 28 notes done, which became 41 records, 31 issues and 15 docs'
@@ -5825,7 +6273,7 @@ instances:
     rests: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
       one'
     n: 5
-    total: 17
+    total: 18
     override:
       rests:
         text: 'This week: a new record, COR-065, replaced a sentence of COR-006, without editing the old
@@ -6049,7 +6497,7 @@ instances:
     rests: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted and
       merged with its code.'
     n: 6
-    total: 17
+    total: 18
     override:
       rests:
         text: 'This week: ADR-075 decided how the rules every session loads are made. It was accepted
@@ -6220,7 +6668,7 @@ instances:
     rests: 'This week: each rule got a permanent id and a status. The file every session loads is now
       generated from the rules.'
     n: 7
-    total: 17
+    total: 18
     override:
       rests:
         text: 'This week: each rule got a permanent id and a status. The file every session loads is now
@@ -6398,7 +6846,7 @@ instances:
       exact part.
     rests: 'In project-kit: pkit ships 11 skills, each with its command.'
     n: 8
-    total: 17
+    total: 18
     override:
       rests:
         text: 'In project-kit: pkit ships 11 skills, each with its command.'
@@ -6491,7 +6939,7 @@ instances:
     rests: Every session holds only each skill's short description. The steps load when the task comes
       up.
     n: 9
-    total: 17
+    total: 18
     override:
       rests:
         text: Every session holds only each skill's short description. The steps load when the task comes
@@ -6556,103 +7004,181 @@ instances:
       bg: 52556404-8864-4529-bd3f-3749a76f180b
       bar: 7d0b1ea3-8fc6-4056-a782-e48c0b893813
       text: 27bcfe2d-e1ac-4fb0-993d-1b978c7287fc
-  T-agents:
+  T-agentsfrom:
     template: slide
-    title: 'Agents: roles with limits'
-    lead: 'Each agent is a role: one job, and only the tools that job needs. The agent that writes a draft
-      never reviews it.'
+    title: Where agents come from
+    lead: 'When the same kind of check keeps coming back, a decision names a role for it: one job, and
+      only the tools it needs.'
     rests: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
       it follows.'
     n: 10
-    total: 17
+    total: 18
     override:
       rests:
         text: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions
           it follows.'
     mural_ids:
-      root: 61f4844b-01f6-439c-a5b4-d0867abb45d0
-      bg: 6859b53b-a62e-4bc3-81f0-d85f14bedd58
-      title: 210ed5cc-4a59-42e4-a32b-364e32b07282
-      lead: 7c4492ac-03a6-4106-8999-ec9460118d37
-      rests: 45a8dcfe-9d33-4d7d-9e83-5da7c4ae9ce6
-      num: 16d67334-67f2-43f8-9af1-98e063e1cd14
+      root: 6927991a-75c8-495b-911a-6dfd3a8e4838
+      bg: ecfdc1e3-68e1-4264-bfe6-9ffee223b38a
+      title: 4b7e0705-6600-40fa-a3b8-3d048daf5cfd
+      lead: e253a957-529f-4c13-b35b-0a1a6e869624
+      rests: fb115692-ce40-46d8-9838-9b0a08ef9fd9
+      num: 696b0114-e1fe-4074-b281-3dc250699ca7
+  T-agentsfrom-map:
+    template: map_T-agentsfrom
+    parent: T-agentsfrom
+    x: 128
+    y: 576
+    mural_ids:
+      root: 41a47e69-fb37-4844-90ff-27d2ac95b2d2
+      h0box: b0a4113a-3a24-4a16-96b9-78634a5a510d
+      h1box: b5ad6324-2169-4c31-a1de-97bd147d4147
+      h2box: 98eb4a8a-a905-4d61-95e2-0a4398948e04
+      h3box: 71e41f79-83f0-47c9-b28d-99cc5a060a5a
+      r0c0box: 954b5688-0fb8-43d2-a104-4a7aa8b9085b
+      r0c1box: 7897c0bf-c2e6-42b0-88a6-e7c77372c4ae
+      r0c2box: 382ed718-6166-4408-9013-b8adc8b11bd2
+      r0c3box: c35683d0-cab6-4cdf-b55b-a4e46e22afe0
+      r1c0box: da7ca992-6a34-4504-a1ea-e4802fdf364e
+      r1c1box: b1130b22-e7fd-4f85-b547-e8862bd373e3
+      r1c2box: 067b9285-a895-439a-959f-e8f40fbaac0c
+      r1c3box: 1f1f5fed-4b3d-4b8e-84b6-28466ee7f6ec
+      r2c0box: f4d1545a-516d-4217-9059-e00cfea5ef43
+      r2c1box: 245eefa5-7efc-4581-819c-8909db848ac6
+      r2c2box: a9e89bb1-ed82-4ad6-bb61-54f97050a826
+      r2c3box: 8fc0d9fe-de7a-4c8f-b1c8-badbad8381b9
+      w0box: be36d115-d47d-4666-8e75-e0f98c3055c5
+      w0bar: 08964d31-83fd-4238-8e9d-5753f2ea7ee0
+      w1box: dafa84b2-9895-4cf1-bea7-3890ff921ff9
+      w1bar: ab4b9576-ac4e-41bb-9358-139a3f4a761f
+      w2box: 4d03ddac-c7f3-4787-b08b-3fce3950efb1
+      w2bar: f15899a0-c569-4b57-ae91-c62636d52c67
+      w3box: b4bd8fcd-5da2-4843-8cee-03a1b30bb7a1
+      w3bar: aa6507ac-4a98-4428-86a7-2c1ccde7ff57
+      h0head: 8579c7b9-cf8e-4dca-b2b5-c401cfd99797
+      h0text: c9bc86e9-8775-4511-bfc7-09d4db8c0b91
+      h1head: cd847dc2-820f-479f-be12-eb5f81ceb482
+      h1text: 8e6c84c8-8448-41dd-9c3e-d7a7debfa06e
+      h2head: 74d8c70a-45fc-4e7e-b3e5-715f8fd1ea0f
+      h2text: 6ba2bfe3-b569-45ba-8f61-a526b7f0994c
+      h3head: 88561b34-9d42-4f1c-8dda-67fe17fe3546
+      h3text: 84f2c370-5f26-4f62-bf39-e39db36654d5
+      r0c0head: 522ec0ed-6491-4a08-b094-d170be28d158
+      r0c0text: 97748554-70f4-447a-b278-0e5806125816
+      r0c1text: d6a9e3a9-6037-4309-862d-5102267d2175
+      r0c2text: 2999fceb-5a24-47dc-8a5b-ec2845bd8ad9
+      r0c3text: 02ce6294-f443-485d-ac4b-54abf7521386
+      r1c0head: 4650cf59-ae45-4228-b0e7-438c2904d08b
+      r1c0text: 262e5535-898e-40df-ae14-868ba83217c3
+      r1c1text: 38400bc2-a1c4-40be-8990-988277968f97
+      r1c2text: 97239b97-0031-48d1-a89e-f407ba81fce2
+      r1c3text: d28727aa-7735-4b51-a398-7d61061227bb
+      r2c0head: 5d7ca898-bf26-4a48-8c44-2aa35c3cc2cd
+      r2c0text: 7313eb50-3b79-4d2b-ba1c-e86db7ad48e0
+      r2c1text: 8c3a0d83-f9b2-4a20-a89e-b6c1e79ebc07
+      r2c2text: 372dce74-3993-4308-aba8-636d56ddc0a8
+      r2c3text: 8e9545fa-e499-4480-89bc-ea75f59cbb38
+      whyhead: e1a5280d-7dc4-4ea9-a53c-61c60260046c
+      w0text: 782a27b5-2eb4-4704-b83c-ce892b526fd5
+      w1text: b24d8e9a-f06d-4e27-9d2f-95c6b572f797
+      w2text: 92d81b05-ba3e-42ed-af6e-3e2dd2863925
+      w3text: d6c54a3f-276d-40ef-ac6d-e60906ecce05
+      h1arrow: 50f0db53-ead2-4364-bf23-4bab74cc0e13
+      h2arrow: 59d47490-7436-4994-b75b-dffaaaf27b6a
+      h3arrow: aea90f80-7ce6-40d2-8aa8-349c27922da7
+  T-agentsfrom-limit:
+    template: notice
+    parent: T-agentsfrom
+    text: 'Limit: The AI tool enforces an agent''s tools. Which files it may change is a rule it follows,
+      not a lock.'
+    x: 128
+    y: 1466.0
+    mural_ids:
+      root: 50f9cbcd-d452-4659-beab-5cda650e24b9
+      bg: 01c52291-5078-4b2f-94a3-090042dab4b4
+      bar: 6415ecb1-e65a-495a-834d-e9631fe32b46
+      text: 3d7c8161-b107-464a-a930-56acfb24e613
+  T-agents:
+    template: slide
+    title: One piece of work, and who sees it
+    lead: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
+    rests: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
+    n: 11
+    total: 18
+    override:
+      rests:
+        text: pkit's own agents advise and never block. Add-ons bring agents that can block a merge.
+    mural_ids:
+      root: 94ccde14-d1b3-4771-98a7-403175ed9e52
+      bg: aeacc5ba-315d-4b6b-882c-01603e4a22ee
+      title: da351dbb-7435-4a9d-84bc-d9959590ab5c
+      lead: de6b54c3-178d-4946-badd-84abc9334f4b
+      rests: 4f33c334-e5c6-43bd-8d31-033f376ae9bd
+      num: b34fc0c8-4c2f-40dc-a0dc-1fcd9f10629f
   T-agents-roles:
     template: roles_T-agents
     parent: T-agents
     x: 128
     y: 576
     mural_ids:
-      root: 0c09260b-3bbf-4985-a405-350979bd086f
-      s0box: 7d3ea0b5-af21-4537-803c-b2a80f905b9d
-      s0tag: 7d01be6f-852a-43c7-bb1c-0a5b01867d18
-      s1box: 2d70561d-ee9c-42bb-bc78-9a02311c0c92
-      s1tag: d9997ab7-e47f-47dd-97d6-4ac037342baf
-      w1box: e926c67d-fd12-49e4-b358-762e475207d3
-      w1bar: 2641aff6-0682-4750-8a2f-c35ecea9bf1d
-      s2box: b296e93b-b191-4b9e-957a-5af5f95d01e9
-      s2tag: 1982a076-25f9-4d09-8382-6f3407c467d1
-      w2box: 8489b297-236f-4e68-b15c-f2748943bf00
-      w2bar: 2e500bac-d7b1-4cc6-ad01-e764149e0167
-      s3box: 38110dcb-ed17-4bfe-a5ee-ed896a9e0adf
-      w3box: 6b56a057-4bb1-455f-9812-5251218fa447
-      w3bar: fab39c5f-8c0f-4783-90a2-0ac1b7c89f09
-      s4box: 8cb074d3-6da2-4778-b588-1a60c66e21fa
-      s4tag: 6dfa2596-205e-46c1-952d-5a9a17dd05ac
-      w4box: 961d385c-6a21-401e-823a-84936dca1b07
-      w4bar: 0473702e-f33c-435b-9ee4-67b365948ca8
-      head: b5aa4088-ab86-421f-adbc-02972de33086
-      s0name: 20d349a4-d0c5-44f2-b1c7-de1bc2c43a27
-      s0job: a2cac454-4999-47dc-a551-8aef7c25dbb3
-      s0tagtext: de3d6eed-7e6f-446a-b14c-cc23d4c2854a
-      s1name: f54a84ff-bebf-45a8-accb-2833075b0f75
-      s1job: 5c9a3d48-37c0-452f-aea1-a97382a22946
-      s1tagtext: 9bbdea78-2e54-450f-a723-4cab89dd0c30
-      w1text: 4cf19c4f-e8f7-4144-88a0-6e8c20947378
-      s2name: 19755ff7-5631-42a4-b95d-9720b2c94478
-      s2job: 5e9264b5-fa14-4862-b611-423a03b48c92
-      s2tagtext: 74d8f132-0ba8-4c68-882a-f54be7e0ab85
-      w2text: 98a77197-04f0-4f1f-a3ab-703140be2f5d
-      s3name: 9c7b487a-e066-48ef-8857-242d36c29130
-      s3job: 78cd9e94-c230-41b9-a97a-0f3bc2bcdc29
-      w3text: 39e12ba6-7eb9-44a0-b9a3-15eebc3e7151
-      s4name: 549c1aee-fe12-47d3-b4d1-40a10d8d0946
-      s4job: 76668e5f-647b-465c-a154-0a28182b8d58
-      s4tagtext: df99e9ae-a47a-49f5-805f-058216d70e72
-      w4text: 4f03fe1f-262e-4066-95a5-5e3f940c865a
-      s1arrow: 567b5e3e-e0d3-4878-a1cb-a0acb299128d
-      s2arrow: b5d79580-6e5f-417c-bf9e-cc5a39a6d711
-      s3arrow: 433a9a2d-7bad-4a9e-88b0-5a006bbd3f92
-      s4arrow: 23599b57-2b99-4994-bc27-c15fccd7b489
+      root: 6311ebb8-a0af-4484-ad44-367dbd076d0b
+      s0box: 315812c2-732e-4035-9279-8849f82f982a
+      s0tag: e34e7c7a-483a-4bee-9095-03a28b51a38b
+      s1box: 6f4edbb5-54ba-407e-82f7-f0890388ddc9
+      s1tag: c99b37bc-53fc-4b30-b816-334084f58088
+      s2box: 6be83ac0-c9e0-4377-9263-502dbcee81b6
+      s2tag: 42680004-c233-46f4-94da-c474d761e696
+      s3box: cbc7dcb0-93a5-435e-821b-864c7f4e091e
+      s4box: a16ffc8a-534a-459e-81b1-5b1665da42db
+      s4tag: 8bf7c57b-37bb-4de0-b22c-5e5caceb7f9b
+      s0name: a3c32f4d-0a52-4d71-913a-038a4d746ff5
+      s0job: fa8bf9b0-8074-446c-939e-95433cf71954
+      s0tagtext: 7c4f8947-c631-4683-87aa-271dc64e9d42
+      s1name: a4e498ed-6e64-4b45-9616-5962e77fab2b
+      s1job: c83a2f25-b8fc-4eb3-a543-a076b033ea62
+      s1tagtext: c5d1c935-9162-45a1-ab79-487ff3b70d91
+      s2name: ed4596be-48ec-4f03-a315-c9eecf0e199f
+      s2job: 5afebc38-352a-41d1-a50b-ceb171e70536
+      s2tagtext: e08bdcf0-88cc-430a-a4f3-9a8416f30d01
+      s3name: e4d290fa-8af1-4d8d-a993-a29cb3b8fd1a
+      s3job: 33b79070-cdfb-4b6a-886d-f7b9054a1460
+      s4name: 2652a3af-c942-438f-8939-805fae2f508b
+      s4job: e36cdb6f-12f5-47dc-ab31-b7c5a15d3cb9
+      s4tagtext: 97d7b973-d98e-4568-b6f5-b218aa12b2d3
+      s1arrow: b3a283de-ca05-4de2-90df-232d276d8db7
+      s2arrow: 7c1b9402-9e10-4210-a27e-cdde3c9d0578
+      s3arrow: 1f9f9550-3188-41b9-9e4d-7a8677f7e156
+      s4arrow: cec5f78d-09d5-40e8-8e41-b969cb205b09
   T-agents-limit:
     template: notice
     parent: T-agents
     text: 'Limit: Every review round costs several agent runs.'
     x: 128
-    y: 1418.0
+    y: 1082.0
     mural_ids:
-      root: c08c2e5a-0565-473f-925f-07843ffcd24f
-      bg: 85f59b08-e52d-4a62-9028-1faf24b164b3
-      bar: 5191b7da-5b40-4c3a-9262-d5c7b04cb507
-      text: 1aad1285-e53d-4095-9166-5b9ed171db8d
+      root: ac019c4c-43b6-4a1f-9784-d7221327bf67
+      bg: 19c76ecc-a25b-4495-b1b9-f2804ef25b70
+      bar: c219eb31-7135-442a-bce7-3be669f538e4
+      text: dda9f923-b138-4338-969b-3610de872ead
   T-permissions:
     template: slide
     title: Permissions you write down
     lead: What agents may do is your project's written rules, not the tool's guesses.
     rests: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that agent
       said no'
-    n: 11
-    total: 17
+    n: 12
+    total: 18
     override:
       rests:
         text: 'This week: a builder''s rm -rf was refused; it asked another agent to run it, and that
           agent said no'
     mural_ids:
-      root: 4b64b01c-9776-4942-82c4-6a1d9414ddaf
-      bg: 162431a3-01a5-4eec-af11-0c8dfa356223
-      title: 181733e3-5193-4672-855c-cb0ff51a5bc8
-      lead: eca26b6b-7cf0-4e61-9a6c-9de963d698e9
-      rests: 35623201-f003-4a9c-82e1-2c4c783c041a
-      num: b6d639b3-9009-4066-b420-da2c47b2f860
+      root: 20aea2b6-246c-402e-8b90-ff125d3da80a
+      bg: 5b280777-9444-45d5-8dbc-8a700ef91c86
+      title: f803bd17-75e1-4172-943c-6a0da20b6132
+      lead: 16dedf06-67a0-4419-afc1-838748eab9d7
+      rests: d2e6d8cb-7631-4b24-ad8c-322f6f89aa57
+      num: ebe320dd-7785-45b1-84aa-591c82ba9f97
   T-permissions-problem:
     template: callout
     parent: T-permissions
@@ -6662,11 +7188,11 @@ instances:
     x: 128
     y: 576
     mural_ids:
-      root: 8ac99451-4b92-4f91-b0c6-28690dd85681
-      bg: a06348b9-19d3-44a0-8280-b77a800fd5bb
-      bar: 78db3efb-d33a-41c3-bc4b-8ba4b592ec2e
-      title: 137376aa-7108-4a38-b5f1-44dc9d41c801
-      body: 6aba09da-115f-4133-90d7-9445f05e200f
+      root: 7a521a9c-26da-4605-a8dd-a3d0e0c1e971
+      bg: b0808f3a-e1a5-48d5-bbee-79e2067751ab
+      bar: 23c1d0a0-1ffc-41d5-9f83-e4858a2dd3f5
+      title: 0f684460-0dab-4579-bf8f-aab3b8aea3e7
+      body: 26608305-410d-43dd-b55d-9cc20a982a58
   T-permissions-cmp1:
     template: compare
     parent: T-permissions
@@ -6680,15 +7206,15 @@ instances:
     x: 128
     y: 800
     mural_ids:
-      root: 6079468c-d102-46e8-810e-243759f43a84
-      spacetag: 75238612-7ec7-4942-b5d0-13f05003907d
-      d1: df0714ef-0ded-4d0f-a1f1-ba350b4578c9
-      d2: ed1ec05a-8164-4283-9c93-1a162c8b309d
-      heading: bb48de5e-d455-4b82-bb27-a09d8e83d586
-      k1: 243ef3a4-96bf-4cbd-854c-5d2650f6bba8
-      v1: 78faef2f-154d-4093-a294-be9e36b8be87
-      k2: d11c8afd-3249-461e-9366-544599286ec7
-      v2: 1b28919a-f27a-45c1-8bc3-6141e0964c1f
+      root: db47d29b-0a90-430e-a824-3f4e87444b7d
+      spacetag: cc488d14-8c66-45cc-a60e-a48ad08f9a02
+      d1: 2f829224-ae60-4870-a59d-77c20739b5c9
+      d2: 71fea844-72a4-47b4-8f59-d258f57404bb
+      heading: 4c233443-6844-4efc-aa80-b8be451cf491
+      k1: d7069d57-3172-4982-93cd-04223b85f827
+      v1: a806136c-36e3-493a-820c-272c82cf4404
+      k2: 9c630b9b-08de-4c2f-9209-138d83f7fc56
+      v2: b30e071a-bc68-4625-a30d-b131ed64fae4
   T-permissions-cmp2:
     template: compare
     parent: T-permissions
@@ -6702,15 +7228,15 @@ instances:
     x: 1632
     y: 800
     mural_ids:
-      root: 3460be80-c582-4a29-a081-64d78bf9f1bb
-      spacetag: 06039804-5105-4bed-8a59-b408612122c3
-      d1: eb9ac4c1-8c83-4cb4-8ceb-deb46874da06
-      d2: ce0443a2-e879-459c-b7f8-d2911f38591d
-      heading: 0ab46c72-ec32-4cd8-9e6e-0cab7616bde3
-      k1: 035a8b84-f713-4856-bfd8-3c8a661f6943
-      v1: 8d8348c5-97f8-4f54-9cfe-2ddc05227280
-      k2: b9df7cc6-e654-4b68-96a1-a61bef1b6d10
-      v2: b769c901-af2b-4755-afe3-f0936ad66095
+      root: 3bd30d74-7ebf-4d32-9f29-420221f742b8
+      spacetag: 16110b24-cbb1-4a94-b9c2-531628fe0571
+      d1: ca5e4426-c008-4b55-a03f-012e77e67a24
+      d2: a2e84dae-6dab-4f0b-81d6-0f4f7b7385c2
+      heading: 075656e5-6f90-4bc0-be6e-0cbff91bd6c0
+      k1: 8a346781-60a6-498e-a2b7-3e28c4550590
+      v1: e1ed5ba6-13a7-4380-8338-1f5e55353e8f
+      k2: a2e2db89-2685-4446-be7e-5a4968d53fe2
+      v2: cc148497-10c2-4632-b7fc-e8d8c34a773e
   T-permissions-limit:
     template: notice
     parent: T-permissions
@@ -6719,84 +7245,84 @@ instances:
     x: 128
     y: 1424
     mural_ids:
-      root: a1c3d013-2c98-44ca-a862-f46f3fcf98f8
-      bg: b1156015-e7e0-4955-8b11-6ef064175ad4
-      bar: 07c4cb9e-a581-443a-9460-d5834b05e1d4
-      text: 04f5b363-0c44-4e7c-990b-be04024f707a
+      root: 4f02b87a-9a77-4a95-bb18-636215dc1e94
+      bg: 93f4dcf1-1539-408e-b20e-e51f42f91aa3
+      bar: 20b456dc-b23e-4cbb-9447-fbcbc49b7d96
+      text: 0d71b54d-62b1-454d-8869-1ec9d7d3e645
   T-checked:
     template: slide
     title: Checked every time
     lead: An agent follows the ties between files without doubting them, so every tie is checked on every
       change.
     rests: In project-kit, this check runs before every push and on every pull request
-    n: 12
-    total: 17
+    n: 13
+    total: 18
     override:
       rests:
         text: In project-kit, this check runs before every push and on every pull request
     mural_ids:
-      root: a83cdc08-180c-4b33-8b7b-3465c5697c36
-      bg: 1f2a99e0-cf58-4f55-b8da-e24f507f157d
-      title: 39bf1540-f985-4c64-b7e6-0e1f41662226
-      lead: cd7a6dca-231a-48ab-a45f-ff6956448532
-      rests: d24fd5c5-d6d4-493a-9c52-265192500ee1
-      num: 17427f80-420b-4256-b0f5-3819d064111f
+      root: 35104249-d740-4ad1-a9b7-4be103d3c85b
+      bg: f5c3d671-61ed-4508-88f0-36fb1fef614e
+      title: 047a3878-49cf-441c-b39f-bc2559d4c955
+      lead: 86f83248-e086-46ed-984a-208b38ce4336
+      rests: 468cd582-fcc3-4e8f-ada0-4de9b8a78f4b
+      num: 6b1f9034-01ee-46a3-92a6-895504173245
   T-checked-ties:
     template: ties_T-checked
     parent: T-checked
     x: 128
     y: 576
     mural_ids:
-      root: f676f8f3-7e48-49a7-9ec4-1f1239597263
-      cbox: db602835-c891-4afa-a0a6-6b7112ea9873
-      c1box: 4361abc5-1b72-43dc-8755-b4253a8cb9b5
-      l0box: 224dbfe8-9ef0-4ae4-a6cc-50645dd55319
-      l1box: a5b414b9-8df3-4b03-83a8-c5da5d689657
-      l2box: 7a327111-50f9-49ae-bba1-bb4b0a8801f6
-      l3box: f49e3963-0686-4185-ae79-54df92c64a5f
-      l4box: 19a6d1e6-15dd-467d-8306-9e4e0e91b367
-      l5box: 6552fd6d-5456-466d-b37d-a8fb1611756a
-      l6box: 12e7501c-bc78-4c09-a3b8-458986097cc6
-      r0box: d09d70b7-e59d-40cb-91be-053484eada87
-      r1box: fa738f75-4eac-440a-880f-71321a9992b2
-      r2box: 3c29180f-5ece-4002-92f2-6229fc892eb0
-      r3box: bcbe2beb-10b8-483c-95db-b388751a0a27
-      r4box: 21a8d550-183d-4a7b-a851-c52a266388bb
-      r5box: b5679983-203a-4032-903b-ffd304ebbeb7
-      lhead: aef95921-9b3e-4d8f-b195-61619d420144
-      rhead: 2c1517cf-321b-46a2-890b-391ffbd8bc78
-      chead: 6b74d722-712a-4e78-a8d0-7a15b9d4db04
-      cpath: 26b379c1-cb39-4a57-b93b-9769f603721a
-      c1head: 26ab08e8-cd80-4bc3-9491-8a91770c60d5
-      c1path: dd3985f7-eec0-4ee8-b1aa-d1a4e4ed7864
-      l0text: 8fd8ac55-f529-4f86-9a16-a0ea11fa3f58
-      l1text: 0d0d06e8-7a1b-4763-9a91-b414a8b839e0
-      l2text: 6c9ac7be-a584-40e0-ad39-284bec42693d
-      l3text: c2e56258-37d8-4bb6-b0cb-eaaae25d17d3
-      l4text: 535e9034-4ff9-4a95-b7f2-5dfca0c32dcc
-      l5text: 7f39cb5f-8f61-4c55-90fa-2f6de616022b
-      l6text: f0c13992-b76b-40b8-891d-1e63043809f9
-      l6note: fcba80f0-faef-49e7-920b-74fc7ec6dd61
-      r0text: 598e0736-f596-421d-bbeb-bfb15e528b86
-      r1text: f722ef01-dff9-4d7a-9f3c-d28d36d5e96f
-      r2text: c0c7a7b1-f899-4996-9b96-e9673c9e2f61
-      r3text: d80cd23d-3ac7-45be-b772-0697860322e0
-      r4text: 05d1f8ec-bb2e-40f1-a76b-f1f35777ea79
-      r5text: 15bf9466-bdab-48ac-b94f-a1bf5f1e9043
-      l0tie: e7d64d41-f7be-426a-91df-426856195420
-      l1tie: 7122fc67-0025-4567-9bb2-fb1d0496a3b2
-      l2tie: dec0709a-63c6-43c8-bcea-5553ff08c7c7
-      l3tie: a0131659-07eb-4dfa-8f6b-f3af8a341846
-      l4tie: 8fa3e20c-5f99-40b0-adad-8d19ebe9f857
-      l5tie: be173f64-f8d4-406c-ad6a-938160f5db4b
-      l6tie: 14d2dc54-b47c-4265-8bb9-67cc242bb43e
-      l6tie1: 9d393d3e-3f95-4d95-8af3-ab861cff3142
-      r0tie: b92f79ca-ba5a-4036-ade3-3c425334ae1d
-      r1tie: 58cb7a4c-18b0-499d-80ab-4f370c4eb59c
-      r2tie: c9a1b928-6587-46ff-8318-1685ed1e133c
-      r3tie: b2402a0a-438c-4c37-96c1-1818cb778298
-      r4tie: 2b66eeee-91fc-442a-a07c-0836a28a01a2
-      r5tie: 56732fa6-4cb4-4895-8b08-d925a0fc1140
+      root: 1dd9fdc0-2941-41c1-a452-83ba2959de64
+      cbox: 4a5b280e-b48e-4b58-96cd-4b4ec65d6960
+      c1box: 95e98a17-9ba9-4491-aded-fe4b2bc6f905
+      l0box: 4bece7d4-aa80-48f1-b567-ea87ca46a319
+      l1box: 4400f9c7-01fb-4911-ad20-38e684bf7e43
+      l2box: 7fa5076f-da4c-40e0-9179-7bd3cc1bfd43
+      l3box: 45a904fc-4d48-4af8-b3ce-ae02eb707d86
+      l4box: e55b1ccf-c4fd-40b4-82f0-2b358b850ce1
+      l5box: 62b466e6-5bc9-4a97-8b8e-4c4bb5ff0d7e
+      l6box: 9636f5be-22a4-46e9-97b6-50600866516d
+      r0box: f6ff1fb3-736e-4859-aaca-5c6351591226
+      r1box: ca6dbe5f-75d2-47e4-bc01-521a0c1adc72
+      r2box: 9ab89c83-e471-4e1a-a60c-e62af306d1a6
+      r3box: 26961662-b37e-4202-bbb9-36c5afe5bb1d
+      r4box: eb5d3716-1062-4c8f-9bc2-359095baf711
+      r5box: 4492da1a-4568-49cd-b9e1-55bc9c63219f
+      lhead: f40f6bc4-d5b1-4edd-815a-1868ab363700
+      rhead: d4345a5f-2f20-404b-ac00-f7cf7ed0295f
+      chead: 7bd0f4f9-0e27-4aaa-93ab-5a7700c86de9
+      cpath: 05fd1f15-ba48-4456-bd90-adf4b93f66a8
+      c1head: 12d625f5-27cb-4c87-a31a-4405b80b38af
+      c1path: 1a09e517-2cd6-418e-b72a-d66ec384cb13
+      l0text: 5fe97a57-491c-4ad1-9fe0-18afe379b1c7
+      l1text: fe281a27-9b9d-4773-8205-53e8d33ccae3
+      l2text: 44d20099-cc6d-447e-9efc-4f3384243664
+      l3text: 19af8e7b-4410-4c3a-8a8b-82e2630d3fb4
+      l4text: b3b91b75-7321-492a-b295-daac50ec0fae
+      l5text: 5e977c31-33b1-4021-b36c-eeeec908c634
+      l6text: 1be3544c-03a3-400c-a533-cd0400f47fed
+      l6note: f628072e-50f3-4f6e-9c2c-000153c40cb2
+      r0text: 2f79faee-8843-487a-afdb-6b56345ecb5d
+      r1text: c7622b92-702e-458d-b0ff-6da0fbbb75a2
+      r2text: 34b5607b-bdf8-4c67-b6da-59f176f045a1
+      r3text: d74d4b72-4768-49a6-984c-90b0b595cf2d
+      r4text: 874642c3-a627-4b1d-ace4-d387c1de21da
+      r5text: 51692244-e46d-46ff-be83-493bb5e5e5ad
+      l0tie: cf873c84-71b6-4b5e-bc8a-de0d2a7a0de3
+      l1tie: 44ff3153-80b8-42b6-b5ee-d6433859aad1
+      l2tie: 72e2425f-af8d-4ddc-b6e1-851ffc358463
+      l3tie: a9ab7c45-e78e-4bd3-b70f-f2107e0354eb
+      l4tie: 6309333e-24ea-453e-84de-c4f1ac81efb4
+      l5tie: 5a6971c6-7eec-4791-8a6c-cf169b4177b5
+      l6tie: f2d172c4-01eb-479f-a4bb-a309e843ea13
+      l6tie1: 147c76b1-2620-4dc9-ae4a-70aef9d2a14a
+      r0tie: 4477ea1b-7a32-4d6d-b15c-793634c6689d
+      r1tie: 6cd2f8d1-e785-4458-9672-87d422ff2f55
+      r2tie: 342a6035-d6d1-4024-aefb-228d7584f8ec
+      r3tie: 8b6f5035-bb6d-4375-abf1-f9a6fafb2ebb
+      r4tie: 6c750f62-c7f7-4601-b6a3-b26b0e9e25ec
+      r5tie: 827a0f56-c756-413f-8952-5018027fd7c8
   T-checked-check:
     template: term_image
     parent: T-checked
@@ -6811,8 +7337,8 @@ instances:
         width: 920
         height: 479
     mural_ids:
-      root: beeaffcd-b028-4fc3-a9af-48dd17d2bf33
-      img: 2d713cda-d0c0-43f9-b470-e6f3509336d4
+      root: f30def74-4c36-4083-b98f-632247df1dc0
+      img: 7e28f171-c89e-4d0b-93a6-f48327cae010
   T-checked-limit:
     template: notice
     parent: T-checked
@@ -6820,29 +7346,29 @@ instances:
     x: 128
     y: 1264
     mural_ids:
-      root: 8dc03767-6f30-4480-baf6-50b7bdb7e370
-      bg: 4f48e504-b864-4585-b753-7b1cadb7e602
-      bar: e75aa360-255a-452d-8f9f-c3d277acbbef
-      text: 6ef62386-2aab-4f6d-90ed-4ba6e84d5359
+      root: 842840ce-4765-4139-bb0c-d797dc74539a
+      bg: d12584f6-ece2-4fc3-a269-6f6cf514da00
+      bar: 1edd638d-9899-4c27-870d-854fa2db8aef
+      text: be4c3366-ca0e-4913-93ff-082962e67451
   T-docs:
     template: slide
     title: Docs that know when they're wrong
     lead: When code changes, the documents that depend on it are named, not found later by accident.
     rests: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed it
       wasn''t'
-    n: 13
-    total: 17
+    n: 14
+    total: 18
     override:
       rests:
         text: 'This week: a builder marked a requirement ''still accurate''; the docs reviewer showed
           it wasn''t'
     mural_ids:
-      root: 9a89db3c-2434-4cb9-9b94-bc8f5faa8821
-      bg: 55a2db7b-27e8-4990-98ef-50aaa47c71e3
-      title: be5af759-15ec-456f-bc87-0c51a29a6d7e
-      lead: 301bf528-1c74-4e8f-9983-0268c005555f
-      rests: 793b2891-3245-46f4-9800-1d8cd6420e98
-      num: 740eefd0-b429-4844-bc2c-9caeddfd9299
+      root: c6dea7d4-5b44-4a7a-9777-f80cf2767025
+      bg: 666ebb24-9dba-4052-98d4-12e732e0a6fd
+      title: aa085d97-1970-4128-b494-914f712251eb
+      lead: f394d5cb-77d5-4847-8a64-3c22c9238288
+      rests: 8e5505f6-ae53-4967-9363-24ea3feeefb2
+      num: 31f619bb-6abd-4412-b2d6-06502e8fcf18
   T-docs-problem:
     template: callout
     parent: T-docs
@@ -6851,11 +7377,11 @@ instances:
     x: 128
     y: 576
     mural_ids:
-      root: f91c2a2a-9dff-461a-b183-606e0acd7c15
-      bg: 9b3cc72d-a403-4f4b-b4bc-4b8640c60e25
-      bar: bd2ba614-8d2c-437c-b4f0-fa915f8a6652
-      title: 1692c3e2-502e-44f8-95f6-c501c6cc79c1
-      body: e1e0b5a4-fbeb-4c9d-bce9-ad50dd0c7657
+      root: 531bd74b-ee2e-4d7c-82a5-1267e8305776
+      bg: afc4aa80-fee0-4710-a155-df30b74034f3
+      bar: a93df8e0-e223-4438-97cb-8d6f28308339
+      title: d92187c3-8b01-41dd-ad95-db333dbd4d44
+      body: 30eb9904-0862-412e-948c-8a1407f591e1
   T-docs-d1:
     template: step
     parent: T-docs
@@ -6871,10 +7397,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: db1f863a-04e4-4670-b27f-4b5ed41dad7f
-      bg: ae9e51a0-562a-4ddc-90ab-ed6d1ac2eaca
-      tag: 0dc68c72-94a6-4f3f-8074-3a753ef0b131
-      text: 741a5206-d81b-41bd-8191-7b5e91f2a8f2
+      root: cb0b4f7b-d7c6-4991-8ea4-159cb6d46bf2
+      bg: c87314cb-2e70-4f9f-9fd2-c6515767082c
+      tag: 8d5f6928-ba43-4677-8a78-89bf474ba3f3
+      text: 75df681f-39ca-4da4-9bca-f0fd3dd943a3
   T-docs-d2:
     template: step
     parent: T-docs
@@ -6890,10 +7416,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: 12efc18f-cae3-47cc-be3c-6c9fe7fa48b7
-      bg: 9e3bd3b6-c54c-4875-9ad2-0389f9495387
-      tag: f854b028-09e9-4ab6-9604-586d3acdc455
-      text: c388f266-0e23-4f3f-9fce-590fd4436e19
+      root: 48733b6d-a260-48bb-8b34-2d16a5fc3bd2
+      bg: c4bbe03d-6ebf-4c77-95fd-f5b4f3229388
+      tag: 7043a596-24aa-42aa-959a-79583e5746ba
+      text: 6d0985d4-e0b4-42d5-9d1e-4c2a30be34d5
   T-docs-d3:
     template: step
     parent: T-docs
@@ -6909,10 +7435,10 @@ instances:
       text:
         width: 624
     mural_ids:
-      root: 8cc3673d-62c9-4dbb-a223-5eaf8a0b15d9
-      bg: 3b454cf8-cd35-48e1-af4e-d114af75e2f7
-      tag: d26316ab-2e6f-4557-9329-d1fd6e2d7366
-      text: d9572e01-7a07-4989-a197-d869d42af0d2
+      root: efb6da77-0196-4842-9302-51def80872c3
+      bg: e536213c-4aff-4327-a219-f98de911be3c
+      tag: a0fb124b-1346-4937-ae1c-4260e341b07b
+      text: a151e332-51df-43e9-9718-c3b01536ca8a
   T-docs-code:
     template: code
     parent: T-docs
@@ -6929,9 +7455,9 @@ instances:
       text:
         height: 288
     mural_ids:
-      root: f4cb9a07-4085-49b6-8939-477922bd93d5
-      bg: 42bba216-809d-4289-b45b-e6bcb22abdb1
-      text: 1f9f8a3b-797d-41d6-9d20-38868d2ca177
+      root: 3581ba2d-bb2e-419e-ba9b-86a40991e9fe
+      bg: 65b2b86d-2e30-4301-88b7-c671d80e1b3b
+      text: f1ab9f59-9145-4727-a454-6667a3cb57d3
   T-docs-limit:
     template: notice
     parent: T-docs
@@ -6939,10 +7465,10 @@ instances:
     x: 128
     y: 1516.0
     mural_ids:
-      root: acf0f772-ae8a-422c-b42e-e45afabd848a
-      bg: ecf4f256-7b31-4340-bee5-2e1b2d50199f
-      bar: ffd75670-7715-49ba-be13-3588339ec47c
-      text: f059e320-b410-4c1a-b4cb-1fd1eb49c40d
+      root: 350701e2-5879-40a7-986e-0cc5dc7e5b14
+      bg: 42454068-1e87-424d-9aac-17d3e6420c97
+      bar: fd8206f2-5e21-4c94-95ee-6a023560a23a
+      text: 1d4a7640-76f3-4e96-a6b0-c60f4f136d73
   T-part-P3:
     template: section
     part: '4'
@@ -6960,8 +7486,8 @@ instances:
     title: project-management
     lead: You talk to one agent; it plans the work and runs builders in parallel.
     rests: 'This week, in one evening: six builders, four pull requests merged'
-    n: 14
-    total: 17
+    n: 15
+    total: 18
     override:
       rests:
         text: 'This week, in one evening: six builders, four pull requests merged'
@@ -7251,8 +7777,8 @@ instances:
       to wire.
     rests: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards; fixed
       before merge'
-    n: 15
-    total: 17
+    n: 16
+    total: 18
     override:
       rests:
         text: 'This week: the code reviewer blocked code that couldn''t find organisation-owned boards;
@@ -7463,8 +7989,8 @@ instances:
       run, still being shaped.
     rests: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes until
       you decide'
-    n: 16
-    total: 17
+    n: 17
+    total: 18
     override:
       rests:
         text: 'Coming in 2.0: a migration that keeps each project''s current setup, so nothing changes
@@ -7722,8 +8248,8 @@ instances:
     title: Questions?
     lead: Everything shown is in project-kit's own repository, built with pkit itself.
     rests: github.com/aleskalfas/project-kit
-    n: 17
-    total: 17
+    n: 18
+    total: 18
     override:
       rests:
         text: github.com/aleskalfas/project-kit
@@ -7801,6 +8327,7 @@ layouts:
   - T-part-P2
   - T-skillsfrom
   - T-skills
+  - T-agentsfrom
   - T-agents
   - T-permissions
   - T-checked

@@ -17477,11 +17477,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 3,
+    "outline": 4,
     "show_title": false,
     "title": "T-agents",
     "width": 3200,
-    "x": 6554,
+    "x": 10154,
     "y": 6641
    },
    "fields": {
@@ -17489,14 +17489,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 3,
+    "outline": 4,
     "show_title": false,
     "title": "T-agents",
     "width": 3200,
-    "x": 6554,
+    "x": 10154,
     "y": 6641
    },
-   "mural_id": "61f4844b-01f6-439c-a5b4-d0867abb45d0",
+   "mural_id": "94ccde14-d1b3-4771-98a7-403175ed9e52",
    "tracked": [
     "title",
     "text",
@@ -17524,7 +17524,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319328394
+   "updatedOn": 1793321593109
   },
   "T-agents-limit": {
    "board": {
@@ -17539,7 +17539,7 @@
     "title": "T-agents-limit",
     "width": 2944,
     "x": 128,
-    "y": 1418
+    "y": 1082
    },
    "fields": {
     "border_color": "#FFFFFF00",
@@ -17551,9 +17551,9 @@
     "title": "T-agents-limit",
     "width": 2944,
     "x": 128,
-    "y": 1418
+    "y": 1082
    },
-   "mural_id": "c08c2e5a-0565-473f-925f-07843ffcd24f",
+   "mural_id": "ac019c4c-43b6-4a1f-9784-d7221327bf67",
    "tracked": [
     "title",
     "text",
@@ -17581,7 +17581,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321298192
+   "updatedOn": 1793321594205
   },
   "T-agents-limit.bar": {
    "board": {
@@ -17611,7 +17611,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "5191b7da-5b40-4c3a-9262-d5c7b04cb507",
+   "mural_id": "c219eb31-7135-442a-bce7-3be669f538e4",
    "tracked": [
     "title",
     "text",
@@ -17639,7 +17639,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-limit.bg": {
    "board": {
@@ -17669,7 +17669,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "85f59b08-e52d-4a62-9028-1faf24b164b3",
+   "mural_id": "19c76ecc-a25b-4495-b1b9-f2804ef25b70",
    "tracked": [
     "title",
     "text",
@@ -17697,7 +17697,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-limit.text": {
    "board": {
@@ -17724,7 +17724,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "1aad1285-e53d-4095-9166-5b9ed171db8d",
+   "mural_id": "dda9f923-b138-4338-969b-3610de872ead",
    "tracked": [
     "title",
     "text",
@@ -17752,7 +17752,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles": {
    "board": {
@@ -17761,7 +17761,7 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "font_size": 36,
-    "height": 794,
+    "height": 458,
     "parent": "T-agents",
     "show_title": false,
     "title": "T-agents-roles",
@@ -17773,7 +17773,7 @@
     "border_color": "#FFFFFF00",
     "border_width": 1,
     "color": "#FFFFFF00",
-    "height": 794,
+    "height": 458,
     "parent": "T-agents",
     "show_title": false,
     "title": "T-agents-roles",
@@ -17781,7 +17781,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "0c09260b-3bbf-4985-a405-350979bd086f",
+   "mural_id": "6311ebb8-a0af-4484-ad44-367dbd076d0b",
    "tracked": [
     "title",
     "text",
@@ -17809,62 +17809,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321298140
-  },
-  "T-agents-roles.head": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 40,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "One piece of work, and who sees it",
-    "title": "tpl:roles_T-agents#head",
-    "width": 2944,
-    "x": 0,
-    "y": 0
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 40,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "One piece of work, and who sees it",
-    "title": "tpl:roles_T-agents#head",
-    "width": 2944,
-    "x": 0,
-    "y": 0
-   },
-   "mural_id": "b5aa4088-ab86-421f-adbc-02972de33086",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321594137
   },
   "T-agents-roles.s0box": {
    "board": {
@@ -17879,7 +17824,7 @@
     "title": "tpl:roles_T-agents#s0box",
     "width": 525,
     "x": 0,
-    "y": 72
+    "y": 0
    },
    "fields": {
     "border_color": "#6929C4FF",
@@ -17892,9 +17837,9 @@
     "title": "tpl:roles_T-agents#s0box",
     "width": 525,
     "x": 0,
-    "y": 72
+    "y": 0
    },
-   "mural_id": "7d3ea0b5-af21-4537-803c-b2a80f905b9d",
+   "mural_id": "315812c2-732e-4035-9279-8849f82f982a",
    "tracked": [
     "title",
     "text",
@@ -17922,7 +17867,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s0job": {
    "board": {
@@ -17936,7 +17881,7 @@
     "title": "tpl:roles_T-agents#s0job",
     "width": 461,
     "x": 32,
-    "y": 232
+    "y": 160
    },
    "fields": {
     "font": "proxima-nova",
@@ -17947,9 +17892,9 @@
     "title": "tpl:roles_T-agents#s0job",
     "width": 461,
     "x": 32,
-    "y": 232
+    "y": 160
    },
-   "mural_id": "a2cac454-4999-47dc-a551-8aef7c25dbb3",
+   "mural_id": "fa8bf9b0-8074-446c-939e-95433cf71954",
    "tracked": [
     "title",
     "text",
@@ -17977,7 +17922,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s0name": {
    "board": {
@@ -17991,7 +17936,7 @@
     "title": "tpl:roles_T-agents#s0name",
     "width": 461,
     "x": 32,
-    "y": 100
+    "y": 28
    },
    "fields": {
     "font": "proxima-nova",
@@ -18002,9 +17947,9 @@
     "title": "tpl:roles_T-agents#s0name",
     "width": 461,
     "x": 32,
-    "y": 100
+    "y": 28
    },
-   "mural_id": "20d349a4-d0c5-44f2-b1c7-de1bc2c43a27",
+   "mural_id": "a3c32f4d-0a52-4d71-913a-038a4d746ff5",
    "tracked": [
     "title",
     "text",
@@ -18032,7 +17977,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s0tag": {
    "board": {
@@ -18047,7 +17992,7 @@
     "title": "tpl:roles_T-agents#s0tag",
     "width": 461,
     "x": 32,
-    "y": 390
+    "y": 318
    },
    "fields": {
     "border_color": "#6929C4FF",
@@ -18060,9 +18005,9 @@
     "title": "tpl:roles_T-agents#s0tag",
     "width": 461,
     "x": 32,
-    "y": 390
+    "y": 318
    },
-   "mural_id": "7d01be6f-852a-43c7-bb1c-0a5b01867d18",
+   "mural_id": "e34e7c7a-483a-4bee-9095-03a28b51a38b",
    "tracked": [
     "title",
     "text",
@@ -18090,7 +18035,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s0tagtext": {
    "board": {
@@ -18104,7 +18049,7 @@
     "title": "tpl:roles_T-agents#s0tagtext",
     "width": 421,
     "x": 52,
-    "y": 400
+    "y": 328
    },
    "fields": {
     "font": "proxima-nova",
@@ -18115,9 +18060,9 @@
     "title": "tpl:roles_T-agents#s0tagtext",
     "width": 421,
     "x": 52,
-    "y": 400
+    "y": 328
    },
-   "mural_id": "de3d6eed-7e6f-446a-b14c-cc23d4c2854a",
+   "mural_id": "7c4f8947-c631-4683-87aa-271dc64e9d42",
    "tracked": [
     "title",
     "text",
@@ -18145,7 +18090,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s1arrow": {
    "board": {
@@ -18157,11 +18102,11 @@
     "points": [
      [
       537,
-      160
+      88
      ],
      [
       593,
-      160
+      88
      ]
     ],
     "text": "",
@@ -18177,17 +18122,17 @@
     "points": [
      [
       537,
-      160
+      88
      ],
      [
       593,
-      160
+      88
      ]
     ],
     "tip": "end",
     "title": "tpl:roles_T-agents#s1arrow"
    },
-   "mural_id": "567b5e3e-e0d3-4878-a1cb-a0acb299128d",
+   "mural_id": "b3a283de-ca05-4de2-90df-232d276d8db7",
    "tracked": [
     "title",
     "text",
@@ -18215,7 +18160,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321300933
+   "updatedOn": 1793321600297
   },
   "T-agents-roles.s1box": {
    "board": {
@@ -18230,7 +18175,7 @@
     "title": "tpl:roles_T-agents#s1box",
     "width": 525,
     "x": 605,
-    "y": 72
+    "y": 0
    },
    "fields": {
     "border_color": "#6929C4FF",
@@ -18243,9 +18188,9 @@
     "title": "tpl:roles_T-agents#s1box",
     "width": 525,
     "x": 605,
-    "y": 72
+    "y": 0
    },
-   "mural_id": "2d70561d-ee9c-42bb-bc78-9a02311c0c92",
+   "mural_id": "6f4edbb5-54ba-407e-82f7-f0890388ddc9",
    "tracked": [
     "title",
     "text",
@@ -18273,7 +18218,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s1job": {
    "board": {
@@ -18287,7 +18232,7 @@
     "title": "tpl:roles_T-agents#s1job",
     "width": 461,
     "x": 637,
-    "y": 232
+    "y": 160
    },
    "fields": {
     "font": "proxima-nova",
@@ -18298,9 +18243,9 @@
     "title": "tpl:roles_T-agents#s1job",
     "width": 461,
     "x": 637,
-    "y": 232
+    "y": 160
    },
-   "mural_id": "5c9a3d48-37c0-452f-aea1-a97382a22946",
+   "mural_id": "c83a2f25-b8fc-4eb3-a543-a076b033ea62",
    "tracked": [
     "title",
     "text",
@@ -18328,7 +18273,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s1name": {
    "board": {
@@ -18342,7 +18287,7 @@
     "title": "tpl:roles_T-agents#s1name",
     "width": 461,
     "x": 637,
-    "y": 100
+    "y": 28
    },
    "fields": {
     "font": "proxima-nova",
@@ -18353,9 +18298,9 @@
     "title": "tpl:roles_T-agents#s1name",
     "width": 461,
     "x": 637,
-    "y": 100
+    "y": 28
    },
-   "mural_id": "f54a84ff-bebf-45a8-accb-2833075b0f75",
+   "mural_id": "a4e498ed-6e64-4b45-9616-5962e77fab2b",
    "tracked": [
     "title",
     "text",
@@ -18383,7 +18328,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s1tag": {
    "board": {
@@ -18398,7 +18343,7 @@
     "title": "tpl:roles_T-agents#s1tag",
     "width": 461,
     "x": 637,
-    "y": 390
+    "y": 318
    },
    "fields": {
     "border_color": "#6929C4FF",
@@ -18411,9 +18356,9 @@
     "title": "tpl:roles_T-agents#s1tag",
     "width": 461,
     "x": 637,
-    "y": 390
+    "y": 318
    },
-   "mural_id": "d9997ab7-e47f-47dd-97d6-4ac037342baf",
+   "mural_id": "c99b37bc-53fc-4b30-b816-334084f58088",
    "tracked": [
     "title",
     "text",
@@ -18441,7 +18386,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s1tagtext": {
    "board": {
@@ -18455,7 +18400,7 @@
     "title": "tpl:roles_T-agents#s1tagtext",
     "width": 421,
     "x": 657,
-    "y": 400
+    "y": 328
    },
    "fields": {
     "font": "proxima-nova",
@@ -18466,9 +18411,9 @@
     "title": "tpl:roles_T-agents#s1tagtext",
     "width": 421,
     "x": 657,
-    "y": 400
+    "y": 328
    },
-   "mural_id": "9bbdea78-2e54-450f-a723-4cab89dd0c30",
+   "mural_id": "c5d1c935-9162-45a1-ab79-487ff3b70d91",
    "tracked": [
     "title",
     "text",
@@ -18496,7 +18441,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s2arrow": {
    "board": {
@@ -18508,11 +18453,11 @@
     "points": [
      [
       1142,
-      160
+      88
      ],
      [
       1198,
-      160
+      88
      ]
     ],
     "text": "",
@@ -18528,17 +18473,17 @@
     "points": [
      [
       1142,
-      160
+      88
      ],
      [
       1198,
-      160
+      88
      ]
     ],
     "tip": "end",
     "title": "tpl:roles_T-agents#s2arrow"
    },
-   "mural_id": "b5d79580-6e5f-417c-bf9e-cc5a39a6d711",
+   "mural_id": "7c1b9402-9e10-4210-a27e-cdde3c9d0578",
    "tracked": [
     "title",
     "text",
@@ -18566,7 +18511,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321300954
+   "updatedOn": 1793321600396
   },
   "T-agents-roles.s2box": {
    "board": {
@@ -18581,7 +18526,7 @@
     "title": "tpl:roles_T-agents#s2box",
     "width": 525,
     "x": 1210,
-    "y": 72
+    "y": 0
    },
    "fields": {
     "border_color": "#6929C4FF",
@@ -18594,9 +18539,9 @@
     "title": "tpl:roles_T-agents#s2box",
     "width": 525,
     "x": 1210,
-    "y": 72
+    "y": 0
    },
-   "mural_id": "b296e93b-b191-4b9e-957a-5af5f95d01e9",
+   "mural_id": "6be83ac0-c9e0-4377-9263-502dbcee81b6",
    "tracked": [
     "title",
     "text",
@@ -18624,7 +18569,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s2job": {
    "board": {
@@ -18638,7 +18583,7 @@
     "title": "tpl:roles_T-agents#s2job",
     "width": 461,
     "x": 1242,
-    "y": 232
+    "y": 160
    },
    "fields": {
     "font": "proxima-nova",
@@ -18649,9 +18594,9 @@
     "title": "tpl:roles_T-agents#s2job",
     "width": 461,
     "x": 1242,
-    "y": 232
+    "y": 160
    },
-   "mural_id": "5e9264b5-fa14-4862-b611-423a03b48c92",
+   "mural_id": "5afebc38-352a-41d1-a50b-ceb171e70536",
    "tracked": [
     "title",
     "text",
@@ -18679,7 +18624,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s2name": {
    "board": {
@@ -18693,7 +18638,7 @@
     "title": "tpl:roles_T-agents#s2name",
     "width": 461,
     "x": 1242,
-    "y": 100
+    "y": 28
    },
    "fields": {
     "font": "proxima-nova",
@@ -18704,9 +18649,9 @@
     "title": "tpl:roles_T-agents#s2name",
     "width": 461,
     "x": 1242,
-    "y": 100
+    "y": 28
    },
-   "mural_id": "19755ff7-5631-42a4-b95d-9720b2c94478",
+   "mural_id": "ed4596be-48ec-4f03-a315-c9eecf0e199f",
    "tracked": [
     "title",
     "text",
@@ -18734,7 +18679,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s2tag": {
    "board": {
@@ -18749,7 +18694,7 @@
     "title": "tpl:roles_T-agents#s2tag",
     "width": 461,
     "x": 1242,
-    "y": 390
+    "y": 318
    },
    "fields": {
     "border_color": "#6929C4FF",
@@ -18762,9 +18707,9 @@
     "title": "tpl:roles_T-agents#s2tag",
     "width": 461,
     "x": 1242,
-    "y": 390
+    "y": 318
    },
-   "mural_id": "1982a076-25f9-4d09-8382-6f3407c467d1",
+   "mural_id": "42680004-c233-46f4-94da-c474d761e696",
    "tracked": [
     "title",
     "text",
@@ -18792,7 +18737,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s2tagtext": {
    "board": {
@@ -18806,7 +18751,7 @@
     "title": "tpl:roles_T-agents#s2tagtext",
     "width": 421,
     "x": 1262,
-    "y": 400
+    "y": 328
    },
    "fields": {
     "font": "proxima-nova",
@@ -18817,9 +18762,9 @@
     "title": "tpl:roles_T-agents#s2tagtext",
     "width": 421,
     "x": 1262,
-    "y": 400
+    "y": 328
    },
-   "mural_id": "74d8f132-0ba8-4c68-882a-f54be7e0ab85",
+   "mural_id": "e08bdcf0-88cc-430a-a4f3-9a8416f30d01",
    "tracked": [
     "title",
     "text",
@@ -18847,7 +18792,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s3arrow": {
    "board": {
@@ -18859,11 +18804,11 @@
     "points": [
      [
       1747,
-      160
+      88
      ],
      [
       1803,
-      160
+      88
      ]
     ],
     "text": "",
@@ -18879,17 +18824,17 @@
     "points": [
      [
       1747,
-      160
+      88
      ],
      [
       1803,
-      160
+      88
      ]
     ],
     "tip": "end",
     "title": "tpl:roles_T-agents#s3arrow"
    },
-   "mural_id": "433a9a2d-7bad-4a9e-88b0-5a006bbd3f92",
+   "mural_id": "1f9f9550-3188-41b9-9e4d-7a8677f7e156",
    "tracked": [
     "title",
     "text",
@@ -18917,7 +18862,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321301006
+   "updatedOn": 1793321600389
   },
   "T-agents-roles.s3box": {
    "board": {
@@ -18932,7 +18877,7 @@
     "title": "tpl:roles_T-agents#s3box",
     "width": 525,
     "x": 1815,
-    "y": 72
+    "y": 0
    },
    "fields": {
     "border_color": "#0043CEFF",
@@ -18945,9 +18890,9 @@
     "title": "tpl:roles_T-agents#s3box",
     "width": 525,
     "x": 1815,
-    "y": 72
+    "y": 0
    },
-   "mural_id": "38110dcb-ed17-4bfe-a5ee-ed896a9e0adf",
+   "mural_id": "cbc7dcb0-93a5-435e-821b-864c7f4e091e",
    "tracked": [
     "title",
     "text",
@@ -18975,7 +18920,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s3job": {
    "board": {
@@ -18989,7 +18934,7 @@
     "title": "tpl:roles_T-agents#s3job",
     "width": 461,
     "x": 1847,
-    "y": 232
+    "y": 160
    },
    "fields": {
     "font": "proxima-nova",
@@ -19000,9 +18945,9 @@
     "title": "tpl:roles_T-agents#s3job",
     "width": 461,
     "x": 1847,
-    "y": 232
+    "y": 160
    },
-   "mural_id": "78cd9e94-c230-41b9-a97a-0f3bc2bcdc29",
+   "mural_id": "33b79070-cdfb-4b6a-886d-f7b9054a1460",
    "tracked": [
     "title",
     "text",
@@ -19030,7 +18975,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s3name": {
    "board": {
@@ -19044,7 +18989,7 @@
     "title": "tpl:roles_T-agents#s3name",
     "width": 461,
     "x": 1847,
-    "y": 100
+    "y": 28
    },
    "fields": {
     "font": "proxima-nova",
@@ -19055,9 +19000,9 @@
     "title": "tpl:roles_T-agents#s3name",
     "width": 461,
     "x": 1847,
-    "y": 100
+    "y": 28
    },
-   "mural_id": "9c7b487a-e066-48ef-8857-242d36c29130",
+   "mural_id": "e4d290fa-8af1-4d8d-a993-a29cb3b8fd1a",
    "tracked": [
     "title",
     "text",
@@ -19085,7 +19030,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s4arrow": {
    "board": {
@@ -19097,11 +19042,11 @@
     "points": [
      [
       2352,
-      160
+      88
      ],
      [
       2408,
-      160
+      88
      ]
     ],
     "text": "",
@@ -19117,17 +19062,17 @@
     "points": [
      [
       2352,
-      160
+      88
      ],
      [
       2408,
-      160
+      88
      ]
     ],
     "tip": "end",
     "title": "tpl:roles_T-agents#s4arrow"
    },
-   "mural_id": "23599b57-2b99-4994-bc27-c15fccd7b489",
+   "mural_id": "cec5f78d-09d5-40e8-8e41-b969cb205b09",
    "tracked": [
     "title",
     "text",
@@ -19155,7 +19100,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321301040
+   "updatedOn": 1793321600504
   },
   "T-agents-roles.s4box": {
    "board": {
@@ -19170,7 +19115,7 @@
     "title": "tpl:roles_T-agents#s4box",
     "width": 525,
     "x": 2420,
-    "y": 72
+    "y": 0
    },
    "fields": {
     "border_color": "#6929C4FF",
@@ -19183,9 +19128,9 @@
     "title": "tpl:roles_T-agents#s4box",
     "width": 525,
     "x": 2420,
-    "y": 72
+    "y": 0
    },
-   "mural_id": "8cb074d3-6da2-4778-b588-1a60c66e21fa",
+   "mural_id": "a16ffc8a-534a-459e-81b1-5b1665da42db",
    "tracked": [
     "title",
     "text",
@@ -19213,7 +19158,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s4job": {
    "board": {
@@ -19227,7 +19172,7 @@
     "title": "tpl:roles_T-agents#s4job",
     "width": 461,
     "x": 2452,
-    "y": 232
+    "y": 160
    },
    "fields": {
     "font": "proxima-nova",
@@ -19238,9 +19183,9 @@
     "title": "tpl:roles_T-agents#s4job",
     "width": 461,
     "x": 2452,
-    "y": 232
+    "y": 160
    },
-   "mural_id": "76668e5f-647b-465c-a154-0a28182b8d58",
+   "mural_id": "e36cdb6f-12f5-47dc-ab31-b7c5a15d3cb9",
    "tracked": [
     "title",
     "text",
@@ -19268,7 +19213,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s4name": {
    "board": {
@@ -19282,7 +19227,7 @@
     "title": "tpl:roles_T-agents#s4name",
     "width": 461,
     "x": 2452,
-    "y": 100
+    "y": 28
    },
    "fields": {
     "font": "proxima-nova",
@@ -19293,9 +19238,9 @@
     "title": "tpl:roles_T-agents#s4name",
     "width": 461,
     "x": 2452,
-    "y": 100
+    "y": 28
    },
-   "mural_id": "549c1aee-fe12-47d3-b4d1-40a10d8d0946",
+   "mural_id": "2652a3af-c942-438f-8939-805fae2f508b",
    "tracked": [
     "title",
     "text",
@@ -19323,7 +19268,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents-roles.s4tag": {
    "board": {
@@ -19338,7 +19283,7 @@
     "title": "tpl:roles_T-agents#s4tag",
     "width": 461,
     "x": 2452,
-    "y": 390
+    "y": 318
    },
    "fields": {
     "border_color": "#6929C4FF",
@@ -19351,9 +19296,9 @@
     "title": "tpl:roles_T-agents#s4tag",
     "width": 461,
     "x": 2452,
-    "y": 390
+    "y": 318
    },
-   "mural_id": "6dfa2596-205e-46c1-952d-5a9a17dd05ac",
+   "mural_id": "8bf7c57b-37bb-4de0-b22c-5e5caceb7f9b",
    "tracked": [
     "title",
     "text",
@@ -19381,7 +19326,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299006
+   "updatedOn": 1793321596737
   },
   "T-agents-roles.s4tagtext": {
    "board": {
@@ -19395,7 +19340,7 @@
     "title": "tpl:roles_T-agents#s4tagtext",
     "width": 421,
     "x": 2472,
-    "y": 400
+    "y": 328
    },
    "fields": {
     "font": "proxima-nova",
@@ -19406,9 +19351,9 @@
     "title": "tpl:roles_T-agents#s4tagtext",
     "width": 421,
     "x": 2472,
-    "y": 400
+    "y": 328
    },
-   "mural_id": "df99e9ae-a47a-49f5-805f-058216d70e72",
+   "mural_id": "97d7b973-d98e-4568-b6f5-b218aa12b2d3",
    "tracked": [
     "title",
     "text",
@@ -19436,691 +19381,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321299977
-  },
-  "T-agents-roles.w1bar": {
-   "board": {
-    "border_color": "#6929C4FF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#6929C4FF",
-    "height": 8,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w1bar",
-    "width": 525,
-    "x": 605,
-    "y": 554
-   },
-   "fields": {
-    "border_color": "#6929C4FF",
-    "border_width": 1,
-    "color": "#6929C4FF",
-    "height": 8,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w1bar",
-    "width": 525,
-    "x": 605,
-    "y": 554
-   },
-   "mural_id": "2641aff6-0682-4750-8a2f-c35ecea9bf1d",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299006
-  },
-  "T-agents-roles.w1box": {
-   "board": {
-    "border_color": "#F4F4F4FF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#F4F4F4FF",
-    "height": 240,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w1box",
-    "width": 525,
-    "x": 605,
-    "y": 554
-   },
-   "fields": {
-    "border_color": "#F4F4F4FF",
-    "border_width": 1,
-    "color": "#F4F4F4FF",
-    "height": 240,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w1box",
-    "width": 525,
-    "x": 605,
-    "y": 554
-   },
-   "mural_id": "e926c67d-fd12-49e4-b358-762e475207d3",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299006
-  },
-  "T-agents-roles.w1text": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "The writer agrees with itself. A mistake caught here costs none of your time.",
-    "title": "tpl:roles_T-agents#w1text",
-    "width": 461,
-    "x": 637,
-    "y": 586
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "The writer agrees with itself. A mistake caught here costs none of your time.",
-    "title": "tpl:roles_T-agents#w1text",
-    "width": 461,
-    "x": 637,
-    "y": 586
-   },
-   "mural_id": "4cf19c4f-e8f7-4144-88a0-6e8c20947378",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299977
-  },
-  "T-agents-roles.w2bar": {
-   "board": {
-    "border_color": "#6929C4FF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#6929C4FF",
-    "height": 8,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w2bar",
-    "width": 525,
-    "x": 1210,
-    "y": 554
-   },
-   "fields": {
-    "border_color": "#6929C4FF",
-    "border_width": 1,
-    "color": "#6929C4FF",
-    "height": 8,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w2bar",
-    "width": 525,
-    "x": 1210,
-    "y": 554
-   },
-   "mural_id": "2e500bac-d7b1-4cc6-ad01-e764149e0167",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299006
-  },
-  "T-agents-roles.w2box": {
-   "board": {
-    "border_color": "#F4F4F4FF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#F4F4F4FF",
-    "height": 240,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w2box",
-    "width": 525,
-    "x": 1210,
-    "y": 554
-   },
-   "fields": {
-    "border_color": "#F4F4F4FF",
-    "border_width": 1,
-    "color": "#F4F4F4FF",
-    "height": 240,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w2box",
-    "width": 525,
-    "x": 1210,
-    "y": 554
-   },
-   "mural_id": "8489b297-236f-4e68-b15c-f2748943bf00",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299006
-  },
-  "T-agents-roles.w2text": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "A change can look fine alone and still break the whole.",
-    "title": "tpl:roles_T-agents#w2text",
-    "width": 461,
-    "x": 1242,
-    "y": 586
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "A change can look fine alone and still break the whole.",
-    "title": "tpl:roles_T-agents#w2text",
-    "width": 461,
-    "x": 1242,
-    "y": 586
-   },
-   "mural_id": "98a77197-04f0-4f1f-a3ab-703140be2f5d",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299977
-  },
-  "T-agents-roles.w3bar": {
-   "board": {
-    "border_color": "#0043CEFF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#0043CEFF",
-    "height": 8,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w3bar",
-    "width": 525,
-    "x": 1815,
-    "y": 554
-   },
-   "fields": {
-    "border_color": "#0043CEFF",
-    "border_width": 1,
-    "color": "#0043CEFF",
-    "height": 8,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w3bar",
-    "width": 525,
-    "x": 1815,
-    "y": 554
-   },
-   "mural_id": "fab39c5f-8c0f-4783-90a2-0ac1b7c89f09",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299006
-  },
-  "T-agents-roles.w3box": {
-   "board": {
-    "border_color": "#F4F4F4FF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#F4F4F4FF",
-    "height": 240,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w3box",
-    "width": 525,
-    "x": 1815,
-    "y": 554
-   },
-   "fields": {
-    "border_color": "#F4F4F4FF",
-    "border_width": 1,
-    "color": "#F4F4F4FF",
-    "height": 240,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w3box",
-    "width": 525,
-    "x": 1815,
-    "y": 554
-   },
-   "mural_id": "6b56a057-4bb1-455f-9812-5251218fa447",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299006
-  },
-  "T-agents-roles.w3text": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "Only you accept a decision or let a change merge.",
-    "title": "tpl:roles_T-agents#w3text",
-    "width": 461,
-    "x": 1847,
-    "y": 586
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "Only you accept a decision or let a change merge.",
-    "title": "tpl:roles_T-agents#w3text",
-    "width": 461,
-    "x": 1847,
-    "y": 586
-   },
-   "mural_id": "39e12ba6-7eb9-44a0-b9a3-15eebc3e7151",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299977
-  },
-  "T-agents-roles.w4bar": {
-   "board": {
-    "border_color": "#6929C4FF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#6929C4FF",
-    "height": 8,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w4bar",
-    "width": 525,
-    "x": 2420,
-    "y": 554
-   },
-   "fields": {
-    "border_color": "#6929C4FF",
-    "border_width": 1,
-    "color": "#6929C4FF",
-    "height": 8,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w4bar",
-    "width": 525,
-    "x": 2420,
-    "y": 554
-   },
-   "mural_id": "0473702e-f33c-435b-9ee4-67b365948ca8",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299006
-  },
-  "T-agents-roles.w4box": {
-   "board": {
-    "border_color": "#F4F4F4FF",
-    "border_style": "solid",
-    "border_width": 1,
-    "color": "#F4F4F4FF",
-    "height": 240,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w4box",
-    "width": 525,
-    "x": 2420,
-    "y": 554
-   },
-   "fields": {
-    "border_color": "#F4F4F4FF",
-    "border_width": 1,
-    "color": "#F4F4F4FF",
-    "height": 240,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "",
-    "title": "tpl:roles_T-agents#w4box",
-    "width": 525,
-    "x": 2420,
-    "y": 554
-   },
-   "mural_id": "961d385c-6a21-401e-823a-84936dca1b07",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299006
-  },
-  "T-agents-roles.w4text": {
-   "board": {
-    "align": "left",
-    "color": "#FFFFFF00",
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "A reviewer that cannot edit stays independent.",
-    "title": "tpl:roles_T-agents#w4text",
-    "width": 461,
-    "x": 2452,
-    "y": 586
-   },
-   "fields": {
-    "font": "proxima-nova",
-    "font_size": 36,
-    "ink": "#161616FF",
-    "parent": "T-agents-roles",
-    "text": "A reviewer that cannot edit stays independent.",
-    "title": "tpl:roles_T-agents#w4text",
-    "width": 461,
-    "x": 2452,
-    "y": 586
-   },
-   "mural_id": "4f03fe1f-262e-4066-95a5-5e3f940c865a",
-   "tracked": [
-    "title",
-    "text",
-    "html",
-    "x",
-    "y",
-    "width",
-    "height",
-    "parent",
-    "color",
-    "font_size",
-    "align",
-    "border_color",
-    "border_width",
-    "border_style",
-    "show_title",
-    "outline",
-    "instruction",
-    "ink",
-    "font",
-    "points",
-    "arrow_type",
-    "tip",
-    "from",
-    "to",
-    "file"
-   ],
-   "updatedOn": 1793321299977
+   "updatedOn": 1793321598027
   },
   "T-agents.bg": {
    "board": {
@@ -20149,7 +19410,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "6859b53b-a62e-4bc3-81f0-d85f14bedd58",
+   "mural_id": "aeacc5ba-315d-4b6b-882c-01603e4a22ee",
    "tracked": [
     "title",
     "text",
@@ -20177,7 +19438,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-agents.lead": {
    "board": {
@@ -20187,7 +19448,7 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "Each agent is a role: one job, and only the tools that job needs. The agent that writes a draft never reviews it.",
+    "text": "Each role sees the work at its own moment: the critic before you, the reviewers on the change.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
@@ -20198,13 +19459,13 @@
     "font_size": 64,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "Each agent is a role: one job, and only the tools that job needs. The agent that writes a draft never reviews it.",
+    "text": "Each role sees the work at its own moment: the critic before you, the reviewers on the change.",
     "title": "tpl:slide#lead",
     "width": 2192,
     "x": 128,
     "y": 320
    },
-   "mural_id": "7c4492ac-03a6-4106-8999-ec9460118d37",
+   "mural_id": "de6b54c3-178d-4946-badd-84abc9334f4b",
    "tracked": [
     "title",
     "text",
@@ -20232,7 +19493,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321230990
+   "updatedOn": 1793321598027
   },
   "T-agents.num": {
    "board": {
@@ -20242,7 +19503,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "10 / 17",
+    "text": "11 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -20254,13 +19515,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "10 / 17",
+    "text": "11 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "16d67334-67f2-43f8-9af1-98e063e1cd14",
+   "mural_id": "b34fc0c8-4c2f-40dc-a0dc-1fcd9f10629f",
    "tracked": [
     "title",
     "text",
@@ -20288,7 +19549,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-agents.rests": {
    "board": {
@@ -20298,7 +19559,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.",
+    "text": "pkit's own agents advise and never block. Add-ons bring agents that can block a merge.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
@@ -20309,13 +19570,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-agents",
-    "text": "In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.",
+    "text": "pkit's own agents advise and never block. Add-ons bring agents that can block a merge.",
     "title": "tpl:slide#rests",
     "width": 2192,
     "x": 128,
     "y": 1664
    },
-   "mural_id": "45a8dcfe-9d33-4d7d-9e83-5da7c4ae9ce6",
+   "mural_id": "4f33c334-e5c6-43bd-8d31-033f376ae9bd",
    "tracked": [
     "title",
     "text",
@@ -20343,7 +19604,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793321231130
+   "updatedOn": 1793321598027
   },
   "T-agents.title": {
    "board": {
@@ -20353,7 +19614,7 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-agents",
-    "text": "Agents: roles with limits",
+    "text": "One piece of work, and who sees it",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
@@ -20364,13 +19625,13 @@
     "font_size": 120,
     "ink": "#161616FF",
     "parent": "T-agents",
-    "text": "Agents: roles with limits",
+    "text": "One piece of work, and who sees it",
     "title": "tpl:slide#title",
     "width": 2944,
     "x": 128,
     "y": 128
    },
-   "mural_id": "210ed5cc-4a59-42e4-a32b-364e32b07282",
+   "mural_id": "da351dbb-7435-4a9d-84bc-d9959590ab5c",
    "tracked": [
     "title",
     "text",
@@ -20398,7 +19659,3769 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 1800,
+    "outline": 3,
+    "show_title": false,
+    "title": "T-agentsfrom",
+    "width": 3200,
+    "x": 6554,
+    "y": 6641
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 1800,
+    "outline": 3,
+    "show_title": false,
+    "title": "T-agentsfrom",
+    "width": 3200,
+    "x": 6554,
+    "y": 6641
+   },
+   "mural_id": "6927991a-75c8-495b-911a-6dfd3a8e4838",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321593032
+  },
+  "T-agentsfrom-limit": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 112,
+    "parent": "T-agentsfrom",
+    "show_title": false,
+    "title": "T-agentsfrom-limit",
+    "width": 2944,
+    "x": 128,
+    "y": 1466
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 112,
+    "parent": "T-agentsfrom",
+    "show_title": false,
+    "title": "T-agentsfrom-limit",
+    "width": 2944,
+    "x": 128,
+    "y": 1466
+   },
+   "mural_id": "50f9cbcd-d452-4659-beab-5cda650e24b9",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321594115
+  },
+  "T-agentsfrom-limit.bar": {
+   "board": {
+    "border_color": "#0043CEFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#0043CEFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-limit",
+    "text": "",
+    "title": "tpl:notice#bar",
+    "width": 6,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#0043CEFF",
+    "border_width": 1,
+    "color": "#0043CEFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-limit",
+    "text": "",
+    "title": "tpl:notice#bar",
+    "width": 6,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "6415ecb1-e65a-495a-834d-e9631fe32b46",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-limit.bg": {
+   "board": {
+    "border_color": "#EDF5FFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#EDF5FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-limit",
+    "text": "",
+    "title": "tpl:notice#bg",
+    "width": 2944,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#EDF5FFFF",
+    "border_width": 1,
+    "color": "#EDF5FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-limit",
+    "text": "",
+    "title": "tpl:notice#bg",
+    "width": 2944,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "01c52291-5078-4b2f-94a3-090042dab4b4",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-limit.text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-limit",
+    "text": "Limit: The AI tool enforces an agent's tools. Which files it may change is a rule it follows, not a lock.",
+    "title": "tpl:notice#text",
+    "width": 2864,
+    "x": 40,
+    "y": 28
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-limit",
+    "text": "Limit: The AI tool enforces an agent's tools. Which files it may change is a rule it follows, not a lock.",
+    "title": "tpl:notice#text",
+    "width": 2864,
+    "x": 40,
+    "y": 28
+   },
+   "mural_id": "3d7c8161-b107-464a-a930-56acfb24e613",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map": {
+   "board": {
+    "border_color": "#FFFFFF00",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "font_size": 36,
+    "height": 842,
+    "parent": "T-agentsfrom",
+    "show_title": false,
+    "title": "T-agentsfrom-map",
+    "width": 2944,
+    "x": 128,
+    "y": 576
+   },
+   "fields": {
+    "border_color": "#FFFFFF00",
+    "border_width": 1,
+    "color": "#FFFFFF00",
+    "height": 842,
+    "parent": "T-agentsfrom",
+    "show_title": false,
+    "title": "T-agentsfrom-map",
+    "width": 2944,
+    "x": 128,
+    "y": 576
+   },
+   "mural_id": "41a47e69-fb37-4844-90ff-27d2ac95b2d2",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321594331
+  },
+  "T-agentsfrom-map.h0box": {
+   "board": {
+    "border_color": "#491D8BFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 136,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#h0box",
+    "width": 664,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#491D8BFF",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 136,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#h0box",
+    "width": 664,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "b0a4113a-3a24-4a16-96b9-78634a5a510d",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.h0head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "The decision",
+    "title": "tpl:map_T-agentsfrom#h0head",
+    "width": 600,
+    "x": 32,
+    "y": 16
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "The decision",
+    "title": "tpl:map_T-agentsfrom#h0head",
+    "width": 600,
+    "x": 32,
+    "y": 16
+   },
+   "mural_id": "8579c7b9-cf8e-4dca-b2b5-c401cfd99797",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.h0text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "names a role",
+    "title": "tpl:map_T-agentsfrom#h0text",
+    "width": 600,
+    "x": 32,
+    "y": 84
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "names a role",
+    "title": "tpl:map_T-agentsfrom#h0text",
+    "width": 600,
+    "x": 32,
+    "y": 84
+   },
+   "mural_id": "c9bc86e9-8775-4511-bfc7-09d4db8c0b91",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.h1arrow": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-agentsfrom-map",
+    "points": [
+     [
+      680,
+      68
+     ],
+     [
+      744,
+      68
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:map_T-agentsfrom#h1arrow"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-agentsfrom-map",
+    "points": [
+     [
+      680,
+      68
+     ],
+     [
+      744,
+      68
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:map_T-agentsfrom#h1arrow"
+   },
+   "mural_id": "50f0db53-ead2-4364-bf23-4bab74cc0e13",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321600135
+  },
+  "T-agentsfrom-map.h1box": {
+   "board": {
+    "border_color": "#BE95FFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 136,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#h1box",
+    "width": 664,
+    "x": 760,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#BE95FFFF",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 136,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#h1box",
+    "width": 664,
+    "x": 760,
+    "y": 0
+   },
+   "mural_id": "b5ad6324-2169-4c31-a1de-97bd147d4147",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.h1head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "The agent",
+    "title": "tpl:map_T-agentsfrom#h1head",
+    "width": 600,
+    "x": 792,
+    "y": 16
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "The agent",
+    "title": "tpl:map_T-agentsfrom#h1head",
+    "width": 600,
+    "x": 792,
+    "y": 16
+   },
+   "mural_id": "cd847dc2-820f-479f-be12-eb5f81ceb482",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.h1text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "does one job",
+    "title": "tpl:map_T-agentsfrom#h1text",
+    "width": 600,
+    "x": 792,
+    "y": 84
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "does one job",
+    "title": "tpl:map_T-agentsfrom#h1text",
+    "width": 600,
+    "x": 792,
+    "y": 84
+   },
+   "mural_id": "8e6c84c8-8448-41dd-9c3e-d7a7debfa06e",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.h2arrow": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-agentsfrom-map",
+    "points": [
+     [
+      1440,
+      68
+     ],
+     [
+      1504,
+      68
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:map_T-agentsfrom#h2arrow"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-agentsfrom-map",
+    "points": [
+     [
+      1440,
+      68
+     ],
+     [
+      1504,
+      68
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:map_T-agentsfrom#h2arrow"
+   },
+   "mural_id": "59d47490-7436-4994-b75b-dffaaaf27b6a",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321600213
+  },
+  "T-agentsfrom-map.h2box": {
+   "board": {
+    "border_color": "#D4BBFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 136,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#h2box",
+    "width": 664,
+    "x": 1520,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#D4BBFFFF",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 136,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#h2box",
+    "width": 664,
+    "x": 1520,
+    "y": 0
+   },
+   "mural_id": "98eb4a8a-a905-4d61-95e2-0a4398948e04",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.h2head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Its limit",
+    "title": "tpl:map_T-agentsfrom#h2head",
+    "width": 600,
+    "x": 1552,
+    "y": 16
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Its limit",
+    "title": "tpl:map_T-agentsfrom#h2head",
+    "width": 600,
+    "x": 1552,
+    "y": 16
+   },
+   "mural_id": "74d8c70a-45fc-4e7e-b3e5-715f8fd1ea0f",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.h2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "only the tools it needs",
+    "title": "tpl:map_T-agentsfrom#h2text",
+    "width": 600,
+    "x": 1552,
+    "y": 84
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "only the tools it needs",
+    "title": "tpl:map_T-agentsfrom#h2text",
+    "width": 600,
+    "x": 1552,
+    "y": 84
+   },
+   "mural_id": "6ba2bfe3-b569-45ba-8f61-a526b7f0994c",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.h3arrow": {
+   "board": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-agentsfrom-map",
+    "points": [
+     [
+      2200,
+      68
+     ],
+     [
+      2264,
+      68
+     ]
+    ],
+    "text": "",
+    "tip": "end",
+    "title": "tpl:map_T-agentsfrom#h3arrow"
+   },
+   "fields": {
+    "arrow_type": "straight",
+    "border_style": "solid",
+    "border_width": 6,
+    "color": "#6929C4FF",
+    "parent": "T-agentsfrom-map",
+    "points": [
+     [
+      2200,
+      68
+     ],
+     [
+      2264,
+      68
+     ]
+    ],
+    "tip": "end",
+    "title": "tpl:map_T-agentsfrom#h3arrow"
+   },
+   "mural_id": "aea90f80-7ce6-40d2-8aa8-349c27922da7",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321600280
+  },
+  "T-agentsfrom-map.h3box": {
+   "board": {
+    "border_color": "#E8DAFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 136,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#h3box",
+    "width": 664,
+    "x": 2280,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#E8DAFFFF",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 136,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#h3box",
+    "width": 664,
+    "x": 2280,
+    "y": 0
+   },
+   "mural_id": "71e41f79-83f0-47c9-b28d-99cc5a060a5a",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.h3head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "What it catches",
+    "title": "tpl:map_T-agentsfrom#h3head",
+    "width": 600,
+    "x": 2312,
+    "y": 16
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 48,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "What it catches",
+    "title": "tpl:map_T-agentsfrom#h3head",
+    "width": 600,
+    "x": 2312,
+    "y": 16
+   },
+   "mural_id": "88561b34-9d42-4f1c-8dda-67fe17fe3546",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.h3text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "so you do not have to",
+    "title": "tpl:map_T-agentsfrom#h3text",
+    "width": 600,
+    "x": 2312,
+    "y": 84
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "so you do not have to",
+    "title": "tpl:map_T-agentsfrom#h3text",
+    "width": 600,
+    "x": 2312,
+    "y": 84
+   },
+   "mural_id": "84f2c370-5f26-4f62-bf39-e39db36654d5",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r0c0box": {
+   "board": {
+    "border_color": "#491D8BFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r0c0box",
+    "width": 664,
+    "x": 0,
+    "y": 160
+   },
+   "fields": {
+    "border_color": "#491D8BFF",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r0c0box",
+    "width": 664,
+    "x": 0,
+    "y": 160
+   },
+   "mural_id": "954b5688-0fb8-43d2-a104-4a7aa8b9085b",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r0c0head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "COR-024",
+    "title": "tpl:map_T-agentsfrom#r0c0head",
+    "width": 600,
+    "x": 32,
+    "y": 162
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "COR-024",
+    "title": "tpl:map_T-agentsfrom#r0c0head",
+    "width": 600,
+    "x": 32,
+    "y": 162
+   },
+   "mural_id": "522ec0ed-6491-4a08-b094-d170be28d158",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r0c0text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "A second opinion",
+    "title": "tpl:map_T-agentsfrom#r0c0text",
+    "width": 600,
+    "x": 32,
+    "y": 218
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "A second opinion",
+    "title": "tpl:map_T-agentsfrom#r0c0text",
+    "width": 600,
+    "x": 32,
+    "y": 218
+   },
+   "mural_id": "97748554-70f4-447a-b278-0e5806125816",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r0c1box": {
+   "board": {
+    "border_color": "#BE95FFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r0c1box",
+    "width": 664,
+    "x": 760,
+    "y": 160
+   },
+   "fields": {
+    "border_color": "#BE95FFFF",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r0c1box",
+    "width": 664,
+    "x": 760,
+    "y": 160
+   },
+   "mural_id": "7897c0bf-c2e6-42b0-88a6-e7c77372c4ae",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r0c1text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "critic",
+    "title": "tpl:map_T-agentsfrom#r0c1text",
+    "width": 600,
+    "x": 792,
+    "y": 187
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "critic",
+    "title": "tpl:map_T-agentsfrom#r0c1text",
+    "width": 600,
+    "x": 792,
+    "y": 187
+   },
+   "mural_id": "d6a9e3a9-6037-4309-862d-5102267d2175",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r0c2box": {
+   "board": {
+    "border_color": "#D4BBFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r0c2box",
+    "width": 664,
+    "x": 1520,
+    "y": 160
+   },
+   "fields": {
+    "border_color": "#D4BBFFFF",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r0c2box",
+    "width": 664,
+    "x": 1520,
+    "y": 160
+   },
+   "mural_id": "382ed718-6166-4408-9013-b8adc8b11bd2",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r0c2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Reads only",
+    "title": "tpl:map_T-agentsfrom#r0c2text",
+    "width": 600,
+    "x": 1552,
+    "y": 187
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Reads only",
+    "title": "tpl:map_T-agentsfrom#r0c2text",
+    "width": 600,
+    "x": 1552,
+    "y": 187
+   },
+   "mural_id": "2999fceb-5a24-47dc-8a5b-ec2845bd8ad9",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r0c3box": {
+   "board": {
+    "border_color": "#E8DAFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r0c3box",
+    "width": 664,
+    "x": 2280,
+    "y": 160
+   },
+   "fields": {
+    "border_color": "#E8DAFFFF",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r0c3box",
+    "width": 664,
+    "x": 2280,
+    "y": 160
+   },
+   "mural_id": "c35683d0-cab6-4cdf-b55b-a4e46e22afe0",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r0c3text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A draft's gaps, before you read it",
+    "title": "tpl:map_T-agentsfrom#r0c3text",
+    "width": 600,
+    "x": 2312,
+    "y": 162
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A draft's gaps, before you read it",
+    "title": "tpl:map_T-agentsfrom#r0c3text",
+    "width": 600,
+    "x": 2312,
+    "y": 162
+   },
+   "mural_id": "02ce6294-f443-485d-ac4b-54abf7521386",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r1c0box": {
+   "board": {
+    "border_color": "#491D8BFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r1c0box",
+    "width": 664,
+    "x": 0,
+    "y": 288
+   },
+   "fields": {
+    "border_color": "#491D8BFF",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r1c0box",
+    "width": 664,
+    "x": 0,
+    "y": 288
+   },
+   "mural_id": "da7ca992-6a34-4504-a1ea-e4802fdf364e",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r1c0head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "COR-024",
+    "title": "tpl:map_T-agentsfrom#r1c0head",
+    "width": 600,
+    "x": 32,
+    "y": 290
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "COR-024",
+    "title": "tpl:map_T-agentsfrom#r1c0head",
+    "width": 600,
+    "x": 32,
+    "y": 290
+   },
+   "mural_id": "4650cf59-ae45-4228-b0e7-438c2904d08b",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r1c0text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "A keeper of the whole system",
+    "title": "tpl:map_T-agentsfrom#r1c0text",
+    "width": 600,
+    "x": 32,
+    "y": 346
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "A keeper of the whole system",
+    "title": "tpl:map_T-agentsfrom#r1c0text",
+    "width": 600,
+    "x": 32,
+    "y": 346
+   },
+   "mural_id": "262e5535-898e-40df-ae14-868ba83217c3",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r1c1box": {
+   "board": {
+    "border_color": "#BE95FFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r1c1box",
+    "width": 664,
+    "x": 760,
+    "y": 288
+   },
+   "fields": {
+    "border_color": "#BE95FFFF",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r1c1box",
+    "width": 664,
+    "x": 760,
+    "y": 288
+   },
+   "mural_id": "b1130b22-e7fd-4f85-b547-e8862bd373e3",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r1c1text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "architect",
+    "title": "tpl:map_T-agentsfrom#r1c1text",
+    "width": 600,
+    "x": 792,
+    "y": 315
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "architect",
+    "title": "tpl:map_T-agentsfrom#r1c1text",
+    "width": 600,
+    "x": 792,
+    "y": 315
+   },
+   "mural_id": "38400bc2-a1c4-40be-8990-988277968f97",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r1c2box": {
+   "board": {
+    "border_color": "#D4BBFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r1c2box",
+    "width": 664,
+    "x": 1520,
+    "y": 288
+   },
+   "fields": {
+    "border_color": "#D4BBFFFF",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r1c2box",
+    "width": 664,
+    "x": 1520,
+    "y": 288
+   },
+   "mural_id": "067b9285-a895-439a-959f-e8f40fbaac0c",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r1c2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Edits only architecture docs",
+    "title": "tpl:map_T-agentsfrom#r1c2text",
+    "width": 600,
+    "x": 1552,
+    "y": 315
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Edits only architecture docs",
+    "title": "tpl:map_T-agentsfrom#r1c2text",
+    "width": 600,
+    "x": 1552,
+    "y": 315
+   },
+   "mural_id": "97239b97-0031-48d1-a89e-f407ba81fce2",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r1c3box": {
+   "board": {
+    "border_color": "#E8DAFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r1c3box",
+    "width": 664,
+    "x": 2280,
+    "y": 288
+   },
+   "fields": {
+    "border_color": "#E8DAFFFF",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r1c3box",
+    "width": 664,
+    "x": 2280,
+    "y": 288
+   },
+   "mural_id": "1f1f5fed-4b3d-4b8e-84b6-28466ee7f6ec",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r1c3text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A change that breaks the whole",
+    "title": "tpl:map_T-agentsfrom#r1c3text",
+    "width": 600,
+    "x": 2312,
+    "y": 315
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A change that breaks the whole",
+    "title": "tpl:map_T-agentsfrom#r1c3text",
+    "width": 600,
+    "x": 2312,
+    "y": 315
+   },
+   "mural_id": "d28727aa-7735-4b51-a398-7d61061227bb",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r2c0box": {
+   "board": {
+    "border_color": "#491D8BFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r2c0box",
+    "width": 664,
+    "x": 0,
+    "y": 416
+   },
+   "fields": {
+    "border_color": "#491D8BFF",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r2c0box",
+    "width": 664,
+    "x": 0,
+    "y": 416
+   },
+   "mural_id": "f4d1545a-516d-4217-9059-e00cfea5ef43",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r2c0head": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "COR-057",
+    "title": "tpl:map_T-agentsfrom#r2c0head",
+    "width": 600,
+    "x": 32,
+    "y": 418
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "COR-057",
+    "title": "tpl:map_T-agentsfrom#r2c0head",
+    "width": 600,
+    "x": 32,
+    "y": 418
+   },
+   "mural_id": "5d7ca898-bf26-4a48-8c44-2aa35c3cc2cd",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r2c0text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "One reviewer for the rules",
+    "title": "tpl:map_T-agentsfrom#r2c0text",
+    "width": 600,
+    "x": 32,
+    "y": 474
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#FFFFFFFF",
+    "parent": "T-agentsfrom-map",
+    "text": "One reviewer for the rules",
+    "title": "tpl:map_T-agentsfrom#r2c0text",
+    "width": 600,
+    "x": 32,
+    "y": 474
+   },
+   "mural_id": "7313eb50-3b79-4d2b-ba1c-e86db7ad48e0",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r2c1box": {
+   "board": {
+    "border_color": "#BE95FFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r2c1box",
+    "width": 664,
+    "x": 760,
+    "y": 416
+   },
+   "fields": {
+    "border_color": "#BE95FFFF",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r2c1box",
+    "width": 664,
+    "x": 760,
+    "y": 416
+   },
+   "mural_id": "245eefa5-7efc-4581-819c-8909db848ac6",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r2c1text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "rule-set-reviewer",
+    "title": "tpl:map_T-agentsfrom#r2c1text",
+    "width": 600,
+    "x": 792,
+    "y": 443
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "rule-set-reviewer",
+    "title": "tpl:map_T-agentsfrom#r2c1text",
+    "width": 600,
+    "x": 792,
+    "y": 443
+   },
+   "mural_id": "8c3a0d83-f9b2-4a20-a89e-b6c1e79ebc07",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r2c2box": {
+   "board": {
+    "border_color": "#D4BBFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r2c2box",
+    "width": 664,
+    "x": 1520,
+    "y": 416
+   },
+   "fields": {
+    "border_color": "#D4BBFFFF",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r2c2box",
+    "width": 664,
+    "x": 1520,
+    "y": 416
+   },
+   "mural_id": "a9e89bb1-ed82-4ad6-bb61-54f97050a826",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r2c2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Never edits what it checks",
+    "title": "tpl:map_T-agentsfrom#r2c2text",
+    "width": 600,
+    "x": 1552,
+    "y": 443
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Never edits what it checks",
+    "title": "tpl:map_T-agentsfrom#r2c2text",
+    "width": 600,
+    "x": 1552,
+    "y": 443
+   },
+   "mural_id": "372dce74-3993-4308-aba8-636d56ddc0a8",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.r2c3box": {
+   "board": {
+    "border_color": "#E8DAFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r2c3box",
+    "width": 664,
+    "x": 2280,
+    "y": 416
+   },
+   "fields": {
+    "border_color": "#E8DAFFFF",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 112,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#r2c3box",
+    "width": 664,
+    "x": 2280,
+    "y": 416
+   },
+   "mural_id": "8fc0d9fe-de7a-4c8f-b1c8-badbad8381b9",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.r2c3text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A broken rule, with its line",
+    "title": "tpl:map_T-agentsfrom#r2c3text",
+    "width": 600,
+    "x": 2312,
+    "y": 443
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A broken rule, with its line",
+    "title": "tpl:map_T-agentsfrom#r2c3text",
+    "width": 600,
+    "x": 2312,
+    "y": 443
+   },
+   "mural_id": "8e9545fa-e499-4480-89bc-ea75f59cbb38",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.w0bar": {
+   "board": {
+    "border_color": "#491D8BFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w0bar",
+    "width": 664,
+    "x": 0,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#491D8BFF",
+    "border_width": 1,
+    "color": "#491D8BFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w0bar",
+    "width": 664,
+    "x": 0,
+    "y": 636
+   },
+   "mural_id": "08964d31-83fd-4238-8e9d-5753f2ea7ee0",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.w0box": {
+   "board": {
+    "border_color": "#F4F4F4FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 206,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w0box",
+    "width": 664,
+    "x": 0,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#F4F4F4FF",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 206,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w0box",
+    "width": 664,
+    "x": 0,
+    "y": 636
+   },
+   "mural_id": "be36d115-d47d-4666-8e75-e0f98c3055c5",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.w0text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A decision makes each check one role's job. By default, nobody watches the whole system.",
+    "title": "tpl:map_T-agentsfrom#w0text",
+    "width": 600,
+    "x": 32,
+    "y": 668
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A decision makes each check one role's job. By default, nobody watches the whole system.",
+    "title": "tpl:map_T-agentsfrom#w0text",
+    "width": 600,
+    "x": 32,
+    "y": 668
+   },
+   "mural_id": "782a27b5-2eb4-4704-b83c-ce892b526fd5",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.w1bar": {
+   "board": {
+    "border_color": "#BE95FFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w1bar",
+    "width": 664,
+    "x": 760,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#BE95FFFF",
+    "border_width": 1,
+    "color": "#BE95FFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w1bar",
+    "width": 664,
+    "x": 760,
+    "y": 636
+   },
+   "mural_id": "ab4b9576-ac4e-41bb-9358-139a3f4a761f",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.w1box": {
+   "board": {
+    "border_color": "#F4F4F4FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 206,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w1box",
+    "width": 664,
+    "x": 760,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#F4F4F4FF",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 206,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w1box",
+    "width": 664,
+    "x": 760,
+    "y": 636
+   },
+   "mural_id": "dafa84b2-9895-4cf1-bea7-3890ff921ff9",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.w1text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "The agent that writes agrees with itself. A second agent does not.",
+    "title": "tpl:map_T-agentsfrom#w1text",
+    "width": 600,
+    "x": 792,
+    "y": 668
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "The agent that writes agrees with itself. A second agent does not.",
+    "title": "tpl:map_T-agentsfrom#w1text",
+    "width": 600,
+    "x": 792,
+    "y": 668
+   },
+   "mural_id": "b24d8e9a-f06d-4e27-9d2f-95c6b572f797",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.w2bar": {
+   "board": {
+    "border_color": "#D4BBFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w2bar",
+    "width": 664,
+    "x": 1520,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#D4BBFFFF",
+    "border_width": 1,
+    "color": "#D4BBFFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w2bar",
+    "width": 664,
+    "x": 1520,
+    "y": 636
+   },
+   "mural_id": "f15899a0-c569-4b57-ae91-c62636d52c67",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.w2box": {
+   "board": {
+    "border_color": "#F4F4F4FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 206,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w2box",
+    "width": 664,
+    "x": 1520,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#F4F4F4FF",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 206,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w2box",
+    "width": 664,
+    "x": 1520,
+    "y": 636
+   },
+   "mural_id": "4d03ddac-c7f3-4787-b08b-3fce3950efb1",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.w2text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A reviewer that cannot edit stays independent.",
+    "title": "tpl:map_T-agentsfrom#w2text",
+    "width": 600,
+    "x": 1552,
+    "y": 668
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "A reviewer that cannot edit stays independent.",
+    "title": "tpl:map_T-agentsfrom#w2text",
+    "width": 600,
+    "x": 1552,
+    "y": 668
+   },
+   "mural_id": "92d81b05-ba3e-42ed-af6e-3e2dd2863925",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.w3bar": {
+   "board": {
+    "border_color": "#E8DAFFFF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w3bar",
+    "width": 664,
+    "x": 2280,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#E8DAFFFF",
+    "border_width": 1,
+    "color": "#E8DAFFFF",
+    "height": 8,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w3bar",
+    "width": 664,
+    "x": 2280,
+    "y": 636
+   },
+   "mural_id": "aa6507ac-4a98-4428-86a7-2c1ccde7ff57",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.w3box": {
+   "board": {
+    "border_color": "#F4F4F4FF",
+    "border_style": "solid",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 206,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w3box",
+    "width": 664,
+    "x": 2280,
+    "y": 636
+   },
+   "fields": {
+    "border_color": "#F4F4F4FF",
+    "border_width": 1,
+    "color": "#F4F4F4FF",
+    "height": 206,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "",
+    "title": "tpl:map_T-agentsfrom#w3box",
+    "width": 664,
+    "x": 2280,
+    "y": 636
+   },
+   "mural_id": "b4bd8fcd-5da2-4843-8cee-03a1b30bb7a1",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom-map.w3text": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Caught here, a mistake costs an agent's time, not yours.",
+    "title": "tpl:map_T-agentsfrom#w3text",
+    "width": 600,
+    "x": 2312,
+    "y": 668
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 36,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Caught here, a mistake costs an agent's time, not yours.",
+    "title": "tpl:map_T-agentsfrom#w3text",
+    "width": 600,
+    "x": 2312,
+    "y": 668
+   },
+   "mural_id": "d6c54a3f-276d-40ef-ac6d-e60906ecce05",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom-map.whyhead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Why pkit has agents",
+    "title": "tpl:map_T-agentsfrom#whyhead",
+    "width": 2944,
+    "x": 0,
+    "y": 568
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 40,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom-map",
+    "text": "Why pkit has agents",
+    "title": "tpl:map_T-agentsfrom#whyhead",
+    "width": 2944,
+    "x": 0,
+    "y": 568
+   },
+   "mural_id": "e1a5280d-7dc4-4ea9-a53c-61c60260046c",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom.bg": {
+   "board": {
+    "border_color": "#E0E0E0FF",
+    "border_style": "solid",
+    "border_width": 2,
+    "color": "#FFFFFFFF",
+    "height": 1800,
+    "ink": "#000000FF",
+    "parent": "T-agentsfrom",
+    "text": "",
+    "title": "tpl:slide#bg",
+    "width": 3200,
+    "x": 0,
+    "y": 0
+   },
+   "fields": {
+    "border_color": "#E0E0E0FF",
+    "border_width": 2,
+    "color": "#FFFFFFFF",
+    "height": 1800,
+    "parent": "T-agentsfrom",
+    "text": "",
+    "title": "tpl:slide#bg",
+    "width": 3200,
+    "x": 0,
+    "y": 0
+   },
+   "mural_id": "ecfdc1e3-68e1-4264-bfe6-9ffee223b38a",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321596737
+  },
+  "T-agentsfrom.lead": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 64,
+    "ink": "#525252FF",
+    "parent": "T-agentsfrom",
+    "text": "When the same kind of check keeps coming back, a decision names a role for it: one job, and only the tools it needs.",
+    "title": "tpl:slide#lead",
+    "width": 2192,
+    "x": 128,
+    "y": 320
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 64,
+    "ink": "#525252FF",
+    "parent": "T-agentsfrom",
+    "text": "When the same kind of check keeps coming back, a decision names a role for it: one job, and only the tools it needs.",
+    "title": "tpl:slide#lead",
+    "width": 2192,
+    "x": 128,
+    "y": 320
+   },
+   "mural_id": "e253a957-529f-4c13-b35b-0a1a6e869624",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom.num": {
+   "board": {
+    "align": "right",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 28,
+    "ink": "#525252FF",
+    "parent": "T-agentsfrom",
+    "text": "10 / 18",
+    "title": "tpl:slide#num",
+    "width": 688,
+    "x": 2384,
+    "y": 1664
+   },
+   "fields": {
+    "align": "right",
+    "font": "proxima-nova",
+    "font_size": 28,
+    "ink": "#525252FF",
+    "parent": "T-agentsfrom",
+    "text": "10 / 18",
+    "title": "tpl:slide#num",
+    "width": 688,
+    "x": 2384,
+    "y": 1664
+   },
+   "mural_id": "696b0114-e1fe-4074-b281-3dc250699ca7",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom.rests": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 28,
+    "ink": "#525252FF",
+    "parent": "T-agentsfrom",
+    "text": "In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.",
+    "title": "tpl:slide#rests",
+    "width": 2192,
+    "x": 128,
+    "y": 1664
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 28,
+    "ink": "#525252FF",
+    "parent": "T-agentsfrom",
+    "text": "In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.",
+    "title": "tpl:slide#rests",
+    "width": 2192,
+    "x": 128,
+    "y": 1664
+   },
+   "mural_id": "fb115692-ce40-46d8-9838-9b0a08ef9fd9",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
+  },
+  "T-agentsfrom.title": {
+   "board": {
+    "align": "left",
+    "color": "#FFFFFF00",
+    "font": "proxima-nova",
+    "font_size": 120,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom",
+    "text": "Where agents come from",
+    "title": "tpl:slide#title",
+    "width": 2944,
+    "x": 128,
+    "y": 128
+   },
+   "fields": {
+    "font": "proxima-nova",
+    "font_size": 120,
+    "ink": "#161616FF",
+    "parent": "T-agentsfrom",
+    "text": "Where agents come from",
+    "title": "tpl:slide#title",
+    "width": 2944,
+    "x": 128,
+    "y": 128
+   },
+   "mural_id": "4b7e0705-6600-40fa-a3b8-3d048daf5cfd",
+   "tracked": [
+    "title",
+    "text",
+    "html",
+    "x",
+    "y",
+    "width",
+    "height",
+    "parent",
+    "color",
+    "font_size",
+    "align",
+    "border_color",
+    "border_width",
+    "border_style",
+    "show_title",
+    "outline",
+    "instruction",
+    "ink",
+    "font",
+    "points",
+    "arrow_type",
+    "tip",
+    "from",
+    "to",
+    "file"
+   ],
+   "updatedOn": 1793321598027
   },
   "T-checked": {
    "board": {
@@ -20408,11 +23431,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 5,
+    "outline": 6,
     "show_title": false,
     "title": "T-checked",
     "width": 3200,
-    "x": 13754,
+    "x": 17354,
     "y": 6641
    },
    "fields": {
@@ -20420,14 +23443,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 5,
+    "outline": 6,
     "show_title": false,
     "title": "T-checked",
     "width": 3200,
-    "x": 13754,
+    "x": 17354,
     "y": 6641
    },
-   "mural_id": "a83cdc08-180c-4b33-8b7b-3465c5697c36",
+   "mural_id": "35104249-d740-4ad1-a9b7-4be103d3c85b",
    "tracked": [
     "title",
     "text",
@@ -20455,7 +23478,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319328518
+   "updatedOn": 1793321593214
   },
   "T-checked-check": {
    "board": {
@@ -20484,7 +23507,7 @@
     "x": 2152,
     "y": 737
    },
-   "mural_id": "beeaffcd-b028-4fc3-a9af-48dd17d2bf33",
+   "mural_id": "f30def74-4c36-4083-b98f-632247df1dc0",
    "tracked": [
     "title",
     "text",
@@ -20512,7 +23535,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319330661
+   "updatedOn": 1793321594771
   },
   "T-checked-check.img": {
    "board": {
@@ -20532,7 +23555,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "2d713cda-d0c0-43f9-b470-e6f3509336d4",
+   "mural_id": "7e28f171-c89e-4d0b-93a6-f48327cae010",
    "tracked": [
     "title",
     "text",
@@ -20560,7 +23583,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319336025
+   "updatedOn": 1793321599243
   },
   "T-checked-limit": {
    "board": {
@@ -20589,7 +23612,7 @@
     "x": 128,
     "y": 1264
    },
-   "mural_id": "8dc03767-6f30-4480-baf6-50b7bdb7e370",
+   "mural_id": "842840ce-4765-4139-bb0c-d797dc74539a",
    "tracked": [
     "title",
     "text",
@@ -20617,7 +23640,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319331331
+   "updatedOn": 1793321594853
   },
   "T-checked-limit.bar": {
    "board": {
@@ -20647,7 +23670,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "e75aa360-255a-452d-8f9f-c3d277acbbef",
+   "mural_id": "1edd638d-9899-4c27-870d-854fa2db8aef",
    "tracked": [
     "title",
     "text",
@@ -20675,7 +23698,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-limit.bg": {
    "board": {
@@ -20705,7 +23728,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "4f48e504-b864-4585-b753-7b1cadb7e602",
+   "mural_id": "d12584f6-ece2-4fc3-a269-6f6cf514da00",
    "tracked": [
     "title",
     "text",
@@ -20733,7 +23756,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-limit.text": {
    "board": {
@@ -20760,7 +23783,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "6ef62386-2aab-4f6d-90ed-4ba6e84d5359",
+   "mural_id": "be4c3366-ca0e-4913-93ff-082962e67451",
    "tracked": [
     "title",
     "text",
@@ -20788,7 +23811,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties": {
    "board": {
@@ -20817,7 +23840,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "f676f8f3-7e48-49a7-9ec4-1f1239597263",
+   "mural_id": "1dd9fdc0-2941-41c1-a452-83ba2959de64",
    "tracked": [
     "title",
     "text",
@@ -20845,7 +23868,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319330710
+   "updatedOn": 1793321594759
   },
   "T-checked-ties.c1box": {
    "board": {
@@ -20875,7 +23898,7 @@
     "x": 600,
     "y": 444
    },
-   "mural_id": "4361abc5-1b72-43dc-8755-b4253a8cb9b5",
+   "mural_id": "95e98a17-9ba9-4491-aded-fe4b2bc6f905",
    "tracked": [
     "title",
     "text",
@@ -20903,7 +23926,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.c1head": {
    "board": {
@@ -20930,7 +23953,7 @@
     "x": 632,
     "y": 460
    },
-   "mural_id": "26ab08e8-cd80-4bc3-9491-8a91770c60d5",
+   "mural_id": "12d625f5-27cb-4c87-a31a-4405b80b38af",
    "tracked": [
     "title",
     "text",
@@ -20958,7 +23981,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.c1path": {
    "board": {
@@ -20985,7 +24008,7 @@
     "x": 632,
     "y": 520
    },
-   "mural_id": "dd3985f7-eec0-4ee8-b1aa-d1a4e4ed7864",
+   "mural_id": "1a09e517-2cd6-418e-b72a-d66ec384cb13",
    "tracked": [
     "title",
     "text",
@@ -21013,7 +24036,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.cbox": {
    "board": {
@@ -21043,7 +24066,7 @@
     "x": 600,
     "y": 88
    },
-   "mural_id": "db602835-c891-4afa-a0a6-6b7112ea9873",
+   "mural_id": "4a5b280e-b48e-4b58-96cd-4b4ec65d6960",
    "tracked": [
     "title",
     "text",
@@ -21071,7 +24094,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.chead": {
    "board": {
@@ -21098,7 +24121,7 @@
     "x": 632,
     "y": 120
    },
-   "mural_id": "6b74d722-712a-4e78-a8d0-7a15b9d4db04",
+   "mural_id": "7bd0f4f9-0e27-4aaa-93ab-5a7700c86de9",
    "tracked": [
     "title",
     "text",
@@ -21126,7 +24149,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.cpath": {
    "board": {
@@ -21153,7 +24176,7 @@
     "x": 632,
     "y": 180
    },
-   "mural_id": "26b379c1-cb39-4a57-b93b-9769f603721a",
+   "mural_id": "05fd1f15-ba48-4456-bd90-adf4b93f66a8",
    "tracked": [
     "title",
     "text",
@@ -21181,7 +24204,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l0box": {
    "board": {
@@ -21211,7 +24234,7 @@
     "x": 0,
     "y": 72
    },
-   "mural_id": "224dbfe8-9ef0-4ae4-a6cc-50645dd55319",
+   "mural_id": "4bece7d4-aa80-48f1-b567-ea87ca46a319",
    "tracked": [
     "title",
     "text",
@@ -21239,7 +24262,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.l0text": {
    "board": {
@@ -21266,7 +24289,7 @@
     "x": 20,
     "y": 78
    },
-   "mural_id": "8fd8ac55-f529-4f86-9a16-a0ea11fa3f58",
+   "mural_id": "5fe97a57-491c-4ad1-9fe0-18afe379b1c7",
    "tracked": [
     "title",
     "text",
@@ -21294,7 +24317,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l0tie": {
    "board": {
@@ -21336,7 +24359,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l0tie"
    },
-   "mural_id": "e7d64d41-f7be-426a-91df-426856195420",
+   "mural_id": "cf873c84-71b6-4b5e-bc8a-de0d2a7a0de3",
    "tracked": [
     "title",
     "text",
@@ -21364,7 +24387,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319337445
+   "updatedOn": 1793321600807
   },
   "T-checked-ties.l1box": {
    "board": {
@@ -21394,7 +24417,7 @@
     "x": 0,
     "y": 148
    },
-   "mural_id": "a5b414b9-8df3-4b03-83a8-c5da5d689657",
+   "mural_id": "4400f9c7-01fb-4911-ad20-38e684bf7e43",
    "tracked": [
     "title",
     "text",
@@ -21422,7 +24445,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.l1text": {
    "board": {
@@ -21449,7 +24472,7 @@
     "x": 20,
     "y": 154
    },
-   "mural_id": "0d0d06e8-7a1b-4763-9a91-b414a8b839e0",
+   "mural_id": "fe281a27-9b9d-4773-8205-53e8d33ccae3",
    "tracked": [
     "title",
     "text",
@@ -21477,7 +24500,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l1tie": {
    "board": {
@@ -21519,7 +24542,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l1tie"
    },
-   "mural_id": "7122fc67-0025-4567-9bb2-fb1d0496a3b2",
+   "mural_id": "44ff3153-80b8-42b6-b5ee-d6433859aad1",
    "tracked": [
     "title",
     "text",
@@ -21547,7 +24570,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319337421
+   "updatedOn": 1793321600853
   },
   "T-checked-ties.l2box": {
    "board": {
@@ -21577,7 +24600,7 @@
     "x": 0,
     "y": 224
    },
-   "mural_id": "7a327111-50f9-49ae-bba1-bb4b0a8801f6",
+   "mural_id": "7fa5076f-da4c-40e0-9179-7bd3cc1bfd43",
    "tracked": [
     "title",
     "text",
@@ -21605,7 +24628,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.l2text": {
    "board": {
@@ -21632,7 +24655,7 @@
     "x": 20,
     "y": 230
    },
-   "mural_id": "6c9ac7be-a584-40e0-ad39-284bec42693d",
+   "mural_id": "44d20099-cc6d-447e-9efc-4f3384243664",
    "tracked": [
     "title",
     "text",
@@ -21660,7 +24683,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l2tie": {
    "board": {
@@ -21702,7 +24725,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l2tie"
    },
-   "mural_id": "dec0709a-63c6-43c8-bcea-5553ff08c7c7",
+   "mural_id": "72e2425f-af8d-4ddc-b6e1-851ffc358463",
    "tracked": [
     "title",
     "text",
@@ -21730,7 +24753,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319337499
+   "updatedOn": 1793321600879
   },
   "T-checked-ties.l3box": {
    "board": {
@@ -21760,7 +24783,7 @@
     "x": 0,
     "y": 300
    },
-   "mural_id": "f49e3963-0686-4185-ae79-54df92c64a5f",
+   "mural_id": "45a904fc-4d48-4af8-b3ce-ae02eb707d86",
    "tracked": [
     "title",
     "text",
@@ -21788,7 +24811,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.l3text": {
    "board": {
@@ -21815,7 +24838,7 @@
     "x": 20,
     "y": 306
    },
-   "mural_id": "c2e56258-37d8-4bb6-b0cb-eaaae25d17d3",
+   "mural_id": "19af8e7b-4410-4c3a-8a8b-82e2630d3fb4",
    "tracked": [
     "title",
     "text",
@@ -21843,7 +24866,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l3tie": {
    "board": {
@@ -21885,7 +24908,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l3tie"
    },
-   "mural_id": "a0131659-07eb-4dfa-8f6b-f3af8a341846",
+   "mural_id": "a9ab7c45-e78e-4bd3-b70f-f2107e0354eb",
    "tracked": [
     "title",
     "text",
@@ -21913,7 +24936,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319337751
+   "updatedOn": 1793321601001
   },
   "T-checked-ties.l4box": {
    "board": {
@@ -21943,7 +24966,7 @@
     "x": 0,
     "y": 376
    },
-   "mural_id": "19a6d1e6-15dd-467d-8306-9e4e0e91b367",
+   "mural_id": "e55b1ccf-c4fd-40b4-82f0-2b358b850ce1",
    "tracked": [
     "title",
     "text",
@@ -21971,7 +24994,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.l4text": {
    "board": {
@@ -21998,7 +25021,7 @@
     "x": 20,
     "y": 382
    },
-   "mural_id": "535e9034-4ff9-4a95-b7f2-5dfca0c32dcc",
+   "mural_id": "b3b91b75-7321-492a-b295-daac50ec0fae",
    "tracked": [
     "title",
     "text",
@@ -22026,7 +25049,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l4tie": {
    "board": {
@@ -22068,7 +25091,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l4tie"
    },
-   "mural_id": "8fa3e20c-5f99-40b0-adad-8d19ebe9f857",
+   "mural_id": "6309333e-24ea-453e-84de-c4f1ac81efb4",
    "tracked": [
     "title",
     "text",
@@ -22096,7 +25119,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319337789
+   "updatedOn": 1793321601000
   },
   "T-checked-ties.l5box": {
    "board": {
@@ -22126,7 +25149,7 @@
     "x": 0,
     "y": 452
    },
-   "mural_id": "6552fd6d-5456-466d-b37d-a8fb1611756a",
+   "mural_id": "62b466e6-5bc9-4a97-8b8e-4c4bb5ff0d7e",
    "tracked": [
     "title",
     "text",
@@ -22154,7 +25177,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.l5text": {
    "board": {
@@ -22181,7 +25204,7 @@
     "x": 20,
     "y": 458
    },
-   "mural_id": "7f39cb5f-8f61-4c55-90fa-2f6de616022b",
+   "mural_id": "5e977c31-33b1-4021-b36c-eeeec908c634",
    "tracked": [
     "title",
     "text",
@@ -22209,7 +25232,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l5tie": {
    "board": {
@@ -22251,7 +25274,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l5tie"
    },
-   "mural_id": "be173f64-f8d4-406c-ad6a-938160f5db4b",
+   "mural_id": "5a6971c6-7eec-4791-8a6c-cf169b4177b5",
    "tracked": [
     "title",
     "text",
@@ -22279,7 +25302,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319337949
+   "updatedOn": 1793321601061
   },
   "T-checked-ties.l6box": {
    "board": {
@@ -22309,7 +25332,7 @@
     "x": 0,
     "y": 528
    },
-   "mural_id": "12e7501c-bc78-4c09-a3b8-458986097cc6",
+   "mural_id": "9636f5be-22a4-46e9-97b6-50600866516d",
    "tracked": [
     "title",
     "text",
@@ -22337,7 +25360,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.l6note": {
    "board": {
@@ -22364,7 +25387,7 @@
     "x": 0,
     "y": 596
    },
-   "mural_id": "fcba80f0-faef-49e7-920b-74fc7ec6dd61",
+   "mural_id": "f628072e-50f3-4f6e-9c2c-000153c40cb2",
    "tracked": [
     "title",
     "text",
@@ -22392,7 +25415,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l6text": {
    "board": {
@@ -22419,7 +25442,7 @@
     "x": 20,
     "y": 534
    },
-   "mural_id": "f0c13992-b76b-40b8-891d-1e63043809f9",
+   "mural_id": "1be3544c-03a3-400c-a533-cd0400f47fed",
    "tracked": [
     "title",
     "text",
@@ -22447,7 +25470,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.l6tie": {
    "board": {
@@ -22489,7 +25512,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l6tie"
    },
-   "mural_id": "14d2dc54-b47c-4265-8bb9-67cc242bb43e",
+   "mural_id": "f2d172c4-01eb-479f-a4bb-a309e843ea13",
    "tracked": [
     "title",
     "text",
@@ -22517,7 +25540,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319338748
+   "updatedOn": 1793321601220
   },
   "T-checked-ties.l6tie1": {
    "board": {
@@ -22559,7 +25582,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#l6tie1"
    },
-   "mural_id": "9d393d3e-3f95-4d95-8af3-ab861cff3142",
+   "mural_id": "147c76b1-2620-4dc9-ae4a-70aef9d2a14a",
    "tracked": [
     "title",
     "text",
@@ -22587,7 +25610,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319338630
+   "updatedOn": 1793321601321
   },
   "T-checked-ties.lhead": {
    "board": {
@@ -22614,7 +25637,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "aef95921-9b3e-4d8f-b195-61619d420144",
+   "mural_id": "f40f6bc4-d5b1-4edd-815a-1868ab363700",
    "tracked": [
     "title",
     "text",
@@ -22642,7 +25665,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.r0box": {
    "board": {
@@ -22672,7 +25695,7 @@
     "x": 1400,
     "y": 110
    },
-   "mural_id": "d09d70b7-e59d-40cb-91be-053484eada87",
+   "mural_id": "f6ff1fb3-736e-4859-aaca-5c6351591226",
    "tracked": [
     "title",
     "text",
@@ -22700,7 +25723,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.r0text": {
    "board": {
@@ -22727,7 +25750,7 @@
     "x": 1420,
     "y": 116
    },
-   "mural_id": "598e0736-f596-421d-bbeb-bfb15e528b86",
+   "mural_id": "2f79faee-8843-487a-afdb-6b56345ecb5d",
    "tracked": [
     "title",
     "text",
@@ -22755,7 +25778,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.r0tie": {
    "board": {
@@ -22797,7 +25820,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r0tie"
    },
-   "mural_id": "b92f79ca-ba5a-4036-ade3-3c425334ae1d",
+   "mural_id": "4477ea1b-7a32-4d6d-b15c-793634c6689d",
    "tracked": [
     "title",
     "text",
@@ -22825,7 +25848,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319338744
+   "updatedOn": 1793321601428
   },
   "T-checked-ties.r1box": {
    "board": {
@@ -22855,7 +25878,7 @@
     "x": 1400,
     "y": 186
    },
-   "mural_id": "fa738f75-4eac-440a-880f-71321a9992b2",
+   "mural_id": "ca6dbe5f-75d2-47e4-bc01-521a0c1adc72",
    "tracked": [
     "title",
     "text",
@@ -22883,7 +25906,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.r1text": {
    "board": {
@@ -22910,7 +25933,7 @@
     "x": 1420,
     "y": 192
    },
-   "mural_id": "f722ef01-dff9-4d7a-9f3c-d28d36d5e96f",
+   "mural_id": "c7622b92-702e-458d-b0ff-6da0fbbb75a2",
    "tracked": [
     "title",
     "text",
@@ -22938,7 +25961,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.r1tie": {
    "board": {
@@ -22980,7 +26003,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r1tie"
    },
-   "mural_id": "58cb7a4c-18b0-499d-80ab-4f370c4eb59c",
+   "mural_id": "6cd2f8d1-e785-4458-9672-87d422ff2f55",
    "tracked": [
     "title",
     "text",
@@ -23008,7 +26031,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319338860
+   "updatedOn": 1793321601444
   },
   "T-checked-ties.r2box": {
    "board": {
@@ -23038,7 +26061,7 @@
     "x": 1400,
     "y": 262
    },
-   "mural_id": "3c29180f-5ece-4002-92f2-6229fc892eb0",
+   "mural_id": "9ab89c83-e471-4e1a-a60c-e62af306d1a6",
    "tracked": [
     "title",
     "text",
@@ -23066,7 +26089,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.r2text": {
    "board": {
@@ -23093,7 +26116,7 @@
     "x": 1420,
     "y": 268
    },
-   "mural_id": "c0c7a7b1-f899-4996-9b96-e9673c9e2f61",
+   "mural_id": "34b5607b-bdf8-4c67-b6da-59f176f045a1",
    "tracked": [
     "title",
     "text",
@@ -23121,7 +26144,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.r2tie": {
    "board": {
@@ -23163,7 +26186,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r2tie"
    },
-   "mural_id": "c9a1b928-6587-46ff-8318-1685ed1e133c",
+   "mural_id": "342a6035-d6d1-4024-aefb-228d7584f8ec",
    "tracked": [
     "title",
     "text",
@@ -23191,7 +26214,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319338877
+   "updatedOn": 1793321601535
   },
   "T-checked-ties.r3box": {
    "board": {
@@ -23221,7 +26244,7 @@
     "x": 1400,
     "y": 338
    },
-   "mural_id": "bcbe2beb-10b8-483c-95db-b388751a0a27",
+   "mural_id": "26961662-b37e-4202-bbb9-36c5afe5bb1d",
    "tracked": [
     "title",
     "text",
@@ -23249,7 +26272,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.r3text": {
    "board": {
@@ -23276,7 +26299,7 @@
     "x": 1420,
     "y": 344
    },
-   "mural_id": "d80cd23d-3ac7-45be-b772-0697860322e0",
+   "mural_id": "d74d4b72-4768-49a6-984c-90b0b595cf2d",
    "tracked": [
     "title",
     "text",
@@ -23304,7 +26327,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.r3tie": {
    "board": {
@@ -23346,7 +26369,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r3tie"
    },
-   "mural_id": "b2402a0a-438c-4c37-96c1-1818cb778298",
+   "mural_id": "8b6f5035-bb6d-4375-abf1-f9a6fafb2ebb",
    "tracked": [
     "title",
     "text",
@@ -23374,7 +26397,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319338400
+   "updatedOn": 1793321601608
   },
   "T-checked-ties.r4box": {
    "board": {
@@ -23404,7 +26427,7 @@
     "x": 1400,
     "y": 414
    },
-   "mural_id": "21a8d550-183d-4a7b-a851-c52a266388bb",
+   "mural_id": "eb5d3716-1062-4c8f-9bc2-359095baf711",
    "tracked": [
     "title",
     "text",
@@ -23432,7 +26455,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.r4text": {
    "board": {
@@ -23459,7 +26482,7 @@
     "x": 1420,
     "y": 420
    },
-   "mural_id": "05d1f8ec-bb2e-40f1-a76b-f1f35777ea79",
+   "mural_id": "874642c3-a627-4b1d-ace4-d387c1de21da",
    "tracked": [
     "title",
     "text",
@@ -23487,7 +26510,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.r4tie": {
    "board": {
@@ -23529,7 +26552,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r4tie"
    },
-   "mural_id": "2b66eeee-91fc-442a-a07c-0836a28a01a2",
+   "mural_id": "6c750f62-c7f7-4601-b6a3-b26b0e9e25ec",
    "tracked": [
     "title",
     "text",
@@ -23557,7 +26580,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319338394
+   "updatedOn": 1793321601678
   },
   "T-checked-ties.r5box": {
    "board": {
@@ -23587,7 +26610,7 @@
     "x": 1400,
     "y": 490
    },
-   "mural_id": "b5679983-203a-4032-903b-ffd304ebbeb7",
+   "mural_id": "4492da1a-4568-49cd-b9e1-55bc9c63219f",
    "tracked": [
     "title",
     "text",
@@ -23615,7 +26638,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked-ties.r5text": {
    "board": {
@@ -23642,7 +26665,7 @@
     "x": 1420,
     "y": 496
    },
-   "mural_id": "15bf9466-bdab-48ac-b94f-a1bf5f1e9043",
+   "mural_id": "51692244-e46d-46ff-be83-493bb5e5e5ad",
    "tracked": [
     "title",
     "text",
@@ -23670,7 +26693,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked-ties.r5tie": {
    "board": {
@@ -23712,7 +26735,7 @@
     "tip": "none",
     "title": "tpl:ties_T-checked#r5tie"
    },
-   "mural_id": "56732fa6-4cb4-4895-8b08-d925a0fc1140",
+   "mural_id": "827a0f56-c756-413f-8952-5018027fd7c8",
    "tracked": [
     "title",
     "text",
@@ -23740,7 +26763,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319338576
+   "updatedOn": 1793321602452
   },
   "T-checked-ties.rhead": {
    "board": {
@@ -23767,7 +26790,7 @@
     "x": 1400,
     "y": 0
    },
-   "mural_id": "2c1517cf-321b-46a2-890b-391ffbd8bc78",
+   "mural_id": "d4345a5f-2f20-404b-ac00-f7cf7ed0295f",
    "tracked": [
     "title",
     "text",
@@ -23795,7 +26818,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked.bg": {
    "board": {
@@ -23824,7 +26847,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "1f2a99e0-cf58-4f55-b8da-e24f507f157d",
+   "mural_id": "f5c3d671-61ed-4508-88f0-36fb1fef614e",
    "tracked": [
     "title",
     "text",
@@ -23852,7 +26875,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-checked.lead": {
    "board": {
@@ -23879,7 +26902,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "cd7a6dca-231a-48ab-a45f-ff6956448532",
+   "mural_id": "86f83248-e086-46ed-984a-208b38ce4336",
    "tracked": [
     "title",
     "text",
@@ -23907,7 +26930,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked.num": {
    "board": {
@@ -23917,7 +26940,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-checked",
-    "text": "12 / 17",
+    "text": "13 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -23929,13 +26952,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-checked",
-    "text": "12 / 17",
+    "text": "13 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "17427f80-420b-4256-b0f5-3819d064111f",
+   "mural_id": "6b1f9034-01ee-46a3-92a6-895504173245",
    "tracked": [
     "title",
     "text",
@@ -23963,7 +26986,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked.rests": {
    "board": {
@@ -23990,7 +27013,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "d24fd5c5-d6d4-493a-9c52-265192500ee1",
+   "mural_id": "468cd582-fcc3-4e8f-ada0-4de9b8a78f4b",
    "tracked": [
     "title",
     "text",
@@ -24018,7 +27041,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-checked.title": {
    "board": {
@@ -24045,7 +27068,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "39bf1540-f985-4c64-b7e6-0e1f41662226",
+   "mural_id": "047a3878-49cf-441c-b39f-bc2559d4c955",
    "tracked": [
     "title",
     "text",
@@ -24073,7 +27096,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-cover": {
    "board": {
@@ -27226,7 +30249,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-current",
-    "text": "16 / 17",
+    "text": "17 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -27238,7 +30261,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-current",
-    "text": "16 / 17",
+    "text": "17 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -27272,7 +30295,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319340179
+   "updatedOn": 1793321603742
   },
   "T-current.rests": {
    "board": {
@@ -29800,7 +32823,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-decisions",
-    "text": "5 / 17",
+    "text": "5 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -29812,7 +32835,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-decisions",
-    "text": "5 / 17",
+    "text": "5 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -29846,7 +32869,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319339991
+   "updatedOn": 1793321602234
   },
   "T-decisions.rests": {
    "board": {
@@ -29966,11 +32989,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 6,
+    "outline": 7,
     "show_title": false,
     "title": "T-docs",
     "width": 3200,
-    "x": 17354,
+    "x": 20954,
     "y": 6641
    },
    "fields": {
@@ -29978,14 +33001,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 6,
+    "outline": 7,
     "show_title": false,
     "title": "T-docs",
     "width": 3200,
-    "x": 17354,
+    "x": 20954,
     "y": 6641
    },
-   "mural_id": "9a89db3c-2434-4cb9-9b94-bc8f5faa8821",
+   "mural_id": "c6dea7d4-5b44-4a7a-9777-f80cf2767025",
    "tracked": [
     "title",
     "text",
@@ -30013,7 +33036,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319328587
+   "updatedOn": 1793321593257
   },
   "T-docs-code": {
    "board": {
@@ -30042,7 +33065,7 @@
     "x": 1632,
     "y": 800
    },
-   "mural_id": "f4cb9a07-4085-49b6-8939-477922bd93d5",
+   "mural_id": "3581ba2d-bb2e-419e-ba9b-86a40991e9fe",
    "tracked": [
     "title",
     "text",
@@ -30070,7 +33093,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319331580
+   "updatedOn": 1793321595691
   },
   "T-docs-code.bg": {
    "board": {
@@ -30100,7 +33123,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "42bba216-809d-4289-b45b-e6bcb22abdb1",
+   "mural_id": "65b2b86d-2e30-4301-88b7-c671d80e1b3b",
    "tracked": [
     "title",
     "text",
@@ -30128,7 +33151,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-code.text": {
    "board": {
@@ -30155,7 +33178,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "1f9f8a3b-797d-41d6-9d20-38868d2ca177",
+   "mural_id": "f1ab9f59-9145-4727-a454-6667a3cb57d3",
    "tracked": [
     "title",
     "text",
@@ -30183,7 +33206,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs-d1": {
    "board": {
@@ -30212,7 +33235,7 @@
     "x": 128,
     "y": 800
    },
-   "mural_id": "db1f863a-04e4-4670-b27f-4b5ed41dad7f",
+   "mural_id": "cb0b4f7b-d7c6-4991-8ea4-159cb6d46bf2",
    "tracked": [
     "title",
     "text",
@@ -30240,7 +33263,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319331449
+   "updatedOn": 1793321595707
   },
   "T-docs-d1.bg": {
    "board": {
@@ -30269,7 +33292,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "ae9e51a0-562a-4ddc-90ab-ed6d1ac2eaca",
+   "mural_id": "c87314cb-2e70-4f9f-9fd2-c6515767082c",
    "tracked": [
     "title",
     "text",
@@ -30297,7 +33320,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-d1.tag": {
    "board": {
@@ -30327,7 +33350,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "0dc68c72-94a6-4f3f-8074-3a753ef0b131",
+   "mural_id": "8d5f6928-ba43-4677-8a78-89bf474ba3f3",
    "tracked": [
     "title",
     "text",
@@ -30355,7 +33378,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-d1.text": {
    "board": {
@@ -30382,7 +33405,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "741a5206-d81b-41bd-8191-7b5e91f2a8f2",
+   "mural_id": "75df681f-39ca-4da4-9bca-f0fd3dd943a3",
    "tracked": [
     "title",
     "text",
@@ -30410,7 +33433,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs-d2": {
    "board": {
@@ -30439,7 +33462,7 @@
     "x": 880,
     "y": 800
    },
-   "mural_id": "12efc18f-cae3-47cc-be3c-6c9fe7fa48b7",
+   "mural_id": "48733b6d-a260-48bb-8b34-2d16a5fc3bd2",
    "tracked": [
     "title",
     "text",
@@ -30467,7 +33490,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319331481
+   "updatedOn": 1793321595549
   },
   "T-docs-d2.bg": {
    "board": {
@@ -30496,7 +33519,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "9e3bd3b6-c54c-4875-9ad2-0389f9495387",
+   "mural_id": "c4bbe03d-6ebf-4c77-95fd-f5b4f3229388",
    "tracked": [
     "title",
     "text",
@@ -30524,7 +33547,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-d2.tag": {
    "board": {
@@ -30554,7 +33577,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "f854b028-09e9-4ab6-9604-586d3acdc455",
+   "mural_id": "7043a596-24aa-42aa-959a-79583e5746ba",
    "tracked": [
     "title",
     "text",
@@ -30582,7 +33605,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-d2.text": {
    "board": {
@@ -30609,7 +33632,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "c388f266-0e23-4f3f-9fce-590fd4436e19",
+   "mural_id": "6d0985d4-e0b4-42d5-9d1e-4c2a30be34d5",
    "tracked": [
     "title",
     "text",
@@ -30637,7 +33660,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs-d3": {
    "board": {
@@ -30666,7 +33689,7 @@
     "x": 128,
     "y": 1158
    },
-   "mural_id": "8cc3673d-62c9-4dbb-a223-5eaf8a0b15d9",
+   "mural_id": "efb6da77-0196-4842-9302-51def80872c3",
    "tracked": [
     "title",
     "text",
@@ -30694,7 +33717,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319331512
+   "updatedOn": 1793321595747
   },
   "T-docs-d3.bg": {
    "board": {
@@ -30723,7 +33746,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "3b454cf8-cd35-48e1-af4e-d114af75e2f7",
+   "mural_id": "e536213c-4aff-4327-a219-f98de911be3c",
    "tracked": [
     "title",
     "text",
@@ -30751,7 +33774,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-d3.tag": {
    "board": {
@@ -30781,7 +33804,7 @@
     "x": 32,
     "y": 32
    },
-   "mural_id": "d26316ab-2e6f-4557-9329-d1fd6e2d7366",
+   "mural_id": "a0fb124b-1346-4937-ae1c-4260e341b07b",
    "tracked": [
     "title",
     "text",
@@ -30809,7 +33832,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-d3.text": {
    "board": {
@@ -30836,7 +33859,7 @@
     "x": 32,
     "y": 128
    },
-   "mural_id": "d9572e01-7a07-4989-a197-d869d42af0d2",
+   "mural_id": "a151e332-51df-43e9-9718-c3b01536ca8a",
    "tracked": [
     "title",
     "text",
@@ -30864,7 +33887,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs-limit": {
    "board": {
@@ -30893,7 +33916,7 @@
     "x": 128,
     "y": 1516
    },
-   "mural_id": "acf0f772-ae8a-422c-b42e-e45afabd848a",
+   "mural_id": "350701e2-5879-40a7-986e-0cc5dc7e5b14",
    "tracked": [
     "title",
     "text",
@@ -30921,7 +33944,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319332340
+   "updatedOn": 1793321595340
   },
   "T-docs-limit.bar": {
    "board": {
@@ -30951,7 +33974,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "ffd75670-7715-49ba-be13-3588339ec47c",
+   "mural_id": "fd8206f2-5e21-4c94-95ee-6a023560a23a",
    "tracked": [
     "title",
     "text",
@@ -30979,7 +34002,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-limit.bg": {
    "board": {
@@ -31009,7 +34032,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "ecf4f256-7b31-4340-bee5-2e1b2d50199f",
+   "mural_id": "42454068-1e87-424d-9aac-17d3e6420c97",
    "tracked": [
     "title",
     "text",
@@ -31037,7 +34060,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-limit.text": {
    "board": {
@@ -31064,7 +34087,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "f059e320-b410-4c1a-b4cb-1fd1eb49c40d",
+   "mural_id": "1d4a7640-76f3-4e96-a6b0-c60f4f136d73",
    "tracked": [
     "title",
     "text",
@@ -31092,7 +34115,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs-problem": {
    "board": {
@@ -31121,7 +34144,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "f91c2a2a-9dff-461a-b183-606e0acd7c15",
+   "mural_id": "531bd74b-ee2e-4d7c-82a5-1267e8305776",
    "tracked": [
     "title",
     "text",
@@ -31149,7 +34172,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319332048
+   "updatedOn": 1793321595631
   },
   "T-docs-problem.bar": {
    "board": {
@@ -31178,7 +34201,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "bd2ba614-8d2c-437c-b4f0-fa915f8a6652",
+   "mural_id": "a93df8e0-e223-4438-97cb-8d6f28308339",
    "tracked": [
     "title",
     "text",
@@ -31206,7 +34229,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-problem.bg": {
    "board": {
@@ -31235,7 +34258,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "9b3cc72d-a403-4f4b-b4bc-4b8640c60e25",
+   "mural_id": "afc4aa80-fee0-4710-a155-df30b74034f3",
    "tracked": [
     "title",
     "text",
@@ -31263,7 +34286,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs-problem.body": {
    "board": {
@@ -31290,7 +34313,7 @@
     "x": 40,
     "y": 92
    },
-   "mural_id": "e1e0b5a4-fbeb-4c9d-bce9-ad50dd0c7657",
+   "mural_id": "30eb9904-0862-412e-948c-8a1407f591e1",
    "tracked": [
     "title",
     "text",
@@ -31318,7 +34341,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs-problem.title": {
    "board": {
@@ -31345,7 +34368,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "1692c3e2-502e-44f8-95f6-c501c6cc79c1",
+   "mural_id": "d92187c3-8b01-41dd-ad95-db333dbd4d44",
    "tracked": [
     "title",
     "text",
@@ -31373,7 +34396,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs.bg": {
    "board": {
@@ -31402,7 +34425,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "55a2db7b-27e8-4990-98ef-50aaa47c71e3",
+   "mural_id": "666ebb24-9dba-4052-98d4-12e732e0a6fd",
    "tracked": [
     "title",
     "text",
@@ -31430,7 +34453,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-docs.lead": {
    "board": {
@@ -31457,7 +34480,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "301bf528-1c74-4e8f-9983-0268c005555f",
+   "mural_id": "f394d5cb-77d5-4847-8a64-3c22c9238288",
    "tracked": [
     "title",
     "text",
@@ -31485,7 +34508,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs.num": {
    "board": {
@@ -31495,7 +34518,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-docs",
-    "text": "13 / 17",
+    "text": "14 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -31507,13 +34530,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-docs",
-    "text": "13 / 17",
+    "text": "14 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "740eefd0-b429-4844-bc2c-9caeddfd9299",
+   "mural_id": "31f619bb-6abd-4412-b2d6-06502e8fcf18",
    "tracked": [
     "title",
     "text",
@@ -31541,7 +34564,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs.rests": {
    "board": {
@@ -31568,7 +34591,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "793b2891-3245-46f4-9800-1d8cd6420e98",
+   "mural_id": "8e5505f6-ae53-4967-9363-24ea3feeefb2",
    "tracked": [
     "title",
     "text",
@@ -31596,7 +34619,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-docs.title": {
    "board": {
@@ -31623,7 +34646,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "be5af759-15ec-456f-bc87-0c51a29a6d7e",
+   "mural_id": "aa085d97-1970-4128-b494-914f712251eb",
    "tracked": [
     "title",
     "text",
@@ -31651,7 +34674,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-fits": {
    "board": {
@@ -34485,7 +37508,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-fits",
-    "text": "2 / 17",
+    "text": "2 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -34497,7 +37520,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-fits",
-    "text": "2 / 17",
+    "text": "2 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -34531,7 +37554,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319339098
+   "updatedOn": 1793321602779
   },
   "T-fits.rests": {
    "board": {
@@ -36295,7 +39318,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-found",
-    "text": "6 / 17",
+    "text": "6 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -36307,7 +39330,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-found",
-    "text": "6 / 17",
+    "text": "6 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -36341,7 +39364,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319340222
+   "updatedOn": 1793321602254
   },
   "T-found.rests": {
    "board": {
@@ -38417,7 +41440,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-ideas",
-    "text": "4 / 17",
+    "text": "4 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -38429,7 +41452,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-ideas",
-    "text": "4 / 17",
+    "text": "4 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -38463,7 +41486,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319340045
+   "updatedOn": 1793321602153
   },
   "T-ideas.rests": {
    "board": {
@@ -39398,7 +42421,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "3 / 17",
+    "text": "3 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -39410,7 +42433,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-install",
-    "text": "3 / 17",
+    "text": "3 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -39444,7 +42467,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319339347
+   "updatedOn": 1793321602104
   },
   "T-install.rests": {
    "board": {
@@ -42425,7 +45448,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-opening",
-    "text": "1 / 17",
+    "text": "1 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -42437,7 +45460,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-opening",
-    "text": "1 / 17",
+    "text": "1 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -42471,7 +45494,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319339267
+   "updatedOn": 1793321602548
   },
   "T-opening.rests": {
    "board": {
@@ -44281,11 +47304,11 @@
     "color": "#FFFFFF00",
     "font_size": 36,
     "height": 1800,
-    "outline": 4,
+    "outline": 5,
     "show_title": false,
     "title": "T-permissions",
     "width": 3200,
-    "x": 10154,
+    "x": 13754,
     "y": 6641
    },
    "fields": {
@@ -44293,14 +47316,14 @@
     "border_width": 1,
     "color": "#FFFFFF00",
     "height": 1800,
-    "outline": 4,
+    "outline": 5,
     "show_title": false,
     "title": "T-permissions",
     "width": 3200,
-    "x": 10154,
+    "x": 13754,
     "y": 6641
    },
-   "mural_id": "4b64b01c-9776-4942-82c4-6a1d9414ddaf",
+   "mural_id": "20aea2b6-246c-402e-8b90-ff125d3da80a",
    "tracked": [
     "title",
     "text",
@@ -44328,7 +47351,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319328459
+   "updatedOn": 1793321593168
   },
   "T-permissions-cmp1": {
    "board": {
@@ -44357,7 +47380,7 @@
     "x": 128,
     "y": 800
    },
-   "mural_id": "6079468c-d102-46e8-810e-243759f43a84",
+   "mural_id": "db47d29b-0a90-430e-a824-3f4e87444b7d",
    "tracked": [
     "title",
     "text",
@@ -44385,7 +47408,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319330838
+   "updatedOn": 1793321594141
   },
   "T-permissions-cmp1.d1": {
    "board": {
@@ -44414,7 +47437,7 @@
     "x": 0,
     "y": 398
    },
-   "mural_id": "df0714ef-0ded-4d0f-a1f1-ba350b4578c9",
+   "mural_id": "2f829224-ae60-4870-a59d-77c20739b5c9",
    "tracked": [
     "title",
     "text",
@@ -44442,7 +47465,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-cmp1.d2": {
    "board": {
@@ -44471,7 +47494,7 @@
     "x": 0,
     "y": 574
    },
-   "mural_id": "ed1ec05a-8164-4283-9c93-1a162c8b309d",
+   "mural_id": "71fea844-72a4-47b4-8f59-d258f57404bb",
    "tracked": [
     "title",
     "text",
@@ -44499,7 +47522,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-cmp1.heading": {
    "board": {
@@ -44526,7 +47549,7 @@
     "x": 0,
     "y": 96
    },
-   "mural_id": "bb48de5e-d455-4b82-bb27-a09d8e83d586",
+   "mural_id": "4c233443-6844-4efc-aa80-b8be451cf491",
    "tracked": [
     "title",
     "text",
@@ -44554,7 +47577,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp1.k1": {
    "board": {
@@ -44581,7 +47604,7 @@
     "x": 0,
     "y": 240
    },
-   "mural_id": "243ef3a4-96bf-4cbd-854c-5d2650f6bba8",
+   "mural_id": "d7069d57-3172-4982-93cd-04223b85f827",
    "tracked": [
     "title",
     "text",
@@ -44609,7 +47632,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp1.k2": {
    "board": {
@@ -44636,7 +47659,7 @@
     "x": 0,
     "y": 432
    },
-   "mural_id": "d11c8afd-3249-461e-9366-544599286ec7",
+   "mural_id": "9c630b9b-08de-4c2f-9209-138d83f7fc56",
    "tracked": [
     "title",
     "text",
@@ -44664,7 +47687,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp1.spacetag": {
    "board": {
@@ -44694,7 +47717,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "75238612-7ec7-4942-b5d0-13f05003907d",
+   "mural_id": "cc488d14-8c66-45cc-a60e-a48ad08f9a02",
    "tracked": [
     "title",
     "text",
@@ -44722,7 +47745,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-cmp1.v1": {
    "board": {
@@ -44749,7 +47772,7 @@
     "x": 564,
     "y": 240
    },
-   "mural_id": "78faef2f-154d-4093-a294-be9e36b8be87",
+   "mural_id": "a806136c-36e3-493a-820c-272c82cf4404",
    "tracked": [
     "title",
     "text",
@@ -44777,7 +47800,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp1.v2": {
    "board": {
@@ -44804,7 +47827,7 @@
     "x": 564,
     "y": 432
    },
-   "mural_id": "1b28919a-f27a-45c1-8bc3-6141e0964c1f",
+   "mural_id": "b30e071a-bc68-4625-a30d-b131ed64fae4",
    "tracked": [
     "title",
     "text",
@@ -44832,7 +47855,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp2": {
    "board": {
@@ -44861,7 +47884,7 @@
     "x": 1632,
     "y": 800
    },
-   "mural_id": "3460be80-c582-4a29-a081-64d78bf9f1bb",
+   "mural_id": "3bd30d74-7ebf-4d32-9f29-420221f742b8",
    "tracked": [
     "title",
     "text",
@@ -44889,7 +47912,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319330940
+   "updatedOn": 1793321594361
   },
   "T-permissions-cmp2.d1": {
    "board": {
@@ -44918,7 +47941,7 @@
     "x": 0,
     "y": 398
    },
-   "mural_id": "eb9ac4c1-8c83-4cb4-8ceb-deb46874da06",
+   "mural_id": "ca5e4426-c008-4b55-a03f-012e77e67a24",
    "tracked": [
     "title",
     "text",
@@ -44946,7 +47969,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-cmp2.d2": {
    "board": {
@@ -44975,7 +47998,7 @@
     "x": 0,
     "y": 574
    },
-   "mural_id": "ce0443a2-e879-459c-b7f8-d2911f38591d",
+   "mural_id": "a2e84dae-6dab-4f0b-81d6-0f4f7b7385c2",
    "tracked": [
     "title",
     "text",
@@ -45003,7 +48026,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-cmp2.heading": {
    "board": {
@@ -45030,7 +48053,7 @@
     "x": 0,
     "y": 96
    },
-   "mural_id": "0ab46c72-ec32-4cd8-9e6e-0cab7616bde3",
+   "mural_id": "075656e5-6f90-4bc0-be6e-0cbff91bd6c0",
    "tracked": [
     "title",
     "text",
@@ -45058,7 +48081,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp2.k1": {
    "board": {
@@ -45085,7 +48108,7 @@
     "x": 0,
     "y": 240
    },
-   "mural_id": "035a8b84-f713-4856-bfd8-3c8a661f6943",
+   "mural_id": "8a346781-60a6-498e-a2b7-3e28c4550590",
    "tracked": [
     "title",
     "text",
@@ -45113,7 +48136,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp2.k2": {
    "board": {
@@ -45140,7 +48163,7 @@
     "x": 0,
     "y": 432
    },
-   "mural_id": "b9df7cc6-e654-4b68-96a1-a61bef1b6d10",
+   "mural_id": "a2e2db89-2685-4446-be7e-5a4968d53fe2",
    "tracked": [
     "title",
     "text",
@@ -45168,7 +48191,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp2.spacetag": {
    "board": {
@@ -45198,7 +48221,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "06039804-5105-4bed-8a59-b408612122c3",
+   "mural_id": "16110b24-cbb1-4a94-b9c2-531628fe0571",
    "tracked": [
     "title",
     "text",
@@ -45226,7 +48249,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-cmp2.v1": {
    "board": {
@@ -45253,7 +48276,7 @@
     "x": 564,
     "y": 240
    },
-   "mural_id": "8d8348c5-97f8-4f54-9cfe-2ddc05227280",
+   "mural_id": "e1ed5ba6-13a7-4380-8338-1f5e55353e8f",
    "tracked": [
     "title",
     "text",
@@ -45281,7 +48304,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-cmp2.v2": {
    "board": {
@@ -45308,7 +48331,7 @@
     "x": 564,
     "y": 432
    },
-   "mural_id": "b769c901-af2b-4755-afe3-f0936ad66095",
+   "mural_id": "cc148497-10c2-4632-b7fc-e8d8c34a773e",
    "tracked": [
     "title",
     "text",
@@ -45336,7 +48359,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-limit": {
    "board": {
@@ -45365,7 +48388,7 @@
     "x": 128,
     "y": 1424
    },
-   "mural_id": "a1c3d013-2c98-44ca-a862-f46f3fcf98f8",
+   "mural_id": "4f02b87a-9a77-4a95-bb18-636215dc1e94",
    "tracked": [
     "title",
     "text",
@@ -45393,7 +48416,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319330818
+   "updatedOn": 1793321594462
   },
   "T-permissions-limit.bar": {
    "board": {
@@ -45423,7 +48446,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "07c4cb9e-a581-443a-9460-d5834b05e1d4",
+   "mural_id": "20b456dc-b23e-4cbb-9447-fbcbc49b7d96",
    "tracked": [
     "title",
     "text",
@@ -45451,7 +48474,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-limit.bg": {
    "board": {
@@ -45481,7 +48504,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "b1156015-e7e0-4955-8b11-6ef064175ad4",
+   "mural_id": "93f4dcf1-1539-408e-b20e-e51f42f91aa3",
    "tracked": [
     "title",
     "text",
@@ -45509,7 +48532,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-limit.text": {
    "board": {
@@ -45536,7 +48559,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "04f5b363-0c44-4e7c-990b-be04024f707a",
+   "mural_id": "0d71b54d-62b1-454d-8869-1ec9d7d3e645",
    "tracked": [
     "title",
     "text",
@@ -45564,7 +48587,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-problem": {
    "board": {
@@ -45593,7 +48616,7 @@
     "x": 128,
     "y": 576
    },
-   "mural_id": "8ac99451-4b92-4f91-b0c6-28690dd85681",
+   "mural_id": "7a521a9c-26da-4605-a8dd-a3d0e0c1e971",
    "tracked": [
     "title",
     "text",
@@ -45621,7 +48644,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319330802
+   "updatedOn": 1793321594223
   },
   "T-permissions-problem.bar": {
    "board": {
@@ -45650,7 +48673,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "78db3efb-d33a-41c3-bc4b-8ba4b592ec2e",
+   "mural_id": "23c1d0a0-1ffc-41d5-9f83-e4858a2dd3f5",
    "tracked": [
     "title",
     "text",
@@ -45678,7 +48701,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-problem.bg": {
    "board": {
@@ -45707,7 +48730,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "a06348b9-19d3-44a0-8280-b77a800fd5bb",
+   "mural_id": "b0808f3a-e1a5-48d5-bbee-79e2067751ab",
    "tracked": [
     "title",
     "text",
@@ -45735,7 +48758,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions-problem.body": {
    "board": {
@@ -45762,7 +48785,7 @@
     "x": 40,
     "y": 92
    },
-   "mural_id": "6aba09da-115f-4133-90d7-9445f05e200f",
+   "mural_id": "26608305-410d-43dd-b55d-9cc20a982a58",
    "tracked": [
     "title",
     "text",
@@ -45790,7 +48813,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions-problem.title": {
    "board": {
@@ -45817,7 +48840,7 @@
     "x": 40,
     "y": 28
    },
-   "mural_id": "137376aa-7108-4a38-b5f1-44dc9d41c801",
+   "mural_id": "0f684460-0dab-4579-bf8f-aab3b8aea3e7",
    "tracked": [
     "title",
     "text",
@@ -45845,7 +48868,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions.bg": {
    "board": {
@@ -45874,7 +48897,7 @@
     "x": 0,
     "y": 0
    },
-   "mural_id": "162431a3-01a5-4eec-af11-0c8dfa356223",
+   "mural_id": "5b280777-9444-45d5-8dbc-8a700ef91c86",
    "tracked": [
     "title",
     "text",
@@ -45902,7 +48925,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319333172
+   "updatedOn": 1793321596737
   },
   "T-permissions.lead": {
    "board": {
@@ -45929,7 +48952,7 @@
     "x": 128,
     "y": 320
    },
-   "mural_id": "eca26b6b-7cf0-4e61-9a6c-9de963d698e9",
+   "mural_id": "16dedf06-67a0-4419-afc1-838748eab9d7",
    "tracked": [
     "title",
     "text",
@@ -45957,7 +48980,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions.num": {
    "board": {
@@ -45967,7 +48990,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-permissions",
-    "text": "11 / 17",
+    "text": "12 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -45979,13 +49002,13 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-permissions",
-    "text": "11 / 17",
+    "text": "12 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
     "y": 1664
    },
-   "mural_id": "b6d639b3-9009-4066-b420-da2c47b2f860",
+   "mural_id": "ebe320dd-7785-45b1-84aa-591c82ba9f97",
    "tracked": [
     "title",
     "text",
@@ -46013,7 +49036,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions.rests": {
    "board": {
@@ -46040,7 +49063,7 @@
     "x": 128,
     "y": 1664
    },
-   "mural_id": "35623201-f003-4a9c-82e1-2c4c783c041a",
+   "mural_id": "d2e6d8cb-7631-4b24-ad8c-322f6f89aa57",
    "tracked": [
     "title",
     "text",
@@ -46068,7 +49091,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-permissions.title": {
    "board": {
@@ -46095,7 +49118,7 @@
     "x": 128,
     "y": 128
    },
-   "mural_id": "181733e3-5193-4672-855c-cb0ff51a5bc8",
+   "mural_id": "f803bd17-75e1-4172-943c-6a0da20b6132",
    "tracked": [
     "title",
     "text",
@@ -46123,7 +49146,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321598027
   },
   "T-pm": {
    "board": {
@@ -48922,7 +51945,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-pm",
-    "text": "14 / 17",
+    "text": "15 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -48934,7 +51957,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-pm",
-    "text": "14 / 17",
+    "text": "15 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -48968,7 +51991,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319340258
+   "updatedOn": 1793321603589
   },
   "T-pm.rests": {
    "board": {
@@ -49257,7 +52280,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-questions",
-    "text": "17 / 17",
+    "text": "18 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -49269,7 +52292,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-questions",
-    "text": "17 / 17",
+    "text": "18 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -49303,7 +52326,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319340452
+   "updatedOn": 1793321603756
   },
   "T-questions.rests": {
    "board": {
@@ -51658,7 +54681,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-se",
-    "text": "15 / 17",
+    "text": "16 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -51670,7 +54693,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-se",
-    "text": "15 / 17",
+    "text": "16 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -51704,7 +54727,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319339763
+   "updatedOn": 1793321603614
   },
   "T-se.rests": {
    "board": {
@@ -53181,7 +56204,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "7 / 17",
+    "text": "7 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -53193,7 +56216,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-sessions",
-    "text": "7 / 17",
+    "text": "7 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -53227,7 +56250,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319340908
+   "updatedOn": 1793321602578
   },
   "T-sessions.rests": {
    "board": {
@@ -55765,7 +58788,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-skills",
-    "text": "9 / 17",
+    "text": "9 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -55777,7 +58800,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-skills",
-    "text": "9 / 17",
+    "text": "9 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -55811,7 +58834,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793319334408
+   "updatedOn": 1793321603797
   },
   "T-skills.rests": {
    "board": {
@@ -59506,7 +62529,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-skillsfrom",
-    "text": "8 / 17",
+    "text": "8 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -59518,7 +62541,7 @@
     "font_size": 28,
     "ink": "#525252FF",
     "parent": "T-skillsfrom",
-    "text": "8 / 17",
+    "text": "8 / 18",
     "title": "tpl:slide#num",
     "width": 688,
     "x": 2384,
@@ -59552,7 +62575,7 @@
     "to",
     "file"
    ],
-   "updatedOn": 1793320250588
+   "updatedOn": 1793321602770
   },
   "T-skillsfrom.rests": {
    "board": {

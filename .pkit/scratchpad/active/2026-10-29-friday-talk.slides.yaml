@@ -672,17 +672,66 @@ slides:
     got a wrong number (PR #16), and core rule 3 came from it. A skill also names the decision records it follows, and stops
     if one is not accepted. Its first step checks that the decisions it names in its first lines are accepted: COR-006, COR-008
     and COR-025. If one is not, the skill stops.'
-- id: agents
+- id: agentsfrom
   part: P2
-  title: 'Agents: roles with limits'
-  message: 'Each agent is a role: one job, and only the tools that job needs. The agent that writes a draft never reviews
-    it.'
+  title: Where agents come from
+  message: 'When the same kind of check keeps coming back, a decision names a role for it: one job, and only the tools it
+    needs.'
   problem: ''
   does: []
   show: 'In project-kit: pkit ships 6 agents, each a file with its job, its tools and the decisions it follows.'
   visual:
+    kind: map
+    head_h: 136
+    row_h: 112
+    columns:
+    - head: The decision
+      text: names a role
+      fill: '#491D8BFF'
+      ink: '@text_on_color'
+    - head: The agent
+      text: does one job
+      fill: '#BE95FFFF'
+      cell: name
+    - head: Its limit
+      text: only the tools it needs
+      fill: '#D4BBFFFF'
+    - head: What it catches
+      text: so you do not have to
+      fill: '#E8DAFFFF'
+    rows:
+    - [{head: COR-024, text: A second opinion}, critic, Reads only, 'A draft''s gaps, before you read it']
+    - [{head: COR-024, text: A keeper of the whole system}, architect, Edits only architecture docs, A change that 
+        breaks the whole]
+    - [{head: COR-057, text: One reviewer for the rules}, rule-set-reviewer, Never edits what it checks, 'A broken rule, with
+        its line']
+    why:
+      head: Why pkit has agents
+      items:
+      - A decision makes each check one role's job. By default, nobody watches the whole system.
+      - The agent that writes agrees with itself. A second agent does not.
+      - A reviewer that cannot edit stays independent.
+      - Caught here, a mistake costs an agent's time, not yours.
+  limit: The AI tool enforces an agent's tools. Which files it may change is a rule it follows, not a lock.
+  minutes: 1
+  notes: 'Agents in pkit are not written at random either. When the same kind of check keeps coming back, it becomes a role
+    (COR-007). A decision names the role, its job and its limits. COR-024 names the critic and the architect. COR-057 names
+    the rule-set-reviewer. COR-044 names the process-author, which writes code only where you allow it. Two more reviewers
+    are older than any record of their own, and COR-024 gives them their place. Why: the agent that writes a draft shows it
+    while it is half done, so cheap mistakes reach your review. The agent you talk to does not watch the whole system, and
+    by default nobody does. An agent''s time is cheap, and yours is not. A reviewer that only reads cannot fix its own findings,
+    so it stays independent (COR-024). Each file has one owning agent (COR-013). The AI tool enforces the tools in an agent''s
+    file. The files an agent owns are a rule it follows. Your own agents go in .pkit/agents/project/, made with the agent-author
+    skill and pkit new agent.'
+- id: agents
+  part: P2
+  title: 'One piece of work, and who sees it'
+  message: 'Each role sees the work at its own moment: the critic before you, the reviewers on the change.'
+  problem: ''
+  does: []
+  show: 'pkit''s own agents advise and never block. Add-ons bring agents that can block a merge.'
+  visual:
     kind: roles
-    head: One piece of work, and who sees it
     stops:
     - name: The agent you talk to
       job: Writes the draft.
@@ -690,31 +739,22 @@ slides:
     - name: Critic
       job: Opposes the draft before you see it.
       limit: reads only
-      why: The writer agrees with itself. A mistake caught here costs none of your time.
     - name: Architect
       job: When the draft touches the whole system, checks that it fits.
       limit: edits only architecture docs
-      why: A change can look fine alone and still break the whole.
     - name: You
       job: Decide.
       tone: yours
-      why: Only you accept a decision or let a change merge.
     - name: Three reviewers
       job: 'Check the change: its writing, its conventions, its rules.'
       limit: never edit what they check
-      why: A reviewer that cannot edit stays independent.
   limit: Every review round costs several agent runs.
-  minutes: 2.5
-  notes: 'An agent is a role written as a file. The file gives its job, the tools it may use, the files it owns and the decisions
-    it follows. Each file has one owning agent (COR-013). pkit ships six agents. COR-024 names the critic and the architect.
-    The critic only reads, which keeps it independent. The architect may edit only the architecture docs and the architecture
-    decisions. Three reviewers check a change. methodology-reviewer checks how records and skills are written. convention-compliance-reviewer
-    checks commits, branches and who owns which file. rule-set-reviewer checks the rules that apply to the files the change
-    touches. The sixth, process-author, writes code, but only where you allow it. The reasons come from COR-024. The agent
-    that writes shows its draft while it is half done, so cheap mistakes reach your review. A change can look fine on its
-    own and still break the whole system. An agent''s time is cheap, and yours is not. pkit''s own agents advise and do not
-    block. Add-ons bring more agents, such as a builder that writes code and reviewers that block a merge. You create your
-    own with the agent-author skill and pkit new agent, in .pkit/agents/project/.'
+  minutes: 1.5
+  notes: 'The work moves from left to right. The agent you talk to writes a draft, with the tools your permissions allow.
+    The critic opposes it before you see it. The architect checks it when it touches the whole system. You decide. Three reviewers
+    check the change. methodology-reviewer checks how records and skills are written. convention-compliance-reviewer checks
+    commits, branches and who owns which file. rule-set-reviewer checks the rules on the files the change touches. Only you
+    accept a decision or let a change merge (COR-064 point 6).'
 - id: permissions
   part: P2
   title: Permissions you write down

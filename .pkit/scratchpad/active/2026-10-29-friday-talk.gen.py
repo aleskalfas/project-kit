@@ -757,7 +757,7 @@ def roles(pid, y, v):
     why_lines = max(lines(s.get("why", ""), 36, iw - 60) for s in stops)  # a margin: wrapping breaks at words
     why_top = HEAD + card_h + 24
     why_h = 32 + why_lines * 46 + 24
-    H = why_top + why_h
+    H = why_top + why_h if any(s.get("why") for s in stops) else HEAD + card_h
     parts = {}
 
     def shape(key, x, top, w, h, fill, line, bw=2):
