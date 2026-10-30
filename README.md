@@ -39,7 +39,7 @@ pkit:
         - .pkit/agents/core/convention-compliance-reviewer.md
         - .pkit/capabilities/project-management/scripts/create-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/bootstrap_gate.py
-      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
+      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, COR-070, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
       artefact:
         - ACT-adopter
         - ACT-ai-agent
