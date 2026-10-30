@@ -606,14 +606,9 @@ def budget_changes(
         was_budget = None if was is None else was.budget
         now_budget = None if now is None else now.budget
         if was_budget != now_budget:
-            loaded_file = loaded_file_of(shown)
             changes.append(
                 BudgetChange(
-                    citation,
-                    shown.path,
-                    None if loaded_file is None else str(loaded_file),
-                    was_budget,
-                    now_budget,
+                    citation, shown.path, str(loaded_file_of(shown)), was_budget, now_budget
                 )
             )
     was_key = plain_file_budget(fd.configuration_at(target_root, base_tree))
