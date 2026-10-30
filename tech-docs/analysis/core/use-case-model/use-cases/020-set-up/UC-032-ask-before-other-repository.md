@@ -33,6 +33,7 @@ pkit:
         - ADR-061#6
         - ADR-047#1
         - ADR-047#2
+        - ADR-060#10
       artefact:
         - ACT-operator
         - ACT-ai-agent
@@ -81,6 +82,7 @@ pkit:
 > - `pkit release apply` with `--tag --push`
 > - `release merge`
 > - `release publish-notes`
+> - `pkit workspace remove`, which takes no confirmation with the call, so only a terminal confirms it ([ADR-060 point 10](../../../../../architecture/decisions/ADR-060-path-scoped-workspace-allow.md#10-removal-through-a-backbone-command-that-tests-its-own-paths))
 >
 > [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs the guard, and #1765 tracks it.
 
