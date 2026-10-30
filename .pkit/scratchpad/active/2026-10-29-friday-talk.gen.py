@@ -610,6 +610,53 @@ TIES_TONES = {"code": ("role_neutral_bg", "role_neutral"), "pkit": ("role_code_b
               "yours": ("role_people_bg", "role_people"), "architecture": ("role_architecture_bg", "role_architecture")}
 
 
+CHECK_ROW, CHECK_GAP, CHECK_HEAD = 68, 10, 72
+
+
+def checklist(pid, y, v):
+    """One procedure as a numbered checklist, one step marked as its command's, and beside it the command's
+    real output in a terminal, an arrow from the marked step. The list is one instance of a template made
+    for this slide."""
+    steps, mark = v["steps"], v["mark"] - 1
+    lw = 1300
+    tx_rel = lw + 160
+    fs = v.get("font_size", 28)
+    file, th = terminal_png(f"{pid}-cmd".removeprefix("T-"), v["terminal"], SPAN16 - tx_rel, fs)
+    line_h = round(fs * 1.53)
+    first = 36 + line_h - round(line_h * 0.3) - fs * 0.35  # the middle of the terminal's first line
+    mark_mid = CHECK_HEAD + mark * (CHECK_ROW + CHECK_GAP) + CHECK_ROW / 2
+    t_top = round(mark_mid - first)
+    list_h = CHECK_HEAD + len(steps) * CHECK_ROW + (len(steps) - 1) * CHECK_GAP
+    H = max(list_h, t_top + th)
+    parts = {
+        "lhead": {"type": "text", "text": md(v["head"]), "style": "@style.key", "ink": "@text_primary", "x": 0, "y": 0, "width": lw, "height": 56},
+        "rhead": {"type": "text", "text": md(v["terminal_head"]), "style": "@style.key", "ink": "@text_primary",
+                  "x": tx_rel, "y": t_top - CHECK_HEAD, "width": SPAN16 - tx_rel, "height": 56},
+        "cmd": {"type": "image", "file": f"{ICONS_DIR}/{file}.png", "x": tx_rel, "y": t_top, "width": SPAN16 - tx_rel, "height": th},
+    }
+    for i, s in enumerate(steps):
+        top = CHECK_HEAD + i * (CHECK_ROW + CHECK_GAP)
+        on = i == mark
+        fill = "@role_code" if on else "@role_neutral_bg"
+        ink = "@text_on_color" if on else "@text_primary"
+        parts[f"r{i}box"] = {"type": "shape", "shape": "rectangle", "text": "", "x": 0, "y": top, "width": lw, "height": CHECK_ROW,
+                             "color": fill, "border_color": fill, "border_width": 1, "ink": ink}
+        parts[f"r{i}num"] = {"type": "text", "text": str(i + 1), "style": "@style.key", "ink": ink, "x": 24, "y": top + 6, "width": 56, "height": 56}
+        parts[f"r{i}text"] = {"type": "text", "text": md(s), "style": "@style.body", "ink": ink, "x": 96, "y": top + 9, "width": lw - 120, "height": 50}
+        if on and v.get("mark_note"):
+            parts[f"r{i}note"] = {"type": "text", "text": md(v["mark_note"]), "style": "@style.key", "ink": ink, "align": "right",
+                                  "x": lw - 520, "y": top + 6, "width": 496, "height": 56}
+    parts["arrow"] = {"type": "arrow", "points": [[lw + 16, round(mark_mid)], [tx_rel - 16, round(mark_mid)]], "arrow_type": "straight",
+                      "tip": "end", "color": "@role_code", "border_width": 6, "border_style": "solid"}
+    name = f"checklist_{pid}"
+    EXTRA_TEMPLATES[name] = {
+        "note": "One procedure as a numbered checklist with its command's output beside it, drawn for one slide by the slide generator.",
+        "root": {**CLEAR_AREA, "width": SPAN16, "height": H},
+        "parts": parts,
+    }
+    return {f"{pid}-checklist": {"template": name, "parent": pid, "x": MARGIN, "y": y}}, H
+
+
 def ideas(pid, y, v):
     """Where ideas start: a conversation, the scratchpad note that keeps it, and what the note becomes, the
     products large on the right, the first (records) dark like the pyramid's apex, dropped small below. A box
@@ -1008,6 +1055,8 @@ def build_slide(s, n, total):
             add(ideas(pid, y, v))
         elif kind == "rules":
             add(rules(pid, y, v))
+        elif kind == "checklist":
+            add(checklist(pid, y, v))
         elif kind == "ties":
             add(ties(pid, y, v))
         elif kind == "story":

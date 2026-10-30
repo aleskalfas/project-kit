@@ -577,35 +577,46 @@ slides:
     22 rules, about 2,800 words, in every session.'
 - id: skills
   part: P2
-  title: Skills and the commands they pair with
-  message: A skill carries the judgement; the command it pairs with does the part that must come out the same every 
-    time.
-  problem: Asked to add a record, an agent improvises a number, a layout and a level of care, different each time.
-  does:
-  - A written procedure an agent follows for one kind of task
-  - Only its short description is in every session; the rest loads on use
-  show: A record once filed by hand got the wrong number; since then agents must use the skill
+  title: Skills and their commands
+  message: A skill tells the agent how to do one kind of task, step by step. Its command does the steps that must be exact.
+  problem: ''
+  does: []
+  show: 'In project-kit: 14 skills. Every session holds only their short descriptions, and the steps load when needed.'
   visual:
-    kind: compare
-    left:
-      space: user
-      space_label: Skill
-      heading: The judgement
-      k1: Example
-      v1: decision-author
-      k2: Carries
-      v2: which kind of record, what it must argue, how to word it
-    right:
-      space: tech
-      space_label: Command
-      heading: The mechanics
-      k1: Example
-      v1: pkit new decision
-      k2: Carries
-      v2: the next number, the file's layout
-  limit: 'Nothing checks that the skill was used: the command stamps the file either way.'
+    kind: checklist
+    head: 'The skill decision-author: a new decision record'
+    steps:
+    - Pick the kind of record
+    - Read the writing rules
+    - Read the record's shape
+    - Pick a short name
+    - Create the file
+    - Write the body
+    - Check it against the rules
+    - Show you the draft
+    - Commit, after you approve
+    mark: 5
+    mark_note: its command
+    terminal_head: 'Its command: pkit new decision'
+    font_size: 28
+    terminal: |-
+      $ pkit new decision project test-coverage-floor
+      Stamped: .pkit/decisions/project/PRJ-012-test-coverage-floor.md
+      # in the file:
+      id: PRJ-012          # the next number, never guessed
+      status: proposed     # until you accept it
+      ## Context
+      ## Decision
+      ## Rationale
+      ## Implications
+  limit: 'Nothing checks that an agent used the skill: the command creates the file either way.'
   minutes: 2
-  notes: Skills and commands turn decisions into one kind of task, done the same way every time.
+  notes: 'A skill is a written procedure for one kind of task: write a decision record, file an issue, write a
+    migration. The agent follows its steps, and its command does the steps that must be exact: the next number, the
+    file''s layout. The command also refuses a name already taken. Every session holds only each skill''s short
+    description, so 14 skills cost a few hundred words. The steps load when the task comes up. Why agents must use
+    the skill: a record filed by hand once got a wrong number (PR #16), and core rule 3 came from it. A skill also
+    names the decision records it follows, and stops if one is not accepted.'
 - id: agents
   part: P2
   title: 'Agents: roles with limits'
