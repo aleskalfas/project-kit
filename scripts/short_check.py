@@ -1,9 +1,12 @@
 """Whether this run of the required `checks` job may be the short check (ADR-067).
 
-`.github/workflows/checks.yml` runs this decider before the check aggregator. It
-answers `full` or `short`, and the job runs `scripts/check.sh` or
-`scripts/check.sh --short` by that answer. The short check is the aggregator
-without its test suite. A run takes it only on a pull request, and only where:
+`.github/workflows/checks.yml` runs this decider in its deciding job, before any part
+of the aggregator starts (ADR-078 point 2). It answers `full` or `short`, and that
+job names the form by the answer. In the full form, the remainder's job runs
+`scripts/check.sh --rest` beside two slices of the suite, `--shard 1/2` and
+`--shard 2/2`. In the short form, it runs `scripts/check.sh --short`, and no slice
+starts. The short check is the aggregator without its test suite. A run takes it
+only on a pull request, and only where:
 
 - **a passing full run is the basis.** GitHub's own record of this workflow's
   runs is read through the Actions API, with the token the workflow holds. The
@@ -13,7 +16,9 @@ without its test suite. A run takes it only on a pull request, and only where:
   is passed over, and the first full run decides: it must have finished with
   success, and its head is the basis. A run is told by its `checks` job's
   steps, as GitHub records them: `FULL_STEP` ran, or it was skipped and
-  `SHORT_STEP` ran. A listing longer than the pages read is no basis, so the
+  `SHORT_STEP` ran. The two steps hold the two forms, so a run whose parts ran
+  in jobs of their own reads as a run that ran the aggregator in one job did
+  (ADR-078 point 4). A listing longer than the pages read is no basis, so the
   decision does not rest on the order GitHub lists runs in.
 - **only answers changed since.** `pkit friction since <basis> --head <head>
   --base origin/<base> --json` says every change from the basis to the pull
@@ -85,8 +90,8 @@ FULL = "full"
 SHORT = "short"
 
 #: The workflow whose runs are read, the job that is the required status, and the
-#: names of its two steps that run the aggregator. The workflow's own steps carry
-#: these names, and a test holds the two together.
+#: names of its two steps that hold the full form and the short one. The workflow's
+#: own steps carry these names, and a test holds the two together.
 WORKFLOW_FILE = "checks.yml"
 WORKFLOW_PATH = f".github/workflows/{WORKFLOW_FILE}"
 JOB = "checks"
