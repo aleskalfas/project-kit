@@ -4,7 +4,7 @@ custom:
   category: Added
   requires_backbone: release
 body: >
-  project-management ships its operational rules as its loaded rule set
+  The capability ships its operational rules as its loaded rule set
   `PM`, whose `rules.md` every session loads wherever the capability is
   installed (COR-070): a pull request's body opens with `Closes #<issue>`, by
   the PR template; work starts from a Task the tracker holds, and its branch
