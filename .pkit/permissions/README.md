@@ -343,7 +343,7 @@ Every checkout of a project has one agent workspace: `.agent-workspace/` at its 
   - the tool is a file tool the privilege lists: `Read`, `Write`, `Edit`, `MultiEdit` or `NotebookEdit`
   - its target lies inside `.agent-workspace/` of the project root, or of another working tree of the same repository
 - **Every shipped profile grants the privilege** to `all`, `read-only` included.
-- **Prompts, not confinement:** the privilege reduces prompts on the allow side, keyed on the target path, and confines nothing. A grant of the privilege can neither reach nor deny a file anywhere else. Outside the folder the privilege does not apply, and a request is decided exactly as without it.
+- **Prompts, not confinement:** the privilege reduces prompts on the allow side, keyed on the target path, and confines nothing. Shell reach is the OS sandbox's, and the file tools run outside the sandbox. A grant of the privilege can neither reach nor deny a file anywhere else. Outside the folder the privilege does not apply, and a request is decided exactly as without it.
 - **What lies inside:** a target whose path resolves inside the folder, symlinks resolved. A link out of the folder is outside.
   - **The folder counts only as the checkout itself holds it.** A symlinked `.agent-workspace` is never the workspace, and a catalog folder entry that is absolute or climbs out with `..` is never recognized. Another working tree counts only when git registered it for the same repository, and another repository's workspace never does.
   - **A repository or worktree nested inside the folder is not the folder.** When any directory from the folder down to the target holds a `.git` entry, the target is another checkout's.

@@ -7,6 +7,7 @@ pkit:
       path:
         - .pkit/skills/core/capability-author.md
         - .pkit/permissions/decide.py
+        - .pkit/schemas/privilege-catalog.yaml
         - .pkit/permissions/project/grants.yaml
         - .pkit/adapters/claude-code/settings/project/settings.json
       record: [COR-028, COR-047, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-016, ADR-021, ADR-025, ADR-032]
@@ -306,7 +307,7 @@ The report's headline counts the real prompts: the logged calls for which the re
 - **`uv run pytest`** matches no allow rule, so the report counts it as genuinely missing, and recommends granting a privilege. The next task grants it.
 - **`gh pr list | jq .`** matches allow rules part by part, but not as a whole. So the report counts it as allowlisted-but-compound, and recommends single commands or a named command of your project. Why `jq` is no text filter is in "Why some commands still prompt" above.
 - **Nothing is applied.** You act on each recommendation yourself ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)).
-- **The core's reasons keep the log's redaction.** The log keeps the hook's reason for each abstain beside the redacted command ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)). The core's reasons name at most an uncovered part's program, or the kinds of an untrusted construct, never an argument. A fault's reason quotes the error the hook met ([the reference, "Denies, and what an abstain says"](../../.pkit/permissions/README.md#denies-and-what-an-abstain-says)).
+- **The core's reasons keep the log's redaction, a fault's excepted.** The log keeps the hook's reason for each abstain beside the redacted command ([the reference, "The permission-prompt diagnostic loop"](../../.pkit/permissions/README.md#the-permission-prompt-diagnostic-loop)). The core's reasons name at most an uncovered part's program, or the kinds of an untrusted construct, never an argument. A fault's reason is the exception: it quotes the error the hook met ([the reference, "Denies, and what an abstain says"](../../.pkit/permissions/README.md#denies-and-what-an-abstain-says)).
 
 ### Allow a command
 
