@@ -1,0 +1,3 @@
+## Operational rules of the project-management capability
+
+*These are the project-management capability's operational rules, kept as its loaded rule set `PM` (COR-070). They bind on the work of every session in a project where project-management is installed. They add to core's rules and never loosen them, and where one cannot be kept with a rule of core's, core's binds. A project's rules add to these and never loosen them. Where one cannot be kept with a rule of another capability's, stop the step and report the clash. The loaded file is generated from `.pkit/capabilities/project-management/rule-sets/pm.md`, where the set is authored, by `pkit rule-sets generate`. A project that receives them by sync or install edits neither.*

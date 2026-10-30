@@ -108,6 +108,10 @@ NOT_SURFACE: dict[str, str] = {
     ".pkit/capabilities/evidence/agents/.gitkeep": (
         "evidence ships no agent yet; the placeholder holds the folder open in git"
     ),
+    ".pkit/capabilities/*/rule-sets/**": (
+        "a capability's rule sets, anchor targets that anchor the records they rest on"
+    ),
+    ".pkit/capabilities/*/rules.md": "generated from the capability's loaded set",
 }
 
 

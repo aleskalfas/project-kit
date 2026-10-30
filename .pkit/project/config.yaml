@@ -99,6 +99,9 @@ friction:
   #     a page describes.
   #   - evidence's `agents/` — it holds only the `.gitkeep` that keeps the
   #     folder in git until an agent lands; name it here then.
+  #   - each capability's `rule-sets/` — rule sets are anchor targets, which
+  #     anchor the records they rest on, not code a page describes; and its
+  #     `rules.md`, generated from its loaded set (COR-070).
   # `tests/test_self_host_documentation.py` holds every file under these trees
   # to the surface or one of these reasons, so a new one cannot land unsorted.
   surface:
