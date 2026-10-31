@@ -1198,6 +1198,20 @@ Point 12 is decided.
 
 Point 15 is decided.
 
+### 13. Outputs, languages and translation (31 October)
+
+**The question.** What is handed out and how it is made; where the glossary for translations lives; how a translation stays in step with the English. Taken one part at a time.
+
+**What was known.** Mural exports only a whole board, so the Friday talk needed `export_pdf.py` for a PDF per language, a page per slide in order. Tools are adopted, never built (the architect's review): `rsvg-convert` gives a PDF with real, selectable text from SVG, headless Chromium a tagged PDF that screen readers follow, `resvg` pictures. pkit does not install them; the capability checks for them (17). A delivered piece's exports are its real freeze (18a).
+
+**Outputs: every export kept, numbered, in the piece's folder. Agreed (31 October).**
+- A piece lists the outputs it wants in `piece.yaml` (`outputs: [pdf, png]`), each made once per language, from the scene through the SVG renderer, never from Mural, so a PDF never depends on a board. The PDF comes from `rsvg-convert`; a piece asks for a tagged PDF through Chromium with `pdf: tagged`.
+- **Versions by default, at the maintainer's wish.** Every export is kept and none is overwritten. One export run is one version number, shared by all its languages and formats, so `v3` in English and `v3` in Czech match: `friday-talk.v3.en.pdf`, `friday-talk.v3.cs.pdf`. A record, `exports/versions.yaml`, says what each version is: its date and time, the piece's state then (draft or delivered), its lock, a hash of its content. A number rather than a timestamp: it is short, sorts, and is easy to say ("send me v3"), and the record holds the time; two branches making the same number for one piece is rare, and the merge shows it.
+- **A living piece also keeps an unnumbered current copy** (`friday-talk.svg`), which a doc page links to, since a link cannot follow a moving number. A check fails when a committed export no longer matches the piece's content.
+- **Committed:** the delivered versions (the freeze), a living piece's current copy (a repository host shows only committed files), and the record. Large files stay in git's history forever, so a draft version stays on the machine that made it, out of git, until it is delivered.
+- **In the piece's folder, not one folder for all.** The maintainer asked which: the piece's folder (`visual/pieces/<piece>/exports/`). A piece is one folder, what it is, its content and what it produced, so it is copied, archived or removed in one step, as its images, renders and local components already are. The file name still carries the piece's name, since an exported file travels alone. Seeing every handout is a command (`pkit visual exports`, listing each piece's versions from their records), and publishing them together is a step that copies them out.
+- **A correction to the agent's first proposal.** It said `renders/` would hold previews and never be committed. That contradicted 4h: `renders/` holds each renderer's record of what it last drew (ids, a hash per property, the commit), which must be committed so another clone updates the same board and an edit made there can be taken back (point 3). Previews and working pictures go to `previews/` instead, never committed; the reviewer renders into the agent workspace (9).
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
@@ -1378,8 +1392,12 @@ visual/                                  the capability's place in the project (
         │   ├── cycle.py                 a helper script (21)
         │   └── cycle.yaml               the checked data it writes, with its fingerprint
         ├── images/                      content images, one per language where they hold text (21)
-        ├── exports/                     what was handed out, kept as delivered (18a)
-        └── renders/                     each renderer's record of what it last drew (4h)
+        ├── exports/                     every export, numbered, never overwritten (13)
+        │   ├── versions.yaml            each version's date, state, lock and content hash
+        │   ├── friday-talk.v1.en.pdf    delivered: committed, the freeze (18a)
+        │   └── friday-talk.v1.cs.pdf
+        ├── previews/                    working pictures and previews, never committed (13)
+        └── renders/                     each renderer's record of what it last drew, committed (4h)
 ```
 
 `piece.yaml`:
@@ -1393,6 +1411,7 @@ languages: [en, cs]
 audience: developers new to pkit, mostly non-native English speakers   # who it is for (9)
 medium: projected                 # where it is shown: projected, screen or print (11)
 state: draft                      # draft, delivered, living or adapted (4d, 4j)
+outputs: [pdf]                    # made per language, numbered in exports/ (13)
 lock: {foundations: 1.4.0, starter: 1.2.0, ibm: 2.0.0, pkit: 1.1.0}   # (4i, 18a)
 renderers:
   svg: {}
