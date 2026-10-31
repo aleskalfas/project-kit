@@ -101,7 +101,7 @@ A section the kind leaves to its writer needs words of its own, so an empty `#` 
 
 - **`signpost.md`**, for a signpost, the page kind the shared rules name: an index-like file that says what a folder holds and where to go (`RS-LDOC-005`).
 - **`reference.md`**, for the page that describes one surface to the reader who uses it, such as an area, a capability or an adapter. The page anchors the code and decisions it describes.
-- **`guide.md`**, for a guide: the page that explains one subject to the reader who uses it, why it exists and how they do its tasks, with its parts in the order [living-docs:DEC-003-guide-kind] gives them. Its declared structure is its title alone, so the order of the other parts is judged in review, never by validation.
+- **`guide.md`**, for a guide: the page that explains one subject to the reader who uses it, why it exists and how they do its tasks. Its parts come in the order [living-docs:DEC-003-guide-kind] gives them. Its declared structure is its title alone, so the order of the other parts is judged in review, never by validation.
 
 A page of a kind the project adds is written by hand from that kind's own template. A template copied into the definitions location takes the template type there, so it is never a page ("Types" below).
 
