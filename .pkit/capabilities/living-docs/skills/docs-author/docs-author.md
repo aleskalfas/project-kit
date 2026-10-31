@@ -19,6 +19,7 @@ reads:
     - COR-008
   paths:
     - .pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md
+    - .pkit/capabilities/living-docs/decisions/DEC-003-guide-kind.md
     - .pkit/capabilities/living-docs/README.md
     - .pkit/capabilities/living-docs/rule-sets/ldoc.md
     - .pkit/capabilities/living-docs/project/config.yaml

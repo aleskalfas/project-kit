@@ -112,6 +112,7 @@ TERM-page-kind:
       anchors:
         path:
           - .pkit/capabilities/living-docs/schemas/page-kinds.yaml
+          - .pkit/capabilities/living-docs/templates/guide.md
           - .pkit/capabilities/living-docs/templates/reference.md
           - .pkit/capabilities/living-docs/templates/signpost.md
         record:
