@@ -20,9 +20,9 @@ The capability's first artefacts, each held to living-docs DEC-001:
 - the **LDOC rule set** validating as a method rule set with its origins and
   the parts its validator enforces, and a space definition instantiated from
   the template inheriting it;
-- the **page templates** — the signpost and the reference page — each
-  validating: its own fields by the capability's schema, its friction block
-  by the core's;
+- the **page templates** — the signpost, the reference page and the guide
+  (living-docs DEC-003) — each validating: its own fields by the capability's
+  schema, its friction block by the core's;
 - **page formats** (RS-LDOC-004; #1267): a page's body against the structure
   its kind declares in `schemas/page-kinds.yaml` — a title missing, or written
   as something that is not read as one; a kind declaring no structure,
@@ -1783,8 +1783,8 @@ PAGE_TEMPLATES = sorted(
 )
 
 
-def test_the_page_templates_are_the_signpost_and_the_reference_page() -> None:
-    assert PAGE_TEMPLATES == ["reference", "signpost"]
+def test_the_page_templates_are_the_guide_the_signpost_and_the_reference_page() -> None:
+    assert PAGE_TEMPLATES == ["guide", "reference", "signpost"]
 
 
 @pytest.mark.parametrize("kind", PAGE_TEMPLATES)
@@ -1868,6 +1868,19 @@ def test_a_page_lacking_a_section_fails_naming_the_page_its_kind_the_section_and
     assert ", 1 departing from it; " in _format_line(document)
 
 
+def test_a_guide_is_checked_for_its_title_alone(project: AdopterRepo) -> None:
+    """A guide's structure is its title (living-docs DEC-003 point 4). Its other
+    sections are the writer's to word, so a guide with no why passes the check, and
+    one with no title fails it."""
+    project.write({"docs/ref.md": _page("guide", "# Ref\n\n## Turn it on\n")})
+    assert run(project)["findings"] == []
+    project.write({"docs/ref.md": _page("guide", "Why it exists.\n\n## Why it exists\n")})
+    assert only_error(run(project)) == (
+        "docs/ref.md",
+        LACKS_TITLE.replace("of kind 'reference'", "of kind 'guide'"),
+    )
+
+
 @pytest.mark.parametrize(
     "body",
     [
@@ -1918,7 +1931,9 @@ def test_a_kind_that_declares_no_structure_is_reported_with_its_pages_and_never_
     )
     document = run(project)
     assert errors(document) == []
-    declared = f"{PAGE_KINDS_PATH} declares ['reference', 'signpost'] — name one of them where"
+    declared = (
+        f"{PAGE_KINDS_PATH} declares ['guide', 'reference', 'signpost'] — name one of them where"
+    )
     closing = "a page is of that kind; a kind the project adds is reported, never failed"
     assert [(f["severity"], f["location"], f["message"]) for f in document["findings"]] == [
         (
