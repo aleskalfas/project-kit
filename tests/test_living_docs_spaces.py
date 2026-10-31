@@ -21,8 +21,8 @@ The capability's first artefacts, each held to living-docs DEC-001:
   the parts its validator enforces, and a space definition instantiated from
   the template inheriting it;
 - the **page templates** — the signpost, the reference page and the guide
-  (living-docs DEC-003) — each validating: its own fields by the capability's schema, its friction block
-  by the core's;
+  (living-docs DEC-003) — each validating: its own fields by the capability's
+  schema, its friction block by the core's;
 - **page formats** (RS-LDOC-004; #1267): a page's body against the structure
   its kind declares in `schemas/page-kinds.yaml` — a title missing, or written
   as something that is not read as one; a kind declaring no structure,
