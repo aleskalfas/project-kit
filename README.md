@@ -274,6 +274,7 @@ A plugin holds whatever its author put in it, so its column marks what a plugin 
 - **Sharing only skills, agents or hooks.** A [Claude Code plugin](https://code.claude.com/docs/en/plugins) gives them to your teammates and your other projects.
 - **Another agent tool.** project-kit works with [Claude Code only](.pkit/adapters/README.md#currently-shipped), today.
 - **No room for the running cost.** Each change answers the documents whose anchors it touches, and each decision waits for acceptance. Someone also keeps the CI job.
+- **A library, a registry package, or a substitute for thinking.** project-kit is opinionated scaffolding you still steer. It is no library, since nothing imports from it, and no registry package, since it installs from the git URL.
 
 ## Install
 
@@ -416,11 +417,8 @@ The friction check asks nothing of your documents until you declare where they l
 
 ## Go deeper
 
+- **The permission model, explained:** [`docs/permissions/README.md`](docs/permissions/README.md) — why it exists, and how to turn it on.
 - **Adopting / navigating the methodology:** [`.pkit/README.md`](.pkit/README.md) — maps every area. The foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
 - **The command surface:** [`.pkit/cli/README.md`](.pkit/cli/README.md).
 - **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - **Session instructions for AI agents:** [`CLAUDE.md`](CLAUDE.md).
-
----
-
-*project-kit is opinionated scaffolding you still steer, and no substitute for thinking. It is no library, since nothing imports from it, and no registry package, since it installs from the git URL.*
