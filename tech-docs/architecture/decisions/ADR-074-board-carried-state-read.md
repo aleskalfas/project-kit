@@ -193,9 +193,13 @@ outcome means. The command decides, at its own boundary, within two limits:
   is reported as that, with what the board said, and never as one of the three
   findings about the issue; a finding is never reported as a broken board. Where
   a command's exit codes tell a broken tool from a refusal, an unreadable board
-  takes the broken tool's code. ADR-053 point 2 rules this for a gate; this
-  record rules it for every command that reads the state, on the same ground.
-  This refines ADR-053 point 2, its reach.
+  takes the broken tool's code. The act such a command exists for may already
+  stand when the board cannot be read. The broken tool's code would then report
+  the act as not made. So the command's code says instead that the act stands
+  and what follows it is owed. That code is neither success's nor a refusal's.
+  ADR-053 point 2 rules this limit for a gate; this record rules it for every
+  command that reads the state, on the same ground. This refines ADR-053
+  point 2, its reach.
 
 DEC-051 point 6 fixes one posture: a seat choosing work skips, with a warning, a
 Task whose position is undetermined, and takes nothing where the board cannot be

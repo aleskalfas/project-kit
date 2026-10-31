@@ -153,8 +153,8 @@ not** (refinement per [ADR-074](ADR-074-board-carried-state-read.md)). What an
 outcome means to such a command is its own to decide; a seat choosing work, for
 one, takes nothing. But it reports a board that will not answer as that, with
 what the board said, and never as a finding about the issue, nor a finding as a
-broken board. Where its exit codes tell a broken tool from a refusal, an
-unreadable board takes the broken tool's code.
+broken board. Which exit code an unreadable board takes is set by
+[ADR-074](ADR-074-board-carried-state-read.md) point 5, for every such command.
 
 **This is explicitly distinct from a board that answers *unset*.** A board that
 responds and reports no value for the field is a genuine missing value — and what
