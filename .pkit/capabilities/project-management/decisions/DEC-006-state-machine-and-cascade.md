@@ -74,6 +74,8 @@ Five paths reach Done, encoded as schema entries:
 - **`manual-wont-do`** — user authorises with a reason; agent verifies all checkboxes are ticked or removed per [project-management:DEC-007-checkbox-validation], records the reason in a close comment.
 - **`cascade-eligibility-close`** — triggered by closure cascade; agent validates parent's close criteria and prompts user per-level.
 
+Each path is a close, and only a close reaches Done (refinement per [project-management:DEC-064-done-only-through-a-close]). A move to Done of an open issue closes nothing, so it is refused before anything is written. A command that closes an issue and moves its state to Done makes that move after the close.
+
 ## Rationale
 
 Gated state machines work well for agent-mediated workflows because the gates — the places where humans must explicitly authorise — can be enforced as tool refusals encoded in schema severities. Asked directly for a user-gated transition, the agent literally cannot make it without an authorisation signal. This converts the methodology's authority discipline into mechanical enforcement.
@@ -111,7 +113,7 @@ A container moved back over a child In Progress or in Review would stand behind 
 
 ## Implications
 
-- The transition-state skill walks the schema's `transitions` list to dispatch every requested state change — refuses the move (per the listed severity) if the requested transition isn't in the schema or if the user-gated transition lacks authorisation.
+- The transition-state skill walks the schema's `transitions` list to dispatch every requested state change — refuses the move (per the listed severity) if the requested transition isn't in the schema or if the user-gated transition lacks authorisation. It refuses a move to Done of an open issue too, which only a close makes (refinement per [project-management:DEC-064-done-only-through-a-close]).
 - The project-manager runs the cascade check after every state-changing operation: forward cascade walks ancestors and bumps any behind; closure cascade surfaces a parent-close prompt when eligibility is reached.
 - PR-merge of a Task requires the checkbox-completeness check from [project-management:DEC-007-checkbox-validation] to pass before the agent authorises the merge — the tracker's auto-close on PR merge would otherwise bypass the close-gate.
 - Won't-do closures and a Task's completed close trigger the same closure cascade as PR-merge closures.
