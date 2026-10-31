@@ -86,7 +86,7 @@ pkit:
 
 **Main path:**
 
-1. The developer chooses the [page](../../glossary.md#term-page--page)'s [documentation space](../../glossary.md#term-documentation-space--documentation-space), its [page kind](../../glossary.md#term-page-kind--page-kind), `signpost` or `reference`, and its [reader](../../glossary.md#term-reader--reader) (the `docs-author` [skill](../../../core/glossary.md#term-skill--skill)'s page operation).
+1. The developer chooses the [page](../../glossary.md#term-page--page)'s [documentation space](../../glossary.md#term-documentation-space--documentation-space), its [page kind](../../glossary.md#term-page-kind--page-kind), `signpost`, `reference` or `guide`, and its [reader](../../glossary.md#term-reader--reader) (the `docs-author` [skill](../../../core/glossary.md#term-skill--skill)'s page operation).
 2. The developer chooses where the file goes: under the space's root by default, or in a [place](../../../core/glossary.md#term-place--place) assigned to the space ([DEC-001 point 1](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#1-spaces)).
 3. The developer chooses what the page rests on, each by its option ([DEC-001 point 4](../../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated)):
    - code by `--path`
