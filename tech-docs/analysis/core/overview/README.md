@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=5 fingerprint=sha256:827a9b5aa52ec5ae488c83b6215810be14f0f1a2ef5a40a085c6c153ab0357d4 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:d9bcb997aad3d7dca1bab702afd49436d224b13ff01782d21a5dfb9dc8f7a7d4 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -232,12 +232,13 @@ Each view of the domain model explains a group of related concepts:
 ```mermaid
 flowchart LR
   accTitle: JRN-001 — Adopt the system
-  accDescr: The flow of JRN-001: ACT-adopter takes 4 steps in order, UC-049, UC-021, UC-023, UC-006. It relies on 1 use case outside the journey, drawn apart with no arrow.
+  accDescr: The flow of JRN-001: ACT-adopter takes 5 steps in order, UC-049, UC-021, UC-023, UC-025, UC-006. It relies on 1 use case outside the journey, drawn apart with no arrow.
   ACT_adopter["ACT-adopter — Adopter"]
   step_1(["1. UC-049 — Install the system into my project with one command"])
   step_2(["2. UC-021 — Declare my project's backbone configuration once, and have it validated"])
   step_3(["3. UC-023 — Add or remove a capability, and be told of a name collision"])
-  step_4(["4. UC-006 — Make my merges wait on the system's checks"])
+  step_4(["4. UC-025 — Choose which installed capability provides a role"])
+  step_5(["5. UC-006 — Make my merges wait on the system's checks"])
   subgraph relies_on["Relied on, outside the journey"]
     UC_048(["UC-048 — Put the system's CLI on my machine at a release"])
   end
@@ -245,6 +246,7 @@ flowchart LR
   step_1 --> step_2
   step_2 --> step_3
   step_3 --> step_4
+  step_4 --> step_5
 ```
 
 #### [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
@@ -289,6 +291,62 @@ flowchart LR
   step_2 --> step_3
   step_3 --> step_4
   step_4 --> step_5
+```
+
+#### [JRN-005 — Package a discipline as a capability, and make it ready to share](../use-case-model/journeys/JRN-005-package-and-share-capability.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-005 — Package a discipline as a capability, and make it ready to share
+  accDescr: The flow of JRN-005: ACT-component-author takes 4 steps in order, UC-015, UC-016, UC-017, UC-018. It relies on 1 use case outside the journey, drawn apart with no arrow.
+  ACT_component_author["ACT-component-author — Component author"]
+  step_1(["1. UC-015 — Package a recurring discipline as a capability"])
+  step_2(["2. UC-016 — Keep a capability I wrote in my own repository"])
+  step_3(["3. UC-017 — Give my capability roles, data points and processes others connect to"])
+  step_4(["4. UC-018 — Know my capability is ready to share"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_049(["UC-049 — Install the system into my project with one command"])
+  end
+  ACT_component_author --> step_1
+  step_1 --> step_2
+  step_2 --> step_3
+  step_3 --> step_4
+```
+
+#### [JRN-006 — Start working on a project on a new machine](../use-case-model/journeys/JRN-006-start-on-new-machine.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-006 — Start working on a project on a new machine
+  accDescr: The flow of JRN-006: ACT-operator takes 2 steps in order, UC-048, UC-050. It relies on 3 use cases outside the journey, drawn apart with no arrow.
+  ACT_operator["ACT-operator — Operator"]
+  step_1(["1. UC-048 — Put the system's CLI on my machine at a release"])
+  step_2(["2. UC-050 — Get a fresh clone ready to work with one sync"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_008(["UC-008 — Release the backbone so adopters can upgrade and pin to it"])
+    UC_049(["UC-049 — Install the system into my project with one command"])
+    UC_052(["UC-052 — Run each project at the version it pins"])
+  end
+  ACT_operator --> step_1
+  step_1 --> step_2
+```
+
+#### [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-007 — Upgrade one capability, and re-pin its rule set
+  accDescr: The flow of JRN-007: ACT-adopter takes 2 steps in order, UC-054, UC-053. It relies on 3 use cases outside the journey, drawn apart with no arrow.
+  ACT_adopter["ACT-adopter — Adopter"]
+  step_1(["1. UC-054 — Upgrade one capability on its own"])
+  step_2(["2. UC-053 — Re-pin an inherited rule set once I have reviewed its new major"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_023(["UC-023 — Add or remove a capability, and be told of a name collision"])
+    UC_038(["UC-038 — Author and extend my project's own rule sets"])
+    UC_048(["UC-048 — Put the system's CLI on my machine at a release"])
+  end
+  ACT_adopter --> step_1
+  step_1 --> step_2
 ```
 
 ### Not built yet
