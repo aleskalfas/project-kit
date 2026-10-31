@@ -1081,6 +1081,41 @@ With that, Mermaid's look beside the libraries' look in a project's docs is a tr
 - a render into the agent workspace that leaves no record and sends nothing;
 - a new question, point 25: whether a piece's facts carry pkit's anchors, so a doc figure is flagged when what it shows changes; the reviewer would then be the fixer of pieces.
 
+### 11. The rules (31 October)
+
+**The question.** Which of the talk's style rules (the talk's note, lines 59 to 70) the capability ships to every adopter, which stay a project's own, and how a piece comes under rule sets at all (COR-051), since `graphic-design-reviewer` reads its rules only from them (point 9).
+
+**The agent's first draft:** the look as library data; a method rule set `VIS` of seven rules; the project's taste in the project rule set the install creates, project-kit inheriting its `WRITE`; `piece.yaml` made an artefact so rules bind on it, which, the draft said, would also decide point 25.
+
+**The critic's review (31 October).** The shape held; four things did not:
+
+1. **Point 25 is not decided by it.** An artefact without anchors is reported and counted, never refused (COR-050 point 8). Pieces as artefacts are only the place where anchors could later live.
+2. **The wrong file.** A plain YAML file is never an artefact (ADR-056 point 2), and the rules judge titles, leads, words and facts, which live in the content. As drafted, a change to a slide's words brought no rule into play, while every lock bump of a draft piece would have altered the artefact.
+3. **Deck rules shipped as universal.** "The lead answers the title" fails on a cover, a section slide, a poster or a map of a system; "big picture before any example" was narrower than the maintainer's own rule ("shown through something the room knows"). Pieces cannot be scoped by discipline, so the wording must fit every discipline.
+4. **Inheriting `WRITE` whole** brings document-structure rules that do not fit slides, leaves its word counts to a lint that never reads content, and never reaches the incubation repository.
+
+Also: a "use your libraries" rule was missing; checks such as fit and contrast must always run, not only where `VIS` binds; a doc figure's audience is its page's reader; rules about libraries (a notation's icons, a brand's footer size) are library validation; a rule set per piece is heavy; `VIS` needs a decision record of the capability's own, not this note.
+
+**The agent's revised recommendation,** discussed point by point at the maintainer's request:
+
+1. Each kind of rule has its own home.
+2. `VIS` holds eight rules worded for every discipline.
+3. Each language's content becomes a document, `content.<language>.md`, the content as its front matter and the piece's brief and notes in its body; `piece.yaml` stays plain YAML, outside the rules.
+4. project-kit writes its own set for its pieces with the talk's plain-words rules, rather than inheriting `WRITE` whole.
+5. `VIS` is grounded in a decision record of the capability, in its own repository.
+
+**Point 1: each kind of rule has its own home. Agreed (31 October),** after the example of the slide "Permissions on day one":
+
+| What | Home | Example on that slide |
+|---|---|---|
+| The look | the libraries: brand, patterns, notation | the terminal panel (`terminal` pattern), the yellow note (`takeaway` pattern), the limit line (the `limit` slot of the brand's slide layout) |
+| What needs no judgment | the engine's checks, run on every render | a card's text spilling out; text too pale on its background; a raw colour |
+| What any piece needs, judged | `VIS`, the capability's rule set | does the lead answer the title, and the picture show it? |
+| The project's taste | the project's rule set, which the install creates | is the lead under 25 words, with no semicolons? |
+| One piece's goals | the piece's brief, read by the reviewer as its intent | does the slide say what comes wired? |
+
+The reason: in the talk all of these were rules a person had to catch by reading; here only two need a reader, the look cannot drift, the checks always run, a project's taste stays its own, and one talk's goals do not become rules that outlive it.
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
