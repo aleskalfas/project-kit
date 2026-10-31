@@ -31,6 +31,7 @@ reads:
     - .pkit/capabilities/software-analysis/decisions/DEC-002-analysis-requirements.md
     - .pkit/capabilities/software-analysis/decisions/DEC-004-domain-model-views.md
     - .pkit/capabilities/software-analysis/decisions/DEC-005-finding-functionality.md
+    - .pkit/capabilities/software-analysis/decisions/DEC-007-path-edges.md
     - .pkit/capabilities/software-analysis/README.md
     - .pkit/project/config.yaml
 ---
