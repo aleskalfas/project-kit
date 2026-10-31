@@ -1,0 +1,9 @@
+component: backbone
+kind: none
+body: >
+  Two references the backbone ships follow living-docs' sections to their
+  new pages (#2397). The CLI reference's `validate` section names
+  living-docs' validation page where it named the README's "Validation", and
+  the skills README's example of a capability's skill links and anchors
+  living-docs' "Authoring" section, where docs-author's pairing is stated in
+  full. No command, path or format changes, so no surface moves.
