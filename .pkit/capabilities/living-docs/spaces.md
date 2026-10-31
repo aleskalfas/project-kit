@@ -24,6 +24,8 @@ pkit:
         - RS-LDOC-008
         - .pkit/schemas/README.md#the-friction-block
         - .pkit/cli/README.md#configuration-file
+        - .pkit/cli/README.md#config-set-key-value---yes
+        - .pkit/schemas/README.md#rule-set-files
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#friction-artefacts---at-rev---json
         - .pkit/cli/README.md#docs-record-location-capability-name---dry-run
@@ -75,12 +77,12 @@ places:                                        # place → space, the place writ
 
 - **A place inside a root** belongs to that root's space. It is listed under `places` only to assign it elsewhere.
 - **A place outside every root** must be listed, unless it is declared to hold rule sets and gives no type. Such a place gives no space until it is listed. A document only it holds, such as its `README.md`, is then neither a page nor an unclassified document (DEC-001 point 1).
-- **A place of rule sets that gives a type** must be listed as any other.
+- **A place of rule sets** is one whose path has a `rule-sets` segment ([the schemas reference, "Rule-set files"](../../schemas/README.md#rule-set-files)). So is the old folder that `pkit config set docs.internal` declares to keep the sets found. One that gives a type must be listed as any other.
 - **Each place names exactly one space,** and a project place never equals or encloses a root.
 
 The file's shape is `schemas/config.schema.json`, which `pkit validate` applies.
 
-**Trees a sync copies into a repository are never places.** In a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates"). The backbone's friction validation enforces this for every declared place, the project's or a capability's, as its `synced-place` finding (the schemas README, "The friction block"). This capability's place validation relies on that finding, rather than checking a second time.
+**Trees a sync copies into a repository are never places.** In a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates"). The backbone's friction validation enforces this for every declared place, the project's or a capability's, as its `synced-place` finding (the schemas README, "The friction block").
 
 ## Each definition's scope
 
@@ -89,6 +91,7 @@ A space's definition carries a scope that selects the space's pages, written wit
 - **Before a definition exists,** no rule binds on the space's pages, and validation reports the space instead. No space has a definition when the capability is installed.
 - **A definition with no scope** selects no page, so no rule binds on the space's pages through it. `pkit living-docs validate` reports such a definition, and names the scope to give it: the space's root and the places assigned to it, by the page type.
 - **Pages a scope leaves out** are reported too, unless the join with the assignment, below, fails them. A scope may leave part of a space out on purpose, with `exclude`, so a page it leaves out is reported, never failed.
+- **A place assigned later.** A place assigned to the space after its definition was written must be added to the scope's paths by hand. Otherwise validation fails each of its pages, which lie outside the scope.
 - **A placeholder left in the scope's paths,** the template's `<root>`, names no file, and is reported as soon as the definition exists.
 
 **The scopes and the assignment.** A scope selects artefacts by path and by type (COR-051 point 2). Where a space's definition carries one, the scope and the assignment both say where the space's pages lie. Validation holds them to each other (DEC-001 point 1):
@@ -129,7 +132,7 @@ A template copied into the definitions location takes the template type there, s
 | `RS-LDOC-004` | Pages of a kind follow one format, with a template per kind. |
 | `RS-LDOC-005` | An index-like file is a signpost to what a folder holds, never a summary of its contents. |
 | `RS-LDOC-006` | Nothing is created ahead of the need for it. |
-| `RS-LDOC-007`, proposed | Each fact has one home, and a diagram is never it. Besides a page, a fact's home may be what the page anchors that decides or states it. That is the first of: an accepted record or rule, another artefact in force such as an analysis artefact, a captured source, code. A page of the user space anchors such a home under the internal root, and links nothing there. |
+| `RS-LDOC-007`, proposed | Each fact has one home, and a diagram is never it. Besides a page, a fact's home may be what the page anchors that decides or states it. The first of these is its home: an accepted record or rule, an artefact in force or a section of one, a captured source, code. A page of the user space anchors such a home under the internal root, and links nothing there. |
 | `RS-LDOC-008`, proposed | A diagram, an image or a recording that carries meaning has a text alternative, and a decorative image has an empty one. |
 
 `RS-LDOC-007` and `RS-LDOC-008` bind nothing yet. A major of `LDOC` accepts both, and `RS-LDOC-007` then supersedes `RS-LDOC-002` (DEC-002 point 10). The definitions' pins then fall behind until the project reviews the new major (core rule sets, COR-051 point 7).

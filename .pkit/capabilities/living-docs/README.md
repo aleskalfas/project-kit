@@ -13,13 +13,24 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/readers.schema.json
         - .pkit/capabilities/living-docs/schemas/reading-evidence.schema.json
         - .pkit/capabilities/living-docs/skills/**
-      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "COR-062#1", "COR-062#7", "project-management:DEC-053", "project-management:DEC-056", "software-analysis:DEC-001#10", "living-docs:DEC-002"]
+      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "project-management:DEC-053", "project-management:DEC-056", "software-analysis:DEC-001#10", "living-docs:DEC-002"]
       artefact:
         - RS-LDOC-003
         - .pkit/capabilities/living-docs/pages.md#
         - .pkit/capabilities/living-docs/pages.md#types
+        - .pkit/capabilities/living-docs/pages.md#a-pages-fields
+        - .pkit/capabilities/living-docs/pages.md#sources
+        - .pkit/capabilities/living-docs/pages.md#visual-elements
+        - .pkit/capabilities/living-docs/pages.md#the-kinds-templates
+        - .pkit/capabilities/living-docs/spaces.md#the-space-definition-template
+        - .pkit/capabilities/living-docs/spaces.md#the-shared-method-ldoc
+        - .pkit/capabilities/living-docs/validation.md#the-command
+        - .pkit/capabilities/living-docs/validation.md#what-a-page-mentions-and-does-not-anchor
+        - .pkit/capabilities/living-docs/agent.md#the-review-contribution
+        - .pkit/capabilities/living-docs/agent.md#onboarding
         - .pkit/capabilities/living-docs/spaces.md#
         - .pkit/capabilities/living-docs/spaces.md#declaring-the-spaces
+        - .pkit/capabilities/living-docs/spaces.md#each-definitions-scope
         - .pkit/capabilities/living-docs/validation.md#
         - .pkit/capabilities/living-docs/agent.md#
         - .pkit/capabilities/living-docs/agent.md#what-it-does
@@ -64,8 +75,8 @@ living-docs keeps each documentation space true for its readers, through anchore
 - **What it needs.** uv on the `PATH`, which runs the capability's commands, and no other capability. project-management is optional ("Dependencies" below).
 - **What it writes.** Nothing of the project's configuration, apart from the answers to the questions it asks. One is project-management's question, where it is installed, about granting the `living-docs` agent. The install never sets the two roots apart.
 - **A fresh project.** `pkit living-docs validate` then reports that neither space has a definition and that the two roots are one folder, and fails nothing.
-- **What sets it up.** `pkit living-docs new space` creates each space ("Authoring" below). A place outside both roots that holds pages is declared before its space is created ([the page on spaces, "Declaring the spaces"](spaces.md#declaring-the-spaces)). The space's definition then takes it into its scope.
-- **Enforcing friction.** `pkit config set` sets `friction.mode` to `enforcing`. With `pkit friction check` a required check of the project's continuous integration, a change that leaves an anchored page stale fails there.
+- **What sets it up.** `pkit living-docs new space` creates each space ("Authoring" below). Declare a place outside both roots that holds pages before its space is created, so that the definition's scope takes it in. One assigned later is added to the scope by hand ([the page on spaces, "Each definition's scope"](spaces.md#each-definitions-scope)).
+- **Enforcing friction, optionally.** `pkit config set` sets `friction.mode` to `enforcing`. With `pkit friction check` a required check of the project's continuous integration, a change that leaves an anchored page stale fails there.
 - **With project-management installed,** the `living-docs` agent becomes the fixer of the project's pages once the project grants it ([project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)). The install's question may already have recorded that grant. project-management's documentation check treats stale pages as advisory until its configuration sets `doc_check.sources.friction: enforcing` ("Connections" below).
 
 ## Authoring: the `docs-author` skill
@@ -108,11 +119,9 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - **It refuses a file the check does not read as a page of the space named.**
 - **It warns** when the space has no definition yet, since no rule binds on the page then.
 
-A page of a kind the project adds is written by hand from that kind's template.
-
 ### A fresh project: the first stamp sets the roots apart
 
-Both roots default to `docs/`, and two roots that are one folder give no space (DEC-001 point 1). So before `new` stamps a space, or a page of the user or technical space, it offers to set the internal root apart. No step comes before the command. What an install placed in `docs/` before the first space stays there, so that space is created before software-analysis is installed.
+Both roots default to `docs/`, and two roots that are one folder give no space (DEC-001 point 1). So before `new` stamps a space, or a page of the user or technical space, it offers to set the internal root apart. No step comes before the command. What an install placed in `docs/` before the first space stays there, so create that space before installing software-analysis.
 
 - **The folder.** The internal root goes to `tech-docs/`, and the user root keeps `docs/`. `--internal-root <path>` names another folder. A folder that lies in the user root, or holds the user root, is refused.
 - **The write.** `pkit config set docs.internal tech-docs` makes the write, and asks once at a terminal. Off a terminal, the stamp needs `--yes`. Without it, the stamp refuses, writes nothing and names the command to run. Declined, nothing is written or stamped.
@@ -219,7 +228,22 @@ No other capability is required. It works without analysis, work-tracking or tes
 
 Each part the capability ships is described here, or on one of the pages beside this one:
 
-- <a id="pages"></a><a id="types"></a><a id="sources"></a><a id="visual-elements"></a><a id="templates"></a>[`pages.md`](pages.md) — a page's fields and anchors, a kind's format, the types of documents, captured sources and visual elements.
-- <a id="declaring-your-spaces"></a><a id="the-shared-method-ldoc"></a>[`spaces.md`](spaces.md) — declaring the spaces, each definition's scope, the definitions location, the space-definition template and the shared method, `LDOC`.
-- <a id="validation"></a><a id="what-a-page-mentions-and-does-not-anchor"></a>[`validation.md`](validation.md) — what validation reads, fails on and reports, and what a page mentions and does not anchor.
-- <a id="the-agent-living-docs"></a><a id="the-review-contribution"></a><a id="onboarding-an-existing-project"></a>[`agent.md`](agent.md) — the `living-docs` agent, its fixer runs and onboarding, and the review contribution.
+- [`pages.md`](pages.md) — a page's fields and anchors, a kind's format, the types of documents, captured sources and visual elements.
+- [`spaces.md`](spaces.md) — declaring the spaces, each definition's scope, the definitions location, the space-definition template and the shared method, `LDOC`.
+- [`validation.md`](validation.md) — what validation reads, fails on and reports, and what a page mentions and does not anchor.
+- [`agent.md`](agent.md) — the `living-docs` agent, its fixer runs and onboarding, and the review contribution.
+
+**Where each section that left this page went:**
+
+- <a id="pages"></a>"Pages" is [`pages.md`, "A page's fields"](pages.md#a-pages-fields).
+- <a id="types"></a>"Types" is [`pages.md`, "Types"](pages.md#types).
+- <a id="sources"></a>"Sources" is [`pages.md`, "Sources"](pages.md#sources).
+- <a id="visual-elements"></a>"Visual elements" is [`pages.md`, "Visual elements"](pages.md#visual-elements).
+- <a id="templates"></a>"Templates" is [`pages.md`, "The kinds' templates"](pages.md#the-kinds-templates), and [`spaces.md`, "The space-definition template"](spaces.md#the-space-definition-template).
+- <a id="the-shared-method-ldoc"></a>"The shared method" is [`spaces.md`, "The shared method"](spaces.md#the-shared-method-ldoc).
+- <a id="declaring-your-spaces"></a>"Declaring your spaces" is [`spaces.md`, "Declaring the spaces"](spaces.md#declaring-the-spaces).
+- <a id="validation"></a>"Validation" is [`validation.md`, "The command"](validation.md#the-command).
+- <a id="what-a-page-mentions-and-does-not-anchor"></a>"What a page mentions and does not anchor" is [`validation.md`, under the same heading](validation.md#what-a-page-mentions-and-does-not-anchor).
+- <a id="the-review-contribution"></a>"The review contribution" is [`agent.md`, under the same heading](agent.md#the-review-contribution).
+- <a id="the-agent-living-docs"></a>"The agent" is [`agent.md`, "What it does"](agent.md#what-it-does).
+- <a id="onboarding-an-existing-project"></a>"Onboarding an existing project" is [`agent.md`, "Onboarding"](agent.md#onboarding).

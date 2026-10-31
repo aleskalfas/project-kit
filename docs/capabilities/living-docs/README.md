@@ -65,7 +65,7 @@ Documentation that nothing checks goes wrong in these ways, and more so when age
 living-docs answers these problems with four claims, and the commands after the list prove each one:
 
 - **Each page in your spaces is flagged when a change touches what it anchors, in that change's own check.** A page anchors what it rests on, such as code, decisions or another page's section.
-- **Validation reports each file path, record or `pkit` command a page names but does not anchor, with an anchor that covers it.**
+- **Where a space's rules bind, validation reports what a page names without anchoring it: a file path, a record, a rule or a `pkit` command.**
 - **Once a space has its definition, a page for a reader your project has not declared is refused.**
 - **A fix is proposed as a diff for you to review, and the agent's definition forbids it to change a tracked file.**
 
@@ -149,7 +149,7 @@ living-docs is meant for documentation that changes as the code changes, written
 - **Your documentation lives outside the repository.** The checks read the repository alone, so a wiki edited elsewhere is beyond their reach.
 
 > [!WARNING]
-> A page is flagged only when something it anchors changes, so a statement that rests on something else is never flagged. Whether each statement rests on the page's anchors is judged by people and reviewers, not checked. The report of unanchored mentions finds only a file named by its path, a record and a `pkit` command.
+> A page is flagged only when something it anchors changes, so a statement that rests on something else is never flagged. Whether each statement rests on the page's anchors is judged by people and reviewers, not checked. Unanchored mentions are found only for a record, a rule, a `pkit` command, and a file a link or a code span names.
 
 ## How it works
 
@@ -178,7 +178,7 @@ flowchart TD
   - each fact has one home
   - each page names its reader, and says only what that reader needs
   - pages of one kind follow one format
-  - an index only points into its folder
+  - an index-like page signposts what its folder holds, and never summarises it
   - nothing is made before it is needed
 - **The checks.** Validation checks a page's reader and its sections, and reports what it names without anchoring ([the reference, "What a page is checked for"](../../../.pkit/capabilities/living-docs/validation.md#what-a-page-is-checked-for)). The friction checks flag a page when an anchor changes.
 - **The judgement.** The rest of each rule is judged by the agent's review, when you ask for one. Where project-management is installed, the rule-set reviewer also judges each change that alters a page ([the reference, "The review contribution"](../../../.pkit/capabilities/living-docs/agent.md#the-review-contribution)).
@@ -196,7 +196,7 @@ $ pkit capabilities install living-docs | grep -e Installed -e "docs-author/SKIL
   created    .claude/agents/living-docs.md
 ```
 
-- **What it writes.** Nothing of your configuration, apart from the answers you give to the questions it asks. With project-management installed, one asks whether the agent may fix your stale pages ([project-management's README, "Grant the fixers"](../../../.pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)).
+- **What it writes.** Nothing of your configuration, apart from the answers you give to the questions it asks. With project-management installed, one asks whether the agent may propose fixes for your stale pages ([project-management's README, "Grant the fixers"](../../../.pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)).
 - **What comes next.** Neither space has its definition yet, and both still share one documentation root. The first task, [Set up your spaces](010-set-up-your-spaces.md), mends both.
 - **The skill.** The `docs-author` skill walks your agent through each stamp, such as a new page, choosing its space, its kind, its reader and its anchors.
 - **The agent.** In Claude Code, ask your session to use the `living-docs` agent, such as "Use the living-docs agent to propose the fix for docs/greet.md". Each task page shows what to ask.

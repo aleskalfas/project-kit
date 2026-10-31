@@ -39,7 +39,7 @@ A project that has documentation already brings it into its spaces through one p
 
 Documents written before living-docs name no reader and anchor nothing, so nobody can say which still hold. Moving them one file at a time misses the facts that several of them repeat. An agent that moves them alone can misjudge which audience a file serves. So the agent proposes the whole change as one plan, and drafts nothing until you approve it.
 
-Here is a request and the agent's answers, as its storyboard, the script it follows, gives them. The person rejects the first plan, and approves the revision:
+Here is a request and the agent's answers, as its storyboard, the script it follows, gives them. The project in it had not set up its spaces yet, so the plan sets them up too. The person rejects the first plan, and approves the revision:
 
 ```text
 User: We just installed living-docs. Can you onboard our existing docs?
@@ -81,13 +81,13 @@ Run `pkit living-docs validate` until it reports no error.
 In Claude Code, ask your session to use the `living-docs` agent, such as "Use the living-docs agent to onboard our existing docs". It reads validation's findings, the friction checks' measures and your documents, and drafts one plan in four parts:
 
 - **Spaces:** the space each document becomes a page of, with its reader and its kind, or why your spaces' rules leave it out.
-- **Splits and rewrites:** each page that serves two readers, or repeats another page's fact, split, merged or rewritten.
+- **Splits and rewrites:** each page that serves two readers, or states another page's fact with no link to it or no anchor on it, split, merged or rewritten.
 - **Anchors:** the anchors each page's statements need. A statement that nothing grounds is raised as a question, never kept as if it were true.
 - **Mapping:** where your work tracker keeps a mapping from code to documents, which of its rules become page anchors.
 
 Each line of the plan cites its evidence, and the plan is in `.agent-workspace/living-docs/onboarding/plan.md`. Approve it, ask for a revision, or reject it. The agent drafts nothing before you approve.
 
-Where your session runs the agent as a subagent, the agent cannot hear your answer. It stops once the plan is written. Approve it in a new request that names the plan's file, such as "Use the living-docs agent to draft the approved plan in .agent-workspace/living-docs/onboarding/plan.md".
+Where your session runs the agent as a subagent, the agent cannot hear your answer, and stops once the plan is written ([the reference, "Onboarding"](../../../.pkit/capabilities/living-docs/agent.md#onboarding)). Approve the plan in a new request that names its file, such as "Use the living-docs agent to draft the approved plan in .agent-workspace/living-docs/onboarding/plan.md".
 
 ## Review the changes it drafts
 

@@ -14,6 +14,7 @@ pkit:
         - ACT-adopter
         - .pkit/capabilities/living-docs/spaces.md#declaring-the-spaces
         - .pkit/capabilities/living-docs/spaces.md#the-space-definition-template
+        - .pkit/capabilities/living-docs/spaces.md#each-definitions-scope
         - .pkit/capabilities/living-docs/README.md#authoring-the-docs-author-skill
         - .pkit/capabilities/living-docs/README.md#a-fresh-project-the-first-stamp-sets-the-roots-apart
         - .pkit/capabilities/living-docs/README.md#the-readers-point
@@ -54,7 +55,7 @@ $ pkit living-docs validate | grep -e "error(s)" -e "no definition yet:" -e "bot
 
 ## Declare the pages outside the documentation roots
 
-A file outside both documentation roots is a page only where you declare it, such as your top-level `README.md` or a `wiki/` folder. Declare it before you create its space, so that the space's definition takes it in. A file you declare later must be added to the definition's scope by hand.
+A file outside both documentation roots is a page only where you declare it, such as your top-level `README.md` or a `wiki/` folder. Declare it before you create its space, so that the space's definition takes it in. A file you declare later must be added to the definition's scope by hand ([the reference, "Each definition's scope"](../../../.pkit/capabilities/living-docs/spaces.md#each-definitions-scope)).
 
 1. List each file or folder in `friction.places` of the backbone configuration, with the page type:
 
@@ -148,7 +149,7 @@ friction:
     - src/**
 ```
 
-The whole-repository friction check then counts each surface file that no page anchors. Bringing in your documents is done once that count is zero.
+The whole-repository friction check then counts each surface file that no page anchors. Bringing your documents in ends with that count at zero, among other measures ("Bring in your documents").
 
 ## Name the page your readers start from
 

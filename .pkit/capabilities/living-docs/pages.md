@@ -48,7 +48,7 @@ What makes a document a page of living-docs, and what a page holds ([living-docs
 
 ## A page's fields
 
-A document is a **page** when it is of this capability's page type, `living-docs:page` ("Types" below). Mostly, that means it declares its page kind in `kind`. It lies in a documentation root, or in a place of the project's that holds pages. A page's front matter carries two fields of its own, beside the core's friction block in the `pkit:` container:
+A document is a **page** when it is of this capability's page type, `living-docs:page` ("Types" below). Mostly, that means two things. It lies in a documentation root or in a project place that holds pages, and it declares its page kind in `kind`. A page's front matter carries two fields of its own, beside the core's friction block in the `pkit:` container:
 
 ```yaml
 ---
@@ -109,7 +109,7 @@ The capability declares two types in its package metadata, under `friction.types
 
 - **The roots give the page type.** Each documentation root is a place of the capability's that gives `living-docs:page`. A document there takes the type only when it declares its page kind in `kind`, present and not empty. One that declares none takes no type and is no page.
 - **The definitions location gives the template type.** It ranks ahead of the internal root, so a page template copied there is a template, never a page, though it carries `reader` and `kind`. The definitions there are rule sets, and every rule takes the backbone's type for rules.
-- **A project place outside the roots.** It takes the page type when written as `{path: CONTRIBUTING.md, type: living-docs:page}` in `friction.places`. A place left untyped holds the pages that declare their kind there, unless it is an unassigned place of rule sets. They have no type, so a scope that selects by type misses them. So such a place takes the page type before a space's definition selects pages by type (DEC-001 point 1).
+- **A project place outside the roots.** It takes the page type when written as `{path: CONTRIBUTING.md, type: living-docs:page}` in `friction.places`. A place left untyped holds the pages that declare their kind there, unless it is an unassigned place of rule sets. They have no type, so a scope that selects by type misses them. So type such a place before a space's definition selects pages by type (DEC-001 point 1).
 - **A type of the project's own.** A place inside a root that gives a type of the project's own, such as `{path: docs/changes, type: change-note}`, ranks ahead of the root. Its documents are the project's, and their `kind` is never read as a page kind.
 - **Another owner's documents.** A document of another component's type is that component's. So is one it holds in a folder it declares, and one of no type in a place it declares. Validation never reads their `reader` or `kind`.
 - **A place another component declares without a type** shadows no other place (COR-056 point 3). So a document there that declares a page kind takes the page type from the root around it, and is a page. `pkit validate` reports, under `packages`, that the root typed the component's file. The component keeps such documents by typing its place.
@@ -195,7 +195,7 @@ A page may show diagrams, images, console output and callouts. Each is neutral c
 - **Text alternatives.** A diagram, an image or a recording that carries meaning has a text alternative, and a decorative image an empty one, `![](path)`. Where `RS-LDOC-008` binds, validation checks each `mermaid` fence's (DEC-002 point 8).
 - **A documentation site** is optional, and the repository host's own view is the default. A site reads the content as written, and takes its theme for diagrams and callouts from one place. It serves one space: its pages and the images they show, wherever they lie. A technical page's link to a user page reaches the user space's site.
 
-**The two proposed rules.** `RS-LDOC-007` widens a fact's home, for every statement a page makes, to what the page anchors that decides or states the fact. `RS-LDOC-008` is the rule on text alternatives.
+**The two proposed rules.** `RS-LDOC-007` widens a fact's home, for every statement a page makes, to what the page anchors that decides or states the fact. It says a diagram or a page is never such a home. `RS-LDOC-008` is the rule on text alternatives.
 
 - **When they bind:** from the major of `LDOC` that accepts them (DEC-002 point 10).
 - **Until then,** a fact's home is a decision record the page anchors, or a page (`RS-LDOC-002`).

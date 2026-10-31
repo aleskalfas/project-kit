@@ -8,7 +8,7 @@ pkit:
         - .pkit/capabilities/living-docs/agents/**
         - .pkit/capabilities/living-docs/review-contributions.yaml
         - .pkit/capabilities/living-docs/scripts/new.py
-      record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-050, COR-057, "project-management:DEC-032", "project-management:DEC-056"]
+      record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-050, COR-057, "COR-062#1", "COR-062#7", "project-management:DEC-032", "project-management:DEC-056"]
       artefact:
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#friction-explain-artefact---json
@@ -71,6 +71,8 @@ The checks say *that* a page drifted, and *which* documents are not pages yet. D
 
 **Its readers before the readers point resolves.** Until then, the agent reads a page as its space's `audience` ([the page on spaces, "Declaring the spaces"](spaces.md#declaring-the-spaces)), and says so. Where the space's entry names none, it reads a user page as users and a technical page as maintainers, as DEC-001 gives them. For a space the project added whose entry names none, it reads no page, and names that entry.
 
+**Answers kept apart from the page.** A change writes its answers in answer files of its own, never in the page (COR-062 point 1). Two branches that revalidate one page apart leave it reported as debt, never stale. It stays so until a revalidation that reads both judges the merged page (COR-062 point 7).
+
 **Its definition and its script.** The agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md). Its scripted flows are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md):
 
 - a fix proposed
@@ -81,7 +83,8 @@ The checks say *that* a page drifted, and *which* documents are not pages yet. D
 
 ## What it never does
 
-- **Apply anything.** It is read-only on the repository. It never edits, moves or deletes a tracked file, never changes configuration, and never runs a friction writer (`revalidate`, `defer`, `record-status`).
+- **Apply anything.** Its definition keeps it read-only on the repository. It never edits, moves or deletes a tracked file, never changes configuration, and never runs a friction writer (`revalidate`, `defer`, `record-status`).
+  - **What holds it:** its definition alone. Nothing at run time confines its Write tool or its shell to the agent workspace, outside a fixer run that a work-tracking command confines.
   - **Why:** the answer a page carries is a person's decision (COR-050 point 3). This agent has no tool for asking the person, and judges pages besides. Who may run a writer is in the agents README, "Friction writers".
   - **Where its proposals land:** in the agent workspace, under `.agent-workspace/living-docs/`, as diffs applied with `git apply` and pull-request bodies.
   - **Its one write outside the workspace:** a reader-review posted as a pull-request comment, on request.
@@ -115,7 +118,7 @@ On a project that already has documentation, nothing is anchored yet. So onboard
 - **Anchors:** the anchors each page's statements need, each on the one part a statement rests on where it rests on one. The statements nothing grounds are raised as questions, rather than kept.
 - **Mapping:** where the project keeps a code-to-doc mapping, which of its rules become path anchors on the pages they name. The mapping is project-management's, read through the work-tracking role's documentation-check point. An anchor that would match most of the repository is narrowed. Retiring the mapping is a separate change, for whoever owns it.
 
-**Its single gate.** The person approves, revises or rejects the plan. Nothing is drafted before approval, a revision comes back to the gate, and a rejection drafts nothing.
+**Its single gate.** The person approves, revises or rejects the plan. Dispatched as a subagent, the agent cannot hear the person. The plan is then its result, and approval arrives as a new request that names the plan's file. Nothing is drafted before approval, a revision comes back to the gate, and a rejection drafts nothing.
 
 **Its drafts.** On approval, it writes one reviewable change per step into `.agent-workspace/living-docs/onboarding/`, as diffs and pull-request bodies, and stops. The person applies them and opens the pull requests. A page new in its change counts as revalidated there, so it needs no writer.
 

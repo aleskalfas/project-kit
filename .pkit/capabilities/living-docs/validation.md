@@ -71,9 +71,9 @@ It reads where the project's documents are from the core, through `pkit friction
 
 **A held document,** such as an analysis capability's revalidation records, is walked by no place. So it is never an unclassified document. It is claimed by its owner, and counted in the summary as "of another component", wherever it sits under the roots (DEC-001 point 1).
 
-**It never reads the declarations or walks the places itself,** so it can never disagree with the core about which files a place holds. A synced copy, a place outside the repository and a malformed declaration are skipped exactly as the core skips them.
+**The core's answer decides which files a place holds.** A synced copy, a place outside the repository and a malformed declaration are skipped exactly as the core skips them.
 
-**Nor does it rank the places.** Where places nest, the first root or project place in the backbone's order gives a document its space (COR-056 point 3).
+**The core's order of places applies.** Where places nest, the first root or project place in the backbone's order gives a document its space (COR-056 point 3).
 
 - A place that equals or encloses a root comes after every other.
 - Otherwise the longer literal part wins.
@@ -98,7 +98,7 @@ The core may give no reading of the places, or a reading without each document's
 
 It fails on each of these:
 
-- **The sources folder,** `.pkit/capabilities/living-docs/project/sources/`, or a folder on its path, that is a file or a link. So is one named in another case, such as `Sources/`. No source is read from it, on any disk. It fails too when the folder cannot be read, through a permission or disk error, so no source is checked.
+- **The sources folder,** `.pkit/capabilities/living-docs/project/sources/`, or a folder on its path, that is a file or a link. It fails too on a folder named in another case, such as `Sources/`. No source is read from it, on any disk. It fails too when the folder cannot be read, through a permission or disk error, so no source is checked.
 - **An entry of the sources folder that is not a captured source:** a `.yaml` file whose name is not a source's name ([the page on pages, "Sources"](pages.md#sources)), a folder, or a link. An entry whose name begins with `.`, such as `.gitkeep` or an editor's file, is left alone, since no source's name begins with one. A captured source's shape is `schemas/source.schema.json`, which `pkit validate` applies under `data`, bound by the file's path (COR-023).
 - **An unassigned place outside every root** that holds a document nothing else claims. A place declared to hold rule sets that gives no type owes no assignment (DEC-001 point 1). For a file without front matter, it fails where every place it lies in is such a place.
 - **An assignment** naming a place `friction.places` does not declare, or a space nobody declares, and a place assigned twice.
@@ -127,7 +127,7 @@ It reports each of these, without failing:
 
 - **Mentions and marks.** Each page whose anchors do not cover what it mentions. Each mark that passes nothing over ("What a page mentions and does not anchor" below).
 - **Sources.** A `source` anchor, or a rule origin citing a `source`, that no captured file answers, which the whole-repository check reports dead. A captured source nothing anchors or cites. A captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier. A file in the sources folder whose name does not end in `.yaml`, such as notes or an editor's backup, which captures nothing.
-- **Definitions.** A space with no definition yet, and a definition with no scope or with the template's placeholder in its scope. Each report names the scope to give it. The pages of a space its definition's scope leaves out.
+- **Definitions.** A space with no definition yet, and a definition with no scope or with the template's placeholder in its scope. Each report names the scope to give it. The pages of a space its definition's scope leaves out ([the page on spaces, "Each definition's scope"](spaces.md#each-definitions-scope)).
 - **Places that cannot be told apart.** A file without front matter whose places cannot be told apart. Where every one of them is an unassigned place outside every root, it fails instead ("What fails" above).
 - **The roots.** Roots that are the same folder, naming the stamp that sets them apart and the folder it recommends. Roots that are nested, which onboarding separates.
 - **A page in an unassigned place of rule sets.** A document that declares its page kind and lies only in an untyped place of rule sets outside every root. No assignment gives that place a space, and the report names the assignment that would make the document a page.

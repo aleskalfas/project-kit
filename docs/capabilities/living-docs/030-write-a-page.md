@@ -126,8 +126,8 @@ mention(s) a page's anchors do not cover, each with an anchor that would cover i
 ```
 
 - **What fails.** A reader your project does not declare, and a page whose sections do not follow its kind's format, are errors ([the reference, "What fails"](../../../.pkit/capabilities/living-docs/validation.md#what-fails)).
-- **What is reported.** Validation reports each file path, record or `pkit` command the page names and its anchors do not cover, with the anchor that would cover it. Above, `src/greet.py` is covered, and `src/farewell.py` is not.
-- **A name that states nothing.** A passage may only name a thing, and say none of its facts. A mark right after the mention then passes it over ([the reference, "Mentions"](../../../.pkit/capabilities/living-docs/validation.md#what-a-page-mentions-and-does-not-anchor)):
+- **What is reported.** Validation reports each file path, record, rule or `pkit` command the page names but does not anchor. It gives the anchor that would cover each. Above, `src/greet.py` is covered, and `src/farewell.py` is not.
+- **A name that states nothing.** A passage may only name a thing, and say none of its facts. A mark right after the mention then passes it over ([the reference](../../../.pkit/capabilities/living-docs/validation.md#what-a-page-mentions-and-does-not-anchor)):
 
   ```markdown
   Run `src/farewell.py` <!-- unanchored: named as the next step, not described --> to be sent off.
