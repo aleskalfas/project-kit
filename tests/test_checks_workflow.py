@@ -987,8 +987,15 @@ def test_a_slice_that_passed_without_reporting_what_it_ran_did_not_pass(
         ("listed", "three"),
         ("unlisted", None),
     ],
-    ids=["digest-two-lines", "digest-short", "collected-two-lines", "collected-negative",
-         "collected-bool", "listed-words", "unlisted-none"],
+    ids=[
+        "digest-two-lines",
+        "digest-short",
+        "collected-two-lines",
+        "collected-negative",
+        "collected-bool",
+        "listed-words",
+        "unlisted-none",
+    ],
 )
 def test_a_report_value_out_of_its_form_is_handed_on_empty(
     tmp_path: Path, key: str, value: object
