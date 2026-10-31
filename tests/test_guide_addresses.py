@@ -1,7 +1,7 @@
 """Every guide address a reference links names a guide README (ADR-069 point 2).
 
 A reference under `.pkit/` links its guide at the tag `latest`,
-`https://github.com/aleskalfas/project-kit/blob/latest/docs/<area>/README.md`.
+`https://github.com/aleskalfas/project-kit/blob/latest/docs/<path>/README.md`.
 No migration reaches a reference already installed, so a guide README that
 moves or goes breaks that link in every version that shipped it. These tests
 read every such address in the files under `.pkit/`, in the tree and at each

@@ -1,0 +1,16 @@
+answers:
+  - artefact: tech-docs/living-docs/rule-sets/rework.md#RS-REWORK-001
+    read:
+      - 20261031T002733Z-8b70c3b7.yaml
+      - 20261031T003946Z-045a5765.yaml
+    revalidated:
+      at: 2026-10-31T18:06:28Z
+      outcome: updated
+  - artefact: tech-docs/living-docs/rule-sets/rework.md#RS-REWORK-004
+    read:
+      - 20261031T002733Z-8b70c3b7.yaml
+      - 20261031T003946Z-045a5765.yaml
+    revalidated:
+      at: 2026-10-31T18:06:31Z
+      outcome: unchanged
+      unchanged-because: Judged on both changes together. ADR-069 point 3 now says the guide kind ships with living-docs, whose validation checks only a guide's title, that a README which only lists guides is a signpost, and that a guide's README anchors no README above it; point 4 reads as before. An area's README still moves only with its folder, so a component's page still reaches a backbone page through it, which is what this rule rests on.
