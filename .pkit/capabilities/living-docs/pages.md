@@ -68,9 +68,12 @@ pkit:
 
 ## Anchoring one part
 
-A page that rests on one part of a record or of another document may anchor that part. A change to another point or section of it then asks the page nothing ([the CLI reference, "friction check"](../../cli/README.md#friction-check---base-ref---head-rev---json)).
+A page that rests on one part of a record or of another document may anchor that part. A change to another point or section of it then asks the page nothing (COR-050 point 5, [the CLI reference, "friction check"](../../cli/README.md#friction-check---base-ref---head-rev---json)).
 
-- **How an anchor names a part** is in [the schemas reference, "The friction block"](../../schemas/README.md#the-friction-block). A record's point is `COR-050#2`, a document's section is its heading's slug, as `docs/cli.md#output`, and its lead is `docs/cli.md#`.
+- **How an anchor names a part** is in [the schemas reference, "The friction block"](../../schemas/README.md#the-friction-block):
+  - a record's point, as `COR-050#2`
+  - a document's section, by its heading's slug, as `docs/cli.md#output`
+  - a document's lead, as `docs/cli.md#`
 - **What names no part:** a path and a `source`.
 - **What it grounds.** An anchor on one part grounds only what that part stands on (`RS-LDOC-001`). A summary of a fact whose home is another page anchors the home's section (`RS-LDOC-002`).
 

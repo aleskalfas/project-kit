@@ -25,7 +25,7 @@ pkit:
 
 # Set up your spaces
 
-A documentation space holds the pages written for one audience, and its definition holds the rules those pages follow. Here you create the two spaces every project has, the user space and the technical space. You also declare which files are pages, the readers they are for, and the code they should cover. What a space's configuration holds is in [the reference on spaces](../../../.pkit/capabilities/living-docs/spaces.md#declaring-the-spaces).
+A documentation space holds the pages written for one audience, and its definition holds the rules those pages follow. Here you create the two spaces every project has, the user space and the technical space. You also declare your pages, their readers and the code they cover. What a space's configuration holds is in [the reference on spaces](../../../.pkit/capabilities/living-docs/spaces.md#declaring-the-spaces).
 
 ## Contents
 
@@ -114,7 +114,7 @@ Commit what the two commands wrote. The user space's own rule is written as acce
 
 ## Declare your readers
 
-Each page names its reader by an id your project declares. `user` and `maintainer` come built in. A capability may add readers of its own, such as software-analysis, one for each actor of its analysis:
+Each page names its reader by an id your project declares. `user` and `maintainer` come built in, and a capability may add readers of its own. A fresh project holds the two built in:
 
 ```console
 $ pkit capabilities install living-docs >/dev/null

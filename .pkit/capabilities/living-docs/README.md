@@ -48,6 +48,7 @@ pkit:
         - .pkit/cli/README.md#validate
         - .pkit/cli/README.md#friction-check---base-ref---head-rev---json
         - .pkit/cli/README.md#friction-check---all---json
+        - .pkit/cli/README.md#friction-checks
         - .pkit/cli/README.md#friction-debt---json
         - .pkit/cli/README.md#friction-explain-artefact---json
         - .pkit/cli/README.md#connections-resolve-address---json
@@ -206,7 +207,7 @@ value:
 - **A commit git cannot read.** The command asks git nothing itself: whether HEAD has a commit it reads from the core (`head` in `pkit repository base --json`). Where git cannot read a commit that is there, the command gives no answer. Such is a repository git refuses as unsafe, or a missing object.
 - **A shallow clone.** If a page's friction lies beyond a shallow clone's history, the check reports itself unresolved, rather than pass on fewer obligations. Fetch the full history.
 - **A page left unjudged:** one whose anchor's resolver gave no answer (`no-answer`, state `unresolved`). The same holds for a page in a state this capability does not know, which it never takes for current. `pkit friction explain <page>` says why.
-- **A friction document of another version.** The friction check's answer carries a `schema_version`. The command does not read one other than 1. One without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks").
+- **A friction document of another version.** The friction check's answer carries a `schema_version`. The command does not read one other than 1. One without the key, from a backbone before it, reads as 1 ([the CLI reference, "Friction checks"](../../cli/README.md#friction-checks)).
 
 **An anchor nothing resolves.** A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend, not an obligation of this change. It is mended in one of three ways:
 

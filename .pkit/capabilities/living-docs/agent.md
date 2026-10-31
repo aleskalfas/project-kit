@@ -77,7 +77,7 @@ The checks say *that* a page drifted, and *which* documents are not pages yet. D
 
 **Its readers before the readers point resolves.** Until then, the agent reads a page as its space's `audience` ([the page on spaces, "Declaring the spaces"](spaces.md#declaring-the-spaces)), and says so. Where the space's entry names none, it reads a user page as users and a technical page as maintainers, as DEC-001 gives them. For a space the project added whose entry names none, it reads no page, and names that entry.
 
-**Answers kept apart from the page.** A change writes its answers in answer files of its own, never in the page (COR-062 point 1). Two branches that revalidate one page apart leave it reported as debt, never stale. It stays so until a revalidation that reads both judges the merged page (COR-062 point 7).
+**Answers kept apart from the page.** A change writes its answers in answer files of its own, never in the page. So two branches that revalidate the same page never conflict over their answers (COR-062 point 1). Two branches that revalidate one page apart leave it reported as debt, never stale. It stays so until a revalidation that reads both judges the merged page (COR-062 point 7).
 
 **Its definition and its script.** The agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md). Its scripted flows are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md):
 

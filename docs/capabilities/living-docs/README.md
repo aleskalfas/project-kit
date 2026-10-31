@@ -154,7 +154,7 @@ living-docs is meant for documentation that changes as the code changes, written
 - **Your documentation lives outside the repository.** The checks read the repository alone, so a wiki edited elsewhere is beyond their reach.
 
 > [!WARNING]
-> A page is flagged only when something it anchors changes, so a statement that rests on something else is never flagged. Whether each statement rests on the page's anchors is judged by people and reviewers, not checked. Unanchored mentions are found only for a record, a rule, a `pkit` command, and a file a link or a code span names.
+> A page is flagged only when something it anchors changes, so a statement that rests on something else is never flagged. Whether each statement rests on the page's anchors is judged by people and reviewers, not checked. Unanchored mentions are found only for a record, a rule, a `pkit` command, and a file a link or a code span names ([the reference](../../../.pkit/capabilities/living-docs/validation.md#what-a-page-mentions-and-does-not-anchor)).
 
 ## How it works
 
@@ -203,7 +203,7 @@ $ pkit capabilities install living-docs | grep -e Installed -e "docs-author/SKIL
 
 - **What it writes.** Nothing of your configuration, apart from the answers you give to the questions it asks. With project-management installed, one asks whether the agent may propose fixes for your stale pages ([project-management's README, "Grant the fixers"](../../../.pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)).
 - **What comes next.** Neither space has its definition yet, and both still share one documentation root. The first task, [Set up your spaces](010-set-up-your-spaces.md), mends both.
-- **The skill.** The `docs-author` skill walks your agent through each stamp ([the reference, "Authoring"](../../../.pkit/capabilities/living-docs/README.md#authoring-the-docs-author-skill)). For a new page, it chooses the page's space, its kind, its reader and its anchors.
+- **The skill.** The `docs-author` skill walks your agent through each stamp ([the reference, "Authoring"](../../../.pkit/capabilities/living-docs/README.md#authoring-the-docs-author-skill)). For a new page, those choices are its space, its kind, its reader and its anchors.
 - **The agent.** In Claude Code, ask your session to use the `living-docs` agent, such as "Use the living-docs agent to propose the fix for docs/greet.md". Each task page shows what to ask.
 - **Enforcing friction.** Set `friction.mode` to `enforcing`, as the first fence above does, and make `pkit friction check` a required check of your continuous integration. A change that leaves a page flagged and unanswered then fails there.
 

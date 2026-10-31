@@ -14,6 +14,7 @@ pkit:
         - REQ-022
         - .pkit/capabilities/living-docs/agent.md#what-it-does
         - .pkit/capabilities/living-docs/agent.md#as-the-fixer-of-pages
+        - .pkit/capabilities/living-docs/agent.md#what-it-never-does
         - .pkit/cli/README.md#friction-explain-artefact---json
         - .pkit/cli/README.md#friction-debt---json
         - .pkit/cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run
@@ -96,7 +97,7 @@ In Claude Code, ask your session to use the `living-docs` agent, such as "Use th
 - **Its ground moved,** such as a renamed file: its anchor re-pointed.
 - **Grounded by nothing now:** given a new anchor, taken out, or raised with you as a question.
 - **The change looks wrong,** rather than the page: the agent says so, and leaves the page alone.
-- **Stale on a captured source:** the agent never fetches the source. It names both versions and the link, and asks you what changed in the source that bears on the page.
+- **Stale on a captured source:** the agent never fetches the source ([the reference, "What it never does"](../../../.pkit/capabilities/living-docs/agent.md#what-it-never-does)). It names both versions and the link, and asks you what changed in the source that bears on the page.
 
 It writes a diff of the page and a pull-request body under `.agent-workspace/living-docs/fix/<page>/`, and applies nothing. Where no statement needs to change, it drafts the reason for an `unchanged` answer instead, for you to confirm or rewrite. Review the diff, then apply it:
 
