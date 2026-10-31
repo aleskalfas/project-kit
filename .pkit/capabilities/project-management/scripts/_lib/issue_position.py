@@ -19,7 +19,9 @@ point 5). :func:`read_status` reads that Status through `_lib/board_status`, as
 the classifier does, and :func:`current_state` takes it beside the labels and the
 milestone. A Status that does not place the issue leaves its position
 undetermined, and :func:`unplaced_refusal` says which of the outcomes it is
-([project-management:DEC-051-axis-carriage-activation] point 6).
+([project-management:DEC-051-axis-carriage-activation] point 6). A closed
+issue's card says where its work stood before the close, which
+:func:`read_status_before_close` reads for a command that needs that origin.
 
 `move-issue` reads the state itself when it moves: the engine's position, else
 the same inference. So a state that changed after the verb's check is judged
@@ -74,6 +76,33 @@ def read_status(
         return None
     if str(issue.get("state", "")).lower() == "closed":
         return None
+    return _read_card(number, issue, config, workflow)
+
+
+def read_status_before_close(
+    number: int,
+    issue: dict[str, Any],
+    config: dict[str, Any],
+    substrate_map: axis_labels.SubstrateMap | None,
+    workflow: dict[str, Any],
+) -> infer.StatusRead | None:
+    """The card's Status of closed issue ``number``, where the map binds the state
+    to the board: where its work stood before the close, which the card says
+    until it is set to Done ([pkit:ADR-074] point 4). None where the map does not
+    bind the state to the board. The issue is Done whatever its card says, so
+    this is no position: it is the origin a command reads that needs one, such as
+    the move to Done a merge's close records. ``issue`` is as for
+    :func:`read_status`."""
+    if not infer.state_is_board_carried(substrate_map):
+        return None
+    return _read_card(number, issue, config, workflow)
+
+
+def _read_card(
+    number: int, issue: dict[str, Any], config: dict[str, Any], workflow: dict[str, Any]
+) -> infer.StatusRead:
+    """What issue ``number``'s card's Status says, read by the node id and on the
+    board of the owner that the read of ``issue`` gave."""
     owner = board_fields.url_owner(str(issue.get("url") or ""))
     board = board_status.StatusBoard(config, workflow, repository_owner=owner)
     return board.read(number, issue_node_id=str(issue.get("id") or ""))

@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Where the substrate map binds the state to the board, a close GitHub makes
+  when a pull request merges is recorded in the issue's history (#2307).
+  `close-issue --mode=pr-merge` reads the card of an issue the merge closed,
+  which still says where the work stood, and records the move to Done from it;
+  `move-issue --to done` records the close from the card it sets to Done, read
+  before the write. A card that places the issue nowhere records no move, and
+  the warning names which of the four outcomes it is: the board could not be
+  read, no card, no Status, or a Status naming no open state, such as a card
+  already at Done. The journal says whether a close is
+  recorded already, so `done-work` and `land-work` record each close once, and
+  where no journal is kept `close-issue` reads no closed issue's card.

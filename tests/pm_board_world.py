@@ -15,7 +15,8 @@ names.
 A config and a substrate map put the board in reach: `BOARD_CONFIG` configures
 board #4, and `LABEL_STATE` binds the state to the kit's own labels, so the
 board configured does not carry it (DEC-051) and its Status is a projection the
-agent maintains (DEC-006).
+agent maintains (DEC-006). `STATE_ON_BOARD` binds the state to the board, so its
+Status is the state's source (DEC-062 point 5).
 """
 
 from __future__ import annotations
@@ -45,6 +46,14 @@ LABEL_STATE: dict[str, Any] = {
             }
         }
     }
+}
+
+#: The state on the board, the other axes on the kit's own labels.
+STATE_ON_BOARD: dict[str, Any] = {
+    "type": {"kit-label": True},
+    "priority": {"kit-label": True},
+    "workstream": {"kit-label": True},
+    "state": {"board": True},
 }
 
 

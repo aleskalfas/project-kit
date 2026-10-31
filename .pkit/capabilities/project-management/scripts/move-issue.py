@@ -33,7 +33,12 @@ decides it, and `has_projects_v2_board` says only that a board exists (per
     (DEC-062 point 5). An open issue's position is read from its card's Status
     (DEC-051 point 6), and the move writes the card's Status: that write is the
     move, so one that fails ends the move unmade (exit 3), and nothing is
-    journaled. A closed issue is Done whatever its card says.
+    journaled. A closed issue is Done whatever its card says. Moving one to done
+    sets its card to Done, the close's move on the board, and records the close,
+    as rewriting a stale label does: from where the card said the work stood,
+    read before the write, unless the last move the journal records is to done
+    already (#2307). A card that places the issue nowhere records no move, with
+    a warning naming which outcome it is.
   * `kit-label` / `adopter-label` — the state lives as a label: the kit's
     `state:*` with no map or under `kit-label: true`, or the adopter's own label
     under a `label:` binding. State changes happen via `gh issue edit
@@ -635,7 +640,7 @@ def main() -> int:
                 if not _gh_apply_state_label(args.issue_number, plan, config):
                     return 3
                 if state == "closed" and not _journal_logging_off(engine_status):
-                    _journal_closed_issue_relabel(
+                    _journal_closed_issue_move(
                         args.issue_number,
                         args.to,
                         workflow=workflow,
@@ -657,7 +662,10 @@ def main() -> int:
         # Where the board carries the state, a closed issue is Done whatever its
         # card says (DEC-062 point 5). Its card may still say where the work was,
         # which tells a finished issue from a won't-do one below, so it is read
-        # before the card is set to Done.
+        # before the card is set to Done. Setting it there is the close's move on
+        # the board, as rewriting a stale label is on the labels, so the close is
+        # recorded from where the card said the work stood (#2307), unless the
+        # journal says it is recorded already, which the card cannot say.
         card_before = None
         if status_role == "source" and board is not None and state == "closed":
             card_before = board.read(args.issue_number, issue_node_id=node_id)
@@ -665,6 +673,19 @@ def main() -> int:
                 _print_status_plan(board, workflow, args.to)
             else:
                 _write_closed_card(board, args.issue_number, args.to, node_id)
+                if move_journal.owes_board_close(move_journal.Journal.of(engine_status), args.to):
+                    _journal_closed_issue_move(
+                        args.issue_number,
+                        args.to,
+                        workflow=workflow,
+                        structural_type=structural_type,
+                        milestone=milestone,
+                        labels=labels,
+                        substrate_map=substrate_map,
+                        actor=invoker.github_login,
+                        reason=merge_reason,
+                        status=card_before,
+                    )
         # The forward cascade is idempotent, so the issue already being in place
         # does not end the walk: re-running a move whose cascade left an ancestor
         # behind brings that ancestor level. An issue already at done came there
@@ -1558,8 +1579,8 @@ def _journal_logging_off(status: dict | None) -> bool:
     the field comes from an engine that predates the setting and always kept a
     journal, and no payload at all says nothing either way.
     """
-    logging = status.get("journal_logging") if isinstance(status, dict) else None
-    return isinstance(logging, dict) and logging.get("enabled", True) is False
+    journal = move_journal.Journal.of(status)
+    return journal is not None and not journal.kept
 
 
 def _landed_moves(
@@ -1611,7 +1632,7 @@ def _landed_moves(
 _journal_move = move_journal.journal_move
 
 
-def _journal_closed_issue_relabel(
+def _journal_closed_issue_move(
     issue_number: int,
     target_state: str,
     *,
@@ -1622,8 +1643,10 @@ def _journal_closed_issue_relabel(
     substrate_map: axis_labels.SubstrateMap | None,
     actor: str | None,
     reason: str | None,
+    status: infer.StatusRead | None = None,
 ) -> None:
-    """Record the move to done that relabelling a closed issue makes (#1231).
+    """Record the move to done that relabelling a closed issue makes (#1231), or
+    setting its card to Done where the board carries the state (#2307).
 
     A closed issue reads as done, so moving one to done finds it already there
     and only reconciles its label — the Review label a merge's `Closes #N` left
@@ -1637,10 +1660,26 @@ def _journal_closed_issue_relabel(
     workflow declares no such move for the issue's type (the engine does not
     read `applies_to`), which is warned about as a refused move is, nor where
     nothing records where the issue was.
+
+    Where the board carries the state, ``status`` is the card's Status read
+    before the card was set to Done, and it is where the issue was: a card that
+    places it nowhere records no move, with a warning naming which outcome it is
+    (DEC-051 point 6), never a guess. The caller asks the journal first whether
+    the move is recorded already (`move_journal.owes_board_close`), since the
+    card cannot say.
     """
     origin = infer.state_before_close(
-        milestone=milestone, labels=labels, closed=True, substrate_map=substrate_map
+        milestone=milestone,
+        labels=labels,
+        closed=True,
+        substrate_map=substrate_map,
+        status=status,
     )
+    if origin is None and status is not None:
+        move_journal.report_unrecorded(
+            issue_number, f"this move was not recorded: {status.finding(issue_number)}"
+        )
+        return
     if origin is None or origin == target_state:
         return
     if _find_transition(workflow, origin, target_state, structural_type) is None:
