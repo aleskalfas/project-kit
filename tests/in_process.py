@@ -234,8 +234,10 @@ def _scripts_of(capability: str | Path) -> Path:
 
 
 def _from_a_lib(module: object) -> bool:
-    """Whether `module` was loaded from a file in a capability's `_lib` folder."""
-    return Path(getattr(module, "__file__", None) or "").parent.name == "_lib"
+    """Whether `module` was loaded from a file in a capability's `_lib` folder. Read with
+    `os.path`, not `Path`: `_ours` asks it of every module in `sys.modules`, twice a load."""
+    file = getattr(module, "__file__", None) or ""
+    return os.path.basename(os.path.dirname(file)) == "_lib"
 
 
 def _ours() -> list[str]:
