@@ -16,7 +16,10 @@ it does not, so a caller makes the same call in both modes.
 
 from __future__ import annotations
 
+import json
 import sys
+from dataclasses import dataclass
+from typing import Any
 
 from _lib import backbone
 
@@ -155,3 +158,87 @@ def report_unrecorded(issue_number: int, why: str) -> None:
     )
     for line in rest:
         print(line, file=sys.stderr)
+
+
+# ---- what the journal already holds (#2307) -----------------------------
+
+
+@dataclass(frozen=True)
+class Journal:
+    """An issue's engine journal as `pkit process status --json` reports it:
+    whether the project keeps one (COR-033 point 7), and its entries, oldest
+    first, none where it keeps none."""
+
+    kept: bool
+    entries: tuple[dict[str, Any], ...] = ()
+
+    @classmethod
+    def of(cls, status: Any) -> Journal | None:
+        """The journal a status payload carries, or None for no payload. Only an
+        explicit `journal_logging.enabled: false` says no journal is kept: a
+        payload without the field comes from an engine that always kept one."""
+        if not isinstance(status, dict):
+            return None
+        logging = status.get("journal_logging")
+        kept = not (isinstance(logging, dict) and logging.get("enabled", True) is False)
+        journal = status.get("journal")
+        entries = (
+            tuple(entry for entry in journal if isinstance(entry, dict))
+            if isinstance(journal, list)
+            else ()
+        )
+        return cls(kept, entries)
+
+    def last_move_to(self, state: str) -> bool:
+        """Whether the last move the journal records ends at ``state``."""
+        moves = [entry for entry in self.entries if "to" in entry]
+        return bool(moves) and moves[-1].get("to") == state
+
+
+def read_journal(issue_number: int) -> Journal | None:
+    """The issue's engine journal, read through `pkit process status --json`
+    (ADR-020), or None where the engine cannot be reached or answers with no
+    status."""
+    try:
+        proc = backbone.run(
+            [
+                "pkit",
+                "process",
+                "status",
+                PROCESS_ADDRESS,
+                "--subject",
+                str(issue_number),
+                "--json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except (OSError, FileNotFoundError):
+        return None
+    if proc.returncode != 0:
+        return None
+    try:
+        return Journal.of(json.loads(proc.stdout or ""))
+    except ValueError:
+        return None
+
+
+def owes_board_close(journal: Journal | None, done: str) -> bool:
+    """Whether a close still owes the journal its move to ``done``, where the
+    map binds the state to the board.
+
+    There the board's Status is the only record of where the work stood, and the
+    card at Done cannot tell a close already recorded from one a person or the
+    board itself set there. So the journal says it: a close is owed where the
+    project keeps a journal and the last move it records is not to ``done``. A
+    close `move-issue` recorded as it set the card to Done, or an earlier run
+    recorded, is not recorded again. Where no journal is kept, nothing is
+    recorded, and nothing is missed. Where the journal could not be read, the
+    close is owed, and the engine says whether it can take it.
+
+    An issue reopened since its last recorded close and closed again with no
+    move recorded in between reads as recorded: the journal holds no reopen."""
+    if journal is None:
+        return True
+    return journal.kept and not journal.last_move_to(done)
