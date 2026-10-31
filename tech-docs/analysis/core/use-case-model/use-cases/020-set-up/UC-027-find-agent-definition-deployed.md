@@ -9,7 +9,7 @@ other-actors:
 after:
   - [UC-014, UC-049]
   - [UC-014, UC-019, UC-049]
-  - [UC-022]
+  - [UC-022, UC-049]
 requirements:
   - REQ-002
   - REQ-005
@@ -71,7 +71,7 @@ pkit:
 
 - **From [UC-014](../010-develop/UC-014-develop-methodology.md) or [UC-049](../050-adopt/UC-049-install-system.md):** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 - **From UC-014, [UC-019](../010-develop/UC-019-adapt-harness.md) or UC-049:** An [adapter](../../../glossary.md#term-adapter--adapter) for the project's [harness](../../../glossary.md#term-harness--harness) deploys [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) where that harness reads them.
-- **From [UC-022](UC-022-add-own-additions.md):** The [overlay](../../../glossary.md#term-overlay--overlay), `.pkit/agents/project/overlay.yaml`, holds the project's own paths for the categories it sets. The project's own grants lie beside the methodology's.
+- **From [UC-022](UC-022-add-own-additions.md) or UC-049:** The [overlay](../../../glossary.md#term-overlay--overlay), `.pkit/agents/project/overlay.yaml`, holds the project's own paths for the categories it sets. The project's own grants lie beside the methodology's. First [install](../../../glossary.md#term-install--install) seeds the overlay with a value for each category the methodology's own agent definitions name (`install.py`). So those agent definitions deploy before the adopter names a path.
 
 **Assumptions:**
 
@@ -104,6 +104,7 @@ pkit:
 
 - **1a.** The adopter first runs `pkit agents`, which writes nothing ([REQ-005](../../../requirements/quality/REQ-005-reading-writes-nothing.md)). It lists each [agent definition](../../../glossary.md#term-agent-definition--agent-definition) as `deployable` or `SKIPPED`, with the categories the [overlay](../../../glossary.md#term-overlay--overlay) leaves unset and the effective model and effort.
 - **1b.** The operator passes `--dry-run`. The [system](../../../glossary.md#term-system--system) names each script it would run with `would run`, runs none of them, and deploys nothing ([REQ-009](../../../requirements/quality/REQ-009-preview-before-change.md)). The use case ends.
+- **1c.** The adopter installs the system with `pkit init`. Step 8 of [UC-049](../050-adopt/UC-049-install-system.md) runs the same deploy primitives, and the path goes on at step 4.
 - **3a.** The [project](../../../glossary.md#term-project--project) is not the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. [Sync](../../../glossary.md#term-sync--sync) stops before it writes, names the remedy, and the use case ends ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)).
 - **6a.** The overlay leaves unset a category that the agent definition names under `owns`, `needs`, `answers`, `reads.paths` or `reads.records`. The [adapter](../../../glossary.md#term-adapter--adapter) skips that agent definition and deploys the rest ([ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)). It names the remedy, `pkit agents adopt <name>`, or `pkit agents reconcile --write` for a category that carries writes. A copy deployed earlier stays as it was, and the use case ends for that agent definition.
 - **6b.** The overlay leaves unset a category that the agent definition reads only through `reads.patterns`. The adapter drops that item, and deploys the agent definition without it ([ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).

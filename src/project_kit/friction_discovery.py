@@ -2424,6 +2424,19 @@ class AnchorKinds:
             self._resolved[key] = resolution
         return self._resolved[key]
 
+    def resolve_each(self, anchors: Iterable[Anchor]) -> None:
+        """Run, in their order, the resolver of each of `anchors` whose kind can be resolved,
+        each value once (`resolve`), and keep the answers for the run.
+
+        A check that will ask every one of them calls this before anything else
+        it reads. A resolver run inside another run has only the time that run has
+        left (ADR-057 point 3), so asked first, a resolver has the most of it, and
+        however long the rest of the check takes, it takes none of a resolver's
+        time."""
+        for anchor in anchors:
+            if anchor.kind not in CORE_ANCHOR_KINDS and self.unresolved(anchor.kind) is None:
+                self.resolve(anchor)
+
     def files(self, anchor: Anchor) -> tuple[str, ...]:
         """The files an anchor of a registered kind stands on — its resolver's answer —
         or none: for a core kind, a kind nothing resolves, or a resolver that gave no

@@ -11,6 +11,7 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/source.schema.json
         - .pkit/capabilities/living-docs/templates/reference.md
         - .pkit/capabilities/living-docs/templates/signpost.md
+        - .pkit/capabilities/living-docs/templates/guide.md
         - .pkit/capabilities/living-docs/scripts/resolve-source.py
         - .pkit/capabilities/living-docs/scripts/_lib/formats.py
         - .pkit/capabilities/living-docs/scripts/_lib/sources.py
@@ -18,7 +19,7 @@ pkit:
         - .pkit/capabilities/living-docs/scripts/_lib/declarations.py
         - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
         - .pkit/capabilities/living-docs/scripts/new.py
-      record: ["living-docs:DEC-001", "living-docs:DEC-002", "doc-examples:DEC-001", COR-050, COR-051, COR-056]
+      record: ["living-docs:DEC-001", "living-docs:DEC-002", "living-docs:DEC-003", "doc-examples:DEC-001", COR-050, COR-051, COR-056]
       artefact:
         - RS-LDOC-001
         - RS-LDOC-002
@@ -98,8 +99,9 @@ A section the kind leaves to its writer needs words of its own, so an empty `#` 
 
 `templates/` holds each shipped kind's template:
 
-- **`signpost.md`**, for an index-like file that says what a folder holds and where to go (`RS-LDOC-005`).
+- **`signpost.md`**, for a signpost, the page kind the shared rules name: an index-like file that says what a folder holds and where to go (`RS-LDOC-005`).
 - **`reference.md`**, for the page that describes one surface to the reader who uses it, such as an area, a capability or an adapter. The page anchors the code and decisions it describes.
+- **`guide.md`**, for a guide: the page that explains one subject to the reader who uses it, why it exists and how they do its tasks, with its parts in the order [living-docs:DEC-003-guide-kind] gives them. Its declared structure is its title alone, so the order of the other parts is judged in review, never by validation.
 
 A page of a kind the project adds is written by hand from that kind's own template. A template copied into the definitions location takes the template type there, so it is never a page ("Types" below).
 

@@ -143,7 +143,7 @@ from __future__ import annotations
 
 import difflib
 import json
-from collections.abc import Callable, Collection, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
@@ -538,7 +538,7 @@ class _Judge:
         history: History,
         walker: Walker,
         blobs: BlobReader,
-        registry: Mapping[str, ResolverCommand],
+        kinds: AnchorKinds,
     ) -> None:
         self.head = head
         self.head_tree = tree
@@ -555,12 +555,12 @@ class _Judge:
         """HEAD's answer files, judged (COR-062 points 4, 5 and 7)."""
         self._answers: dict[str, Answers] = {}
         self._points: dict[str, AnswerPoints] = {}
-        self.kinds = AnchorKinds(head.root, registry, head.files, HEAD_STATE)
+        self.kinds = kinds
         """The anchor kinds, as HEAD's registrations declare them, and each registered
         kind's anchors as their resolvers answered — once per anchor value for the run
         (COR-050 point 2), each answer read against HEAD's files: a resolver reads the
         files on disk, the one thing here that does, and a path HEAD does not hold —
-        uncommitted work — is no answer, never a file with no history."""
+        uncommitted work — is no answer, never a file with no history (`head_kinds`)."""
         self.unreadable: dict[str, str] = {}
         """The revalidation points whose `friction.exclude` does not read, and why:
         each read under HEAD's instead, and reported (`unreadable_findings`)."""
@@ -1578,6 +1578,25 @@ class _Judge:
 # --- the check ---------------------------------------------------------------------
 
 
+def head_kinds(
+    head: Side, registry: Mapping[str, ResolverCommand], anchors: Iterable[Anchor]
+) -> AnchorKinds:
+    """The anchor kinds as HEAD's registrations declare them, with `anchors` resolved,
+    each against HEAD's files, before history is read (`AnchorKinds.resolve_each`).
+
+    The check runs inside a query's run when a filler reads it, so each
+    resolver it starts has only the time that run has left (ADR-057 point 3).
+    Started first, a resolver has the most of it, and however long reading
+    history then takes, it takes none of a resolver's time. `anchors` are
+    those the check will ask about, in its order, so no resolver runs that the
+    check would not run, and one that overruns does so on the value it would
+    have.
+    """
+    kinds = AnchorKinds(head.root, registry, head.files, HEAD_STATE)
+    kinds.resolve_each(anchors)
+    return kinds
+
+
 def run_repository_check(
     target_root: Path, *, registry: Mapping[str, ResolverCommand] | None = None
 ) -> RepositoryCheck:
@@ -1629,11 +1648,17 @@ def _check_head(
 
     head = Side(target_root, tree, discovery)
     registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
+    order = truth_chain_order(discovery, head.record_path)
+    # The judging asks about every artefact's anchors, each artefact with one being
+    # judged, so its resolvers are run first, in the judging's order.
+    kinds = head_kinds(
+        head, registry, (a for i in order for a in anchors_of(discovery.artefacts[i]))
+    )
     history = read_history(target_root, head_sha)
-    judge = _Judge(head, tree, history, Walker(history, blobs), blobs, registry)
+    judge = _Judge(head, tree, history, Walker(history, blobs), blobs, kinds)
     reports: list[ArtefactReport] = []
     findings: list[RepositoryFinding] = []
-    for index in truth_chain_order(discovery, head.record_path):
+    for index in order:
         artefact = discovery.artefacts[index]
         if _judged(artefact, judge):
             report, found = _check_artefact(artefact, judge)
@@ -2152,11 +2177,12 @@ def run_artefact_check(
     if not artefact.has_friction_block or unanswered:
         return ArtefactCheck(head, bool(shallow_commits(target_root)), artefact, None, ())
     registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
+    side = Side(target_root, tree, discovery)
+    kinds = head_kinds(side, registry, anchors_of(artefact))
     history = read_history(target_root, head_sha)
     blobs = BlobReader(target_root)
     try:
-        side = Side(target_root, tree, discovery)
-        judge = _Judge(side, tree, history, Walker(history, blobs), blobs, registry)
+        judge = _Judge(side, tree, history, Walker(history, blobs), blobs, kinds)
         answers = judge.answers_of(artefact)
         if not _judged(artefact, judge):
             return ArtefactCheck(head, bool(history.shallow), artefact, None, (), answers=answers)

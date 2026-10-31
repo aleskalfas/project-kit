@@ -110,7 +110,7 @@ def process_starts(
     """The guard (#2314, choice 4): every process of `pkit` or a capability script the
     test starts, its setting-up and its tearing-down included, counted. A test that
     starts one without `@pytest.mark.process(<reason>)` fails, unless its module is in
-    the baseline the slices of #2313 empty. A test may ask for this fixture to read what
+    the guard's baseline (`in_process.BASELINE`). A test may ask for this fixture to read what
     it started (`started`)."""
     starts = in_process.ProcessStarts(building_template).watch(monkeypatch)
     yield starts

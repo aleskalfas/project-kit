@@ -14,7 +14,7 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/config.schema.json
         - .pkit/capabilities/living-docs/schemas/reading-evidence.schema.json
         - .pkit/capabilities/living-docs/skills/**
-      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002"]
+      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002", "living-docs:DEC-003"]
       artefact:
         - RS-LDOC-003
         - .pkit/capabilities/living-docs/pages.md#
@@ -117,7 +117,7 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - **It refuses when the check cannot read what it judges** once the rules bind. An example is a readers point that does not resolve while the space's pages name readers.
 - **It writes nothing else itself:** no other space's definition, and nothing of the backbone configuration. Only `pkit config set` writes that, when the command sets the roots apart ("A fresh project" below).
 
-**`new page`** writes one new page into a space of the project, from the template of a kind this capability declares, `signpost` or `reference`.
+**`new page`** writes one new page into a space of the project, from the template of a kind this capability declares, `signpost`, `reference` or `guide`.
 
 - **Where it goes.** A new page of the user or technical space goes under that space's root by default. A page of any space may go into a place assigned to that space (DEC-001 point 1).
 - **Its front matter** names the reader and the kind. Its friction block lists the anchors given, and is empty with none: the page then counts as unanchored for onboarding.
@@ -232,7 +232,7 @@ Of such a page:
 
 ## Citing this capability's decisions
 
-`[living-docs:DEC-001-living-docs-discipline]` and `[living-docs:DEC-002-visual-elements]`, and a rule of the shared method as `[living-docs:RS-LDOC-003]`.
+`[living-docs:DEC-001-living-docs-discipline]`, `[living-docs:DEC-002-visual-elements]` and `[living-docs:DEC-003-guide-kind]`, and a rule of the shared method as `[living-docs:RS-LDOC-003]`.
 
 ## Dependencies
 

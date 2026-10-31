@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit friction check --all` and `pkit friction explain` run the resolvers of
+  registered anchor kinds before they read history (#2405). A filler that reads
+  the whole-repository check, such as living-docs' `fill-doc-check`, runs it
+  inside its own thirty-second run, so each resolver has only the time that run
+  has left. Run late, after a slow reading of history, a resolver could be left
+  too little, and a page's anchor of such a kind had no answer: validation and
+  project-management's doc check then failed by chance on a slow machine. The
+  check also parses each version of an answer file once, where the names an
+  answer reads were parsed a second time. What the check reports is unchanged.
