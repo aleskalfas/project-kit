@@ -1122,7 +1122,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | library | a named, versioned set of pieces that is shared, and names the libraries it builds on | working |
 | values, structure, meaning | the three kinds of content a library holds (point 4g) | working |
 | core, interface, starter | the core holds only the interface (role names, top components, named layouts, slots); the starter holds the capability's opinionated components (point 18b) | working |
-| subject | what the work is about, such as pkit; its concepts mapped to roles (point 4g) | working |
+| notation | the meaning library a piece names, such as pkit: each of its concepts mapped to roles (colour, icon, shape), and its own marks (logo, icons); "subject" before the naming pass | decided (naming pass) |
 | layouts, slot, entry point | level 6: the layouts a top component declares and a brand supplies, such as a deck's cover, section and slide ("named layouts" before the naming pass); a place in a layout; a named way into a library, such as `ibm/deck` (point 4g) | layouts and slot decided (naming pass); entry point working |
 | shared core, per brand, per piece | the three scopes | working |
 | drafting, delivered, reused | the states of point 4d | working |
@@ -1195,8 +1195,9 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   ```
 - **"Slot" stays,** for a named place in a layout or a component that content fills. Chosen by the maintainer: the established term of component design (web components, Vue, Svelte, and the design systems built on them), and one word for layouts and components alike. Ruled out: "placeholder", PowerPoint's word for a layout's slot, which designers also hear as mock text or an empty field's hint, and which fits layouts only. Flagged clash: pkit's capability slots (point 24); the context tells them apart, "a layout's slot" against "a capability slot".
 - **"Brand" for the values library a piece names** (IBM, DAM, neutral), as `brand: ibm/deck`. Chosen by the maintainer. The design-tokens format the capability adopts (DTCG's Resolver, point 4f) uses "context" for one setting of any switch, light, dark or brandA alike, so the old word would mean light in the token files and IBM in the pieces. "Brand" is the word of multi-brand design systems, of DTCG's own examples, of Quarto's `_brand.yml` and of the research's Infinum case, and matches "brand-only parts" and the brand guide. DAM is a client's brand; neutral is an unbranded one. The points before the naming pass say "context"; read it as brand. Ruled out: "theme" (the values only, without layouts and logo) and "system" (Spectrum's switch, which collides with design system).
+- **"Notation" for the meaning library a piece names** (pkit), as `notations: [pkit]`. Chosen by the maintainer. It is the established word of diagramming for a fixed set of symbols and what each means (UML, BPMN, C4, ArchiMate, crow's foot), and it names what the library brings rather than the piece's topic, which "subject" suggested. A piece about two projects names two notations. The points before the naming pass say "subject"; read it as notation. Ruled out: "theme" (Structurizr's word for its icon sets, but ours is values), "encoding" (information design's word, which developers hear as text encoding) and "legend" (the visible key on a figure, not the rules behind it).
 
-**A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --brand ibm/deck --subject pkit` writes two files; the rest appear when they are needed:
+**A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --brand ibm/deck --notation pkit` writes two files; the rest appear when they are needed:
 
 ```
 visual/                                  the capability's place in the project (a setting)
@@ -1223,7 +1224,7 @@ visual/                                  the capability's place in the project (
 schema_version: 1
 top: core/deck                    # its top component (4f)
 brand: ibm/deck                   # the brand's entry point (4g)
-subjects: [pkit]
+notations: [pkit]
 languages: [en, cs]
 state: drafting                   # drafting, delivered or living (4d, 4j)
 lock: {core: 1.4.0, starter: 1.2.0, ibm: 2.0.0, pkit: 1.1.0}   # (4i, 18a)
