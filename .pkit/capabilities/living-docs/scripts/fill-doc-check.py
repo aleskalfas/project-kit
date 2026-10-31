@@ -65,7 +65,7 @@ import argparse
 import json
 import sys
 from collections.abc import Mapping
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -81,24 +81,20 @@ def reading(root: Path) -> tuple[Mapping[str, Any], list[str]] | None:
     project at `root`; None when nothing is committed — no HEAD to judge, so nothing
     is owed. Raises NoAnswer.
 
-    The three backbone readings run at once. The check judges the pages alone, and
-    is handed them once they are told (`doc_check.Pages`); where they cannot be, it is
-    handed none, so it ends. The answers are read in the order the answer depends on
-    them: whether HEAD names a commit, then the check, then the pages. So the first
-    that gives no answer is the one named, and with no commit the others' answers go
-    unread, as when each waited for the one before."""
+    The three backbone readings run at once. The check judges the pages alone: a
+    hand-over of its own hands it them once they are told (`doc_check.Pages`), or
+    none where they cannot be, so the check never waits on a list that does not
+    come, whether the readings run at once or in turn. The answers are read in the
+    order the answer depends on them: whether HEAD names a commit, then the check,
+    then the pages. So the first that gives no answer is the one named, and with no
+    commit the others' answers go unread, as when each waited for the one before."""
     handed = doc_check.Pages()
     try:
         with ThreadPoolExecutor(max_workers=4) as pool:
             head = pool.submit(doc_check.has_commit, str(root))
-            friction = pool.submit(doc_check.read_friction, str(root), pages=handed)
             places = pool.submit(spaces.pages, root)
-            unread: Unreadable | None = None
-            try:
-                pages = places.result()
-            except Unreadable as exc:
-                pages, unread = [], exc
-            given = pool.submit(handed.give, pages)
+            given = pool.submit(_hand_over, places, handed)
+            friction = pool.submit(doc_check.read_friction, str(root), pages=handed)
             try:
                 if not head.result():
                     return None
@@ -107,13 +103,25 @@ def reading(root: Path) -> tuple[Mapping[str, Any], list[str]] | None:
                 # The check has ended, or its answer goes unread: nothing reads the
                 # pages handed to it any more, so a hand-over still writing stops.
                 handed.close()
-                given.result()
+                given.exception()
+            try:
+                pages = places.result()
+            except Unreadable as exc:
+                raise doc_check.NoAnswer(f"the pages cannot be told: {exc}") from exc
     finally:
         handed.close()
-    if unread is not None:
-        raise doc_check.NoAnswer(f"the pages cannot be told: {unread}") from unread
     doc_check.judged_as_handed(report, pages)
     return report, pages
+
+
+def _hand_over(places: Future[list[str]], handed: doc_check.Pages) -> None:
+    """Hand the check the pages once they are told, or none where their reading gave
+    no answer, which the reading's own answer names in its turn."""
+    told: list[str] = []
+    try:
+        told = places.result()
+    finally:
+        handed.give(told)
 
 
 def main() -> int:
