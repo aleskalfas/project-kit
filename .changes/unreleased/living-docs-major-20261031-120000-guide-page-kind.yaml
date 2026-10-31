@@ -14,4 +14,6 @@ body: >
   RS-LDOC-004 binds, a page that names `guide` is checked against that
   structure, so one without a title written as `# Title` at the start of a
   line, which passed before as a kind with no structure, fails validation.
-  Give it that title.
+  Give it that title. A kind of your project's own named `guide` follows the
+  shipped format, or takes another name. No migration ships: only a page's
+  writer can word its title.

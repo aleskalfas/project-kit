@@ -6,8 +6,8 @@
 # subject exists, the reader's tasks, and, on a folder's entry page, the
 # folder's pages last. A section on how the subject works may stand anywhere
 # after the why. The detail a reader looks up is left to the page that
-# describes the subject, which the lead names. Stamp it with `pkit living-docs
-# new page <file> --kind guide …`, and fill it in.
+# describes the subject, which the lead names where one does. Stamp it with
+# `pkit living-docs new page <file> --kind guide …`, and fill it in.
 reader: user                      # who the page is for: an id of the readers point (user, maintainer, or one the project adds)
 kind: guide                       # the page's kind: this template's
 pkit:
@@ -34,6 +34,6 @@ pkit:
 
 ## <The folder's pages>
 
-<Only on a folder's entry page, such as its README: the folder's further pages, in the order the reader takes them. Delete this section on any other page.>
+<Only on a folder's entry page, such as its README: the pages the folder holds for this reader, in the order they take them, a subfolder's pages through its entry page. Delete this section on any other page.>
 
 - [<page>](<page>) — <what the reader finds there, in a line>.
