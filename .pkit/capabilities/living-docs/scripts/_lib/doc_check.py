@@ -53,7 +53,9 @@ module's.
 
 from __future__ import annotations
 
+import contextlib
 import json
+import os
 import subprocess
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any
@@ -122,17 +124,67 @@ def has_commit(root: str, run: Runner = backbone.run) -> bool:
     )
 
 
+class Pages:
+    """The pages, handed to a check started before they are known: the check reads them
+    from its standard input (`--artefacts-from -`), as late as just before it judges
+    any artefact, so telling the pages adds little to its time or none.
+
+    `give` writes them, one a line, and ends the list: given none, the check judges
+    none. `close` lets go of both ends, so a `give` still writing to a check that has
+    ended stops rather than waits on a reader that is gone."""
+
+    def __init__(self) -> None:
+        read, write = os.pipe()
+        self.reader = os.fdopen(read, "r", encoding="utf-8")
+        self._writer = os.fdopen(write, "w", encoding="utf-8")
+
+    def give(self, pages: Iterable[str]) -> None:
+        try:
+            self._writer.writelines(f"{page}\n" for page in pages)
+        except (BrokenPipeError, ValueError):
+            pass  # the check has ended and been let go of: it reads no more
+        finally:
+            _quietly_closed(self._writer)
+
+    def close(self) -> None:
+        _quietly_closed(self.reader)
+        _quietly_closed(self._writer)
+
+
+def _quietly_closed(end: Any) -> None:
+    """Close one end of the pipe; a write the close flushes that finds no reader is owed
+    nothing."""
+    with contextlib.suppress(OSError):
+        end.close()
+
+
 def read_friction(
-    root: str, run: Runner = backbone.run, *, pages: Sequence[str] | None = None
+    root: str, run: Runner = backbone.run, *, pages: Pages | None = None
 ) -> Mapping[str, Any]:
     """The whole-repository check's machine-readable document, through `pkit`: with
-    `pages`, judging those artefacts alone (`--artefact`), each as the whole check
-    judges it, the measures still the whole repository's. The obligations read no
-    other artefact's judgement, so the check does not pay for every one. Raises
-    NoAnswer when it gives none, or one of a version this reading does not
-    understand."""
-    selected = (word for page in pages or () for word in ("--artefact", page))
-    return _reading(CHECK_ARGV, root, run, "artefacts", (*CHECK_ARGV, *selected))
+    `pages`, judging the pages alone, each as the whole check judges it, the measures
+    still the whole repository's. The obligations read no other artefact's judgement,
+    so the check does not pay for every one. Raises NoAnswer when it gives none, or one
+    of a version this reading does not understand."""
+    if pages is None:
+        return _reading(CHECK_ARGV, root, run, "artefacts")
+    called = (*CHECK_ARGV, "--artefacts-from", "-")
+    return _reading(CHECK_ARGV, root, run, "artefacts", called, stdin=pages.reader)
+
+
+def judged_as_handed(report: Mapping[str, Any], pages: Iterable[str]) -> None:
+    """Raise NoAnswer unless the check judged the pages it was handed, as its
+    `selection` names them: a list cut short on its way reads like a whole one, and
+    a page the check was never handed would owe nothing, unread."""
+    if report.get("dormant"):
+        return
+    selection = report.get("selection")
+    named = selection.get("named") if isinstance(selection, Mapping) else None
+    handed = sorted(set(pages))
+    if named != handed:
+        raise NoAnswer(
+            f"`{' '.join(CHECK_ARGV)}` judged {named!r}, not the {len(handed)} page(s) handed to it"
+        )
 
 
 def _reading(
@@ -141,13 +193,16 @@ def _reading(
     run: Runner,
     key: str,
     called: Sequence[str] | None = None,
+    **options: Any,
 ) -> Mapping[str, Any]:
     """The document a backbone reading prints, one that carries `key`, at the version
     this capability reads: `argv` names the reading, and `called`, where given, is the
     argument list it runs with, what it is asked of added. Raises NoAnswer when it
     gives none, or one of a version this reading does not understand."""
     try:
-        proc = run(list(called or argv), cwd=root, capture_output=True, text=True, check=False)
+        proc = run(
+            list(called or argv), cwd=root, capture_output=True, text=True, check=False, **options
+        )
     except OSError as exc:
         raise NoAnswer(f"`pkit` could not be run ({exc})") from exc
     try:

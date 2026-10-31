@@ -40,12 +40,14 @@ interpreter (`pkit_on_path`), so no test reaches `uv` or the network.
 from __future__ import annotations
 
 import functools
+import io
 import json
 import os
 import shutil
 import subprocess
 import sys
 import threading
+import time
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -545,6 +547,20 @@ def test_a_check_of_another_version_is_no_answer(version: Any) -> None:
     )
 
 
+def test_a_check_that_judged_other_than_the_pages_handed_to_it_is_no_answer() -> None:
+    """Standard input cannot tell a list cut short from a whole one, so the filler reads
+    back what the check was asked to judge (`selection`): anything but the pages it
+    handed — a page missing, a check that judged every artefact — is no answer, never
+    fewer obligations (#2365)."""
+    pages = ["docs/guide.md", "tech-docs/README.md"]
+    whole = {**REPORT, "selection": {"named": pages, "absent": []}}
+    doc_check_lib.judged_as_handed(whole, [*reversed(pages), pages[0]])
+    doc_check_lib.judged_as_handed({"dormant": True, "artefacts": []}, pages)
+    for selection in ({"named": pages[:1], "absent": []}, None):
+        with pytest.raises(doc_check_lib.NoAnswer, match="not the 2 page"):
+            doc_check_lib.judged_as_handed({**REPORT, "selection": selection}, pages)
+
+
 def test_a_check_without_a_version_reads_as_the_first() -> None:
     """A backbone from before the key answers version 1."""
     assert doc_check_lib.read_friction(".", _check_answering(REPORT)) == REPORT
@@ -657,11 +673,17 @@ def one_call_at_a_time(monkeypatch: pytest.MonkeyPatch) -> None:
     one before to end: a call uses the process's directory, environment and standard
     streams, so it is not safe beside another in a thread, and the filler starts its
     three readings in threads (`InProcessPkit`). Each reading still starts when the
-    filler starts it. A call made inside another, in its thread, goes on."""
+    filler starts it. A call made inside another, in its thread, goes on. A call handed
+    a list on its standard input reads it whole before it waits its turn, as a process
+    reads its input on its own: the filler hands the check the pages once another call,
+    the pages' reading, has been answered."""
     call = InProcessPkit.__call__
     lock = threading.RLock()
 
     def one_at_a_time(self: InProcessPkit, *args: Any, **options: Any) -> Any:
+        stdin = options.get("stdin")
+        if stdin is not None:
+            options["stdin"] = io.StringIO(stdin.read())
         with lock:
             return call(self, *args, **options)
 
@@ -1035,8 +1057,7 @@ def test_a_history_git_cannot_read_is_no_answer_and_the_filler_asks_git_nothing(
     assert outside.read_text(encoding="utf-8") == ""
 
 
-#: The filler's three readings, each named by the two words after `pkit`: HEAD's and the
-#: pages' at once, then the check of the pages.
+#: The filler's three readings, each named by the two words after `pkit`.
 HEAD, CHECK, PAGES_READ = "repository base", "friction check", "friction artefacts"
 
 #: How long a reading waits for the others, in seconds, before it is taken to wait in vain.
@@ -1048,18 +1069,18 @@ def _reading(argv: Sequence[str]) -> str:
 
 
 def _met() -> Runner:
-    """A `pkit` that answers each call in this process, the first call of the readings of
-    HEAD and of the pages only once both have started: a reading started only after the
-    other was answered never comes, and the wait breaks (`threading.Barrier`)."""
+    """A `pkit` that answers each call in this process, the first call of each of the
+    three readings only once all three have started: a reading started only after
+    another was answered never comes, and the wait breaks (`threading.Barrier`)."""
     pkit = InProcessPkit()
-    barrier = threading.Barrier(2, timeout=PATIENCE)
+    barrier = threading.Barrier(3, timeout=PATIENCE)
     waited: set[str] = set()
     guard = threading.Lock()
 
     def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
         reading = _reading(argv)
         with guard:
-            first = reading in (HEAD, PAGES_READ) and reading not in waited
+            first = reading in (HEAD, CHECK, PAGES_READ) and reading not in waited
             waited.add(reading)
         if first:
             barrier.wait()
@@ -1070,8 +1091,8 @@ def _met() -> Runner:
 
 def _failing(failing: Sequence[str]) -> Runner:
     """A `pkit` that answers each call in this process, or, for a reading `failing`
-    names, exits 1 saying so; the reading of HEAD only once the pages' has ended, so
-    the reading that ends first is never for that the one named."""
+    names, exits 1 saying so; the reading of HEAD only once the other two have ended, so
+    the readings that end first are never for that the ones named."""
     pkit = InProcessPkit()
     ended: set[str] = set()
     others_ended = threading.Event()
@@ -1099,15 +1120,16 @@ def _failing(failing: Sequence[str]) -> Runner:
         finally:
             with guard:
                 ended.add(reading)
-                if PAGES_READ in ended:
+                if {CHECK, PAGES_READ} <= ended:
                     others_ended.set()
 
     return run
 
 
-def test_the_filler_reads_head_and_the_pages_at_once(docs_project: AdopterRepo) -> None:
-    """Neither the reading of HEAD nor that of the pages waits for the other: each starts
-    before either is answered, and the answer is the one they give."""
+def test_the_filler_starts_its_three_readings_at_once(docs_project: AdopterRepo) -> None:
+    """None of the three readings waits for another: each starts before any of them is
+    answered — the check before it is handed the pages — and the answer is the one they
+    give."""
     docs_project.write({"src/a.py": "A = 1\n"})
     docs_project.commit("base")
     alone = filled(docs_project.root)
@@ -1119,10 +1141,9 @@ def test_the_filler_reads_head_and_the_pages_at_once(docs_project: AdopterRepo) 
 @pytest.mark.parametrize(
     ("committed", "failing", "named"),
     [
-        (True, ("friction check",), "`pkit friction check --all --json`"),
-        (True, ("friction check", "friction artefacts"), "the pages cannot be told"),
+        (True, ("friction check", "friction artefacts"), "`pkit friction check --all --json`"),
         (True, ("friction artefacts",), "the pages cannot be told"),
-        (True, ("repository base", "friction artefacts"), "`pkit repository base --json`"),
+        (True, ("repository base", "friction check"), "`pkit repository base --json`"),
         (False, ("friction check", "friction artefacts"), None),
     ],
 )
@@ -1132,9 +1153,9 @@ def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
     failing: tuple[str, ...],
     named: str | None,
 ) -> None:
-    """The readings are read in order — HEAD, the places, then the check of the pages
-    they name: the first that gives no answer is the one named, and with no commit
-    nothing is owed, whatever the pages' reading gave, and the check is not asked."""
+    """Read at once, the readings are still read in order — HEAD, the check, the
+    places: the first that gives no answer is the one named, and with no commit
+    nothing is owed, whatever the others gave, as when each waited for the last."""
     if committed:
         docs_project.write({"src/a.py": "A = 1\n"})
         docs_project.commit("base")
@@ -1152,10 +1173,10 @@ def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
 
 def test_the_filler_has_the_check_judge_the_pages_alone(docs_project: AdopterRepo) -> None:
     """The obligations read only the pages' judgements and the measures, so the filler
-    asks the check to judge the pages and no other artefact (`--artefact`, one per
-    page). However many other artefacts a change brings or makes stale, the check
-    judges the pages alone, and what it reads of the rest — the uncovered surface — is
-    the whole repository's still (#2365)."""
+    asks the check to judge the pages and no other artefact, handing it the pages on its
+    standard input (`--artefacts-from -`). However many other artefacts a change brings
+    or makes stale, the check judges the pages alone, and what it reads of the rest —
+    the uncovered surface — is the whole repository's still (#2365)."""
     repo = docs_project
     page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
     records = {
@@ -1186,13 +1207,9 @@ def test_the_filler_has_the_check_judge_the_pages_alone(docs_project: AdopterRep
     answered = filled(repo.root, pkit=run)
     assert answered.returncode == 0, answered.stderr
     (argv,) = [call for call in pkit.calls if _reading(call) == CHECK]
-    pages = ["docs/guide.md", "tech-docs/README.md"]
-    assert argv == [
-        "pkit",
-        *("friction", "check", "--all", "--json"),
-        *(word for page in pages for word in ("--artefact", page)),
-    ]
+    assert argv == ["pkit", "friction", "check", "--all", "--json", "--artefacts-from", "-"]
     (check,) = checks
+    assert check["selection"] == {"named": ["docs/guide.md", "tech-docs/README.md"], "absent": []}
     assert [a["location"] for a in check["artefacts"]] == ["docs/guide.md"]
     assert check["measures"]["uncovered_surface"] == ["src/b.py"]
     assert [(o["reason"], o.get("document") or o.get("path")) for o in _value(answered)] == [
@@ -1203,6 +1220,65 @@ def test_the_filler_has_the_check_judge_the_pages_alone(docs_project: AdopterRep
 
 def _value(answered: subprocess.CompletedProcess[str]) -> list[dict[str, Any]]:
     return json.loads(answered.stdout)["value"]
+
+
+#: The filler's CPU time on project-kit's own tree, in units of the work `_yaml_unit`
+#: does, may grow to this before the budget fails: twice the 19 units it took when the
+#: budget was set, on 31 October 2026, when judging every artefact took 31. The filler
+#: must answer well within the 30 s `pkit validate` gives a query command (#2365), so a
+#: doubling of its work fails here first. What still grows with each change is the
+#: reading of every answer file in history (ADR-079, Implications): raise the budget only
+#: with the reason it grew.
+DOC_CHECK_BUDGET = 38
+
+
+def _yaml_unit() -> float:
+    """The CPU time of a fixed piece of the work the filler's time is made of: a run of
+    answer-file-shaped YAML parsed with the backbone's own loader, in pure Python. The
+    budget is counted in it, so a runner slower than another counts the same."""
+    entry = (
+        "  - artefact: tech-docs/analysis/core/glossary.md#TERM-{n}\n"
+        "    read:\n"
+        + "".join(f"      - 2026102{d}T00000{d}Z-0000000{d}.yaml\n" for d in range(8))
+        + "    revalidated:\n      at: 2026-10-30T04:15:20Z\n      outcome: unchanged\n"
+        '      unchanged-because: "The page still says what the code does."\n'
+    )
+    text = "answers:\n" + "".join(entry.format(n=n) for n in range(40))
+    loader = YAML(typ="safe", pure=True)
+    start = time.process_time()
+    for _ in range(20):
+        loader.load(text)
+    return time.process_time() - start
+
+
+@pytest.mark.answers
+def test_the_filler_answers_within_its_budget_on_project_kit_s_own_tree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The documentation check on this repository, history and answers included, as
+    `pkit validate` runs it, every `pkit` it reads through and every resolver answered in
+    this process: its CPU time holds within `DOC_CHECK_BUDGET`, counted in `_yaml_unit`s
+    so a slow runner and a fast one count alike (#2365)."""
+    shallow = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if shallow.stdout.strip() != "false":
+        pytest.skip("the check reads every artefact's history, which this clone does not hold")
+    start_in_process(monkeypatch)
+    unit = min(_yaml_unit() for _ in range(3))
+    start = time.process_time()
+    answered = filled(REPO)
+    spent = time.process_time() - start
+    assert answered.returncode == 0, answered.stderr
+    assert spent / unit <= DOC_CHECK_BUDGET, (
+        f"fill-doc-check took {spent:.1f} s of CPU, {spent / unit:.0f} units of "
+        f"{unit:.3f} s, over its budget of {DOC_CHECK_BUDGET}: find what doubled its work "
+        f"before raising the budget"
+    )
 
 
 @pytest.mark.process(

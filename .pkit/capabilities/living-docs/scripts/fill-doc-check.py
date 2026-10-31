@@ -23,12 +23,16 @@ parameter: it reads the repository through the backbone and asks git nothing
 itself — whether HEAD names a commit, `head` in `pkit repository base --json`;
 which documents are pages, from the working tree through `pkit friction
 artefacts --json`; and HEAD and its history, through `pkit friction check --all
---json` — writes nothing and needs no network. The first two depend on nothing,
-so it starts them at once and reads their answers in that order. The check
-judges the pages alone, each named with `--artefact`: the obligations read no
-other artefact's judgement, and judging every artefact of the repository to
-read the pages' costs the time the backbone's bound gives a query. Its measures
-stay the whole repository's, so the uncovered surface is read whole. Its
+--json` — writes nothing and needs no network. The check judges the pages
+alone: the obligations read no other artefact's judgement, and judging every
+artefact of the repository to read the pages' costs the time the backbone's
+bound gives a query. Its measures stay the whole repository's, so the uncovered
+surface is read whole. It starts the three readings at once, the check with
+`--artefacts-from -`, and hands the check the pages once it knows them: the
+check reads them once it has read HEAD and its history, so telling the pages
+costs it no time. It reads their answers in the order the answer depends on
+them — HEAD's, the check's, the pages' — so the first that gives no answer is
+the one named, and with no commit the others' answers go unread. Its
 `commands:` entry declares what it reads beyond the working tree, `reads:
 [history]`, so the backbone's
 report names the commit HEAD was read at; it reads no settled state and no
@@ -77,21 +81,39 @@ def reading(root: Path) -> tuple[Mapping[str, Any], list[str]] | None:
     project at `root`; None when nothing is committed — no HEAD to judge, so nothing
     is owed. Raises NoAnswer.
 
-    Whether HEAD names a commit and which documents are pages are read at once,
-    and their answers in that order, so the first that gives no answer is the one
-    named, and with no commit the pages go unread. The check is read last, of the
-    pages alone: only theirs is owed, and judging every artefact of the repository
-    to read theirs would cost the time the point's bound gives (COR-052 point 6)."""
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        head = pool.submit(doc_check.has_commit, str(root))
-        places = pool.submit(spaces.pages, root)
-        if not head.result():
-            return None
-        try:
-            pages = places.result()
-        except Unreadable as exc:
-            raise doc_check.NoAnswer(f"the pages cannot be told: {exc}") from exc
-    return doc_check.read_friction(str(root), pages=pages), pages
+    The three backbone readings run at once. The check judges the pages alone, and
+    is handed them once they are told (`doc_check.Pages`); where they cannot be, it is
+    handed none, so it ends. The answers are read in the order the answer depends on
+    them: whether HEAD names a commit, then the check, then the pages. So the first
+    that gives no answer is the one named, and with no commit the others' answers go
+    unread, as when each waited for the one before."""
+    handed = doc_check.Pages()
+    try:
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            head = pool.submit(doc_check.has_commit, str(root))
+            friction = pool.submit(doc_check.read_friction, str(root), pages=handed)
+            places = pool.submit(spaces.pages, root)
+            unread: Unreadable | None = None
+            try:
+                pages = places.result()
+            except Unreadable as exc:
+                pages, unread = [], exc
+            given = pool.submit(handed.give, pages)
+            try:
+                if not head.result():
+                    return None
+                report = friction.result()
+            finally:
+                # The check has ended, or its answer goes unread: nothing reads the
+                # pages handed to it any more, so a hand-over still writing stops.
+                handed.close()
+                given.result()
+    finally:
+        handed.close()
+    if unread is not None:
+        raise doc_check.NoAnswer(f"the pages cannot be told: {unread}") from unread
+    doc_check.judged_as_handed(report, pages)
+    return report, pages
 
 
 def main() -> int:
