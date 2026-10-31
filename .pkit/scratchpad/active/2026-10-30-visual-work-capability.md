@@ -122,7 +122,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
     - **Variations per language.** The same work in several languages, from material of the same structure (use case 7).
     - **Translation know-how, shipped in the capability.** What the Czech version taught: translate a slide from its meaning, not word for word, one translator per slide; keep the English words developers say (capability, engine, slot); build each sentence the target language's way; one glossary, one word for one thing; a review by a native speaker. The lessons are in the Friday talk's note, "The Czech version".
 14. ~~**The workarounds.** What to fix in the Mural renderer rather than carry beside it: the duplicates left after retries, monospace text rendered as images.~~ Decided (31 October): the renderer never retries a create blindly; it finds what a failed create made by its marker (see "Discussion", point 14).
-15. **Moving in.** Tests, versions, and moving today's user-level skill into pkit.
+15. ~~**Moving in.** Tests, versions, and moving today's user-level skill into pkit.~~ Decided (31 October): the delivered Friday talk and the skill stay as they are until the renderer covers what the talk used; the slice rebuilds four slides on a new board; the maintainer signs in again (see "Discussion", point 15).
 16. ~~**Names.** A naming pass with the maintainer before any record or code fixes a name.~~ Decided (31 October): the capability `visual-communication`; a piece, its content, local components, patterns, layouts, slots and frames; a brand, a component library and a notation; foundations and the starter; the states draft, delivered, living and adapted; the rest kept or chosen by the agent at the maintainer's word (see "Names", the naming pass).
 17. ~~**The runtime and outside programs.**~~ Decided: Python, with no Node; outside programs are called only on the path that needs them, and the capability checks for them (see "Discussion", point 17).
 18. **The architect's four revisions of decided points**, taken one at a time:
@@ -1191,6 +1191,12 @@ Point 12 is decided.
 **Settled along the way.** The capability starts at 0.1.0 (point 23). Its tests live in project-kit's `tests/`, as every capability's do, and the tool's offline suite, which runs against a fake Mural API, comes with it.
 
 **The Friday talk stays as it is. Agreed (31 October).** The talk was given on 30 October, so it is delivered: locked, with its exports as the real freeze (4d, 18a). Its board, its map file and the `mural-boards` skill stay untouched. For the first slice, four of its slides are made again as a new piece from the talk's content and pushed to a new board, so the delivered board is never at risk. The skill keeps working until the capability's Mural renderer covers everything the talk used; then the maintainer retires it. If the talk is given again, it is converted then, as an adapted piece (4d). Set aside: converting the whole talk now and taking over its board (some 30 slides and 38 one-off diagrams converted before the slice proves anything, with the delivered board at risk), and converting it onto a new board (safe, but most of the work, for a result nobody needs yet).
+
+**The maintainer signs in again. Agreed (31 October).** The current sign-in sits in `~/.config/mural-boards/`, which no agent may read. `pkit sign-in mural` asks for the app's client id and secret in the terminal, hidden as they are typed, then opens the browser once; the same Mural app serves, its callback address unchanged. Nothing reads the old folder, and the maintainer deletes it when the skill retires. If #2419 decides that project-kit registers one app for everyone, only the browser step stays. Set aside: pkit taking the old sign-in over, which would teach pkit's code another tool's secret files to save a minute.
+
+**The tool's code splits as it moves.** Its sign-in goes to the backbone (#2418); its client, pacing, retries and sync record go to the capability's Mural renderer (point 23), with point 14's fix for duplicates.
+
+Point 15 is decided.
 
 ## Architect's review (31 October)
 
