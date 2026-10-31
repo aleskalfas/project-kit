@@ -1122,7 +1122,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | values, structure, meaning | the three kinds of content a library holds (point 4g) | working |
 | core, interface, starter | the core holds only the interface (role names, top components, named layouts, slots); the starter holds the capability's opinionated components (point 18b) | working |
 | subject | what the work is about, such as pkit; its concepts mapped to roles (point 4g) | working |
-| layouts, slot, entry point | level 6: the layouts a top component declares and a context supplies, such as a deck's cover, section and slide ("named layouts" before the naming pass); a place in a layout; a named way into a library, such as `ibm/deck` (point 4g) | layouts decided (naming pass); slot and entry point working |
+| layouts, slot, entry point | level 6: the layouts a top component declares and a context supplies, such as a deck's cover, section and slide ("named layouts" before the naming pass); a place in a layout; a named way into a library, such as `ibm/deck` (point 4g) | layouts and slot decided (naming pass); entry point working |
 | shared core, per context, per piece | the three scopes | working |
 | drafting, delivered, reused | the states of point 4d | working |
 | living | the fourth state: work that is never delivered, such as a doc figure (point 4j) | working |
@@ -1192,6 +1192,7 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   # the scene, computed: each element's frame
   - {id: fits/visual/pyramid/level-1, frame: {x: 340, y: 520, width: 1200, height: 140}}
   ```
+- **"Slot" stays,** for a named place in a layout or a component that content fills. Chosen by the maintainer: the established term of component design (web components, Vue, Svelte, and the design systems built on them), and one word for layouts and components alike. Ruled out: "placeholder", PowerPoint's word for a layout's slot, which designers also hear as mock text or an empty field's hint, and which fits layouts only. Flagged clash: pkit's capability slots (point 24); the context tells them apart, "a layout's slot" against "a capability slot".
 
 **A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --context ibm/deck --subject pkit` writes two files; the rest appear when they are needed:
 
