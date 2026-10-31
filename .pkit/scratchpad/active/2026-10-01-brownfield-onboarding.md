@@ -33,7 +33,7 @@ The records settle the principle and the engine, and they leave the onboarding l
   - **The signal is *uncovered surface*:** the paths the project declares its analysis should cover, against what the artefacts anchor to.
   - **The end:** onboarding needs a non-empty declared surface, and it is complete when that surface is covered. An artefact nothing embodies carries `unanchored-because`.
 - **The onboarding lifecycle is explicitly not decided** (software-analysis DEC-001 point 11): "lifecycles on the process substrate (a planned revalidation; onboarding) … each needs its own decision when a real need arrives." The need has arrived.
-- **The path for documentation** (living-docs README, "Onboarding an existing project", and living-docs DEC-001 point 8):
+- **The path for documentation** (living-docs' reference page on its agent, "Onboarding", and living-docs DEC-001 point 8):
   1. Declare where documentation lives.
   2. Ask the agent to onboard.
   3. The agent drafts *one plan* in four parts behind a single gate: spaces, splits and rewrites, anchors, mapping.

@@ -1,9 +1,23 @@
 ---
 rule-set: REWORK
-version: 2.0.0
+version: 2.1.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
-  paths: [.pkit/permissions/README.md, docs/permissions/README.md]
+  paths:
+    - .pkit/permissions/README.md
+    - docs/permissions/README.md
+    - .pkit/capabilities/living-docs/README.md
+    - .pkit/capabilities/living-docs/pages.md
+    - .pkit/capabilities/living-docs/spaces.md
+    - .pkit/capabilities/living-docs/validation.md
+    - .pkit/capabilities/living-docs/agent.md
+    - docs/capabilities/README.md
+    - docs/capabilities/living-docs/README.md
+    - docs/capabilities/living-docs/010-set-up-your-spaces.md
+    - docs/capabilities/living-docs/020-bring-in-your-documents.md
+    - docs/capabilities/living-docs/030-write-a-page.md
+    - docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md
+    - docs/capabilities/living-docs/050-fix-a-stale-page.md
   types: [living-docs:page]
 rules:
   RS-REWORK-001:
@@ -33,11 +47,17 @@ rules:
   RS-REWORK-005:
     status: accepted
     origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The maintainer chose a contents list for a page a reader moves around in, such as a long guide or a reference (#2053). A generator writes it, and a check fails it when stale. Four second-level sections is project-kit's choice of where a page becomes one. A list kept by hand drifts when a section is added or renamed."}
-# The part of a rule that project-kit's contents generator, scripts/page_contents.py,
-# checks (COR-051 point 2). The generator checks every contents list a page holds, as
-# CONTRIBUTING.md says. It stands in for this rule's part only where the rule binds,
-# and whoever judges the rest of the rule there leaves that part to it.
+# The parts of rules that project-kit's own tools check (COR-051 point 2). Each stands
+# in for its rule's part only where the rule binds, and whoever judges the rest of the
+# rule there leaves that part to it.
+# - The numbering test, tests/test_page_numbering.py, holds the list of each README
+#   this set's scope selects to the numbered pages and subfolders beside it.
+# - The contents generator, scripts/page_contents.py, checks every contents list a
+#   page holds, as CONTRIBUTING.md says.
 checks:
+  RS-REWORK-001:
+    - check: page-numbering
+      part: Each number is in tens, no two of a folder's pages or subfolders share one, and the folder's README lists each numbered page and subfolder in number order, each by a list item that opens with a link to it.
   RS-REWORK-005:
     - check: page-contents
       part: The list between the page's contents markers is the one the contents generator writes from the page's second-level headings.
@@ -68,7 +88,7 @@ Name a page or a subfolder that its reader reads in order with a number in tens,
   - The folder's README lists its numbered pages and subfolders in number order. The README keeps its own name (ADR-069 point 3).
 - **Breaks the rule:** a guide folder on no branch holds `turning-it-on.md` and `common-tasks.md`, read in that order, and neither name says so.
 - **Keeps the rule:** the same pages on no branch, named `010-turning-it-on.md` and `020-common-tasks.md`, and a glossary beside them named `glossary.md`.
-- **Note:** ADR-069 point 4 gives this rule a test as its check, which holds each README's list to the numbers. The test comes with the first numbered folder (RS-LDOC-006), and until then a reviewer judges the list.
+- **Note:** ADR-069 point 4 gives this rule a test as its check, which holds each README's list to the numbers, as the set's `checks` declare. It came with the first numbered folder, living-docs' guide (RS-LDOC-006).
 
 ## RS-REWORK-002 — A move keeps every address
 
