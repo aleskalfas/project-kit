@@ -210,6 +210,9 @@ Run `pkit sync` <!-- unanchored: named as the next step, not described --> after
 
 - **One passage.** A mark passes over the path, id or command it follows: the last before it on its line, after any earlier comment. A later passage that rests on the same thing is still read.
 - **A person's decision.** A mark is written on a person's decision, and the `living-docs` agent proposes one as it proposes any change to a page.
-- **A mark that passes nothing over is reported:** one that follows no mention, one that gives no reason, and one after a mention the page's anchors cover. A mark after a file since removed, or a record that no longer exists, follows no mention. It is reported, never moved to an earlier mention.
+- **A mark that passes nothing over is reported.** That is any of these:
+  - one that follows no mention, such as one after a file since removed or a record that no longer exists. It is reported, never moved to an earlier mention.
+  - one that gives no reason
+  - one after a mention the page's anchors cover
 
 A page accepted with no anchors (`unanchored-because`) has its mentions read like any other. The report settles no part of `RS-LDOC-001`. Whether a statement rests on what it mentions stays a judgment, the agent's reader-review's and the rule-set reviewer's, so `LDOC` declares no check for it.

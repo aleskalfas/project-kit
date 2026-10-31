@@ -102,7 +102,7 @@ $ pkit friction check >/dev/null 2>&1; echo $?
 1
 ```
 
-Below, again from a fresh project, a page names the script without anchoring it. Another is written for a reader the project has not declared. Last, `grep` prints the line of the agent's definition that forbids it to change a tracked file:
+Below, again from a fresh project, a page names the script and a record without anchoring either. Another is written for a reader the project has not declared. Last, `grep` prints the line of the agent's definition that forbids it to change a tracked file:
 
 ```console
 $ pkit capabilities install living-docs >/dev/null
@@ -110,10 +110,12 @@ $ pkit living-docs new space user --yes >/dev/null 2>&1
 $ mkdir -p src && echo 'print("Hello")' > src/greet.py
 $ pkit living-docs new page docs/usage.md --space user --kind reference --reader user --title "Usage" >/dev/null
 $ echo 'Run `src/greet.py` to be greeted.' >> docs/usage.md
-$ pkit living-docs validate | tail -3
-mention(s) a page's anchors do not cover, each with an anchor that would cover it (1):
+$ echo 'This page is flagged when what it anchors changes (COR-050).' >> docs/usage.md
+$ pkit living-docs validate | tail -4
+mention(s) a page's anchors do not cover, each with an anchor that would cover it (2):
   docs/usage.md
     15: path `src/greet.py` → path: [src/greet.py]
+    16: record `COR-050` → record: [COR-050]
 $ pkit living-docs new page docs/ops.md --space user --kind reference --reader operator --title "Operations"
 refused: writing docs/ops.md would bring validation errors the project did not have — docs/ops.md:/reader: docs/ops.md is for reader 'operator', which does not resolve: the readers point pkit::documentation:readers holds ['maintainer', 'user'] — name one of them, or add 'operator' to the point in the project's filler, tech-docs/pkit/fillers/pkit/documentation/readers.yaml (DEC-001 points 4 and 7). Nothing is written
 $ grep -o "You never Edit or Write a tracked file[^.]*\." .claude/agents/living-docs.md
@@ -123,7 +125,7 @@ You never Edit or Write a tracked file, never move or delete one, never change a
 What the output proves, claim by claim:
 
 - **Flagged in the change.** The change check names `docs/greet.md`, since the branch changed what it anchors. Once friction is enforced, the check exits 1 until the page has an answer ([Fix a stale page](050-fix-a-stale-page.md#answer-for-the-page) shows how to give one). project-kit's friction checks do the flagging. living-docs makes each page in its spaces' documentation roots one they read, with no place to declare for it.
-- **Reported when unanchored.** `docs/usage.md` names `src/greet.py` and anchors nothing, so validation lists the mention, with `path: [src/greet.py]` as the anchor that covers it.
+- **Reported when unanchored.** `docs/usage.md` names `src/greet.py` and COR-050, and anchors nothing, so validation lists both mentions, each with the anchor that covers it: `path: [src/greet.py]` and `record: [COR-050]`.
 - **Refused for an undeclared reader.** The stamp refuses `operator`, a reader nobody declared, and writes nothing. The readers it accepts are `user`, `maintainer`, and those your project or another capability adds. Whether the page then serves its reader is judged when the agent reads it as that reader ([Have a page read as its reader](040-have-a-page-read-as-its-reader.md#why-a-page-is-read-as-its-reader)).
 - **Proposed, not applied.** The agent's definition forbids it to change a tracked file ([the reference, "What it never does"](../../../.pkit/capabilities/living-docs/agent.md#what-it-never-does)). So it writes each fix as a diff in the agent workspace, for you to apply.
 

@@ -91,7 +91,7 @@ The checks say *that* a page drifted, and *which* documents are not pages yet. D
 
 - **Apply anything.** Its definition keeps it read-only on the repository. It never edits, moves or deletes a tracked file, never changes configuration, and never runs a friction writer (`revalidate`, `defer`, `record-status`).
   - **What holds it:** its definition alone. Nothing at run time confines its Write tool or its shell to the agent workspace, outside a fixer run that a work-tracking command confines. So never ask it to apply a change.
-  - **Why:** for what this agent proposes, the answer a page carries is a person's decision (COR-050 point 3). This agent has no tool for asking the person, and judges pages besides. Who may run a writer is in the agents README, "Friction writers".
+  - **Why:** for what this agent proposes, the answer a page carries is a person's decision (COR-050 point 3). This agent has no tool for asking the person, and judges pages besides.
   - **Where its proposals land:** in the agent workspace, under `.agent-workspace/living-docs/`, as diffs applied with `git apply` and pull-request bodies.
   - **Its one write outside the workspace:** a reader-review posted as a pull-request comment, on request.
 - **Repeat validation.** What `pkit living-docs validate` and `pkit validate` already judge, it names rather than judges again.
@@ -100,6 +100,8 @@ The checks say *that* a page drifted, and *which* documents are not pages yet. D
 - **Revalidate what is not a page,** such as a decision record, a rule or another capability's artefact. Its own component does that.
 - **Fetch a source.** For a page stale on a `source` anchor, it reads the versions recorded and the address from the source file's history (`git show <commit> -- <file>`). It names the source, both versions and the link, and asks the person what changed in the source that bears on the page's statements. It never rewrites a page from a version change alone.
 - **Read a friction document of a version it does not read.** The `explain`, `debt` and `check --all` documents carry a `schema_version` ([the CLI reference, "Friction checks"](../../cli/README.md#friction-checks)). One other than 1 it refuses, naming the command and the version, and proposes nothing from it. One without the key, from a backbone before it, reads as 1.
+
+**Note:** who may run a writer is in the agents README, "Friction writers".
 
 ## As the fixer of pages
 

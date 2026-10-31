@@ -13,6 +13,7 @@ pkit:
         - ACT-developer
         - REQ-022
         - .pkit/capabilities/living-docs/agent.md#what-it-does
+        - .pkit/capabilities/living-docs/README.md#the-readers-point
         - docs/capabilities/living-docs/010-set-up-your-spaces.md#declare-your-readers
 ---
 
@@ -42,7 +43,7 @@ In Claude Code, ask your session to use the `living-docs` agent, such as "Use th
 - **Nothing found.** It says so in one line, as above, and writes nothing.
 - **A question for you.** A passage a rule leaves to your judgement, such as a fact the page states twice, is listed as a question rather than a break.
 - **On a pull request.** Ask, and name the pull request, and the agent posts the record as a comment.
-- **Reader paths.** The page's rules may ask that reader paths stay unbroken, as the user space's rule does. The agent then follows each of the reader's paths that passes through the page. With none, it follows the page's own links.
+- **Reader paths.** The page's rules may ask that reader paths stay unbroken, as the user space's rule does. The agent then follows each of the reader's paths that passes through the page ([the reference, "The readers point"](../../../.pkit/capabilities/living-docs/README.md#the-readers-point)). With none, it follows the page's own links.
 
 A finding reads like this one, on a page of the user space whose reader is `user`:
 

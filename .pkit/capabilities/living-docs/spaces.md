@@ -51,7 +51,7 @@ Where a project's documentation spaces lie, and the rules their pages follow ([l
 
 Where the documentation lives is declared in two files, joined by path:
 
-- **The backbone configuration** (`.pkit/project/config.yaml` <!-- unanchored: named as the file that holds these keys, whose meaning rests on the CLI reference's Configuration file section, which the page anchors -->) names the two documentation roots (`docs.user`, `docs.internal`). It names every place outside them that holds pages (`friction.places`), and the paths the friction checks leave out (`friction.exclude`). The CLI reference's "Configuration file" section documents those keys.
+- **The backbone configuration** (`.pkit/project/config.yaml` <!-- unanchored: named as the file that holds these keys, whose meaning rests on the CLI reference's Configuration file section, which the page anchors -->) names the two documentation roots (`docs.user`, `docs.internal`). It names every place outside them that holds pages (`friction.places`), and the paths the friction checks leave out (`friction.exclude`).
 - **This capability's project configuration** (`.pkit/capabilities/living-docs/project/config.yaml` <!-- unanchored: named as the file, whose shape is schemas/config.schema.json, which the page anchors -->) holds what only living-docs needs: each space's audience, entry point and definition, and which space each place belongs to.
 
 ```yaml
@@ -83,6 +83,8 @@ places:                                        # place → space, the place writ
 The file's shape is `schemas/config.schema.json`, which `pkit validate` applies.
 
 **Trees a sync copies into a repository are never places.** In a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates"). The backbone's friction validation enforces this for every declared place, the project's or a capability's, as its `synced-place` finding (the schemas README, "The friction block").
+
+**Note:** the CLI reference documents the backbone configuration's keys, in ["Configuration file"](../../cli/README.md#configuration-file).
 
 ## Each definition's scope
 

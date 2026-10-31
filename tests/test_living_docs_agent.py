@@ -163,7 +163,7 @@ def test_the_reference_says_the_answer_is_a_person_s_decision():
     text = AGENT_PAGE.read_text(encoding="utf-8")
     assert "the answer a page carries is yours to give" not in text
     assert "the answer a page carries is a person's decision (COR-050 point 3)" in text
-    assert 'Who may run a writer is in the agents README, "Friction writers"' in text
+    assert 'who may run a writer is in the agents README, "Friction writers"' in text
 
 
 def test_storyboard_is_declared_as_its_sibling(agent):
