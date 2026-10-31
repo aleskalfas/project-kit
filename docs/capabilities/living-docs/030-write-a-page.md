@@ -69,9 +69,9 @@ pkit:
 
 ## Stamp the page
 
-The stamp writes the page from its kind's template, with its reader and its anchors in its front matter. Your agent's `docs-author` skill walks it through these choices ([the reference, "Authoring"](../../../.pkit/capabilities/living-docs/README.md#authoring-the-docs-author-skill)):
+The stamp writes the page from its kind's template, with its reader and its anchors in its front matter. The `docs-author` skill walks your agent through these choices ([the reference, "Authoring"](../../../.pkit/capabilities/living-docs/README.md#authoring-the-docs-author-skill)):
 
-- **The space.** The user space serves the people who use your system, and the technical space those who build it.
+- **The space.** The user space serves the people who use your system, and the technical space serves those who build it.
 - **The kind,** the page's format ([the reference, "A kind's format"](../../../.pkit/capabilities/living-docs/pages.md#a-kinds-format)). `reference` describes one thing to the reader who uses it, such as a command or a part of the system. `signpost` points into a folder, and only says what the folder holds.
 - **The reader.** `user`, `maintainer`, or a reader your project declares ([Set up your spaces, "Declare your readers"](010-set-up-your-spaces.md#declare-your-readers)).
 - **The file.** It goes under the space's documentation root, or into a place you declared for the space ([Set up your spaces](010-set-up-your-spaces.md#declare-the-pages-outside-the-documentation-roots)).
@@ -133,11 +133,16 @@ mention(s) a page's anchors do not cover, each with an anchor that would cover i
   Run `src/farewell.py` <!-- unanchored: named as the next step, not described --> to be sent off.
   ```
 
-- **Who writes a mark.** A person decides each mark, as they decide each answer. An agent may propose one, and writes it only once you accept its words.
+- **Who writes a mark.** A person decides each mark. An agent may propose one, and writes it only once you accept its words.
 
 ## Anchor a source outside the repository
 
-A page that rests on a standard, a specification or another project's documentation anchors it as a captured source. The checks never reach the network, so you record which text of the source your page was checked against ([the reference, "Sources"](../../../.pkit/capabilities/living-docs/pages.md#sources)). Below, the source's file is written, `resolve-source` shows that its name finds the file, and the page anchors it:
+A page that rests on a standard, a specification or another project's documentation anchors it as a captured source. The checks never reach the network, so you record which text of the source your page was checked against ([the reference, "Sources"](../../../.pkit/capabilities/living-docs/pages.md#sources)). The fence below takes three steps:
+
+- it writes the source's file
+- `resolve-source` shows that the source's name finds the file
+- the page anchors the source
+
 
 ```console
 $ pkit capabilities install living-docs >/dev/null

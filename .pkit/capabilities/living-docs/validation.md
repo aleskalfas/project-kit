@@ -63,7 +63,9 @@ What `pkit living-docs validate` reads, fails on and reports, a page's unanchore
 
 It reads where the project's documents are from the core, through `pkit friction artefacts --json`. That is the same discovery `pkit validate` and the friction checks read. The answer holds:
 
-- the documentation roots, the places the configuration and every installed capability declare, and which of them are declared to hold rule sets
+- the documentation roots
+- the places the configuration and every installed capability declare
+- which of those places are declared to hold rule sets
 - the files each place matches, and each file's front matter
 - each document's type, with its matching places in the backbone's order
 - the scopes covering each page

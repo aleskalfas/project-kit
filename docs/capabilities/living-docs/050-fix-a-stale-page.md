@@ -58,7 +58,11 @@ living-docs: Then it's ready: `git apply --check` takes the diff cleanly on your
 
 ## Find the stale pages
 
-The change check of your pull request names each page the change flagged. `pkit friction debt` lists every page the default branch left stale, the oldest first. `pkit friction explain` says which anchor of a page changed, in which commit, and what clears it.
+The change check of your pull request names each page the change flagged. `pkit friction debt` lists every page the default branch left stale, the oldest first ([the CLI reference](../../../.pkit/cli/README.md#friction-debt---json)). For one page, `pkit friction explain` names these ([the CLI reference](../../../.pkit/cli/README.md#friction-explain-artefact---json)):
+
+- which anchor changed
+- in which commit
+- what clears it
 
 Each fence on this page starts from a fresh project, so it first installs living-docs and creates the user space, their output dropped. Below, the page `docs/greet.md` anchors `src/greet.py`, and a later commit changed the script:
 
@@ -108,7 +112,7 @@ The answer goes in the pull request that mends the page. For a page your own cha
 - **`unchanged`:** the page still holds, and you say why.
 - **Deferred:** one anchor's change can wait, and your reason names the follow-up that will answer it. The page stays in the debt listing until then.
 
-Below, the page is mended and answered `updated`, and the change check finds nothing left to answer. Commit the answer file the command writes with the page:
+Below, the page is mended and answered `updated`, and the change check finds nothing left to answer. Commit the answer file the command writes with the page ([the CLI reference, "friction revalidate"](../../../.pkit/cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run)):
 
 ```console
 $ pkit capabilities install living-docs >/dev/null

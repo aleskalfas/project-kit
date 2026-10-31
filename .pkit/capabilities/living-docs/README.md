@@ -11,6 +11,7 @@ pkit:
         - .pkit/capabilities/living-docs/scripts/_lib/doc_check.py
         - .pkit/capabilities/living-docs/scripts/validate.py
         - .pkit/capabilities/living-docs/schemas/readers.schema.json
+        - .pkit/capabilities/living-docs/schemas/config.schema.json
         - .pkit/capabilities/living-docs/schemas/reading-evidence.schema.json
         - .pkit/capabilities/living-docs/skills/**
       record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002"]
@@ -94,7 +95,11 @@ pkit living-docs new page <file> --space <space> --kind <kind> --reader <id> --t
 **One check decides.** Each command runs validation's own check before and after it writes. That is the check `pkit living-docs validate` runs.
 
 - **A write that breaks validation is put back.** When the write brings an error the project did not have, the command puts back every file it wrote, refuses and quotes the error. So what it stamps passes `pkit living-docs validate` wherever the project passed it before.
-- **What the check cannot read refuses too.** That is the places, where the rules bind, the readers point, or the kinds' structures.
+- **What the check cannot read refuses too.** That is any of these:
+  - the places
+  - where the rules bind
+  - the readers point
+  - the kinds' structures
 - **`--dry-run`** makes the checks before the write, prints each file it would write, and writes nothing.
 
 **`new space`** makes the three writes of creating a space (DEC-001 point 2):
@@ -108,7 +113,7 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - **It refuses** a space that has a definition, and a set name another rule set has. It refuses a space no scope can select yet, with no root of its own and no place assigned to it.
 - **It refuses a write that breaks validation,** such as a place outside every root, assigned to the space, that gives no page type.
 - **It reports, without refusing,** each page of the space that the space's rules fail once they bind.
-- **It refuses when the check cannot read what it judges** once the rules bind, such as a readers point that does not resolve while the space's pages name readers.
+- **It refuses when the check cannot read what it judges** once the rules bind. An example is a readers point that does not resolve while the space's pages name readers.
 - **It writes nothing else itself:** no other space's definition, and nothing of the backbone configuration. Only `pkit config set` writes that, when the command sets the roots apart ("A fresh project" below).
 
 **`new page`** writes one new page into a space of the project, from the template of a kind this capability declares, `signpost` or `reference`.
@@ -117,7 +122,12 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - **Its front matter** names the reader and the kind. Its friction block lists the anchors given, and is empty with none: the page then counts as unanchored for onboarding.
 - **Its anchors:** code by `--path`, decisions and their points by `--record`, and captured sources by `--source`. `--artefact` takes rules, analysis artefacts and the home section of a fact it summarises.
 - **Its body** is the template's. The title fills the level-1 heading. The command lists the lines that still hold the template's other placeholders.
-- **It refuses** an unknown space or kind, a file that exists, and a path that is no Markdown file of the repository. It refuses a path reached through a link, a reader that is not a word, and an empty or placeholder title.
+- **It refuses** these, and writes nothing:
+  - an unknown space or kind
+  - a file that exists
+  - a path that is no Markdown file of the repository, or one reached through a link
+  - a reader that is not a word
+  - an empty or placeholder title
 - **It refuses a file the check does not read as a page of the space named.**
 - **It warns** when the space has no definition yet, since no rule binds on the page then.
 
@@ -140,7 +150,7 @@ The capability provides the `pkit::documentation` role (COR-053), under which it
 
 ### The readers point
 
-**Accepts `pkit::documentation:readers`** (version 1): who reads the documentation, what they need and the paths they take.
+**Accepts `pkit::documentation:readers`** (version 1): the readers of the documentation, each with their needs and the paths they take.
 
 - **An entry** is an `id`, which a page names as its `reader`, and a `description` of what that reader needs (`schemas/readers.schema.json`).
 - **Its paths.** An entry may also carry `paths`, the paths that reader takes through the pages. A path is the list of pages the reader reads in order, under `pages`, with an optional `description` of what they come to do. Each page is named by its Markdown file's path from the repository's root, never by a pattern of files.
@@ -158,7 +168,7 @@ value:
 ```
 
 - **Replacing an entry.** An entry replaces another of its id whole, so `user` takes paths only in an entry that writes its `description` with them.
-- **Who reads the paths.** No check reads a path. The agent's reader-review takes a page's reader from the point, with the reader's description and paths. Where a rule asks that reader paths stay unbroken, as the user space's own rule does, the review follows each path that passes through the page.
+- **Who reads the paths.** No check reads a path. The agent's reader-review takes a page's reader from the point, with the reader's description and paths. A rule may ask that reader paths stay unbroken, as the user space's own rule does. The review then follows each path that passes through the page.
 - **Readers a capability supplies.** A capability that keeps an analysis of the software can supply readers too, under ids of its own.
 - **When it is checked.** Validation checks a page's `reader` against the resolved point wherever `RS-LDOC-003` binds on the page.
 - **Its inert policy is `fail`.** If a capability's readers fall out of step with the point's version, the whole point is unresolved, rather than checked against whichever readers survived. Validation then reports "readers unresolved" once, not once per page, and `pkit validate` names the fix under `connections`.
@@ -198,7 +208,13 @@ value:
 - **A page left unjudged:** one whose anchor's resolver gave no answer (`no-answer`, state `unresolved`). The same holds for a page in a state this capability does not know, which it never takes for current. `pkit friction explain <page>` says why.
 - **A friction document of another version.** The friction check's answer carries a `schema_version`. The command does not read one other than 1. One without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks").
 
-**An anchor nothing resolves.** A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend: correct or remove it, install the capability that registers the kind, or mend a refused registration. It is not an obligation of this change.
+**An anchor nothing resolves.** A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend, not an obligation of this change. It is mended in one of three ways:
+
+- correct or remove it
+- install the capability that registers the kind
+- mend a refused registration
+
+Of such a page:
 
 - **What the command answers.** It answers for the page with what its other anchors owe, and names the anchor in its human view.
 - **Who reports the anchor.** `pkit validate` reports it under `friction`, and the change check fails it where a pull request adds it, or takes its resolver away (COR-050 point 12).
@@ -215,7 +231,7 @@ value:
 
 ## Citing this capability's decisions
 
-`[living-docs:DEC-001-living-docs-discipline]`, `[living-docs:DEC-002-visual-elements]`; a rule of the shared method, `[living-docs:RS-LDOC-003]`.
+`[living-docs:DEC-001-living-docs-discipline]` and `[living-docs:DEC-002-visual-elements]`, and a rule of the shared method as `[living-docs:RS-LDOC-003]`.
 
 ## Dependencies
 

@@ -14,6 +14,7 @@ pkit:
         - ACT-adopter
         - REQ-022
         - .pkit/capabilities/living-docs/agent.md#onboarding
+        - .pkit/capabilities/living-docs/agent.md#what-it-does
         - .pkit/capabilities/living-docs/spaces.md#each-definitions-scope
         - .pkit/cli/README.md#friction-check---base-ref---head-rev---json
         - docs/capabilities/living-docs/010-set-up-your-spaces.md#declare-the-pages-outside-the-documentation-roots
@@ -86,7 +87,7 @@ In Claude Code, ask your session to use the `living-docs` agent, such as "Use th
 - **Anchors:** the anchors each page's statements need. A statement that nothing grounds is raised as a question, never kept as if it were true.
 - **Mapping:** where your work tracker keeps a mapping from code to documents, which of its rules become page anchors.
 
-Each line of the plan cites its evidence, and the plan is in `.agent-workspace/living-docs/onboarding/plan.md`. Approve it, ask for a revision, or reject it. The agent drafts nothing before you approve.
+Each line of the plan cites its evidence, and the plan is in `.agent-workspace/living-docs/onboarding/plan.md` ([the reference, "What it does"](../../../.pkit/capabilities/living-docs/agent.md#what-it-does)). Approve it, ask for a revision, or reject it. The agent drafts nothing before you approve.
 
 Where your session runs the agent as a subagent, the agent cannot hear your answer, and stops once the plan is written ([the reference, "Onboarding"](../../../.pkit/capabilities/living-docs/agent.md#onboarding)). Approve the plan in a new request that names its file, such as "Use the living-docs agent to draft the approved plan in .agent-workspace/living-docs/onboarding/plan.md".
 

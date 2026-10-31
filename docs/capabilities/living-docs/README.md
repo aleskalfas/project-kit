@@ -33,6 +33,8 @@ pkit:
         - .pkit/capabilities/living-docs/validation.md#what-a-page-is-checked-for
         - .pkit/capabilities/living-docs/validation.md#what-a-page-mentions-and-does-not-anchor
         - .pkit/capabilities/living-docs/agent.md#what-it-does
+        - .pkit/capabilities/living-docs/agent.md#what-it-never-does
+        - .pkit/capabilities/living-docs/README.md#authoring-the-docs-author-skill
         - .pkit/capabilities/living-docs/agent.md#the-review-contribution
         - .pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare
         - .pkit/cli/README.md#friction-check---base-ref---head-rev---json
@@ -70,7 +72,7 @@ living-docs answers the first four of these problems with four claims, and the c
 - **Each page in your spaces is flagged when a change touches what it anchors, in that change's own check.** A page anchors what it rests on, such as code, decisions or another page's section.
 - **Where a space's rules bind, validation reports what a page names without anchoring it: a file path, a record, a rule or a `pkit` command.**
 - **Once a space has its definition, a page for a reader your project has not declared is refused.**
-- **A fix is proposed as a diff for you to review, and the agent's definition forbids it to change a tracked file.**
+- **A fix is proposed as a diff for you to review, and the agent's definition forbids it to change a tracked file.** ([the reference, "What it never does"](../../../.pkit/capabilities/living-docs/agent.md#what-it-never-does))
 
 Below, a page anchors the script `src/greet.py`, and a branch then changes the script. Each fence starts from a fresh project, so it first installs living-docs and creates the user space, their output dropped:
 
@@ -123,10 +125,10 @@ What the output proves, claim by claim:
 - **Flagged in the change.** The change check names `docs/greet.md`, since the branch changed what it anchors. Once friction is enforced, the check exits 1 until the page has an answer ([Fix a stale page](050-fix-a-stale-page.md#answer-for-the-page) shows how to give one). project-kit's friction checks do the flagging. living-docs makes each page in its spaces' documentation roots one they read, with no place to declare for it.
 - **Reported when unanchored.** `docs/usage.md` names `src/greet.py` and anchors nothing, so validation lists the mention, with `path: [src/greet.py]` as the anchor that covers it.
 - **Refused for an undeclared reader.** The stamp refuses `operator`, a reader nobody declared, and writes nothing. The readers it accepts are `user`, `maintainer`, and those your project or another capability adds. Whether the page then serves its reader is judged when the agent reads it as that reader ([Have a page read as its reader](040-have-a-page-read-as-its-reader.md#why-a-page-is-read-as-its-reader)).
-- **Proposed, not applied.** The agent's definition forbids it to change a tracked file. So it writes each fix as a diff in the agent workspace, for you to apply.
+- **Proposed, not applied.** The agent's definition forbids it to change a tracked file ([the reference, "What it never does"](../../../.pkit/capabilities/living-docs/agent.md#what-it-never-does)). So it writes each fix as a diff in the agent workspace, for you to apply.
 
 > [!WARNING]
-> Only its definition holds the agent to proposals. Nothing at run time stops its shell or its Write tool from changing a tracked file. So ask it for a proposal, never for a fix applied.
+> Only its definition holds the agent to proposals. Nothing at run time stops its shell or its Write tool from changing a tracked file ([the reference, "What it never does"](../../../.pkit/capabilities/living-docs/agent.md#what-it-never-does)). So ask it for a proposal, never for a fix applied.
 
 ### Compared with the alternatives
 
@@ -201,7 +203,7 @@ $ pkit capabilities install living-docs | grep -e Installed -e "docs-author/SKIL
 
 - **What it writes.** Nothing of your configuration, apart from the answers you give to the questions it asks. With project-management installed, one asks whether the agent may propose fixes for your stale pages ([project-management's README, "Grant the fixers"](../../../.pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)).
 - **What comes next.** Neither space has its definition yet, and both still share one documentation root. The first task, [Set up your spaces](010-set-up-your-spaces.md), mends both.
-- **The skill.** The `docs-author` skill walks your agent through each stamp, such as a new page, choosing its space, its kind, its reader and its anchors.
+- **The skill.** The `docs-author` skill walks your agent through each stamp ([the reference, "Authoring"](../../../.pkit/capabilities/living-docs/README.md#authoring-the-docs-author-skill)). For a new page, it chooses the page's space, its kind, its reader and its anchors.
 - **The agent.** In Claude Code, ask your session to use the `living-docs` agent, such as "Use the living-docs agent to propose the fix for docs/greet.md". Each task page shows what to ask.
 - **Enforcing friction.** Set `friction.mode` to `enforcing`, as the first fence above does, and make `pkit friction check` a required check of your continuous integration. A change that leaves a page flagged and unanswered then fails there.
 
@@ -209,7 +211,7 @@ $ pkit capabilities install living-docs | grep -e Installed -e "docs-author/SKIL
 
 Each page below teaches one task. Set up your spaces first. Then bring in the documents you have, if any, before you write new pages:
 
-- [Set up your spaces](010-set-up-your-spaces.md): create the user and technical spaces, and declare which files are pages, who reads them and what code they should cover.
+- [Set up your spaces](010-set-up-your-spaces.md): create the user and technical spaces, and declare your pages, their readers and the code they cover.
 - [Bring in your documents](020-bring-in-your-documents.md): have the agent plan how the documents you already have become pages, and review the plan.
 - [Write a page](030-write-a-page.md): stamp a page for one reader, anchor what it rests on, and check it.
 - [Have a page read as its reader](040-have-a-page-read-as-its-reader.md): learn what the page's reader would miss, or would not need.

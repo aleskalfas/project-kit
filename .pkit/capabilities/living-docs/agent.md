@@ -13,6 +13,7 @@ pkit:
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#friction-explain-artefact---json
         - .pkit/cli/README.md#friction-check---all---json
+        - .pkit/cli/README.md#friction-checks
         - .pkit/cli/README.md#rule-sets-reach-path---at-rev---preview---json
         - .pkit/adapters/claude-code/README.md#deploy-agentssh
         - .pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift
@@ -90,7 +91,7 @@ The checks say *that* a page drifted, and *which* documents are not pages yet. D
 
 - **Apply anything.** Its definition keeps it read-only on the repository. It never edits, moves or deletes a tracked file, never changes configuration, and never runs a friction writer (`revalidate`, `defer`, `record-status`).
   - **What holds it:** its definition alone. Nothing at run time confines its Write tool or its shell to the agent workspace, outside a fixer run that a work-tracking command confines. So never ask it to apply a change.
-  - **Why:** the answer a page carries is a person's decision (COR-050 point 3). This agent has no tool for asking the person, and judges pages besides. Who may run a writer is in the agents README, "Friction writers".
+  - **Why:** for what this agent proposes, the answer a page carries is a person's decision (COR-050 point 3). This agent has no tool for asking the person, and judges pages besides. Who may run a writer is in the agents README, "Friction writers".
   - **Where its proposals land:** in the agent workspace, under `.agent-workspace/living-docs/`, as diffs applied with `git apply` and pull-request bodies.
   - **Its one write outside the workspace:** a reader-review posted as a pull-request comment, on request.
 - **Repeat validation.** What `pkit living-docs validate` and `pkit validate` already judge, it names rather than judges again.
@@ -98,7 +99,7 @@ The checks say *that* a page drifted, and *which* documents are not pages yet. D
 - **Test the docs by running the product.** Such results arrive through the reading-evidence point, and the agent reads them as advice when it reviews a page as its reader.
 - **Revalidate what is not a page,** such as a decision record, a rule or another capability's artefact. Its own component does that.
 - **Fetch a source.** For a page stale on a `source` anchor, it reads the versions recorded and the address from the source file's history (`git show <commit> -- <file>`). It names the source, both versions and the link, and asks the person what changed in the source that bears on the page's statements. It never rewrites a page from a version change alone.
-- **Read a friction document of a version it does not read.** The `explain`, `debt` and `check --all` documents carry a `schema_version`. One other than 1 it refuses, naming the command and the version, and proposes nothing from it. One without the key, from a backbone before it, reads as 1.
+- **Read a friction document of a version it does not read.** The `explain`, `debt` and `check --all` documents carry a `schema_version` ([the CLI reference, "Friction checks"](../../cli/README.md#friction-checks)). One other than 1 it refuses, naming the command and the version, and proposes nothing from it. One without the key, from a backbone before it, reads as 1.
 
 ## As the fixer of pages
 
@@ -123,7 +124,11 @@ On a project that already has documentation, nothing is anchored yet. So onboard
 - **Anchors:** the anchors each page's statements need, each on the one part a statement rests on where it rests on one. The statements nothing grounds are raised as questions, rather than kept.
 - **Mapping:** where the project keeps a code-to-doc mapping, which of its rules become path anchors on the pages they name. The mapping is project-management's, read through the work-tracking role's documentation-check point. An anchor that would match most of the repository is narrowed. Retiring the mapping is a separate change, for whoever owns it.
 
-**Its single gate.** The person approves, revises or rejects the plan. Dispatched as a subagent, the agent cannot hear the person. The plan is then its result, and approval arrives as a new request that names the plan's file. Nothing is drafted before approval, a revision comes back to the gate, and a rejection drafts nothing.
+**Its single gate.** The person approves, revises or rejects the plan. Dispatched as a subagent, the agent cannot hear the person. The plan is then its result, and approval arrives as a new request that names the plan's file. Then:
+
+- Nothing is drafted before approval.
+- A revision comes back to the gate.
+- A rejection drafts nothing.
 
 **Its drafts.** On approval, it writes one reviewable change per step into `.agent-workspace/living-docs/onboarding/`, as diffs and pull-request bodies, and stops. The person applies them and opens the pull requests.
 
@@ -133,7 +138,7 @@ On a project that already has documentation, nothing is anchored yet. So onboard
 **When it is done.** Onboarding is complete when the declared surface is covered, and no page is left unanchored without a reason a person accepted.
 
 - **A page with nothing to anchor** carries that reason in its friction block, `unanchored-because: <why>`, instead of anchors. That is the core's key (COR-050 point 1), which the core refuses beside anchors.
-- **The measures.** `pkit friction check --all` shows both, listing the pages accepted with a reason apart and counting only those without one. `pkit living-docs validate` counts the pages of the spaces each way in its summary, and lists them.
+- **The measures.** `pkit friction check --all` shows both, listing the pages accepted with a reason apart and counting only those without one. `pkit living-docs validate` counts the pages of the spaces each way in its summary, and lists them ([the page on validation, "What it reports"](validation.md#what-it-reports)).
 
 From then on, the friction checks flag pages as their anchors change, and the agent proposes each fix.
 

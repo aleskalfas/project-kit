@@ -194,7 +194,7 @@ A page may show diagrams, images, console output and callouts. Each is neutral c
   - **A command that cannot run as a test** goes in a fence of its shell's language, with no output.
   - **The anchor:** the page anchors the code whose output the fence shows.
 - **Callouts.** A callout is a block quote whose first line is `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]`. Where nothing draws it, it reads as a block quote.
-- **Text alternatives.** A diagram, an image or a recording that carries meaning has a text alternative, and a decorative image an empty one, `![](path)`. Where `RS-LDOC-008` binds, validation checks each `mermaid` fence's (DEC-002 point 8).
+- **Text alternatives.** A diagram, an image or a recording that carries meaning has a text alternative, and a decorative image has an empty one, `![](path)`. Where `RS-LDOC-008` binds, validation checks each `mermaid` fence's (DEC-002 point 8).
 - **A documentation site** is optional, and the repository host's own view is the default. A site reads the content as written, and takes its theme for diagrams and callouts from one place. It serves one space: its pages and the images they show, wherever they lie. A technical page's link to a user page reaches the user space's site.
 
 **The two proposed rules.** `RS-LDOC-007` widens a fact's home, for every statement a page makes, to what the page anchors that decides or states the fact. It says a diagram or a page is never such a home. `RS-LDOC-008` is the rule on text alternatives.

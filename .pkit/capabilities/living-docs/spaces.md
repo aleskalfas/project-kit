@@ -35,7 +35,7 @@ pkit:
 
 # Spaces
 
-Where a project's documentation spaces lie, the definition each space's pages follow, and the shared method every definition inherits, `LDOC` ([living-docs:DEC-001-living-docs-discipline] points 1 to 3).
+Where a project's documentation spaces lie, and the rules their pages follow ([living-docs:DEC-001-living-docs-discipline] points 1 to 3).
 
 ## Contents
 
@@ -107,7 +107,10 @@ The capability declares, in its package metadata, the two roots as the default p
 
 - **The definitions** go in the location's `rule-sets/` folder, where the core reads them as the project's rule sets.
 - **Recorded on first use.** The location is recorded the first time a definition is placed there, in `.pkit/capabilities/living-docs/project/docs-locations.yaml` <!-- unanchored: named as where the location is recorded, which COR-049 decides and the page anchors --> (`locations: {definitions: docs/living-docs}`). So changing a root later moves nothing already written (COR-049 point 5).
-- **Who records it.** `pkit living-docs new space` records it (DEC-001 point 2). For a definition written by hand, `pkit docs record-location living-docs definitions` records it, and says what it recorded, the root it was derived from, and where to change it.
+- **Who records it.** `pkit living-docs new space` records it (DEC-001 point 2). For a definition written by hand, `pkit docs record-location living-docs definitions` records it. The command then names these:
+  - what it recorded
+  - the root it was derived from
+  - where to change it
 
 ## The space-definition template
 
@@ -137,7 +140,7 @@ A template copied into the definitions location takes the template type there, s
 
 `RS-LDOC-007` and `RS-LDOC-008` bind nothing yet. A major of `LDOC` accepts both, and `RS-LDOC-007` then supersedes `RS-LDOC-002` (DEC-002 point 10). The definitions' pins then fall behind until the project reviews the new major (core rule sets, COR-051 point 7).
 
-**`LDOC` is never edited.** A space's definition inherits it, pinned to its major (`inherits: [living-docs:LDOC@1]`), and `pkit validate` reports when a new major arrives. Rules about how rules are named and inherited are the core's (COR-051), so they are not repeated here.
+**`LDOC` is never edited.** A space's definition inherits it, pinned to its major (`inherits: [living-docs:LDOC@1]`), and `pkit validate` reports when a new major arrives.
 
 **Where `LDOC` binds.** `LDOC` takes no scope, as no shipped rule set does. So its rules bind on a page only through a project rule set whose scope selects the page (DEC-001 points 2 and 3).
 
@@ -151,6 +154,8 @@ A template copied into the definitions location takes the template type there, s
 - `RS-LDOC-004`: the page's body carries the sections its kind's structure declares, in order where order matters.
 - `RS-LDOC-008`: each `mermaid` fence in the page's body carries an `accTitle` and an `accDescr`, each followed by text that is not blank.
 
-A reader-review leaves those parts to validation, and judges the rest of each rule (DEC-001 point 6). A declaration is no part of a rule's content, so it flags nothing anchored to the rule. `pkit rule-sets reach` lists each part on the rule wherever `LDOC` binds. 
+A reader-review leaves those parts to validation, and judges the rest of each rule (DEC-001 point 6). A declaration is no part of a rule's content, so it flags nothing anchored to the rule. `pkit rule-sets reach` lists each part on the rule wherever `LDOC` binds.
 
 Validation checks each part only on the pages where its rule binds, as that answer gives it. On any other page, it reads none of them.
+
+**Note:** rules about how rules are named and inherited are the core's (COR-051), so they are not repeated here.
