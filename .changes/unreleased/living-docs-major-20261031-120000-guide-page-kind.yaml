@@ -1,0 +1,17 @@
+component: living-docs
+kind: major
+custom:
+  category: Added
+body: >
+  The capability ships the `guide` page kind, for a page that explains one
+  subject to the reader who uses it: why it exists, what it solves for them
+  and how they do its tasks (living-docs DEC-003, #2060). Its template,
+  `templates/guide.md`, shows a guide's parts in order: the title, a lead with
+  any contents list, why the subject exists, the reader's tasks, and on a
+  folder's entry page the folder's pages last. `pkit living-docs new page
+  --kind guide` stamps one. The kind's declared structure is its title alone,
+  so the order of the other parts is judged in review. Breaking: where
+  RS-LDOC-004 binds, a page that names `guide` is checked against that
+  structure, so one without a title written as `# Title` at the start of a
+  line, which passed before as a kind with no structure, fails validation.
+  Give it that title.
