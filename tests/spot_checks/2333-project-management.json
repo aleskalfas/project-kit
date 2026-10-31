@@ -1,0 +1,50 @@
+[
+  {
+    "id": "pm-unread-issue-placed-in-todo",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/lifecycle_predicates.py",
+    "find": "    issue = _fetch_issue(issue_number, config, fields)\n    if issue is None:\n        return _indeterminate(f\"could not read issue #{issue_number} (gh failure)\")",
+    "replace": "    issue = _fetch_issue(issue_number, config, fields)\n    if issue is None:\n        return _Position(\"todo\", \"\")"
+  },
+  {
+    "id": "pm-unread-board-placed-nowhere",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/lifecycle_predicates.py",
+    "find": "return _indeterminate(f\"the board's Status of #{issue_number} could not be read\")",
+    "replace": "return _Position(infer.UNDETERMINED, status.finding(issue_number))"
+  },
+  {
+    "id": "pm-fold-lists-only-foreign-children",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/lifecycle_predicates.py",
+    "find": "members = [member_id(child) for child in resolution.children]",
+    "replace": "members = [member_id(child) for child in resolution.children if child.repository]"
+  },
+  {
+    "id": "pm-checkbox-gate-inverted",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/lifecycle_predicates.py",
+    "find": "\"result\": not unticked,",
+    "replace": "\"result\": bool(unticked),"
+  },
+  {
+    "id": "pm-merge-credited-to-the-actor",
+    "file": ".pkit/capabilities/project-management/scripts/_lib/lifecycle_predicates.py",
+    "find": "    merged_by = pr.get(\"merged_by\")\n    return {\n        \"exists\": True,",
+    "replace": "    merged_by = actor\n    return {\n        \"exists\": True,"
+  },
+  {
+    "id": "pm-classifier-script-answers-nothing-as-success",
+    "file": ".pkit/capabilities/project-management/scripts/detect-state.py",
+    "find": "        return 2\n    print(json.dumps(payload))",
+    "replace": "        return 0\n    print(json.dumps(payload))"
+  },
+  {
+    "id": "pm-classifier-registered-to-another-script",
+    "file": ".pkit/capabilities/project-management/package.yaml",
+    "find": "script: scripts/detect-state.py",
+    "replace": "script: scripts/detect-todo.py"
+  },
+  {
+    "id": "engine-drops-what-the-predicate-said",
+    "file": "src/project_kit/process.py",
+    "find": "return PredicateFailure(run.ending_described, run.stderr_tail)",
+    "replace": "return PredicateFailure(run.ending_described)"
+  }
+]
