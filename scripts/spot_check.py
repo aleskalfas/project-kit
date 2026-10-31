@@ -1,7 +1,7 @@
 """Planted-bug spot-check: do a module's new tests catch every bug its old tests caught?
 
-A slice of #2313 converts tests that start a process into tests that call the code
-in their own process (`tests/README.md`, "Running the suite"). It proves the
+A change may convert tests that start a process into tests that call the code
+in their own process, as #2313's slices did (`tests/README.md`, "Running the suite"). It proves the
 conversion lost no check this way. It plants bugs in the code the tests cover, one
 at a time. On each, it runs the tests as they were at a base commit, and as they
 are now. Every bug an old test caught must be caught by a new test.

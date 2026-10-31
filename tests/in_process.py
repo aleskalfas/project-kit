@@ -451,8 +451,9 @@ def _read(
 #: `@pytest.mark.process("<why the process is the point>")`.
 MARK = "process"
 
-#: The modules the guard does not hold yet, one name a line, in a file beside this one.
-#: Each slice of #2313 takes out the modules it converts; a module not listed is held.
+#: The modules the guard does not hold yet, one name a line, in a file beside this one:
+#: those left as they were when #2313 closed. A change that marks or converts a module's
+#: starts takes it out (#2407); a module not listed is held.
 BASELINE = Path(__file__).with_name("process_guard_baseline.txt")
 
 #: Programs that run a script named among their arguments.
