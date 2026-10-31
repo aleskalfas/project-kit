@@ -112,7 +112,7 @@ mention(s) a page's anchors do not cover, each with an anchor that would cover i
 $ pkit living-docs new page docs/ops.md --space user --kind reference --reader operator --title "Operations"
 refused: writing docs/ops.md would bring validation errors the project did not have — docs/ops.md:/reader: docs/ops.md is for reader 'operator', which does not resolve: the readers point pkit::documentation:readers holds ['maintainer', 'user'] — name one of them, or add 'operator' to the point in the project's filler, tech-docs/pkit/fillers/pkit/documentation/readers.yaml (DEC-001 points 4 and 7). Nothing is written
 $ grep -o "You never Edit or Write a tracked file[^.]*\." .claude/agents/living-docs.md
-x
+You never Edit or Write a tracked file, never move or delete one, never change a configuration file, and never run a friction writer.
 ```
 
 What the output proves, claim by claim:
