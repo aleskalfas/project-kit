@@ -108,14 +108,14 @@ Taken one at a time, in this order. The order may change as the answers come. Po
    - ~~4j. The lifecycle of work that is never delivered, such as a figure in a doc page (point 4d revisited). Came from the over-fitting check of 4g.~~ Decided: every piece of work has a lock, and a fourth state, living, moves it through a reviewed proposal (see "Discussion", point 4j). Taken before 4i, which came up next.
    - ~~4h. The scene's primitives, and how each traces back to the model.~~ Decided: a tree of groups with traced primitives whose names map onto SVG, with SVG and HTML as the reference renderer (see "Discussion", point 4h).
    - ~~4i. Where a library lives and how another adopter gets it; whether pkit's capability dependencies (COR-030) or incubation (COR-031) carry it. Came from the critic's review of 4g.~~ Decided: libraries are the capability's data, kept as a read-only folder per version, with a lock per piece (see "Discussion", point 4i).
-5. **Text and fonts.** A layout made before rendering must know how much room text takes, and every renderer must draw it in the same font. Mural accepts only 12 fonts, none of them monospace.
+5. **Text and fonts.** A layout made before rendering must know how much room text takes, and every renderer must draw it in the fonts it was measured with (its profile's fonts, point 18d). Mural accepts only 12 fonts, none of them monospace. Decided on 31 October: measure only from committed files, the engine breaks lines with language rules, Mural wraps within the measured width, estimate first (see "Discussion", point 5).
 6. **How a renderer plugs in.** Plugins inside the one capability, as `demo-recording` does, or a capability per renderer that fills a role (COR-052, COR-053). Also the name: pkit already says "adapter" for a harness adapter (COR-005), so these are "renderers". The critic suggested (31 October) checking whether `demo-recording`'s plugin interface can serve as the renderer contract (COR-007).
 7. **Its origin.** Shipped by project-kit, or incubated in a project first (COR-031).
 8. **The starter library and themes.** Which graphical elements and themes the capability ships, from the talk's 26 masters, its kinds of visual, and the three themes.
 9. **The agents.** A designer agent: its job, its limits, its tools. Whether a reviewer reads a deck for flow and plain words.
 10. **The skills.** The build loop (change, generate, render, verify) as a skill, and how a deck or a diagram is authored.
 11. **The rules.** Which of the talk's style rules the capability ships, and which stay a project's own.
-12. **Credentials, permissions and the sandbox**, per renderer that talks to a service.
+12. **Credentials, permissions and the sandbox**, per renderer that talks to a service. Since renderers stay plugins of one capability (point 18c), it decides how the Mural plugin's network access and credentials reach only the projects that use it.
 13. **Output.** PDF, images, a set per language, and the translation workflow. The maintainer asked (31 October) that the capability carry both, the know-how included:
     - **Outputs.** Preparing what is handed out, such as a PDF of a deck, one per language, a page per slide in order. The Friday talk needed a script of its own for it, because Mural exports only the whole board (`2026-10-29-friday-talk-tools/export_pdf.py`; use case 8).
     - **Variations per language.** The same work in several languages, from material of the same structure (use case 7).
@@ -123,8 +123,12 @@ Taken one at a time, in this order. The order may change as the answers come. Po
 14. **The workarounds.** What to fix in the Mural renderer rather than carry beside it: the duplicates left after retries, monospace text rendered as images.
 15. **Moving in.** Tests, versions, and moving today's user-level skill into pkit.
 16. **Names.** A naming pass with the maintainer before any record or code fixes a name (see "Names").
-17. **The runtime and outside programs.** Python with no Node, and how the capability checks for programs pkit does not install. From the architect's review; first in its order.
-18. **The architect's four revisions of decided points:** what a delivered piece locks (4d), where the core library's versions live (4i), how renderers plug in without connection points (point 6), and a scene per font profile (point 2, with point 5).
+17. ~~**The runtime and outside programs.**~~ Decided: Python, with no Node; outside programs are called only on the path that needs them, and the capability checks for them (see "Discussion", point 17).
+18. **The architect's four revisions of decided points**, taken one at a time:
+    - ~~18a. What a delivered piece locks (4d).~~ Decided: library versions only; the exports are the real freeze (see "Discussion", point 18a).
+    - ~~18b. Where the core library's versions live (4i).~~ Decided: the core holds only the interface, a starter library holds the opinionated components, and all three shipped libraries are copied into the project like any other (see "Discussion", point 18b).
+    - ~~18c. How renderers plug in without connection points (point 6).~~ Decided: plugins inside the one capability, never a capability per renderer (see "Discussion", point 18c).
+    - ~~18d. A scene per font profile (point 2, with point 5).~~ Decided: font profiles set by the context, one scene per profile (see "Discussion", point 18d).
 19. **References between elements.** One element using another's measured size, one owner per dimension, cycles refused.
 20. **Format numbers** on every file from its first commit, read by the engine forever.
 21. **An escape for hand-drawn one-offs**, such as an area the renderer leaves alone; the architect's largest risk to the product.
@@ -434,7 +438,7 @@ What each change does:
 | State | What it follows |
 |---|---|
 | Drafting | The latest shared core and context library. An improvement shows at the next render. |
-| Delivered | Exactly what it used, locked (for example `core 1.3.0, context-ibm 2.0.0, renderer-mural 0.9.0`), with its exports kept. Nothing changes unless a person asks. |
+| Delivered | Exactly what it used, locked (for example `core 1.3.0, context-ibm 2.0.0, renderer-mural 0.9.0`), with its exports kept. Nothing changes unless a person asks. *Revised by point 18a: only library versions are locked; the exports are the real freeze.* |
 | Reused for a new audience | The talk is copied, then upgraded on purpose, with a before-and-after preview of each slide. Any change can be undone. |
 
 Behind the lifecycle:
@@ -743,6 +747,147 @@ Its counter-alternatives: the scene as a subset of SVG, or names that map onto S
 
 **Outcome (31 October).** The maintainer chose the revised recommendation. He added that he does not understand these things deeply: he does not want to reinvent the wheel, nor to depend on a technology that does not cover the needs. He asked whether to consult the architect now. The agent agreed: the design so far is a new component with new abstractions, so the architect reviews the whole of it, with a check per layer of what existing technology could carry it (see "Architect's review").
 
+### 17. The runtime (31 October)
+
+**Outcome.** The maintainer chose Python, as the architect recommended. pkit and the Mural tool are Python, and pkit sync installs a capability's Python dependencies. Most visual tools run on Node (Style Dictionary, Terrazzo, elkjs, Bluefish, Satori, Slidev, tldraw), which would put it on every adopter's machine. An outside program is called only where it is one stable executable, on the path that needs it, such as rsvg-convert or Chromium for a PDF and resvg for pictures. pkit does not install them, so the capability checks for them and says what is missing, as demo-recording does.
+
+### 18a. What a delivered piece locks (31 October)
+
+**Outcome.** The maintainer agreed with the architect's first revision. A delivered piece locks its library versions only, such as `uses: {core: 1.3.0, ibm: 2.0.0, pkit: 1.1.0}`. The engine and the renderers ship inside the capability, and a pkit upgrade moves them (COR-017, COR-059 point 7), so no piece can lock them. The real freeze of delivered work is its exports, kept as they were handed out. A delivered piece drawn again uses today's engine with its locked libraries, and any difference shows in a before-and-after. This revises point 4d, whose example lock named `renderer-mural`.
+
+**Options that were on the table.** Locking the engine too, which needs pkit to keep old capability versions installed, a change to pkit's own rules; and drawing a delivered piece again from the commit where it was delivered, which is fragile.
+
+### 18b. Where the core's versions live, and what the core holds (31 October)
+
+**The architect's revision.** The core's versions cannot sit side by side inside the capability (4i): the files are pkit's, a project cannot prune them, and the capability cannot know which versions locks name. The agent recommended copying the core into the project's library folder like any other library, the neutral context too, so a pkit upgrade brings a newer core but changes no figure until `upgrade core`.
+
+**The maintainer's question.** Is the core only primitives, or does it bring opinions, such as a card? The agent's answer: as 4g described it, it brings opinions. (The 4g table also listed primitives and layout operators under the core; they are the engine's code, per 4a and 4h.) There are three levels:
+
+| Level | Example | Opinion |
+|---|---|---|
+| Engine (code) | box, text, line, image; repetition, stack, distribute | none: the alphabet |
+| Interface (data) | role names (`accent`, `surface`); the deck's layouts cover, section and slide, with slots for title, lead, visual and footer | a little, and it must be shared: it lets a piece switch from IBM to DAM. PowerPoint's layouts ("Title Slide", "Section Header", "Title and Content") are the same idea. |
+| Components (data) | the card (heading on top, body below, a bar in its tone's colour), the "Limit" note, the chip, `stage` | a design choice. A context changes colours, radius and spacing, not that a card has its heading on top. |
+
+**The agent's recommendation.** Split along this line:
+
+- **The core holds only the interface:** role names, and each discipline's top component with its named layouts and slots. It changes rarely, and every library builds on it.
+- **Opinionated components go into a starter library** the capability ships (point 8). An adopter uses it, ignores it, or uses their own instead. It may improve faster without touching the interface, and pieces lock it like any library.
+- **The Friday talk's Carbon-flavoured components go into the maintainer's IBM library,** not the starter (COR-014).
+
+**The alternative.** One core with the components: one library fewer, but every adopter carries the capability's opinions, and every change to a card changes the library everything builds on.
+
+**Outcome of the split (31 October).** The maintainer agreed. The capability ships three libraries: the core (the interface only), the starter (opinionated components) and the neutral context (values). This refines point 4g. Where the libraries' versions live is the remaining question of 18b.
+
+**Outcome (31 October).** The maintainer agreed with the architect's revision. The capability ships only the newest version of the core, the starter and the neutral context. Each is copied into the project's library folder (`core/1.4.0/`, `starter/1.2.0/`, `neutral/1.0.0/`), like any other library, and locked per piece. A pkit upgrade brings newer versions but changes no figure until `upgrade` moves a piece, after its before-and-after. `prune` removes versions nothing uses. This revises point 4i, which kept the core's versions inside the capability.
+
+### 18c. How a renderer plugs in (31 October)
+
+**Outcome.** Renderers are plugins inside the one capability, behind a clean seam, as in demo-recording: a neutral core, knowledge flowing one way, one check at each plugin's edge. The contract between the engine and a renderer is the scene, the renderer's list of what it can draw, update and read back, and its report of what it lost. Two plugins come first: SVG/HTML and Mural. This settles point 6.
+
+The agent had suggested deciding at point 12 whether Mural might later split into a capability of its own. The maintainer ruled it out: a separate capability for Mural would make this capability miss its point, which is one system with several renderers. Point 12 therefore decides how the Mural plugin's network access and credentials reach only the projects that use it, inside the one capability.
+
+**Options that were on the table.** A capability per renderer joined through connection points, which pkit's points cannot carry (a filler takes no input, a subscriber uses no network); and a renderer capability that depends on the engine (COR-030), split from the first day.
+
+### 18d. Fonts per renderer (31 October)
+
+**Outcome.** The maintainer agreed to font profiles set by the context. A font profile is the set of fonts for a group of renderers, such as `standard` (SVG, HTML, PDF: IBM Plex Sans and IBM Plex Mono) and `mural` (`proxima-nova`, since Mural accepts 12 fonts and none is IBM Plex or monospace). The context, not the renderer, sets each profile's fonts, so design stays in the logical layer. The engine computes one scene per profile, measuring text in that profile's fonts, so text fits in every renderer; the scenes differ only in measured text and box sizes. For monospace on Mural, the context chooses a substitute font (text stays editable and searchable) or the image fallback (looks right, cannot be edited); point 5 settles the details. This revises point 2's "every renderer uses the same fonts": every renderer uses its profile's fonts, which the context sets.
+
+**Options that were on the table.** One scene with only fonts every renderer has, which lets the weakest renderer limit all; and one scene with the renderer swapping fonts, which 4h ruled out because boxes would not fit.
+
+### 5. Text and fonts (31 October)
+
+**What is settled already.** Text is measured by the engine with HarfBuzz and fontTools (the architect's review); the engine computes one scene per font profile, with the fonts the context sets (point 18d); a text leaf names the exact font it was measured with, its runs and its measured line breaks, and a renderer without that font declares a loss (point 4h).
+
+**What was found (31 October).** Mural accepts these 12 fonts, asked of its API with `mural_fonts.py`: `adelle`, `blambot-casual`, `blambot-pro`, `lint-mccree`, `marker-felt`, `museo-slab`, `proxima-nova`, `shark-water`, `abc-social`, `stk-bureau-serif`, `ey-interstate`, `itc-garamond-condensed`. Most are commercial, and none is an open-licence font the capability could ship. This machine has IBM Plex installed as files, but not `proxima-nova`. So the engine can measure the `standard` profile exactly, but has no file to measure the `mural` profile with. Today's tool estimates a width as the number of characters times 0.58 of the size, and `verify` reports the boxes Mural grew past their planned height (`FIT`).
+
+**The agent's draft recommendation.**
+
+- **The engine fixes the line breaks.** It breaks every text into lines by the language's rules (in Czech, a one-letter preposition never ends a line), and the scene carries the lines. Each renderer draws the lines as given, with an explicit break at each, in a box a little wider than the longest measured line. A renderer never wraps text itself, so a small error in a width can no longer move words to other lines and push the boxes below.
+- **Where the measurements come from, per font of a profile:**
+  - a font file in the context library, where its licence allows shipping it (IBM Plex, under the SIL Open Font License);
+  - a font file on the machine, where the project's people hold a licence;
+  - a metrics table, for a renderer's own fonts that nobody has as files, such as Mural's. It holds each glyph's width and the line height, not the font itself. It is made once by calibration against the renderer (text pushed to Mural and its size read back), never by hand, and shipped with the renderer's plugin.
+- **The check stays.** `verify` keeps reporting a box the renderer grew past its planned size, which also tells when a metrics table is off.
+- **Monospace on Mural, by default:** inline code is drawn as text in a substitute font with the code style's background, so it stays editable and searchable; a terminal, whose columns must line up, is drawn as an image. A context may choose otherwise.
+
+**The alternatives.**
+
+1. The draft above.
+2. Keep the estimate (characters times a constant) for fonts without a file, with a wider safety margin. Simple, but boxes are often too large or too small.
+3. Measure in a browser that has the font, for every renderer. Exact for HTML, but heavy, and Mural's fonts are not in a browser either.
+
+**The critic's review (31 October).** It kept the core: the engine measures, the scene carries the lines, `verify` guards. It found:
+
+- **Fonts found on the machine break the same scene on every run** (4h) and the before-and-after (4i): two machines, or CI, would measure differently. Measure only from committed files, and refuse when a font is missing.
+- **Forced line breaks on Mural damage taking edits back** (point 3). The tool writes each line as its own `<div>`, so a pulled text comes back with the engine's breaks inside it, and a person's added words wrap raggedly until the next render.
+- **The draft said how text is measured, not how each renderer gets the font to draw it.** rsvg-convert looks fonts up by name on the machine and swaps a missing one silently; an SVG shown as an image cannot load outside fonts.
+- **The Mural calibration rests on an untested assumption.** Only a grown height comes back from Mural, never a width, and it is not known whether Mural computes it on its server or only when a browser opens the board.
+- Also: the output scale (slide, doc, narrow screen) handed over by 4g; alignment when a box is widened; how each text was measured (file, table or estimate); characters a font lacks; where the Czech rule lives (a non-breaking space after one-letter words, as the Czech TeX tool `vlna` does; Unicode line breaking through `uniseg`, pure Python); explicit line height; inline code on Mural, never tested with a background; IBM Plex's licence (ship the files unchanged with their licence; the name "Plex" is reserved for unmodified files).
+- **The estimate was dismissed without evidence.** Checked the same day: `verify` on the Friday talk's board, 2,479 objects in two languages built with gen.py's estimate per kind of character, reports 6 texts estimated to wrap past their box.
+
+**The agent's revised recommendation.** The critic's leanest start, with Mural wrapping its own lines (its C1).
+
+- **Measure only from committed files.** A context library commits its font files, unchanged with their licence (IBM Plex), or a widths file: taken from a licensed font with fontTools, from a calibration, or an estimate. Never a font found on the machine; a missing font refuses the render. The scene records how each text was measured: a file and its hash, a table and its date, or an estimate.
+- **The engine breaks lines** with Unicode's rules (`uniseg`) plus each language's rules, kept as data in the engine: in Czech, a non-breaking space after each one-letter word. It breaks against the planned width minus a small margin and draws in the planned width, so centred and right-aligned text stay put. A word longer than its box breaks after a `/` or is marked as overflowing. No hyphenation and no justified text at first.
+- **Per renderer:**
+  - SVG, HTML and PDF draw the engine's lines, in the library's fonts: embedded or linked in SVG, loaded by HTML from the library, and rsvg-convert and resvg pointed at the library's font folder with system fonts off. A check fails when the drawn font is not the measured one.
+  - Mural gets the measured width minus the margin and wraps the text itself. The non-breaking spaces keep the Czech rule, and edits come back as clean text: the import turns them back into ordinary spaces. Mural draws text in text boxes, never inside shapes.
+- **Mural is measured by estimate at first:** widths per kind of character, as gen.py does, recorded as "estimated" and guarded by `FIT`. A calibrated table is built only if `FIT` keeps firing.
+- **Every character is checked** against its font or table, and a missing one is reported.
+- **Line height is explicit** in the scene, and every renderer uses it.
+- **Monospace on Mural, by default:** inline code in a substitute font or colour, with no background, declared as a loss; a terminal as an image. The default lives in the neutral context's font profile, not in the Mural plugin.
+- **Named, not built yet:** the output scale (slide, doc, narrow screen) as an axis giving a scene of its own, like a font profile; calibration; hyphenation; backgrounds for inline code.
+- **First, a short Mural test:** whether a grown height comes back with no browser open; whether a line break stays apart from a paragraph after a person edits; whether `&nbsp;` is kept; whether part of a text can have a background.
+
+**The alternatives now.**
+
+1. The revised recommendation.
+2. Every renderer, Mural too, draws the engine's lines. Exact on Mural within the margin, but edits taken back carry the breaks, and an edited line wraps raggedly.
+3. Build the calibrated Mural table first. More exact than the estimate, but it rests on the untested assumption, and the estimate left 6 warnings on 2,479 objects.
+
+**Outcome (31 October).** The maintainer agreed to the revised recommendation: the lean start, with Mural wrapping its own lines within the measured width.
+
+### 19 and 20. References between elements, and format numbers (31 October, open)
+
+**19. The question.** Point 4a's formulas see an item's index, the count and the tokens, but not another element's measured size. So a card's body cannot start under a heading that wrapped to two lines, and a note cannot sit under the tallest of three cards. Today's tool has such references one by one (`anchor`, `align: <slot>`, `wrap: <part>`, `below: <instance>`).
+
+**19. The agent's draft recommendation.** References between elements, kept local:
+
+```yaml
+card:
+  parts:
+    heading: {text: "{title}", x: 24, y: 24, width: =root.width - 48}       # height: measured
+    body:    {text: "{body}", x: 24, y: =heading.bottom + @space.04, width: =heading.width}
+  root: {height: =body.bottom + 24}
+```
+
+- **A formula may read another element's computed frame** (`x`, `y`, `width`, `height`, `right`, `bottom`, `center`), but only inside the same component: its own parts, and the outer frames of the components in its slots. Elements in different components line up through their parent's layout operator (stack, align, distribute, equal heights), never by reaching across.
+- **One owner per value** (Bluefish's rule). Each of an element's `x`, `y`, `width` and `height` is set by exactly one thing: the component, the measured text, or the parent's layout. A second writer is an error.
+- **The engine orders the computation by the references,** and refuses a loop (A's height from B's, B's from A's), naming the loop.
+- **The formula language stays closed:** numbers, the four operations, parentheses, tokens, index, count, `min`, `max`, `round`, and now references to frames.
+
+**19. The alternatives.**
+
+1. The draft above.
+2. A constraint solver, such as Cassowary (behind Apple's Auto Layout): relations are declared and a solver finds the positions. Powerful, but results are hard to predict, and a conflict is hard to explain.
+3. Layout operators only, no references: simpler, but no "a note under the tallest card" or "an arrow from this box's bottom".
+
+**20. The question.** A breaking change to a file's format cannot be migrated inside a fetched library (read-only) or a delivered piece (frozen), so pkit's usual migrations (COR-010) cannot reach them (the architect's fit issues 7 and 8).
+
+**20. The agent's draft recommendation.**
+
+- **Every file the capability reads carries its format number from its first commit:** material, component, library, context, subject, lock (for example `format: 1`).
+- **The engine reads every format number it ever shipped.** An old file is converted in memory when it is read, never rewritten on disk. A project's own files may be rewritten to the new format on request, with the diff reviewed (as point 4i decided for breaking library changes).
+- **A library declares the format it was written for,** and that number also covers the engine tools it uses: a library using a tool added in format 3 says `format: 3`, and an older engine refuses it with a clear message.
+- **The scene has a format number of its own**, which each renderer declares it reads (point 4h).
+
+**20. The alternatives.**
+
+1. The draft above.
+2. One version number for the whole capability, named in each library: simpler, but a library would have to change whenever anything in the capability changes.
+3. No format numbers until the first breaking change: the first change then has to guess which files are old.
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
@@ -818,6 +963,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | deck | the top component of a presentation | working (Slidev, Marp and Keynote users say "deck") |
 | library | a named, versioned set of pieces that is shared, and names the libraries it builds on | working |
 | values, structure, meaning | the three kinds of content a library holds (point 4g) | working |
+| core, interface, starter | the core holds only the interface (role names, top components, named layouts, slots); the starter holds the capability's opinionated components (point 18b) | working |
 | subject | what the work is about, such as pkit; its concepts mapped to roles (point 4g) | working |
 | named layout, slot, entry point | a discipline's frame, which a context supplies; a place in it; a named way into a library, such as `ibm/deck` (point 4g) | working |
 | shared core, per context, per talk | the three scopes | working |
