@@ -11,9 +11,10 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/page-kinds.yaml
         - .pkit/capabilities/living-docs/templates/reference.md
         - .pkit/capabilities/living-docs/templates/signpost.md
+        - .pkit/capabilities/living-docs/templates/guide.md
         - .pkit/capabilities/living-docs/skills/docs-author/docs-author.md
         - .pkit/capabilities/living-docs/skills/docs-author/page.md
-      record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4", "living-docs:DEC-001#6", "COR-050#5", "COR-050#6", "COR-050#7"]
+      record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4", "living-docs:DEC-001#6", "living-docs:DEC-003#1", "COR-050#5", "COR-050#6", "COR-050#7"]
       artefact:
         - UC-044
         - ACT-developer
@@ -72,7 +73,7 @@ pkit:
 The stamp writes the page from its kind's template, with its reader and its anchors in its front matter. The `docs-author` skill walks your agent through these choices ([the reference, "Authoring"](../../../.pkit/capabilities/living-docs/README.md#authoring-the-docs-author-skill)):
 
 - **The space.** The user space serves the people who use your system, and the technical space serves those who build it.
-- **The kind,** the page's format ([the reference, "A kind's format"](../../../.pkit/capabilities/living-docs/pages.md#a-kinds-format)). `reference` describes one thing to the reader who uses it, such as a command or a part of the system. `signpost` points into a folder, and only says what the folder holds.
+- **The kind,** the page's format ([the reference, "A kind's format"](../../../.pkit/capabilities/living-docs/pages.md#a-kinds-format)). `reference` describes one thing to the reader who uses it, such as a command or a part of the system. `signpost` points into a folder, and only says what the folder holds. `guide` explains one subject to the reader who uses it: why it exists, then how they do its tasks.
 - **The reader.** `user`, `maintainer`, or a reader your project declares ([Set up your spaces, "Declare your readers"](010-set-up-your-spaces.md#declare-your-readers)).
 - **The file.** It goes under the space's documentation root, or into a place you declared for the space ([Set up your spaces](010-set-up-your-spaces.md#declare-the-pages-outside-the-documentation-roots)).
 - **The anchors.** Name the code it describes with `--path`, the decisions it applies with `--record`, and rules or another page's section with `--artefact`.
