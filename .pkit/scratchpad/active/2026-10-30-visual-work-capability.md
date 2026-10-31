@@ -375,7 +375,7 @@ The synthesis is kept beside this note, with its sources: `2026-10-30-visual-wor
   | 3. Primitives and layout operators | core |
   | 4. Components | core |
   | 5. Recipes and kinds | core or per context, after about three uses |
-  | 6. Frame | per context, changes about yearly |
+  | 6. Frame (named "layouts" in the naming pass) | per context, changes about yearly |
   | 7. One-offs | per talk, never shared |
   | 8. Talk | per talk, frozen once delivered |
 
@@ -1112,7 +1112,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | option, variant | a choice a component declares, such as a card's tone | working (Figma says "variants" and "component properties") |
 | design tokens, raw values, roles, component tokens | the design language as data | established terms (W3C Design Tokens) |
 | theme, mode, context | a set of values; light or dark; DAM or IBM | working |
-| frame | the per-context template: slide, section slide, footer, grid | working |
+| frame | an element's box: `x`, `y`, `width`, `height` (points 4h, 19); before the naming pass, also level 6 | decided (naming pass): this meaning only |
 | recipe | a recurring arrangement, promoted after about three uses | working (Brad Frost's term) |
 | one-off | level 7 before the naming pass | replaced by "local component" (naming pass) |
 | local component, library component | a component made inside one piece, in its `components/` folder (level 7); a component a library publishes. A local component that recurs about three times is promoted to a library component | decided (naming pass; Figma's terms) |
@@ -1122,7 +1122,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | values, structure, meaning | the three kinds of content a library holds (point 4g) | working |
 | core, interface, starter | the core holds only the interface (role names, top components, named layouts, slots); the starter holds the capability's opinionated components (point 18b) | working |
 | subject | what the work is about, such as pkit; its concepts mapped to roles (point 4g) | working |
-| named layout, slot, entry point | a discipline's frame, which a context supplies; a place in it; a named way into a library, such as `ibm/deck` (point 4g) | working |
+| layouts, slot, entry point | level 6: the layouts a top component declares and a context supplies, such as a deck's cover, section and slide ("named layouts" before the naming pass); a place in a layout; a named way into a library, such as `ibm/deck` (point 4g) | layouts decided (naming pass); slot and entry point working |
 | shared core, per context, per piece | the three scopes | working |
 | drafting, delivered, reused | the states of point 4d | working |
 | living | the fourth state: work that is never delivered, such as a doc figure (point 4j) | working |
@@ -1165,6 +1165,33 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   6. A local component a helper script wrote waits for its script to become an engine tool (point 21), then is promoted as data.
 
   No `promote` command is planned: generalising needs judgment, so it is the agent's work (aspect 9).
+- **Level 6: "layouts"; "frame" keeps one meaning, an element's box.** Chosen by the maintainer after an example. The note had used "frame" for both a context's templates (4c, 4g) and an element's computed box (4h, 19), and a designer also hears Figma's frame, any container. "Layouts" is PowerPoint's, Keynote's and Google Slides' word ("Title Slide", "Section Header"), and the note already called each one a named layout. The core declares a top component's layouts and their slots; a context supplies how each is drawn; the content picks a layout per page and fills its slots; the scene gives each element a frame. Ruled out: "master" (PowerPoint's parent of the layouts, and InDesign renamed its master pages parent pages) and "template" (a file one starts from; atomic design's page skeleton; every component in today's mural-boards tool).
+
+  ```yaml
+  # libraries/core/1.4.0/deck/deck.yaml: which layouts a deck has
+  layouts:
+    cover:   {slots: [title, subtitle, author, link]}
+    section: {slots: [number, title]}
+    slide:   {slots: [title, lead, visual, footer]}
+
+  # libraries/ibm/2.0.0/deck/layouts.yaml: how IBM draws one of them
+  slide:
+    size: {width: 3200, height: 1800}
+    slots:
+      title:  {x: =@grid.offset.1, y: =@region.title_y, width: =@grid.span.14, style: "@style.heading"}
+      visual: {x: =@grid.offset.1, y: =@region.content_y, width: =@grid.span.14}
+    parts:
+      number: {text: "{n} / {total}", align: right}
+
+  # pieces/friday-talk/content.en.yaml: a layout per slide, its slots filled
+  deck:
+    slides:
+      - {layout: section, number: 2, title: What the agent knows}
+      - {layout: slide, title: How pkit fits together, visual: {use: components/pyramid}}
+
+  # the scene, computed: each element's frame
+  - {id: fits/visual/pyramid/level-1, frame: {x: 340, y: 520, width: 1200, height: 140}}
+  ```
 
 **A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --context ibm/deck --subject pkit` writes two files; the rest appear when they are needed:
 
