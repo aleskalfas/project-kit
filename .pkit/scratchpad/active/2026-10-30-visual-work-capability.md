@@ -1,0 +1,700 @@
+---
+authors:
+  - Aleš Kalfas <kalfas.ales@gmail.com>
+started: 2026-10-30
+---
+
+# A capability for visual work, drawn by different renderers
+
+## The question
+
+What should a capability for visual work hold, so that any project using pkit can make presentations, concept diagrams and designs with an agent of its own? It starts from the `mural-boards` tool and what building the Friday talk on Mural taught us. Since the first discussion, Mural is one renderer among several, not the centre (see "Discussion", point 1). The note was opened as `mural-boards-capability`, and renamed before its first commit.
+
+The note is worked through with the maintainer, one aspect at a time. Each outcome is recorded under "Discussion" with its date and its reason.
+
+## What exists today
+
+### The tool: `mural-boards`
+
+It is a user-level Claude Code skill at `~/.claude/skills/mural-boards`, on one machine. It is its own git repository with 20 commits, from 28 September to 1 October 2026, and it has no remote. Its `SKILL.md` already says that its layout mirrors a capability's, and that it could become `pkit mural-boards …` once it has proven itself.
+
+- **One script**, `scripts/mural_boards.py`, 2,959 lines, run with `uv run --script` (it needs only pyyaml and jsonschema). Its sections:
+  - helpers;
+  - themes;
+  - configuration and tokens: OAuth with PKCE against an app the user registers with Mural, with tokens refreshed on their own;
+  - the API client: at most 20 requests a second, parallel workers, and retries only where a repeat is harmless;
+  - the map model: templates, composites, layouts, formulas, regions, zones and the library layout;
+  - 14 commands: `login`, `init`, `list`, `status`, `verify`, `pull`, `push`, `adopt`, `forget`, `remove`, `zones`, `audit`, `theme`, and `push --verify`.
+- **The map file** (`board-map.schema.json`, 652 lines) is the source of truth for the objects it describes, and the board is their rendering. Objects the map does not describe are never touched.
+- **Templates and the library.** A template may name a *master*: an instance in a library frame on the board, whose layout and style define the template. A person designs in the master, `pull` takes the design into the template, and `push` carries it to every instance that did not override it. Text never travels from a master.
+- **Themes**: `carbon-light`, `teal-calm` and `warm-paper`. They hold colour roles, fonts, a type scale, a grid, spacing and named slide regions. Each declares the text and background pairs that must reach WCAG contrast 4.5, and `push` refuses a theme that fails.
+- **Checks**: `verify` covers sync, zones, overlaps, text that will not fit its box, contrast, and objects styled by hand or off the theme.
+- **Tests**: 48 offline tests against a fake Mural API.
+- **Credentials** live in `~/.config/mural-boards/`. The agent never reads them.
+
+### How the Friday talk used it
+
+- **Three layers.** The content is data: `slides.yaml` and `slides.cs.yaml`, one entry per slide, with a header that explains every field. A generator, `gen.py` (1,823 lines), turns the slides into instances in the board map, and the tool pushes the map to the board.
+- **The library played a small part.**
+  - The board's library holds 26 masters in three groups: Slides 3, Components 13, Diagrams 10.
+  - Of the talk map's 76 templates, 26 follow a master, and 38 are made per slide by the generator. The generator places every box and arrow of those 38 in code, in about 25 "kinds" of visual: `pyramid`, `sockets`, `wired`, `slice`, `fanout`, `ties`, `files`, `board`, `answers`, and others.
+  - The new cover was also made by the generator, not from its master.
+  - So most of the design work lived in Python, not on the board.
+- **Tools the talk needed beside the tool**, in `2026-10-29-friday-talk-tools/`:
+  - `stray_duplicates.py`: when the board service failed a request after it had made the object, the tool's retry left a second copy behind, invisible but in the way of `remove`. This script deletes those copies.
+  - `make_row_icons.py`: recolours Carbon pictograms to the theme's roles.
+  - `mural_fonts.py`: lists the 12 fonts Mural accepts. None of them is monospace, so the generator renders each terminal panel to a PNG in IBM Plex Mono with `rsvg-convert`.
+  - `export_pdf.py`: Mural's API exports only the whole board, as one PDF page. This script cuts it into one PDF per language, with a page per slide.
+- **A second language.** The Czech set sits on the board under the English one, built from a second slides file with the same keys. Revisers rewrote it slide by slide, from a shared brief of terms and Czech sentence building.
+- **The writing and flow rules** are in the talk's hand-off note, "The deck's style". Read aloud, each slide's lead answers its title and follows from the slide before. Show the big picture before any detail. Say why. Say what comes wired. Use plain words for non-native speakers. Never refer to the talk itself.
+- **Lessons about the board**, from the same note:
+  - Areas cannot move, so a moved slide is rebuilt.
+  - Template colours take eight hex digits.
+  - `pull` before editing, because the maintainer edits on the board.
+  - Text that will not fit shows as `FIT` lines.
+
+## What pkit already decides that bears on this
+
+- A capability is one optional folder with its decisions, schemas, skills, agents, permissions and scripts (COR-017). Its dependencies are declared (COR-030).
+- A capability is either shipped by the methodology or incubated in a project's own repository (COR-031).
+- An agent belongs in the capability that owns its discipline (COR-026). Agents are persistent roles (COR-013).
+- What every project needs goes in core, and the rest does not (COR-014). Mural is a choice some projects make, so this belongs in a capability.
+- The permission model decides which tools and files an agent may use, and what the sandbox lets out to the network (COR-028).
+- `demo-recording` is a precedent: a capability for presentation-like output. It has a generic format, a plugin interface, and one plugin, for macOS.
+
+## Forces
+
+- **A third-party service.** Each adopter registers an OAuth app with Mural and keeps its secrets outside the repository. The agent must never read them, and the sandbox must let requests out to `app.mural.co`.
+- **One vendor.** The tool is Mural through and through: areas cannot move, colours have their own formats, and the API has its own limits. Its ideas, though, would fit any board: a map as the source of truth, templates with masters, themes, and checks.
+- **Where design lives.** Designing on the board, in library masters, lets a person design and an agent fill in content. Designing in code, as the talk did, lets an agent draw complex diagrams exactly, but a person cannot change them on the board.
+- **Content discipline.** Much of the talk's quality came from rules about content, not from the board: flow, plain words, big picture first. Some of these suit any deck, and some suit only this one.
+- **The tool's state today.** It is single-user, has no remote, and lives on one machine. Moving it into pkit makes pkit its owner.
+
+## Use cases to support
+
+The maintainer asked to track the use cases as the discussion goes (30 October). Each says where it came from. Once the capability is decided, they can become use cases in the project's analysis (software-analysis), where the project manager plans from them.
+
+1. **Build a presentation from reusable components.** Build a presentation from components that already exist, and reuse the same components in several presentations, each filled with its own data. Nothing already built is made again. *(The maintainer, 30 October.)*
+2. **Improve a component.** Improve a component, and the presentations that use it benefit, without one presentation's improvement breaking another. *(The maintainer, 30 October. How is point 4c.)*
+3. **Switch the theme.** Give the same material a different theme, and see it look different. *(Point 2.)*
+4. **Render through another renderer.** Render the same material through another renderer, such as HTML instead of Mural. *(Point 1.)*
+5. **Take back edits made in a renderer.** Take edits made in an editable renderer back into the material, on demand. *(Point 3.)*
+6. **Add a new kind of visual.** Add a new kind of visual as data, without code. *(Point 4a; the talk needed 19 kinds for 24 slides.)*
+7. **Give the presentation in a second language.** The same presentation in a second language, from a second set of material with the same structure. *(The Friday talk's Czech version.)*
+8. **Hand out a PDF.** Hand out the presentation as a PDF, one per language, with a page per slide in order. *(The Friday talk.)*
+
+Use cases 1 to 8 all come from presentations. The maintainer warned (31 October) that the capability may serve documentation and other content too, so decisions must not over-fit the two talks. Use cases 9 to 12 are proposed for that reason, to test each decision against:
+
+9. **Put a figure in a documentation page.** A diagram in a doc page, rendered to HTML or SVG, follows the site's light or dark mode, and stays current as the page changes. It is never "delivered". *(Proposed, 31 October.)*
+10. **Draw several views of one system.** Several diagrams of one system share its concepts and their look. A concept restyled once changes every view. *(Proposed, 31 October; Structurizr's "model once, many views" in the research.)*
+11. **Add a discipline the capability does not ship.** An adopter adds a discipline of its own, such as a one-page handout or a poster, with its own top component and layouts, without changing the capability. *(Proposed, 31 October.)*
+12. **Work about several subjects, under any brand.** A deck about two projects, or a deck in a client's brand about your own project. *(Proposed, 31 October.)*
+
+## Aspects to discuss
+
+Taken one at a time, in this order. The order may change as the answers come. Points 1 to 3 are decided; points 4 to 6 came from them.
+
+1. ~~**What the capability is for.**~~ Decided: visual work in two layers, with renderers (see "Discussion", point 1).
+2. ~~**Where layout lives.**~~ Decided: in the logical layer, with its own libraries and themes; renderers only project it (see "Discussion", point 2).
+3. ~~**Edits made in a renderer.**~~ Decided: an on-demand import writes the exact matches and reports the rest (see "Discussion", point 3).
+4. **The logical model.** What the logical layer holds, and in what format: the material per discipline (a deck, a diagram, a design); the kinds of visual with their data, such as the talk's `pyramid` and `sockets`; the primitives a scene is made of; the library of graphical elements; the themes. Taken in parts:
+   - ~~4a. How a kind of visual is defined.~~ Decided: as data only; computing lives in the engine's general tools (see "Discussion", point 4a).
+   - ~~4b. Whether a kind of visual and a library element are one concept or two.~~ Decided: one concept, components all the way down (see "Discussion", point 4b).
+   - ~~4c. How the library will be used: its levels and scopes.~~ Decided: eight levels in three scopes, built lean (see "Discussion", point 4c, its outcome at the end). The name of level 8 is open, and goes to the naming pass (point 16).
+   - ~~4d. How a change reaches a talk.~~ Decided: drafting follows the latest, delivered is locked, reused is upgraded on purpose with a preview (see "Discussion", point 4d).
+   - ~~4e. Variants of a component.~~ Decided: options the component declares, with overrides through roles only, and a one-off for anything beyond (see "Discussion", point 4e).
+   - ~~4f. The material's format per discipline, and how it binds to a component.~~ Decided: one shape for every discipline; the engine knows no discipline (see "Discussion", point 4f).
+   - ~~4g. How pieces group into libraries, so a context can share them, such as "IBM Deck" or "IBM Diagram". Came from 4f.~~ Decided: libraries by owner, holding values, structure or meaning (see "Discussion", point 4g, its outcome at the end).
+   - ~~4j. The lifecycle of work that is never delivered, such as a figure in a doc page (point 4d revisited). Came from the over-fitting check of 4g.~~ Decided: every piece of work has a lock, and a fourth state, living, moves it through a reviewed proposal (see "Discussion", point 4j). Taken before 4i, which came up next.
+   - 4h. The scene's primitives, and how each traces back to the model.
+   - ~~4i. Where a library lives and how another adopter gets it; whether pkit's capability dependencies (COR-030) or incubation (COR-031) carry it. Came from the critic's review of 4g.~~ Decided: libraries are the capability's data, kept as a read-only folder per version, with a lock per piece (see "Discussion", point 4i).
+5. **Text and fonts.** A layout made before rendering must know how much room text takes, and every renderer must draw it in the same font. Mural accepts only 12 fonts, none of them monospace.
+6. **How a renderer plugs in.** Plugins inside the one capability, as `demo-recording` does, or a capability per renderer that fills a role (COR-052, COR-053). Also the name: pkit already says "adapter" for a harness adapter (COR-005), so these are "renderers".
+7. **Its origin.** Shipped by project-kit, or incubated in a project first (COR-031).
+8. **The starter library and themes.** Which graphical elements and themes the capability ships, from the talk's 26 masters, its kinds of visual, and the three themes.
+9. **The agents.** A designer agent: its job, its limits, its tools. Whether a reviewer reads a deck for flow and plain words.
+10. **The skills.** The build loop (change, generate, render, verify) as a skill, and how a deck or a diagram is authored.
+11. **The rules.** Which of the talk's style rules the capability ships, and which stay a project's own.
+12. **Credentials, permissions and the sandbox**, per renderer that talks to a service.
+13. **Output.** PDF, images, a set per language, and the translation workflow. The maintainer asked (31 October) that the capability carry both, the know-how included:
+    - **Outputs.** Preparing what is handed out, such as a PDF of a deck, one per language, a page per slide in order. The Friday talk needed a script of its own for it, because Mural exports only the whole board (`2026-10-29-friday-talk-tools/export_pdf.py`; use case 8).
+    - **Variations per language.** The same work in several languages, from material of the same structure (use case 7).
+    - **Translation know-how, shipped in the capability.** What the Czech version taught: translate a slide from its meaning, not word for word, one translator per slide; keep the English words developers say (capability, engine, slot); build each sentence the target language's way; one glossary, one word for one thing; a review by a native speaker. The lessons are in the Friday talk's note, "The Czech version".
+14. **The workarounds.** What to fix in the Mural renderer rather than carry beside it: the duplicates left after retries, monospace text rendered as images.
+15. **Moving in.** Tests, versions, and moving today's user-level skill into pkit.
+16. **Names.** A naming pass with the maintainer before any record or code fixes a name (see "Names").
+
+## Discussion
+
+*(Outcomes are recorded here as they are decided, newest last.)*
+
+### 1. What the capability is for (30 October)
+
+**Outcome.** The capability is about visual work, not about Mural. It has two layers.
+
+- **Visual work, at the logical level.** It is split into disciplines and sub-disciplines: presentations, diagrams, designs, and others later. The material says what to show, not how it looks.
+- **Renderers** draw that material. Mural is one renderer. HTML is another and may matter most: "who needs the Mural at the end". Figma might be one, but it works very differently.
+
+What matters most is that it is built cleverly. A project can switch colour themes easily. The same material can be rendered by different renderers, and may look completely different in each, while it stays the same at the logical level.
+
+The maintainer also asked whether producing visual work inside tools such as Mural is becoming obsolete. That is why HTML is a first-class renderer, not an afterthought.
+
+**Options that were on the table.**
+
+- A Mural tool capability, with content discipline left to projects.
+- Visual work with Mural as its only renderer.
+- Two capabilities, an engine and visual work.
+
+The maintainer went further than all three, to renderer independence.
+
+**What the Friday talk shows for this.**
+
+- The seam already half exists. `slides.yaml` is close to the logical level: a title, a lead, the kind of visual, and its data. `gen.py` mixes layout with Mural's own constraints: areas, eight-digit colours, and terminals as PNGs because Mural has no monospace font.
+- The Czech set reused every kind of visual with other text. Once the material is separate, a second rendering costs little.
+- An HTML renderer would have removed two of the talk's workarounds. It has monospace fonts, so terminals need not be images. It prints to PDF, so no cutting of a whole-board export is needed.
+
+**To check.** As far as the agent knows, Figma's public REST API reads files but cannot create layers. Writing goes through a plugin that runs inside Figma. If so, a Figma renderer needs a plugin bridge. This is not a reason to rule Figma out, only a cost to know.
+
+### 2. Where layout lives (30 October)
+
+**Outcome.** The logical layer defines the layout, and renderers only *project* it. The logical layer also owns its libraries of graphical elements and its themes, in the capability's own format, so nothing depends on one technology.
+
+- **A renderer adds no design of its own.** It turns what the logical layout defines into its medium: shapes on a Mural board, elements in an HTML page, layers in Figma.
+- **A different look comes from the logical layer.** It comes from another theme or another library, and never from the renderer. This is how "the same material, a completely different look" from point 1 is reached.
+- **Where a renderer cannot draw something natively,** it still projects it faithfully. For example, it can place an image that the capability renders from the logical description, as the talk did with terminals on Mural.
+
+**Options that were on the table.**
+
+1. Each renderer lays out each kind of visual itself.
+2. A shared layout makes a neutral scene, and thin renderers paint it.
+3. Both, with a renderer free to draw a kind in its own native way.
+
+The agent recommended 3, built as 2 first. The maintainer chose 2 in its pure form, and widened it: the libraries and themes are the logical layer's too.
+
+**What this changes from today's tool.**
+
+- In `mural-boards`, the library lives on the board. Masters are designed in Mural, and `pull` takes the design into the map.
+- Under this outcome, the library's source is the capability's own format, and a board's library is one more projection of it. Whether a person may still design on a board is part of point 3.
+- The talk's `gen.py` already does most of the work of a shared layout. What it lacks is a renderer-neutral output: today it writes Mural map objects.
+
+**A parallel with pkit itself.** pkit's pyramid has the same shape. The decisions are the source, and every layer below carries them out and is checked against them (COR-065). Here the logical layer is the source, and each renderer carries it out. A check, such as `verify` today, can confirm that a rendering matches its source.
+
+**Costs to keep in view.**
+
+- The logical layout must measure text before any renderer draws it. Every renderer must then use the same fonts (point 5).
+- A browser's own text flow, or Figma's auto-layout, goes unused, because the logical layout has already placed everything.
+
+### 3. Edits made in a renderer (30 October)
+
+**The maintainer's ask.** Where a renderer can be edited, as Mural can, the capability should detect the changes made there and update the logical model from them, on demand.
+
+**Outcome.** An on-demand import does three things.
+
+- **It writes the exact matches into the logical model.** An edit that has exactly one place to go is written there. Git is the review: the person reads the diff, and commits or reverts it.
+- **It stops on a conflict.** If a field changed both in the renderer and in the logical model since the last render, the import writes neither, and reports it.
+- **It reports the rest and changes nothing for them.** These are edits that have no exact place to go. For each one, a person or the agent chooses: make it an explicit override, change the theme or the library, or drop it.
+
+**Options that were on the table.**
+
+1. Write every edit that maps.
+2. Propose every edit, and write only what is accepted one by one.
+3. Write the exact matches, stop on conflicts, and report the rest.
+
+The agent recommended 3, and the maintainer agreed. A separate proposal step adds little, because git already shows everything that was written.
+
+**Evidence from the Friday board.** `status` compared the 2,479 objects it describes and found one difference. It traced that difference to its field, `T-cs-cover.title`: "Vývoj s AI podle rozhodnutí v…" in the map, "Decision driven AI development" on the board. Detection already works.
+
+**Where each kind of edit lands.**
+
+| Edit in the renderer | Where it lands |
+|---|---|
+| Text that came from a field of the material: a title, a lead, a card | That field. Today's `pull` already reverses a template's text pattern. |
+| A library element's design, changed in its master on a board | The library. Today's `pull` already does this for masters. |
+| A colour picked by hand, off the theme | No exact place. Reported. |
+| A moved box, where the layout is computed (the layers of a pyramid, an arrow) | No exact place: no field holds that position. Reported. |
+| A new object drawn by hand, or a deleted one | No exact place: no element matches. Reported. |
+
+**What this asks of the design.** Every rendered object must trace back to its element and field in the logical model. Today the trace stops at the board map. The talk's generator writes the map in one direction only, so a pulled title would be overwritten by the next build.
+
+### 4a. How a kind of visual is defined (30 October)
+
+**Outcome.** A kind of visual is data only: a declarative layout in YAML, checked by a schema. The computing lives in the engine, as a few general tools that every kind can use:
+
+1. **Repetition** over a list in the material, such as "one box for each layer".
+2. **Formulas**: plain arithmetic over an item's index, the count of items, and theme tokens.
+3. **Connectors** between named elements, with routing options such as "spread the ends evenly".
+4. **Text measuring**, so a box can size itself to its text.
+
+When a kind needs something data cannot say, the engine gains a new general tool, shipped and tested once in the capability. A kind never carries code.
+
+**The limit accepted with it.** A project cannot add a tool to the engine itself. It asks for one, and the question is revisited if that need actually comes up.
+
+**Options that were on the table.**
+
+1. Kinds as code: a function per kind, as in `gen.py`.
+2. Kinds as data: a declarative layout.
+3. Both: data, with code kinds called by name as elements, the way a custom component works in HTML.
+
+The agent first recommended 3. The maintainer leaned to 2 and asked how 3 would mix data with code. Reading the talk's hardest kinds showed that 2 is enough, so the agent changed its recommendation to 2 with the rule above, and the maintainer agreed.
+
+**Evidence from the talk.**
+
+- Its 24 slides use 19 different kinds. Only `wired` (4 slides) and `map` (3 slides) were reused. A new kind must therefore be cheap to make, and an agent can write data correctly against a schema.
+- Most kinds are arrangements: rows, columns and grids of cards, panels and terminals (`wired`, `map`, `files`, `checklist`, `rules`, `install`, `answers`).
+- The two hardest kinds need only arithmetic:
+  - `pyramid`: for each layer, width = `top_w + i × step`, x = `centre − width / 2`, y = `top + i × (height + gap)`.
+  - `sockets`: each arrow's end = `slot middle + (k − (n − 1) / 2) × 32`, which spreads n arrows evenly around a slot, plus "connect this box to that slot".
+- The Mural tool already evaluates formulas over theme tokens, such as `=@grid.margin + @space.10`.
+
+### 4b. Kinds of visual and library elements (30 October)
+
+**Outcome.** They are one concept: components all the way down.
+
+- A tag, a card, the pyramid and a whole slide are all *components*. A component is data with parameters, built from other components and from the scene's primitives.
+- A library is a set of components.
+- A discipline's "kinds of visual" are simply the components its material may name at the top. Being a kind is a role, not a separate concept.
+- A parameter's value may come from the material. That is how any component, not only a kind, takes the material's data.
+
+**Options that were on the table.**
+
+1. One concept.
+2. Two concepts, elements and kinds, each with its own schema and rules.
+
+The agent recommended 1, and the maintainer agreed. The reasons:
+
+- There is one schema and one way to compose, for the agent and for adopters alike.
+- It is already how the Mural tool works: a template can contain other templates.
+- A library can hold anything from a tag to a complete slide layout, and a theme or a library change reaches all of it the same way.
+
+**The maintainer's aim, said with it.** Build reusable components, and build presentations from them, each filled with its own data, so that nothing already made is made again. Improve components over time, perhaps with versions or variants. This became use cases 1 and 2 and points 4c and 4d.
+
+### 4c. How the library will be used (30 October, open)
+
+**What the agent proposed.** Three answers to "how does an improved component reach the presentations that use it". First, no versions: a presentation follows its components, and a change flags every presentation that uses them, as pkit's anchors do (COR-050). Second, one version per library, with compatible ranges. Third, one version per component.
+
+**The maintainer stepped back.** Re-rendering an existing presentation when a component improves may not be wanted at all. The question is first how the library is used.
+
+- **Some parts change rarely.** Slide layouts may change once a year. There may be one template library per context, such as one for DAM and another for IBM internal projects.
+- **Content elements will evolve.**
+- **Is it evolution or extension?** The Friday talk seemed to create completely different elements from the Mockingbird talk. Each talk describes different things, so it may be too early to say what was reused, or should have been.
+- **Updating is hard.** Looking at the Mockingbird board now, the maintainer would not dare update its components.
+- **The aim:** keep freedom for creativity, and still have a library of reusable components that compose.
+- **A missing concept?** Perhaps there should be a design language, defined in one unified way, with the components as its projection. The maintainer feels short of background in design, and asked for research.
+
+**Evidence: what the Friday talk took from the Mockingbird talk.** The two board maps were compared: Mockingbird's (`mockingbird/.pkit/scratchpad/active/2026-09-28-living-docs-board.yaml`, its board `ibmresearchdesign6459.1790595606038`) and the Friday talk's.
+
+- **The Friday talk started from Mockingbird's whole library.** It has the same 26 templates and the same 26 masters in the same groups. 22 are identical, and 4 were changed: `actor`, `artefact`, `cover` and `role_badge`.
+- **It used only 6 of them**, counted per language set:
+
+  | Template | What it is | Uses per set |
+  |---|---|---|
+  | `slide` | the frame | 24 |
+  | `section` | the frame | 5 |
+  | `notice` | the frame: the bottom evidence line | 20 |
+  | `stage` | a building block | 15 |
+  | `link` | a building block: the arrow joint | 17 |
+  | `artefact` | a building block | 3 |
+
+- **Mockingbird's content components went unused.** None of `card`, `tile`, `stat`, `listrow`, `branch`, `actor`, `label`, `step`, `compare` or `timeline` appears in the Friday talk. Mockingbird used them 4 to 20 times each.
+- **The Friday talk added 50 templates.** 38 were made per slide by the generator: one-off diagrams. 12 are new reusable pieces: `terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, the tree's `tree_bar`, `tree_tag` and `tree_note`, `divider`, and `talk_cover`.
+
+**What the evidence suggests.**
+
+- **The frame was reused unchanged.** The frame is the slide, the section, the evidence line and the theme.
+- **A few small building blocks were reused heavily:** a box with a heading, and an arrow.
+- **Content components were mostly not reused.** New ones were made for the new subject.
+- **Most of the work was one-off compositions,** one per slide.
+
+So reuse happened at the bottom (tokens, the frame, small building blocks) and not in the middle (content components). The top (compositions) is new in every talk. That matches the maintainer's sense that the talks "describe different things".
+
+**The research the maintainer asked for (30 October).** Five researchers covered:
+
+1. the vocabulary and design tokens;
+2. systems that serve several brands;
+3. reuse, governance and versioning;
+4. presentation tools;
+5. diagrams as models and views.
+
+The synthesis is kept beside this note, with its sources: `2026-10-30-visual-work-capability.research.md`, "Share the grammar, lock every delivered talk". What it says for this note:
+
+- **The missing concept has a name: design tokens.** The design language stored as named data, in three tiers:
+  - raw values;
+  - roles, such as accent, surface or primary text;
+  - an optional value for one part of one component.
+
+  There is a standard file format, the W3C Design Tokens Community Group's 2025.10, stable since 28 October 2025. Its Resolver module describes themes and modes as data. Adopt it rather than invent one.
+- **Components bind to the design language; they are not its projection.** A component names roles, never raw values, and a theme swaps the values behind the role names (Carbon: "Tokens are universal and never change across themes"). "Projection" stays the word for the logical layer → renderer relation, as in point 2. The second half of the missing concept is the split between a component's *specification* and its *implementation*. The specification is data in the logical layer: parts and slots, options, states, and which token each part uses. The implementation is one per renderer. Adobe's Spectrum Design Data, still a draft, is the closest precedent.
+- **The two talks follow the expected curve.**
+  - Reuse gathers in the foundations: the theme and the frame. It also gathers in small components free of any message.
+  - Content components tied to a message do not travel.
+  - The 38 diagrams are healthy one-offs ("snowflakes", Brad Frost). They belong in a labelled place inside the talk.
+  - A shape is promoted to the library once it has appeared about three times. The measures that matter are how cheap a one-off is to make, and how fast a repeated one-off becomes shared.
+- **A grammar, not a catalogue.** The shared layer gives primitives, layout operators (stack, align, distribute, repeat), defaults and a few kinds. Wickham's grammar of graphics, Vega-Lite and Penrose are the precedents. This supports point 4a. The research adds three conditions:
+  - Formulas stay a restricted language, as Vega's has no loops or assignment.
+  - Layout is deterministic and local; Bluefish dropped a global constraint solver.
+  - Manual overrides are keyed by stable ids.
+- **"All the way down" must not tax the one-off.** If a one-off is painful to write as data, it escapes the tool. A sanctioned way out is needed: a picture or a renderer-native object embedded as it is, which then does not follow the theme. A copied-and-changed part records where it came from.
+- **A theme carries values, never structure.**
+  - A frame is a per-context template: the slide, the section slide, the footer, the grid.
+  - Switching context swaps both the theme and the frame. Switching mode, such as light or dark, swaps values only.
+  - Context, mode and output scale are separate axes, as in Adobe Spectrum.
+- **A context library is values, a frame and a few brand-only parts. It is not a fork of the components** (Infinum's case study). For the IBM context, Carbon's values already exist.
+- **Rendering to several renderers has no prior art.** No tool found renders one component definition natively into HTML, a slide tool and a design tool at once. The contract with a renderer should be:
+  - layout names and slot roles;
+  - a declared list of the features each renderer supports;
+  - a report of what each render lost.
+
+  Whether Mural knows variables or themes is unknown. Tokens are likely resolved into literal values before a push, as the tool does today.
+- **Updates are pulled, never pushed.** In visual work every change shows, so semver's "a patch is safe" does not hold for pictures. The proposed lifecycle:
+  - A talk being drafted follows a version range.
+  - A delivered talk locks exact versions of every library and of the renderer, and keeps a static export.
+  - A talk reused for a new audience is copied, then upgraded explicitly, with a before-and-after preview per slide.
+  - There is one version per library: one for the shared core, and one per context.
+  - The yearly frame change is a major release.
+  - A part is deprecated in any release and removed in the next major one.
+  - A migration note per breaking change is enough.
+- **The proposed levels**, eight in three scopes (shared core, per context, per talk):
+
+  | Level | Scope |
+  |---|---|
+  | 1. Tokens | role names in the core, values per context |
+  | 2. Themes | per context |
+  | 3. Primitives and layout operators | core |
+  | 4. Components | core |
+  | 5. Recipes and kinds | core or per context, after about three uses |
+  | 6. Frame | per context, changes about yearly |
+  | 7. One-offs | per talk, never shared |
+  | 8. Talk | per talk, frozen once delivered |
+
+  A brand guide (logo, imagery, tone) sits above the logical layer, and the renderers sit below it.
+
+**Questions the research left open.** It found:
+
+- no documented practice for freezing a delivered presentation;
+- no reuse data for slide or diagram libraries;
+- nothing on Mural's support for variables;
+- nothing that confirms which tools support the Resolver module.
+
+**The levels on one real slide (worked example, 30 October).** The maintainer found the levels too abstract and asked for examples. Take the Friday talk's "How capabilities work together", slide 23 of 24:
+
+| What you see on the slide | Level | Why it sits there |
+|---|---|---|
+| The yellow of the capability boxes, the purple arrows, the grey text | 1. Tokens | The box names the role `capability`, never `#F1C21B`. The IBM theme says `capability = yellow-30 = #F1C21B`. |
+| All those colours and fonts together | 2. Theme | The IBM theme, today `carbon-light`. A DAM theme gives the same roles other values. Dark mode flips `text-primary` and `background`. |
+| Boxes, text, arrows; slots stacked one under another; one slot repeated per entry; the three "why" cards spread across | 3. Primitives and layout operators | box, text, connector; stack, repeat, distribute. |
+| The grey `doc-check` chip; a box with a heading; the "Limit" note with its blue bar | 4. Components | They are small and say nothing on their own, so every talk can use them. |
+| Terminal panels with tie cards (`wired`, 4 slides); a table (`map`, 3 slides) | 5. Recipes and kinds | Each recurs, so each is a candidate to be promoted once a third talk needs it. |
+| The title at top, the lead under it, the evidence line and "23 / 24" at the foot; the cover; the section slides | 6. Frame | It is the IBM context's template. A DAM frame would have another cover, logo and footer. |
+| The diagram of capabilities plugging into slots | 7. One-off | It was drawn once, for this message. It lives in the talk. |
+| The title, lead, slot names, contributors, "why" texts, notes; the Czech set; the lock | 8. Talk | The talk's material and what it is locked to. |
+
+What each change does:
+
+- **Switching the mode** to dark changes level 1's values only.
+- **Switching the context** to DAM changes levels 1, 2 and 6. The talk's material and its one-offs stay the same.
+- **Improving the chip in the core** reaches every talk still being drafted. A delivered talk keeps the chip it was locked to:
+
+  ```yaml
+  talk: friday-talk
+  delivered: 2026-10-30
+  uses: {core: 1.3.0, context-ibm: 2.0.0, renderer-mural: 0.9.0}
+  export: [friday-talk.en.pdf, friday-talk.cs.pdf]
+  ```
+
+- **A third talk that needs a stepped pyramid** promotes the Friday talk's one-off `pyramid` to a kind in the core.
+
+**Outcome (30 October).** The maintainer accepted the eight levels in three scopes, after the worked example. It is built lean:
+
+- start with token roles and values, one frame per context, a small shared core, and one-offs inside each talk;
+- add recipes and kinds, component tokens, and extra modes or scales only when a real talk needs them.
+
+**On the terms** (the maintainer asked whether "one-off" and "talk" are design terms):
+
+- **One-off** is informal, but established in design-system writing.
+  - Brad Frost writes "one-off components" (2018), and suggests a folder named `/one-offs` or `/departures` for them.
+  - He later names the tier "snowflakes" (2021): parts that "don't really get reused outside of their first use case".
+  - A Figma copy that has left its library is a "detached instance".
+  - The note keeps "one-off": it is plain English, and Frost uses it too.
+- **Talk** is not a design term. It is this note's word for the Friday talk.
+  - Atomic Design calls this level a *page*: a template filled with real content.
+  - Presentation tools call it a *deck* or a *presentation*.
+  - Since the capability covers diagrams and designs too, level 8 needs a name that fits every discipline. Open; it goes to the naming pass (point 16).
+
+### 4d. How a change reaches a talk (30 October)
+
+**Outcome.** The maintainer accepted the lifecycle the research proposed:
+
+| State | What it follows |
+|---|---|
+| Drafting | The latest shared core and context library. An improvement shows at the next render. |
+| Delivered | Exactly what it used, locked (for example `core 1.3.0, context-ibm 2.0.0, renderer-mural 0.9.0`), with its exports kept. Nothing changes unless a person asks. |
+| Reused for a new audience | The talk is copied, then upgraded on purpose, with a before-and-after preview of each slide. Any change can be undone. |
+
+Behind the lifecycle:
+
+- There is one version per library: one for the shared core, and one per context. Components are not versioned one by one.
+- A yearly frame change is a major version of its context.
+- Old versions stay available for locked talks to render. Each version is a git tag, and a lock points at it.
+- The machinery large design systems need for many teams is not needed for one author: committees, notice periods, upgrade scripts. A migration note per breaking change is enough.
+
+### 4e. Variants of a component (30 October)
+
+**Outcome.** A component declares its options, and a talk picks from them. Each value of an option points the component's parts at different roles. For example, a card declares `tone: pkit | yours | capability`, and tone `capability` sets the border to `capability` and the background to `capability-bg`. A fix to the card reaches every tone, and a new tone is a small change to the card.
+
+- **A talk may also override a part, but only through a role.** It may say "this border is `accent`", and never give a raw `#hex`, so the theme still reaches the part.
+- **Anything beyond that is a one-off.** The component is copied into the talk, and its origin is recorded.
+
+**Options that were on the table.**
+
+1. Options the component declares.
+2. A separate component per variant, which means copies.
+3. Free overrides where the component is used.
+
+The agent recommended 1 with a narrow form of 3, and the maintainer agreed. Figma works the same way: declared variants, limited overrides, and detach.
+
+**The Friday talk's examples.** The cards in three tones (pkit purple, yours blue, capability yellow; `CARD_TONES` in `gen.py`), and the pairs diagram in two styles, plain and tinted (`PAIR_STYLES`). "Variant" and "option" are working names (see "Names").
+
+### 4f. The material's format (31 October)
+
+**Outcome.** One shape for every discipline. The material is a tree of components with their data (point 4b).
+
+- A presentation's top is a deck component, whose fields are its title, author, parts and slides. A slide is a component whose fields are its title, lead, visual, limit, notes and minutes.
+- A standalone diagram is a single component with its data, such as `sockets` with its provider and contributors. A diagram drawn for a slide can be lifted out unchanged as a diagram of its own, or put into a document.
+- Each component's schema checks its fields, so a presentation's file still reads like the Friday talk's `slides.yaml` does today.
+- Layout leaves the material. Today's `font_size: 22` in a visual becomes an option of its component (point 4e).
+
+**Options that were on the table.**
+
+1. One shape for every discipline.
+2. A format per discipline (a presentation file, a diagram file, a design file), each with its own schema and its own reader.
+
+The agent recommended 1, and the maintainer agreed.
+
+**The maintainer's addition.** The engine knows no discipline: "deck" and "diagram" are components in libraries, not code. Yet libraries per discipline must be possible, with an opinion on how pieces group, so that a context can share, for example, "IBM Deck" or "IBM Diagram". That opinion is point 4g.
+
+The name of level 8 is not settled here. It goes to the naming pass (point 16).
+
+### 4g. How pieces group into libraries (31 October)
+
+**The agent's first recommendation** (superseded by the revised one below). A library is what is shared and versioned: a named set of pieces that names the libraries it builds on. Pieces group on two axes, brand and discipline:
+
+| Library | Holds | Builds on | Made by |
+|---|---|---|---|
+| `base` | primitives, layout operators, small components (chip, card), the token roles | nothing | the capability |
+| `deck` | the deck and slide components, a plain cover and section slide | `base` | the capability |
+| `diagram` | the diagram component, nodes, connector styles | `base` | the capability |
+| `ibm` | IBM's token values, its themes (light, dark), logo and fonts | `base` | the IBM context |
+| `ibm-deck` | IBM's slide frame (cover, section slide, footer, grid), IBM's deck recipes | `deck`, `ibm` | the IBM context |
+| `ibm-diagram` | IBM's diagram notation and recipes | `diagram`, `ibm` | the IBM context |
+
+A DAM context adds `dam` and `dam-deck`. A presentation names one library, `uses: ibm-deck`, and gets the libraries it builds on. `uses: dam-deck` switches the context.
+
+The rules of the grouping:
+
+- **A brand library holds values only, no layout.** IBM Deck and IBM Diagram share one IBM look, and a brand refresh is one change.
+- **A discipline library holds structure only, through roles, never values.** IBM Deck and DAM Deck share one slide component, so a fix to it reaches both.
+- **Each library has its own version.** The yearly change of IBM's slide frame is a major version of `ibm-deck`, and `ibm-diagram` does not move. This refines point 4d, which said one version per context.
+- **The engine does not hold the grouping in code.** A check can verify the two content rules: no raw values in a discipline library, no layout in a brand library.
+- **Built lean, as in 4c.** The capability ships `base` and `deck` first, and `diagram` when a real diagram needs it. A context starts with its brand library plus one library for each discipline it uses.
+
+It listed two other options: one library per context with a folder per discipline, and no opinion at all. It left one edge for later: a structure only IBM uses, in both decks and diagrams, had no home.
+
+**The critic's review.** The maintainer asked for the critic's opinion. The critic kept the basic idea: values apart from structure, components bound to roles, no discipline in the engine. It found four problems with the first recommendation.
+
+1. **Splitting deck from diagram cuts through the reuse that happened.** The Friday talk's most reused blocks are diagram parts used inside slides: `stage` (15 uses), `link` (17) and `artefact` (3). With the split, `uses: ibm-deck` could not reach them, and a slide's diagram could not be lifted out unchanged (point 4f).
+2. **A version per library reverses point 4d and buys nothing that shows.** Drafting follows the latest, delivered is locked, and reuse is previewed, so in no state does a diagram see a difference. It adds a diamond of dependencies (`ibm-deck` builds on `deck` and `ibm`, both on `base`) and the version ranges between them.
+3. **The two content rules leave the combined library unclassified.** IBM's slide grid (3200 wide, 16 columns, margin 128) is numbers, it is IBM's, and it is the deck's. "Raw value" was not defined. A token name such as `@grid.span.16` carries IBM's 16 columns into shared components.
+4. **Nothing says how one library overrides another.** If `ibm-deck` replaces `deck`'s cover and slide by name, a fix to `deck`'s reaches no IBM talk, and the frame is the only part reused today.
+
+It also found gaps:
+
+- **A third axis, the subject.** Both talks carry the same colours for pkit's concepts as raw Carbon values: `role_agents`, `role_checks`, `role_code`, `role_people`, `role_admin`, `role_experimenter`, `role_neutral`, each with its `_bg` partner. The Friday talk added `role_architecture` and `role_addon`. They are about the subject, neither about IBM nor about a discipline, and point 4e forbids raw values in a talk. The project's logo on the cover is the same kind.
+- **Parts only a brand uses are the normal case, not an edge.** Today's library is Carbon-flavoured throughout ("Carbon tile", "Carbon inline notification").
+- **Switching the context works only for names both contexts have.**
+- **The lean start cannot render.** The core holds no values, and the neutral themes (`teal-calm`, `warm-paper`) had no home.
+- **Where a library lives and how another adopter gets it** is not designed, though sharing is the aim. pkit already has versioned dependencies between capabilities (COR-030) and incubation (COR-031).
+- **Fonts and the type scale change layout**, and differ per discipline and per renderer.
+
+Its counter-proposals: separate the unit you version from the unit you use (C1); ordered layers, where a talk lists a stack and the later layer wins (C2); the frame as an interface each context implements (C3); and, named to be declined, a context library as an incubated capability (C4).
+
+**The agent's revised recommendation** (C1 with C3, and the subject as its own library). One library per owner, one version each, so point 4d stands:
+
+| Library | Holds | Made by |
+|---|---|---|
+| core | role names (with neutral category roles `category-1` …), primitives, layout operators, components for every discipline (chip, card, `stage`, `link`, connectors), the deck and diagram top components, and the frame's interface: named layouts (cover, section, slide) with their slots | the capability |
+| neutral context | neutral values (today's `teal-calm`, `warm-paper`) and a plain frame, so the core renders out of the box | the capability |
+| a context, such as `ibm` | IBM's values (colours, fonts, logo, type scale, light and dark), its frame (every named layout the core declares, with its grid), and parts only IBM uses (Carbon tile, notice), in folders such as `deck/` and `diagram/` | the IBM context |
+| a subject, such as `pkit` | what each of pkit's concepts maps to (agents → `category-3`), and the project's logo; roles only, no values | the project the work is about |
+
+A presentation says `uses: {context: ibm/deck, subject: pkit}`. `ibm/deck` and `ibm/diagram` are named entry points into one library, so "IBM Deck" can still be named and shared.
+
+The rules:
+
+- **One version per library.** A library is split only when a real second user needs part of it alone. Old versions stay as tags, so splitting later is cheap.
+- **A raw value is a literal colour, font or image file.** Only a context holds raw values. Geometry is not a raw value.
+- **The frame is an interface.** The core names the layouts and their slots. Every context supplies each of them, with the same parameters, and a check confirms it. A context never replaces a core component by name: it supplies the frame and adds its own parts. Quarto works this way for PowerPoint templates.
+- **Switching the context reports every name the new context lacks**, such as a Carbon tile the presentation used.
+- **The core's names carry no brand.** A width is a fraction or a named width, not `span.16`.
+
+Left for other points: where a library lives and how it is shared (point 4i); fonts, the type scale per discipline and the output scale (point 5).
+
+**Options now on the table.**
+
+1. The revised recommendation.
+2. Ordered layers (C2): a presentation lists a stack, `uses: [core, ibm, pkit]`, and for each name the later layer wins; a check reports every name overridden. One simple mechanism, but a context may replace any core piece, so a fix to the core can be shadowed.
+3. The first recommendation.
+
+**The over-fitting check (31 October).** The maintainer asked whether the critic, working from the two talks, over-fitted the proposal to them. The agent tested each part against use cases 9 to 12.
+
+Parts that hold beyond the talks:
+
+- One library per owner, one version each. It does not depend on a discipline.
+- Values apart from structure, with components bound to roles.
+- The subject as its own axis. It holds even more for documentation than for talks: Structurizr styles elements by tag, so the model says what an element is and the styles say how it looks, and its icon themes (such as AWS) are libraries of that kind.
+- A neutral context; a context switch that reports what is missing; splitting a library only when needed.
+
+Four parts were shaped by the talks, each with its correction:
+
+1. **The core was the only home for structure.** A documentation team wants components of its own with no brand: a callout, a figure with a caption. Correction: anyone may publish a structure library. A name is read with its library (`core/card`, `docs-kit/callout`), so no library replaces another's piece. This settles overriding for every library, not only the core.
+2. **The frame's interface was the deck's.** Cover, section and slide are slide words. A doc figure's frame is a caption and a number; a poster has one page. Correction: each top component (deck, figure, poster) declares its own named layouts, and a context's entry point (`ibm/deck`) supplies those of its discipline only. A context that only serves documentation supplies no slide layouts.
+3. **"A raw value is a colour, font or image" was too narrow, and inconsistent.** It came from the grid problem. A context also sets spacing, corner radius and border widths, and the subject's logo is an image. Correction: a context gives values to tokens of any type (colour, font, size, spacing, picture). A component uses a token for anything a context may change. A subject's own marks (logo, icons) are its assets. Images that are content, such as a screenshot in a doc, belong to the material.
+4. **The subject mapped concepts to colours only, one subject at a time.** Diagrams also mark concepts by icon and shape, and colour alone should not carry meaning. Correction: a subject maps a concept to roles of any kind (colour, icon, shape), and a piece of work may name several subjects.
+
+**Found outside 4g.** Point 4d's lifecycle (drafting, delivered, reused) is a talk's. A doc figure is never delivered: it follows its page, and may be locked per release of the docs. Taken up as point 4j.
+
+**Outcome (31 October).** The maintainer chose the revised recommendation with the four corrections. Put together:
+
+- **Libraries by owner, one version each.** Point 4d stands. A library is split only when a second user needs part of it alone.
+- **A library holds one of three kinds of content:**
+  - **Values.** A context, such as IBM, DAM, or the neutral one the capability ships, gives values to tokens of any type: colour, font, size, spacing, picture, in each of its modes (light, dark). It also holds its frame (the named layouts of each discipline it serves) and the parts only its brand uses.
+  - **Structure.** Components, and each discipline's top component with its named layouts and their slots. The capability ships the core; anyone may publish another, such as a docs team's `docs-kit`. A component uses a token for anything a context may change.
+  - **Meaning.** A subject, such as `pkit`, maps each of its concepts to roles (colour, icon, shape) and carries its own marks (logo, icons).
+- **A name is read with its library** (`core/card`, `docs-kit/callout`). No library replaces another's piece.
+- **A context's entry point** (`ibm/deck`, `ibm/diagram`) supplies the named layouts of its discipline. A check confirms each is there, with the same parameters.
+- **A piece of work names** its context's entry point, its subjects, and any structure libraries beyond the core, for example `uses: {context: ibm/deck, subjects: [pkit], libraries: [docs-kit]}`.
+- **Switching the context reports** every name the new context lacks.
+- **Images that are content belong to the material.**
+- **Left to other points:** where a library lives and how it is shared (point 4i); fonts, the type scale per discipline and the output scale (point 5); the lifecycle of work that is never delivered (point 4j).
+
+### 4j. Work that is never delivered (31 October)
+
+**The question.** Point 4d has three states: drafting follows the latest libraries, delivered is locked, reused is upgraded on purpose. A figure in a doc page (use case 9) is never delivered. It lives as long as its page, in git, and the docs may be released in versions. When a library changes, should the figure change?
+
+**The agent's recommendation.** Every piece of work has a lock: the exact versions of the libraries it used. The states differ only in who moves the lock. A fourth state, living, is added:
+
+| State | Who moves the lock |
+|---|---|
+| Drafting | Every render moves it to the latest. |
+| Delivered | Nobody. It is frozen, with its exports. |
+| Living (new) | When a library releases a version, the tool proposes moving the lock, with a before-and-after preview of each figure it changes. The proposal is accepted like any other change. |
+| Reused | A person, on purpose, with a preview. |
+
+Why:
+
+- **A published page does not change without anyone looking.** A shared component's change reaches the docs only through a reviewed change.
+- **An old release of the docs renders as it was.** Its lock is in git, at that release.
+- **The docs do not drift away from the current look.** Every library release brings a proposal, so the figures keep up.
+- **A text edit and a library change stay apart.** Re-rendering a page after its text changed does not pull in a new library at the same time.
+
+**The alternative.** Living work follows the latest, as drafting does, and a check after each library release reports what broke. It is simpler, but a library change reaches published pages unreviewed, and an old release of the docs no longer renders as it was.
+
+**Outcome (31 October).** The maintainer agreed: every piece of work has a lock, and a fourth state, living, moves it through a proposed change with a before-and-after preview. He then asked how a library is released and taken in at all (point 4i), which may refine where the lock lives.
+
+### 4i. How a library is shared and upgraded (31 October)
+
+**The maintainer's view.** Someone gives you a link to their library. That connects your copy to theirs, and commands upgrade your copy when a new version exists. It sounds like npm packages. It should not be over-engineered, but taking in new versions must be easy.
+
+**What pkit already decides.** Content shared between repositories is pulled whole from a git source, pinned to a version; an upgrade is moving the pin; sync brings the copy to exactly the pinned content, never by merging; the copy has one owner, the source; there is no registry (COR-041, realised by ADR-040). COR-041 names "a company house-style shipped as one" capability as a use, and prefers reusing the capability to inventing a new kind of artefact. The same content is incubated in its author's repository (COR-031) and pulled by everyone else. The compatibility gate reads the fetched package, and a source that cannot be reached warns loudly and never stops the command. The code knows the `externally-sourced` origin, but the fetch from a git source does not appear to be built yet.
+
+**The agent's recommendation.**
+
+- **A shared library is a capability, pulled as externally-sourced content (COR-041).** The visual-work capability defines a point that libraries contribute to (COR-053), so installing `ibm-visual` makes its libraries available.
+- **The author** keeps the library in a repository of their own, incubated there. A release is a version tag through pkit's release flow. A breaking change ships a migration that rewrites the consumers' material where it can, such as a renamed component, as every capability's breaking change must (COR-010).
+- **The consumer** adds it by its link and a version, and `pkit capabilities upgrade <name>` moves the pin. Before anything is written, the visual-work capability shows the before-and-after of every living piece the move changes (point 4j). Delivered pieces do not move.
+- **A library used only in its own project** is a folder there: no package, no pin.
+- **No registry, and one compatibility range.** A library says which major version of the visual-work capability it fits (`requires_capabilities`), checked when it is added and upgraded.
+- **What this means for the lock (point 4j).** A project holds one copy of each library, at its pin. Drafting and living work follow the project's pin, and moving the pin is the reviewed change of 4j. A delivered piece's lock is the commit where it was delivered: git keeps the library's copy as it was then, so the piece can render again from there.
+
+**The alternative.** The visual-work capability keeps its own list of libraries (a link and a version each), with its own fetch and upgrade commands, following COR-041's rules. It is lighter per library, with no package file, but repeats what pkit already decides for capabilities: fetching, sign-in, the pin, the compatibility gate, loud failure, migrations and release.
+
+**The maintainer's objection (31 October).** A library should not be on the same level as a capability. The capability is the system being designed; libraries are that system's data. The agent agrees:
+
+- A capability is a discipline of the method, with its decisions, skills, agents and scripts (COR-017). A library is content the capability's engine reads, as an issue is to project management, or a use case to software analysis.
+- The "company house-style" that COR-041 names is a house style of the method (its rules and conventions), not a set of colours and components.
+- A library's author, perhaps a designer, should not need a package file, changesets and pkit's release flow to publish a version.
+
+So the recommendation moves to the alternative: libraries are the visual-work capability's data, with a list of their own, kept by the capability's commands. They follow COR-041's rules of sharing (pulled whole, pinned, upgraded by moving the pin, never merged, no registry), without its container. The critic's review, running when the objection came, is folded into the revised recommendation.
+
+**The critic's review (31 October).** It confirmed that the fetch from a git source is not built: `manifest.py` says so. Its main finding: a capability gives one version per project, which is right for code but wrong for data that pieces lock to. Its findings:
+
+1. **One pin per project quietly replaced the lock per piece (4j).** A new version that improves figure A and breaks figure B cannot be taken for A alone. A typo fix in a delivered talk renders with the new libraries. Docs kept as a folder per version (as Docusaurus does) render their old figures with today's libraries.
+2. **The core escaped the preview.** It ships inside the capability, so a pkit upgrade taken for something else would restyle every figure, with no before-and-after.
+3. **The migration sentence was wrong.** Content pulled from an external source runs no migrations (COR-059 point 3). Rewriting a project's own content is a separate operation with a reviewed diff (COR-059 point 10). And 4d said a note per breaking change is enough.
+4. **"Reuse what pkit has" rested on what pkit does not have:** no fetch, no install from a link, no upgrade to a new version, and no tag for a release of a component alone.
+
+It also found gaps:
+
+- The preview had no mechanism before the upgrade writes.
+- An edit taken back from a board (point 3) cannot be written into a library copy owned by its source.
+- Nothing says a new version exists.
+- project-kit's own build ships everything under `.pkit/capabilities/`, so a library it consumes there would ship to every adopter.
+- A library made in the project had no version for a lock to name.
+- A brand's own published tokens file could not be used without wrapping it.
+- A palette should not declare compatibility with pkit's backbone, only with the visual-work format.
+- A lock that names a commit is fragile (squashed branches, dirty trees), and loses the readable `uses: {core: 1.3.0, …}` line.
+
+Its recommendation (CA1): copies kept by version, with a lock per piece, owned by the visual-work capability.
+
+**The agent's revised recommendation.** The critic's CA1, which the maintainer's objection also points to.
+
+- **A library's version is a folder.** Each version that a lock names is a read-only folder, `<library>/<version>/`. It is fetched whole at its tag, never edited, and checked by a hash. The folders are committed, so rendering needs no network and CI needs no sign-in. They live in the project's own tree, never under `.pkit/capabilities/`, so project-kit never ships a library it only uses.
+- **A project's list of libraries** is one small file: each library's link, and the versions present.
+- **Each piece's lock names versions,** readably: `uses: {core: 1.4.0, ibm: 2.0.0, pkit: 1.1.0}`. Drafting work moves to the newest version present at every render. Living work moves through the preview. Delivered work never moves. Old versions stay as long as a lock names them.
+- **A release is a git tag** in the author's repository, `<library>/v<version>` where a repository holds several libraries.
+- **A library's own file** gives its name, its version, and the one number of the visual-work format it fits.
+- **The commands** (working names):
+  - `add <link>` fetches a version into its folder and lists the library;
+  - `outdated` lists libraries with newer tags (read-only);
+  - `upgrade <library>` fetches the new version beside the old, renders each living and drafting piece with both, shows the before-and-after, and moves each accepted piece's lock. A piece may stay behind;
+  - `prune` removes versions no lock names.
+- **The core's versions also sit side by side** inside the capability. A pkit upgrade adds a version and moves no lock.
+- **A breaking change ships a note.** On request, a command rewrites the material to follow it, and the diff is reviewed like any change. No migrations, as 4d decided.
+- **Taking back edits (point 3)** never writes into a fetched library. It reports the edit and names the library's repository, or offers to make it a one-off in the piece.
+- **A library made in the project** has a version too. Sharing it means tagging its folder in a repository, and its name stays.
+- **Later, when needed:** a brand's own tokens file (W3C format) used through a small file that maps its tokens to roles; and the fetch as a pkit primitive, if pkit builds ADR-040's fetch, which visual-work would then use.
+
+**The alternatives now.**
+
+1. Versioned copies with a lock per piece (above).
+2. One copy per library at a project-wide pin. It is simpler, but it gives up the lock per piece of 4j, and all pieces move at once.
+3. Git submodules: the "clone linked to its remote" feel, but one version per path, extra steps for cloning and CI, and validation cannot see inside them.
+
+**Outcome (31 October).** The maintainer chose versioned copies with a lock per piece. Libraries are the visual-work capability's data, not capabilities. Each version a lock names is a read-only folder, fetched whole at its tag and committed; each piece's lock names its versions; `add`, `outdated`, `upgrade` (piece by piece, after a before-and-after) and `prune` keep them. It refines point 4j: the lock is per piece, and an upgrade may leave a piece behind.
+
+## Names
+
+**Names are confirmed together with the maintainer** (30 October). The note's terms are working names until the maintainer confirms them. The maintainer said to be careful about picking names such as "one-off" or "talk".
+
+| Working name | Meaning | Status |
+|---|---|---|
+| visual work | what the capability is about | working |
+| logical layer, material | the source; what to show | working |
+| renderer, projection | what draws the logical layer; the relation between the two | working ("adapter" ruled out, as pkit uses it for the harness) |
+| component | anything from a tag to a whole slide layout (point 4b) | working; established term |
+| kind | a component the material may name at the top | working |
+| option, variant | a choice a component declares, such as a card's tone | working (Figma says "variants" and "component properties") |
+| design tokens, raw values, roles, component tokens | the design language as data | established terms (W3C Design Tokens) |
+| theme, mode, context | a set of values; light or dark; DAM or IBM | working |
+| frame | the per-context template: slide, section slide, footer, grid | working |
+| recipe | a recurring composition, promoted after about three uses | working (Brad Frost's term) |
+| one-off | a part drawn for one message, inside the talk | working (Frost: "one-off components", "snowflakes") |
+| talk | level 8: the material plus its lock | working; needs a name that fits every discipline (naming pass, point 16) |
+| deck | the top component of a presentation | working (Slidev, Marp and Keynote users say "deck") |
+| library | a named, versioned set of pieces that is shared, and names the libraries it builds on | working |
+| values, structure, meaning | the three kinds of content a library holds (point 4g) | working |
+| subject | what the work is about, such as pkit; its concepts mapped to roles (point 4g) | working |
+| named layout, slot, entry point | a discipline's frame, which a context supplies; a place in it; a named way into a library, such as `ibm/deck` (point 4g) | working |
+| shared core, per context, per talk | the three scopes | working |
+| drafting, delivered, reused | the states of point 4d | working |
+
+A naming pass with the maintainer comes before any record or code fixes a name.
