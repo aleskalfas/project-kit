@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Summary
 
-**In plain terms:** people learning project-kit read guides in `docs/`, on GitHub. Agents in an adopter's project read references under `.pkit/`, because only those ship. Each side has a folder per area, led by its README. The reference holds the contract; the guide explains it.
+**In plain terms:** people learning project-kit read guides in `docs/`, on GitHub. Agents in an adopter's project read references under `.pkit/`, because only those ship. Each side has a folder per area, capability or adapter, at the same path, led by its README. The reference holds the contract; the guide explains it.
 
 ## Context
 
@@ -18,7 +18,9 @@ ADR-055 point 3 makes each adopter-facing README under `.pkit/` a user page, and
 
 ### 1. Where pages live
 
-- **Guides** sit in `docs/`, which does not ship. A guide says why an area exists, what it solves, how it compares, and how people do its tasks. `docs/` has a folder per area, capability or adapter, named as under `.pkit/`, and material across the tool at its top.
+- **Guides** sit in `docs/`, which does not ship. A guide says why an area exists, what it solves, how it compares, and how people do its tasks. Material across the tool sits at the top of `docs/`.
+  - **A guide's folder mirrors its reference's:** the guide to what `.pkit/<path>/README.md` describes leads `docs/<path>/`, such as `docs/capabilities/living-docs/` or `docs/adapters/claude-code/`. Two guides lead one folder only where two references would, which `.pkit/` rules out.
+  - **An unnumbered folder of `docs/` stands at a path `.pkit/` holds.** A mechanism with no folder there has its guide as a page: in the folder of the area, capability or adapter whose reference holds its contract, or numbered at the top of `docs/` when it runs across the tool.
 - **References** sit under `.pkit/`, beside what they describe, and ship. A reference holds the contract an agent acts on: formats, statuses, paths, and what each command does and how it fails. How an area is built goes to the technical space.
 - **Agents' task procedures** live in skills, which carry procedure (COR-006).
 - **An adapter's references** sit at its top level. Sync copies no adapter subfolder but its core settings, and reads each folder under `.pkit/adapters/` as an adapter.
@@ -28,15 +30,15 @@ ADR-055 point 3 makes each adopter-facing README under `.pkit/` a user page, and
 - **Each fact has one home** (RS-LDOC-002). A fact a record decides has that record as its home on each page that anchors it, so a guide anchors the record, not the reference. Any other contract fact has its home in the reference, which ships with its version; a guide that summarises it links and anchors that section. The why and people's tasks have their home in the guide, which no reference anchors.
 - **A reference's purpose line** rests on its area's or capability's deciding record, which it anchors, so it needs no link to the guide. The guide expands the why.
 - **A guide links its reference** by a relative path. A site built from `docs/` alone would break these links, and would have to handle them.
-- **A reference links its guide** at the `latest` tag, `https://github.com/aleskalfas/project-kit/blob/latest/docs/<area>/README.md`, and names it in words. The address is project-kit's own fact in project-kit's own text, as its install line already is (PRJ-004). GitHub redirects a moved repository; a fork with guides of its own rewrites the addresses.
+- **A reference links its guide** at the `latest` tag, `https://github.com/aleskalfas/project-kit/blob/latest/docs/<path>/README.md`, and names it in words. The address's `<path>` is the path of the reference's folder under `.pkit/` (point 1). The address is project-kit's own fact in project-kit's own text, as its install line already is (PRJ-004). GitHub redirects a moved repository; a fork with guides of its own rewrites the addresses.
 - **A linked guide README keeps its path,** since no migration reaches an installed reference. A test of project-kit's own checks that every guide address in the tree's references, and in those of each version tag, names a README in the tree's `docs/`.
 
 ### 3. A folder's README leads its pages
 
 A README that is a page leads its folder. Maintainers' sub-READMEs, such as those of templates and migrations, lead nothing.
 - **It is the folder's stable address,** and moves only with its folder.
-- **Its kind follows its side.** A guide's README is a `guide`: the area's why and common tasks, then its pages in number order. Until living-docs ships that kind, it reports the kind and fails nothing (living-docs DEC-001 point 3). A reference's README is a `reference`: a one-line purpose (point 2), then what it describes. Its list of pages is a signpost (RS-LDOC-005).
-- **It anchors each page it lists.** No page anchors its own README, which would make a cycle (COR-050 point 5).
+- **Its kind follows its side.** A guide's README is a `guide`: the area's why and common tasks, then its pages in number order. Until living-docs ships that kind, it reports the kind and fails nothing (living-docs DEC-001 point 3). A README that only lists the guides in the folders below it is a signpost (RS-LDOC-005). A reference's README is a `reference`: a one-line purpose (point 2), then what it describes. Its list of pages is a signpost (RS-LDOC-005).
+- **It anchors each page it lists.** No page anchors its own README, which would make a cycle (COR-050 point 5). A guide's README anchors no README above it.
 - **Folders are planned** with an area's rework, each created with its first page and its README, so no page moves when the second lands.
 
 ### 4. The page rules live in the spaces' rule sets
@@ -63,6 +65,8 @@ This refines ADR-055 point 3.
 
 **The contract ships with what it describes.** An adopter's agent never sees `docs/`. Kept in the reference, the contract matches the installed version, and a guide that summarises it is flagged when it changes.
 
+**Guide folders at their references' paths.** Areas, capabilities and adapters are separate namespaces under `.pkit/` (COR-005, COR-011, COR-017), each keeping its own names unique. Guide folders that mirror them therefore cannot collide, and need no rule of their own to keep their names apart.
+
 **The newest release's guide.** On `latest`, the link shows the guide for what `@latest` installs (#2052). An older install reads a newer guide, and its own reference decides each contract fact. The default branch would show guides for work no release holds. A version tag would make each release rewrite shipped text, since versions are written only at release (PRJ-002). A component released alone reaches `latest` with the next backbone release, as it reaches a tagged install (PRJ-004). Read the Docs' `stable` is the same kind of address (the note on document versions, `.pkit/scratchpad/active/2026-10-08-document-versioning.md`).
 
 **Addresses read from the tags.** Each version tag holds the references it shipped, so a moved guide fails the test even when nobody remembers the old address. A list kept beside the test would depend on that memory, and forgetting is the slip the test exists to catch. CI's checkout fetches the tags.
@@ -72,6 +76,7 @@ This refines ADR-055 point 3.
 ### Alternatives considered
 
 - **Guides installed with the references.** Rejected: every project would carry text its agents do not use.
+- **A flat `docs/<name>/` for every area, capability and adapter.** Rejected: it merges the three namespaces, with nothing keeping a name unique across them. A guide's address is fixed for good once a released reference links it (point 2), so a clash could not be mended by a move.
 - **A space of its own for the references.** Not taken: the audience is the same, and a scope already gives the split.
 - **A reader of project-kit's own for the references.** Not taken: the analysis already has the actor.
 - **The page rules as points of this record.** Rejected: nothing would enforce them page by page.
