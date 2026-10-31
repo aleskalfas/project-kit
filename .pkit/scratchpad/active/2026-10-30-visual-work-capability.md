@@ -112,7 +112,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
 5. **Text and fonts.** A layout made before rendering must know how much room text takes, and every renderer must draw it in the fonts it was measured with (its profile's fonts, point 18d). Mural accepts only 12 fonts, none of them monospace. Decided on 31 October: measure only from committed files, the engine breaks lines with language rules, Mural wraps within the measured width, estimate first (see "Discussion", point 5).
 6. ~~**How a renderer plugs in.** Plugins inside the one capability, as `demo-recording` does, or a capability per renderer that fills a role (COR-052, COR-053). Also the name: pkit already says "adapter" for a harness adapter (COR-005), so these are "renderers". The critic suggested (31 October) checking whether `demo-recording`'s plugin interface can serve as the renderer contract (COR-007).~~ Decided by point 18c: plugins inside the one capability, called renderers.
 7. ~~**Its origin.** Shipped by project-kit, or incubated in a project first (COR-031).~~ Decided (31 October): shipped by project-kit, built directly in it (see point 23).
-8. **The starter library and themes.** Which graphical elements and themes the capability ships, from the talk's 26 masters, its kinds of visual, and the three themes.
+8. **The starter library and themes.** Which graphical elements and themes the capability ships, from the talk's 26 masters, its kinds of visual, and the three themes. In discussion (1 November): the starter is built wide from the beginning, by the job a visual does; a component enters as experimental and becomes stable when its library's owner marks it (see "Discussion", point 8).
 9. **The agents.** ~~Which agents.~~ Decided: `graphic-designer`, `graphic-design-reviewer` and `translator` (see "Discussion", point 9). Open: each one's tools and limits in detail, and the overlay category for the designer's writes.
 10. **The skills.** The build loop (change, generate, render, verify) as a skill, and how a deck or a diagram is authored.
 11. ~~**The rules.** Which of the talk's style rules the capability ships, and which stay a project's own.~~ Decided (31 October): two method rule sets, `COMM` and `VISUAL`, grounded in a decision record of the capability for its rules; the content stays YAML and pkit is fixed (#2416); project-kit's set inherits `WRITE` too (see "Discussion", point 11).
@@ -424,7 +424,7 @@ What each change does:
 **Outcome (30 October).** The maintainer accepted the eight levels in three scopes, after the worked example. It is built lean:
 
 - start with token roles and values, one frame per context, a small shared core, and one-offs inside each talk;
-- add recipes and kinds, component tokens, and extra modes or scales only when a real talk needs them.
+- add recipes and kinds, component tokens, and extra modes or scales only when a real talk needs them. (Revised by point 8 for patterns: the starter adds them ahead of need, each entering as experimental.)
 
 **On the terms** (the maintainer asked whether "one-off" and "talk" are design terms):
 
@@ -1243,6 +1243,45 @@ Set aside: a record of the capability's own, a fingerprint of the English kept w
 
 Point 13 is decided.
 
+### 8. The starter library (1 November)
+
+**The question.** Which components the capability ships in its starter library, how it decides each one, and which themes the neutral brand ships.
+
+**The maintainer's direction (31 October).** The agent first proposed a small starter: six blocks, no patterns, each pattern added once a local component had recurred about three times. The maintainer wants a wide starter from the beginning, since a wide library is more likely to be reused, built carefully, logically, justifiably, and ahead of need.
+
+**The agent's first draft.** The starter organised by the job a visual does, from PowerPoint's SmartArt categories, Dan Roam's "when" and Gene Zelazny's comparison: ten patterns (`list`, `steps`, `cycle`, `tree`, `layers`, `hub`, `connections`, `matrix`, `compare`, `timeline`) and eight blocks (`card`, `chip`, `connector`, `note`, `stat`, `quote`, `terminal`, `figure`), with data charts named as a later wave. Each component would carry a written justification and pass an admission bar, and would have a status, `experimental` or `stable`.
+
+**The critic's review.** The direction was taken as given. Its findings:
+- **The evidence was mapped wrongly.** `fanout` is a pipeline with one parallel stage (gen.py, lines 70 to 72), not a hub. `files` shows real files side by side (lines 1088 to 1091), not a tree. The only kinds that recurred, `wired` (4 slides) and `map` (3 slides, a table), had no family. Nor did the structure the talk repeated most: a list or diagram beside a real exhibit (a terminal, a file), joined by ties, in eight kinds (`wired`, `rules`, `checklist`, `sockets`, `answers`, `files`, `install`, `slice`). That is evidence shown beside its claim (Michael Alley), which RS-COMM-001 already rests on.
+- **The diagnosis was contradicted.** The draft blamed the generator for making one-offs easier than components, but gen.py offered Mockingbird's components as ready kinds (`cards`, `compare`, `actors`, `code`, `steps`), one line of YAML away, and no slide used them. Likelier causes: the job never came up; the forms did not fit the message (`step_card` was made from `stage` rather than use `step`); and "a new message may look new" (RS-VISUAL-004).
+- **Some patterns cannot be library data yet.** A `cycle` and a radial `hub` need sine and cosine, which the formula language lacks (point 21); `connections` is a graph, whose positions come from a helper (point 22); a top-down `tree` needs a tree layout, while the tree tool of point 21 is the indented file tree.
+- **Jobs were missing:** a table; an exhibit with notes on it; containment and boundaries; groups; pairs, such as problem and answer; a flow that branches or splits and joins; a visual equation (A + B = C, as in `wired`); overlap; and, for docs, sequence, swimlane and state diagrams. Use case 13's four diagrams must be checked too.
+- **Blocks were missing:** `artefact` (one of the three blocks the talks reused), a legend (RS-VISUAL-006 needs one), source code, a callout, an icon. `figure` clashes with the figure top component, whose layout has a caption slot.
+- **Nothing bounds the options**, so a pattern could grow into a small language; and the admission bar rested on what is not built (the reviewer, #2416, the output scale, the Mural font profile, the neutral brand).
+- **The IBM library could duplicate the starter.** If `stage`, `link` and `artefact` stay IBM components while the starter adds its own, the maintainer's pieces use IBM's and the starter goes unused, as Mockingbird's components did. A brand is "not a fork of the components" (4g).
+- **The taxonomy was thin and leaned to slides.** Better: Lohse, Biolsi, Walker and Rueter, "A classification of visual representations" (Communications of the ACM, 1994), eleven categories found by people sorting graphics; Yuri Engelhardt's syntactic principles (linking, containment, grouping, lining up, proportional size) as a check of the grammar; SmartArt, Google Slides and Nancy Duarte's *slide:ology* as the practitioners' cross-check.
+- **A status as rules have it is a false analogy:** a proposed rule binds nothing, so an experimental component would be unusable. Better precedents: GOV.UK's and Carbon's experimental components, with `deprecated` added.
+- **COMM cannot judge a block**, which says nothing on its own (4c); and a shipped library is tested in stress languages (long compounds, diacritics), not project-kit's English and Czech.
+- Its alternatives: two gates (C1); versions per library only, with a `starter-labs` library (C2); a mapping table of all the evidence against the taxonomy (C3); a log of misses (C4); patterns as thin defaults over layout operators (C5); a build order tied to the first slice (C6).
+
+**The agent's revised plan (1 November)**, decided one part at a time:
+1. **A list of jobs** from Lohse et al., cross-checked with SmartArt, Google Slides and Duarte, with a table in this note mapping all the evidence to it: the Friday talk's kinds, Mockingbird's components, software-analysis's diagrams, typical doc figures. Jobs with evidence come first; the others are the wave built ahead of need.
+2. **A status per component** (decided below).
+3. **Patterns as thin defaults over layout operators.** A page that does not fit is built from blocks and operators.
+4. **A log of misses:** for each local component, which starter pattern its designer considered and why it did not fit. It measures whether the breadth works.
+5. **A build order:** blocks; then the patterns that need only decided tools; then those that need new tools (a circle, a top-down tree, graph positions).
+6. **The IBM library styles the starter's blocks** rather than keep its own.
+
+**A component's status is its library owner's mark. Decided by the maintainer (1 November).** The agent proposed two gates: a component enters as `experimental` with no use needed, and becomes `stable` once about three pieces use it, across at least two kinds of work. The maintainer disagreed with the count: a component becomes stable when its author marks it stable. This follows GOV.UK's and Carbon's practice, where the team that owns a component decides it is ready.
+- A component enters a library as `experimental`, once it passes the admission bar: its job, the established form it follows and its source, its fields and options, the machine checks, its reference renders, and a review. It needs no use first.
+- It becomes `stable` when the library's owner marks it so, in its file. No count of uses and no check decides it. How many pieces use a component is information the owner may look at, never a condition.
+- The owner may mark it `deprecated` in any release, and it is removed in the next major one (4c).
+- This holds for every library: the starter's owner is project-kit, a project's own library's owner is that project.
+- **It revises decided points.** 4c's outcome added patterns "only when a real talk needs them": the starter now adds them ahead of need, each entering as experimental. The Names section promoted a local component once it recurred about three times: recurring is a reason to promote it, not a condition, and the owner judges. Point 21's rule, a helper script becoming an engine tool after about three uses, is about the engine's code and stays.
+- **Left open:** what each status promises, such as whether an experimental component may be renamed in a minor release (point 20's semver says a major removes or renames), and whether a check compares a stable component's fields with its previous version's.
+
+**Still open in point 8, in this order:** the list of jobs and its mapping table; what each status promises; how far a pattern's options go; the log of misses; the build order, with the engine tools each pattern needs; where the Friday talk's twelve new reusable pieces go (`terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, `tree_bar`, `tree_tag`, `tree_note`, `divider`, `talk_cover`); whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
@@ -1316,7 +1355,8 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | frame | an element's box: `x`, `y`, `width`, `height` (points 4h, 19); before the naming pass, also level 6 | decided (naming pass): this meaning only |
 | recipe, kind | level 5 before the naming pass | replaced by "pattern" (naming pass) |
 | one-off | level 7 before the naming pass | replaced by "local component" (naming pass) |
-| local component, library component | a component made inside one piece, in its `components/` folder (level 7); a component a library publishes. A local component that recurs about three times is promoted to a library component | decided (naming pass; Figma's terms) |
+| local component, library component | a component made inside one piece, in its `components/` folder (level 7); a component a library publishes. A local component that recurs about three times is promoted to a library component (revised by point 8: recurring is a reason to promote, not a condition; the library's owner judges) | decided (naming pass; Figma's terms) |
+| experimental, stable, deprecated | a library component's status: entered and may still change; marked ready by its library's owner; on its way out, removed in the next major release (point 8) | decided (point 8; GOV.UK's and Carbon's labels) |
 | talk | level 8 in the first drafts | replaced by "piece" (naming pass) |
 | deck | the top component of a presentation | kept (naming pass; Slidev, Marp and Keynote users say "deck") |
 | library | a named, versioned set of components, values or notation that is shared, and names the libraries it builds on | kept (naming pass) |
