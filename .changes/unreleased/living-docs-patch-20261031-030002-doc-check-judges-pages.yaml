@@ -1,0 +1,15 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  `fill-doc-check`, the contribution to `pkit::work-tracking:doc-check`, has
+  the whole-repository friction check judge the pages alone, one `--artefact`
+  each, so its time follows the pages and not every artefact of the
+  repository (#2365). On project-kit's own tree it judged 386 artefacts to read
+  24 pages' state and crossed the 30 seconds `pkit validate` gives a component's
+  command on CI, failing pull requests with nothing wrong in them. The
+  obligations are the same. It reads whether HEAD names a commit and which
+  documents are pages at once, then the check; where two of them give no
+  answer, the first named is HEAD's, then the pages', then the check's.

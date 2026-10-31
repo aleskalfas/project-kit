@@ -1035,7 +1035,8 @@ def test_a_history_git_cannot_read_is_no_answer_and_the_filler_asks_git_nothing(
     assert outside.read_text(encoding="utf-8") == ""
 
 
-#: The filler's three readings, each named by the two words after `pkit`.
+#: The filler's three readings, each named by the two words after `pkit`: HEAD's and the
+#: pages' at once, then the check of the pages.
 HEAD, CHECK, PAGES_READ = "repository base", "friction check", "friction artefacts"
 
 #: How long a reading waits for the others, in seconds, before it is taken to wait in vain.
@@ -1047,18 +1048,18 @@ def _reading(argv: Sequence[str]) -> str:
 
 
 def _met() -> Runner:
-    """A `pkit` that answers each call in this process, the first call of each of the
-    three readings only once all three have started: a reading started only after
-    another was answered never comes, and the wait breaks (`threading.Barrier`)."""
+    """A `pkit` that answers each call in this process, the first call of the readings of
+    HEAD and of the pages only once both have started: a reading started only after the
+    other was answered never comes, and the wait breaks (`threading.Barrier`)."""
     pkit = InProcessPkit()
-    barrier = threading.Barrier(3, timeout=PATIENCE)
+    barrier = threading.Barrier(2, timeout=PATIENCE)
     waited: set[str] = set()
     guard = threading.Lock()
 
     def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
         reading = _reading(argv)
         with guard:
-            first = reading in (HEAD, CHECK, PAGES_READ) and reading not in waited
+            first = reading in (HEAD, PAGES_READ) and reading not in waited
             waited.add(reading)
         if first:
             barrier.wait()
@@ -1069,8 +1070,8 @@ def _met() -> Runner:
 
 def _failing(failing: Sequence[str]) -> Runner:
     """A `pkit` that answers each call in this process, or, for a reading `failing`
-    names, exits 1 saying so; the reading of HEAD only once the other two have ended, so
-    the readings that end first are never for that the ones named."""
+    names, exits 1 saying so; the reading of HEAD only once the pages' has ended, so
+    the reading that ends first is never for that the one named."""
     pkit = InProcessPkit()
     ended: set[str] = set()
     others_ended = threading.Event()
@@ -1098,15 +1099,15 @@ def _failing(failing: Sequence[str]) -> Runner:
         finally:
             with guard:
                 ended.add(reading)
-                if {CHECK, PAGES_READ} <= ended:
+                if PAGES_READ in ended:
                     others_ended.set()
 
     return run
 
 
-def test_the_filler_starts_its_three_readings_at_once(docs_project: AdopterRepo) -> None:
-    """None of the three readings waits for another: each starts before any of them is
-    answered, and the answer is the one they give."""
+def test_the_filler_reads_head_and_the_pages_at_once(docs_project: AdopterRepo) -> None:
+    """Neither the reading of HEAD nor that of the pages waits for the other: each starts
+    before either is answered, and the answer is the one they give."""
     docs_project.write({"src/a.py": "A = 1\n"})
     docs_project.commit("base")
     alone = filled(docs_project.root)
@@ -1118,9 +1119,10 @@ def test_the_filler_starts_its_three_readings_at_once(docs_project: AdopterRepo)
 @pytest.mark.parametrize(
     ("committed", "failing", "named"),
     [
-        (True, ("friction check", "friction artefacts"), "`pkit friction check --all --json`"),
+        (True, ("friction check",), "`pkit friction check --all --json`"),
+        (True, ("friction check", "friction artefacts"), "the pages cannot be told"),
         (True, ("friction artefacts",), "the pages cannot be told"),
-        (True, ("repository base", "friction check"), "`pkit repository base --json`"),
+        (True, ("repository base", "friction artefacts"), "`pkit repository base --json`"),
         (False, ("friction check", "friction artefacts"), None),
     ],
 )
@@ -1130,9 +1132,9 @@ def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
     failing: tuple[str, ...],
     named: str | None,
 ) -> None:
-    """Read at once, the readings are still read in order — HEAD, the check, the
-    places: the first that gives no answer is the one named, and with no commit
-    nothing is owed, whatever the others gave, as when each waited for the last."""
+    """The readings are read in order — HEAD, the places, then the check of the pages
+    they name: the first that gives no answer is the one named, and with no commit
+    nothing is owed, whatever the pages' reading gave, and the check is not asked."""
     if committed:
         docs_project.write({"src/a.py": "A = 1\n"})
         docs_project.commit("base")
@@ -1146,6 +1148,61 @@ def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
     assert (answered.returncode, answered.stdout) == (1, ""), answered.stderr
     assert answered.stderr.startswith(f"error: {named}"), answered.stderr
     assert answered.stderr.count("failed on purpose") <= 1
+
+
+def test_the_filler_has_the_check_judge_the_pages_alone(docs_project: AdopterRepo) -> None:
+    """The obligations read only the pages' judgements and the measures, so the filler
+    asks the check to judge the pages and no other artefact (`--artefact`, one per
+    page). However many other artefacts a change brings or makes stale, the check
+    judges the pages alone, and what it reads of the rest — the uncovered surface — is
+    the whole repository's still (#2365)."""
+    repo = docs_project
+    page: dict[str, Any] = {"reader": "user", "kind": "signpost"}
+    records = {
+        f"tech-docs/decisions/ADR-00{n}-a.md": friction_document(
+            f"ADR-00{n}", anchors={"path": ["src/a.py"]}, title="A", status="accepted"
+        )
+        for n in range(1, 6)
+    }
+    repo.write(
+        {
+            "src/a.py": "A = 1\n",
+            "src/b.py": "B = 1\n",
+            "docs/guide.md": friction_document(None, anchors={"path": ["src/a.py"]}, **page),
+            **records,
+        }
+    )
+    repo.commit("base")
+    repo.commit("change a", {"src/a.py": "A = 2\n"})
+    pkit = InProcessPkit()
+    checks: list[dict[str, Any]] = []
+
+    def run(argv: Sequence[str], **options: Any) -> subprocess.CompletedProcess[Any]:
+        answered = pkit(argv, **options)
+        if _reading(argv) == CHECK:
+            checks.append(json.loads(answered.stdout))
+        return answered
+
+    answered = filled(repo.root, pkit=run)
+    assert answered.returncode == 0, answered.stderr
+    (argv,) = [call for call in pkit.calls if _reading(call) == CHECK]
+    pages = ["docs/guide.md", "tech-docs/README.md"]
+    assert argv == [
+        "pkit",
+        *("friction", "check", "--all", "--json"),
+        *(word for page in pages for word in ("--artefact", page)),
+    ]
+    (check,) = checks
+    assert [a["location"] for a in check["artefacts"]] == ["docs/guide.md"]
+    assert check["measures"]["uncovered_surface"] == ["src/b.py"]
+    assert [(o["reason"], o.get("document") or o.get("path")) for o in _value(answered)] == [
+        ("page-stale", "docs/guide.md"),
+        ("code-undocumented", "src/b.py"),
+    ]
+
+
+def _value(answered: subprocess.CompletedProcess[str]) -> list[dict[str, Any]]:
+    return json.loads(answered.stdout)["value"]
 
 
 @pytest.mark.process(

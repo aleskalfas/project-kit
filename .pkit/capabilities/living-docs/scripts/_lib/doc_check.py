@@ -122,19 +122,32 @@ def has_commit(root: str, run: Runner = backbone.run) -> bool:
     )
 
 
-def read_friction(root: str, run: Runner = backbone.run) -> Mapping[str, Any]:
-    """The whole-repository check's machine-readable document, through `pkit`.
-    Raises NoAnswer when it gives none, or one of a version this reading does not
+def read_friction(
+    root: str, run: Runner = backbone.run, *, pages: Sequence[str] | None = None
+) -> Mapping[str, Any]:
+    """The whole-repository check's machine-readable document, through `pkit`: with
+    `pages`, judging those artefacts alone (`--artefact`), each as the whole check
+    judges it, the measures still the whole repository's. The obligations read no
+    other artefact's judgement, so the check does not pay for every one. Raises
+    NoAnswer when it gives none, or one of a version this reading does not
     understand."""
-    return _reading(CHECK_ARGV, root, run, "artefacts")
+    selected = (word for page in pages or () for word in ("--artefact", page))
+    return _reading(CHECK_ARGV, root, run, "artefacts", (*CHECK_ARGV, *selected))
 
 
-def _reading(argv: Sequence[str], root: str, run: Runner, key: str) -> Mapping[str, Any]:
+def _reading(
+    argv: Sequence[str],
+    root: str,
+    run: Runner,
+    key: str,
+    called: Sequence[str] | None = None,
+) -> Mapping[str, Any]:
     """The document a backbone reading prints, one that carries `key`, at the version
-    this capability reads. Raises NoAnswer when it gives none, or one of a version
-    this reading does not understand."""
+    this capability reads: `argv` names the reading, and `called`, where given, is the
+    argument list it runs with, what it is asked of added. Raises NoAnswer when it
+    gives none, or one of a version this reading does not understand."""
     try:
-        proc = run(list(argv), cwd=root, capture_output=True, text=True, check=False)
+        proc = run(list(called or argv), cwd=root, capture_output=True, text=True, check=False)
     except OSError as exc:
         raise NoAnswer(f"`pkit` could not be run ({exc})") from exc
     try:
