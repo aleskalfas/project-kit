@@ -106,10 +106,10 @@ Taken one at a time, in this order. The order may change as the answers come. Po
    - ~~4f. The material's format per discipline, and how it binds to a component.~~ Decided: one shape for every discipline; the engine knows no discipline (see "Discussion", point 4f).
    - ~~4g. How pieces group into libraries, so a context can share them, such as "IBM Deck" or "IBM Diagram". Came from 4f.~~ Decided: libraries by owner, holding values, structure or meaning (see "Discussion", point 4g, its outcome at the end).
    - ~~4j. The lifecycle of work that is never delivered, such as a figure in a doc page (point 4d revisited). Came from the over-fitting check of 4g.~~ Decided: every piece of work has a lock, and a fourth state, living, moves it through a reviewed proposal (see "Discussion", point 4j). Taken before 4i, which came up next.
-   - 4h. The scene's primitives, and how each traces back to the model.
+   - ~~4h. The scene's primitives, and how each traces back to the model.~~ Decided: a tree of groups with traced primitives whose names map onto SVG, with SVG and HTML as the reference renderer (see "Discussion", point 4h).
    - ~~4i. Where a library lives and how another adopter gets it; whether pkit's capability dependencies (COR-030) or incubation (COR-031) carry it. Came from the critic's review of 4g.~~ Decided: libraries are the capability's data, kept as a read-only folder per version, with a lock per piece (see "Discussion", point 4i).
 5. **Text and fonts.** A layout made before rendering must know how much room text takes, and every renderer must draw it in the same font. Mural accepts only 12 fonts, none of them monospace.
-6. **How a renderer plugs in.** Plugins inside the one capability, as `demo-recording` does, or a capability per renderer that fills a role (COR-052, COR-053). Also the name: pkit already says "adapter" for a harness adapter (COR-005), so these are "renderers".
+6. **How a renderer plugs in.** Plugins inside the one capability, as `demo-recording` does, or a capability per renderer that fills a role (COR-052, COR-053). Also the name: pkit already says "adapter" for a harness adapter (COR-005), so these are "renderers". The critic suggested (31 October) checking whether `demo-recording`'s plugin interface can serve as the renderer contract (COR-007).
 7. **Its origin.** Shipped by project-kit, or incubated in a project first (COR-031).
 8. **The starter library and themes.** Which graphical elements and themes the capability ships, from the talk's 26 masters, its kinds of visual, and the three themes.
 9. **The agents.** A designer agent: its job, its limits, its tools. Whether a reviewer reads a deck for flow and plain words.
@@ -123,6 +123,13 @@ Taken one at a time, in this order. The order may change as the answers come. Po
 14. **The workarounds.** What to fix in the Mural renderer rather than carry beside it: the duplicates left after retries, monospace text rendered as images.
 15. **Moving in.** Tests, versions, and moving today's user-level skill into pkit.
 16. **Names.** A naming pass with the maintainer before any record or code fixes a name (see "Names").
+17. **The runtime and outside programs.** Python with no Node, and how the capability checks for programs pkit does not install. From the architect's review; first in its order.
+18. **The architect's four revisions of decided points:** what a delivered piece locks (4d), where the core library's versions live (4i), how renderers plug in without connection points (point 6), and a scene per font profile (point 2, with point 5).
+19. **References between elements.** One element using another's measured size, one owner per dimension, cycles refused.
+20. **Format numbers** on every file from its first commit, read by the engine forever.
+21. **An escape for hand-drawn one-offs**, such as an area the renderer leaves alone; the architect's largest risk to the product.
+22. **Graphs:** graph layout as an engine tool, or relation graphs left to Mermaid as software-analysis does.
+23. **Where the first slice's code lives,** outside project-kit's shipped tree.
 
 ## Discussion
 
@@ -670,6 +677,125 @@ Its recommendation (CA1): copies kept by version, with a lock per piece, owned b
 3. Git submodules: the "clone linked to its remote" feel, but one version per path, extra steps for cloning and CI, and validation cannot see inside them.
 
 **Outcome (31 October).** The maintainer chose versioned copies with a lock per piece. Libraries are the visual-work capability's data, not capabilities. Each version a lock names is a read-only folder, fetched whole at its tag and committed; each piece's lock names its versions; `add`, `outdated`, `upgrade` (piece by piece, after a before-and-after) and `prune` keep them. It refines point 4j: the lock is per piece, and an upgrade may leave a piece behind.
+
+### 4h. The scene and its primitives (31 October)
+
+**The question.** Between the engine and the renderers sits the scene: what the engine computed, which every renderer draws. What does it hold, which primitives does it use, and what happens when a renderer cannot draw one?
+
+**What the Friday talk showed.** Mural has no monospace font, so the generator drew every terminal and code chip as an image (`gen.py`). Mural's API cannot update an area, so a changed area is rebuilt. Mural's shapes come in few kinds.
+
+**The agent's draft recommendation.**
+
+- **The scene is a tree.** Its inner nodes are component instances: the component's name, its library version and its options. Its leaves are primitives, with their final position (relative to their parent) and size. A renderer with components of its own, such as Mural's masters or Figma's components, can map an instance to one; the others draw the leaves.
+- **A component may mark itself a page,** such as a slide or a poster. Outputs such as a PDF cut by pages (point 13).
+- **Each value keeps its token beside it,** such as `@accent = #8a3ffc`. A renderer with variables (Figma) can bind the token, and the import (point 3) can tell an off-theme colour.
+- **Each leaf carries its trace:** the piece, the path of instances down to it, the part, the material field it shows (if any), and which of its values were computed and which were given. Point 3's import reads it.
+- **A small set of primitives to start:** box (rectangle, rounded corners, fill, border), ellipse, text (the box it wraps in, its font role, size, colour, alignment), line (points, heads, straight, orthogonal or curved, attached ends), image, and group (a container, which may clip).
+- **Each renderer declares what it can draw,** primitive by primitive and property by property. Before rendering, the engine checks the scene against it and reports what cannot be drawn. A renderer may declare a fallback, such as drawing text in a missing font as an image, which the Friday talk did by hand.
+- **A new primitive is a new engine tool** (point 4a), added when a real need appears, with each renderer's support declared.
+- **Left to point 5:** the engine measures text to lay it out, and each renderer draws it in its own fonts.
+
+**The alternatives.**
+
+1. The draft above.
+2. Only what every renderer can draw, with no fallbacks. The scene is then bound by the weakest renderer: HTML could never show a terminal as monospace text.
+3. A rich set (paths, gradients, shadows) that every renderer must draw. Mural could not be a renderer.
+
+**The critic's review (31 October).** It kept the core: a computed scene with final positions, a trace on each leaf, and a list per renderer of what it can draw. It found two conflicts with point 2:
+
+- **Fonts.** Point 2 says every renderer uses the same fonts; the draft said each renderer draws text in its own fonts. If text is measured in one font and drawn in another, every box is the wrong size.
+- **Native components.** Letting a renderer map an instance to its own component brings back point 2's rejected option 3: two sources of geometry. On Mural there is nothing native to map to anyway. The tool's masters are a convention of plain widgets with markers.
+
+It found gaps, most important first:
+
+- **The trace cannot say where a value came from.** A value may come from a material field, an option, an override, a fetched library's default, a one-off, a token or a subject. Only some of these may be written back (point 4i).
+- **No stable ids.** An item found by its index gets the wrong edit after the material reorders its list. The trace must also name the language file (`slides.cs.yaml`).
+- **A line's shape was left to the renderer.** Mural draws its own curve through the points, and re-routes attached arrows by itself.
+- **Text had no runs.** It could not mix bold, inline code or links in one box, which docs need.
+- **The fallback's cost was not weighed.** An image of text cannot be edited, taken back or searched in a PDF, and must be uploaded again on every theme switch. Mural cannot make the image itself.
+- **The renderer's list covered drawing only,** not updating in place or reading back, which point 3 needs.
+- **"A component marks itself a page" breaks.** A diagram is a page alone and not inside a slide; a doc figure is a fragment; a poster needs a physical size.
+- **Modes.** A docs page switching to dark mode while open needs every mode's values; a mode that changes sizes needs its own scene.
+- **Missing pieces:** where the last render is kept, a version for the scene format, and the same scene on every run (for the preview of 4i).
+- **Missing primitives and properties:** icons that follow the theme (a tint), a path for non-rectangular shapes, draw order, meaning for docs and searchable PDFs (alt text, headings, lists, tables), rotation, border style, image fit.
+- **Copies.** A widget duplicated on the board copies its trace.
+
+Its counter-alternatives: the scene as a subset of SVG, or names that map onto SVG, with SVG as the reference renderer (C1); a renderer profile as a token axis, so the context says how monospace text looks on Mural (C2); a flat list with no instance nodes (C3, which it would not take). It also suggested that point 6 check the `demo-recording` capability's plugin interface as a renderer contract.
+
+**The agent's revised recommendation.** The critic's lean start.
+
+- **The scene is a tree of groups, each with a frame.** A group may say which component it came from (`core/card@1.4.0`, with its options). A renderer may wrap a group's leaves in a container of its own, but never replaces them with its own component.
+- **The root says what the scene is:** the piece, its lock, its language and material file, its mode, and the scene format's version. A scene is an output unit: a set of pages, or a fragment such as a doc figure. Sizes have units.
+- **Pages are declared by a top component's slot.** A deck says its `slides` slot holds pages. The same diagram is then a page alone, and part of a page inside a slide. A page inside a page is an error. How pages lie on a board is the renderer's setting.
+- **Primitives:** box (radius, border style), ellipse, text, line and image, with `path` reserved. Property names map onto SVG. Draw order is tree order.
+  - **Text** holds paragraphs of runs, each with a style role and maybe a link. It names the exact font it was measured with, its measured line breaks and height, and marks overflow.
+  - **A line** carries its full shape: every corner, or the curve's control points. Its attached ends are hints for renderers with native connectors.
+  - **An image** has a fit, and a tint by role, so icons follow the theme.
+  - **Meaning** for docs and PDFs: alt text, reading order, and roles such as heading, list, table and caption.
+- **Each value carries its token and its value.** A snapshot of every mode's token values travels once beside the scene. A mode that changes sizes gives a scene of its own.
+- **The trace:** stable ids, made from the path of instances, the part and a key per list item, never from render order; and a source per property. The import writes only to the material and the piece's own one-offs, and reports the rest. Two board objects with one trace are a copy, to adopt or report.
+- **Each renderer declares, per primitive and property,** whether it draws it, updates it in place, recreates it, and reads it back. A loss is approximated, an image, or refused. A piece may accept a known loss, so the check does not repeat it.
+- **One fallback:** the part is drawn through the SVG renderer and placed as an image. The fields under it are marked as not to be taken back from that renderer.
+- **Fonts:** a renderer without the measured font declares a loss and never swaps it silently. Whether a context may set fonts per renderer (C2) is point 5.
+- **The scene is derived and never committed.** Each render target keeps a small record of what it last drew (ids, a hash per property, the commit), as `.state.json` does today. Ordering and rounding are fixed, so two scenes compare.
+- **Two renderers to start:** SVG and HTML as the reference, and Mural.
+- **Later:** native components, Figma's variables, checks of whole libraries per renderer.
+
+**Outcome (31 October).** The maintainer chose the revised recommendation. He added that he does not understand these things deeply: he does not want to reinvent the wheel, nor to depend on a technology that does not cover the needs. He asked whether to consult the architect now. The agent agreed: the design so far is a new component with new abstractions, so the architect reviews the whole of it, with a check per layer of what existing technology could carry it (see "Architect's review").
+
+## Architect's review (31 October)
+
+The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
+
+**Adopt, wrap or build, per layer.**
+
+| Layer | Verdict |
+|---|---|
+| Runtime | Python, as pkit and the Mural tool are. No Node in the first version: most visual tools (Style Dictionary, Terrazzo, elkjs, Bluefish, Satori, Slidev, tldraw) would put it on every adopter's machine. Call a separate program only where it is one stable executable, on the path that needs it. |
+| Tokens | Adopt the W3C DTCG format; build a small Python reader for aliases and the Resolver. The JavaScript tools do not yet support the 2025.10 format fully. The format has no type for a picture or logo (`$extensions`, or outside the tokens). |
+| Component specifications | Build: nothing existing covers parts, slots, options and formulas with geometry. Borrow Spectrum's words, Bluefish's rule (one owner per dimension), and Vega's limited expressions. Fix the formula grammar in a record, so it never grows into a programming language. |
+| Material | Build on YAML and JSON Schema. Deck formats such as Slidev, Marp and Quarto know about slides, against point 4f. Every list item an edit can return to needs a stable `id` now. |
+| Layout | Build repetition, formulas and small stack, align and distribute operators (flexbox's names where they match). Build only simple connector routing; never routing around obstacles (adopt libavoid if ever needed). ELK lays out whole graphs, which fits use case 10, not the talk's diagrams. |
+| Text measuring | Adopt HarfBuzz (through uharfbuzz) for shaping and fontTools for font metrics; build only the line-breaking rules, such as Czech one-letter prepositions. It replaces today's estimate of a width as characters times a constant. The thinnest point of the stack: building it ourselves is the most likely mistake. |
+| Scene | Build our own JSON with SVG names, as 4h decided; the SVG output carries each trace id as a `data-` attribute. tldraw's format needs a licence key; Excalidraw's is too flat. |
+| Renderers | Build SVG and HTML (SVG in a page, CSS variables per mode). Wrap the Mural tool's API client, sign-in, pacing and state, fed plain objects. Defer Figma: creating layers needs a plugin run inside Figma, and variables need an Enterprise plan. Worth adding later: PowerPoint (python-pptx) and an Excalidraw file, a cheap test of point 3. Slidev, Marp and reveal.js lay out with CSS, against point 2. |
+| Sharing | A thin layer over git, built once a second repository uses a library; move onto pkit's own fetch (ADR-040) when it is built. |
+| Outputs | Adopt; never build a PDF writer. rsvg-convert gives a PDF with real text from SVG; headless Chromium gives a tagged PDF (headings, reading order, alt text) for accessibility. resvg for pictures (fallback images, previews, test snapshots), identical on every platform. |
+| Charts | Vega-Lite later, as an engine tool, fed the context's tokens (vl-convert, no Node). D2, Mermaid, Structurizr, Typst, Penrose: not the engine. |
+
+The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, reveal.js, Quarto, Typst, D2, Mermaid, tldraw): as the engine it would break point 2, and none could feed Mural.
+
+**Concerns that revise decided points**, so the maintainer decides each:
+
+1. **A delivered piece cannot lock the engine or a renderer** (4d's example names `renderer-mural: 0.9.0`). A project holds one version of a capability, and a pkit upgrade moves it (COR-017, COR-059 point 7). Only libraries lock per piece; the real freeze of delivered work is its exports.
+2. **The core library cannot keep its versions side by side inside the capability** (4i). Those files are pkit's, the project cannot prune them, and pkit would ship every version forever. Copy the core into the project's library folder like any other library.
+3. **A renderer cannot be a capability joined through connection points** (COR-052, COR-053). A filler takes no input and a subscriber uses no network, and a renderer needs both. Plugins inside one capability, or renderer capabilities that depend on the engine (COR-030), fit pkit as it is.
+4. **Mural's 12 fonts break "one scene for every renderer"** (point 2). Compute one scene per font profile, with the context naming the fonts for Mural, as 4h does for a mode that changes sizes.
+
+**Fit issues.**
+
+5. Formulas cannot stack boxes that size to their text: the engine needs references between elements, with one owner per dimension and cycles refused.
+6. Use case 10 needs automatic graph layout: add it as an engine tool (ELK), or leave relation graphs to Mermaid, as software-analysis does (its DEC-003).
+7. A breaking format change cannot be migrated in fetched libraries or delivered pieces: every file carries a format number from its first commit, and the engine keeps reading old numbers.
+8. A library's format number must also cover the engine's tools it uses.
+9. pkit does not install outside programs (resvg, rsvg-convert, Chromium): the capability checks for them, as demo-recording does.
+
+**Out of date in this note.** Point 3's second row, a master's design on the board flowing into the library, cannot happen now (4h defers native components; 4i forbids writing into a fetched library). Point 4d's example lock names a renderer. Point 4a lists four tools, but 4c's example uses stack and distribute.
+
+**Tensions across points.**
+
+- The import into a delivered piece changes frozen material: it should refuse, or copy the piece into the reused state first.
+- No escape is decided for a hand-drawn one-off, such as an area the renderer leaves alone. The talk's 38 one-off diagrams were most of its work, so this is the largest risk to the product.
+- Previews are part of the main loop (4i, 4j), so a reproducible rasteriser comes in early.
+- Rendered doc figures must be committed for a repository host to show them, while 4h never commits the scene. Committed outputs need a freshness check, as software-analysis's generated overview has.
+
+**The decided points with the most risk:** point 2 in its pure form, with 4h (text and fonts on the critical path); 4a's data-only one-offs; 4i (the most to build for the least proven need: one author, one repository today); 4j (it depends on previews).
+
+**Fit in pkit.** It fits the capability pattern (COR-017) and agent placement (COR-026). Renderers are plugins under `scripts/`, not COR-017 variants. demo-recording's interface does not fit as the renderer contract (its own DEC-003 tested a tree rendered to HTML), but its pattern does: a neutral core, knowledge flowing one way, one check at the plugin's edge. A fetched library folder should be described as a project file the capability keeps equal to its tag by a hash, not as owned by its source, which would invent a third owner (COR-001). Anything under `.pkit/capabilities/` in project-kit ships to every adopter, so the first slice is proved outside the shipped tree. The IBM context and the pkit subject must not ship (COR-014). Only two things would need a core decision, and both can be avoided: renderers joined through connection points, and delivered pieces locking the engine.
+
+**To decide before building, in this order:** the runtime and outside programs (new); text and fonts (point 5); references between elements (new); format numbers (new); how a renderer plugs in, at its smallest (point 6); the names inside files (part of point 16); where the slice's code lives (parts of points 7 and 15). The rest can wait, including 4i's commands, 4j's previews and Figma.
+
+**The smallest first slice.** Four slides of the Friday talk, each testing one part: a plain slide with a long lead (frame, tokens, text measuring); `pyramid` (repetition and formulas, colours as roles); `sockets` (connectors and references between elements); a terminal slide (Mural's missing monospace font and the image fallback). Each in English and Czech, in `carbon-light` and `teal-calm`, as one scene rendered to SVG and pushed to Mural; then a PDF from the SVG, and a board edit taken back. Optionally `sockets` lifted out as a doc figure in light and dark. It passes when one scene feeds both renderers with no Mural-only geometry, text fits on both, the data for `pyramid` and `sockets` is no longer than `gen.py`'s code for them, a theme switch changes only values, and a Czech edit on the board lands in the Czech material file. Left out: fetching, versions, locks, states, previews, Figma, agents.
 
 ## Names
 
