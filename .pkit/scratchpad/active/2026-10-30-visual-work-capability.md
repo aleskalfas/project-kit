@@ -1479,6 +1479,7 @@ top: foundations/deck             # its top component (4f)
 brand: ibm/deck                   # the brand's entry point (4g)
 notations: [pkit]
 languages: [en, cs]
+source: en                        # the language the others translate (13)
 audience: developers new to pkit, mostly non-native English speakers   # who it is for (9)
 medium: projected                 # where it is shown: projected, screen or print (11)
 state: draft                      # draft, delivered, living or adapted (4d, 4j)
