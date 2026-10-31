@@ -133,6 +133,10 @@ rules:
             - "software-analysis:DEC-005#1"
             - "software-analysis:DEC-005#2"
             - "software-analysis:DEC-005#5"
+            - "software-analysis:DEC-007#1"
+            - "software-analysis:DEC-007#2"
+            - "software-analysis:DEC-007#3"
+            - "software-analysis:DEC-007#4"
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -195,7 +199,7 @@ checks:
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 5, 9, 11 and 12, and DEC-002 points 4 to 8. They also rest on DEC-003 points 8 and 10, DEC-004 points 3 to 6 and DEC-005 points 1, 2 and 5. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 5, 9, 11 and 12, and DEC-002 points 4 to 8. Others are DEC-003 points 8 and 10, DEC-004 points 3 to 6, DEC-005 points 1, 2 and 5, and DEC-007 points 1 to 4. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
 A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase, a sentence that starts with "So" and the items labelled *Examples* only illustrate.
 
@@ -476,7 +480,16 @@ Each use case lies in a functional area whose goal it is a step toward, and no t
     - **Two areas, one function.** Two areas serve one function where one area's goal is a step toward the other's, or a reader cannot tell the two goals apart.
   - **What cuts an area.** What its use cases do. Their number cuts none. Nor does their actor, a concept they act on or the code that carries them out, unless that is also what they do together.
   - **A path.** Several of one actor's own use cases, which it takes in turn, end to end, toward one goal that none of them reaches alone. Each step takes up what an earlier one left, such as a state its postconditions make true.
-    - **A sign, never proof.** A precondition that an earlier use case of the same actor makes true is a sign of a path. The actor may still never take the two toward one goal.
+    - **The actor's own.** Each use case whose `actor` it is, whoever starts it or carries out its steps (software-analysis DEC-007 point 1). So other actors may do all of a use case's work, and it may still be a step of its actor's path.
+    - **A sign, never proof.** A use case that states a hand-over with another use case of the same actor gives a sign of a path (DEC-007 point 2). It takes up what the other leaves, or the other takes up what it leaves. The actor may still never take the two toward one goal.
+    - **Where a sign stands.** In a precondition, in the trigger, or in a step of the main path or of a variant. It names the other use case by its id, or only by what it leaves, such as a log it wrote.
+    - **No sign.** A mention that takes nothing up, such as a step that works as another use case does.
+    - **A step that names the next use case.** Where an event other than that step starts the named use case, the step hands over to it, and is a sign. That event may be its actor's own choice, or the end of the use case that names it (DEC-007 point 3).
+    - **Part of it.** A use case that runs only inside that step, started by it and by nothing else, is part of the use case that names it. The two make no path.
+    - **What a use case reaches alone.** What its own steps make true. A postcondition that only another use case's steps make true is reached through that use case (DEC-007 point 3).
+    - **A standing condition.** A state one use case leaves standing, which any number of later runs rely on. It joins a later use case in a path only where the actor takes the two in turn toward one goal (DEC-007 point 4). A goal served again each time a later run relies on the state joins no path. A hand-over that the next run takes up once is no standing condition.
+    - **A goal a run did not meet.** What one run leaves where it did not meet the actor's goal is a sign like any other. It makes a path with the use case that takes it up only where one goal joins the two (DEC-007 point 4).
+    - **A remedy.** A use case that only restores the other's goal makes no path toward it, where the other's main path reaches that goal alone. What later runs meet because of a state left standing is read as a standing condition.
     - **No path.** A single use case with its variants makes none. Nor do use cases the actor never takes in turn toward one goal, however many it has.
     - **Another actor's use case** on the way is no step of the path. The journey relies on it.
   - **Told.** A journey in force of the path's actor tells the path where its `steps`, or the steps one of its variants takes, run through the path's use cases in their order. So a stretch of a longer path is told by the journey of that path. Its steps may lie in several areas.
@@ -485,11 +498,11 @@ Each use case lies in a functional area whose goal it is a step toward, and no t
     - Each use case of an area breaks it while the area's use cases serve more than one summary goal one level above them, whatever the area's goal says. So an area cut by actor, by concept or by the code breaks it, unless that is also what its use cases do together.
     - Each use case of an area breaks it while that area serves one function with another area.
     - The change that adds a use case to an area, or moves one into it, owns the breaks of that area and of the area it shares a function with. To judge them, a reviewer reads the goals of the analysis's other areas.
-    - Each use case of a path breaks it while no journey in force tells the path. The change that leaves the path untold owns that break. Such a change adds a use case that completes the path, or edits what a use case takes up or leaves, such as its preconditions. It may also withdraw or shorten the journey that told the path, or change a use case's `actor` or goal. To judge it, a reviewer reads the use cases and the journeys of each actor whose use case or journey the change adds or alters.
+    - Each use case of a path breaks it while no journey in force tells the path. The change that leaves the path untold owns that break. Such a change adds a use case that completes a path, or edits what a use case takes up or leaves, in any part. It may also withdraw or shorten the journey that told the path, or change a use case's `actor` or goal. To judge it, a reviewer reads the use cases and the journeys of each actor whose use case or journey the change adds or alters.
     - A journey breaks it while its steps make no path.
   - **A goal changed.** A change to an area's goal alters no artefact, so it brings none of the area's use cases before a reviewer. Whoever changes a goal reads the area's use cases against it.
   - **What a check can hold.** A script can read, from its path, that each use case in force lies in an area's folder. Until this set declares a check of it under `checks`, a reviewer judges it too.
-  - **Its limits.** No script reads what a use case does. So a reviewer judges whether two goals name one function, whether a use case is a step toward its area's goal, and whether use cases make a path. The overview's list of each area's journeys shows where a path may be untold, and settles nothing.
+  - **Its limits.** No script reads what a use case does. So a reviewer judges whether two goals name one function, and whether a use case is a step toward its area's goal. A reviewer also judges what one use case takes up from another, and whether use cases make a path. The overview's list of each area's journeys shows where a path may be untold, and settles nothing.
   - **Examples,** from an online shop:
     - Areas `010-catalogue`, `020-ordering` and `030-delivery`, whose goals read "Find a product and compare it", "Place an order and pay for it" and "Deliver an order to its customer", keep this rule.
     - An area `customer`, which holds every use case whose actor is the customer, breaks it, since its use cases serve all three summary goals. So does an area `025-payment` beside `020-ordering`, whose goal "Pay for an order" is a step toward "Place an order and pay for it".
