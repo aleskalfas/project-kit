@@ -22,7 +22,7 @@ from types import ModuleType
 
 import pytest
 
-from tests.pm_board_world import BOARD_CONFIG, BoardTracker
+from tests.pm_board_world import BOARD_CONFIG, STATE_ON_BOARD, BoardTracker
 from tests.pm_lifecycle_world import (
     AUTHORED_BODY,
     CAPABILITY_ROOT,
@@ -35,14 +35,6 @@ from tests.pm_lifecycle_world import (
 )
 
 CONTAINER_BODY = "## What\n\nA container.\n"
-
-#: The state on the board, the other axes on the kit's own labels.
-STATE_ON_BOARD = {
-    "type": {"kit-label": True},
-    "priority": {"kit-label": True},
-    "workstream": {"kit-label": True},
-    "state": {"board": True},
-}
 
 
 @pytest.fixture(scope="module")

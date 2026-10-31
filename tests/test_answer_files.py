@@ -557,6 +557,28 @@ def test_a_revalidation_that_reads_both_clears_the_debt(timeline: Timeline) -> N
     assert result.prunable == ("one.yaml", "two.yaml")
 
 
+def test_the_check_parses_each_version_of_an_answer_file_once(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The names history agrees with are read from the versions the points are read from
+    (COR-062 points 5 and 6), so each version is parsed once for both (#2405)."""
+    _apart(timeline)
+    timeline.commit(
+        "judge the combined state",
+        {answer_path("three"): answers(entry(at=T3, read=("one", "two")))},
+    )
+    parsed: list[bytes | None] = []
+    read = af.read_answer_file
+
+    def reading(name: str, raw: bytes | None) -> af.AnswerFile:
+        parsed.append(raw)
+        return read(name, raw)
+
+    monkeypatch.setattr(af, "read_answer_file", reading)
+    assert _kinds(_check(timeline)) == []
+    assert len(parsed) == len(set(parsed)) == 3
+
+
 def test_an_anchor_changed_since_only_one_of_two_apart_is_no_friction(
     timeline: Timeline,
 ) -> None:
