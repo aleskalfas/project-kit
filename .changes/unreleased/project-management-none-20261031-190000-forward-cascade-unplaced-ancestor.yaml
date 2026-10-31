@@ -1,0 +1,3 @@
+component: project-management
+kind: none
+body: DEC-064 is proposed, deciding what the forward cascade does at an ancestor whose card the board does not place, and it partially supersedes DEC-006 there. No behaviour changes with it. The build that follows its acceptance declares its own changeset.
