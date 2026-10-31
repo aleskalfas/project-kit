@@ -113,7 +113,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
 6. **How a renderer plugs in.** Plugins inside the one capability, as `demo-recording` does, or a capability per renderer that fills a role (COR-052, COR-053). Also the name: pkit already says "adapter" for a harness adapter (COR-005), so these are "renderers". The critic suggested (31 October) checking whether `demo-recording`'s plugin interface can serve as the renderer contract (COR-007).
 7. **Its origin.** Shipped by project-kit, or incubated in a project first (COR-031).
 8. **The starter library and themes.** Which graphical elements and themes the capability ships, from the talk's 26 masters, its kinds of visual, and the three themes.
-9. **The agents.** A designer agent: its job, its limits, its tools. Whether a reviewer reads a deck for flow and plain words.
+9. **The agents.** ~~Which agents.~~ Decided: `graphic-designer`, `graphic-design-reviewer` and `translator` (see "Discussion", point 9). Open: each one's tools and limits in detail, and the overlay category for the designer's writes.
 10. **The skills.** The build loop (change, generate, render, verify) as a skill, and how a deck or a diagram is authored.
 11. **The rules.** Which of the talk's style rules the capability ships, and which stay a project's own.
 12. **Credentials, permissions and the sandbox**, per renderer that talks to a service. Since renderers stay plugins of one capability (point 18c), it decides how the Mural plugin's network access and credentials reach only the projects that use it.
@@ -136,6 +136,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
 22. ~~**Graphs:** graph layout as an engine tool, or relation graphs left to Mermaid as software-analysis does.~~ Decided: a helper arranges graphs while preparing, views share one model file, and other capabilities connect later through a contract with fallback (see "Discussion", points 21 and 22).
 23. ~~**Where the first slice's code lives,** outside project-kit's shipped tree.~~ Decided (31 October): a new repository of its own, which installs pkit and incubates the capability in its own `.pkit/capabilities/` (COR-031), nothing shipping to anyone. The Mural plugin reuses the mural-boards tool's client, sign-in, pacing and sync record, and the mural-boards skill keeps working unchanged until the capability replaces it (point 15). Whether the capability later moves into project-kit or stays in its own repository is point 7. The repository is created when building starts, in a session rooted there or with the maintainer's confirmation (the cross-repository rule), and its name comes from the naming pass (point 16).
 24. **A protocol between capabilities.** How a consumer such as software-analysis declares a contract, how visual-work is connected to it, and whether pkit's slots and connection points can carry a request with input or need a core decision. Use case 13; not built now.
+25. **Anchors on a piece's facts.** Whether a piece, or its content, carries pkit's anchors (COR-050), so a doc figure is flagged when the code or decision it shows changes, and `graphic-design-reviewer` becomes the fixer of pieces (project-management DEC-056). Came from point 9.
 
 ## Discussion
 
@@ -1043,6 +1044,43 @@ With that, Mermaid's look beside the libraries' look in a project's docs is a tr
 
 **Outcome of 22 (31 October).** The maintainer agreed: graphs are arranged by a helper while preparing, never by the engine, with positions committed per font profile and a fingerprint; several views share one model file, and a view never holds a fact the model lacks; other capabilities connect later through a contract, with the coverage reported and a fallback to their own drawing for any kind not covered (use case 13, point 24). Nothing of it is in the first slice; the formats leave room for it.
 
+### 9. The agents: which ones (31 October)
+
+**The question.** Which agents the capability ships, and what each is for. Their tools and limits in detail follow; Mural's credentials are point 12.
+
+**What the Friday talk shows, by kind of work.**
+
+- **Designing and building:** the main session chose each slide's visual, wrote all 38 per-slide diagrams, pushed, verified fit, removed duplicates and exported PDFs. It also wrote the words and checked every fact against the repository: counts, real command output from throwaway installs.
+- **Reading as the room:** the maintainer set the rules one by one (keep the flow, plain words, no self-reference, big picture before detail, say why, say what comes wired; the talk's note, lines 63 to 70). The writing session checked its own slides, and the maintainer still caught misses.
+- **Translating:** separate helpers translated slide by slide and still wrote "translated English"; three fresh translators then rewrote it from one brief (a glossary, the words kept in English, Czech sentence building and typography), and the maintainer reviewed it.
+
+**The agent's first draft:** a designer writing only inside its piece, a read-only reviewer with the talk's rules as its lens, and a translator owning each language's content file, the designer later declared the fixer of pieces.
+
+**The critic's review (31 October).** The split by kind of work held; the write scopes and the reasons did not:
+
+1. **No agent could write a library,** yet use cases 2, 3, 6, 10, 11, 12 and 13 need it: improving a component, a new brand, a pattern, the shared model, a top component with its layouts, a notation, drawing another capability's visuals. Promotion is the agent's work by the naming pass. The draft was shaped like one talk.
+2. **The designer could not be a fixer:** project-management's DEC-056 point 1 refuses a fixer that claims paths or may change files or start agents; living-docs' fixer owns nothing. And a library release is no drift: `upgrade` already handles it (4i). The drift a fixer is for is a piece's facts going stale against their sources, such as a doc figure about code, which needs pieces to carry anchors.
+3. **The translator's file sat inside the designer's folder:** two owners of one path, which `pkit refs validate` flags, and several translators writing one file at once.
+4. **The reviewer's rules were the talk's, written into the agent:** which rules ship is point 11, and a shipped agent must not carry one project's taste (COR-006, COR-014). living-docs' reader review reads its rules only from the rule sets.
+5. **No one checked the facts but the writer,** though the talk's work was largely facts.
+6. Also: an audience needs a place to be declared; a reviewer that renders must leave no record and push nothing; the translator's real gain was the brief and narrow tools, not a fresh context; the designer must work when dispatched too, since project-manager may hold the session (DEC-059), and dispatch others only when it holds the `Agent` tool, always without a name.
+
+**The agent's revised recommendation.** Three agents, by kind of work, none per discipline (4f):
+
+| Agent | What it does | What it may write |
+|---|---|---|
+| `graphic-designer` | Turns an intent and its facts into a piece: content, local components, helper scripts, render, fit, sending to renderers through `pkit visual` only. Builds the project's own libraries: promotes local components, adds a brand or a notation, implements another capability's contract. Shows the person any write to a library in another repository first (core rule 19). Booted as the session's agent or dispatched; dispatches the other two when it can. | the project's pieces, its own libraries and shared models, through an overlay category; never the fetched copies, never credentials |
+| `graphic-design-reviewer` | Reads a whole piece, rendered, as its audience: every language, and a doc figure as its page's reader (living-docs' readers). Checks the piece's facts against the repository. Takes its rules only from the rule sets (point 11). | nothing; it renders into its workspace only |
+| `translator` | Translates a page from its meaning, from a brief the capability ships (point 13), and returns the text with notes on length. The native speaker's review stays the person's. | nothing; the designer writes the file |
+
+**The names.** The maintainer asked why the reviewer's name did not match the producer's. pkit's own pair names a producer by its role and a reviewer by the work it reads (`software-engineer`, `code-reviewer`), so a reviewer stays independent of whoever made the work: the agent, a person editing on the board, another pull request. He proposed `design-reviewer`, which a developer reads as a review of a software design, the architect's ground; and `graphic-reviewer`, where "graphic" alone means a picture or "explicit". `graphic-design-reviewer` keeps the fixed term whole and matches the producer. "Designer" alone means user-interface design; "art director" directs and decides, while the reviewer only reports.
+
+**Outcome (31 October).** The maintainer agreed to the three agents, `graphic-designer`, `graphic-design-reviewer` and `translator`. It adds three things:
+
+- an `audience:` field in a piece;
+- a render into the agent workspace that leaves no record and sends nothing;
+- a new question, point 25: whether a piece's facts carry pkit's anchors, so a doc figure is flagged when what it shows changes; the reviewer would then be the fixer of pieces.
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
@@ -1136,6 +1174,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | helper script | a script run while preparing, writing a checked local component (point 21) | kept (naming pass) |
 | model | the file of a system's elements and relations that several views read (point 22) | kept (naming pass) |
 | contract, coverage, fallback | the visuals another capability needs drawn; how many a library draws; the drawing used for the rest (point 22) | kept (naming pass) |
+| graphic-designer, graphic-design-reviewer, translator | the capability's agents: the producer, the reviewer of pieces, and the translator that returns text (point 9) | decided (point 9) |
 
 A naming pass with the maintainer comes before any record or code fixes a name. It starts with the names that appear inside files (the architect's review), one decision at a time: the capability's name first, which is also the repository's.
 
@@ -1234,6 +1273,7 @@ top: foundations/deck             # its top component (4f)
 brand: ibm/deck                   # the brand's entry point (4g)
 notations: [pkit]
 languages: [en, cs]
+audience: developers new to pkit, mostly non-native English speakers   # who it is for (9)
 state: draft                      # draft, delivered, living or adapted (4d, 4j)
 lock: {foundations: 1.4.0, starter: 1.2.0, ibm: 2.0.0, pkit: 1.1.0}   # (4i, 18a)
 renderers:
