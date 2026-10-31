@@ -20,7 +20,7 @@ Where the substrate map binds state to the board, an open issue's position is it
 
 None of the four is guessed, so no command acts on a position it could not read. At an ancestor the read does not place, that rule and the cascade's promise pull apart. As built, the walk stops there with a warning, and the move that started it stands. So that ancestor, and every container above it, stays where it was, possibly behind the work.
 
-ADR-074 leaves which rule gives way to a record of this capability (its Boundaries). Its point 5 sets two limits on every command that reads the state. A command never acts on a guess, and it keeps a board that would not answer apart from a finding. Where its exit codes tell a broken tool from a refusal, an unreadable board takes the broken tool's code.
+ADR-074 leaves which rule gives way to a record of this capability (its Boundaries). Its point 5 sets two limits on every command that reads the state. A command never acts on a guess, and it keeps a board that would not answer apart from a finding. Where its exit codes tell a broken tool from a refusal, an unreadable board takes the broken tool's code. Where the act the command exists for already stands, its code says instead that the act stands and what follows it is owed.
 
 The cascade runs inside **the move command**, the command that moves one issue through the lifecycle. Before it writes the move, it reads each ancestor up the walk and prints its plan. A **composing command**, one that runs the move command as a step, may have written its own changes first, such as a branch or an assignee. After a close, a merge that closes a Task, or a re-run that finishes a cascade, the move that started it has already happened.
 
@@ -57,7 +57,7 @@ The move then ends with the code a move ends with when its cascade is left incom
 
 ### 4. An unread ancestor stops the walk, and a re-run completes it
 
-At an unread ancestor, the walk stops, and nothing above it is read or written. This holds wherever the cascade meets the board's silence, in its plan or after the move landed. The cascade may read an ancestor again just before it writes, to catch a move made since its plan. Where that read cannot tell a finding from a board that would not answer, the walk stops there too.
+At an unread ancestor, the walk stops, and nothing above it is read or written. This holds wherever the cascade meets the board's silence, in its plan or after the move landed. The cascade may read an ancestor again just before it writes, to catch a move made since its plan. That read goes through the state's one reader (ADR-074 point 2), so it gives a placed ancestor or one of its four outcomes, each handled as above.
 
 The run then ends with the code that says the act stands and a re-run completes what follows it (the capability's README, "Exit 4 — accepted, a re-run completes it"). ADR-074 point 5 gives a command that code where its act already stands when the board fails. The code is the run's last word: the move's own hooks fire first, as for any move that landed.
 
@@ -137,7 +137,7 @@ A board that does not answer for an ancestor's card is no reason to refuse eithe
 - **Stop the walk at the unplaced ancestor.** Rejected: it leaves every container above behind the work, though nothing about them is unknown.
 - **Go on above an unread ancestor.** Rejected: every read above needs the same board, and a re-run completes the walk.
 - **End with the broken tool's code after the move landed.** Rejected: a composing command would report a landed move as not made, and name its changes for undoing.
-- **Give a finding the code that says a re-run completes the cascade.** Rejected here: a project that keeps a Blocked column would see every forward move under it end that way. Whether every cascade left incomplete, for any cause, takes that code is a question of its own.
+- **Give a finding the code that says a re-run completes the cascade.** Rejected here: a project that keeps a Blocked column would see every forward move under it end that way. Whether every cascade left incomplete, for a cause other than a board that would not answer, takes that code is a question of its own.
 
 ## Implications
 
@@ -155,6 +155,6 @@ A board that does not answer for an ancestor's card is no reason to refuse eithe
 - **A surface change** for the capability: the walk goes on where it stopped, and the move command and the commands that compose it gain an exit code. The build's changeset declares it, naming each command. No migration is owed, since no adopter file or schema changes.
 - **Not decided here:**
   - what a move to done does on an open issue whose state the board carries, which is [#2304](https://github.com/aleskalfas/project-kit/issues/2304)'s question. Where such a move runs the cascade, this record governs it at an ancestor the board does not place.
-  - whether every cascade left incomplete, for any cause, takes the code that says a re-run completes it. A failed write of an ancestor's state, on the board or as a label, is among those causes, and stays as it is until that question is settled.
+  - whether every cascade left incomplete, for a cause other than a board that would not answer, takes the code that says a re-run completes it. ADR-074 point 5 rules that cause. A failed write of an ancestor's state, on the board or as a label, is among those causes, and stays as it is until that question is settled.
   - whether a container whose card reads Review is a finding. The read places it, though a container never enters Review, so the cascade leaves it alone, as DEC-006 leaves any ancestor at or past the target.
   - what a card a person drags by hand means, which DEC-006 leaves open
