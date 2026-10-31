@@ -1,0 +1,9 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The whole-repository friction check parses each version of an answer file
+  once a run (#2365). The names an entry reads were parsed from each version a
+  second time, about a quarter of the check's answer-file reading on
+  project-kit's own history. No answer changes.

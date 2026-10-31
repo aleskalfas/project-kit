@@ -38,7 +38,7 @@ import traceback
 from collections.abc import Callable, Collection, Iterator, Mapping, Sequence
 from pathlib import Path
 from types import FrameType, ModuleType
-from typing import Any, Protocol
+from typing import IO, Any, Protocol
 
 import pytest
 from click.testing import CliRunner
@@ -61,7 +61,7 @@ QUERY_ENVIRONMENT: Mapping[str, str | None] = {
 }
 
 #: The keywords of `subprocess.run` the in-process `pkit` models. It refuses any other.
-MODELLED = ("cwd", "capture_output", "text", "check")
+MODELLED = ("cwd", "capture_output", "text", "check", "stdin")
 
 #: What runs `pkit` for a capability: `subprocess.run`'s signature, the argument list first.
 Runner = Callable[..., subprocess.CompletedProcess[Any]]
@@ -88,6 +88,8 @@ class InProcessPkit:
       output and standard error apart.
     - Its `returncode` is the command's exit code.
     - The command runs from `cwd`, or the current directory, which is restored after.
+    - Its standard input is `stdin`, a file it reads to its end before the command runs,
+      as a list a command reads whole; none gives it an empty one.
     - It runs in the environment the backbone's runner gives a query
       (`QUERY_ENVIRONMENT`), and the caller's is restored after.
     - An exception the command raises is exit 1, its traceback on standard error, as a
@@ -112,6 +114,7 @@ class InProcessPkit:
         capture_output: bool = False,
         text: bool = False,
         check: bool = False,
+        stdin: IO[str] | None = None,
         **unmodelled: Any,
     ) -> subprocess.CompletedProcess[Any]:
         if unmodelled:
@@ -124,9 +127,12 @@ class InProcessPkit:
         if not argv or Path(argv[0]).name != "pkit":
             raise ValueError(f"the in-process `pkit` answers `pkit` alone, not {argv[:1]}")
         self.calls.append(argv)
+        given = "" if stdin is None else stdin.read()
         reset_caches()
         with contextlib.chdir(os.fspath(cwd) if cwd is not None else os.getcwd()):
-            result = CliRunner().invoke(cli.main, argv[1:], env=QUERY_ENVIRONMENT, prog_name="pkit")
+            result = CliRunner().invoke(
+                cli.main, argv[1:], input=given, env=QUERY_ENVIRONMENT, prog_name="pkit"
+            )
         returncode, stdout, stderr = result.exit_code, result.stdout, result.stderr
         crashed = result.exception is not None and not isinstance(result.exception, SystemExit)
         if crashed and result.exc_info is not None:

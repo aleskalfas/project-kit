@@ -572,11 +572,21 @@ def commit_files(tree: CommitTree) -> dict[str, AnswerFile]:
 class HistoryNames:
     """Whether a name in `read` is one history agrees with (COR-062 point 5), from a
     history read from the state's commit: the named file was added in a commit that
-    first carried the name, or in an ancestor of one."""
+    first carried the name, or in an ancestor of one.
 
-    def __init__(self, history: History, blobs: BlobReader) -> None:
+    `parse`, where given, reads a version of an answer file, under its name, in place of
+    parsing it here: the reader that parses every version once for the run
+    (`AnswerHistory.parsed`) hands its own, so no version is parsed twice."""
+
+    def __init__(
+        self,
+        history: History,
+        blobs: BlobReader,
+        parse: Callable[[TreeEntry, str], AnswerFile] | None = None,
+    ) -> None:
         self.history = history
         self._blobs = blobs
+        self._parse = parse
         self._reads: dict[str, frozenset[str]] = {}
         self._adds: dict[str, tuple[int, ...]] = {}
         self._carried: dict[tuple[str, str], tuple[int, ...]] = {}
@@ -617,11 +627,13 @@ class HistoryNames:
                 entry = self.history.entry(index, path)
                 if entry is None or entry.status == "D" or entry.after is None:
                     continue
-                if named not in self.reads(entry.after):
+                if named not in self.reads(entry.after, reader):
                     continue
                 added = entry.status == "A" or entry.status == "R"
                 parents = () if added else entry.before
-                if not any(state is not None and named in self.reads(state) for state in parents):
+                if not any(
+                    state is not None and named in self.reads(state, reader) for state in parents
+                ):
                     writes.append(index)
             found = tuple(
                 w
@@ -631,12 +643,15 @@ class HistoryNames:
             self._carried[key] = found
         return found
 
-    def reads(self, state: TreeEntry) -> frozenset[str]:
-        """Every name the version `state` of an answer file reads, any entry's."""
+    def reads(self, state: TreeEntry, name: str = "") -> frozenset[str]:
+        """Every name the version `state` of the answer file `name` reads, any entry's."""
         found = self._reads.get(state[1])
         if found is None:
-            raw = None if state[0] == LINK_MODE else self._blobs.read_object(state[1])
-            parsed = read_answer_file("", raw)
+            if self._parse is not None:
+                parsed = self._parse(state, name)
+            else:
+                raw = None if state[0] == LINK_MODE else self._blobs.read_object(state[1])
+                parsed = read_answer_file("", raw)
             found = frozenset(name for entry in parsed.entries for name in entry.read)
             self._reads[state[1]] = found
         return found
@@ -1553,7 +1568,7 @@ class AnswerHistory:
         self.walker = walker
         self.blobs = blobs
         self.trees = TreeReader(blobs)
-        self.names = HistoryNames(history, blobs)
+        self.names = HistoryNames(history, blobs, self.parsed)
         self.starts = Starts(self.names, walker)
         self.paths = tuple(p for p in history.paths if is_answer_file(p))
         self._parsed: dict[str, AnswerFile] = {}

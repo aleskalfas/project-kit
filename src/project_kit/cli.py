@@ -2316,10 +2316,35 @@ def friction_prune_command(dry_run: bool, yes: bool, as_json: bool) -> None:
     "Not with --all.",
 )
 @click.option(
+    "--artefact",
+    "judged_locations",
+    metavar="LOCATION",
+    multiple=True,
+    help="With --all, judge only the artefact at LOCATION (`path`, or `path#id` for a "
+    "collection entry), as the whole check judges it; repeatable. The measures stay the "
+    "whole repository's, and which answer files a prune would remove is not read.",
+)
+@click.option(
+    "--artefacts-from",
+    "judged_from",
+    metavar="FILE",
+    type=click.Path(exists=True, dir_okay=False, allow_dash=True),
+    default=None,
+    help="With --all, judge only the artefacts at the locations FILE lists, one a line, "
+    "beside any --artefact names; `-` reads standard input, never a terminal. The check "
+    "may read the list as late as just before it judges, so a caller may start it and "
+    "write the list when it knows it. An empty list judges none.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
 def friction_check_command(
-    base_ref: str | None, whole_repository: bool, head_rev: str | None, as_json: bool
+    base_ref: str | None,
+    whole_repository: bool,
+    head_rev: str | None,
+    judged_locations: tuple[str, ...],
+    judged_from: str | None,
+    as_json: bool,
 ) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
@@ -2358,18 +2383,26 @@ def friction_check_command(
     accepted with a reason listed apart, never counted — and uncovered
     surface. Reads each artefact's history back to
     where it was last added; in a shallow clone it marks what the cut hides,
-    and exits 0 in either mode.
+    and exits 0 in either mode. With --artefact or --artefacts-from, it judges
+    only the artefacts named, and the measures stay the whole repository's.
     """
     if whole_repository and head_rev is not None:
         raise click.UsageError(
             "--head and --all exclude each other: the whole-repository check reads HEAD and "
             "its history."
         )
+    if (judged_locations or judged_from is not None) and not whole_repository:
+        raise click.UsageError(
+            "--artefact and --artefacts-from name what the whole-repository check judges, so "
+            "they need --all; the change check judges what the change touches."
+        )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if whole_repository:
-        report = friction_repository.run_repository_check(target_root)
+        report = friction_repository.run_repository_check(
+            target_root, judging=_judging(judged_locations, judged_from)
+        )
         if as_json:
             click.echo(friction_repository.render_json(report), nl=False)
         else:
@@ -2390,6 +2423,28 @@ def friction_check_command(
         click.echo(friction_check.render_human(result), nl=False)
     if result.exit_code:
         raise SystemExit(result.exit_code)
+
+
+def _judging(named: tuple[str, ...], listed_in: str | None) -> friction_repository.Judging | None:
+    """What `friction check --all` judges: every artefact (`None`), the locations named, or
+    those and the ones `listed_in` lists — a file, or `-` for standard input — read when
+    the check asks for them, so a caller may write the list while the check reads."""
+    if listed_in is None:
+        return frozenset(named) if named else None
+    if listed_in == "-" and click.get_text_stream("stdin").isatty():
+        raise click.UsageError(
+            "--artefacts-from - reads the list from standard input, which is a terminal here: "
+            "pipe the list in, name a file, or name each artefact with --artefact."
+        )
+
+    def read() -> frozenset[str]:
+        if listed_in == "-":
+            text = click.get_text_stream("stdin").read()
+        else:
+            text = Path(listed_in).read_text(encoding="utf-8")
+        return frozenset(named) | {line.strip() for line in text.splitlines() if line.strip()}
+
+    return read
 
 
 @friction.command("debt")

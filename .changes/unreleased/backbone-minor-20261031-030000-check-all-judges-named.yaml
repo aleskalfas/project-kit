@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction check --all` can judge only the artefacts a reader names:
+  `--artefact <location>`, repeatable, and `--artefacts-from <file>`, a list one
+  location a line, `-` for standard input, an empty list judging none (#2365,
+  ADR-079). Each is judged by the whole check's one judgement, and the measures
+  and the count of answer files stay the whole repository's, so a reader that
+  needs a few artefacts' state, such as living-docs' documentation check, pays
+  for theirs and not for every artefact's. The document gains `selection` —
+  `null`, or the locations named and those HEAD holds no artefact at — and the
+  read view's header says it; which answer files a prune would remove is not
+  read under a selection, so `answers.prunable` is `null`. Without a selection
+  nothing changes but the `selection` key, which is `null`.

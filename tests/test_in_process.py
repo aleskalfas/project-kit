@@ -74,6 +74,7 @@ def said(words: tuple[str, ...]) -> None:
                 "base": os.environ.get(default_branch.CHECK_BASE_ENV),
                 "head": os.environ.get(default_branch.CHECK_HEAD_ENV),
                 "cached": fd._targets_patterns.cache_info().currsize,
+                "stdin": click.get_text_stream("stdin").read(),
             }
         )
     )
@@ -162,10 +163,23 @@ def test_an_exception_is_exit_1_with_its_traceback_on_standard_error(
     assert completed.stderr.rstrip().endswith("RuntimeError: the command broke")
 
 
-@pytest.mark.parametrize("keyword", ["env", "input", "timeout", "stdin", "encoding"])
+def test_its_standard_input_is_the_file_it_is_given_read_whole(
+    stand_in: InProcessPkit, tmp_path: Path
+) -> None:
+    """A command reading a list from standard input reads the file it is given, to its end;
+    without one it reads nothing, as a process given no input."""
+    listed = tmp_path / "list"
+    listed.write_text("docs/a.md\ndocs/b.md\n", encoding="utf-8")
+    with listed.open(encoding="utf-8") as stdin:
+        completed = stand_in(["pkit"], capture_output=True, text=True, stdin=stdin)
+    assert _seen(completed)["stdin"] == "docs/a.md\ndocs/b.md\n"
+    assert _seen(stand_in(["pkit"], capture_output=True, text=True))["stdin"] == ""
+
+
+@pytest.mark.parametrize("keyword", ["env", "input", "timeout", "encoding"])
 def test_a_keyword_it_does_not_model_is_refused(stand_in: InProcessPkit, keyword: str) -> None:
     with pytest.raises(
-        TypeError, match=f"models only cwd, capture_output, text, check, not {keyword}"
+        TypeError, match=f"models only cwd, capture_output, text, check, stdin, not {keyword}"
     ):
         unmodelled: dict[str, Any] = {keyword: None}
         stand_in(["pkit"], **unmodelled)
