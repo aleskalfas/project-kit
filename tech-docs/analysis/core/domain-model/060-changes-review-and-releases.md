@@ -399,6 +399,7 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
 - [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
 - [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
+- [JRN-007 — Upgrade one capability, and re-pin its rule set](../use-case-model/journeys/JRN-007-upgrade-one-capability.md)
 - [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
 - [REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)

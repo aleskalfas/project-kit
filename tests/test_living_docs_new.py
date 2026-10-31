@@ -5,7 +5,8 @@ backbone runs a capability's command, over an adopter repository with the
 capability installed (the fixture of `test_living_docs_spaces.py`):
 
 - **a page** — stamped into each root and into a place outside the roots that
-  is assigned to a space, with its reader, kind and anchors; refused, with
+  is assigned to a space, with its reader, kind and anchors, a guide with its
+  parts in order (living-docs DEC-003); refused, with
   nothing written, for a space or kind the project lacks, a file that exists, a
   path that is no Markdown file of the repository or is reached through a link,
   a reader that is not a word and a title validation does not read; refused
@@ -299,6 +300,37 @@ def test_the_stamp_lists_the_template_placeholders_left_and_never_a_title_of_its
         "docs/maps.md:12: - [<entry>](<entry>) — <what the reader finds there, in a line>.",
     ]
     assert "run `pkit living-docs validate`, `pkit validate` and `pkit friction check`" in out
+
+
+def test_a_guide_is_stamped_with_its_parts_in_order_and_checked_for_its_title(
+    project: AdopterRepo,
+) -> None:
+    """The guide's template shows its parts in their order (living-docs DEC-003 point
+    2): the stamp writes them under the title given and lists each one the writer
+    words. Its structure is its title alone (point 4), so the page passes validation
+    before its other sections are worded."""
+    out = stamped(page(project, "docs/turning-on.md", "--kind", "guide", "--title", "Turning on"))
+    assert out.splitlines()[0] == (
+        "stamped docs/turning-on.md: a guide page of space 'user', for reader 'user'."
+    )
+    assert front(project, "docs/turning-on.md") == {
+        "reader": "user",
+        "kind": "guide",
+        "pkit": {"friction": {}},
+    }
+    text = (project.root / "docs/turning-on.md").read_text(encoding="utf-8")
+    parts = [
+        "## <Why the subject exists>",
+        "## <A task the reader does>",
+        "## <The folder's pages>",
+    ]
+    assert [line for line in text.splitlines() if line.startswith("#")] == [
+        "# Turning on",
+        *parts,
+    ]
+    listed = [line.split(": ", 1)[1] for line in out.splitlines() if "docs/turning-on.md:" in line]
+    assert [line for line in listed if line.startswith("#")] == parts
+    assert errors(run(project)) == []
 
 
 @pytest.mark.parametrize(
