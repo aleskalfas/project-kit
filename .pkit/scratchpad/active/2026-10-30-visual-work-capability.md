@@ -414,7 +414,7 @@ What each change does:
   export: [friday-talk.en.pdf, friday-talk.cs.pdf]
   ```
 
-- **A third talk that needs a stepped pyramid** promotes the Friday talk's one-off `pyramid` to a kind in the core.
+- **A third talk that needs a stepped pyramid** promotes the Friday talk's one-off `pyramid` to a kind in the core. (Revised by point 18b and the naming pass: it goes to a structure library or the starter, since the core holds only the interface.)
 
 **Outcome (30 October).** The maintainer accepted the eight levels in three scopes, after the worked example. It is built lean:
 
@@ -1113,8 +1113,9 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | design tokens, raw values, roles, component tokens | the design language as data | established terms (W3C Design Tokens) |
 | theme, mode, context | a set of values; light or dark; DAM or IBM | working |
 | frame | the per-context template: slide, section slide, footer, grid | working |
-| recipe | a recurring composition, promoted after about three uses | working (Brad Frost's term) |
-| one-off | a part drawn for one message, inside the talk | working (Frost: "one-off components", "snowflakes") |
+| recipe | a recurring arrangement, promoted after about three uses | working (Brad Frost's term) |
+| one-off | level 7 before the naming pass | replaced by "local component" (naming pass) |
+| local component, library component | a component made inside one piece, in its `components/` folder (level 7); a component a library publishes. A local component that recurs about three times is promoted to a library component | decided (naming pass; Figma's terms) |
 | talk | level 8 in the first drafts | replaced by "piece" (naming pass) |
 | deck | the top component of a presentation | working (Slidev, Marp and Keynote users say "deck") |
 | library | a named, versioned set of pieces that is shared, and names the libraries it builds on | working |
@@ -1154,6 +1155,16 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   - "material": every designer hears Google's Material Design, a design system close to what this capability builds.
   - "copy": only the text.
   - "data": fits charts, but undersells slides and words.
+- **Level 7: "local component",** in the folder `components/` inside the piece; its counterpart is a library component. Chosen by the maintainer: Figma's terms for a component defined in the file and one published in a library, which is this split. The points before the naming pass say "one-off"; read it as local component. Ruled out: "one-off" and "snowflake" (Brad Frost's), which name an attitude rather than where the component lives, read as slang to non-native speakers, and contradict promotion.
+- **Promotion of a local component,** as the maintainer asked how it works. It follows from points 4c, 4i, 18b and 21:
+  1. It goes to a library its author owns: a structure library, or the starter if every adopter could use it, or a context library if it is one brand's only. Never the core, which holds only the interface.
+  2. A small building block becomes a component (level 4); a whole arrangement filled with content becomes a recipe or kind (level 5).
+  3. It is generalised on the way: fixed texts become content fields, one-time choices become options, and every colour a role.
+  4. It is added in the library's own repository and released as a new version, since a project's copies are read-only.
+  5. Each piece switches on purpose: `upgrade` brings the version, the content's `use: components/pyramid` becomes `use: <library>/pyramid` after a before-and-after, and the local copy is removed. Delivered pieces keep theirs.
+  6. A local component a helper script wrote waits for its script to become an engine tool (point 21), then is promoted as data.
+
+  No `promote` command is planned: generalising needs judgment, so it is the agent's work (aspect 9).
 
 **A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --context ibm/deck --subject pkit` writes two files; the rest appear when they are needed:
 
@@ -1167,7 +1178,7 @@ visual/                                  the capability's place in the project (
         ├── piece.yaml                   written by `new`: what it is, what it uses, its lock, its state
         ├── content.en.yaml              written by `new`: what to show, with the top component's fields to fill
         ├── content.cs.yaml              when a language is added: the same keys, in Czech (use case 7)
-        ├── one-offs/                    components made for this piece only (4c, level 7)
+        ├── components/                  local components, made for this piece only (4c, level 7)
         │   ├── pyramid.yaml
         │   ├── cycle.py                 a helper script (21)
         │   └── cycle.yaml               the checked data it writes, with its fingerprint
@@ -1204,7 +1215,7 @@ deck:
       part: P0
       title: How pkit fits together
       lead: In five layers, from your decisions down to your code.
-      visual: {use: one-offs/pyramid, levels: [{head: Decisions, text: Choices you accepted, and why.}]}
+      visual: {use: components/pyramid, levels: [{head: Decisions, text: Choices you accepted, and why.}]}
 ```
 
 The scene is not among them: it is computed at every render and never committed (4h). A shared model (22) is a file of its own beside the pieces, since several pieces read it.
