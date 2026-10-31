@@ -6,13 +6,15 @@
   on a stand-in for the backbone's CLI that says what it saw, and then on the CLI
   itself, through each capability's one private function;
 - **the loader** (choice 3): each capability's `_lib` kept apart, a script and its
-  `_lib` from one call, and a script's `main` run as its process ran;
+  `_lib` from one call, a script loaded into a `_lib` a test holds, and a script's
+  `main` run as its process ran;
 - **the guard** (choice 4): what counts as a start of `pkit` or a capability
   script, a test that starts one without the mark failed, and what is not
   counted: a template's build, and a test of the runner;
 - **the reverse seam** (choice 5): a component's validator started in this process
-  through the runner's one lookup, for living-docs and software-analysis, and a
-  broken registration still failing;
+  through the runner's one lookup, for living-docs and software-analysis, a
+  broken registration still failing, and a `_lib` a test holds taking its own
+  capability's scripts alone;
 - **no capability code imports the backbone** (ADR-057 point 1), the premise of all
   of it: a capability reaches the backbone only through `pkit`'s commands.
 """
@@ -20,6 +22,7 @@
 from __future__ import annotations
 
 import ast
+import importlib
 import json
 import os
 import subprocess
@@ -321,6 +324,48 @@ def test_a_copy_an_earlier_test_left_is_neither_shared_nor_disturbed(
     assert sys.modules["default_branch"] is earlier
 
 
+@pytest.fixture
+def held_lib(monkeypatch: pytest.MonkeyPatch) -> Iterator[ModuleType]:
+    """project-management's `_lib` package, imported as a test module imports it, through
+    the folder that holds it on the import path, with its `bootstrap_gate`. Whatever `_lib`
+    was in `sys.modules` is put back after."""
+    saved = {name: sys.modules.pop(name) for name in _ours()}
+    monkeypatch.syspath_prepend(str(PM_LIB.parent))
+    lib = importlib.import_module("_lib")
+    importlib.import_module("_lib.bootstrap_gate")
+    yield lib
+    for name in _ours():
+        del sys.modules[name]
+    sys.modules.update(saved)
+
+
+def _gate_asked(lib: ModuleType, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """The names `lib`'s bootstrap gate is asked for, each refused: patched as a test
+    patches the `_lib` it holds."""
+    asked: list[str] = []
+
+    def enforce(name: str, *_args: Any, **_kwargs: Any) -> bool:
+        asked.append(name)
+        return False
+
+    monkeypatch.setattr(lib.bootstrap_gate, "enforce", enforce)
+    return asked
+
+
+def test_a_script_loaded_into_a_held_lib_runs_with_what_the_test_patched(
+    held_lib: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Given the `_lib` a test holds, the script takes its modules, patched as the test
+    left them, and `sys.modules` is left as it was."""
+    asked = _gate_asked(held_lib, monkeypatch)
+    held = {name: sys.modules[name] for name in _ours()}
+    (detect,) = load("project-management", "detect-state.py", lib=held_lib)
+    assert detect.bootstrap_gate is held_lib.bootstrap_gate
+    assert run_main(detect, "7", "--json", cwd=tmp_path).returncode == 2
+    assert asked == ["detect-state"]
+    assert {name: sys.modules[name] for name in _ours()} == held
+
+
 def test_a_script_s_main_runs_as_its_process_ran(tmp_path: Path) -> None:
     """`sys.argv`, the exit code and the two streams as a process gives them, from the
     directory given; the caller's directory and `sys.argv` left as they were."""
@@ -412,6 +457,26 @@ def test_a_script_that_cannot_be_started_is_not_started(
     run = command_runner.run_command(tmp_path / "missing.py", ["--json"], cwd=tmp_path)
     assert run.ending is Ending.NOT_STARTED
     assert "No such file or directory" in run.detail
+
+
+def test_a_held_lib_takes_its_own_capability_s_scripts_alone(
+    held_lib: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Started with the `_lib` a test holds, project-management's predicate runs with the
+    test's patch, while living-docs' validator still loads its own `_lib`."""
+    asked = _gate_asked(held_lib, monkeypatch)
+    started = start_in_process(monkeypatch, lib=held_lib)
+    detect = PM_LIB.parent / "detect-state.py"
+    predicate = command_runner.run_command(detect, ["7", "--json"], cwd=tmp_path)
+    validator = command_runner.run_command(LD_SCRIPTS / "validate.py", ["--help"], cwd=tmp_path)
+    assert (predicate.ending, predicate.returncode, asked) == (
+        Ending.ABNORMAL_EXIT,
+        2,
+        ["detect-state"],
+    )
+    assert validator.ending is Ending.UNPARSABLE
+    assert validator.stdout.startswith("usage: validate.py")
+    assert [script.name for script in started] == ["detect-state.py", "validate.py"]
 
 
 # --- the guard (choice 4) -------------------------------------------------------------------

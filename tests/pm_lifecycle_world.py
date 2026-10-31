@@ -5,7 +5,7 @@ The scripts run in this process. `subprocess.run` is routed so that `gh` reaches
 an in-memory tracker, `pkit process` reaches the engine's own CLI, and a script
 that runs `move-issue` or `close-issue` runs its `main` here. The engine runs the shipped
 issue-lifecycle definition in a scratch repository, and its predicates answer
-from the tracker through the capability's own predicate code. A test compares
+from the tracker through the capability's own predicate scripts. A test compares
 the tracker's view of an issue's state with the engine's and reads the engine's
 journal.
 
@@ -13,10 +13,12 @@ A test module loads the scripts once (`load_script`), builds the scratch
 repository per test (`make_engine_repo`) and wires a `World` over both
 (`wire`).
 
-A predicate answers in this process, but as its script would: where the
-capability's predicate code could not reach an answer, the script exits 2 and
-the engine reads no answer, so the harness hands the engine the same failure,
-with what the code said on standard error.
+A predicate runs in this process, as the engine's runner runs it otherwise: the
+runner's one lookup resolves its script, and only the start is replaced
+(`tests/in_process.py`, `start_in_process`). The script is loaded into this
+module's `_lib`, so it runs with what a test patched there. Its answer is read as
+a process's is: where it exits 2, the engine reads no answer, with what it said on
+standard error.
 
 A test whose fake `gh` is a script, rather than this tracker, answers it in this
 process too (`fake_gh_in_process`).
@@ -38,11 +40,13 @@ from typing import Any
 
 import pytest
 from click.testing import CliRunner
+from ruamel.yaml import YAML
 
 from project_kit import process as process_mod
 from project_kit.cli import main as pkit_main
-from project_kit.command_runner import diagnostic_tail
+from project_kit.command_runner import registered_commands
 from project_kit.process import PredicateFailure, PredicateRunner, ProcessEngine, load_definition
+from tests.in_process import start_in_process
 from tests.process_journal_support import enable_journal_logging
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -68,6 +72,7 @@ AUTHORED_BODY = (
 )
 
 sys.path.insert(0, str(SCRIPTS_DIR))
+import _lib  # noqa: E402
 from _lib import bootstrap_gate, session_guard  # noqa: E402
 from _lib import lifecycle_inference as inference  # noqa: E402
 from _lib import lifecycle_predicates as predicates  # noqa: E402
@@ -519,28 +524,19 @@ class World:
         ]
 
 
-def _predicate_answer(run_name: str, number: int) -> dict[str, Any] | None:
-    """What the capability's predicate code answers for `run_name`, or None
-    when no script of the capability runs it."""
-    if run_name == "detect-state":
-        return predicates.classify_state(number)
-    if run_name.startswith("detect-"):
-        return predicates.detect_state(number, run_name.removeprefix("detect-"))
-    if run_name == "gate-checkboxes-ticked":
-        return predicates.gate_checkboxes_ticked(number)
-    if run_name == "gate-pr-merged":
-        return predicates.gate_pr_merged(number)
-    return None
+#: The runner's own predicate run, before `wire` routes it through `answer_from_tracker`.
+_RUN = PredicateRunner._invoke
 
 
 def answer_from_tracker(
     runner: PredicateRunner, run_name: str, with_args: Any
 ) -> dict[str, Any] | PredicateFailure:
-    """The engine's predicate run, answered in this process by the capability's
-    own predicate code (which reads the tracker through `gh`), under its
-    script's exit-code contract: an answer the predicate could not reach is no
-    answer — the script exits 2, with what the predicate said on standard
-    error — never the payload it carries.
+    """The engine's predicate run, made by the runner itself with the script its
+    one lookup resolves started in this process (`start_in_process`). The script
+    is loaded into this module's `_lib`, so it runs with what a test patched
+    there, and reads the tracker through `gh`. Its answer is read as a process's
+    is: an answer the predicate could not reach is no answer, the script exiting
+    2 with what it said on standard error.
 
     The tracker holds this repository's issues only. A subject that is not one
     of them — a closure-fold member in another repository, `owner/repo#<n>`, or
@@ -554,14 +550,9 @@ def answer_from_tracker(
             f"the in-memory tracker holds this repository's issues only: "
             f"{runner.subject!r} {where}",
         )
-    said = io.StringIO()
-    with contextlib.redirect_stderr(said):
-        answer = _predicate_answer(run_name, subject)
-    if answer is None:
-        return PredicateFailure("could not start: no script of the capability runs it")
-    if answer.get(predicates.INDETERMINATE_KEY):
-        return PredicateFailure("exited 2", diagnostic_tail(said.getvalue()))
-    return answer
+    with pytest.MonkeyPatch.context() as patched:
+        start_in_process(patched, lib=_lib)
+        return _RUN(runner, run_name, with_args)
 
 
 def fake_gh_in_process(monkeypatch: pytest.MonkeyPatch, source: str) -> None:
@@ -600,15 +591,44 @@ def fake_gh_in_process(monkeypatch: pytest.MonkeyPatch, source: str) -> None:
     monkeypatch.setattr(subprocess, "run", run)
 
 
+def _runs(node: Any) -> list[str]:
+    """Every command a predicate in `node`, a definition or a part of one, runs."""
+    if isinstance(node, list):
+        return [run for item in node for run in _runs(item)]
+    if not isinstance(node, dict):
+        return []
+    named = [node["run"]] if isinstance(node.get("run"), str) else []
+    return named + [run for value in node.values() for run in _runs(value)]
+
+
+def _predicate_scripts() -> list[Path]:
+    """The scripts the shipped lifecycle's predicates run, each found as the
+    runner's one lookup finds it."""
+    workflow = CAPABILITY_ROOT / "schemas" / "workflow.yaml"
+    definition = YAML(typ="safe").load(workflow.read_text(encoding="utf-8"))
+    scripts = {
+        command.name: command.script for command in registered_commands(CAPABILITY_ROOT).values()
+    }
+    return sorted({scripts[run] for run in _runs(definition)})
+
+
+#: What `make_engine_repo` copies into the scratch repository's `scripts/`.
+PREDICATE_SCRIPTS = _predicate_scripts()
+
+
 def make_engine_repo(tmp_path: Path) -> Path:
     """A scratch repository holding the shipped issue-lifecycle definition, the
-    package that registers its predicates and the shape contract, with journal
-    logging on."""
+    package that registers its predicates, the scripts they run and the shape
+    contract, with journal logging on. The scripts are copies, so a test that
+    rewrites one there leaves the capability's own as it was."""
     repo = tmp_path / "engine"
     capability = repo / ".pkit" / "capabilities" / "project-management"
     (capability / "schemas").mkdir(parents=True)
     shutil.copy(CAPABILITY_ROOT / "schemas" / "workflow.yaml", capability / "schemas")
     shutil.copy(CAPABILITY_ROOT / "package.yaml", capability)
+    (capability / "scripts").mkdir()
+    for script in PREDICATE_SCRIPTS:
+        shutil.copy(script, capability / "scripts")
     defs = repo / ".pkit" / "schemas" / "_defs"
     defs.mkdir(parents=True)
     shutil.copy(REPO_ROOT / ".pkit" / "schemas" / "_defs" / "process.schema.json", defs)
