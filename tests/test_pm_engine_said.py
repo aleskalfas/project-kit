@@ -110,11 +110,11 @@ def _break(
     """Make the engine run `command` as a real script for the subjects
     `for_subject` picks — `body`, or, for None, a script that is not executable —
     while every other predicate run answers from the tracker as before. The
-    broken script is a file of its own, which the runner runs in place of the
-    one its lookup resolves, so the other subjects' runs still start the
-    shipped script."""
-    script = world.engine_repo.parent / "broken" / f"{command}.py"
-    script.parent.mkdir(parents=True, exist_ok=True)
+    broken script is a file of its own beside the one the runner's lookup
+    resolves, and runs in its place, so the other subjects' runs still start
+    the shipped script."""
+    scripts = world.engine_repo / ".pkit/capabilities/project-management/scripts"
+    script = scripts / f"{command}-broken.py"
     script.write_text("#!/usr/bin/env python3\n" + (body or "print('{}')\n"), encoding="utf-8")
     if body is not None:
         script.chmod(script.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
