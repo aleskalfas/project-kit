@@ -79,7 +79,8 @@ NEVER_HOLDS = (
 #: cannot ask, so it runs no writer.
 ASKING_TOOL = "AskUserQuestion"
 
-README = REPO / ".pkit" / "capabilities" / "living-docs" / "README.md"
+#: The capability's reference page on its agent, beside its README (ADR-069 point 3).
+AGENT_PAGE = REPO / ".pkit" / "capabilities" / "living-docs" / "agent.md"
 
 #: The storyboard's scenarios (COR-016), each with its four parts.
 SCENARIOS = (
@@ -158,11 +159,11 @@ def test_storyboard_hands_over_no_consent_and_runs_no_writer(storyboard):
     assert [c for c in handed if handed_over.CONSENT.search(c)] == []
 
 
-def test_readme_says_the_answer_is_a_person_s_decision():
-    text = README.read_text(encoding="utf-8")
+def test_the_reference_says_the_answer_is_a_person_s_decision():
+    text = AGENT_PAGE.read_text(encoding="utf-8")
     assert "the answer a page carries is yours to give" not in text
     assert "the answer a page carries is a person's decision (COR-050 point 3)" in text
-    assert 'who may run a writer is in the agents README, "Friction writers"' in text
+    assert 'Who may run a writer is in the agents README, "Friction writers"' in text
 
 
 def test_storyboard_is_declared_as_its_sibling(agent):
