@@ -21,6 +21,7 @@ engine against an in-memory GitHub (`tests/pm_lifecycle_world.py`).
 
 from __future__ import annotations
 
+import copy
 import stat
 from collections.abc import Callable
 from pathlib import Path
@@ -108,8 +109,11 @@ def _break(
 ) -> None:
     """Make the engine run `command` as a real script for the subjects
     `for_subject` picks — `body`, or, for None, a script that is not executable —
-    while every other predicate run answers from the tracker as before."""
-    script = world.engine_repo / ".pkit/capabilities/project-management/scripts" / f"{command}.py"
+    while every other predicate run answers from the tracker as before. The
+    broken script is a file of its own, which the runner runs in place of the
+    one its lookup resolves, so the other subjects' runs still start the
+    shipped script."""
+    script = world.engine_repo.parent / "broken" / f"{command}.py"
     script.parent.mkdir(parents=True, exist_ok=True)
     script.write_text("#!/usr/bin/env python3\n" + (body or "print('{}')\n"), encoding="utf-8")
     if body is not None:
@@ -117,7 +121,9 @@ def _break(
 
     def invoke(runner: PredicateRunner, run_name: str, with_args: Any) -> Any:
         if run_name == command and for_subject(runner.subject):
-            return _RUN_THE_SCRIPT(runner, run_name, with_args)
+            broken = copy.copy(runner)
+            broken._command_registry = {**runner._command_registry, command: script}
+            return _RUN_THE_SCRIPT(broken, run_name, with_args)
         return answer_from_tracker(runner, run_name, with_args)
 
     monkeypatch.setattr(PredicateRunner, "_invoke", invoke)

@@ -967,8 +967,8 @@ def test_a_failed_release_leaves_the_close_standing(ci, monkeypatch, capsys) -> 
 # The issue's example, through the real scripts and the real engine fold against
 # an in-memory GitHub (`tests/pm_lifecycle_world.py`): the EPIC has two open
 # children. Closing the first reports the EPIC held by the second; closing the
-# second reports it eligible to close. The harness answers the fold's members
-# and membership predicates through the capability's own predicate code here.
+# second reports it eligible to close. The fold's members and membership
+# predicates run as every predicate of the world does, through their scripts.
 
 
 @pytest.fixture(scope="module")
@@ -987,16 +987,6 @@ def world(lifecycle_scripts, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     s = lifecycle_scripts
     world = lw.World(lw.Tracker(), lw.make_engine_repo(tmp_path), s.ci, s.pi, s.mi, s.hist, s.cl)
     lw.wire(world, monkeypatch)
-    answer = lw._predicate_answer
-
-    def with_the_fold(run_name: str, number: int):
-        if run_name == "cascade-members":
-            return lw.predicates.cascade_members(number)
-        if run_name == "cascade-membership":
-            return lw.predicates.cascade_membership(number)
-        return answer(run_name, number)
-
-    monkeypatch.setattr(lw, "_predicate_answer", with_the_fold)
     return world
 
 
