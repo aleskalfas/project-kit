@@ -1116,6 +1116,17 @@ Also: a "use your libraries" rule was missing; checks such as fit and contrast m
 
 The reason: in the talk all of these were rules a person had to catch by reading; here only two need a reader, the look cannot drift, the checks always run, a project's taste stays its own, and one talk's goals do not become rules that outlive it.
 
+**Point 2: the shipped rules come from the canon, in two sets. Agreed (31 October).** On the first rule ("the lead answers the title, and the main visual shows that answer") the maintainer said such rules are not a project's taste but core knowledge of good design: nobody wants the opposite, and no adopter should have to write them again. The capability gives its opinion of good visual communication; adopters add their own on top. So the shipped rules are taken from the established canon, each with its source, and the talk is only the example that confirms them. They fall into two kinds, shipped as two method rule sets, both inherited by the project set the install creates:
+
+- **`COMM`: does it say the right thing?** One point per page, stated and then shown (Michael Alley's assertion-evidence); the answer and the big picture first (Barbara Minto's pyramid principle; Shneiderman's "overview first, details on demand"); each page following from the one before; words that fit the audience; facts with a named source (Tufte, "thoroughly describe the evidence").
+- **`VISUAL`: does it look right?** One focal point per page (visual hierarchy); related things grouped and aligned (proximity and alignment, Robin Williams); nothing that does not help the message (Tufte's chartjunk; Mayer's coherence principle); the same thing drawn the same way, through the library's patterns (consistency); readable where it is shown (Nancy Duarte's glance test); colour never the only signal (WCAG 1.4.1).
+
+Why two sets: a finding says which kind of failure it is ("no point" against "no focal point"), fixed by different people; and `COMM` is not visual at all, so documents could use it too. Moving it into pkit's core is a question for when a second user appears (COR-007), not now. The set names are working names.
+
+The rules are then taken one at a time, `COMM` first.
+
+- **RS-COMM-001, one point per page. Agreed (31 October):** "Where a page has a title and a lead, the lead answers the title, and the main visual shows that answer." A doc figure's caption counts as its lead. A page without a lead (a cover, a section slide, the questions) is not judged by it. The talk's example: the lead "Decisions are the source: everything else in pkit carries them out…" under "How pkit fits together", which the maintainer found did not answer the title.
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
