@@ -6,7 +6,7 @@ other gates (see [CONTRIBUTING.md](../CONTRIBUTING.md) "Running checks").
 ## Running the suite
 
 **While you build, run the tests of what you changed.** The full suite — some
-20 800 tests — is the pre-push hook's and CI's to run, not a builder's (the
+21 300 tests — is the pre-push hook's and CI's to run, not a builder's (the
 project's rules, `.pkit/rules/project.md`): run the test modules for the files
 you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates,
 `uv run pkit validate`, `uv run pkit friction check`,
@@ -183,67 +183,38 @@ It plants each bug the JSON file BUGS lists, one at a time, and runs the tests a
 REF holds them and as they are now. It exits 1 when the new tests miss a bug the
 old tests caught. The bugs of #2315 are in `tests/spot_checks/`.
 
-**The slowest modules**, by the time their tests take together, setup
-included, in one parallel pass (`uv run pytest -q -n 4 -m "not serial"
---junitxml=...`, 2026-10-01, on a 12-core Mac other runs were sharing; the pass
-summed 1 879 s of test time and took 529 s on the clock):
+**The slowest modules**, by the time their tests take together, setup included,
+measured again once #2313's slices had merged (#2329). CI's seconds are the median
+of three full runs on `main` on 30 October, from the times each slice keeps
+(`test-times-<i>-of-2`). A slice's runner has four workers. In those runs the
+parallel pass summed 3 600 to 4 900 s of test time. The local seconds are one run
+of the aggregator's two passes, `-n auto`, on 31 October, on a 12-core Mac other
+builders were sharing. That run summed 31 250 s of test time and took 53 minutes
+on the clock.
 
-| Module | Tests | Seconds | Per test | Slowest test |
-|---|---:|---:|---:|---:|
-| `test_software_analysis.py` | 45 | 233 | 5.2 | 20.7 |
-| `test_software_analysis_numbers.py` | 15 | 116 | 7.7 | 21.8 |
-| `test_software_analysis_check.py` | 27 | 98 | 3.6 | 21.1 |
-| `test_software_analysis_resolver.py` | 53 | 89 | 1.7 | 18.7 |
-| `test_friction_check.py` | 76 | 63 | 0.8 | 1.8 |
-| `test_default_branch.py` | 66 | 53 | 0.8 | 27.9 |
+| Module | Tests | CI, s | Per test | Slowest test | Locally, s |
+|---|---:|---:|---:|---:|---:|
+| `test_software_analysis_check.py` | 61 | 164 | 2.7 | 16.4 | 823 |
+| `test_software_analysis_overview.py` | 18 | 141 | 7.8 | 19.9 | 1 067 |
+| `test_living_docs_new.py` | 56 | 121 | 2.2 | 34.8 | 486 |
+| `test_software_analysis.py` | 51 | 117 | 2.3 | 8.1 | 1 432 |
+| `test_living_docs_spaces.py` | 180 | 117 | 0.6 | 7.7 | 340 |
+| `test_friction_repository.py` | 162 | 109 | 0.7 | 1.4 | 2 376 |
+| `test_self_host_documentation.py` | 41 | 100 | 2.4 | 42.1 | 121 |
+| `test_friction_check.py` | 148 | 87 | 0.6 | 1.5 | 1 613 |
 
-`test_living_docs_spaces.py` has left the table. #2315 converted it, and its 180
-tests took 23 s on the clock in a pass of their own, `-n 4`, against 127 s before
-(2026-10-29).
-
-`test_process_cascade_engine.py` has left it too. #2323 converted it, with eight
-other modules of the process engine and project-management's closure fold. Their
-288 tests took 43 s on the clock in a pass of their own, `-n 3`, against 207 s
-before (2026-10-29).
-
-`test_friction_check.py`'s row predates #2320, which commits the install of the
-friction modules once per session (`committed_adopter`). Its 148 tests and the
-164 of four other friction modules took 359 s on the clock, against 564 s before.
-Both passes ran only these modules, `-n 3`, on 2026-10-29, on a Mac other builders
-were sharing. Each of its tests still runs the change check, which reads git for its
-base.
-
-The whole-repository check's, the report's and the derived links' four modules lay
-their history on that committed install too (#2328). Their 261 tests took
-1 324 s on the clock, against 1 833 s before, in passes of their own, `-n 3`, on
-2026-10-29. What is left is git: the simplest of these tests starts some 25 git
-processes to commit its history and check it. On a Mac other builders were sharing,
-each took a third of a second.
-
-`test_software_analysis_check.py` is converted (#2319): its 61 tests took 58 s on
-the clock in a pass of their own, `-n 3`, against 102 s before (2026-10-29).
-What is left is mostly the backbone's own reading of the analysis, which each
-stamp and each check asks for.
-
-The numbering, renumbering and requirement modules are converted too (#2324),
-`test_software_analysis_numbers.py` among them. Their 214 tests took 1 549 s on
-the clock, `-n 3`, against 1 923 s before, on a machine other runs shared
-(2026-10-29). What is left is mostly `git`: one test spent 43 s of its 53 s
-waiting on 182 `git` processes.
-
-`test_software_analysis.py` and `test_software_analysis_resolver.py` are
-converted too (#2325), with ten other modules, and still rank among the slowest.
-Run back to back, `-n 3`, on 2026-10-29, the twelve modules' 452 tests took 179 s
-on the clock, against 262 s before. Before, 79 of those tests started a process
-of `pkit` or a script, and now 6 do, each marked with why. What is left is the
-stamps' and the checks' own reading of git.
+**What is left is mostly `git`.** #2313's slices took most starts of `pkit` and of
+the capability scripts out of the slow tests, and measured each area on #2313. A
+friction or analysis test still commits and reads its history through tens of
+`git` processes. On a Mac other builders share, each takes a third of a second or
+more. So these modules take five to over twenty times as long there as in CI.
 
 A software-analysis test stamps, links and writes the overview in its own
 process, through `tests/analysis_repo.py` (#2319). A script a test runs through
-`run_script`, such as the number check, still runs as a process until its
-module's slice of #2313 converts it. What its tests share is built once ("Built
-once, copied for each test", below). A test that stays slow says why in a comment
-above it.
+`run_script`, such as the number check, runs as a process, and the test carries
+the `process` mark with why. What its tests share is built once ("Built once,
+copied for each test", below). A test that stays slow says why in a comment above
+it.
 
 ## Type checking
 
