@@ -572,11 +572,21 @@ def commit_files(tree: CommitTree) -> dict[str, AnswerFile]:
 class HistoryNames:
     """Whether a name in `read` is one history agrees with (COR-062 point 5), from a
     history read from the state's commit: the named file was added in a commit that
-    first carried the name, or in an ancestor of one."""
+    first carried the name, or in an ancestor of one.
 
-    def __init__(self, history: History, blobs: BlobReader) -> None:
+    `read` reads one version of an answer file, its tree entry and its name, as
+    `read_answer_file` does. A caller that reads the same versions passes its own,
+    so each is parsed once for both (`AnswerHistory`)."""
+
+    def __init__(
+        self,
+        history: History,
+        blobs: BlobReader,
+        read: Callable[[TreeEntry, str], AnswerFile] | None = None,
+    ) -> None:
         self.history = history
         self._blobs = blobs
+        self._read = self._read_version if read is None else read
         self._reads: dict[str, frozenset[str]] = {}
         self._adds: dict[str, tuple[int, ...]] = {}
         self._carried: dict[tuple[str, str], tuple[int, ...]] = {}
@@ -617,11 +627,13 @@ class HistoryNames:
                 entry = self.history.entry(index, path)
                 if entry is None or entry.status == "D" or entry.after is None:
                     continue
-                if named not in self.reads(entry.after):
+                if named not in self.reads(entry.after, reader):
                     continue
                 added = entry.status == "A" or entry.status == "R"
                 parents = () if added else entry.before
-                if not any(state is not None and named in self.reads(state) for state in parents):
+                if not any(
+                    state is not None and named in self.reads(state, reader) for state in parents
+                ):
                     writes.append(index)
             found = tuple(
                 w
@@ -631,15 +643,18 @@ class HistoryNames:
             self._carried[key] = found
         return found
 
-    def reads(self, state: TreeEntry) -> frozenset[str]:
-        """Every name the version `state` of an answer file reads, any entry's."""
+    def reads(self, state: TreeEntry, name: str = "") -> frozenset[str]:
+        """Every name the version `state` of the answer file `name` reads, any entry's."""
         found = self._reads.get(state[1])
         if found is None:
-            raw = None if state[0] == LINK_MODE else self._blobs.read_object(state[1])
-            parsed = read_answer_file("", raw)
-            found = frozenset(name for entry in parsed.entries for name in entry.read)
+            parsed = self._read(state, name)
+            found = frozenset(read for entry in parsed.entries for read in entry.read)
             self._reads[state[1]] = found
         return found
+
+    def _read_version(self, state: TreeEntry, name: str) -> AnswerFile:
+        raw = None if state[0] == LINK_MODE else self._blobs.read_object(state[1])
+        return read_answer_file(name, raw)
 
 
 class Starts:
@@ -1542,7 +1557,8 @@ class AnswerPoints:
 
 class AnswerHistory:
     """The answer files through one history, beside each artefact's block (COR-062
-    point 6): every version of every answer file read once, by its object.
+    point 6): every version of every answer file read once, by its object — for the
+    names history agrees with too (`HistoryNames`).
 
     `dormant` — no answer file in the history — leaves every reading to the
     artefact's block, exactly as before.
@@ -1553,10 +1569,11 @@ class AnswerHistory:
         self.walker = walker
         self.blobs = blobs
         self.trees = TreeReader(blobs)
-        self.names = HistoryNames(history, blobs)
+        self._parsed: dict[str, AnswerFile] = {}
+        self.names = HistoryNames(history, blobs, self.parsed)
         self.starts = Starts(self.names, walker)
         self.paths = tuple(p for p in history.paths if is_answer_file(p))
-        self._parsed: dict[str, AnswerFile] = {}
+        self._entries: Mapping[str, tuple[tuple[int, Entry], ...]] | None = None
         self._naming: dict[str, bool] = {}
         self._at: dict[str, Mapping[str, TreeEntry]] = {}
         self._locations: dict[str, frozenset[str]] = {}
@@ -1630,17 +1647,26 @@ class AnswerHistory:
             found = self._locations[like.location] = frozenset(head_locations(self.history)(like))
         return found
 
+    def _by_location(self) -> Mapping[str, tuple[tuple[int, Entry], ...]]:
+        """Every entry of every version of every answer file in the history, by the
+        location it names, each with the log index of its version: read once, so asking
+        about an artefact walks its own entries, never every file's."""
+        if self._entries is None:
+            found: dict[str, list[tuple[int, Entry]]] = {}
+            for path in self.paths:
+                name = name_of(path)
+                for index, state in self.versions(path):
+                    for entry in self.parsed(state, name).entries:
+                        found.setdefault(entry.location, []).append((index, entry))
+            self._entries = {location: tuple(each) for location, each in found.items()}
+        return self._entries
+
     def ever_named(self, like: Artefact) -> bool:
         """Whether any answer file in the history names `like`."""
         found = self._naming.get(like.location)
         if found is None:
-            locations = self._names_artefact(like)
-            found = any(
-                entry.location in locations
-                for path in self.paths
-                for _index, state in self.versions(path)
-                for entry in self.parsed(state, name_of(path)).entries
-            )
+            named = self._by_location()
+            found = any(location in named for location in self._names_artefact(like))
             self._naming[like.location] = found
         return found
 
@@ -1707,15 +1733,12 @@ class AnswerHistory:
         return None if start is None else self.history.descendants(start)
 
     def _file_candidates(self, like: Artefact, in_entry: Callable[[Entry], bool]) -> set[int]:
-        locations = self._names_artefact(like)
+        named = self._by_location()
         return {
             index
-            for path in self.paths
-            for index, state in self.versions(path)
-            if any(
-                entry.location in locations and in_entry(entry)
-                for entry in self.parsed(state, name_of(path)).entries
-            )
+            for location in self._names_artefact(like)
+            for index, entry in named.get(location, ())
+            if in_entry(entry)
         }
 
     # --- a revalidation's value ----------------------------------------------------
