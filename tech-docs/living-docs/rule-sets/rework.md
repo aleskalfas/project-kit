@@ -1,6 +1,6 @@
 ---
 rule-set: REWORK
-version: 2.0.0
+version: 3.0.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths: [.pkit/permissions/README.md, docs/permissions/README.md]
@@ -8,10 +8,10 @@ scope:
 rules:
   RS-REWORK-001:
     status: accepted
-    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "ADR-069 point 4 decides the names. A number in a name gives the reading order a home that a test can hold the README's list to. Numbers in tens leave room for a page between two others, so adding one renames none. A rename of a shipped page owes revalidations and a changeset (ADR-069, Implications)."}
+    origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "ADR-069 point 4 decides the names. A number in a name gives the reading order a home that a test can hold the README's list to. Numbers in tens leave room for a page between two others, so adding one renames none. A rename of a shipped page owes revalidations and a changeset (ADR-069, Implications). A guide's folder takes no number, since ADR-069 point 1 names it after its reference's folder. Aleš Kalfas accepted that layout on 31 October (#2396)."}
     pkit:
       friction:
-        anchors: {record: ["ADR-069#3", "ADR-069#4"]}
+        anchors: {record: ["ADR-069#1", "ADR-069#3", "ADR-069#4"]}
   RS-REWORK-002:
     status: accepted
     origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "ADR-069 point 4 decides how a move keeps its links. A link from outside the change, such as from an adopter's page or an old message, cannot be mended by the change. It still lands where the old address stays. The pilot renamed five headings to drop their citations, and kept each old address as an HTML id (PR #2018)."}
@@ -66,9 +66,10 @@ Name a page or a subfolder that its reader reads in order with a number in tens,
   - A lookup page, which a reader looks up rather than reads in order, takes its topic as its name, with no number, such as `glossary.md`.
   - Every page but a README is read in order or looked up.
   - The folder's README lists its numbered pages and subfolders in number order. The README keeps its own name (ADR-069 point 3).
+  - A guide's folder is a lookup subfolder, named after its reference's folder, with no number, such as `docs/permissions/` (ADR-069 point 1). Its parent's README lists it by name after the numbered entries.
 - **Breaks the rule:** a guide folder on no branch holds `turning-it-on.md` and `common-tasks.md`, read in that order, and neither name says so.
 - **Keeps the rule:** the same pages on no branch, named `010-turning-it-on.md` and `020-common-tasks.md`, and a glossary beside them named `glossary.md`.
-- **Note:** ADR-069 point 4 gives this rule a test as its check, which holds each README's list to the numbers. The test comes with the first numbered folder (RS-LDOC-006), and until then a reviewer judges the list.
+- **Note:** ADR-069 point 4 gives this rule a test as its check, which holds each README's list to the numbers and skips a guide's folder. The test comes with the first numbered folder (RS-LDOC-006), and until then a reviewer judges the list.
 
 ## RS-REWORK-002 — A move keeps every address
 
