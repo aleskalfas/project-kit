@@ -1111,7 +1111,8 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | kind | a component the content may name at the top | working |
 | option, variant | a choice a component declares, such as a card's tone | working (Figma says "variants" and "component properties") |
 | design tokens, raw values, roles, component tokens | the design language as data | established terms (W3C Design Tokens) |
-| theme, mode, context | a set of values; light or dark; DAM or IBM | working |
+| theme, mode | a set of values; light or dark | working |
+| brand | the values library a piece names, such as IBM, DAM or neutral: its token values, layouts, logo and brand-only parts; "context" before the naming pass | decided (naming pass) |
 | frame | an element's box: `x`, `y`, `width`, `height` (points 4h, 19); before the naming pass, also level 6 | decided (naming pass): this meaning only |
 | recipe | a recurring arrangement, promoted after about three uses | working (Brad Frost's term) |
 | one-off | level 7 before the naming pass | replaced by "local component" (naming pass) |
@@ -1122,15 +1123,15 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | values, structure, meaning | the three kinds of content a library holds (point 4g) | working |
 | core, interface, starter | the core holds only the interface (role names, top components, named layouts, slots); the starter holds the capability's opinionated components (point 18b) | working |
 | subject | what the work is about, such as pkit; its concepts mapped to roles (point 4g) | working |
-| layouts, slot, entry point | level 6: the layouts a top component declares and a context supplies, such as a deck's cover, section and slide ("named layouts" before the naming pass); a place in a layout; a named way into a library, such as `ibm/deck` (point 4g) | layouts and slot decided (naming pass); entry point working |
-| shared core, per context, per piece | the three scopes | working |
+| layouts, slot, entry point | level 6: the layouts a top component declares and a brand supplies, such as a deck's cover, section and slide ("named layouts" before the naming pass); a place in a layout; a named way into a library, such as `ibm/deck` (point 4g) | layouts and slot decided (naming pass); entry point working |
+| shared core, per brand, per piece | the three scopes | working |
 | drafting, delivered, reused | the states of point 4d | working |
 | living | the fourth state: work that is never delivered, such as a doc figure (point 4j) | working |
 | piece | level 8: one finished item made from components, such as a deck, a standalone diagram, a doc figure or a poster; its content plus its lock | decided (naming pass) |
 | lock | the library versions a piece uses (points 4j, 4i, 18a) | working |
 | engine | the code that computes the scene: tools, formulas, text measuring | working |
 | scene | what the engine computes and every renderer draws (point 4h) | working |
-| font profile | the fonts for a group of renderers, set by the context (point 18d) | working |
+| font profile | the fonts for a group of renderers, set by the brand (point 18d) | working |
 | asks, gets | an element's two sizes: the size it asks for, the size it gets (point 19) | working |
 | public anchor | a part a component lets others point at (point 19) | working |
 | helper script | a script run while preparing, writing a checked one-off (point 21) | working |
@@ -1157,7 +1158,7 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   - "data": fits charts, but undersells slides and words.
 - **Level 7: "local component",** in the folder `components/` inside the piece; its counterpart is a library component. Chosen by the maintainer: Figma's terms for a component defined in the file and one published in a library, which is this split. The points before the naming pass say "one-off"; read it as local component. Ruled out: "one-off" and "snowflake" (Brad Frost's), which name an attitude rather than where the component lives, read as slang to non-native speakers, and contradict promotion.
 - **Promotion of a local component,** as the maintainer asked how it works. It follows from points 4c, 4i, 18b and 21:
-  1. It goes to a library its author owns: a structure library, or the starter if every adopter could use it, or a context library if it is one brand's only. Never the core, which holds only the interface.
+  1. It goes to a library its author owns: a structure library, or the starter if every adopter could use it, or a brand library if only that brand uses it. Never the core, which holds only the interface.
   2. A small building block becomes a component (level 4); a whole arrangement filled with content becomes a recipe or kind (level 5).
   3. It is generalised on the way: fixed texts become content fields, one-time choices become options, and every colour a role.
   4. It is added in the library's own repository and released as a new version, since a project's copies are read-only.
@@ -1165,7 +1166,7 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   6. A local component a helper script wrote waits for its script to become an engine tool (point 21), then is promoted as data.
 
   No `promote` command is planned: generalising needs judgment, so it is the agent's work (aspect 9).
-- **Level 6: "layouts"; "frame" keeps one meaning, an element's box.** Chosen by the maintainer after an example. The note had used "frame" for both a context's templates (4c, 4g) and an element's computed box (4h, 19), and a designer also hears Figma's frame, any container. "Layouts" is PowerPoint's, Keynote's and Google Slides' word ("Title Slide", "Section Header"), and the note already called each one a named layout. The core declares a top component's layouts and their slots; a context supplies how each is drawn; the content picks a layout per page and fills its slots; the scene gives each element a frame. Ruled out: "master" (PowerPoint's parent of the layouts, and InDesign renamed its master pages parent pages) and "template" (a file one starts from; atomic design's page skeleton; every component in today's mural-boards tool).
+- **Level 6: "layouts"; "frame" keeps one meaning, an element's box.** Chosen by the maintainer after an example. The note had used "frame" for both a brand's templates (4c, 4g) and an element's computed box (4h, 19), and a designer also hears Figma's frame, any container. "Layouts" is PowerPoint's, Keynote's and Google Slides' word ("Title Slide", "Section Header"), and the note already called each one a named layout. The core declares a top component's layouts and their slots; a brand supplies how each is drawn; the content picks a layout per page and fills its slots; the scene gives each element a frame. Ruled out: "master" (PowerPoint's parent of the layouts, and InDesign renamed its master pages parent pages) and "template" (a file one starts from; atomic design's page skeleton; every component in today's mural-boards tool).
 
   ```yaml
   # libraries/core/1.4.0/deck/deck.yaml: which layouts a deck has
@@ -1193,8 +1194,9 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   - {id: fits/visual/pyramid/level-1, frame: {x: 340, y: 520, width: 1200, height: 140}}
   ```
 - **"Slot" stays,** for a named place in a layout or a component that content fills. Chosen by the maintainer: the established term of component design (web components, Vue, Svelte, and the design systems built on them), and one word for layouts and components alike. Ruled out: "placeholder", PowerPoint's word for a layout's slot, which designers also hear as mock text or an empty field's hint, and which fits layouts only. Flagged clash: pkit's capability slots (point 24); the context tells them apart, "a layout's slot" against "a capability slot".
+- **"Brand" for the values library a piece names** (IBM, DAM, neutral), as `brand: ibm/deck`. Chosen by the maintainer. The design-tokens format the capability adopts (DTCG's Resolver, point 4f) uses "context" for one setting of any switch, light, dark or brandA alike, so the old word would mean light in the token files and IBM in the pieces. "Brand" is the word of multi-brand design systems, of DTCG's own examples, of Quarto's `_brand.yml` and of the research's Infinum case, and matches "brand-only parts" and the brand guide. DAM is a client's brand; neutral is an unbranded one. The points before the naming pass say "context"; read it as brand. Ruled out: "theme" (the values only, without layouts and logo) and "system" (Spectrum's switch, which collides with design system).
 
-**A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --context ibm/deck --subject pkit` writes two files; the rest appear when they are needed:
+**A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --brand ibm/deck --subject pkit` writes two files; the rest appear when they are needed:
 
 ```
 visual/                                  the capability's place in the project (a setting)
@@ -1220,7 +1222,7 @@ visual/                                  the capability's place in the project (
 ```yaml
 schema_version: 1
 top: core/deck                    # its top component (4f)
-context: ibm/deck                 # the context's entry point (4g)
+brand: ibm/deck                   # the brand's entry point (4g)
 subjects: [pkit]
 languages: [en, cs]
 state: drafting                   # drafting, delivered or living (4d, 4j)
