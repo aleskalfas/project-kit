@@ -117,7 +117,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
 10. **The skills.** The build loop (change, generate, render, verify) as a skill, and how a deck or a diagram is authored.
 11. ~~**The rules.** Which of the talk's style rules the capability ships, and which stay a project's own.~~ Decided (31 October): two method rule sets, `COMM` and `VISUAL`, grounded in a decision record of the capability for its rules; the content stays YAML and pkit is fixed (#2416); project-kit's set inherits `WRITE` too (see "Discussion", point 11).
 12. ~~**Credentials, permissions and the sandbox**, per renderer that talks to a service. Since renderers stay plugins of one capability (point 18c), it decides how the Mural plugin's network access and credentials reach only the projects that use it.~~ Decided (31 October): one sign-in per service, kept per person outside every repository, shared by every capability through the backbone; a service's hosts allowed, each by its exact name, once a project turns on the Mural renderer (#2418, #2419; see "Discussion", point 12).
-13. **Output.** PDF, images, a set per language, and the translation workflow. The maintainer asked (31 October) that the capability carry both, the know-how included:
+13. **Output.** PDF, images, a set per language, and the translation workflow. **Decided (31 October):** every export kept and numbered in the piece's folder; a layered glossary; translations anchored to their source, with the translator as their fixer (see "Discussion", point 13). The maintainer asked (31 October) that the capability carry both, the know-how included:
     - **Outputs.** Preparing what is handed out, such as a PDF of a deck, one per language, a page per slide in order. The Friday talk needed a script of its own for it, because Mural exports only the whole board (`2026-10-29-friday-talk-tools/export_pdf.py`; use case 8).
     - **Variations per language.** The same work in several languages, from material of the same structure (use case 7).
     - **Translation know-how, shipped in the capability.** What the Czech version taught: translate a slide from its meaning, not word for word, one translator per slide; keep the English words developers say (capability, engine, slot); build each sentence the target language's way; one glossary, one word for one thing; a review by a native speaker. The lessons are in the Friday talk's note, "The Czech version".
@@ -1230,6 +1230,18 @@ decision record:
 ```
 
 Set aside: a glossary per piece only (every pkit piece repeats it, and the copies drift), and the project's glossary from software-analysis (it says what a term means, not how to translate it, and reading it would join two capabilities, point 24's work; later, a notation's term could anchor to the analysis term it translates).
+
+**A translation anchors to its source. Agreed (31 October).** After the Czech version was made, an edit to an English slide left its Czech page out of date without a sign. pkit already has the means: an artefact anchors to what it rests on, the change check flags it when that changes, and an anchor can name a part of a YAML file by its key path (COR-071, proposed in PR #2420).
+- **`piece.yaml` names the source language** (`source: en`); the others are its translations.
+- **Each translation anchors to its source, page by page** (`content.en.yaml#slides/install`), written by the capability when a language or a page is added, never by hand.
+- **An edit to an English page flags the Czech file**, naming the page.
+- **The translator is the fixer of translations** (DEC-056): it is read-only and owns no files, as a fixer must. After a merge it proposes the new Czech for each flagged page, and the person accepts, rewords or refuses each one in a batch, which is the native-speaker review (9).
+- **A delivered piece does not move**, being locked; a draft's pages are translated again on demand.
+- **It needs #2416 built.** The first slice keeps its two languages in step by hand.
+
+Set aside: a record of the capability's own, a fingerprint of the English kept with each translated page and listed by `pkit visual check` (it works before #2416, but it is a second mechanism beside pkit's, unseen by the reviewers and the fixers), and no tracking at all (every change translates the whole file again, rewriting reviewed Czech).
+
+Point 13 is decided.
 
 ## Architect's review (31 October)
 
