@@ -8,6 +8,8 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 **In plain terms:** a place may say that it reads *data files*, YAML files whose whole content is data. Each YAML file such a place matches is then an artefact, as a Markdown document with front matter is. Rule sets reach it, anchors name it, and it carries the methodology's container at the top of its data. An anchor names a part of it by the keys that lead to the part, where a document's parts are its headings.
 
+The file's schema marks which of its fields hold prose. A rule that judges prose reads only those fields, never every string. Any other reader of a data file's prose reads the same marks, whether a place reads the file or not.
+
 A place that does not say so reads documents only. The methodology's own YAML files, such as its configuration, answer files and sidecars, never become artefacts. Any other YAML file stays data only until a place says it reads it. A project's place never turns a component's own files into artefacts. Nothing that exists changes until someone declares such a place.
 
 ## Context
@@ -22,15 +24,18 @@ A YAML file is no document. It can still be what an artefact is: something that 
 
 Not every YAML file should become one. A project's places often hold configuration, a site generator's data or examples beside their documents. A component may keep YAML that a tool rewrites at every run beside the content its rules judge. The methodology also keeps its own settings and bookkeeping in YAML, at locations its records fix.
 
+A rule that judges prose reads a document's text. A data file's text is not all prose. It also holds ids, references, paths and code, which are not prose.
+
 ## Decision
 
-**A place may say that it reads data files, and each YAML file it matches is then an artefact read from its data as front matter. An anchor names a part of one by its key path. The methodology's own YAML files never are such artefacts, and a project's place leaves a component's files to the component.**
+**A place may say that it reads data files, and each YAML file it matches is then an artefact read from its data as front matter. An anchor names a part of one by its key path, and the file's schema marks the fields a rule on prose reads. The methodology's own YAML files never are such artefacts, and a project's place leaves a component's files to the component.**
 
-Four terms recur:
+Five terms recur:
 - A **data place** is a place that says it reads data files (point 1).
 - A **placed data file** is a YAML file that a data place reads (points 1 and 2). It is one of the data files a schema may bind (COR-023), read by a place. Which file names are YAML is fixed by the backbone, the same in every project.
 - Its **data** is the one YAML document the file holds, read as front matter is. Its top is a mapping.
 - A **key path** names a value inside the data. It joins with `/` the keys from the data's top down to the value. It names an item of a list by its `id` (point 5).
+- A **rule on prose** is a rule whose text judges prose, what a writer writes for people to read. It may judge other things too (point 8).
 
 The records on anchors, connection points and types speak of an artefact's front matter (COR-050, COR-053 point 10, COR-056). There they mean a placed data file's data too.
 
@@ -107,18 +112,43 @@ A placed data file is its data, so it never keeps it in a sidecar (COR-063).
 - **Validation** fails a sidecar beside a placed data file, whatever its type allows.
 - **The backbone never reads one** as a placed data file's data.
 
-### 8. A rule reads a placed data file's text values
+### 8. The file's schema marks its prose, and a rule on prose reads only that
 
-A rule set reaches a placed data file as it reaches any artefact, through its scope's paths and types (COR-051 point 2). The backbone's one answer of which rules bind holds placed data files too (COR-051 point 7).
-- **Its words.** Where a rule, a check or a reviewer reads an artefact's words, a placed data file's words are its text values outside any container. Keys and comments hold no words. Nor do values that YAML reads as numbers, booleans or dates.
-- **Prose and other text.** Some text values hold no prose, such as an id, a path or a name from a fixed list. They give a rule on prose nothing to judge, and a reviewer tells them apart by reading them. A check that cannot tell them apart reads only the fields that its declaration, under the rule set's checks, names (COR-051 point 2).
-- **One passage each.** Each text value is a passage of its own, read as the rule reads a block of a document's text, any markup in it included. A finding names the value's line, and its key path where the value has a name.
-- **No body.** A placed data file has no headings and no sections. A rule that judges a body judges nothing there.
+A rule set reaches a placed data file as it reaches any artefact, through its scope's paths and types (COR-051 point 2). The backbone's one answer of which rules bind holds placed data files too (COR-051 point 7). Which of the file's values hold prose is the format's to say, once, in its schema.
+- **The mark.** The schema the file's binding names (COR-023) marks each field that holds prose. The mark is the annotation keyword `x-pkit-prose`, set to true, on the field's own schema in the JSON Schema companion. JSON Schema 2020-12 asks a validator to read a keyword it does not know as an annotation, so the mark changes no validation.
+  - **A format with no prose** says so with the mark set to false at its schema's root.
+  - **On a field,** a mark set to false marks nothing.
+- **Its prose.** A placed data file's prose is each text value its schema marks. A value is marked where the schema, applied to the data without any container, gives it the mark, as JSON Schema collects annotations.
+  - **A list or a mapping.** A mark on one marks no value inside it, so a list of passages marks its items' schema.
+  - **A collection file.** An entry's prose is the marked values within it.
+- **Never prose.** An id, a reference, a path, a name from a fixed list or a line of code is never prose. A schema marks none of them. Keys and comments are never prose, whatever the schema marks. Nor are values that YAML reads as numbers, booleans or dates.
+- **One answer for every reader.** The backbone answers, at each state, which values of a file are its prose. It gives them in the file's order, each with its line, and its key path where it has one.
+  - **Read through the binding.** The answer comes from the file's data, its binding and the schema the binding names. Places, types and friction take no part in it, so it holds for any file a binding binds, placed or not.
+  - **Rules, checks and reviewers.** A rule on prose, and each check and reviewer that judges one, reads only that answer's values in a placed data file.
+  - **Any other reader** that needs a file's prose reads the same answer, such as one that translates it.
+- **Nothing marked.** A rule on prose finds nothing to judge in a placed data file whose schema marks no field, or that binds no schema. It never reads every string instead.
+  - **Reported.** Validation reports such a file that an accepted rule binds on, without failing. The report names the file's schema and its owner, or says the file binds none. It leaves out a file whose schema says the format holds no prose.
+  - **Whatever the rule.** Validation cannot tell a rule on prose from another rule, so it reports the file whatever the rule judges.
+- **Prose that cannot be read.** Where the backbone cannot read a file's prose, its answer says so, and never gives an empty answer instead. A rule on prose then cannot be judged there, so a reviewer does not approve (COR-057 point 3). Two cases:
+  - **The file fails its schema.** JSON Schema keeps no annotation from data its schema fails. Validation fails the file (point 6).
+  - **The backbone cannot collect the schema's annotations,** as where the schema uses a keyword its reading does not follow.
+- **One passage each.** Each marked value is a passage of its own, read as the rule reads a block of a document's text, any markup in it included. A finding names the value's line, and its key path where the value has a name.
+- **Other rules.** A rule not on prose reads what it judges as it does in a document, such as ids or every character of a file. So does a rule on prose, for what else it judges. A rule's text says whether it judges prose. Where the text does not settle it, a finding under the rule is a passage for a person (COR-057 point 3).
+- **No body's structure.** A placed data file has no headings, no sections and no lead. A rule on a body's structure judges nothing there.
+- **A document's front matter** is not this point's. What a rule on prose reads there is left as it was.
 
 ### 9. A writer keeps what is not its own
 
 - **The backbone's writers** write a placed data file's container and leave the rest of the file as it was, its comments and layout included. One is the after-merge status job (COR-050 point 10). A container a writer adds goes after the own fields it sits beside.
 - **A component's writers** that rewrite a placed data file keep its container, and every other key they do not own.
+
+### 10. A change owns the values it newly marks as prose
+
+A change can newly mark a value of a placed data file as prose, by an edit of the schema or of the data. It then brings the artefact that holds the value under each rule on prose that binds on it at the base and the head (refinement of COR-057 point 2).
+- **When.** The backbone's answer holds the value as prose at the head and not at the base, and the file passes its schema at both.
+- **What the change owns.** For that rule, it owns only the values it newly marks, as the head holds them. A break there takes its kind as COR-060 point 1 says.
+- **What the reviewer is given.** The backbone gives the rule-set reviewer the values a change newly marks as prose, beside the artefacts it brings under a rule.
+- **Taking a mark off** takes a value out of what the rules on prose read, and brings nothing under a rule.
 
 ## Rationale
 
@@ -148,7 +178,7 @@ The backbone knows its own location rules, so the line is one it can draw. Leavi
 **Why a collection is read as front matter's is.** One reading serves both forms, so a reader who knows a collection file in Markdown knows one in YAML. The cost: data often holds mappings at its top. A key named as the container, inside one of them, would make the file read as a collection. So a data format leaves that key free at its top and at the top of each mapping its top holds.
 
 **Why the content is the data, compared parsed.** A placed data file has no body. What its readers and its tools read is its data, so its data is what holds against its anchors. Front matter's fields are compared parsed (COR-050), and the data is front matter without a body.
-- **Comments.** A comment is no content. A note a person keeps in a comment escapes friction and the rules, so a component that wants notes judged keeps them in a field.
+- **Comments.** A comment is no content. A note a person keeps in a comment escapes friction and the rules. So a component that wants notes judged keeps them in a field its schema marks as prose.
 - **Values YAML types.** A value YAML reads as a number, a boolean or a date compares as that value. So a change between two spellings of one value is no change. Where a field holds words, its binding's schema asks for text, and validation fails such a value.
 
 **Why a key path names a part.** A document's sections are named by its headings, which its writer chose. A data file's values are mostly named by keys its schema chose. So a key path names a part as stably as a heading names a section. A list's positions move at each insertion, so an item is named by its `id`.
@@ -162,8 +192,31 @@ The backbone knows its own location rules, so the line is one it can draw. Leavi
 
 **Why the container stays in the file.** The container is bookkeeping, as COR-063 says of a document's data. Kept in the file, it asks a component's writers to keep it (point 9), and its schemas to admit its key. A sidecar would spare both, but it would give the container two homes, a permission and the rename hazard of COR-063 point 9. No component needs one yet.
 
-**Why its text values are its words.** Rules judge what an author wrote, and in a data file that is mostly its text values. Keys are mostly the schema's names, the same in every file it binds. A rule on words that read them would judge the schema.
-- **The cost.** Some keys are content, such as a term keyed by its own words, or a table keyed by language. A rule on words does not read them. A format that wants such words judged keeps them in values.
+**Why the schema marks the prose.** A rule on prose judges what an author wrote for people to read. A data file holds other text too, such as ids, references, paths and code. Only the format knows which of its fields hold prose, and its schema already says what each field holds. Marked there, beside each field, the prose has one home, and every reader reads the same values.
+- **Not every text value.** A rule on prose would judge an id or a line of code, and a translation would change one. A reviewer that told them apart by reading would judge differently from run to run. A check could not tell them apart at all.
+- **Not each rule set's declaration.** A rule set's author would have to know the fields of every format its scope reaches. Each set would name them again, and the copies would drift as a format changes. A reader outside the rule sets, such as a translation, would find no marking to read.
+- **Keys and comments.** Keys are mostly the schema's names, the same in every file it binds, so a rule on prose that read them would judge the schema. A comment escapes the rules on prose as it escapes friction (point 4).
+- **The costs:**
+  - A format's schema must mark its prose before a rule on prose judges anything in a file it binds. A file that binds no schema holds no prose. A project marks the prose of a format of its own in a schema it keeps, such as one of a capability it incubates (COR-031).
+  - Some keys are content, such as a term keyed by its own words, or a table keyed by language. No mark reaches them, so a format that wants such words judged keeps them in values.
+  - A component's schema decides which values a project's rules on prose read in its files. So a component's release can bring text under a rule, as COR-057 already accepts ("Why a change owns the whole of what it brings under a rule"). A project can neither add a mark there nor take one off, and asks the component's owner instead.
+  - A break in a value a new mark reaches can hold the change that upgrades the component. Its ways out are COR-060 point 2's, such as a scope that leaves the file out. The component's release says so, since a mark that changes is a surface change of it (Implications).
+
+**Why an annotation keyword.** JSON Schema 2020-12 asks a validator to read a keyword it does not know as an annotation, so the mark changes no result. The backbone reads the mark as JSON Schema collects annotations. The mark then follows the data through references, combined schemas and the branch of a choice the data takes.
+- **A choice of kinds.** A slide's body may be prose in one kind of slide and code in another. Only the branch the data takes gives the mark, so only the prose is marked. A list of paths, or a walk of the schema alone, would mark both.
+- **A gate, as for references.** COR-029 gates references by an annotation on the field, rather than reading every value. The prose mark gates the rules on prose the same way.
+- **The prefix.** The keyword takes the prefix of the methodology's other annotations (COR-019, COR-029). This record says how the prose mark is read, and those keep their own reading. So a schema's author should not expect them to reach the values the prose mark reaches.
+- **Standard keywords** say other things, as the alternatives below show.
+
+**Why a file with nothing marked is reported, never failed.** Many data files hold no prose, and validation cannot tell a rule on their data from a rule on prose. Failing would fail a project for a component's schema, which it cannot correct in its own files (COR-055 point 1). Silence would let it take its prose for judged where nothing was read. A report names the schema's owner, who marks its prose or says the format holds none, and the report goes.
+
+**Why prose that cannot be read is said, never left empty.** JSON Schema drops every annotation once the data fails, so one unrelated error would take all of a file's prose out of the rules' reach. A reading that misses a keyword would drop marks as silently. An empty answer would then read as a file with nothing to judge, and a reviewer would approve it. An answer that says the prose cannot be read keeps the unjudged rule in view, as COR-057 point 3 asks.
+
+**Why a change owns the values it newly marks.** No rule on prose has judged a value a new mark reaches. If the change that marks it did not own it, no change would, and the rule would claim text nobody checks (COR-057, "Why a change owns the whole of what it brings under a rule"). A data place a component adds brings its files under the rules, owned by the change that upgrades the component. A place added first and marked later would bring the same prose under the same rules with no owner.
+- **Rules on prose only.** A rule on anything else read the value before it was marked. Owning it for that rule would make the change answer for that rule's past breaks.
+- **The artefact is brought under the rule.** COR-057's points, its gate contributions and its listing for a gate all read an artefact brought under a rule. The change owns only the marked values, but the artefact is brought under the rule, so all of them reach it.
+- **Passing at both states.** A change that mends a file its schema failed makes every value readable again. It does not own them all for that, since no mark changed. The cost: a change that both mends such a file and marks a value does not own that value.
+- **Taking a mark off** takes values out of what the rules read, as a rule that stops binding takes text out of its reach. Nothing then needs an owner.
 
 **Why core.** Friction, validation, rule sets and every component that judges a change by its paths must agree on which files are artefacts. Components that must not depend on one another cannot each decide it. Nothing here names a discipline.
 
@@ -184,28 +237,48 @@ The backbone knows its own location rules, so the line is one it can draw. Leavi
 - **Keys joined by `.`.** Not taken. A dot can sit in a key as a slash can, such as in a version or a file name. The slash is the separator that readers of a schema know.
 - **A part standing on its value alone.** Not taken. A new schema version that changes a value's meaning would flag nothing anchored to it.
 - **Comments as content.** Not taken. Front matter's comments are no content either, and no tool that reads the data reads them.
+- **Every text value as prose, told apart by the reviewer.** Rejected. A reviewer's judgement varies from run to run, and a check cannot tell an id from a sentence. The marking would live in no file, so readers other than the rules, such as a translation, would have none to read.
+- **Marking in each rule set, in its checks' declarations** (COR-051 point 2). Rejected. A rule set's author would have to know every format's fields, and each set would repeat them. The marking would have as many homes as there are sets, and readers outside the rule sets would have none.
+- **A list of the prose fields apart from their schemas,** such as in the schema's YAML file or on the data place. Rejected. It would drift from the schema that defines the fields, so a field renamed in one would be missed in the other.
+- **A standard keyword, or a vocabulary, as the mark.** Not taken.
+  - `contentMediaType` says how a string's content is encoded, and an id and a sentence are both plain text. A schema may still give it beside the mark, to say a passage's markup.
+  - `format` names a string's syntax, for validation. A validator that asserts formats may refuse one it does not know.
+  - `title` and `description` are words for people, and no reader can rely on them as a mark.
+  - A vocabulary of the methodology's own, declared through `$vocabulary`, would need a meta-schema of its own for one keyword.
+- **Marks in the data, such as a YAML tag on each prose value.** Rejected. Every file and every language's copy would repeat them, and a writer would drop them. A YAML tool that does not know the tag may refuse the file.
+- **A record of its own for the prose mark,** as COR-029 has for its annotation. Not taken. The mark exists so that a rule finds the prose in a placed data file, which this record decides. A record of its own would split that reading across two records.
+- **A rule declaring that it judges prose,** in a field of its entry. Not taken now. It would make validation's report and a reviewer's reading of a rule exact. It would cost a field on every rule (COR-051 point 2), and a rule's text already says what it judges.
+- **A mark that changes bringing nothing under a rule,** its values judged where a change edits them. Rejected. The rules on prose would claim values that none of them ever judged, and no change would own them, the gap COR-057 rejects. A data place added already marked would bring its prose under the rules with an owner, and one marked later without.
+- **Ownership of a newly marked value for every rule that binds on its file.** Rejected. A rule not on prose read the value before. The change would then answer for that rule's past breaks, which COR-057 keeps from a rule that binds at both states.
+- **A format's prose read from a file its schema fails,** from the parts that pass. Not taken. JSON Schema keeps no annotation from failing data, so the backbone would need a reading of its own that no other tool shares.
 - **Other formats, such as JSON or TOML, now.** Not taken now. No component needs one, and each would need a container form of its own.
 
 ## Implications
 
 - **The backbone ships** the declaration on a place, in the package-metadata schema and the configuration schema. It ships the reading of a placed data file wherever it reads an artefact or a placed file, at every state.
   - **Validation's findings:** a placed data file whose data is no mapping, and a sidecar beside one. Also a part anchor on one that is dead, ambiguous or refused.
-  - **Reports that do not fail:** a project data place that yields to a component's place, and one component's data place over another's own place.
+  - **Reports that do not fail:** a project data place that yields to a component's place, and one component's data place over another's own place. Also a placed data file that an accepted rule binds on and whose schema neither marks a field as prose nor says its format holds none. Also such a file that binds no schema.
+- **The backbone reads the prose mark** as JSON Schema collects annotations, and gives one answer of a file's prose at each state (point 8). Checks, reviewers and components' tools read it through the backbone's machine-readable output.
+  - **Its build** records which evaluator collects the annotations, and what that evaluator does not follow.
+  - **Schema validation** refuses a mark that is no boolean, and a mark beside a reference annotation (COR-029), `enum` or `const`. It also refuses a schema that marks a field and says at its root that the format holds no prose.
+  - **The backbone's listing of what a change brings under a rule** names the artefacts a mark brings under one, with the values newly marked (point 10).
 - **The backbone checks a placed data file twice:** its containers against the backbone's schema, and its own fields against its binding, without the containers. The binding's validator and friction read the same file names as YAML.
 - **The backbone's machine-readable output** says, for each artefact, whether its file is a document or a placed data file. A component that lists artefacts tells the two apart there, rather than taking every artefact for a document.
 - **The backbone's writers** write a placed data file's container in place, and keep the rest of the file as it was.
-- **The rule-set reviewer's instructions** read a placed data file's text values as its passages (point 8).
-- **The references** for package metadata, the backbone configuration, the schemas and anchors document the declaration and the key path. They list the backbone's own location rules, whose files point 2 leaves out.
+- **The rule-set reviewer's instructions** read only the prose answer's values for a rule on prose, each as a passage of its own (point 8). They judge a newly marked value as text the change owns (point 10).
+- **The references** for package metadata, the backbone configuration, the schemas and anchors document the declaration, the key path and the prose mark. They list the backbone's own location rules, whose files point 2 leaves out.
 - **A component that keeps content as YAML** may declare data places, and needs a backbone that reads the declaration. It covers, with a place or a held folder of its own, the folders whose other YAML files must stay data only.
   - **Its data format** leaves the methodology's key free at its top, and at the top of each mapping its top holds. It names by an `id` text field each list item that an anchor should reach.
-  - **Its schemas,** where an editor applies them to the whole file, admit that key, so an anchored file reads as valid there.
+  - **Its schemas,** where an editor applies them to the whole file, admit that key, so an anchored file reads as valid there. They mark each field that holds prose, and no other.
   - **Its commands** that rewrite a placed data file keep the container.
 - **A component's release** that adds or withdraws a data place, or changes the path of one, changes which artefacts exist. That is a surface change of the component (COR-010).
   - **Withdrawing one** makes the anchors on its files dead.
   - **Adding one** brings its files under every rule set whose scope reaches them, the project's own included. The change that upgrades the component then owns their text for those rules (COR-057 point 2).
+  - **Marking a field as prose, or taking a mark off,** changes what every rule on prose reads in the files the schema binds. That is a surface change of the component too. A new mark brings the values it reaches under the rules on prose, and the change that upgrades the component owns them (point 10).
 - **A project** may say that its own places read data files, and needs a backbone that reads the declaration.
 - **Nothing changes until a place says it reads data files,** so no migration is due (COR-010). Declaring a data place changes how its files compare for a path anchor, another owner's included. From then on, an edit of only a comment, or only a container, is no change to them.
 - **Records refined in place,** atomically with this record's acceptance:
+  - COR-023: validation of a placed data file's binding reads it without its containers
   - COR-050 point 1: a place may read data files, each read as front matter with no body
   - COR-050 point 2: a value of a placed data file is a part, named by its key path. The record's sections read as such values too.
   - COR-050 point 5: an anchor on a value of a placed data file stands on that value and the binding's fields
@@ -214,7 +287,7 @@ The backbone knows its own location rules, so the line is one it can draw. Leavi
   - COR-053 point 10: the container sits at the top of a placed data file's data
   - COR-056 point 3: only data places type a placed data file
   - COR-056 point 4: a placed data file declares its kind at the top of its data
+  - COR-057 point 2 and its Rationale: a change owns a value it newly marks as prose, for each rule on prose
   - COR-062 point 1: an answer names a placed data file by its path
   - COR-063 point 2: no place reads a sidecar as a placed data file
   - COR-063 points 3 and 4: a sidecar beside a placed data file is never read, and validation fails it
-  - COR-023: validation of a placed data file's binding reads it without its containers
