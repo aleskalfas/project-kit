@@ -130,7 +130,7 @@ The single approval gate of Scenario 3 is a turn the agent waits on. Booted as t
 >
 > **User:** Approve.
 >
-> **living-docs:** *Drafting the changes the plan names…* Four reviewable changes are in .agent-workspace/living-docs/onboarding/: roots and definitions, user pages, technical pages with the architecture split, and mapping anchors — each a diff and a pull-request body citing its evidence. Nothing was applied; they are yours to review and open.
+> **living-docs:** *Drafting the changes the plan names…* Four reviewable changes are in .agent-workspace/living-docs/onboarding/: roots and definitions, user pages, technical pages with docs/architecture.md moved whole, and mapping anchors — each a diff and a pull-request body citing its evidence. Nothing was applied; they are yours to review and open.
 
 ### Behind the scenes
 

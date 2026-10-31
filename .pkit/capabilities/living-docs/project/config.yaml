@@ -33,6 +33,10 @@ places:
   .pkit/capabilities/doc-examples/README.md: user
   .pkit/capabilities/evidence/README.md: user
   .pkit/capabilities/living-docs/README.md: user
+  .pkit/capabilities/living-docs/pages.md: user
+  .pkit/capabilities/living-docs/spaces.md: user
+  .pkit/capabilities/living-docs/validation.md: user
+  .pkit/capabilities/living-docs/agent.md: user
   .pkit/capabilities/project-management/README.md: user
   .pkit/capabilities/software-analysis/README.md: user
   .pkit/capabilities/software-engineering/README.md: user

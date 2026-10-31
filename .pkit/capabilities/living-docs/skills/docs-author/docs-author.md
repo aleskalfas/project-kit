@@ -21,6 +21,10 @@ reads:
     - .pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md
     - .pkit/capabilities/living-docs/decisions/DEC-003-guide-kind.md
     - .pkit/capabilities/living-docs/README.md
+    - .pkit/capabilities/living-docs/pages.md
+    - .pkit/capabilities/living-docs/spaces.md
+    - .pkit/capabilities/living-docs/validation.md
+    - .pkit/capabilities/living-docs/agent.md
     - .pkit/capabilities/living-docs/rule-sets/ldoc.md
     - .pkit/capabilities/living-docs/project/config.yaml
     - .pkit/project/config.yaml
@@ -33,7 +37,7 @@ This is the **living-docs** capability's authoring skill. It covers the two thin
 - **The command owns what it writes:** a page's front matter from its template, a definition's scope and pin, and the check of the write.
 - **This skill owns the choices behind it:** which space, which kind, which reader, where the file goes, and what each statement rests on.
 
-The rule is [living-docs:DEC-001-living-docs-discipline], and the shared rules are `LDOC`, in `.pkit/capabilities/living-docs/rule-sets/ldoc.md`. The layout, the configuration and every command are in `.pkit/capabilities/living-docs/README.md`.
+The rule is [living-docs:DEC-001-living-docs-discipline], and the shared rules are `LDOC`, in `.pkit/capabilities/living-docs/rule-sets/ldoc.md`. Every command is in `.pkit/capabilities/living-docs/README.md`. A page's fields and kinds are in `pages.md` beside it, and the layout and the configuration are in `spaces.md`.
 
 ## Acceptance gate
 

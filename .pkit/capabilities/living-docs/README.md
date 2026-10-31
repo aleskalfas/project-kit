@@ -1,240 +1,90 @@
 ---
-reader: user
+reader: act-ai-agent
 kind: reference
 pkit:
   friction:
     anchors:
       path:
-        - .pkit/capabilities/living-docs/scripts/**
-        - .pkit/capabilities/living-docs/schemas/**
-        - .pkit/capabilities/living-docs/agents/**
-        - .pkit/capabilities/living-docs/templates/**
+        - .pkit/capabilities/living-docs/scripts/new.py
+        - .pkit/capabilities/living-docs/scripts/_lib/stamp.py
+        - .pkit/capabilities/living-docs/scripts/fill-doc-check.py
+        - .pkit/capabilities/living-docs/scripts/_lib/doc_check.py
+        - .pkit/capabilities/living-docs/scripts/validate.py
+        - .pkit/capabilities/living-docs/schemas/readers.schema.json
+        - .pkit/capabilities/living-docs/schemas/config.schema.json
+        - .pkit/capabilities/living-docs/schemas/reading-evidence.schema.json
         - .pkit/capabilities/living-docs/skills/**
-        - .pkit/capabilities/living-docs/review-contributions.yaml
-      record: ["living-docs:DEC-001", "living-docs:DEC-002", "living-docs:DEC-003", "doc-examples:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "COR-062#1", "COR-062#7", COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-053", "project-management:DEC-056", "software-analysis:DEC-001#10"]
-      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare", ".pkit/capabilities/project-management/README.md#starting-the-fixers--fix-drift", ".pkit/lifecycle/README.md#the-methodologys-literals", ".pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping", ".pkit/cli/README.md#capabilities--two-ways-in", ".pkit/cli/README.md#configuration-file", ".pkit/cli/README.md#config-set-key-value---yes", ".pkit/cli/README.md#docs-record-location-capability-name---dry-run", ".pkit/cli/README.md#repository-base---base-ref---json", ".pkit/cli/README.md#sync", ".pkit/cli/README.md#status", ".pkit/cli/README.md#validate", ".pkit/cli/README.md#friction-check---base-ref---head-rev---json", ".pkit/cli/README.md#friction-debt---json", ".pkit/cli/README.md#friction-explain-artefact---json", ".pkit/cli/README.md#friction-artefacts---at-rev---json", ".pkit/cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run", ".pkit/cli/README.md#rule-sets-reach-path---at-rev---preview---json", ".pkit/cli/README.md#connections-resolve-address---json"]
+      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002", "living-docs:DEC-003"]
+      artefact:
+        - RS-LDOC-003
+        - .pkit/capabilities/living-docs/pages.md#
+        - .pkit/capabilities/living-docs/pages.md#types
+        - .pkit/capabilities/living-docs/pages.md#a-pages-fields
+        - .pkit/capabilities/living-docs/pages.md#sources
+        - .pkit/capabilities/living-docs/pages.md#visual-elements
+        - .pkit/capabilities/living-docs/pages.md#the-kinds-templates
+        - .pkit/capabilities/living-docs/spaces.md#the-space-definition-template
+        - .pkit/capabilities/living-docs/spaces.md#the-shared-method-ldoc
+        - .pkit/capabilities/living-docs/validation.md#the-command
+        - .pkit/capabilities/living-docs/validation.md#what-a-page-mentions-and-does-not-anchor
+        - .pkit/capabilities/living-docs/agent.md#the-review-contribution
+        - .pkit/capabilities/living-docs/agent.md#onboarding
+        - .pkit/capabilities/living-docs/spaces.md#
+        - .pkit/capabilities/living-docs/spaces.md#declaring-the-spaces
+        - .pkit/capabilities/living-docs/spaces.md#each-definitions-scope
+        - .pkit/capabilities/living-docs/validation.md#
+        - .pkit/capabilities/living-docs/agent.md#
+        - .pkit/capabilities/living-docs/agent.md#what-it-does
+        - .pkit/capabilities/living-docs/agent.md#as-the-fixer-of-pages
+        - .pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare
+        - .pkit/lifecycle/README.md#the-methodologys-literals
+        - .pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping
+        - .pkit/adapters/claude-code/README.md#deploy-skillssh
+        - .pkit/cli/README.md#capabilities--two-ways-in
+        - .pkit/cli/README.md#config-set-key-value---yes
+        - .pkit/cli/README.md#repository-base---base-ref---json
+        - .pkit/cli/README.md#sync
+        - .pkit/cli/README.md#status
+        - .pkit/cli/README.md#validate
+        - .pkit/cli/README.md#friction-check---base-ref---head-rev---json
+        - .pkit/cli/README.md#friction-check---all---json
+        - .pkit/cli/README.md#friction-checks
+        - .pkit/cli/README.md#friction-debt---json
+        - .pkit/cli/README.md#friction-explain-artefact---json
+        - .pkit/cli/README.md#connections-resolve-address---json
 ---
 
 # living-docs capability
 
-Keep your documentation **true for the people who read it**, even when an agent writes most of it. Documentation is organised into spaces by audience: user-facing docs for people who use the system, and technical docs for the people and agents who build it. Every page names its reader and is anchored to what makes it true. When those anchors change, drift is detected, and an agent proposes the fix for a person to review. The rule is in [living-docs:DEC-001-living-docs-discipline].
-
-## How it works
-
-- **Spaces.** A user space and a technical space, kept separate: neither root lies inside the other. You can add others. Each space's *definition* (its rules) lives in the technical space.
-  - **Places.** A space can also include places the project declares — inside a root, where they inherit that root's space, or outside every root, such as the repo's top-level README, where the capability's project configuration assigns them to a space. A new page of the user or technical space goes under that space's root by default. A new page of any space may go into a place assigned to that space.
-  - **Places of rule sets.** A place whose path has a `rule-sets` segment is declared to hold rule sets, as is the old folder that `pkit config set docs.internal` declares to keep your sets found (the schemas reference, [Rule-set files](../../schemas/README.md#rule-set-files)). Outside every root, such a place that gives no type owes no assignment. Until you assign it, it is passed over, and gives its `README.md` no space.
-  - **Nested places.** Where places nest, the backbone's order of places decides which one gives a page its space.
-  - **Pages.** A page is a document of this capability's page type ([Pages](#pages)). Decision records, rule sets, templates and anything another owner claims — by its type, by its place, or by a folder of documents it holds, such as an analysis capability's revalidation records — are anchor targets or their owner's, never pages.
-- **Rules.** The shared method rule set, `LDOC`, ships with this capability. Each space's definition inherits it, adds its own rules, and carries a scope that selects the space's pages. `LDOC`'s rules bind on a page only through such a scope (core rule sets, COR-051).
-- **Anchors and friction.** Each page's anchors (code, decisions, [sources](#sources), analysis artefacts, the home of each fact it summarises) must ground everything it says. The core friction check (COR-050) flags a page when any of those changed and nobody revalidated it. A change writes its answers in answer files of its own, never in the page, so two branches that revalidate the same page never conflict over their answers (COR-062 point 1). Once both land, neither reading the other, the two revalidations were answered apart: the whole-repository check reports the page as debt, never stale, until the next revalidation that reads both judges the merged page (COR-062 point 7).
-- **Proposals, never blind edits.** The agent, `living-docs` ("The agent" below), proposes each fix with its evidence, and a person reviews it.
-- **Reader-review.** The agent reads a page as its declared reader and reports what that reader would miss or wouldn't need.
-
-## Adopter setup
-
-**What it needs.** uv on your `PATH`, which runs the capability's commands, and no other capability: project-management is optional ([Dependencies](#dependencies)).
-
-Install:
-
-```
-pkit capabilities install living-docs
-```
-
-The install copies the capability into `.pkit/capabilities/living-docs/`, deploys its `docs-author` skill and its `living-docs` agent, and provisions its query commands ([the CLI reference, "Capabilities — two ways in"](../../cli/README.md#capabilities--two-ways-in)). Apart from the answers you give to the questions it asks, such as project-management's question about granting the `living-docs` agent where project-management is installed, it writes none of your configuration, and never sets the two roots apart. On a fresh project, `pkit living-docs validate` then reports that neither space has a definition and that the two roots are one folder, and fails nothing.
-
-After install:
-
-1. **Declare the places outside both roots that hold pages,** such as your top-level `README.md`, if you have any. List each in `friction.places` with the page type, and assign it to a space under `places` in the capability's project configuration ([Declaring your spaces](#declaring-your-spaces)). Do it before you create that space, so that the space's definition takes the place into its scope. A place you assign later needs adding to that scope by hand.
-2. **Create the two spaces:** `pkit living-docs new space user`, then `pkit living-docs new space technical`. Where both roots are still `docs/`, the first command offers to move the internal root to `tech-docs/`, and needs `--yes` for that off a terminal ([A fresh project](#a-fresh-project-the-first-stamp-sets-the-roots-apart)). Each writes its space's definition and names it in the capability's project configuration, creating that file if it is absent. Create the spaces before you install a capability that places documents under the internal root, such as software-analysis.
-3. **Write your pages.** Stamp a new page with `pkit living-docs new page`, or give an existing document its `reader` and `kind` ([Pages](#pages)). Name the page each space's readers start from as the space's `entry-point`, in the capability's project configuration. On a project that has documentation already, the agent plans that work with you ([Onboarding an existing project](#onboarding-an-existing-project)).
-4. **Name your other readers.** A `user` and a `maintainer` are built in. A page written for anyone else names a reader you add in the readers point's project file ([Connections](#connections)).
-5. **Check your spaces** with `pkit living-docs validate`, until it reports no error ([Validation](#validation)). `pkit validate` runs the same check.
-
-Two steps are optional:
-
-- **Enforce friction.** Set `friction.mode` to `enforcing` with `pkit config set`, and make `pkit friction check` a required check of your continuous integration. A change that leaves an anchored page stale then fails there.
-- **With project-management installed,** grant the `living-docs` agent as the fixer of your pages, if the install's question has not already recorded your answer ([project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)). The documentation check of project-management treats stale pages as advisory until you set `doc_check.sources.friction: enforcing` in its configuration ([Connections](#connections)).
-
-## Pages
-
-A document is a **page** when it is of this capability's page type, `living-docs:page` ([Types](#types), below). Mostly, that means it lies in a documentation root, or in a place of yours that holds pages, and declares its page kind in `kind`. A page's front matter carries two fields of its own, beside the core's friction block in the `pkit:` container:
-
-```yaml
----
-reader: user          # who the page is for: an id of the readers point (user, maintainer, …)
-kind: signpost        # the page's kind: the template it follows
-pkit:
-  friction:
-    anchors: { path: [src/cli/**], record: [ADR-006] }
----
-```
-
-`reader` and `kind` are each a word (`[a-z][a-z0-9-]*`); their shape is `schemas/page.schema.json`, which the validator below applies: to `kind` on every page, and to `reader` where `RS-LDOC-003` binds. The friction block is the core's, and `pkit validate` checks it under `friction`. A document in a space's places that is no page, no decision record and no rule-set file, and that no other owner claims, is an *unclassified document*: counted for onboarding to classify, never failed. A document that names a reader but declares no kind is one.
-
-**Anchoring one part.** A page that rests on one part of a record or of another document may anchor that part, so that a change to another point or section of it asks the page nothing (COR-050 point 5). How an anchor names a part is in [the schemas reference, "The friction block"](../../schemas/README.md#the-friction-block): a record's point as `COR-050#2`, a document's section by its heading's slug as `docs/cli.md#output`, and its lead as `docs/cli.md#`. A path and a `source` name no part. An anchor on one part grounds only what that part stands on (`RS-LDOC-001`), and a summary of a fact whose home is another page anchors the home's section (`RS-LDOC-002`).
-
-**A kind's structure.** Pages of a kind follow one format (`RS-LDOC-004`). A kind's template is the starting shape you fill in; the part of the format the validator checks is the kind's *structure*: the sections every page of the kind carries, in order where order matters. Each kind this capability ships declares its structure once, in `schemas/page-kinds.yaml`, and that file is where to read what a kind's pages must carry: each section is a heading level and, where the kind fixes the wording, its text, in the order listed unless the kind sets `ordered: false`. A structure names only what every page of the kind must carry, so a template may show more, and a page may carry other sections.
-
-A section is a heading written with one to six `#` at the start of a line. These are not read as one: a `#` line that is indented (under a list item, say) or that lies inside a block quote, fenced code or an HTML comment; an underlined (setext) heading; an HTML heading (`<h1>`). A section the kind leaves you to word needs words of its own, so an empty `#` and a template's unfilled `<placeholder>` do not count; fixed text is compared ignoring case, runs of white space and trailing punctuation. Where `RS-LDOC-004` binds on a page whose kind declares no structure — a kind your project adds, say — the page is reported with its kind and never failed.
-
-### Types
-
-The capability declares two types in its package metadata, under `friction.types` (DEC-001 points 2 and 4, COR-056). The backbone gives each document its type from the places that match it, and the validator reads that answer. A rule set's scope can select pages by their type, `types: [living-docs:page]`.
-
-| Type | What it is | Kind field | On your own places |
-|---|---|---|---|
-| `living-docs:page` | a page of a documentation space | `kind` | admitted |
-| `living-docs:template` | a writer's tool in the definitions location, never a page | none | not admitted |
-
-- **The roots give the page type.** Each documentation root is a place of the capability's that gives `living-docs:page`. A document there takes the type only when it declares its page kind in `kind`, present and not empty. One that declares none takes no type and is no page.
-- **The definitions location gives the template type.** It ranks ahead of the internal root, so a page template you copy there is a template, never a page, though it carries `reader` and `kind`. The definitions there are rule sets, and every rule takes the backbone's type for rules.
-- **Your places outside the roots.** Give one the page type by writing it `{path: CONTRIBUTING.md, type: living-docs:page}` in `friction.places`. A place you leave untyped holds the pages that declare their kind there, unless it is a place of rule sets you have not assigned. They have no type, so a scope that selects by type misses them. Type such a place before a definition selects pages by type ([Declaring your spaces](#declaring-your-spaces)).
-- **A type of your own.** A place inside a root that gives a type of your own, such as `{path: docs/changes, type: change-note}`, ranks ahead of the root. Its documents are yours, and their `kind` is never read as a page kind.
-- **Another owner's documents.** A document of another component's type is that component's. So is one it holds in a folder it declares, and one of no type in a place it declares. The validator never reads their `reader` or `kind`. A place another component declares without a type shadows no other place (COR-056 point 3). So a document there that declares a page kind takes the page type from the root around it, and is a page. `pkit validate` reports, under `packages`, that the root typed the component's file. The component keeps such documents by typing its place.
-- **A decision record that would otherwise be a page** fails validation: one of the page type, or one of no type that declares its page kind in an untyped place of yours outside the roots. A decision record is never a page. The validator reads a document's `id` only to tell a decision record.
-- **A tie.** Where two typed places rank equal and give different types, the document counts as each (COR-056 point 3). One that counts as the page type is a page until the tie is mended, whatever other type it counts as.
-- **Where to read it.** `pkit friction artefacts --json` gives each document its `type`, the place that gave it, and its matching places in the backbone's order.
-
-## Sources
-
-A page that rests on something outside the repository — a standard, a specification, another project's documentation — anchors it with the `source` kind, by the source's name:
-
-```yaml
-pkit:
-  friction:
-    anchors:
-      path: [src/release/**]
-      source: [keep-a-changelog]
-```
-
-**Capture each source once.** The friction checks read the repository alone and never reach the network, so each source is captured in a file of its own, `.pkit/capabilities/living-docs/project/sources/<name>.yaml`:
-
-```yaml
-# yaml-language-server: $schema=../../schemas/source.schema.json
-title: Keep a Changelog
-url: https://keepachangelog.com/en/1.1.0/
-version: "1.1.0"
-```
-
-- `title` — what the source is called. Required.
-- `url` — where it is found. Optional: a printed standard has none.
-- `version` — which text of the source your pages were last checked against, as the source labels that text: its version, edition or revision. For Keep a Changelog that is the document's `1.1.0`, not the release its own changelog has reached. For a source that labels none, name the exact text another way, such as a commit of the repository it is published from. Only when nothing names it, write the date you read it, `YYYY-MM-DD` — which records when, not what, so a later reader has nothing to compare it with. Quote it: YAML reads `1.1` as a number and `2026-10-03` as a date, and the shape wants text. Required.
-
-Write nothing else. The file is bound to its shape (`schemas/source.schema.json`) by its path, so it needs no `pkit_schema`. A `schema_version` would make any later version of the shape rewrite every captured source. If you want the editor directive comment, write it when you create the file. The name is lower-case words of letters and digits joined by single hyphens, starting with a letter, at most 64 characters (`rfc-9110`, `iso-8601`, `owasp-top-10`), so one name is one file on any disk. It cannot start with a digit (`twelve-factor-app`) or hold a dot; a version belongs in the file, not the name. Who captured a source, and when each version was recorded, is git's to say.
-
-**What counts as the source changing: any change to its file, nothing else.** That is why the file holds only these fields: describe the source, and say why a page relies on it, on the page. Recording a new version, or correcting the title or the address, is then the only edit the file has reason to see, and each asks every page anchored to the source for its answer — updated, unchanged with its reason, or deferred. Other edits ask them too: a comment added later; a reformat (a repository-wide YAML formatter or line-ending change asks every source-anchored page at once); `1.1` rewritten as `1.1.0`. A new version asks every page resting on any part of the source. To narrow that, capture the parts you rely on separately (`owasp-top-10-a01`), knowing that nothing keeps their versions in step.
-
-**Recording a new version.** When you read a new version of a source, edit `version` — and `url` if the address moved — in a pull request; the change check asks every page anchored to the source to answer in the same pull request. A change to the source that nobody records is not seen: nothing fetches it.
-
-**Dead, or no answer.** A name no file captures is a dead anchor: the change check fails it where the pull request adds it, the whole-repository check reports it, and `pkit validate` reports it under `living-docs:spaces` without failing. Commit a source's file with the page that first anchors it: a file only your working tree holds is no answer to a check that reads HEAD. If where sources are kept cannot be read — a permission or disk error — the resolver gives no answer: the page is not judged, and the documentation check reports itself unresolved until a run succeeds (Connections, below).
-
-**Rule-set origins** may cite a captured source as where a rule's words were said: `origin: {…, source: {kind: source, value: keep-a-changelog}}` (COR-051 point 5).
-
-**Uninstalling living-docs** removes its project tier — captured sources with it; they stay in git history — and leaves every `source` anchor with no resolver. Remove those anchors in the same change: where friction is enforced, the change check fails a pull request that keeps them while taking their resolver away.
-
-`pkit living-docs resolve-source <name>` prints the file a name resolves to. It is the resolver the friction checks run (`--json` prints `{"paths": [...]}`).
-
-## Visual elements
-
-A page may show diagrams, images, console output and callouts. Each is neutral content: the page holds no styling, and your presentation decides how it looks. On your repository host, such as GitHub, that is the host's own look, and on a site it is the site's theme ([living-docs:DEC-002-visual-elements]).
-
-- **No styling.** Nothing in a page sets a colour, a font, a theme, a class or a style. That rules out Mermaid's `%%{init}%%` directive, a `config` block in a diagram's front matter, `classDef`, `class`, `:::`, `style` and `linkStyle` lines, and HTML attributes that size, align or theme an image.
-- **Diagrams.** Write a diagram as a `mermaid` fence in the page, with an `accTitle` and an `accDescr`. A repository host such as GitHub draws it with no setup, and it reads as text where nothing draws it. Use another diagram language only where you render it to an image yourself, and show that as an image.
-- **What a diagram shows.** A diagram is never a fact's home. Each fact it shows has its home elsewhere: a decision record the page anchors, or prose on a page. Once `RS-LDOC-007` binds, it may also be anything else the page anchors that decides or states the fact. The page anchors the home of each fact the diagram draws. A diagram of its own page's prose is a view of that prose, and one of another page's fact is a summary, with the link and the anchor a summary takes. For a wide diagram, anchor the records that decide its parts and how they relate, never most of the repository.
-- **Images.** Show an image with `![alt](path)`, beside the page that shows it. An image that pages of both spaces show lies beside a user page, never under the internal root. For an image you made, a screenshot taken by hand included, anchor what it shows, and the image file too if replacing it should ask whether the text still agrees.
-- **Screenshots from a script.** Take them with a capture script you keep, with its window size, scale and theme in settings of their own. Anchor the script and what the screenshot shows, never the screenshot: each new capture would flag the page for nothing. When the script's anchor flags the page, run the capture again before you answer. The same holds for a recording, an animated image included.
-- **Console output.** Show a command and what it prints in a shell-session fence, such as `console` for a POSIX shell: each command after its prompt, `$ `, its output below. Run the fences as tests with the run the doc-examples capability ships, or with a runner of your own: living-docs never runs your product, and how output that varies is matched is the runner's. A command that cannot run as a test goes in a fence of its shell's language, with no output. Anchor the code whose output the fence shows.
-- **Callouts.** Write a callout as a block quote whose first line is `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]`. Where nothing draws it, it reads as a block quote.
-- **Text alternatives.** A diagram, an image or a recording that carries meaning has a text alternative, and a decorative image an empty one, `![](path)`. The validator checks the `mermaid` fences ([Validation](#validation)).
-- **A documentation site** is optional, and your repository host's own view is the default. A site you publish reads your content as written, takes its theme for diagrams and callouts from one place, and serves one space: its pages and the images they show, wherever they lie. A technical page's link to a user page reaches the user space's site.
-
-`RS-LDOC-007` widens a fact's home, for every statement a page makes, to what the page anchors that decides or states the fact, and says a diagram or a page is never such a home. `RS-LDOC-008` is the rule on text alternatives. Both are proposed, and bind from the major of `LDOC` that accepts them ([The shared method](#the-shared-method-ldoc)). Until then, a fact's home is a decision record the page anchors, or a page (`RS-LDOC-002`).
-
-## The shared method: `LDOC`
-
-`rule-sets/ldoc.md` is a method rule set (COR-051), cited `living-docs:LDOC`. Its accepted rules are those point 3 of [living-docs:DEC-001-living-docs-discipline] states, with that decision as their origin and their anchor. Its two proposed rules come from [living-docs:DEC-002-visual-elements]:
-
-| Rule | Statement |
-|---|---|
-| `RS-LDOC-001` | A page's anchors ground every statement it makes, and only what the page anchors grounds one. |
-| `RS-LDOC-002` | Each fact has one home. For a page that anchors a decision record, the record is the home of the facts it decides. The page may state them with no link to another page. A page states a fact whose home is another page only as a summary that links to the home and anchors to its section, however short. A name that gives none of a thing's facts needs neither. |
-| `RS-LDOC-003` | Each page names its reader and says only what that reader needs. |
-| `RS-LDOC-004` | Pages of a kind follow one format, with a template per kind. |
-| `RS-LDOC-005` | An index-like file is a signpost to what a folder holds, never a summary of its contents. |
-| `RS-LDOC-006` | Nothing is created ahead of the need for it. |
-| `RS-LDOC-007`, proposed | Each fact has one home, and a diagram is never it. Besides a page, a fact's home may be what the page anchors that decides or states it, the first of: an accepted record or rule, another artefact in force such as an analysis artefact or a section of one, a captured source, code. A page of the user space anchors such a home under the internal root, and links nothing there. |
-| `RS-LDOC-008`, proposed | A diagram, an image or a recording that carries meaning has a text alternative, and a decorative image has an empty one. |
-
-`RS-LDOC-007` and `RS-LDOC-008` bind nothing yet. A major of `LDOC` accepts both, and `RS-LDOC-007` then supersedes `RS-LDOC-002` (DEC-002 point 10). Your definitions' pins then fall behind until you review the new major (core rule sets, COR-051 point 7).
-
-You never edit `LDOC`; a space's definition inherits it, pinned to its major (`inherits: [living-docs:LDOC@1]`), and `pkit validate` tells you when a new major arrives. Rules about how rules are named and inherited are the core's (COR-051), so they are not repeated here.
-
-**Where `LDOC` binds.** `LDOC` takes no scope, as no shipped rule set does, so its rules bind on a page only through a rule set of yours whose scope selects the page (DEC-001 points 2 and 3; COR-051 point 7). That set is the page's space definition, or a documentation rule set of yours that inherits `LDOC`. A page that no such scope selects is bound by none of `LDOC`'s rules. Neither is a page reached only through a pin behind `LDOC`'s major. So each definition's pin decides when a new major of `LDOC` starts binding on its space's pages. `pkit rule-sets reach` lists the rules that bind on each page.
-
-**What validation settles.** `LDOC` declares, under `checks`, the parts of its rules that this capability's validator, `living-docs:validate`, enforces (COR-051 point 2, DEC-001 point 6):
-
-- `RS-LDOC-003`: the page names its reader in its `reader` field, one the readers point holds.
-- `RS-LDOC-004`: the page's body carries the sections its kind's structure declares, in order where order matters.
-- `RS-LDOC-008`: each `mermaid` fence in the page's body carries an `accTitle` and an `accDescr`, each followed by text that is not blank.
-
-The agent's reader-review leaves those parts to the validator and judges the rest of each rule. A declaration is no part of a rule's content, so it flags nothing anchored to the rule. `pkit rule-sets reach` lists each part on the rule wherever `LDOC` binds. The validator checks each part only on the pages where its rule binds, as that answer gives it: a page's sections where `RS-LDOC-004` binds, its reader where `RS-LDOC-003` binds, and its diagrams where `RS-LDOC-008` binds. On any other page it reads none of them.
-
-## Templates
-
-`templates/` holds the writers' tools:
-
-- **`space-definition.md`** — a space's definition: a project rule set that inherits `LDOC`, carries a scope that selects the space's pages, and holds the space's own rules, each carrying its friction block in its own container. `pkit living-docs new space` writes it to `<definitions>/rule-sets/<space>.md` (below), with the set named and the scope's paths written, and names the file as the space's `definition` ([Authoring](#authoring-the-docs-author-skill)). The paths are the space's root, everything beneath it, and each place assigned to the space outside that root. The scope selects by the page type too, `types: [living-docs:page]`, so the definitions, records and rules under the root stay outside it. The user space adds one rule of its own: its readers' paths stay unbroken (DEC-001 point 3).
-- **`signpost.md`** — the page template for a signpost, the page kind the shared rules name: an index-like file that says what a folder holds and where to go (`RS-LDOC-005`). A page of another kind arrives with its template and its declared structure.
-- **`reference.md`** — the page template for a reference page: the page that describes one surface — an area, a capability, an adapter — to the reader who uses it, anchored to the code and decisions it describes.
-- **`guide.md`** — the page template for a guide: the page that explains one subject to the reader who uses it, why it exists and how they do its tasks, with its parts in the order [living-docs:DEC-003-guide-kind] gives them. Its declared structure is its title alone, so the order of the other parts is judged in review, never by validation.
-
-`pkit living-docs new page` stamps a page from its kind's template. A page of a kind your project adds is written by hand from that kind's template.
-
-A template you copy into the definitions location takes the template type there, so it is never a page ([Types](#types)).
-
-## Declaring your spaces
-
-Where your documentation lives is declared in two files, joined by path:
-
-- **The backbone configuration** (`.pkit/project/config.yaml` <!-- unanchored: named as the file that holds these keys, whose meaning rests on the CLI reference's Configuration file section, which the page anchors -->) names the two documentation roots (`docs.user`, `docs.internal`) and every place outside them that holds pages (`friction.places`), and the paths the friction checks leave out (`friction.exclude`). The CLI reference's "Configuration file" section documents those keys.
-- **This capability's project configuration** (`.pkit/capabilities/living-docs/project/config.yaml` <!-- unanchored: named as the file, whose shape is schemas/config.schema.json, which the page anchors -->) holds what only living-docs needs: each space's audience, entry point and definition, and which space each place belongs to.
-
-```yaml
-pkit_schema: living-docs:config
-schema_version: 1
-spaces:
-  user:                                        # who it serves, where they start, the space's rules
-    audience: users
-    entry-point: README.md
-    definition: docs/living-docs/rule-sets/user.md
-  technical:
-    audience: maintainers
-    entry-point: CONTRIBUTING.md
-    definition: docs/living-docs/rule-sets/technical.md
-places:                                        # place → space, the place written as in friction.places
-  README.md: user
-  CONTRIBUTING.md: technical
-```
-
-A space's `audience` says, in words, who the space serves. DEC-001 gives the user space users and the technical space maintainers, and a space you add serves an audience neither serves, such as `integrators who call the HTTP API`. Name the audience of each space you add, which the living-docs agent reads ([The agent](#the-agent-living-docs)). `pkit validate` refuses an audience that is not text, or is blank.
-
-A place inside a root belongs to that root's space; list it under `places` only to assign it elsewhere. A place outside every root must be listed, unless it is declared to hold rule sets and gives no type. Such a place gives no space until you list it. A document only it holds, such as its `README.md`, is then neither a page nor an unclassified document (DEC-001 point 1). A place of rule sets you give a type must be listed as any other. Each place names exactly one space. A project place never equals or encloses a root. The file's shape is `schemas/config.schema.json`, which `pkit validate` applies. Trees a sync copies into your repository are never places; in a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates"). The backbone's friction validation enforces this for every declared place, yours or a capability's, as its `synced-place` finding (the schemas README, "The friction block"), and this capability's place validation relies on that finding rather than checking a second time.
-
-**Each definition's scope.** A space's definition carries a scope that selects the space's pages, written with the definition (DEC-001 point 2). Through it, `LDOC` and the space's own rules bind on those pages, and the validator checks the parts of them it enforces as soon as the definition exists. Until then — and no space has a definition when you install the capability — no rule binds on the space's pages, and the validator reports the space instead. A definition with no scope selects no page, so no rule binds on the space's pages through it. `pkit living-docs validate` reports such a definition and names the scope to give it: the space's root and the places assigned to it, by the page type. It also reports the pages of a space that the definition's scope leaves out, unless the join with the assignment, below, fails them. A placeholder left in the scope's paths, the template's `<root>`, names no file, and is reported as soon as the definition exists. A scope may leave part of a space out on purpose, with `exclude`, so a page it leaves out is reported, never failed.
-
-**Your definitions' scopes and the assignment.** Where a space's definition carries a scope, which selects artefacts by path and by type (COR-051 point 2), the scope and the assignment both say where the space's pages lie. Validation holds them to each other (DEC-001 point 1):
-
-- Each page an assigned place gives a space lies in that space definition's scope, and in no other space definition's scope. The validator reads the scopes covering each page from `in_scope_of` in [`pkit friction artefacts --json`](../../cli/README.md#friction-artefacts---at-rev---json).
-- Where a definition selects by type, `types` in its scope, each assigned place outside every root gives the page type: `{path: CONTRIBUTING.md, type: living-docs:page}` in `friction.places`. Such a place that names no type fails, before it holds any page.
-
-A definition with no scope selects nothing itself, so nothing is held to it. The places assigned to its space are checked only against the scopes of the other spaces' definitions. A space with no definition yet is checked the same way. The validator's summary names the spaces whose definitions carry a scope.
-
-**What the capability declares for you**, in its package metadata: the two roots, as the default places of their spaces (everything under each), each giving the page type, and its **definitions location**, `living-docs/` under the internal root — `docs/living-docs/` with the default root — which gives the template type. The spaces' definitions go in its `rule-sets/` folder, where the core reads them as your project's rule sets. The location is recorded the first time a definition is placed there, in `.pkit/capabilities/living-docs/project/docs-locations.yaml` <!-- unanchored: named as where the location is recorded, which COR-049 decides and the page anchors --> (`locations: {definitions: docs/living-docs}`). So changing a root later moves nothing already written (COR-049 point 5). `pkit living-docs new space` records it. For a definition you write by hand, `pkit docs record-location living-docs definitions` records it. It says what it recorded, the root it was derived from, and where to change it.
+<a id="how-it-works"></a><a id="adopter-setup"></a>
+
+living-docs keeps each documentation space true for its readers, through anchored pages, declared readers and reviewed fixes ([living-docs:DEC-001-living-docs-discipline]). Pages, spaces, validation and the agent each have a page beside this one ("The pages beside this one" below). Why it exists, and how people set it up and do its tasks, is in [living-docs' guide](https://github.com/aleskalfas/project-kit/blob/latest/docs/capabilities/living-docs/README.md).
+
+## Contents
+
+<!-- pkit:contents -->
+- [Installing it](#installing-it)
+- [Authoring: the `docs-author` skill](#authoring-the-docs-author-skill)
+- [Connections](#connections)
+- [Citing this capability's decisions](#citing-this-capabilitys-decisions)
+- [Dependencies](#dependencies)
+- [The pages beside this one](#the-pages-beside-this-one)
+<!-- /pkit:contents -->
+
+## Installing it
+
+`pkit capabilities install living-docs` copies the capability into `.pkit/capabilities/living-docs/`. It deploys the `docs-author` skill and the `living-docs` agent, and provisions the query commands ([the CLI reference, "Capabilities — two ways in"](../../cli/README.md#capabilities--two-ways-in)).
+
+- **What it needs.** uv on the `PATH`, which runs the capability's commands, and no other capability. project-management is optional ("Dependencies" below).
+- **What it writes.** Nothing of the project's configuration, apart from the answers to the questions it asks. One is project-management's question, where it is installed, about granting the `living-docs` agent. The install never sets the two roots apart.
+- **A fresh project.** `pkit living-docs validate` then reports that neither space has a definition and that the two roots are one folder, and fails nothing.
+- **What sets it up.** `pkit living-docs new space` creates each space ("Authoring" below). Declare a place outside both roots that holds pages before its space is created, so that the definition's scope takes it in. One assigned later is added to the scope by hand ([the page on spaces, "Each definition's scope"](spaces.md#each-definitions-scope)).
+- **Enforcing friction, optionally.** `pkit config set` sets `friction.mode` to `enforcing`. With `pkit friction check` a required check of the project's continuous integration, a change that leaves an anchored page stale fails there.
+- **With project-management installed,** the `living-docs` agent becomes the fixer of the project's pages once the project grants it ([project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare)). The install's question may already have recorded that grant. project-management's documentation check treats stale pages as advisory until its configuration sets `doc_check.sources.friction: enforcing` ("Connections" below).
 
 ## Authoring: the `docs-author` skill
 
-`pkit living-docs new` stamps a page or a space's definition. The `docs-author` skill pairs with it (COR-005). It walks you through the choices the command does not make. `pkit sync` deploys it with the other skills, in Claude Code as `.claude/skills/docs-author/`.
+`pkit living-docs new` stamps a page or a space's definition. The `docs-author` skill pairs with it (COR-005), and walks through the choices the command does not make. `pkit sync` deploys the skill with the other skills, in Claude Code as `.claude/skills/docs-author/`, through the adapter's `deploy-skills.sh` ([the Claude Code adapter's README, `deploy-skills.sh`](../../adapters/claude-code/README.md#deploy-skillssh)).
 
 ```
 pkit living-docs new space <space> [--set <NAME>] [--internal-root <path>] [--yes] [--dry-run]
@@ -243,16 +93,20 @@ pkit living-docs new page <file> --space <space> --kind <kind> --reader <id> --t
     [--internal-root <path>] [--yes] [--dry-run]
 ```
 
-**One check decides.** Each command runs the validator's own check before and after it writes. That is the check `pkit living-docs validate` runs.
+**One check decides.** Each command runs validation's own check before and after it writes. That is the check `pkit living-docs validate` runs.
 
-- **A write that breaks validation is put back.** When the write brings an error your project did not have, the command puts back every file it wrote, refuses and quotes the error. So what it stamps passes `pkit living-docs validate` wherever your project passed it before.
-- **What the check cannot read refuses too.** That is your places, where the rules bind, the readers point, or the kinds' structures.
-- **`--dry-run`** makes the checks before the write, prints each file it would write and writes nothing.
+- **A write that breaks validation is put back.** When the write brings an error the project did not have, the command puts back every file it wrote, refuses and quotes the error. So what it stamps passes `pkit living-docs validate` wherever the project passed it before.
+- **What the check cannot read refuses too.** That is any of these:
+  - the places
+  - where the rules bind
+  - the readers point
+  - the kinds' structures
+- **`--dry-run`** makes the checks before the write, prints each file it would write, and writes nothing.
 
 **`new space`** makes the three writes of creating a space (DEC-001 point 2):
 
-- **The definition,** `<definitions>/rule-sets/<space>.md`. It is a project rule set that inherits `LDOC` at its current major. Its scope selects the space's pages, the scope `pkit living-docs validate` names for a definition without one. The set is named after the space in upper case, its hyphens dropped, unless you name it with `--set`.
-- **Its path,** as the space's `definition` in `.pkit/capabilities/living-docs/project/config.yaml` <!-- unanchored: named as the file the command writes, whose shape is schemas/config.schema.json, which the page anchors -->. Every other byte of the file is kept. The entry declares a space your project adds. Without the file, the command creates it.
+- **The definition,** `<definitions>/rule-sets/<space>.md`. It is a project rule set that inherits `LDOC` at its current major. Its scope selects the space's pages, the scope `pkit living-docs validate` names for a definition without one. The set is named after the space in upper case, its hyphens dropped, unless `--set` names it.
+- **Its path,** as the space's `definition` in `.pkit/capabilities/living-docs/project/config.yaml` <!-- unanchored: named as the file the command writes, whose shape is schemas/config.schema.json, which the page anchors -->. Every other byte of the file is kept. The entry declares a space the project adds. Without the file, the command creates it.
 - **The definitions location,** recorded the first time.
 
 The user space's definition carries its one rule, `RS-<SET>-001`, reader paths stay unbroken. It is written accepted, so the review of the change that carries it accepts it (COR-051 point 4).
@@ -260,101 +114,49 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - **It refuses** a space that has a definition, and a set name another rule set has. It refuses a space no scope can select yet, with no root of its own and no place assigned to it.
 - **It refuses a write that breaks validation,** such as a place outside every root, assigned to the space, that gives no page type.
 - **It reports, without refusing,** each page of the space that the space's rules fail once they bind.
-- **It refuses when the check cannot read what it judges** once the rules bind, such as a readers point that does not resolve while the space's pages name readers.
-- **It writes nothing else itself:** no other space's definition, and nothing of the backbone configuration. Only `pkit config set` writes that, when the command sets the roots apart ([A fresh project](#a-fresh-project-the-first-stamp-sets-the-roots-apart)).
+- **It refuses when the check cannot read what it judges** once the rules bind. An example is a readers point that does not resolve while the space's pages name readers.
+- **It writes nothing else itself:** no other space's definition, and nothing of the backbone configuration. Only `pkit config set` writes that, when the command sets the roots apart ("A fresh project" below).
 
-**`new page`** writes one new page into a space of your project, from the template of a kind this capability declares, `signpost`, `reference` or `guide`.
+**`new page`** writes one new page into a space of the project, from the template of a kind this capability declares, `signpost`, `reference` or `guide`.
 
-- **Its front matter** names the reader and the kind. Its friction block lists the anchors you give, and is empty with none: the page then counts as unanchored for onboarding.
+- **Where it goes.** A new page of the user or technical space goes under that space's root by default. A page of any space may go into a place assigned to that space (DEC-001 point 1).
+- **Its front matter** names the reader and the kind. Its friction block lists the anchors given, and is empty with none: the page then counts as unanchored for onboarding.
 - **Its anchors:** code by `--path`, decisions and their points by `--record`, and captured sources by `--source`. `--artefact` takes rules, analysis artefacts and the home section of a fact it summarises.
 - **Its body** is the template's. The title fills the level-1 heading. The command lists the lines that still hold the template's other placeholders.
-- **It refuses** an unknown space or kind, a file that exists, and a path that is no Markdown file of the repository. It refuses a path reached through a link, a reader that is not a word, and an empty or placeholder title.
-- **It refuses a file the check does not read as a page of the space you named.**
+- **It refuses** these, and writes nothing:
+  - an unknown space or kind
+  - a file that exists
+  - a path that is no Markdown file of the repository, or one reached through a link
+  - a reader that is not a word
+  - an empty or placeholder title
+- **It refuses a file the check does not read as a page of the space named.**
 - **It warns** when the space has no definition yet, since no rule binds on the page then.
 
 ### A fresh project: the first stamp sets the roots apart
 
-Both roots default to `docs/`, and two roots that are one folder give no space (DEC-001 point 1). So before `new` stamps a space, or a page of the user or technical space, it offers to set the internal root apart. No step comes before the command. What an install placed in `docs/` before the first space stays there, so create that space before you install software-analysis.
+Both roots default to `docs/`, and two roots that are one folder give no space (DEC-001 point 1). So before `new` stamps a space, or a page of the user or technical space, it offers to set the internal root apart. No step comes before the command. What an install placed in `docs/` before the first space stays there, so create that space before installing software-analysis.
 
-- **The folder.** The internal root goes to `tech-docs/`, and the user root keeps `docs/`. Name another folder with `--internal-root <path>`. A folder that lies in the user root, or holds the user root, is refused.
-- **The write.** `pkit config set docs.internal tech-docs` makes the write, and asks once at a terminal. Off a terminal the stamp needs `--yes`. Without it the stamp refuses, writes nothing and names the command to run. Declined, nothing is written or stamped.
-- **What stays in `docs/`.** No document moves. A project rule set a capability's install created in `docs/rule-sets/` stays there, among your user documents, and is still found. The configuration command names each recorded location the old root held ([the CLI reference, "config set"](../../cli/README.md#config-set-key-value---yes)).
+- **The folder.** The internal root goes to `tech-docs/`, and the user root keeps `docs/`. `--internal-root <path>` names another folder. A folder that lies in the user root, or holds the user root, is refused.
+- **The write.** `pkit config set docs.internal tech-docs` makes the write, and asks once at a terminal. Off a terminal, the stamp needs `--yes`. Without it, the stamp refuses, writes nothing and names the command to run. Declined, nothing is written or stamped.
+- **What stays in `docs/`.** No document moves. A project rule set a capability's install created in `docs/rule-sets/` stays there, among the user documents, and is still found. The configuration command names each recorded location the old root held ([the CLI reference, "config set"](../../cli/README.md#config-set-key-value---yes)).
 - **A dry run** says it would set the root first, and writes nothing.
 
-Accepted, the roots stay apart even where the stamp then refuses. A space your project adds lies in places of its own, so a page of it needs no separation. Its definition still lies under the internal root, so `new space` for it offers the separation too.
-
-## Validation
-
-`pkit living-docs validate` checks your spaces against the decision; `pkit validate` runs the same check as its `living-docs:spaces` member (`--json` prints the findings document it reads). It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
-
-**What it reads.** Where your documents are, it reads from the core, through `pkit friction artefacts --json` — the same discovery `pkit validate` and the friction checks read: your documentation roots, the places your configuration and every installed capability declare and which of them are declared to hold rule sets, the files each place matches, each file's front matter, each document's type with its matching places in the backbone's order, the scopes covering each page, and the documents a capability holds that are not artefacts, with their owner. A held document — an analysis capability's revalidation records, say — is walked by no place, so it is never an unclassified document: it is claimed by its owner and counted in the summary as "of another component" wherever it sits under your roots (DEC-001 point 1). It never reads the declarations or walks the places itself, so it can never disagree with the core about which files a place holds; a synced copy, a place outside the repository and a malformed declaration are skipped exactly as the core skips them. Nor does it rank the places: where places nest, the first root or project place in the backbone's order gives a document its space (COR-056 point 3). A place that equals or encloses a root comes after every other, the longer literal part wins, and at equal length an exact file beats a glob, which beats a folder. The answer ranks the places of artefacts only. A file that holds no artefact — no front matter the backbone reads — comes without ranks: where its places would give it different spaces, or one of them is a place outside every root with no assignment, which place holds it cannot be told, so the validator reports it and counts it unclassified. Where every one of its places is such an unassigned place, whichever holds it needs an assignment, which fails. What it decides over that answer is this capability's: which space a place serves, and what a document is to your spaces. Besides, it reads its own project configuration, where the rules bind — only when there is a page — through `pkit rule-sets reach --json`, and the readers point — only when some page names a reader where `RS-LDOC-003` binds — through `pkit connections resolve`. When the core gives no reading of the places, or a reading without each document's type, that is its one error, and no space is checked. It fails on:
-
-- the sources folder, `.pkit/capabilities/living-docs/project/sources/`, or a folder on its path, that is a file or a link, or is named in another case (`Sources/`): no source is read from it, on any disk; the sources folder unreadable — a permission or disk error — so no source is checked;
-- an entry of the sources folder that is not a captured source: a `.yaml` file not named `<name>.yaml` with a name of the grammar in Sources, a folder, or a link. An entry whose name begins with `.` — `.gitkeep`, an editor's or a desktop's file — is left alone: no source's name begins with one. A captured source's shape — the three fields, nothing else, each text — is `schemas/source.schema.json`, which `pkit validate` applies under `data`, bound by the file's path (COR-023);
-- a place outside every root that holds a document nothing else claims, with no assignment, unless the place is declared to hold rule sets and gives no type (DEC-001 point 1) — for a file without front matter, where every place it lies in is such a place; an assignment naming a place `friction.places` does not declare, or a space nobody declares; a place assigned twice;
-- a project place equal to or enclosing a root; a file two project places claim at equal rank, ahead of every other place of your spaces, in the backbone's order;
-- where a space's definition carries a scope: a page an assigned place gives that space outside that scope, or inside another space definition's scope; where it selects by type, an assigned place outside every root that does not give the page type ([Declaring your spaces](#declaring-your-spaces));
-- a decision record that would otherwise be a page — of the page type, or declaring its page kind in an untyped place of yours outside every root — since a decision record is never a page. Another owner's document is never read for `reader` or `kind` ([Types](#types)), so carrying them fails nothing;
-- where the rules bind, unreadable — `pkit rule-sets reach --json` gives no answer: one error, and no page's structure, reader or diagram is checked;
-- a page whose `kind` does not fit `schemas/page.schema.json`; where `RS-LDOC-003` binds on a page, a `reader` it lacks or that does not fit the schema;
-- where `RS-LDOC-003` binds on a page, a `reader` the readers point does not hold — the message names the readers it does (Connections, below);
-- a page whose body lacks a section its kind's structure declares, or carries one out of order (Pages, above) — the message names the page, its kind, the section and the declared structure. It is an error where `RS-LDOC-004` binds on the page. A page no rule set of yours reaches is not checked, nor one reached only through a pin behind `LDOC`'s major, nor any page while the rule is not accepted (COR-051 points 4 and 7);
-- the declaration of the kinds' structures, `schemas/page-kinds.yaml`, absent, unparsable or not fitting its schema — one error, "structures unreadable", and no page's body is checked. The file is read only where `RS-LDOC-004` binds on some page, or while you have no page and the rule is accepted;
-- where `RS-LDOC-004` binds on a page whose kind declares a structure, a body that cannot be read;
-- where `RS-LDOC-008` binds on a page, a `mermaid` fence in its body without an `accTitle` or without an `accDescr`, each followed by text that is not blank — the message names the page and the fence's line. A fence is read as a section's heading is: below the front matter, outside an HTML comment, in a callout or under a list item too. A Mermaid comment, a line that opens with `%%`, holds neither. While the rule is proposed it binds on no page, and the summary says so;
-- an entry point that is not a document of its space — under its root or in a place assigned to it. An entry point without front matter whose places cannot be told apart (above) fails only when none of them gives its space;
-- a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
-
-It reports, without failing: each page whose anchors do not cover what it mentions, and each mark that passes nothing over ([What a page mentions and does not anchor](#what-a-page-mentions-and-does-not-anchor), below); a `source` anchor, or a rule origin citing a `source`, that no captured file answers (the whole-repository check reports it dead); a captured source nothing anchors or cites; a captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier; a file in the sources folder whose name does not end in `.yaml` — notes, an editor's backup — which captures nothing; a space with no definition yet, a definition with no scope, or with the template's placeholder in its scope, naming the scope to give it, the pages of a space its definition's scope leaves out, a file without front matter whose places cannot be told apart, unless every one of them is an unassigned place outside every root, which fails (above), roots that are the same folder, naming the stamp that sets them apart and the folder it recommends, or nested (onboarding separates them), a document that declares its page kind and lies only in an untyped place of rule sets outside every root that no assignment gives a space, naming the assignment that would make it a page, each kind that declares no structure, with the pages that name it where `RS-LDOC-004` binds and the kinds that do declare one, and — in its summary — the unclassified documents and the documents of a type of your own, whether each entry point is a page yet, the spaces whose definitions carry a scope, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, how many pages each check left out because its rule does not bind on them, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
-
-**Pages are checked** for their front matter — `kind`, and `reader` against the readers point where `RS-LDOC-003` binds, and the friction block, which `pkit validate` checks under `friction` — for their body's structure, against the structure their kind declares, where `RS-LDOC-004` binds, and for their diagrams' text alternatives where `RS-LDOC-008` binds. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact has one home, and whether the page says only what its reader needs. The report below shows the mentions a page's anchors leave uncovered, as input to that judgment.
-
-### What a page mentions and does not anchor
-
-Only what a page anchors grounds what it says (`RS-LDOC-001`). So a page that names a file, a record, a rule or a command and anchors nothing of it is never asked when that thing changes. Where `RS-LDOC-001` binds on a page, the validator reports each such mention, with an anchor that would cover it, and never fails on one (DEC-001 point 6). `pkit validate` shows one report per page, and `pkit living-docs validate` lists each mention with its line:
-
-```
-mention(s) a page's anchors do not cover, each with an anchor that would cover it (2):
-  docs/guide.md
-    12: path `src/app.py` → path: [src/app.py]
-    30: record `COR-050#5` → record: [COR-050#5]
-```
-
-**What it reads.** The page's body below its front matter, outside fenced code, HTML comments and strikethrough:
-
-- **A path**: an inline code span that holds a `/` and no space, or a link's target, naming a file your repository holds. A code span is read from the repository's root, and failing that from the page's folder. A link is read from the page's folder, or from the root where it opens with `/`. A placeholder such as `<name>`, a glob, an ellipsis, a URL, a folder and an image are not read, and a link's `#fragment` names a section.
-- **A record**: `COR-NNN`, `PRJ-NNN`, `ADR-NNN`, a capability's decision as `<capability>:DEC-NNN`, with its slug or without, or as `<capability> DEC-NNN`, and a bare `DEC-NNN` on a page in that capability's folder. The points written after the id count: `COR-050#5`, `COR-050 point 5`, `COR-050 points 2 and 5`. A link to a record's file mentions the record.
-- **A rule**: `RS-<SET>-NNN`, bare or after its component, as in `[living-docs:RS-LDOC-003]`.
-- **A command**: an inline code span that opens with `pkit`, or `uv run pkit`, and a word. Its words run to the first that is not a word of lowercase letters, digits and hyphens, so `pkit friction check --base main` is `pkit friction check`.
-
-An id that names no record or rule is not read, and a page never mentions itself.
-
-**What covers each.** A mention is covered by an anchor of the page that stands on what it names:
-
-| Mention | Covered by an anchor on | The finding suggests |
-|---|---|---|
-| a path | its file: a path anchor standing on it, or an artefact or record anchor on it. For a link with a fragment, the whole file or that section | an `artefact` anchor for a document of your places, a `path` anchor otherwise |
-| a record | the whole record. For a mention with points, each point it names, and without, any part | `record: [COR-050#5]` |
-| a rule | the rule, or its rule set's whole file | `artefact: [RS-LDOC-003]` |
-| a command | the script that implements it, or what documents it: the whole file, or the section that names it | that section, by its heading, and the script |
-
-**Marking a passage.** A name that gives none of the named thing's facts needs no anchor (DEC-001 point 3). Where a passage only names a thing, mark it right after the mention, on its line, with the reason:
-
-```markdown
-Run `pkit sync` <!-- unanchored: named as the next step, not described --> after upgrading.
-```
-
-- **One passage.** A mark passes over the path, id or command it follows: the last before it on its line, after any earlier comment. A later passage that rests on the same thing is still read.
-- **A person's decision.** A mark is written on a person's decision, and the `living-docs` agent proposes one as it proposes any change to a page.
-- **A mark that passes nothing over is reported:** one that follows no mention, one that gives no reason, and one after a mention the page's anchors cover. A mark after a file since removed, or a record that no longer exists, follows no mention. It is reported, never moved to an earlier mention.
-
-A page accepted with no anchors (`unanchored-because`) has its mentions read like any other. The report settles no part of `RS-LDOC-001`: whether a statement rests on what it mentions stays a judgment, the agent's reader-review's and the rule-set reviewer's. So `LDOC` declares no check for it.
+Accepted, the roots stay apart even where the stamp then refuses. A space the project adds lies in places of its own, so a page of it needs no separation. Its definition still lies under the internal root, so `new space` for it offers the separation too.
 
 ## Connections
 
-The capability provides the `pkit::documentation` role (COR-053); `pkit::` is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)). Under it, it accepts two data points. It contributes to two points of the work-tracking role, its documentation check and its fixers. `pkit status` shows how each point resolved, and `pkit connections resolve <point>` prints one.
+The capability provides the `pkit::documentation` role (COR-053), under which it accepts two data points. It contributes to two points of the work-tracking role: its documentation check and its fixers. `pkit status` shows how each point resolved, and `pkit connections resolve <point>` prints one.
 
-**Accepts `pkit::documentation:readers`** (version 1): who reads the documentation, what they need and the paths they take. Each entry is an `id`, which a page names as its `reader`, and a `description` of what that reader needs (`schemas/readers.schema.json`). An entry may also carry `paths`, the paths that reader takes through your pages. A path is the list of pages the reader reads in order, under `pages`, with an optional `description` of what they come to do. Each page is named by its Markdown file's path from the repository's root, never by a pattern of files. A `user` and a `maintainer` are built in and always included, with no paths, since only you know your pages. The point is `union`, so you add readers, replace one by its id, or drop one with `remove` and a reason, in the point's [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping) — `docs/pkit/fillers/pkit/documentation/readers.yaml` with the default internal root:
+- **`pkit::`** is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
+
+### The readers point
+
+**Accepts `pkit::documentation:readers`** (version 1): the readers of the documentation, each with their needs and the paths they take.
+
+- **An entry** is an `id`, which a page names as its `reader`, and a `description` of what that reader needs (`schemas/readers.schema.json`).
+- **Its paths.** An entry may also carry `paths`, the paths that reader takes through the pages. A path is the list of pages the reader reads in order, under `pages`, with an optional `description` of what they come to do. Each page is named by its Markdown file's path from the repository's root, never by a pattern of files.
+- **The built-in readers.** A `user` and a `maintainer` are built in and always included, with no paths, since only the project knows its pages.
+- **Its policy.** The point is `union`, so the project adds readers, replaces one by its id, or drops one with `remove` and a reason. It does so in the point's [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping), `docs/pkit/fillers/pkit/documentation/readers.yaml` with the default internal root:
 
 ```yaml
 schema_version: 1
@@ -366,98 +168,101 @@ value:
         pages: [docs/operations.md, docs/runbooks/restart.md]
 ```
 
-An entry replaces another of its id whole, so to give `user` paths, write the entry's `description` with them. No check reads a path. The agent's reader-review takes a page's reader from the point, with the reader's description and paths. Where a rule asks that reader paths stay unbroken, as the user space's own rule does, the review follows each path that passes through the page.
+- **Replacing an entry.** An entry replaces another of its id whole, so `user` takes paths only in an entry that writes its `description` with them.
+- **Who reads the paths.** No check reads a path. The agent's reader-review takes a page's reader from the point, with the reader's description and paths. A rule may ask that reader paths stay unbroken, as the user space's own rule does. The review then follows each path that passes through the page.
+- **Readers a capability supplies.** A capability that keeps an analysis of the software can supply readers too, under ids of its own.
+- **When it is checked.** Validation checks a page's `reader` against the resolved point wherever `RS-LDOC-003` binds on the page.
+- **Its inert policy is `fail`.** If a capability's readers fall out of step with the point's version, the whole point is unresolved, rather than checked against whichever readers survived. Validation then reports "readers unresolved" once, not once per page, and `pkit validate` names the fix under `connections`.
 
-A capability that keeps an analysis of the software can supply readers too, under ids of its own. The validator checks a page's `reader` against the resolved point wherever `RS-LDOC-003` binds on the page. Its inert policy is `fail`: if a capability's readers fall out of step with the point's version, the whole point is unresolved rather than checked against whichever readers survived. The validator then reports "readers unresolved" once, not once per page, and `pkit validate` names the fix under `connections`.
+### The reading-evidence point
 
-**Accepts `pkit::documentation:reading-evidence`** (version 1): results of executed checks that follow the documentation, such as a simulated user running a guide. Each entry is one result: an `id`, `<path>@<commit>#<check>`, with the `path` it followed, the `commit` by its full name (40 hexadecimal digits, or 64 under SHA-256), the `check`, the `outcome` (`passed` or `failed`) and an optional `description` (`schemas/reading-evidence.schema.json`). The `check` is the name its filler gives one executed check, kept from commit to commit — lower-case words of letters, digits and hyphens joined by dots, the first beginning with a letter — and by convention opens with the filler's own name: a capability's, or `project` for your own. A filler gives each result it reports for a page or path at a commit its own check, since one filler never supplies an id twice. So two fillers' results for one page or path at one commit stand side by side, and only two that claim one check collide: the point is then unresolved until your filler gives that id or removes it (COR-052 point 4). This capability's validation reads none of the point's entries, so the schema's patterns hold the shape of the id and the check, and nothing warns on the opening name. `union`, with no default. This capability runs no such check: a capability that does, or your project file, supplies the evidence, and until one does the point shows as unfilled. It is advisory (inert policy `fallback`): a filler that cannot answer is warned about, and the rest still count.
+**Accepts `pkit::documentation:reading-evidence`** (version 1): results of executed checks that follow the documentation, such as a simulated user running a guide.
 
-**Contributes to `pkit::work-tracking:doc-check`**, the documentation check of a work-tracking capability such as project-management ([project-management:DEC-053-doc-check-slot]). Its command, `fill-doc-check`, reads the core's whole-repository friction check at HEAD (`pkit friction check --all --json`) and prints obligations with the source `friction`. It declares that it reads history (`reads: [history]` on its `commands:` entry), so `pkit validate` and `pkit status` name the commit it read HEAD at; it reads no base — the base a pull request is compared with bounds the work-tracking check's diff, never this command:
+- **An entry** is one result (`schemas/reading-evidence.schema.json`):
+  - an `id`, `<path>@<commit>#<check>`
+  - the `path` it followed
+  - the `commit` by its full name, 40 hexadecimal digits, or 64 under SHA-256
+  - the `check`
+  - the `outcome`, `passed` or `failed`
+  - an optional `description`
+- **The `check`** is the name its filler gives one executed check, kept from commit to commit. It is lower-case words of letters, digits and hyphens joined by dots, the first beginning with a letter. By convention it opens with the filler's own name: a capability's, or `project` for the project's own.
+- **One check per result.** One filler never supplies an id twice. So it gives each of its results for one page or path at one commit a check of its own. So two fillers' results for one page or path at one commit stand side by side. Only two that claim one check collide, and the point is then unresolved until the filler gives that id or removes it (COR-052 point 4).
+- **What validation reads of it:** none of its entries. So the schema's patterns hold the shape of the id and the check, and nothing warns on the opening name.
+- **Its policy.** `union`, with no default. This capability runs no such check. A capability that does, or the project file, supplies the evidence, and until one does the point shows as unfilled.
+- **Its inert policy is `fallback`,** since it is advisory: a filler that cannot answer is warned about, and the rest still count.
 
-- `page-stale` — one per page the check reports stale, naming the page as `document`. The page's answer in the pull request's diff meets it. A deferred page gives none: its deferral is the answer ([project-management:DEC-053-doc-check-slot] point 4), and `pkit friction debt` keeps reporting it until someone revalidates the page.
-- `code-undocumented` — one per path of the declared surface that nothing anchors, naming the code as `path` and no `document`: no page's change meets it, only a page anchoring the path. The command reads HEAD, so the obligation leaves the point once a page on the branch anchors the code; until then the check reports it unmet, with the fix — anchor the path from a page.
+### The documentation check
 
-The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until you set `doc_check.sources.friction: enforcing`. A repository with no commit yet owes nothing. The command asks git nothing itself: whether HEAD has a commit it reads from the core (`head` in `pkit repository base --json`). If git cannot read a commit that is there — a repository git refuses as unsafe, or a missing object — the command gives no answer, never "nothing owed". If a page's friction lies beyond a shallow clone's history, the command gives no answer either: the check then reports itself unresolved rather than pass on fewer obligations, so fetch the full history. Nor does it answer for a page whose anchor's resolver gave no answer (`no-answer`, state `unresolved`), or a page in a state this capability does not know, which it never takes for current: `pkit friction explain <page>` says why. A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend — correct or remove it, install the capability that registers the kind, or mend a refused registration — not an obligation of this change. So the command answers for the page with what its other anchors owe, and names the anchor in its human view. `pkit validate` reports such an anchor under `friction`, and the change check fails it where a pull request adds it or takes its resolver away (COR-050 point 12). It gives none either when the friction check answers a `schema_version` other than 1, which it does not read; a document without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). `pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
+**Contributes to `pkit::work-tracking:doc-check`**, the documentation check of a work-tracking capability such as project-management ([project-management:DEC-053-doc-check-slot]). Its command, `fill-doc-check`, reads the core's whole-repository friction check at HEAD (`pkit friction check --all --json`), and prints obligations with the source `friction`:
+
+- **`page-stale`:** one per page the check reports stale, naming the page as `document`. The page's answer in the pull request's diff meets it. A deferred page gives none, since its deferral is the answer ([project-management:DEC-053-doc-check-slot] point 4), and `pkit friction debt` keeps reporting it until someone revalidates the page.
+- **`code-undocumented`:** one per path of the declared surface that nothing anchors, naming the code as `path` and no `document`. No page's change meets it, only a page anchoring the path. The command reads HEAD, so the obligation leaves the point once a page on the branch anchors the code. Until then the check reports it unmet, with the fix: anchor the path from a page.
+
+**What it reads.** It declares that it reads history, `reads: [history]` on its `commands:` entry, so `pkit validate` and `pkit status` name the commit it read HEAD at. It reads no base: the base a pull request is compared with bounds the work-tracking check's diff, never this command.
+
+**Whether it blocks.** The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until `doc_check.sources.friction: enforcing` is set. A repository with no commit yet owes nothing.
+
+**When it gives no answer,** never "nothing owed":
+
+- **A commit git cannot read.** The command asks git nothing itself: whether HEAD has a commit it reads from the core (`head` in `pkit repository base --json`). Where git cannot read a commit that is there, the command gives no answer. Such is a repository git refuses as unsafe, or a missing object.
+- **A shallow clone.** If a page's friction lies beyond a shallow clone's history, the check reports itself unresolved, rather than pass on fewer obligations. Fetch the full history.
+- **A page left unjudged:** one whose anchor's resolver gave no answer (`no-answer`, state `unresolved`). The same holds for a page in a state this capability does not know, which it never takes for current. `pkit friction explain <page>` says why.
+- **A friction document of another version.** The friction check's answer carries a `schema_version`. The command does not read one other than 1. One without the key, from a backbone before it, reads as 1 ([the CLI reference, "Friction checks"](../../cli/README.md#friction-checks)).
+
+**An anchor nothing resolves.** A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend, not an obligation of this change. It is mended in one of three ways:
+
+- correct or remove it
+- install the capability that registers the kind
+- mend a refused registration
+
+Of such a page:
+
+- **What the command answers.** It answers for the page with what its other anchors owe, and names the anchor in its human view.
+- **Who reports the anchor.** `pkit validate` reports it under `friction`, and the change check fails it where a pull request adds it, or takes its resolver away (COR-050 point 12).
+
+`pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
+
+### The fixers
 
 **Contributes to `pkit::work-tracking:fixers`**, which says which agent fixes the artefacts of each type, in a work-tracking capability such as project-management ([project-management:DEC-056-drift-fixers]). Its static value names the `living-docs` agent as the fixer of the page type, `living-docs:page` (DEC-001 point 5).
 
-The agent starts on its own only where you grant it, as [project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare) says. A work-tracking capability that starts granted fixers then starts it on the pages the default branch left stale, and brings you what it proposes ("The agent" below). The point is keyed by type, so only pages of the type `living-docs:page` are the agent's there. A page in a project place that lies outside the roots and gives no type, or one whose type is tied, is not started on: give the place the page type ([Types](#types)) to bring its pages in. The contribution is inert when no work-tracking capability is installed.
-
-## The review contribution
-
-Where the project-management capability is installed, this capability contributes the core `rule-set-reviewer` to its merge gate (DEC-001 point 9). The reviewer judges a change against the accepted rules that bind on what it alters or brings under a rule (COR-057). The contribution is `review-contributions.yaml`, with one rule:
-
-```yaml
-contributions:
-  - floor: touches-ruled-artefact
-    reviewer: rule-set-reviewer
-```
-
-When that floor requires the reviewer, and what it reads locally, is in [project-management's README](../project-management/README.md), "Documents the rules govern" ([project-management:DEC-032-conditional-reviewer-requirements] D1).
-
-- **What it covers.** Every artefact on which an accepted rule binds, a page or not, such as an analysis artefact. software-analysis contributes the same rule. With both installed, the reviewer is required once.
-- **Opting out.** An opt-out under `review.agents.contributed_opt_out` in project-management's configuration withdraws one capability's contribution. The reviewer stays required through any other, so list each capability that contributes it.
-- **The reviewer.** Core ships it, and `pkit sync` deploys it with the other agents. While it is not deployed, project-management refuses to resolve any pull request's reviewers.
-- **Not a connection.** The contribution names project-management's gate, not a role, so it is none of the connections above.
-
-## The agent: `living-docs`
-
-The checks above tell you *that* a page drifted and *which* documents are not pages yet. Deciding what that means for a page is judgment, and the capability's agent, `living-docs`, does it — always as a proposal you review, never as an edit (DEC-001 points 5, 6 and 8). `pkit sync` deploys it with the other agents; in Claude Code it is `.claude/agents/living-docs.md` <!-- unanchored: named so a reader finds the deployed agent, which the sync section the page anchors deploys -->. Ask it in plain words; it picks one of three intents from what you ask:
-
-| Ask it to… | It reads | It gives you |
-|---|---|---|
-| **fix a stale or deferred page** | `pkit friction explain <page>`: the anchors that changed and the commits behind them; then those commits and the page | a diff of the page and a pull-request body, citing each commit and the anchor it changed, and naming the answer you give once it is applied (`pkit friction revalidate … --outcome updated`). An anchor it re-points or adds names the one part a statement rests on, where it rests on one. When nothing in the page needs to change, it proposes the `unchanged` answer with a draft reason for you to confirm. For a page `explain` reports `unresolved`, it says why from the anchor's finding and proposes nothing for the prose: for `no-answer`, run again, then `pkit sync`, or the resolver needs mending; for `unresolved-kind`, where the kind misspells a registered one (`pkit validate` names the nearest), a one-line anchor correction with the revalidation a changed anchor list needs, otherwise the capability to install or the registration to mend. |
-| **review a page as its reader** | the page's `reader`, resolved through `pkit::documentation:readers`, with that reader's description and paths; the rules that bind on the page, `LDOC`'s and its space's own, from `pkit rule-sets reach`; the results of executed checks that followed the page, from `pkit::documentation:reading-evidence`, as advice where there are any | a findings record, naming each reading-evidence entry it read, each finding citing the rule the page breaks (`RS-LDOC-003`, or the space's own rule) and quoting the passage, and each passage a rule leaves to your judgement, such as a fact the page repeats, listed as a question — **only when something was found**. Nothing found: one line, naming any reading-evidence entry it read, and no file. As a pull-request comment if you ask for one. |
-| **onboard existing documentation** | the validator's unclassified documents and findings, the friction check's measures, your code-to-doc mapping if you keep one | one plan behind one approval gate (below) |
-
-What it will not do:
-
-- **Apply anything.** It is read-only on your repository: it never edits, moves or deletes a tracked file, never changes configuration, and never runs a friction writer (`revalidate`, `defer`, `record-status`) — the answer a page carries is a person's decision (COR-050 point 3), and this agent has no tool for asking you and judges pages besides; who may run a writer is in the agents README, "Friction writers". When you ask it, its proposals land in the agent workspace, under `.agent-workspace/living-docs/`, as diffs you apply with `git apply` and pull-request bodies you open with. The one thing it writes outside the workspace is a reader-review posted as a pull-request comment, when you ask for it.
-- **Repeat validation.** What `pkit living-docs validate` and `pkit validate` already judge, it names rather than re-judges.
-- **Review a change for missing docs.** That is change review, the code-review panel's documentation reviewer where one is installed; reader-review looks at the page, not the diff.
-- **Test the docs by running the product.** Such results arrive through the reading-evidence point, and the agent reads them as advice when it reviews a page as its reader.
-- **Revalidate what is not a page** — a decision record, a rule, another capability's artefact. Its own component does that.
-- **Fetch a source.** For a page stale on a `source` anchor it reads the versions recorded and the address from the source file's history (`git show <commit> -- <file>`), names the source, both versions and the link, and asks you what changed in the source that bears on the page's statements. It never rewrites a page from a version change alone.
-- **Read a friction document of a version it does not read.** The `explain`, `debt` and `check --all` documents carry a `schema_version`; one other than 1 it refuses, naming the command and the version, and proposes nothing from it. One without the key, from a backbone before it, reads as 1.
-
-**As the fixer of your pages.** Where you granted it, a work-tracking command may start the agent with nobody watching ("Connections" above). project-management ships one, `pkit pm fix-drift` ([its README, "Starting the fixers"](../project-management/README.md#starting-the-fixers--fix-drift)). In such a run the agent only proposes friction fixes, on the pages the command names, and writes in the workspace the command gives it:
-
-- **For each page it proposes,** it writes the evidence, the answer as fields, and, for an `updated` answer, a diff of the page's text and anchors. The command builds the answer's command from those fields, and never runs a command the agent wrote.
-- **A page whose fix needs what only you know,** such as what changed in a source, it holds with one question. Your answer goes with the page's next run.
-- **It ends with one line for each page,** in the forms of project-management's run contract: proposed, held with its question, or none with one of the contract's reasons, such as `not-mine` for a location that is no page.
-
-Nothing is applied until you accept it.
-
-Until the readers point resolves, the agent reads a page as its space's `audience` ([Declaring your spaces](#declaring-your-spaces)), and says so. Where the space's entry names none, it reads a user page as users and a technical page as maintainers, as DEC-001 gives them. For a space you added whose entry names none, it reads no page, and names that entry. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised, a page stale on a source, a fixer run a command started) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
-
-## Onboarding an existing project
-
-On a project that already has documentation, nothing is anchored yet, so onboarding is not moving files: it is friction work on that starting point (DEC-001 point 8). The path:
-
-1. **Declare where your documentation lives** — the roots and any places outside them, each assigned to a space ("Declaring your spaces" above) — until `pkit living-docs validate` reports no errors. Its summary counts the **unclassified documents**: documents in your spaces' places that are not pages yet. They are the onboarding's input.
-2. **Ask the agent to onboard.** It drafts **one plan**, each line citing its evidence, in four parts:
-   - **spaces** — which space each unclassified document becomes a page of, with its `reader` and `kind`, or why the spaces' rules do not govern it; roots still shared are separated, and a space with no definition gets one from `pkit living-docs new space`, which you run, with the scope that selects its pages;
-   - **splits and rewrites** — pages that serve two readers, or that state another page's fact with no link to its home or no anchor on the home's section (`RS-LDOC-002`), split, merged or rewritten for their reader;
-   - **anchors** — the anchors each page's statements need, each on the one part a statement rests on where it rests on one ("Anchoring one part", in Pages above), and the statements nothing grounds, raised as questions rather than kept;
-   - **mapping** — if you keep a code-to-doc mapping (the project-management capability's, read through the work-tracking role's documentation-check point), which of its rules become path anchors on the pages they name, narrowed where an anchor would match most of the repository. Retiring the mapping is a separate change, for whoever owns it.
-3. **Review the plan at its single gate**: approve, revise, or reject. Nothing is drafted before you approve; a revision comes back to the gate; a rejection drafts nothing.
-4. **Review the changes it drafts.** On approval it writes one reviewable change per step into `.agent-workspace/living-docs/onboarding/` — diffs and pull-request bodies — and stops. You apply them and open the pull requests. A page new in its change counts as revalidated there, so it needs no writer.
-5. **Repeat until done.** Onboarding is complete when the declared surface is covered and no page is left unanchored without a reason you accepted. A page that has nothing to anchor to carries that reason in its friction block, `unanchored-because: <why>` instead of anchors — the core's key (COR-050 point 1), which the core refuses beside anchors. `pkit friction check --all` shows both measures, listing the pages accepted with a reason apart and counting only those without one; `pkit living-docs validate` counts the pages of your spaces each way in its summary and lists them.
-
-From then on, the friction check flags pages as their anchors change, and the agent proposes each fix.
-
-## What's shipped now, what's next
-
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost, reference and guide page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. So is the agent's declaration as the fixer of your pages, with what it takes from the command that starts it and what it returns. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill. So is the contribution of the core rule-set reviewer to project-management's merge gate. So are the decision on visual elements, its two proposed rules, and the validator's check of a diagram's text alternative, which runs once a major of `LDOC` accepts its rule. So is the validator's report of what a page mentions and does not anchor, with the mark that passes a passage over. So is the decision on the guide kind.
+- **Only where granted.** The agent starts on its own only where the project grants it, as [project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare) says. A work-tracking capability that starts granted fixers then starts it on the pages the default branch left stale. It brings the person what the agent proposes ([the page on the agent, "As the fixer of pages"](agent.md#as-the-fixer-of-pages)).
+- **Keyed by type.** Only pages of the type `living-docs:page` are the agent's there. A page in a project place that lies outside the roots and gives no type, or one whose type is tied, is not started on. Giving the place the page type ([the page on pages, "Types"](pages.md#types)) brings its pages in.
+- **Inert** when no work-tracking capability is installed.
 
 ## Citing this capability's decisions
 
-`[living-docs:DEC-001-living-docs-discipline]`, `[living-docs:DEC-002-visual-elements]`, `[living-docs:DEC-003-guide-kind]`; a rule of the shared method, `[living-docs:RS-LDOC-003]`.
+`[living-docs:DEC-001-living-docs-discipline]`, `[living-docs:DEC-002-visual-elements]` and `[living-docs:DEC-003-guide-kind]`, and a rule of the shared method as `[living-docs:RS-LDOC-003]`.
 
 ## Dependencies
 
 No other capability is required. It works without analysis, work-tracking or testing capabilities, and each can enrich it.
 
-Its commands are Python scripts that uv runs, each with the packages it declares, so uv must be on your `PATH`.
+- **uv.** Its commands are Python scripts that uv runs, each with the packages it declares, so uv must be on the `PATH`.
+- **project-management** is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 9). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.
 
-project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 9). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.
+## The pages beside this one
+
+<a id="whats-shipped-now-whats-next"></a>
+
+Each part the capability ships is described here, or on one of the pages beside this one:
+
+- [`pages.md`](pages.md) — a page's fields and anchors, a kind's format, the types of documents, captured sources and visual elements.
+- [`spaces.md`](spaces.md) — declaring the spaces, each definition's scope, the definitions location, the space-definition template and the shared method, `LDOC`.
+- [`validation.md`](validation.md) — what validation reads, fails on and reports, and what a page mentions and does not anchor.
+- [`agent.md`](agent.md) — the `living-docs` agent, its fixer runs and onboarding, and the review contribution.
+
+**Where each section that left this page went:**
+
+- <a id="pages"></a>"Pages" is [`pages.md`, "A page's fields"](pages.md#a-pages-fields).
+- <a id="types"></a>"Types" is [`pages.md`, "Types"](pages.md#types).
+- <a id="sources"></a>"Sources" is [`pages.md`, "Sources"](pages.md#sources).
+- <a id="visual-elements"></a>"Visual elements" is [`pages.md`, "Visual elements"](pages.md#visual-elements).
+- <a id="templates"></a>"Templates" is [`pages.md`, "The kinds' templates"](pages.md#the-kinds-templates), and [`spaces.md`, "The space-definition template"](spaces.md#the-space-definition-template).
+- <a id="the-shared-method-ldoc"></a>"The shared method" is [`spaces.md`, "The shared method"](spaces.md#the-shared-method-ldoc).
+- <a id="declaring-your-spaces"></a>"Declaring your spaces" is [`spaces.md`, "Declaring the spaces"](spaces.md#declaring-the-spaces).
+- <a id="validation"></a>"Validation" is [`validation.md`, "The command"](validation.md#the-command).
+- <a id="what-a-page-mentions-and-does-not-anchor"></a>"What a page mentions and does not anchor" is [`validation.md`, under the same heading](validation.md#what-a-page-mentions-and-does-not-anchor).
+- <a id="the-review-contribution"></a>"The review contribution" is [`agent.md`, under the same heading](agent.md#the-review-contribution).
+- <a id="the-agent-living-docs"></a>"The agent" is [`agent.md`, "What it does"](agent.md#what-it-does).
+- <a id="onboarding-an-existing-project"></a>"Onboarding an existing project" is [`agent.md`, "Onboarding"](agent.md#onboarding).
