@@ -18,14 +18,14 @@ The methodology's own documentation wrote its first such page, and named its kin
 
 ## Decision
 
-**The capability ships the page kind `guide`, for a page that explains one subject to the reader who uses it. A guide holds its title, a lead, why the subject exists and the reader's tasks, in that order, and a folder's entry page ends with the folder's pages. Its structure, the part the validator checks, is its title.**
+**The capability ships the page kind `guide`, for a page that explains one subject to the reader who uses it. A guide holds its title, a lead, why the subject exists and the reader's tasks, in that order, and a folder's entry page ends with the pages the folder holds for its reader. Its structure, the part the validator checks, is its title.**
 
 ### 1. A guide explains one subject to the reader who uses it
 
 A *guide* is a page of the kind `guide`. Its *subject* is one thing the project offers the page's reader, such as an area, a component, a tool or a feature.
 - **What it says:** why the subject exists, what problem it solves for the reader, and how the reader does its tasks.
-- **What it leaves to other pages:** detail a reader looks up rather than reads through, such as each option of a command or each key of a file. Where the guide summarises such a fact, it links and anchors the fact's home, as the rule on one home asks of any page (DEC-001 point 3).
-- **Telling it from a page that describes a surface:** a guide's first section after its lead says why its subject exists, and the guide leaves the detail to look up to other pages. A page that describes a surface opens with what the surface is for, and goes on to how it is used and what is true of it.
+- **What it leaves to other pages:** detail a reader looks up rather than reads through, such as each option of a command or each key of a file. Where the guide summarises such a fact, it does so as the rule on one home asks of any page (DEC-001 point 3).
+- **Telling it from a page that describes a surface:** a guide's first section after its lead and any contents list says why its subject exists, and the guide leaves the detail to look up to other pages. A page that describes a surface opens with what the surface is for, and goes on to how it is used and what is true of it.
 
 ### 2. A guide holds the why, then the tasks
 
@@ -33,8 +33,8 @@ A guide's format holds these parts, in this order, and its template shows them:
 - **Its title,** a level-1 heading naming the subject.
 - **A lead:** a paragraph saying what the subject is, for this reader, and which page describes it, where one does. A contents list may follow the lead.
 - **Why the subject exists:** the problem it solves for the reader. It is the first section after the lead and any contents list.
-- **The reader's tasks:** a section for each task the guide teaches. A task comes after any task it needs done first. The tasks' sections may stand under one heading that gathers them.
-- **The folder's pages, last,** where the guide is a folder's *entry page*, such as its README, and the folder holds further pages for the guide's reader. Each such page is listed with a line on what the reader finds there, in the order the reader takes them. The list takes a signpost's form (RS-LDOC-005). The guide's why and tasks are its own, never a summary of those pages.
+- **The reader's tasks:** a section for each task the guide teaches. A task comes after any task it needs done first. Some or all of the tasks' sections may stand under one heading that gathers them.
+- **The folder's pages, last,** where the guide is a folder's *entry page*, such as its README, and the folder holds further pages for the guide's reader. Each such page is listed with a line on what the reader finds there, in the order the reader takes them. A page in a subfolder that has an entry page of its own may be reached through that entry page instead. The list takes a signpost's form (RS-LDOC-005). The guide's why and tasks are its own, never a summary of those pages.
 
 A section on how the subject works may stand anywhere after the why, where its reader needs one. A guide may carry other sections, such as the project's own case (point 3), where they keep this order. The writer words every heading.
 
@@ -54,13 +54,13 @@ Every page that names `guide` in its `kind` field follows this format, whoever w
 
 ## Rationale
 
-**Why a kind of its own.** A page that describes a surface serves a reader who has chosen the surface and comes to use it, so it puts the surface's purpose and use first. A guide serves a reader who needs the reason first: one who has not chosen the subject, or who must understand it to use it well. The two differ in what comes first and in what they leave to other pages, so they are two kinds.
+**Why a kind of its own.** A page that describes a surface serves a reader who has chosen the surface and comes to use it, so it puts the surface's purpose and use first. A guide serves a reader who needs the reason first: one who has not chosen the subject, or who must understand it to use it well. The two differ in what follows the lead and in what they leave to other pages, so they are two kinds.
 
-**Why the why comes first.** A reader decides from the problem whether the subject is for them. A guide that opens with its mechanism makes them read how something works before they know whether they need it. The cost falls on a reader who comes for one task, who passes the why first. A contents list after the lead sends that reader on.
+**Why the why comes first.** A reader decides from the problem whether the subject is for them. A guide that opens with its mechanism makes them read how something works before they know whether they need it. The cost falls on a reader who comes for one task, who passes the why first. A contents list after the lead, where the page has one, sends that reader on.
 
 **Why tasks, in the order they depend on each other.** A reader comes to a guide to do something. A task placed before the task it needs fails for the reader who follows the page in order.
 
-**Why the folder's pages come last.** A reader who opens a folder's entry page learns there why the subject exists and does its common tasks. The folder's other pages are where that reader goes next. A reader who wants only the list reaches it from the contents list.
+**Why the folder's pages come last.** A reader who opens a folder's entry page learns there why the subject exists and does its common tasks. The folder's other pages are where that reader goes next. A reader who wants only the list finds it at the page's end, or from a contents list.
 
 **Why the case is the project's.** What persuades a reader differs between projects and audiences. A rule on proof, comparison or limits that suits a tool's entry page would bind every guide of every project that adopts the capability. Such rules belong in the shared set only once more than one project has tried them.
 
@@ -70,7 +70,7 @@ Every page that names `guide` in its `kind` field follows this format, whoever w
 
 ### Alternatives considered
 
-- **Guides as pages that describe a surface,** of the kind that already ships. Rejected. The two differ in what comes first and in what they leave to other pages (Rationale).
+- **Guides as pages that describe a surface,** of the kind that already ships. Rejected. The two differ in what follows the lead and in what they leave to other pages (Rationale).
 - **Separate kinds for explaining a subject and for doing its tasks,** as documentation typologies such as Diátaxis split explanation from how-to guides. Not taken. A reader of one subject finds its why and its common tasks on one page. A page that teaches one task alone can come as a kind of its own once such a page is written.
 - **Fixed headings,** such as "Why" and "Tasks", in the structure. Rejected. They bind every project's wording and language.
 - **A structure of levels,** a title and at least two second-level sections. Rejected. Any two headings pass it, so it fails no page that lacks its why.
@@ -82,5 +82,5 @@ Every page that names `guide` in its `kind` field follows this format, whoever w
 ## Implications
 
 - **The capability** ships the kind's template, and declares its structure beside the other kinds'. The authoring command stamps a guide as it stamps any kind the capability declares. The capability's README lists the kind.
-- **A page that names `guide` already** is checked against the structure where the one-format rule binds on it, and judged against the format (point 5). One whose title the validator does not read as a level-1 heading passed before and then fails, such as a page with no title or with an HTML heading. So shipping the kind is a breaking change of the capability (DEC-001 point 3), which its release notes say.
-- **The capability's agent and its authoring skill** read the guide's template beside the other kinds'.
+- **A page that names `guide` already** is checked against the structure where the one-format rule binds on it, and judged against the format (point 5). One whose title the validator does not read as a level-1 heading passed before and then fails, such as a page with no title or with an HTML heading. So shipping the kind is a breaking change of the capability (DEC-001 point 3), which its release notes say. No migration comes with it: what fails is a page's own title, which only its writer can word.
+- **The capability's agent** reads the guide's template beside the other kinds', and this record for the order it judges. Its authoring skill offers the kind.
