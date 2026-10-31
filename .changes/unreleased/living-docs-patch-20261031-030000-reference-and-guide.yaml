@@ -3,8 +3,8 @@ kind: patch
 custom:
   category: Changed
 body: >
-  living-docs' README becomes a reference for the AI agent that uses the
-  capability (#2397). It keeps the install, the authoring command and the
+  The README of living-docs becomes a reference for the AI agent that uses
+  the capability (#2397). It keeps the install, the authoring command and the
   connections, and links its guide for people. Four pages beside it hold the
   rest: `pages.md` (a page's fields, kinds, types, sources and visual
   elements), `spaces.md` (declaring spaces, definitions and `LDOC`),

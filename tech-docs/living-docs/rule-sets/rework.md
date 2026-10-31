@@ -57,7 +57,7 @@ rules:
 checks:
   RS-REWORK-001:
     - check: page-numbering
-      part: Each number is in tens, no two of a folder's pages or subfolders share one, and the folder's README links each numbered page and subfolder, in number order.
+      part: Each number is in tens, no two of a folder's pages or subfolders share one, and the folder's README lists each numbered page and subfolder in number order, each by a list item that opens with a link to it.
   RS-REWORK-005:
     - check: page-contents
       part: The list between the page's contents markers is the one the contents generator writes from the page's second-level headings.

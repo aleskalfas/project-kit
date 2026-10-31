@@ -10,8 +10,10 @@ is the test `REWORK` declares as the rule's check, `page-numbering`:
 - **What is numbered:** a page `NNN-<topic>.md` or a subfolder `NNN-<topic>/`
   beside the README, its number three digits or more.
 - **What holds:** each number is in tens, no two entries share one, and the README
-  links each numbered entry, its first link to each in number order. A link to a
-  subfolder names the folder or its `README.md`.
+  lists each numbered entry in number order. The README's list is its list items
+  that open with a link to a numbered entry. A link elsewhere, such as in the prose
+  of a section, lists nothing. A link to a subfolder names the folder or its
+  `README.md`.
 - **What is skipped:** a lookup page, named by its topic with no number, and a
   guide's folder, a subfolder named after its reference's folder with no number
   (ADR-069 point 1). Its parent's README lists it by name after the numbered
@@ -34,6 +36,7 @@ REWORK = "tech-docs/living-docs/rule-sets/rework.md"
 NUMBERED = re.compile(r"^(\d{3,})-")
 LINK = re.compile(r"\[(?:[^\]\\]|\\.)*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
 FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+(?=\[)")
 
 
 def numbered_entries(folder: Path) -> dict[str, int]:
@@ -48,8 +51,10 @@ def numbered_entries(folder: Path) -> dict[str, int]:
     return entries
 
 
-def linked_targets(text: str) -> list[str]:
-    """Each inline link's target, in the order the text gives them, outside fenced code."""
+def listed_targets(text: str) -> list[str]:
+    """The target of the link each list item opens with, in the text's order, outside
+    fenced code. A list item that opens with no link, and a link anywhere else, list
+    nothing."""
     targets: list[str] = []
     fence: str | None = None
     for line in text.splitlines():
@@ -61,8 +66,10 @@ def linked_targets(text: str) -> list[str]:
             elif marker.startswith(fence):
                 fence = None
             continue
-        if fence is None:
-            targets.extend(LINK.findall(line))
+        if fence is None and LIST_ITEM.match(line):
+            found = LINK.search(line)
+            if found is not None:
+                targets.append(found.group(1))
     return targets
 
 
@@ -100,7 +107,7 @@ def numbering_findings(readme: Path) -> list[str]:
         if len(names) > 1:
             findings.append(f"{', '.join(sorted(names))}: they share the number {number}")
     listed: list[str] = []
-    for target in linked_targets(readme.read_text(encoding="utf-8")):
+    for target in listed_targets(readme.read_text(encoding="utf-8")):
         name = _entry_linked(target, entries, folder)
         if name is not None and name not in listed:
             listed.append(name)
@@ -161,7 +168,8 @@ def _folder(tmp_path: Path, readme: str, *names: str) -> Path:
 def test_a_readme_listing_its_pages_in_number_order_holds(tmp_path: Path) -> None:
     readme = _folder(
         tmp_path,
-        "# Guide\n\n- [Set up](010-set-up.md)\n- [Write](020-write.md#first)\n- [More](030-more/)\n",
+        "# Guide\n\n- [Set up](010-set-up.md)\n- [Write](020-write.md#first)\n"
+        "- [More](030-more/)\n",
         "010-set-up.md",
         "020-write.md",
         "030-more/",
@@ -175,9 +183,7 @@ def test_a_subfolder_is_listed_by_its_readme_too(tmp_path: Path) -> None:
 
 
 def test_a_page_listed_out_of_number_order_fails(tmp_path: Path) -> None:
-    readme = _folder(
-        tmp_path, "- [B](020-b.md)\n- [A](010-a.md)\n", "010-a.md", "020-b.md"
-    )
+    readme = _folder(tmp_path, "- [B](020-b.md)\n- [A](010-a.md)\n", "010-a.md", "020-b.md")
     assert numbering_findings(readme) == [
         "the README lists 020-b.md, 010-a.md, out of number order: 010-a.md, 020-b.md"
     ]
@@ -211,6 +217,24 @@ def test_lookup_pages_and_guide_folders_are_skipped(tmp_path: Path) -> None:
         "010-a.md",
     )
     assert numbering_findings(readme) == []
+
+
+def test_a_link_in_prose_lists_nothing(tmp_path: Path) -> None:
+    """A section may link a later page in its prose, and only the list is held to the
+    numbers."""
+    readme = _folder(
+        tmp_path,
+        "See [B](020-b.md) first.\n\n- **Why.** It needs [B](020-b.md#x).\n\n"
+        "- [A](010-a.md)\n- [B](020-b.md)\n",
+        "010-a.md",
+        "020-b.md",
+    )
+    assert numbering_findings(readme) == []
+
+
+def test_a_numbered_page_linked_only_in_prose_is_not_listed(tmp_path: Path) -> None:
+    readme = _folder(tmp_path, "See [A](010-a.md).\n", "010-a.md")
+    assert numbering_findings(readme) == ["010-a.md: the README does not list it"]
 
 
 def test_a_link_in_fenced_code_lists_nothing(tmp_path: Path) -> None:
