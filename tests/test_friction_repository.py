@@ -1483,6 +1483,35 @@ def test_unparsable_front_matter_is_reported(timeline: Timeline) -> None:
     assert _summary(_run(timeline)) == [("unreadable", "docs/broken.md", None, None)]
 
 
+def test_each_answer_file_version_is_parsed_once_a_run(
+    timeline: Timeline, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A run parses each version of an answer file once: the names an entry reads, which
+    say whether history agrees with it (`HistoryNames`), come from the one parse the
+    answers' history keeps, never from a second (#2365)."""
+    without_shipped_rule_sets(timeline.adopter)
+    timeline.start({"docs/guide.md": guide()})
+    timeline.commit("change the CLI", {"src/cli/main.py": "print('j')\n"}, author=ALICE)
+    timeline.commit("revalidate", {"docs/guide.md": guide(at=T2)}, author=BOB)
+    parsed: list[bytes | None] = []
+    read_names: list[str] = []
+    parse, reads = af.read_answer_file, af.HistoryNames.reads
+
+    def parse_once(name: str, raw: bytes | None) -> af.AnswerFile:
+        parsed.append(raw)
+        return parse(name, raw)
+
+    def reads_spied(self: af.HistoryNames, state: Any, name: str = "") -> frozenset[str]:
+        read_names.append(name)
+        return reads(self, state, name)
+
+    monkeypatch.setattr(af, "read_answer_file", parse_once)
+    monkeypatch.setattr(af.HistoryNames, "reads", reads_spied)
+    assert _point(_run(timeline)) is not None
+    assert read_names, "no entry read another answer file: nothing here was asked twice"
+    assert parsed and len(parsed) == len(set(parsed))
+
+
 def test_json_document_shape(timeline: Timeline) -> None:
     without_shipped_rule_sets(timeline.adopter)
     timeline.start({"docs/guide.md": guide()}, friction_config(mode="enforcing"))
