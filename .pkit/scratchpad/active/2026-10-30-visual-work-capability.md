@@ -89,6 +89,7 @@ Use cases 1 to 8 all come from presentations. The maintainer warned (31 October)
 10. **Draw several views of one system.** Several diagrams of one system share its concepts and their look. A concept restyled once changes every view. *(Proposed, 31 October; Structurizr's "model once, many views" in the research.)*
 11. **Add a discipline the capability does not ship.** An adopter adds a discipline of its own, such as a one-page handout or a poster, with its own top component and layouts, without changing the capability. *(Proposed, 31 October.)*
 12. **Work about several subjects, under any brand.** A deck about two projects, or a deck in a client's brand about your own project. *(Proposed, 31 October.)*
+13. **Draw another capability's visuals.** Another capability, software-analysis first, has all its diagrams drawn by visual-work in the style of the selected libraries, through a contract it declares. A library that covers only part of the contract still works: what it lacks is drawn the old way, and the coverage is reported. *(The maintainer, 31 October.)*
 
 ## Aspects to discuss
 
@@ -129,11 +130,12 @@ Taken one at a time, in this order. The order may change as the answers come. Po
     - ~~18b. Where the core library's versions live (4i).~~ Decided: the core holds only the interface, a starter library holds the opinionated components, and all three shipped libraries are copied into the project like any other (see "Discussion", point 18b).
     - ~~18c. How renderers plug in without connection points (point 6).~~ Decided: plugins inside the one capability, never a capability per renderer (see "Discussion", point 18c).
     - ~~18d. A scene per font profile (point 2, with point 5).~~ Decided: font profiles set by the context, one scene per profile (see "Discussion", point 18d).
-19. **References between elements.** One element using another's measured size, one owner per dimension, cycles refused.
-20. **Format numbers** on every file from its first commit, read by the engine forever.
-21. **An escape for hand-drawn one-offs**, such as an area the renderer leaves alone; the architect's largest risk to the product.
-22. **Graphs:** graph layout as an engine tool, or relation graphs left to Mermaid as software-analysis does.
+19. ~~**References between elements.** One element using another's measured size, one owner per dimension, cycles refused.~~ Decided: two sizes per element, public anchors, list operations as layout operators (see "Discussion", points 19 and 20).
+20. ~~**Format numbers** on every file from its first commit, read by the engine forever.~~ Decided: pkit's `schema_version` for breaking changes, `requires` for added features, semver for each library's content (see "Discussion", points 19 and 20).
+21. ~~**An escape for hand-drawn one-offs**, such as an area the renderer leaves alone; the architect's largest risk to the product.~~ Decided: the risk is a missing tool; four tools are added, and helper scripts run while preparing write checked data (see "Discussion", points 21 and 22).
+22. ~~**Graphs:** graph layout as an engine tool, or relation graphs left to Mermaid as software-analysis does.~~ Decided: a helper arranges graphs while preparing, views share one model file, and other capabilities connect later through a contract with fallback (see "Discussion", points 21 and 22).
 23. **Where the first slice's code lives,** outside project-kit's shipped tree.
+24. **A protocol between capabilities.** How a consumer such as software-analysis declares a contract, how visual-work is connected to it, and whether pkit's slots and connection points can carry a request with input or need a core decision. Use case 13; not built now.
 
 ## Discussion
 
@@ -848,7 +850,7 @@ The agent had suggested deciding at point 12 whether Mural might later split int
 
 **Outcome (31 October).** The maintainer agreed to the revised recommendation: the lean start, with Mural wrapping its own lines within the measured width.
 
-### 19 and 20. References between elements, and format numbers (31 October, open)
+### 19 and 20. References between elements, and format numbers (31 October)
 
 **19. The question.** Point 4a's formulas see an item's index, the count and the tokens, but not another element's measured size. So a card's body cannot start under a heading that wrapped to two lines, and a note cannot sit under the tallest of three cards. Today's tool has such references one by one (`anchor`, `align: <slot>`, `wrap: <part>`, `below: <instance>`).
 
@@ -887,6 +889,159 @@ card:
 1. The draft above.
 2. One version number for the whole capability, named in each library: simpler, but a library would have to change whenever anything in the capability changes.
 3. No format numbers until the first breaking change: the first change then has to guess which files are old.
+
+**The critic's review of 19 (31 October).** The idea holds (read computed sizes, one owner per value, refuse loops), but:
+
+- **The draft's own card broke its rule.** The card sets its height, and a row with equal heights sets it again: two writers. Yet gen.py takes the tallest item in about seven kinds (`wired`, `sockets`, `why_row`, `board`, `answers`, `code2`, `roles`). Fix: each element has the size it asks for (from its content) and the size it gets (from its parent, by default what it asked for), as Flutter and CSS do. The one-owner rule applies to the size it gets.
+- **An arrow could not reach a part inside another component.** `sockets` draws arrows to slots two levels down inside the provider box, and use case 10 needs relations between parts of different containers. Today's tool allows it. Fix: a component marks some parts as public anchors, which an ancestor may read at any depth, never sideways or upward. The reason for locality, unstated in the draft: a component's inner parts stay private, so a library can change them without breaking anyone.
+- **Gaps:** compute value by value, like spreadsheet cells, so a parent's width and a child's measured height are no loop; make a text's natural width (on one line) readable; reach the tallest, the first or last, or a keyed item of a list; say what a missing part and a division by zero give; rows lining up across sibling cards (a later operator, like CSS subgrid); report overflow per scene, never shrink text; with references, the scenes of two font profiles differ in positions too, which rewords 18d.
+- **Counter-alternative:** list operations ("the tallest", "the item with this key", alignment) belong in layout operators, keeping formulas to arithmetic plus reading a frame, so the grammar stays small.
+
+**The agent's revised recommendation for 19.**
+
+```yaml
+card:
+  anchors: [heading, body]                 # public: an ancestor may point here
+  parts:
+    heading: {text: "{title}", x: 24, y: 24, width: =root.width - 48}
+    body:    {text: "{body}", x: 24, y: =heading.bottom + @space.04, width: =heading.width}
+  asks: {height: =body.bottom + 24}        # what it asks for; its parent may give more
+row:
+  layout: {stack: across, equal: height}   # gives each card the tallest card's height
+```
+
+- **Two sizes per element:** the size it asks for and the size it gets. One owner per value applies to the size it gets. A part reads the size its container gets.
+- **What a formula may read:** its own component's parts, and the public anchors of components below it, at any depth. Never sideways, never upward. Renaming or removing a public anchor is a breaking change, with a note (4i).
+- **Lists through layout operators:** stack, align, distribute, equal sizes, and a list item by its stable key, the first or the last. Formulas stay arithmetic plus reading a frame, including a text's natural width.
+- **Computed value by value,** in the order the references give; a loop is refused, naming it.
+- **Missing and impossible values:** a missing part has zero size at its place; dividing by zero is an error naming the formula.
+- **Overflow** is reported per scene, never fixed by shrinking text.
+- **Later:** rows lining up across sibling cards; baselines.
+
+**Outcome of 19 (31 October).** The maintainer agreed to the revised recommendation: two sizes per element, public anchors, and list operations as layout operators. With references, the scenes of two font profiles differ in positions too, not only in measured text and box sizes (a rewording of 18d).
+
+**The critic's review of 20 (31 October).** Numbering from the first commit is right, but the draft built a second versioning system beside pkit's. pkit data files carry `schema_version`, which `pkit data validate` checks (COR-023). The maintainer's content-conversions design (`2026-10-09-content-upgrades.md`, decided 10 October, filed as #1431 to #1445, not yet a record) already covers reading an old format through an optional conversion, a reviewed rewrite of a project's own files, and validation over a range of versions. Also: one number for the whole format, not one per kind of file (4i already says so); the list of files was wrong (W3C token files, fonts and images cannot carry it); "reads" is not "draws the same" (18a: the exports are the freeze); an edit taken back into an old file should be refused, naming the conversion; and the lowest format a library needs can be computed from the tools it uses and checked against what it declares.
+
+**The agent's revised recommendation for 20.** Use pkit's own version field, and line up with the content-conversions design without building on it as authority until it is a record.
+
+- **Each file of the capability's own format binds to its schema the pkit way,** with `schema_version` (COR-023), so `pkit data validate` and editors check it. W3C token files, fonts and images carry no number: they are in other formats.
+- **The capability's schemas share one version number,** raised together on a breaking change, because the files refer to each other. A library's file names that number, and the engine checks it against the lowest number the library's tools need.
+- **A breaking change ships a converter from the previous version.** Converters chain (1 → 2 → 3), convert shapes only, and keep sample files of each old version in the tests. The engine converts in memory when it reads a fetched library folder, which it never rewrites. A project's own files are rewritten on request, as a diff a person reviews, the files that share keys together (`slides.yaml` with `slides.cs.yaml`). That is the content-conversions design's optional conversion.
+- **Reading an old file is not drawing it the same:** today's engine may draw it differently; the exports stay the freeze (18a).
+- **An edit taken back into a file of an old version is refused,** naming the conversion, so an edit and a format change never mix.
+- **What is needed from pkit:** validation that accepts a range of versions, from the content-conversions arc (#1431 to #1445). It is not needed until the first breaking change; version 1 needs nothing new.
+
+**The alternative.** The capability's own `format:` field, outside pkit's data binding, with its own validation. Independent of pkit's plans, but a second versioning system, without pkit's validation and editor support.
+
+**The maintainer's question (31 October).** Would semver be better, since it says whether a change is breaking? The agent's answer: semver's information is wanted, and it already has places in pkit; a semver string in the format field would leave pkit's convention, where `schema_version` is an integer that validation compares exactly (`.pkit/schemas/README.md`). The three numbers, each with one job:
+
+```yaml
+# ibm/2.0.0/library.yaml
+version: 2.0.0                  # the library's content, semver: major removes or renames, minor adds, patch fixes
+schema_version: 1               # the shape of the files: rises only on a breaking change, the format's major
+requires: {visual-work: "1.4"}  # the oldest capability release with the tools the library uses, the format's minor
+```
+
+- **A breaking change to the shape** raises `schema_version` and ships a converter.
+- **An additive change,** such as a new engine tool or a new optional field, leaves `schema_version` alone. It arrives in a minor release of the capability, which pkit already versions in semver through changesets (PRJ-002). A library that uses it names that release in `requires`, which the engine computes from the tools used and checks against the declaration.
+- **The library's own version** stays semver, as 4i decided. For pictures it is a signal, not a promise: the lock and the before-and-after protect each piece whatever the number says.
+
+So the format's major and minor are carried by `schema_version` and `requires`, the split Rust uses (its edition and its `rust-version`), without a second versioning scheme.
+
+**Outcome of 20 (31 October).** The maintainer agreed: pkit's integer `schema_version`, one number shared by the capability's schemas, rising only on a breaking change, with a converter; `requires` naming the oldest capability release whose tools a library uses, computed and checked by the engine; semver for each library's content. The rest of the revised recommendation stands: converters chain, fetched folders are converted in memory, a project's own files are rewritten on request as a reviewed diff, and an edit taken back into an old-version file is refused.
+
+### 21 and 22. An escape for hand-drawn one-offs, and graphs (31 October)
+
+**21. The question.** Point 4a makes every one-off data. The Friday talk's 38 one-off diagrams were most of its work, written as Python in `gen.py`. If writing a one-off as data is slow, people go around the tool: the architect's largest risk to the product. No escape is decided for something drawn by hand.
+
+**21. The agent's draft recommendation.** Data stays the norm, with two escapes that need no code:
+
+- **A foreign drawing.** A part that shows a drawing made elsewhere (Figma, Inkscape, Excalidraw, draw.io, a scan), as an SVG file or an image beside the material. It is drawn as given in every renderer (on Mural through the image fallback). An SVG may use the role colours through CSS variables or `currentColor`, so a theme switch reaches it; otherwise it is declared as not following the theme. Its trace names its file but no fields, so the import reports an edit to it instead of taking it.
+- **A reserved area.** On an editable renderer, the engine draws an empty, labelled frame and leaves what is inside to people, such as a workshop's sticky notes on a slide. The import never takes what is inside, and a push never touches it, as today's tool already refuses to rebuild an area with hand-made content. Other renderers draw the empty frame, or a picture cut from the board's export (as `export_pdf.py` cuts slides).
+- **The designer agent writes one-offs as data** (point 9). In the Friday talk the agent, not the maintainer, wrote all 38 in `gen.py`. The first slice measures whether `pyramid` and `sockets` are shorter as data than as code; if not, the engine lacks a tool.
+
+**21. The alternatives.**
+
+1. The draft above.
+2. Code as an escape: a one-off as a Python function in the piece, producing scene elements. Fast to write, but it breaks 4a (kinds are data), cannot be checked by a schema, and runs a project's code inside the engine.
+3. No escape: everything is data. The purest, and the largest risk.
+
+**22. The question.** Use case 10 (several views of one system) needs graphs laid out automatically, which arithmetic cannot do. The architect named two ways: a graph-layout tool in the engine (ELK), or relation graphs left to Mermaid, as software-analysis does (its DEC-003). ELK runs on Java or JavaScript, which point 17 (Python, no Node) rules out as a library.
+
+**22. The agent's draft recommendation.** Graphs are out of the first slice, with the door kept open: when a real graph is needed, graph layout becomes an engine tool that calls Graphviz (`dot`), one stable outside program on the path that needs it (point 17). Graphviz returns node positions and edge routes, which go into the scene, styled from the tokens like any other part, so a graph renders to Mural too. Mermaid stays software-analysis's way of showing its own analysis graphs, outside this capability.
+
+**22. The alternatives.**
+
+1. The draft above.
+2. Graph layout now, with Graphviz, in the first slice: use case 10 proved early, at the cost of a larger slice.
+3. Relation graphs always left to Mermaid: no layout to build, but no tokens, no Mural, no trace.
+
+**The critic's review of 21 (31 October).** The two escapes did not match the evidence. The critic read every one-off in `gen.py`, about 19 per language: none was drawn by hand or in another tool. Each is code placing boxes from the material.
+
+- **About 14 are arrangements** (rows, columns and grids of cards and terminals with equal heights: `map` ×3, `wired` ×4, the card row, the caption, `files`, `answers`, `roles`, `slice`, `board`), which the tools of 4a and 19 cover.
+- **3 are connector diagrams** (`sockets`, `ties`, `ideas`), which spread connectors and public anchors cover.
+- **A few need a tool nobody has decided:** a part shown only when its field is given (the optional "why" rows, in about six kinds); a terminal placed so its first line is level with a marked step (`checklist`); a file tree (`install`); colours stepping by position (the pyramid's purple ramp, raw values in the material today).
+- **None needs a foreign drawing.** The only outside drawings were Carbon icons, which 4h's tinted image covers.
+
+So the real risk is "my one-off needs a tool the engine lacks", which "the agent writes them as data" hides: an agent then types fixed numbers (which break in Czech and in the Mural profile) or writes a script nobody governs, and an adopter cannot add a tool at all (4a). Also:
+
+- **The reserved area does not work.** On Mural a slide is an area, and an area with hand-made content cannot be rebuilt, so one sticky note freezes the whole slide. A picture cut from the board needs Mural's sign-in and network on every render, against 4i. No use case asks for it.
+- **The foreign drawing is mostly decided** (4g: content images belong to the material; 4h: an image has a fit and a tint). CSS variables reach an SVG only when it is inline in the page; Figma and Inkscape export fixed colours; text inside it cannot be translated, and fails point 5's font rule unless outlined.
+- **The slice tests only the easy kinds** (`pyramid`, `sockets`). It should include the hardest (`install`'s tree, `checklist`, `board`, a `map` with its optional row), and count the tries an agent needs for a one-off it has not seen, in both languages and both font profiles.
+
+Counter-alternatives: a one-off generator run while authoring, never by the engine, whose output is a normal one-off component, committed and checked, with a fingerprint saying when it is stale (A); a drawing turned into data by the import, its text into material fields and its colours to the nearest roles (B); hand nudges as a layer keyed by stable ids (C, which changes point 3).
+
+**The critic's review of 22 (31 October).** Graphviz would run before the scene is made, not after it: its version and its own text measuring would change the scene between machines, against point 5 and 4h. Its curves need a stated loss on Mural. `dot` cannot pin a node. Deferring graphs defers the wrong half of use case 10: what is missing is one model that several pieces read, not automatic layout. Counter-alternatives: run Graphviz while authoring and commit its positions, keyed by a hash of the graph and the Graphviz version (A); a small layered layout in Python (B); hand-placed views over a shared model first (C).
+
+**One rule across both** (the critic's): what the engine's closed set of tools cannot compute may be computed outside, while authoring, and committed as data with a check that it is fresh. It held in seven cases tested, except where the output holds fixed numbers, which break in Czech and in the Mural profile: the output must use references, or be made once per language and profile.
+
+**The agent's revised recommendation for 21.**
+
+- **The risk is a missing tool, not hand drawing.** Add the few tools the talk shows are missing: a part shown only when its field is given; a text's lines as readable frames, so another part can line up with one line; a tree layout operator; and colour by position through a role ramp (`level-1` … `level-n`), not raw values.
+- **The sanctioned escape is an authoring-time generator** (the critic's rule). A person or the agent runs it while authoring; the engine never runs it. Its output is a normal one-off component in the piece: committed, checked by the schema, no raw values, text taken from material fields, with a fingerprint of its inputs that says when to run it again. Its output uses formulas and references, not fixed numbers, so it fits every language and font profile. Generators never go into libraries, since one-offs are never shared.
+- **A drawing made elsewhere is a content image** (4g, 4h): one file per language, with alt text; its text outlined or in the library's fonts, which a check confirms; reported at every theme, mode or context switch, since it does not follow them.
+- **The reserved area is dropped.** Workshops on a board would be a use case of their own.
+- **Later:** turning a drawing into data through the import (B), and hand nudges as a layer (C, a change to point 3).
+- **The first slice adds the hardest one-offs** (`install`'s tree, `checklist`, `board`, a `map` with its optional row), and measures the tries an agent needs for a one-off it has not seen.
+
+**Outcome of 21 (31 October).** After the agent explained each tool on the talk's own slides, the maintainer agreed:
+
+- **Four tools are added to the engine:**
+  - an optional part, shown only when its field is given (the "why" panel of "Where skills come from": `when: why`);
+  - lining up with one item of a list or one line of a text (the terminal level with the marked step of "One skill, step by step": `=steps[mark].middle`);
+  - a tree (folders indented by depth, coloured by owner, joined by lines, as `gen.py`'s `tree()` drew them);
+  - a colour ramp by level (`level-1` … `level-n` roles with readable text colours, replacing the pyramid's raw values).
+- **Helper scripts are allowed while preparing, never run by the engine.** For a picture no tool can build, such as the cycle ring (a circle needs sine and cosine, which the formula language lacks), a script writes an ordinary one-off component beside the material. It is checked like everything else: no raw colours, text from the material, positions as formulas relative to the frame, and a fingerprint of its inputs that says when to run it again. A script needed again and again becomes a tool (about three uses, 4c).
+- **A drawing made elsewhere is a content image,** one per language, reported at every theme switch.
+- **The reserved area is dropped.**
+
+**The agent's revised recommendation for 22.**
+
+- **Automatic graph layout follows 21's rule.** When a graph is needed, a helper runs while preparing (Graphviz, or a small layered layout in Python), never inside the engine. The engine gives it each node's measured size; it writes the positions into a committed file, with a fingerprint of the graph, the helper's version and the font profile, one file per profile. Lines are straight or right-angled, which Mural draws as given; a curve is declared as a loss on Mural. A person may move a node in that file.
+- **A shared model is a file of its own.** For several views of one system (use case 10), the system's elements and relations live in one material file, and each view names the elements it shows by their stable ids and places them, by hand with the layout tools or through the helper. A view never holds facts the model lacks, so a fact lives in one place. The model is the project's own file: a change to it is reviewed like any change, and drafting and living views follow it.
+- **Mermaid stays software-analysis's,** for the analysis's own diagrams (its DEC-003). A project's docs then show two looks, which is an accepted cost. Reading a model from where its facts already live, such as the analysis, comes later.
+- **Not built in the first slice.** The principle is fixed now, so the formats leave room for it.
+
+**The alternatives.**
+
+1. The revised recommendation.
+2. Graph layout inside the engine, calling Graphviz at every render: the scene would change with Graphviz's version and its own text measuring, between machines and in CI.
+3. Relation graphs always left to Mermaid: nothing to build, but Mermaid's command-line renderer needs Node (point 17), it lays out by itself (the architect's trap), and it cannot feed Mural.
+
+**The maintainer's addition (31 October).** He leans to yes, and wants, in the end, to connect visual-work to software-analysis, so that all of the analysis's diagrams and visuals are drawn by visual-work, in the style of the selected libraries. software-analysis would then declare an interface, a contract: the kinds of visual it needs drawn, and constraints such as the output format and the smallest and largest sizes. Preparing a library that covers the whole contract could take a while, so a connection must work in an incomplete state: where the library lacks a kind the analysis needs, nothing fails, and that diagram is drawn the old way. No integration now, but the design should count with collaboration between capabilities and a protocol for it.
+
+**The agent's recommendation for the addition.** One mechanism, a contract, of which the frame (point 18b) is already the first case:
+
+- **A contract is a list of named kinds,** each with the schema of the data it receives and its constraints (output formats, smallest and largest size, modes, accessibility). software-analysis's would hold its four diagrams (its DEC-003): the use-case diagram, a journey's flow, the requirement map and the chain of use cases.
+- **A library declares which kinds of a contract it implements,** and with which component, as a context supplies the core's named layouts.
+- **Coverage is reported, never assumed.** For example: "software-analysis needs 4 kinds; your libraries draw 2; 2 are drawn the old way." The library grows one kind at a time.
+- **A missing kind falls back to the consumer's own drawing,** which the contract names: for software-analysis, its plain Mermaid. Nothing fails.
+- **The data stays where it lives.** visual-work reads the analysis's front matter through the contract; a diagram never becomes a fact's home, which matches software-analysis's own rule (DEC-003 point 1) and 22's shared model.
+- **The wiring in pkit is not designed yet.** pkit's slots and connection points (COR-052, COR-053) carry data and events, not a request with input, such as "draw this from that data" (the architect's concern 3). A protocol between capabilities may need a core decision when it is built.
+
+With that, Mermaid's look beside the libraries' look in a project's docs is a transitional state, not a permanent cost.
+
+**Outcome of 22 (31 October).** The maintainer agreed: graphs are arranged by a helper while preparing, never by the engine, with positions committed per font profile and a fingerprint; several views share one model file, and a view never holds a fact the model lacks; other capabilities connect later through a contract, with the coverage reported and a fallback to their own drawing for any kind not covered (use case 13, point 24). Nothing of it is in the first slice; the formats leave room for it.
 
 ## Architect's review (31 October)
 
