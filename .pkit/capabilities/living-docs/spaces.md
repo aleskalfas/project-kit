@@ -111,7 +111,7 @@ The capability declares, in its package metadata, the two roots as the default p
 
 ## The space-definition template
 
-`templates/space-definition.md` is a space's definition. It is a project rule set that inherits `LDOC`, carries a scope that selects the space's pages, and holds the space's own rules. Each rule carries its friction block in its own container.
+`templates/space-definition.md` is the template of a space's definition. A definition is a project rule set that inherits `LDOC`, carries a scope that selects the space's pages, and holds the space's own rules. Each rule carries its friction block in its own container.
 
 - **Its stamp.** `pkit living-docs new space` writes it with the set named and its scope written, and names the file as the space's `definition` (DEC-001 point 2).
 - **The scope's paths** are the space's root, everything beneath it, and each place assigned to the space outside that root.

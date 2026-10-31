@@ -102,7 +102,7 @@ git apply .agent-workspace/living-docs/fix/<page>/<file>.diff
 
 ## Answer for the page
 
-The answer is yours to give, in the pull request that mends the page. It is one of three:
+The answer goes in the pull request that mends the page. For a page your own change flagged, the agent building the change may write it, and a reviewer other than that agent checks it. For a page the default branch left stale, you decide it. It is one of three:
 
 - **`updated`:** you mended the page.
 - **`unchanged`:** the page still holds, and you say why.

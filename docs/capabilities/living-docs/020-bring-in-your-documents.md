@@ -19,6 +19,7 @@ pkit:
         - docs/capabilities/living-docs/010-set-up-your-spaces.md#declare-the-pages-outside-the-documentation-roots
         - docs/capabilities/living-docs/010-set-up-your-spaces.md#declare-the-code-your-pages-should-cover
         - docs/capabilities/living-docs/010-set-up-your-spaces.md#name-the-page-your-readers-start-from
+        - docs/capabilities/living-docs/050-fix-a-stale-page.md#answer-for-the-page
 ---
 
 # Bring in your documents
@@ -54,7 +55,7 @@ living-docs: Revised: docs/architecture.md moves whole to the technical space as
 
 User: Approve.
 
-living-docs: Drafting the changes the plan names… Four reviewable changes are in .agent-workspace/living-docs/onboarding/: roots and definitions, user pages, technical pages with the architecture split, and mapping anchors — each a diff and a pull-request body citing its evidence. Nothing was applied; they are yours to review and open.
+living-docs: Drafting the changes the plan names… Four reviewable changes are in .agent-workspace/living-docs/onboarding/: roots and definitions, user pages, technical pages with docs/architecture.md moved whole, and mapping anchors — each a diff and a pull-request body citing its evidence. Nothing was applied; they are yours to review and open.
 ```
 
 ## Declare where your documents lie
@@ -98,7 +99,7 @@ git apply .agent-workspace/living-docs/onboarding/<step>/<file>.diff
 ```
 
 - **A document with no front matter before the change** is new to the friction checks there, and owes no answer.
-- **A document that had front matter already** owes an answer for its new anchors, in the same pull request. "Fix a stale page" shows how to give one.
+- **A document that had front matter already** owes an answer for its new anchors, in the same pull request ([Fix a stale page](050-fix-a-stale-page.md#answer-for-the-page)).
 
 ## Repeat until no document is left
 

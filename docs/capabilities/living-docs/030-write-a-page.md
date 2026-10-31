@@ -150,5 +150,5 @@ $ pkit living-docs new page docs/changes.md --space user --kind reference --read
 stamped docs/changes.md: a reference page of space 'user', for reader 'user'.
 ```
 
-- **The file** holds `title`, `url` where the source has one, and `version`, and nothing else. Its name is the source's name, and a name no file captures is a dead anchor, which the checks fail where a change adds it.
+- **The file** holds `title`, `url` where the source has one, and `version`, and nothing else. Its name is the source's name, and a name no file captures is a dead anchor, which the checks fail where a change adds it. Commit the file with the page that first anchors it, since the checks read what is committed.
 - **A new version.** When you read a newer text of the source, edit `version` in a pull request. Every page that anchors the source is then flagged, so you judge what the new text changes for it.

@@ -110,6 +110,8 @@ technical: 0 page(s); definition tech-docs/living-docs/rule-sets/technical.md.
 
 Commit what the two commands wrote. The user space's own rule is written as accepted, so read it before you merge. Merging that change accepts it for every page of the user space.
 
+**A space of your own.** A project may add a space for an audience neither space serves, such as the readers of an interface reference. Its entry in living-docs' configuration names its `audience`, and its places are assigned to it first, since it has no root of its own. Then `pkit living-docs new space <space>` writes its definition ([the reference, "Declaring the spaces"](../../../.pkit/capabilities/living-docs/spaces.md#declaring-the-spaces)).
+
 ## Declare your readers
 
 Each page names its reader by an id your project declares. `user` and `maintainer` come built in. A capability may add readers of its own, such as software-analysis, one for each actor of its analysis:

@@ -44,4 +44,15 @@ In Claude Code, ask your session to use the `living-docs` agent, such as "Use th
 - **On a pull request.** Ask, and name the pull request, and the agent posts the record as a comment.
 - **Reader paths.** The page's rules may ask that reader paths stay unbroken, as the user space's rule does. The agent then follows each of the reader's paths that passes through the page. With none, it follows the page's own links.
 
+A finding reads like this one, on a page of the user space whose reader is `user`:
+
+```text
+### RS-LDOC-003: the page explains the hook's internals to a user
+
+> The hook loads the model once for each process, and keeps it in memory.
+
+- What the reader does not need: how the hook loads the model. A user who turns enforcement on acts on none of it.
+- Direction: cut the sentence, or move it to a page of the technical space.
+```
+
 The agent leaves to validation what validation checks, such as whether the page names a reader your project declares. It changes nothing it reviews, so you mend each finding yourself.

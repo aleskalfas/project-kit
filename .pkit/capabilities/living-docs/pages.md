@@ -16,6 +16,8 @@ pkit:
         - .pkit/capabilities/living-docs/scripts/_lib/sources.py
         - .pkit/capabilities/living-docs/scripts/_lib/source_layout.py
         - .pkit/capabilities/living-docs/scripts/_lib/declarations.py
+        - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
+        - .pkit/capabilities/living-docs/scripts/new.py
       record: ["living-docs:DEC-001", "living-docs:DEC-002", "doc-examples:DEC-001", COR-050, COR-051, COR-056]
       artefact:
         - RS-LDOC-001
@@ -168,7 +170,7 @@ version: "1.1.0"
 
 **Rule-set origins** may cite a captured source as where a rule's words were said: `origin: {…, source: {kind: source, value: keep-a-changelog}}` (COR-051 point 5).
 
-**Uninstalling living-docs** removes its project tier, captured sources with it, which stay in git history. It leaves every `source` anchor with no resolver. Those anchors are removed in the same change. Where friction is enforced, the change check fails a pull request that keeps them while it takes their resolver away.
+**Uninstalling living-docs** removes its project tier, captured sources with it, which stay in git history. It leaves every `source` anchor with no resolver. Whoever uninstalls it removes those anchors in the same change. Where friction is enforced, the change check fails a pull request that keeps them while it takes their resolver away.
 
 `pkit living-docs resolve-source <name>` prints the file a name resolves to. It is the resolver the friction checks run, and `--json` prints `{"paths": [...]}`.
 

@@ -13,7 +13,7 @@ pkit:
         - .pkit/capabilities/living-docs/schemas/readers.schema.json
         - .pkit/capabilities/living-docs/schemas/reading-evidence.schema.json
         - .pkit/capabilities/living-docs/skills/**
-      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "project-management:DEC-053", "project-management:DEC-056", "software-analysis:DEC-001#10", "living-docs:DEC-002"]
+      record: ["living-docs:DEC-001", COR-005, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, "project-management:DEC-053", "project-management:DEC-056", "living-docs:DEC-002"]
       artefact:
         - RS-LDOC-003
         - .pkit/capabilities/living-docs/pages.md#
@@ -34,6 +34,7 @@ pkit:
         - .pkit/capabilities/living-docs/validation.md#
         - .pkit/capabilities/living-docs/agent.md#
         - .pkit/capabilities/living-docs/agent.md#what-it-does
+        - .pkit/capabilities/living-docs/agent.md#as-the-fixer-of-pages
         - .pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare
         - .pkit/lifecycle/README.md#the-methodologys-literals
         - .pkit/lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping
@@ -55,7 +56,7 @@ pkit:
 
 <a id="how-it-works"></a><a id="adopter-setup"></a>
 
-living-docs keeps each documentation space true for its readers, through anchored pages, declared readers and reviewed fixes ([living-docs:DEC-001-living-docs-discipline]). Why it exists, and how people set it up and do its tasks, is in [living-docs' guide](https://github.com/aleskalfas/project-kit/blob/latest/docs/capabilities/living-docs/README.md).
+living-docs keeps each documentation space true for its readers, through anchored pages, declared readers and reviewed fixes ([living-docs:DEC-001-living-docs-discipline]). Pages, spaces, validation and the agent each have a page beside this one ("The pages beside this one" below). Why it exists, and how people set it up and do its tasks, is in [living-docs' guide](https://github.com/aleskalfas/project-kit/blob/latest/docs/capabilities/living-docs/README.md).
 
 ## Contents
 
@@ -112,6 +113,7 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 
 **`new page`** writes one new page into a space of the project, from the template of a kind this capability declares, `signpost` or `reference`.
 
+- **Where it goes.** A new page of the user or technical space goes under that space's root by default. A page of any space may go into a place assigned to that space (DEC-001 point 1).
 - **Its front matter** names the reader and the kind. Its friction block lists the anchors given, and is empty with none: the page then counts as unanchored for onboarding.
 - **Its anchors:** code by `--path`, decisions and their points by `--record`, and captured sources by `--source`. `--artefact` takes rules, analysis artefacts and the home section of a fact it summarises.
 - **Its body** is the template's. The title fills the level-1 heading. The command lists the lines that still hold the template's other placeholders.
@@ -207,7 +209,7 @@ value:
 
 **Contributes to `pkit::work-tracking:fixers`**, which says which agent fixes the artefacts of each type, in a work-tracking capability such as project-management ([project-management:DEC-056-drift-fixers]). Its static value names the `living-docs` agent as the fixer of the page type, `living-docs:page` (DEC-001 point 5).
 
-- **Only where granted.** The agent starts on its own only where the project grants it, as [project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare) says. A work-tracking capability that starts granted fixers then starts it on the pages the default branch left stale. It brings the person what the agent proposes ([the page on the agent, "What it does"](agent.md#what-it-does)).
+- **Only where granted.** The agent starts on its own only where the project grants it, as [project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare) says. A work-tracking capability that starts granted fixers then starts it on the pages the default branch left stale. It brings the person what the agent proposes ([the page on the agent, "As the fixer of pages"](agent.md#as-the-fixer-of-pages)).
 - **Keyed by type.** Only pages of the type `living-docs:page` are the agent's there. A page in a project place that lies outside the roots and gives no type, or one whose type is tied, is not started on. Giving the place the page type ([the page on pages, "Types"](pages.md#types)) brings its pages in.
 - **Inert** when no work-tracking capability is installed.
 

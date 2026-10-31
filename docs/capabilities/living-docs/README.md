@@ -24,6 +24,9 @@ pkit:
         - docs/capabilities/living-docs/030-write-a-page.md#
         - docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md#
         - docs/capabilities/living-docs/050-fix-a-stale-page.md#
+        - docs/capabilities/living-docs/050-fix-a-stale-page.md#answer-for-the-page
+        - docs/capabilities/living-docs/040-have-a-page-read-as-its-reader.md#why-a-page-is-read-as-its-reader
+        - docs/capabilities/living-docs/020-bring-in-your-documents.md#why-a-plan-comes-first
         - .pkit/capabilities/living-docs/README.md#installing-it
         - .pkit/capabilities/living-docs/pages.md#a-pages-fields
         - .pkit/capabilities/living-docs/spaces.md#the-shared-method-ldoc
@@ -62,7 +65,7 @@ Documentation that nothing checks goes wrong in these ways, and more so when age
 
 ### What living-docs does instead
 
-living-docs answers these problems with four claims, and the commands after the list prove each one:
+living-docs answers the first four of these problems with four claims, and the commands after the list prove each one. The fifth, the documents you already have, is a task of its own ([Bring in your documents](020-bring-in-your-documents.md#why-a-plan-comes-first)):
 
 - **Each page in your spaces is flagged when a change touches what it anchors, in that change's own check.** A page anchors what it rests on, such as code, decisions or another page's section.
 - **Where a space's rules bind, validation reports what a page names without anchoring it: a file path, a record, a rule or a `pkit` command.**
@@ -97,7 +100,7 @@ $ pkit friction check >/dev/null 2>&1; echo $?
 1
 ```
 
-A second page names the script without anchoring it, and a third is written for a reader the project has not declared. Last, `grep` prints the line of the agent's definition that forbids it to change a tracked file:
+Below, again from a fresh project, a page names the script without anchoring it. Another is written for a reader the project has not declared. Last, `grep` prints the line of the agent's definition that forbids it to change a tracked file:
 
 ```console
 $ pkit capabilities install living-docs >/dev/null
@@ -117,9 +120,9 @@ You never Edit or Write a tracked file, never move or delete one, never change a
 
 What the output proves, claim by claim:
 
-- **Flagged in the change.** The change check names `docs/greet.md`, since the branch changed what it anchors. Once friction is enforced, the check exits 1 until the page has an answer ("Fix a stale page" shows how to give one). project-kit's friction checks do the flagging. living-docs makes each page in its spaces' documentation roots one they read, with no place to declare for it.
+- **Flagged in the change.** The change check names `docs/greet.md`, since the branch changed what it anchors. Once friction is enforced, the check exits 1 until the page has an answer ([Fix a stale page](050-fix-a-stale-page.md#answer-for-the-page) shows how to give one). project-kit's friction checks do the flagging. living-docs makes each page in its spaces' documentation roots one they read, with no place to declare for it.
 - **Reported when unanchored.** `docs/usage.md` names `src/greet.py` and anchors nothing, so validation lists the mention, with `path: [src/greet.py]` as the anchor that covers it.
-- **Refused for an undeclared reader.** The stamp refuses `operator`, a reader nobody declared, and writes nothing. The readers it accepts are `user`, `maintainer`, and those your project or another capability adds. Whether the page then serves its reader is judged when the agent reads it as that reader ("Have a page read as its reader").
+- **Refused for an undeclared reader.** The stamp refuses `operator`, a reader nobody declared, and writes nothing. The readers it accepts are `user`, `maintainer`, and those your project or another capability adds. Whether the page then serves its reader is judged when the agent reads it as that reader ([Have a page read as its reader](040-have-a-page-read-as-its-reader.md#why-a-page-is-read-as-its-reader)).
 - **Proposed, not applied.** The agent's definition forbids it to change a tracked file. So it writes each fix as a diff in the agent workspace, for you to apply.
 
 > [!WARNING]
@@ -183,7 +186,7 @@ flowchart TD
 - **The checks.** Validation checks a page's reader and its sections, and reports what it names without anchoring ([the reference, "What a page is checked for"](../../../.pkit/capabilities/living-docs/validation.md#what-a-page-is-checked-for)). The friction checks flag a page when an anchor changes.
 - **The judgement.** The rest of each rule is judged by the agent's review, when you ask for one. Where project-management is installed, the rule-set reviewer also judges each change that alters a page ([the reference, "The review contribution"](../../../.pkit/capabilities/living-docs/agent.md#the-review-contribution)).
 - **The agent,** `living-docs`, proposes the fix for a stale page, reads a page as its reader, and plans how your existing documents become pages. It writes each proposal in the agent workspace, and you apply what you accept ([the reference, "What it does"](../../../.pkit/capabilities/living-docs/agent.md#what-it-does)).
-- **The answer** a flagged page carries is yours to give. It is `updated` once you mended the page, `unchanged` with your reason, or a deferral with your reason.
+- **The answer** a flagged page carries is `updated` once the page is mended, `unchanged` with a reason, or a deferral with a reason. For a page your own change flagged, the agent building the change may write it, and a reviewer other than that agent checks it. You decide every other answer.
 
 ## Turning it on
 

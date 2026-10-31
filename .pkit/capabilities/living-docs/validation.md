@@ -100,7 +100,7 @@ It fails on each of these:
 
 - **The sources folder,** `.pkit/capabilities/living-docs/project/sources/`, or a folder on its path, that is a file or a link. It fails too on a folder named in another case, such as `Sources/`. No source is read from it, on any disk. It fails too when the folder cannot be read, through a permission or disk error, so no source is checked.
 - **An entry of the sources folder that is not a captured source:** a `.yaml` file whose name is not a source's name ([the page on pages, "Sources"](pages.md#sources)), a folder, or a link. An entry whose name begins with `.`, such as `.gitkeep` or an editor's file, is left alone, since no source's name begins with one. A captured source's shape is `schemas/source.schema.json`, which `pkit validate` applies under `data`, bound by the file's path (COR-023).
-- **An unassigned place outside every root** that holds a document nothing else claims. A place declared to hold rule sets that gives no type owes no assignment (DEC-001 point 1). For a file without front matter, it fails where every place it lies in is such a place.
+- **An unassigned place outside every root** that holds a document nothing else claims. A place declared to hold rule sets that gives no type owes no assignment (DEC-001 point 1). A file without front matter fails here only where every place it lies in is an unassigned place outside every root.
 - **An assignment** naming a place `friction.places` does not declare, or a space nobody declares, and a place assigned twice.
 - **A project place equal to or enclosing a root.**
 - **A file two project places claim at equal rank,** ahead of every other place of the spaces, in the backbone's order.
