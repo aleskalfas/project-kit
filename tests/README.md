@@ -140,9 +140,10 @@ what an adopter template's build starts, nor what a test of the runner asks of
 `run_command` itself.
 
 **The guard holds every module but those in its baseline**,
-`tests/process_guard_baseline.txt`, the modules no slice of #2313 has converted
-yet. A slice takes its modules out, and no module is ever added. So a new module
-is held from its first test.
+`tests/process_guard_baseline.txt`: the modules left as they are when #2313
+closed, under the reason each stays (#2329). A change that marks or converts a
+module's starts takes it out, and no module is ever added. So a new module is held
+from its first test.
 
 **What a converted test calls** lives in `tests/in_process.py`:
 
