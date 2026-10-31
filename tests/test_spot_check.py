@@ -5,6 +5,7 @@ script's own, so these tests hold the parts around them."""
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -34,6 +35,33 @@ def test_the_planted_file_is_put_back_whatever_happens(tmp_path: Path) -> None:
         assert path.read_text(encoding="utf-8") == "x = 2\ny = 1\n"
         raise RuntimeError("the run broke")
     assert path.read_text(encoding="utf-8") == "x = 1\ny = 1\n"
+
+
+def _git(root: Path, *args: str) -> None:
+    identity = ["-c", "user.name=t", "-c", "user.email=t@example.com", "-c", "commit.gpgsign=false"]
+    subprocess.run(["git", *identity, *args], cwd=root, check=True, capture_output=True)
+
+
+def test_a_helper_is_at_its_old_version_for_the_block_alone(tmp_path: Path) -> None:
+    """A helper the old tests import is in its own place as the base held it, and is put
+    back after, whatever happens; a helper the base does not hold is refused."""
+    helper = tmp_path / "helper.py"
+    helper.write_text("old = True\n", encoding="utf-8")
+    _git(tmp_path, "init", "-q")
+    _git(tmp_path, "add", "helper.py")
+    _git(tmp_path, "commit", "-q", "-m", "base")
+    helper.write_text("old = False\n", encoding="utf-8")
+    with pytest.raises(RuntimeError), sc.old_helpers(["helper.py"], "HEAD", root=tmp_path):
+        assert helper.read_text(encoding="utf-8") == "old = True\n"
+        raise RuntimeError("the run broke")
+    assert helper.read_text(encoding="utf-8") == "old = False\n"
+    unheld = ["helper.py", "new.py"]
+    with (
+        pytest.raises(sc.Refused, match=r"HEAD holds no new\.py"),
+        sc.old_helpers(unheld, "HEAD", root=tmp_path),
+    ):
+        pass
+    assert helper.read_text(encoding="utf-8") == "old = False\n"
 
 
 def test_an_old_test_is_read_beside_the_new_one() -> None:

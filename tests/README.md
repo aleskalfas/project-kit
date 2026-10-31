@@ -184,7 +184,9 @@ eleven of `friction_answers`' tests start a real `pkit` on one of CI's workers
 **The spot-check** is `uv run python scripts/spot_check.py BUGS --base REF TEST...`.
 It plants each bug the JSON file BUGS lists, one at a time, and runs the tests as
 REF holds them and as they are now. It exits 1 when the new tests miss a bug the
-old tests caught. The bugs of #2315 are in `tests/spot_checks/`.
+old tests caught. Where a change converted a helper module the old tests share,
+`--old-helper FILE` puts it at its version at REF for the old run alone. The bugs
+of #2315 are in `tests/spot_checks/`.
 
 **The slowest modules**, by the time their tests take together, setup included,
 measured again once #2313's slices had merged (#2329). CI's seconds are the median

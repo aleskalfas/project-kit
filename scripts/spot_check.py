@@ -7,7 +7,8 @@ at a time. On each, it runs the tests as they were at a base commit, and as they
 are now. Every bug an old test caught must be caught by a new test.
 
 Usage:
-  uv run python scripts/spot_check.py BUGS --base REF [--old-path DIR]... [--workers N] TEST...
+  uv run python scripts/spot_check.py BUGS --base REF [--old-path DIR]... [--old-helper FILE]...
+      [--workers N] TEST...
 
 BUGS is a JSON file: a list of bugs, each `{"id", "file", "find", "replace"}`.
 `find` must appear exactly once in `file`, a path from the repository root. Each
@@ -15,9 +16,12 @@ TEST is a test module, or one test of it (`path::name`), as the working tree
 holds it. Its old version is `git show REF:path`, written beside it for the run as
 `_spot_old_<module>.py` and removed after. `--old-path` puts a folder on the
 import path of the old run alone, for an old module that loads a capability's
-`_lib` modules by their files. A test counts a bug as caught when it fails. An
-error in its setting-up or tearing-down, such as the process guard's, does not
-count. The planted file is put back after each run, whatever happens.
+`_lib` modules by their files. `--old-helper` puts a module the tests import, a
+path from the repository root, at its version at REF in its own place for the old
+run alone, for a change that converted a helper the old tests share. A test
+counts a bug as caught when it fails. An error in its setting-up or tearing-down,
+such as the process guard's, does not count. The planted file and each helper are
+put back after each run, whatever happens.
 
 Exit codes:
   0  every bug some old test caught, some new test caught too
@@ -117,28 +121,50 @@ def planted(bug: Bug, root: Path = REPO) -> Iterator[None]:
         path.write_text(text, encoding="utf-8")
 
 
+def shown(base: str, path: str, root: Path = REPO) -> str:
+    """The file at `path` as `base` holds it. Refused when it holds none."""
+    done = subprocess.run(
+        ["git", "show", f"{base}:{path}"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if done.returncode != 0:
+        raise Refused(f"{base} holds no {path}: {done.stderr.strip()}")
+    return done.stdout
+
+
 @contextmanager
 def old_modules(tests: Sequence[str], base: str, root: Path = REPO) -> Iterator[None]:
     """Each test module's version at `base`, written beside it for the block."""
     written: list[Path] = []
     try:
         for module in sorted({test.partition("::")[0] for test in tests}):
-            shown = subprocess.run(
-                ["git", "show", f"{base}:{module}"],
-                cwd=root,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if shown.returncode != 0:
-                raise Refused(f"{base} holds no {module}: {shown.stderr.strip()}")
             path = root / old_name(module)
-            path.write_text(shown.stdout, encoding="utf-8")
+            path.write_text(shown(base, module, root), encoding="utf-8")
             written.append(path)
         yield
     finally:
         for path in written:
             path.unlink(missing_ok=True)
+
+
+@contextmanager
+def old_helpers(helpers: Sequence[str], base: str, root: Path = REPO) -> Iterator[None]:
+    """Each helper module at its version at `base`, in its own place for the block, and
+    put back after, whatever happens."""
+    kept: dict[Path, str] = {}
+    try:
+        for helper in helpers:
+            old = shown(base, helper, root)
+            path = root / helper
+            kept[path] = path.read_text(encoding="utf-8")
+            path.write_text(old, encoding="utf-8")
+        yield
+    finally:
+        for path, text in kept.items():
+            path.write_text(text, encoding="utf-8")
 
 
 def run(tests: Sequence[str], workers: int, env: Mapping[str, str], root: Path = REPO) -> set[str]:
@@ -180,6 +206,7 @@ def spot_check(
     *,
     base: str,
     old_path: Sequence[str] = (),
+    old_helper: Sequence[str] = (),
     workers: int = 4,
     say: Callable[[str], None] = print,
 ) -> list[Verdict]:
@@ -191,16 +218,19 @@ def spot_check(
         paths = [str(REPO / p) for p in old_path]
         old_env["PYTHONPATH"] = os.pathsep.join([*paths, os.environ.get("PYTHONPATH", "")])
     olds = [old_name(test) for test in tests]
+
+    def old_run() -> set[str]:
+        with old_helpers(old_helper, base):
+            return run(olds, workers, old_env)
+
     verdicts: list[Verdict] = []
     with old_modules(tests, base):
-        before = run(olds, workers, old_env), run(tests, workers, new_env)
+        before = old_run(), run(tests, workers, new_env)
         if any(before):
             raise Refused(f"tests fail before any bug is planted: {sorted(set().union(*before))}")
         for bug in bugs:
             with planted(bug):
-                verdict = Verdict(
-                    bug.id, len(run(olds, workers, old_env)), len(run(tests, workers, new_env))
-                )
+                verdict = Verdict(bug.id, len(old_run()), len(run(tests, workers, new_env)))
             say(f"{bug.id}: {verdict.old} old test(s) caught it, {verdict.new} new test(s)")
             verdicts.append(verdict)
     return verdicts
@@ -216,12 +246,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("tests", nargs="+", help="test modules, or tests, as now")
     parser.add_argument("--base", required=True, help="the commit that holds the old tests")
     parser.add_argument("--old-path", action="append", default=[], help="import path, old run")
+    parser.add_argument(
+        "--old-helper", action="append", default=[], help="a helper module at REF, old run"
+    )
     parser.add_argument("--workers", type=int, default=4, help="pytest-xdist workers per run")
     args = parser.parse_args(argv)
     try:
         bugs = read_bugs(args.bugs.read_text(encoding="utf-8"))
         verdicts = spot_check(
-            bugs, args.tests, base=args.base, old_path=args.old_path, workers=args.workers
+            bugs,
+            args.tests,
+            base=args.base,
+            old_path=args.old_path,
+            old_helper=args.old_helper,
+            workers=args.workers,
         )
     except (Refused, OSError, ValueError, TypeError) as exc:
         print(f"spot-check refused: {exc}", file=sys.stderr)
