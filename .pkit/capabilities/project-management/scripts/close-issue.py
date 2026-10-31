@@ -86,13 +86,26 @@ milestone (Backlog, inferred), else — for an issue still open — Todo, read a
 it were open, so an issue GitHub closed when a pull request merged reads where
 the merge found it. An issue GitHub closed with neither a state label nor a
 milestone carries nothing of where it was, and its close is not recorded from a
-guessed Todo. Where the substrate map binds the state to the board, an open
-issue's card's Status says where it was (DEC-062 point 5,
-``_lib.issue_position.read_status``). A Status that places it nowhere records
-no move, with a warning, and refuses a completed close, which could not tell a
-Task in Review (DEC-051 point 6). An issue whose label already says done was
-moved there by whoever wrote the label — ``move-issue``, or an earlier run of
-this script — and is not recorded again, so a re-run adds nothing. Whether the move is recorded is the
+guessed Todo. An issue whose label already says done was moved there by whoever
+wrote the label — ``move-issue``, or an earlier run of this script — and is not
+recorded again, so a re-run adds nothing.
+
+Where the substrate map binds the state to the board, an open issue's card's
+Status says where it was (DEC-062 point 5, ``_lib.issue_position.read_status``).
+The card of an issue a merge closed says where the merge found it until the
+card is set to Done, so a pr-merge close reads it as the move's origin
+(``read_status_before_close``, ADR-074 point 4; #2307). The card cannot say
+whether that move is recorded already, so the journal does
+(``move_journal.owes_board_close``): the card is read only while the last move
+the journal records is not to Done, and not at all where no journal is kept.
+``move-issue``, which ``done-work`` runs first on its own issue, records that
+close as it sets the card to Done, and a re-run finds the move recorded. A
+Status that places the issue nowhere records no move, with a warning naming
+which of the four outcomes it is (DEC-051 point 6); a closed issue's card at
+Done is one, since it says nothing of where the work stood. On an open Task it
+refuses a completed close too, which could not tell a Task in Review.
+
+Whether the move is recorded is the
 engine's: it appends to the journal where the project keeps one and records
 nothing where it does not. A move the workflow does not declare for the issue's
 type — a container whose label was set to Review by hand, say — is not handed to
@@ -198,7 +211,9 @@ from _lib.move_journal import (
     PR_MERGE_CLOSE,
     PROCESS_ADDRESS,
     journal_move,
+    owes_board_close,
     pr_merge_close_reason,
+    read_journal,
     report_unrecorded,
 )
 from _lib.pr_validation import extract_closing_issues
@@ -403,7 +418,7 @@ def main() -> int:
     # The move to done each path below records once it has closed the issue
     # (#1231), read before anything is written. Where the map binds the state to
     # the board, the open issue's card's Status says where it was (DEC-062 point
-    # 5), read here once.
+    # 5), and so does the card of an issue a merge closed (#2307), read here once.
     close_move = _CloseMove.read(
         args.issue_number,
         issue,
@@ -412,8 +427,8 @@ def main() -> int:
         workflow=workflow,
         substrate_map=substrate_map,
         actor=invoker.github_login,
-        status=issue_position.read_status(
-            args.issue_number, issue, config, substrate_map, workflow
+        status=_card_before_close(
+            args, issue, state, config=config, substrate_map=substrate_map, workflow=workflow
         ),
     )
 
@@ -576,6 +591,9 @@ def main() -> int:
             # GitHub closed the issue and wrote no label: the move to done is
             # recorded here, from where the merge found it — unless its label
             # already says done (done-work's move-issue wrote it, or a re-run).
+            # Where the map binds the state to the board, the card read above
+            # says where the merge found it, and the journal whether the move
+            # is recorded already (`_card_before_close`).
             close_move.record(
                 pr_merge_close_reason(args.pr, closed_by_merge=True)
                 if args.pr is not None
@@ -1098,6 +1116,37 @@ def _bring_ancestors_level(args: argparse.Namespace) -> None:
 # ---- recording the close (#1231) ------------------------------------
 
 
+def _card_before_close(
+    args: argparse.Namespace,
+    issue: dict,
+    state: str,
+    *,
+    config: dict,
+    substrate_map: axis_labels.SubstrateMap | None,
+    workflow: dict,
+) -> infer.StatusRead | None:
+    """Where the issue's card's Status says it stood before this close, where the
+    map binds the state to the board; None elsewhere.
+
+    An open issue's card says where it is (DEC-062 point 5). A closed issue's
+    card says where its work stood until it is set to Done ([pkit:ADR-074] point
+    4), and is read only for the move a pr-merge close records of a close a
+    merge made (#2307), while the journal still owes that move
+    (`move_journal.owes_board_close`). `done-work` runs move-issue on its own
+    issue first, which records the close as it sets the card to Done, so that
+    close is not recorded twice. A dry run records nothing, and reads no closed
+    issue's card."""
+    if state != "closed":
+        return issue_position.read_status(args.issue_number, issue, config, substrate_map, workflow)
+    if args.mode != "pr-merge" or args.dry_run or not infer.state_is_board_carried(substrate_map):
+        return None
+    if not owes_board_close(read_journal(args.issue_number), DONE_STATE):
+        return None
+    return issue_position.read_status_before_close(
+        args.issue_number, issue, config, substrate_map, workflow
+    )
+
+
 @dataclass(frozen=True)
 class _CloseMove:
     """The lifecycle move a close makes — to done, from where the issue was —
@@ -1108,14 +1157,15 @@ class _CloseMove:
     #: Where the issue was before the close (`state_before_close`), or None when
     #: nothing records it (a `derive`-bound state, an issue already closed with
     #: neither a state label nor a milestone, or a board-carried state whose card's
-    #: Status places the open issue nowhere).
+    #: Status places the issue nowhere, or whose card was not read).
     from_state: str | None
     #: Why the move is not recorded although it is one: the workflow declares
     #: no `from_state → done` for the issue's type. Empty when it does.
     undeclared: str
     actor: str | None
-    #: The open issue's card's Status, where the map binds the state to the board
-    #: (`issue_position.read_status`); None elsewhere, and for a closed issue.
+    #: The card's Status, where the map binds the state to the board
+    #: (`_card_before_close`): an open issue's, and a closed one's in a pr-merge
+    #: close the journal still owes; None elsewhere.
     status: infer.StatusRead | None = None
 
     @classmethod
@@ -1156,8 +1206,9 @@ class _CloseMove:
 
     def unplaced(self) -> infer.StatusRead | None:
         """The card's Status, where the board carries the state and that Status
-        places the open issue nowhere (DEC-051 point 6), so where it was is not
-        known; None otherwise."""
+        places the issue nowhere (DEC-051 point 6), so where it was is not known;
+        None otherwise. A closed issue's card at Done is one such: it says
+        nothing of where the work stood."""
         return self.status if self.status is not None and self.from_state is None else None
 
     def record(self, reason: str) -> None:
