@@ -125,13 +125,26 @@ def _json(path: Path) -> Mapping[str, Any]:
 
 
 def part_outputs(part: Sequence[str], seconds: int, report: Report) -> dict[str, str]:
-    """The outputs a part hands on, but `passed`."""
+    """The outputs a part hands on, but `passed`. A value from the slice's report is
+    handed on only in its form, a digest as `_DIGEST` writes it and a count in digits,
+    and is empty otherwise: what the report holds never writes a line of its own into
+    `$GITHUB_OUTPUT`, and a slice whose digest is empty did not pass."""
     outputs = {"seconds": str(seconds)}
     if part[0] == "--shard" and report.cut is not None:
-        for key in ("digest", "collected", "listed", "unlisted"):
-            outputs[key] = str(report.cut.get(key, ""))
+        digest = str(report.cut.get("digest", ""))
+        outputs["digest"] = digest if _DIGEST.fullmatch(digest) else ""
+        for key in ("collected", "listed", "unlisted"):
+            count = report.cut.get(key)
+            outputs[key] = str(count) if _count_form(count) else ""
         outputs["share"] = "" if report.share is None else str(report.share)
     return outputs
+
+
+def _count_form(value: object) -> bool:
+    """A count as a slice's report writes it: a whole number, not below zero."""
+    return (isinstance(value, int) and not isinstance(value, bool) and value >= 0) or (
+        isinstance(value, str) and value.isascii() and value.isdigit()
+    )
 
 
 def part_summary(
