@@ -378,6 +378,24 @@ class AcceptedUnanchored:
 
 
 @dataclass(frozen=True)
+class Selection:
+    """The artefacts a run was asked to judge, where not every one (`run_repository_check`):
+    the locations named, sorted, and those of them HEAD holds no artefact at."""
+
+    named: tuple[str, ...]
+    absent: tuple[str, ...]
+
+    def as_json(self) -> dict[str, list[str]]:
+        return {"named": list(self.named), "absent": list(self.absent)}
+
+
+#: What names the artefacts a run judges: their locations, or a reading of them made when
+#: the run needs them — once it has read HEAD, its history and HEAD's answers — so a
+#: caller may start the run before it knows them.
+Judging = Collection[str] | Callable[[], Collection[str]]
+
+
+@dataclass(frozen=True)
 class RepositoryCheck:
     """The outcome of one run of the whole-repository check. It never fails."""
 
@@ -406,6 +424,7 @@ class RepositoryCheck:
     # (`run_repository_check`), which reads too few answers to say.
     answer_files: int = 0
     prunable: tuple[str, ...] | None = ()
+    selection: Selection | None = None  # what the run was asked to judge; `None`: every one
 
     def count(self, kind: RepositoryFindingKind) -> int:
         return sum(1 for f in self.findings if f.kind is kind)
@@ -1583,19 +1602,27 @@ def run_repository_check(
     target_root: Path,
     *,
     registry: Mapping[str, ResolverCommand] | None = None,
-    judging: Collection[str] | None = None,
+    judging: Judging | None = None,
 ) -> RepositoryCheck:
     """Run the whole-repository check of HEAD against its history.
 
-    `judging`, where given, names the artefacts to judge by their locations, so a
-    reader that needs a few artefacts' state does not pay for every artefact's.
-    Each is judged exactly as the whole check judges it: an artefact's judgement
-    reads history and what its anchors stand on, never another artefact's
-    judgement. The reports and findings are theirs alone; the measures and the
-    count of answer files are the whole repository's still. Which answer files a
+    `judging`, where given, names the artefacts to judge by their locations (`Judging`),
+    so a reader that needs a few artefacts' state does not pay for every artefact's;
+    an empty list judges none (ADR-079). Each is judged by the one judgement of the
+    whole check (`_check_artefact`), which reads HEAD, the history, the artefact's own
+    answers and what its anchors stand on, never another artefact's judgement. So
+    where every anchor of an artefact gets an answer in both runs, a selection judges
+    it as the whole check does. Whether an anchor gets an answer depends on its
+    resolver and the time left — a resolver that overran its bound is not started
+    again (`AnchorKinds`), and a nested run's deadline leaves less time to what comes
+    later — and can differ between two runs either way. The reports are the
+    named artefacts' alone, and so are the findings, but for unreadable front matter,
+    reported wherever it is, and a revalidation point whose `friction.exclude` does
+    not read, reported where a named artefact's point reaches it. The measures and
+    the count of answer files are the whole repository's still. Which answer files a
     prune would remove is a reading of every artefact's answers, so it is not read
-    (`prunable` is `None`). A location HEAD holds no artefact at judges nothing.
-    `None` judges every artefact.
+    (`prunable` is `None`). The result says what was named, and which of the
+    locations HEAD holds no artefact at (`Selection`). `None` judges every artefact.
 
     Raises `FrictionCheckError` when it cannot run — outside a git repository,
     or before the first commit — except while dormant, when no place is
@@ -1627,12 +1654,11 @@ def _check_head(
     head_sha: str,
     blobs: BlobReader,
     registry: Mapping[str, ResolverCommand] | None,
-    judging: Collection[str] | None = None,
+    judging: Judging | None = None,
 ) -> RepositoryCheck:
     """The whole-repository check of the commit HEAD names, `head_sha`, its files and
     its history's blobs read through `blobs`, judging the artefacts `judging` names,
     or every one (`run_repository_check`)."""
-    named = None if judging is None else frozenset(judging)
     tree = CommitTree(target_root, head_sha, blobs)
     discovery = discover_artefacts(target_root, tree=tree)
     settings = discovery.settings
@@ -1648,6 +1674,7 @@ def _check_head(
     registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
     history = read_history(target_root, head_sha)
     judge = _Judge(head, tree, history, Walker(history, blobs), blobs, registry)
+    named = None if judging is None else frozenset(judging() if callable(judging) else judging)
     reports: list[ArtefactReport] = []
     findings: list[RepositoryFinding] = []
     for index in truth_chain_order(discovery, head.record_path):
@@ -1695,7 +1722,14 @@ def _check_head(
             if judge.answers.dormant
             else judge.answers.prune(discovery).remove
         ),
+        selection=None if named is None else _selection(named, discovery),
     )
+
+
+def _selection(named: frozenset[str], discovery: Discovery) -> Selection:
+    """What a run was asked to judge, and which of it HEAD holds no artefact at."""
+    held = {artefact.location for artefact in discovery.artefacts}
+    return Selection(tuple(sorted(named)), tuple(sorted(named - held)))
 
 
 def _judged(artefact: Artefact, judge: _Judge) -> bool:
@@ -2529,6 +2563,7 @@ def render_json(result: RepositoryCheck) -> str:
             "files": result.answer_files,
             "prunable": None if result.prunable is None else list(result.prunable),
         },
+        "selection": None if result.selection is None else result.selection.as_json(),
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
@@ -2658,6 +2693,12 @@ def _header_lines(result: RepositoryCheck) -> list[str]:
         )
     else:
         lines.append("  History: full")
+    if result.selection is not None:
+        named = result.selection.named
+        line = f"  Judged: only the {counted(len(named), 'artefact', 'artefacts')} named"
+        if result.selection.absent:
+            line += f"; HEAD holds none at {', '.join(result.selection.absent)}"
+        lines.append(line)
     lines.append(
         f"  Mode: {result.mode}"
         + cli_render.style("muted", "   (reports only: the whole-repository check never fails)")

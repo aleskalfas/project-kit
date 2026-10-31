@@ -3,11 +3,14 @@ kind: minor
 custom:
   category: Added
 body: >
-  `pkit friction check --all --artefact <location>`, repeatable, judges only the
-  artefacts named, each exactly as the whole-repository check judges it, and
-  keeps the measures and the count of answer files the whole repository's
-  (#2365). A reader that needs a few artefacts' state, such as living-docs'
-  documentation check, then pays for theirs and not for every artefact's. Which
-  answer files a prune would remove reads every artefact's answers, so with
-  `--artefact` the document's `answers.prunable` is `null` and the read view
-  says it is not read. Without `--artefact` nothing changes.
+  `pkit friction check --all` can judge only the artefacts a reader names:
+  `--artefact <location>`, repeatable, and `--artefacts-from <file>`, a list one
+  location a line, `-` for standard input, an empty list judging none (#2365,
+  ADR-079). Each is judged by the whole check's one judgement, and the measures
+  and the count of answer files stay the whole repository's, so a reader that
+  needs a few artefacts' state, such as living-docs' documentation check, pays
+  for theirs and not for every artefact's. The document gains `selection` —
+  `null`, or the locations named and those HEAD holds no artefact at — and the
+  read view's header says it; which answer files a prune would remove is not
+  read under a selection, so `answers.prunable` is `null`. Without a selection
+  nothing changes but the `selection` key, which is `null`.
