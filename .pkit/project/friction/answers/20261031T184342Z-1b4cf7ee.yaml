@@ -1,0 +1,217 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-authorisation
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+    revalidated:
+      at: 2026-10-31T18:43:42Z
+      outcome: unchanged
+      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The authorisation gates the term rests on are untouched, and DEC-064 keeps the cascade asking for none.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222714Z-39971455.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261031T010527Z-8e577440.yaml
+    revalidated:
+      at: 2026-10-31T18:43:53Z
+      outcome: unchanged
+      unchanged-because: "This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The term's definition holds: each issue above is brought forward where it is behind, and DEC-064 changes the cascade only at an ancestor the board does not place, which the definition does not speak of."
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
+    read:
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261031T010527Z-8e577440.yaml
+    revalidated:
+      at: 2026-10-31T18:43:56Z
+      outcome: unchanged
+      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The states and moves the term names are untouched.
+  - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
+    read:
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+    revalidated:
+      at: 2026-10-31T18:44:00Z
+      outcome: unchanged
+      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The view's account of the cascade states the built behaviour and DEC-006's promise for every issue the read places, which DEC-064 leaves standing.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T184858Z-f36698cb.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T211250Z-f74ab866.yaml
+      - 20261029T214542Z-efb6f11b.yaml
+    revalidated:
+      at: 2026-10-31T18:44:13Z
+      outcome: unchanged
+      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The held moves and their authorisation are untouched, and the requirement leaves the cascade's moves outside it.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
+    read:
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T023307Z-fc6b5909.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T182942Z-4d4f1fbb.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+    revalidated:
+      at: 2026-10-31T18:44:17Z
+      outcome: unchanged
+      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. How a planner reads a Task's state is untouched.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
+    read:
+      - 20261026T041810Z-c47f89f5.yaml
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T020848Z-91131abb.yaml
+      - 20261028T040414Z-bea9746a.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T233109Z-431c3965.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+    revalidated:
+      at: 2026-10-31T18:44:20Z
+      outcome: unchanged
+      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. Scheduling an issue with promote-issue, and the reason it takes, are untouched.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
+    read:
+      - 20261026T123735Z-1bb7aeeb.yaml
+      - 20261026T151502Z-9cd0e5da.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261031T010527Z-8e577440.yaml
+    revalidated:
+      at: 2026-10-31T18:44:25Z
+      outcome: unchanged
+      unchanged-because: "This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The move and its variants describe the cascade as built, which this change does not touch. DEC-064, once accepted, is built under #2305, whose change revisits this use case."
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261026T013726Z-d41bac9b.yaml
+      - 20261026T043015Z-eb9c3dc3.yaml
+      - 20261026T083710Z-10b15046.yaml
+      - 20261026T123904Z-0482f880.yaml
+      - 20261026T145234Z-564794a2.yaml
+      - 20261026T152835Z-e6e43fac.yaml
+      - 20261026T210005Z-449f9bd4.yaml
+      - 20261026T210118Z-2e14ebf6.yaml
+      - 20261026T212744Z-4789db3b.yaml
+      - 20261027T002549Z-a8936977.yaml
+      - 20261027T113439Z-2546eef4.yaml
+      - 20261027T120231Z-5ff90c34.yaml
+      - 20261027T142620Z-f8937159.yaml
+      - 20261027T143058Z-33fd32cd.yaml
+      - 20261027T161824Z-9a93bea8.yaml
+      - 20261028T013353Z-b3364ebc.yaml
+      - 20261028T034346Z-d3adecf2.yaml
+      - 20261028T165055Z-ec1b7353.yaml
+      - 20261028T173643Z-b8011dea.yaml
+      - 20261028T180810Z-fdd668c3.yaml
+      - 20261028T202048Z-0a06bcc5.yaml
+      - 20261028T205654Z-b292a5c8.yaml
+      - 20261028T211532Z-c55f02b0.yaml
+      - 20261028T214052Z-d9e0c8d3.yaml
+      - 20261028T215451Z-69a1d552.yaml
+      - 20261028T215825Z-4efe689f.yaml
+      - 20261028T222319Z-ba01956c.yaml
+      - 20261028T224420Z-150fbc32.yaml
+      - 20261028T231033Z-db617c30.yaml
+      - 20261028T231506Z-7ce27d1e.yaml
+      - 20261028T235104Z-84c9ec8b.yaml
+      - 20261029T002130Z-82af462f.yaml
+      - 20261029T003116Z-3df0ccea.yaml
+      - 20261029T082952Z-2a8401f3.yaml
+      - 20261029T083740Z-70b67a7a.yaml
+      - 20261029T141235Z-12329a76.yaml
+      - 20261029T150941Z-ca5f64b9.yaml
+      - 20261029T195333Z-464ebbe4.yaml
+      - 20261030T004238Z-96d8bad7.yaml
+      - 20261030T044443Z-53a77744.yaml
+      - 20261030T114612Z-ece11007.yaml
+      - 20261031T010527Z-8e577440.yaml
+    revalidated:
+      at: 2026-10-31T18:44:28Z
+      outcome: unchanged
+      unchanged-because: "This change adds DEC-064, a proposed record, and names it on DEC-006's top line. The README describes the forward cascade and its exit codes as built, which this change does not touch. It changes with the build that follows DEC-064's acceptance, under #2305."
