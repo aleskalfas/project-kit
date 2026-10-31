@@ -35,7 +35,7 @@ ADR-055 point 3 makes each adopter-facing README under `.pkit/` a user page, and
 
 A README that is a page leads its folder. Maintainers' sub-READMEs, such as those of templates and migrations, lead nothing.
 - **It is the folder's stable address,** and moves only with its folder.
-- **Its kind follows its side.** A guide's README is a `guide`: the area's why and common tasks, then its pages in number order. Until living-docs ships that kind, it reports the kind and fails nothing (living-docs DEC-001 point 3). A reference's README is a `reference`: a one-line purpose (point 2), then what it describes. Its list of pages is a signpost (RS-LDOC-005).
+- **Its kind follows its side.** A guide's README is a `guide`: the area's why and common tasks, then its pages in number order. The kind ships with living-docs, whose validation checks only a guide's title (living-docs DEC-003). A reference's README is a `reference`: a one-line purpose (point 2), then what it describes. Its list of pages is a signpost (RS-LDOC-005).
 - **It anchors each page it lists.** No page anchors its own README, which would make a cycle (COR-050 point 5).
 - **Folders are planned** with an area's rework, each created with its first page and its README, so no page moves when the second lands.
 
