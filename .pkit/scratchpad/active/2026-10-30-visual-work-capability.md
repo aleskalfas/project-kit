@@ -123,7 +123,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
     - **Translation know-how, shipped in the capability.** What the Czech version taught: translate a slide from its meaning, not word for word, one translator per slide; keep the English words developers say (capability, engine, slot); build each sentence the target language's way; one glossary, one word for one thing; a review by a native speaker. The lessons are in the Friday talk's note, "The Czech version".
 14. **The workarounds.** What to fix in the Mural renderer rather than carry beside it: the duplicates left after retries, monospace text rendered as images.
 15. **Moving in.** Tests, versions, and moving today's user-level skill into pkit.
-16. **Names.** A naming pass with the maintainer before any record or code fixes a name (see "Names").
+16. ~~**Names.** A naming pass with the maintainer before any record or code fixes a name.~~ Decided (31 October): the capability `visual-communication`; a piece, its content, local components, patterns, layouts, slots and frames; a brand, a component library and a notation; foundations and the starter; the states draft, delivered, living and adapted; the rest kept or chosen by the agent at the maintainer's word (see "Names", the naming pass).
 17. ~~**The runtime and outside programs.**~~ Decided: Python, with no Node; outside programs are called only on the path that needs them, and the capability checks for them (see "Discussion", point 17).
 18. **The architect's four revisions of decided points**, taken one at a time:
     - ~~18a. What a delivered piece locks (4d).~~ Decided: library versions only; the exports are the real freeze (see "Discussion", point 18a).
@@ -1103,40 +1103,39 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 
 | Working name | Meaning | Status |
 |---|---|---|
-| visual work | what the capability is about | working |
-| logical layer | the source: content, components, libraries | working |
+| visual communication | what the capability is about; "visual work" before the naming pass | decided (naming pass) |
+| logical layer | the source: content, components, libraries | kept (naming pass) |
 | content | what to show, in one language: text, lists, image references, no layout; "material" in the points before the naming pass | decided (naming pass) |
-| renderer, projection | what draws the logical layer; the relation between the two | working ("adapter" ruled out, as pkit uses it for the harness) |
-| component | anything from a tag to a whole slide layout (point 4b) | working; established term |
-| kind | a component the content may name at the top | working |
-| option, variant | a choice a component declares, such as a card's tone | working (Figma says "variants" and "component properties") |
-| design tokens, raw values, roles, component tokens | the design language as data | established terms (W3C Design Tokens) |
-| theme, mode | a set of values; light or dark | working |
+| renderer, projection | what draws the logical layer; the relation between the two | kept (naming pass; "adapter" ruled out, as pkit uses it for the harness) |
+| component | anything from a tag to a whole slide layout (point 4b) | kept (naming pass) |
+| pattern | level 5: a library component that is a whole arrangement filled with content, such as a pyramid, a timeline or a comparison; "recipe" and "kind" before the naming pass | decided (naming pass) |
+| option, variant | a choice a component declares, such as a card's tone | kept (naming pass; Figma says "variants" and "component properties") |
+| design tokens, raw values, roles, component tokens | the design language as data | kept (naming pass; DTCG; Material 3's "colour roles") |
+| theme, mode | a set of values; light or dark | kept (naming pass) |
 | brand | the values library a piece names, such as IBM, DAM or neutral: its token values, layouts, logo and brand-only parts; "context" before the naming pass | decided (naming pass) |
 | frame | an element's box: `x`, `y`, `width`, `height` (points 4h, 19); before the naming pass, also level 6 | decided (naming pass): this meaning only |
-| recipe | a recurring arrangement, promoted after about three uses | working (Brad Frost's term) |
+| recipe, kind | level 5 before the naming pass | replaced by "pattern" (naming pass) |
 | one-off | level 7 before the naming pass | replaced by "local component" (naming pass) |
 | local component, library component | a component made inside one piece, in its `components/` folder (level 7); a component a library publishes. A local component that recurs about three times is promoted to a library component | decided (naming pass; Figma's terms) |
 | talk | level 8 in the first drafts | replaced by "piece" (naming pass) |
-| deck | the top component of a presentation | working (Slidev, Marp and Keynote users say "deck") |
-| library | a named, versioned set of pieces that is shared, and names the libraries it builds on | working |
+| deck | the top component of a presentation | kept (naming pass; Slidev, Marp and Keynote users say "deck") |
+| library | a named, versioned set of components, values or notation that is shared, and names the libraries it builds on | kept (naming pass) |
 | brand, component library, notation | the three kinds of library (point 4g): values, structure and meaning before the naming pass | decided (naming pass) |
-| core, interface, starter | the core holds only the interface (role names, top components, named layouts, slots); the starter holds the capability's opinionated components (point 18b) | working |
+| foundations, interface, starter | the foundations hold only the interface (role names, top components, layouts, slots); the starter holds the capability's opinionated components (point 18b); "core" before the naming pass | foundations decided (naming pass); interface and starter kept |
 | notation | the meaning library a piece names, such as pkit: each of its concepts mapped to roles (colour, icon, shape), and its own marks (logo, icons); "subject" before the naming pass | decided (naming pass) |
-| layouts, slot, entry point | level 6: the layouts a top component declares and a brand supplies, such as a deck's cover, section and slide ("named layouts" before the naming pass); a place in a layout; a named way into a library, such as `ibm/deck` (point 4g) | layouts and slot decided (naming pass); entry point working |
-| shared core, per brand, per piece | the three scopes | working |
-| drafting, delivered, reused | the states of point 4d | working |
-| living | the fourth state: work that is never delivered, such as a doc figure (point 4j) | working |
+| layouts, slot, entry point | level 6: the layouts a top component declares and a brand supplies, such as a deck's cover, section and slide ("named layouts" before the naming pass); a place in a layout; a named way into a library, such as `ibm/deck` (point 4g) | layouts and slot decided, entry point kept (naming pass) |
+| shared, per brand, per piece | the three scopes; "shared core" before the naming pass | decided (naming pass) |
+| draft, delivered, living, adapted | a piece's states: its lock follows the newest at every render; never moves; moves through a proposal after a library release; moves only when a person upgrades it on purpose (points 4d, 4j); "drafting" and "reused" before the naming pass | decided (naming pass) |
 | piece | level 8: one finished item made from components, such as a deck, a standalone diagram, a doc figure or a poster; its content plus its lock | decided (naming pass) |
-| lock | the library versions a piece uses (points 4j, 4i, 18a) | working |
-| engine | the code that computes the scene: tools, formulas, text measuring | working |
-| scene | what the engine computes and every renderer draws (point 4h) | working |
-| font profile | the fonts for a group of renderers, set by the brand (point 18d) | working |
-| asks, gets | an element's two sizes: the size it asks for, the size it gets (point 19) | working |
-| public anchor | a part a component lets others point at (point 19) | working |
-| helper script | a script run while preparing, writing a checked one-off (point 21) | working |
-| model | the file of a system's elements and relations that several views read (point 22) | working |
-| contract, coverage, fallback | the kinds another capability needs drawn; how many a library draws; the drawing used for the rest (point 22) | working |
+| lock | the library versions a piece uses (points 4j, 4i, 18a) | kept (naming pass) |
+| engine | the code that computes the scene: tools, formulas, text measuring | kept (naming pass) |
+| scene | what the engine computes and every renderer draws (point 4h) | kept (naming pass) |
+| font profile | the fonts for a group of renderers, set by the brand (point 18d) | kept (naming pass) |
+| preferred size, actual size | an element's two sizes: the one it prefers, from its content, and the one its parent gives it (point 19); "asks" and "gets" before the naming pass | decided (naming pass) |
+| exposed part | a part a component lets its ancestors point at (point 19); "public anchor" before the naming pass | decided (naming pass) |
+| helper script | a script run while preparing, writing a checked local component (point 21) | kept (naming pass) |
+| model | the file of a system's elements and relations that several views read (point 22) | kept (naming pass) |
+| contract, coverage, fallback | the visuals another capability needs drawn; how many a library draws; the drawing used for the rest (point 22) | kept (naming pass) |
 
 A naming pass with the maintainer comes before any record or code fixes a name. It starts with the names that appear inside files (the architect's review), one decision at a time: the capability's name first, which is also the repository's.
 
@@ -1158,18 +1157,18 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   - "data": fits charts, but undersells slides and words.
 - **Level 7: "local component",** in the folder `components/` inside the piece; its counterpart is a library component. Chosen by the maintainer: Figma's terms for a component defined in the file and one published in a library, which is this split. The points before the naming pass say "one-off"; read it as local component. Ruled out: "one-off" and "snowflake" (Brad Frost's), which name an attitude rather than where the component lives, read as slang to non-native speakers, and contradict promotion.
 - **Promotion of a local component,** as the maintainer asked how it works. It follows from points 4c, 4i, 18b and 21:
-  1. It goes to a library its author owns: a structure library, or the starter if every adopter could use it, or a brand library if only that brand uses it. Never the core, which holds only the interface.
-  2. A small building block becomes a component (level 4); a whole arrangement filled with content becomes a recipe or kind (level 5).
+  1. It goes to a library its author owns: a component library, or the starter if every adopter could use it, or a brand library if only that brand uses it. Never the foundations, which hold only the interface.
+  2. A small building block becomes a component (level 4); a whole arrangement filled with content becomes a pattern (level 5).
   3. It is generalised on the way: fixed texts become content fields, one-time choices become options, and every colour a role.
   4. It is added in the library's own repository and released as a new version, since a project's copies are read-only.
   5. Each piece switches on purpose: `upgrade` brings the version, the content's `use: components/pyramid` becomes `use: <library>/pyramid` after a before-and-after, and the local copy is removed. Delivered pieces keep theirs.
   6. A local component a helper script wrote waits for its script to become an engine tool (point 21), then is promoted as data.
 
   No `promote` command is planned: generalising needs judgment, so it is the agent's work (aspect 9).
-- **Level 6: "layouts"; "frame" keeps one meaning, an element's box.** Chosen by the maintainer after an example. The note had used "frame" for both a brand's templates (4c, 4g) and an element's computed box (4h, 19), and a designer also hears Figma's frame, any container. "Layouts" is PowerPoint's, Keynote's and Google Slides' word ("Title Slide", "Section Header"), and the note already called each one a named layout. The core declares a top component's layouts and their slots; a brand supplies how each is drawn; the content picks a layout per page and fills its slots; the scene gives each element a frame. Ruled out: "master" (PowerPoint's parent of the layouts, and InDesign renamed its master pages parent pages) and "template" (a file one starts from; atomic design's page skeleton; every component in today's mural-boards tool).
+- **Level 6: "layouts"; "frame" keeps one meaning, an element's box.** Chosen by the maintainer after an example. The note had used "frame" for both a brand's templates (4c, 4g) and an element's computed box (4h, 19), and a designer also hears Figma's frame, any container. "Layouts" is PowerPoint's, Keynote's and Google Slides' word ("Title Slide", "Section Header"), and the note already called each one a named layout. The foundations declare a top component's layouts and their slots; a brand supplies how each is drawn; the content picks a layout per page and fills its slots; the scene gives each element a frame. Ruled out: "master" (PowerPoint's parent of the layouts, and InDesign renamed its master pages parent pages) and "template" (a file one starts from; atomic design's page skeleton; every component in today's mural-boards tool).
 
   ```yaml
-  # libraries/core/1.4.0/deck/deck.yaml: which layouts a deck has
+  # libraries/foundations/1.4.0/deck/deck.yaml: which layouts a deck has
   layouts:
     cover:   {slots: [title, subtitle, author, link]}
     section: {slots: [number, title]}
@@ -1196,7 +1195,15 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
 - **"Slot" stays,** for a named place in a layout or a component that content fills. Chosen by the maintainer: the established term of component design (web components, Vue, Svelte, and the design systems built on them), and one word for layouts and components alike. Ruled out: "placeholder", PowerPoint's word for a layout's slot, which designers also hear as mock text or an empty field's hint, and which fits layouts only. Flagged clash: pkit's capability slots (point 24); the context tells them apart, "a layout's slot" against "a capability slot".
 - **"Brand" for the values library a piece names** (IBM, DAM, neutral), as `brand: ibm/deck`. Chosen by the maintainer. The design-tokens format the capability adopts (DTCG's Resolver, point 4f) uses "context" for one setting of any switch, light, dark or brandA alike, so the old word would mean light in the token files and IBM in the pieces. "Brand" is the word of multi-brand design systems, of DTCG's own examples, of Quarto's `_brand.yml` and of the research's Infinum case, and matches "brand-only parts" and the brand guide. DAM is a client's brand; neutral is an unbranded one. The points before the naming pass say "context"; read it as brand. Ruled out: "theme" (the values only, without layouts and logo) and "system" (Spectrum's switch, which collides with design system).
 - **"Notation" for the meaning library a piece names** (pkit), as `notations: [pkit]`. Chosen by the maintainer. It is the established word of diagramming for a fixed set of symbols and what each means (UML, BPMN, C4, ArchiMate, crow's foot), and it names what the library brings rather than the piece's topic, which "subject" suggested. A piece about two projects names two notations. The points before the naming pass say "subject"; read it as notation. Ruled out: "theme" (Structurizr's word for its icon sets, but ours is values), "encoding" (information design's word, which developers hear as text encoding) and "legend" (the visible key on a figure, not the rules behind it).
-- **The three kinds of library: a brand, a component library, a notation** (point 4g's values, structure and meaning). Chosen by the maintainer for the structure kind, such as the core, the starter or a docs team's `docs-kit`: the established term (NN/g's parts of a design system; Carbon's and Material's own), which says what is inside and pairs with "library component". Ruled out: "kit" (Figma's "UI kit", Material's and Carbon's design kits), the one-word term, because it clashes closely with project-kit's "kit-owned" and "kit-shipped"; "stencil" (diagrams only); "components" (uncountable as a name, the content of every library, and the piece's `components/` folder); "structure" (says nothing of what is inside).
+- **The three kinds of library: a brand, a component library, a notation** (point 4g's values, structure and meaning). Chosen by the maintainer for the structure kind, such as the foundations, the starter or a docs team's `docs-kit`: the established term (NN/g's parts of a design system; Carbon's and Material's own), which says what is inside and pairs with "library component". Ruled out: "kit" (Figma's "UI kit", Material's and Carbon's design kits), the one-word term, because it clashes closely with project-kit's "kit-owned" and "kit-shipped"; "stencil" (diagrams only); "components" (uncountable as a name, the content of every library, and the piece's `components/` folder); "structure" (says nothing of what is inside).
+- **The established names are kept,** confirmed by the maintainer as one batch: component, library, deck, theme, mode, design tokens, roles, component tokens, variant, option, renderer, scene, lock, model, engine, helper script, font profile, contract, coverage, fallback, starter. The table marks them "kept".
+- **The maintainer left the remaining names to the agent** (31 October), trusting its choices from the domain and his preferences: established terms, plain for non-native speakers, one word where one serves, a clash with pkit flagged rather than avoided. The agent chose:
+  - **The states: draft, delivered, living, adapted.** "Draft" is the state's name everywhere work is written (documents, content systems, pull requests). "Delivered" stays: a talk is delivered, and so is a client's file. "Living" stays: the established "living document" and "living style guide". "Adapted" replaces "reused", which named an action: a piece copied from a delivered one and adapted for a new audience, its lock moved only when a person upgrades it. Ruled out: "final" and "published" for delivered (final suggests it can never be taken up again; published fits pages, which are living), and "repurposed" for adapted (marketing jargon). Flagged clash: pkit's harness adapter, a different word and meaning.
+  - **Level 5: "pattern",** a library component that is a whole arrangement filled with content, such as a pyramid, a timeline or a comparison. The design-system term for a reusable arrangement of components (Carbon's and Atlassian's patterns; the pattern library NN/g names beside the component library). It replaces two names for one level: "recipe" (Brad Frost's, less known) and "kind". The points before the naming pass say "kind" or "recipe"; read it as pattern, and "kinds are data" (4a) as "patterns are data". Flagged clash: pkit's pattern extraction (COR-007), a related meaning.
+  - **"Foundations" for the core,** the library that holds only the interface: role names, top components, layouts and slots (`foundations/deck`). The design-system term for the base layer every other part builds on (Carbon's, Atlassian's and Material's foundations). "Core" clashed head-on with pkit's own core (core records, core-owned files): a "core" library shipped by a capability would not be core-owned. The scope "shared core" becomes "shared". The points before the naming pass say "core" for this library; read it as foundations.
+  - **"Preferred size" and "actual size"** for an element's two sizes (point 19), with the key `preferred:` in a component (`preferred: {height: =body.bottom + 24}`). The established pair of layout systems (the preferred size of CSS sizing, Swing and GTK; WPF's desired and actual size), plain for non-native speakers. The actual size is what a formula reads, so it needs no key. Ruled out: "asks" and "gets" (verbs, not names), "intrinsic" (from content only, while a preferred size may be a formula) and SwiftUI's "proposed" and "chosen" (the parent proposes, the reverse of ours).
+  - **"Exposed part"** for a part a component lets its ancestors point at (point 19), with the key `exposes: [heading, body]`. Figma lets a component expose its nested instances to the outside, the same idea. "Public anchor" clashed with pkit's anchors (what an artefact rests on, under `anchors:` in front matter), and a key `anchors:` in a component file could be taken for them.
+  - **Kept without a change:** "logical layer", "projection", "entry point" (a named way into a library, such as `ibm/deck`), "raw value" (a literal value, such as `#F1C21B`, which only a brand holds).
 
 **A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --brand ibm/deck --notation pkit` writes two files; the rest appear when they are needed:
 
@@ -1204,7 +1211,7 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
 visual/                                  the capability's place in the project (a setting)
 ├── libraries.yaml                       each library's link and the versions present (4i)
 ├── libraries/                           read-only copies, fetched whole at their tag (4i, 18b)
-│   ├── core/1.4.0/  starter/1.2.0/  neutral/1.0.0/  ibm/2.0.0/  pkit/1.1.0/
+│   ├── foundations/1.4.0/  starter/1.2.0/  neutral/1.0.0/  ibm/2.0.0/  pkit/1.1.0/
 └── pieces/
     └── friday-talk/
         ├── piece.yaml                   written by `new`: what it is, what it uses, its lock, its state
@@ -1223,12 +1230,12 @@ visual/                                  the capability's place in the project (
 
 ```yaml
 schema_version: 1
-top: core/deck                    # its top component (4f)
+top: foundations/deck             # its top component (4f)
 brand: ibm/deck                   # the brand's entry point (4g)
 notations: [pkit]
 languages: [en, cs]
-state: drafting                   # drafting, delivered or living (4d, 4j)
-lock: {core: 1.4.0, starter: 1.2.0, ibm: 2.0.0, pkit: 1.1.0}   # (4i, 18a)
+state: draft                      # draft, delivered, living or adapted (4d, 4j)
+lock: {foundations: 1.4.0, starter: 1.2.0, ibm: 2.0.0, pkit: 1.1.0}   # (4i, 18a)
 renderers:
   svg: {}
   mural: {board: ibmresearchdesign6459.1790595606038}
