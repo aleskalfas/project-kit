@@ -1,6 +1,6 @@
 ---
 reader: user
-kind: reference
+kind: guide
 pkit:
   friction:
     anchors:
