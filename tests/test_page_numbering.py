@@ -18,6 +18,10 @@ is the test `REWORK` declares as the rule's check, `page-numbering`:
   guide's folder, a subfolder named after its reference's folder with no number
   (ADR-069 point 1). Its parent's README lists it by name after the numbered
   entries, and this test does not check where.
+- **Which READMEs are skipped:** one whose folder only groups guides, such as
+  `docs/capabilities/`. It holds no page but its README, and only subfolders with
+  no number. RS-REWORK-001 does not yet say how such a folder is named and listed
+  (#2402), so the test reports it skipped rather than passed.
 """
 
 from __future__ import annotations
@@ -121,6 +125,22 @@ def numbering_findings(readme: Path) -> list[str]:
     return findings
 
 
+def only_groups_guides(folder: Path) -> bool:
+    """Whether a folder only groups guides: it holds no page but its README, and
+    only subfolders with no number, each led by a README."""
+    children = [child for child in folder.iterdir() if child.name != "README.md"]
+    pages = [child for child in children if child.is_file() and child.suffix == ".md"]
+    folders = [child for child in children if child.is_dir()]
+    return (
+        not pages
+        and bool(folders)
+        and all(
+            NUMBERED.match(child.name) is None and (child / "README.md").is_file()
+            for child in folders
+        )
+    )
+
+
 def _rework_readmes() -> list[str]:
     covering = covering_rule_sets(discover_artefacts(REPO))
     return sorted(
@@ -130,10 +150,27 @@ def _rework_readmes() -> list[str]:
     )
 
 
+def _rework_readme_params() -> list:
+    """Each README `REWORK` selects, one whose folder only groups guides marked
+    skipped until RS-REWORK-001 says how such a folder is listed (#2402)."""
+    return [
+        pytest.param(
+            readme,
+            marks=pytest.mark.skip(
+                reason=f"{posixpath.dirname(readme)}/ only groups guides, which "
+                "RS-REWORK-001 does not yet name or list (#2402)"
+            ),
+        )
+        if only_groups_guides((REPO / readme).parent)
+        else readme
+        for readme in _rework_readmes()
+    ]
+
+
 # --- the READMEs REWORK's scope selects -------------------------------------
 
 
-@pytest.mark.parametrize("readme", _rework_readmes())
+@pytest.mark.parametrize("readme", _rework_readme_params())
 def test_each_readme_rework_selects_lists_its_numbered_pages_in_order(readme: str) -> None:
     findings = numbering_findings(REPO / readme)
     assert findings == [], (
@@ -240,3 +277,21 @@ def test_a_numbered_page_linked_only_in_prose_is_not_listed(tmp_path: Path) -> N
 def test_a_link_in_fenced_code_lists_nothing(tmp_path: Path) -> None:
     readme = _folder(tmp_path, "```markdown\n- [A](010-a.md)\n```\n", "010-a.md")
     assert numbering_findings(readme) == ["010-a.md: the README does not list it"]
+
+
+def test_a_folder_that_only_groups_guides_is_told_apart(tmp_path: Path) -> None:
+    """A README whose folder holds only guide folders is skipped (#2402); one with a
+    page, or a numbered subfolder, beside it is checked."""
+    _folder(tmp_path, "- [living-docs](living-docs/README.md)\n", "living-docs/")
+    assert only_groups_guides(tmp_path)
+    (tmp_path / "glossary.md").write_text("# Glossary\n", encoding="utf-8")
+    assert not only_groups_guides(tmp_path)
+
+
+def test_a_folder_with_a_numbered_subfolder_is_checked(tmp_path: Path) -> None:
+    _folder(tmp_path, "- [More](010-more/)\n", "010-more/", "living-docs/")
+    assert not only_groups_guides(tmp_path)
+
+
+def test_docs_capabilities_is_skipped_as_a_folder_of_guides() -> None:
+    assert only_groups_guides(REPO / "docs" / "capabilities")
