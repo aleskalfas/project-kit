@@ -1,6 +1,6 @@
 ---
 rule-set: GUIDE
-version: 1.0.0
+version: 1.1.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
   paths: [docs/**, README.md]
@@ -11,7 +11,7 @@ rules:
     origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The pilot's first pass rewrote the permissions README under every accepted rule and kept every claim (#2012). It still never said what problem the model solves (PR #2018). The research found that the strongest pages open with the problem, in countable terms, such as pnpm's hundred copies of one package (pnpm.io/motivation). On 25 October the maintainer set where the problems come from: the needs and goals the analysis gives the page's readers (#1928)."}
     pkit:
       friction:
-        anchors: {record: ["ADR-069#4", "living-docs:DEC-001#7"]}
+        anchors: {record: ["ADR-069#1", "ADR-069#4", "living-docs:DEC-001#7"]}
   RS-GUIDE-002:
     status: accepted
     origin: {date: 2026-10-26, by: "Aleš Kalfas", why: "The research found that the strongest pages prove each claim in a way the reader can check. uv and ripgrep give benchmarks, each with its method. The weakest give labels with no proof, such as Vite's README and Rust's three pillars. The pilot's second pass stated five claims, and proved each by a command's real output (PR #2018). On 26 October the maintainer, Aleš Kalfas, set what comes first for a claim with no proof: \"We should not just reword our decisions when we see that they are not truth we should first have to care whether we have a gap in our implementation first.\" (#1928)."}
@@ -23,13 +23,13 @@ rules:
     origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The research found that trusted pages compare the thing with its alternatives. pnpm marks a feature table with ✅ and ❌ against npm and Yarn, and Renovate's comparison credits Dependabot where Dependabot is better. Diátaxis holds that an explanation can and must consider alternatives (diataxis.fr/explanation). The pilot's comparison credits Claude Code's own settings with setup and the cost of a call (PR #2018)."}
     pkit:
       friction:
-        anchors: {record: ["ADR-069#4"]}
+        anchors: {record: ["ADR-069#1", "ADR-069#4"]}
   RS-GUIDE-004:
     status: accepted
     origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The research found that trusted pages state an honest limit, such as ripgrep's \"Why shouldn't I use ripgrep?\" and \"What Kubernetes is not\". A reader told when a thing does not fit can trust what the page claims for it. That is a reason, not a finding, since the research tested no readers. The pilot's guide says when the model is not needed (PR #2018)."}
     pkit:
       friction:
-        anchors: {record: ["ADR-069#4"]}
+        anchors: {record: ["ADR-069#1", "ADR-069#4"]}
   RS-GUIDE-005:
     status: accepted
     origin: {date: 2026-10-25, by: "Aleš Kalfas", why: "The pilot's first pass explained the decision core in its first sentence, and showed no decision anywhere on the page (PR #2018). The research found that the strongest pages show a worked example early, as Git's chapter on rerere, direnv's README and uv's documentation do. That one case teaches faster than a mechanism is a reason, not a finding, since neither tested readers."}
@@ -93,7 +93,7 @@ The rules that project-kit's guides in `docs/` and its entry README, `README.md`
 Open an introducing page's case with the problem that the thing it describes solves for its reader, stated concretely.
 
 - **How:**
-  - An introducing page is the README of a folder in `docs/` holding one area's, capability's or adapter's guide (ADR-069 point 1), or the entry README. The rule binds only on such a page.
+  - An introducing page is the README of a folder in `docs/` holding its own guide to one area, capability or adapter (ADR-069 point 1), or the entry README. The rule binds only on such a page.
   - The problem comes in the page's first second-level section after its lead and any contents list. The lead may say what the thing is.
   - The problem is a need or a goal the analysis gives, stated as what goes wrong while it is unmet. The need is an actor's, and the goal a use case's or a journey's. The page anchors the use case or journey it draws from, or the actor where neither states it.
   - Concretely means that each problem names what its reader meets: a count, a step that fails, or a thing they cannot do. A quality word alone, such as hard or slow, names none.
@@ -124,7 +124,7 @@ State each advantage a page claims as one sentence in bold, and give a proof its
 Compare the thing an introducing page describes with what its reader would otherwise use, and credit the alternative where it is better.
 
 - **How:**
-  - An introducing page is the README of a folder in `docs/` holding one area's, capability's or adapter's guide (ADR-069 point 1), or the entry README. The rule binds only on such a page.
+  - An introducing page is the README of a folder in `docs/` holding its own guide to one area, capability or adapter (ADR-069 point 1), or the entry README. The rule binds only on such a page.
   - The alternative is what the reader uses without the thing, such as the harness's own settings, or files kept by hand. The page names it.
   - With three or more points of comparison, the comparison is a table. Each row is one point, each column one option, and each cell opens with ✅ or ❌. A cell may say why in a few words.
   - What the thing costs its reader is among the points, such as its setup and its running cost. Each point where the alternative is better is marked ✅ for the alternative.
@@ -136,7 +136,7 @@ Compare the thing an introducing page describes with what its reader would other
 Say on an introducing page when its reader does not need the thing it describes, or what the thing is not.
 
 - **How:**
-  - An introducing page is the README of a folder in `docs/` holding one area's, capability's or adapter's guide (ADR-069 point 1), or the entry README. The rule binds only on such a page.
+  - An introducing page is the README of a folder in `docs/` holding its own guide to one area, capability or adapter (ADR-069 point 1), or the entry README. The rule binds only on such a page.
   - Each case is a situation the reader can recognise in their work, such as working alone, or something they might mistake the thing for. Name what serves them instead, where something does.
   - Keep the cases together, under a heading or a label of their own, such as "When not to use it".
 - **Breaks the rule:** the first pass never says when a project can do without the model.
