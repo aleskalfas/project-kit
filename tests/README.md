@@ -150,7 +150,9 @@ from its first test.
 - `load(capability, *names)` loads a capability's scripts, such as `validate.py`,
   and its `_lib` modules in the test's own process. Each capability's `_lib` is
   kept apart in `sys.modules`. While a call loads, no `_lib` folder is on the
-  import path and no `_lib` module imported by path is in `sys.modules`.
+  import path and no `_lib` module imported by path is in `sys.modules`. Given
+  `lib=`, a `_lib` package the test already imported, it loads the scripts into
+  that package instead, so they run with what the test patched there.
   `run_main(script, *args, cwd=...)` runs a script's `main` as its process ran.
 - `route_pkit(monkeypatch, backbone)` answers every `pkit` call of a capability
   with the backbone's CLI in the test's own process. Each capability makes its
@@ -169,7 +171,8 @@ from its first test.
 - `start_in_process(monkeypatch)` starts in the test's own process each command
   the backbone's runner starts for a component, such as a validator. The
   runner's one lookup still resolves the command, so a broken registration still
-  fails.
+  fails. Given `lib=`, it loads each script of that `_lib`'s capability into it.
+  `tests/pm_lifecycle_world.py` starts project-management's predicates so.
 
 **A test leaves the import path as it found it.** A fixture that puts a folder on
 `sys.path` takes it off after its tests, through `monkeypatch.syspath_prepend` or

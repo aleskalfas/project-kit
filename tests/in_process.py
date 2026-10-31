@@ -13,8 +13,9 @@ suite"):
   `route_pkit` sends every `pkit` call of a capability to it, through the one
   private function the capability's calls go through, `_lib.backbone._run`.
 - **The loader** (`load`): a capability's scripts and `_lib`, imported in this
-  process, each capability's `_lib` kept apart; `run_main` runs a script's
-  `main` as its process ran.
+  process, each capability's `_lib` kept apart, or the scripts loaded into a
+  `_lib` a test already holds; `run_main` runs a script's `main` as its process
+  ran.
 - **The reverse seam** (`start_in_process`): the commands the backbone's runner
   starts for a component, started in this process. The runner's one lookup
   still resolves each command, and only its start is replaced.
@@ -217,7 +218,7 @@ def route_pkit(
     given, such as one that stands for an older backbone around it. `backbone` is the
     capability's `_lib.backbone`, as `load` gave it, whose `_run` every call goes through,
     looked up when called. Returns the runner, whose `calls` a test may read."""
-    capability = Path(backbone.__file__ or "").parents[2].name
+    capability = _capability_of(backbone)
     if capability not in ROUTES:
         raise LookupError(f"no route to the in-process `pkit` for {capability!r}: add it to ROUTES")
     runner = pkit if pkit is not None else InProcessPkit()
@@ -248,7 +249,9 @@ def _ours() -> list[str]:
     ]
 
 
-def load(capability: str | Path, *names: str) -> tuple[ModuleType, ...]:
+def load(
+    capability: str | Path, *names: str, lib: ModuleType | None = None
+) -> tuple[ModuleType, ...]:
     """A capability's scripts and `_lib` modules, imported in this process together, as one
     run of its scripts imports them: a name ending `.py` is a script of its `scripts/`, any
     other a module of its `_lib`. `capability` is the name of a capability in this
@@ -260,6 +263,11 @@ def load(capability: str | Path, *names: str) -> tuple[ModuleType, ...]:
     Each call imports afresh: the modules of one call share their `_lib`, and two calls
     share nothing. A script is known by `_script_<capability>_<name>`.
 
+    Given `lib`, a capability's `_lib` package a test already imported, the call imports
+    that package and its modules already imported in place of a fresh `_lib`. So a script
+    it loads runs with what the test patched there. A module of `lib` not yet imported is
+    imported into it.
+
     While they load, no `_lib` folder is on the import path, and no module of a `_lib`
     imported by path is in `sys.modules`. So a module that imports its siblings by path
     first takes them from the call's `_lib`, whatever an earlier test left (#2353)."""
@@ -267,6 +275,8 @@ def load(capability: str | Path, *names: str) -> tuple[ModuleType, ...]:
     saved = {name: sys.modules.pop(name) for name in _ours()}
     path = list(sys.path)
     sys.path[:] = [str(scripts), *(entry for entry in path if Path(entry).name != "_lib")]
+    if lib is not None:
+        sys.modules.update(_modules_of(lib))
     try:
         return tuple(
             _script(scripts, name) if name.endswith(".py") else _lib(name) for name in names
@@ -276,6 +286,23 @@ def load(capability: str | Path, *names: str) -> tuple[ModuleType, ...]:
         for name in _ours():
             del sys.modules[name]
         sys.modules.update(saved)
+
+
+def _modules_of(lib: ModuleType) -> dict[str, ModuleType]:
+    """A `_lib` package and each of its modules already imported, by their names in
+    `sys.modules`."""
+    prefix = f"{lib.__name__}."
+    imported = [value for value in vars(lib).values() if isinstance(value, ModuleType)]
+    return {
+        lib.__name__: lib,
+        **{module.__name__: module for module in imported if module.__name__.startswith(prefix)},
+    }
+
+
+def _capability_of(module: ModuleType) -> str:
+    """The name of the capability whose `scripts/_lib/` holds `module`, a `_lib` package or
+    one of its modules."""
+    return Path(module.__file__ or "").parents[2].name
 
 
 def _lib(name: str) -> ModuleType:
@@ -364,7 +391,9 @@ STARTERS: tuple[ModuleType, ...] = (
 )
 
 
-def start_in_process(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
+def start_in_process(
+    monkeypatch: pytest.MonkeyPatch, *, lib: ModuleType | None = None
+) -> list[Path]:
     """Start in this process every command the backbone's runner starts for a component:
     `run_command` replaced in each module that calls it (`STARTERS`). The runner's one
     lookup still resolves the command to its script, so a registration that names no
@@ -375,8 +404,12 @@ def start_in_process(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
     its `main` run with the run's arguments, from the run's directory, in the environment
     the run gives it. Its answer is read as `run_command` reads one (`CommandRun`). Nothing
     bounds the run in this process, so the bound and the grace are not used. A request on
-    standard input is not modelled, and is refused. Returns the scripts started, in order:
-    a generalisation of `answer_from_tracker` (`tests/pm_lifecycle_world.py`)."""
+    standard input is not modelled, and is refused. Returns the scripts started, in order.
+
+    Given `lib`, a capability's `_lib` package the test already imported, each script of
+    that capability is loaded into it rather than into a fresh `_lib` (`load`), so it runs
+    with what the test patched there. `answer_from_tracker` (`tests/pm_lifecycle_world.py`)
+    starts project-management's predicates so."""
     started: list[Path] = []
 
     def start(
@@ -394,8 +427,9 @@ def start_in_process(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
             raise TypeError("the in-process start does not model a request on standard input")
         started.append(script)
         own = command_runner.COMMAND_TIMEOUT_SECONDS if bound_seconds is None else bound_seconds
+        mine = lib if lib is not None and _capability_of(lib) == script.parents[1].name else None
         try:
-            modules = _loaded(script)
+            modules = _loaded(script, mine)
         except (OSError, ImportError, SyntaxError) as exc:
             return CommandRun(
                 Ending.NOT_STARTED, own, detail=str(exc), own_bound_seconds=bound_seconds
@@ -413,16 +447,17 @@ def start_in_process(monkeypatch: pytest.MonkeyPatch) -> list[Path]:
     return started
 
 
-def _loaded(script: Path) -> tuple[ModuleType, ModuleType | None]:
+def _loaded(script: Path, lib: ModuleType | None = None) -> tuple[ModuleType, ModuleType | None]:
     """A script the runner would start, loaded, with its capability's `_lib.backbone`
-    where it has one."""
+    where it has one: into `lib` when given, as `load` takes it."""
     if not script.is_file():
         raise FileNotFoundError(f"[Errno 2] No such file or directory: {str(script)!r}")
     scripts = script.parent
-    if (scripts / "_lib" / "backbone.py").is_file():
-        loaded, backbone = load(scripts, script.name, "backbone")
+    folder = scripts / "_lib" if lib is None else Path(lib.__file__ or "").parent
+    if (folder / "backbone.py").is_file():
+        loaded, backbone = load(scripts, script.name, "backbone", lib=lib)
         return loaded, backbone
-    (loaded,) = load(scripts, script.name)
+    (loaded,) = load(scripts, script.name, lib=lib)
     return loaded, None
 
 
