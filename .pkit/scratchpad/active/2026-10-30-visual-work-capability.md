@@ -1104,10 +1104,11 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | Working name | Meaning | Status |
 |---|---|---|
 | visual work | what the capability is about | working |
-| logical layer, material | the source; what to show | working |
+| logical layer | the source: content, components, libraries | working |
+| content | what to show, in one language: text, lists, image references, no layout; "material" in the points before the naming pass | decided (naming pass) |
 | renderer, projection | what draws the logical layer; the relation between the two | working ("adapter" ruled out, as pkit uses it for the harness) |
 | component | anything from a tag to a whole slide layout (point 4b) | working; established term |
-| kind | a component the material may name at the top | working |
+| kind | a component the content may name at the top | working |
 | option, variant | a choice a component declares, such as a card's tone | working (Figma says "variants" and "component properties") |
 | design tokens, raw values, roles, component tokens | the design language as data | established terms (W3C Design Tokens) |
 | theme, mode, context | a set of values; light or dark; DAM or IBM | working |
@@ -1124,7 +1125,7 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | shared core, per context, per piece | the three scopes | working |
 | drafting, delivered, reused | the states of point 4d | working |
 | living | the fourth state: work that is never delivered, such as a doc figure (point 4j) | working |
-| piece | level 8: one finished item made from components, such as a deck, a standalone diagram, a doc figure or a poster; its material plus its lock | decided (naming pass) |
+| piece | level 8: one finished item made from components, such as a deck, a standalone diagram, a doc figure or a poster; its content plus its lock | decided (naming pass) |
 | lock | the library versions a piece uses (points 4j, 4i, 18a) | working |
 | engine | the code that computes the scene: tools, formulas, text measuring | working |
 | scene | what the engine computes and every renderer draws (point 4h) | working |
@@ -1149,6 +1150,10 @@ A naming pass with the maintainer comes before any record or code fixes a name. 
   - "design": collides with design tokens and the design system.
   - "work": too general, and pkit uses it everywhere.
   - "asset": a DAM word, which collides with the logos, images and fonts inside a piece.
+- **What to show: "content",** the file `content.<language>.yaml`. Chosen by the maintainer: the established term in design systems and content design, and in PowerPoint's and Keynote's content placeholders. Its opposite, layout, is the split this capability makes, and "content images" (point 21) already use it. The points before the naming pass say "material"; read it as content. Ruled out:
+  - "material": every designer hears Google's Material Design, a design system close to what this capability builds.
+  - "copy": only the text.
+  - "data": fits charts, but undersells slides and words.
 
 **A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --context ibm/deck --subject pkit` writes two files; the rest appear when they are needed:
 
@@ -1159,9 +1164,9 @@ visual/                                  the capability's place in the project (
 │   ├── core/1.4.0/  starter/1.2.0/  neutral/1.0.0/  ibm/2.0.0/  pkit/1.1.0/
 └── pieces/
     └── friday-talk/
-        ├── piece.yaml                  written by `new`: what it is, what it uses, its lock, its state
-        ├── material.en.yaml             written by `new`: the content, with the top component's fields to fill
-        ├── material.cs.yaml             when a language is added: the same keys, in Czech (use case 7)
+        ├── piece.yaml                   written by `new`: what it is, what it uses, its lock, its state
+        ├── content.en.yaml              written by `new`: what to show, with the top component's fields to fill
+        ├── content.cs.yaml              when a language is added: the same keys, in Czech (use case 7)
         ├── one-offs/                    components made for this piece only (4c, level 7)
         │   ├── pyramid.yaml
         │   ├── cycle.py                 a helper script (21)
@@ -1186,7 +1191,7 @@ renderers:
   mural: {board: ibmresearchdesign6459.1790595606038}
 ```
 
-`material.en.yaml`, the content only:
+`content.en.yaml`, what to show and nothing else:
 
 ```yaml
 schema_version: 1
