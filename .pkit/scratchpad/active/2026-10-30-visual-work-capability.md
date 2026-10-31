@@ -1212,6 +1212,25 @@ Point 15 is decided.
 - **In the piece's folder, not one folder for all.** The maintainer asked which: the piece's folder (`visual/pieces/<piece>/exports/`). A piece is one folder, what it is, its content and what it produced, so it is copied, archived or removed in one step, as its images, renders and local components already are. The file name still carries the piece's name, since an exported file travels alone. Seeing every handout is a command (`pkit visual exports`, listing each piece's versions from their records), and publishing them together is a step that copies them out.
 - **A correction to the agent's first proposal.** It said `renders/` would hold previews and never be committed. That contradicted 4h: `renders/` holds each renderer's record of what it last drew (ids, a hash per property, the commit), which must be committed so another clone updates the same board and an edit made there can be taken back (point 3). Previews and working pictures go to `previews/` instead, never committed; the reviewer renders into the agent workspace (9).
 
+**The glossary: layered, like the libraries. Agreed (31 October).** The Czech version taught that terms must be fixed before anyone translates: one word for one thing; "capability" stays English in Czech, feminine and not declined; never "add-on"; "čistá instalace" for a fresh install. The talk kept them in the Czech file's header, where translators read them and nothing checked them.
+- **A notation holds the words of its subject**, per language, beside the colour and icon it gives each concept, so every piece about that subject says it the same way. A notation for software work, which the starter could ship, holds that Czech developers say "pull request" and "commit" in English, and "větev" and "repozitář" in Czech; the pkit notation holds "capability", "záznam o rozhodnutí" and "jádro pkitu".
+- **A brand holds its company's voice** (in Czech, the formal "vy", in lower case), and **a piece only its own terms** (`glossary.yaml` in its folder: "čistá instalace").
+- **The translator reads one merged list**: the piece over the brand over the notations. A term two notations define differently is reported, and the piece settles it.
+- **A glossary may say which words are never used** (`never: [add-on, plugin]`). The engine checks them in the prose fields, with no judgment (`TERM content.en.yaml slides/install/lead: "add-on"; the pkit notation says "capability"`); the reviewer judges whether each term is used in its meaning.
+
+```yaml
+# libraries/pkit/1.1.0/glossary.yaml
+capability:
+  meaning: an optional part of pkit that a project installs
+  en: {use: capability, never: [add-on, plugin]}
+  cs: {use: capability, note: stays English; plural capabilities; feminine, does not decline}
+decision record:
+  meaning: a file that records one decision and why it was made
+  cs: {use: záznam o rozhodnutí}
+```
+
+Set aside: a glossary per piece only (every pkit piece repeats it, and the copies drift), and the project's glossary from software-analysis (it says what a term means, not how to translate it, and reading it would join two capabilities, point 24's work; later, a notation's term could anchor to the analysis term it translates).
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
