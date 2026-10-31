@@ -1,5 +1,5 @@
 ---
-id: DEC-064
+id: DEC-065
 title: The forward cascade writes nothing to an ancestor the board does not place, and the move stands
 status: proposed
 date: 2026-10-31

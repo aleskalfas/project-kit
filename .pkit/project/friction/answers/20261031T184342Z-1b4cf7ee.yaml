@@ -13,7 +13,7 @@ answers:
     revalidated:
       at: 2026-10-31T18:43:42Z
       outcome: unchanged
-      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The authorisation gates the term rests on are untouched, and DEC-064 keeps the cascade asking for none.
+      unchanged-because: This change adds DEC-065, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The authorisation gates the term rests on are untouched, and DEC-065 keeps the cascade asking for none.
   - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
     read:
       - 20261026T145234Z-564794a2.yaml
@@ -33,7 +33,7 @@ answers:
     revalidated:
       at: 2026-10-31T18:43:53Z
       outcome: unchanged
-      unchanged-because: "This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The term's definition holds: each issue above is brought forward where it is behind, and DEC-064 changes the cascade only at an ancestor the board does not place, which the definition does not speak of."
+      unchanged-because: "This change adds DEC-065, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The term's definition holds: each issue above is brought forward where it is behind, and DEC-065 changes the cascade only at an ancestor the board does not place, which the definition does not speak of."
   - artefact: tech-docs/analysis/project-management/glossary.md#TERM-issue-lifecycle
     read:
       - 20261026T145234Z-564794a2.yaml
@@ -53,7 +53,7 @@ answers:
     revalidated:
       at: 2026-10-31T18:43:56Z
       outcome: unchanged
-      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The states and moves the term names are untouched.
+      unchanged-because: This change adds DEC-065, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The states and moves the term names are untouched.
   - artefact: tech-docs/analysis/project-management/domain-model/030-the-issue-lifecycle.md
     read:
       - 20261026T043015Z-eb9c3dc3.yaml
@@ -71,7 +71,7 @@ answers:
     revalidated:
       at: 2026-10-31T18:44:00Z
       outcome: unchanged
-      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The view's account of the cascade states the built behaviour and DEC-006's promise for every issue the read places, which DEC-064 leaves standing.
+      unchanged-because: This change adds DEC-065, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The view's account of the cascade states the built behaviour and DEC-006's promise for every issue the read places, which DEC-065 leaves standing.
   - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
     read:
       - 20261026T041810Z-c47f89f5.yaml
@@ -94,7 +94,7 @@ answers:
     revalidated:
       at: 2026-10-31T18:44:13Z
       outcome: unchanged
-      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The held moves and their authorisation are untouched, and the requirement leaves the cascade's moves outside it.
+      unchanged-because: This change adds DEC-065, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The held moves and their authorisation are untouched, and the requirement leaves the cascade's moves outside it.
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/040-work-in-parallel/UC-090-see-who-works-on-what.md
     read:
       - 20261026T151502Z-9cd0e5da.yaml
@@ -117,7 +117,7 @@ answers:
     revalidated:
       at: 2026-10-31T18:44:17Z
       outcome: unchanged
-      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. How a planner reads a Task's state is untouched.
+      unchanged-because: This change adds DEC-065, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. How a planner reads a Task's state is untouched.
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/010-plan/UC-063-plan-intent.md
     read:
       - 20261026T041810Z-c47f89f5.yaml
@@ -144,7 +144,7 @@ answers:
     revalidated:
       at: 2026-10-31T18:44:20Z
       outcome: unchanged
-      unchanged-because: This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. Scheduling an issue with promote-issue, and the reason it takes, are untouched.
+      unchanged-because: This change adds DEC-065, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. Scheduling an issue with promote-issue, and the reason it takes, are untouched.
   - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/020-file-and-move/UC-061-move-issue.md
     read:
       - 20261026T123735Z-1bb7aeeb.yaml
@@ -166,7 +166,7 @@ answers:
     revalidated:
       at: 2026-10-31T18:44:25Z
       outcome: unchanged
-      unchanged-because: "This change adds DEC-064, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The move and its variants describe the cascade as built, which this change does not touch. DEC-064, once accepted, is built under #2305, whose change revisits this use case."
+      unchanged-because: "This change adds DEC-065, a proposed record, and names it on DEC-006's top line as a partial supersession, with DEC-006's body as it stood. The move and its variants describe the cascade as built, which this change does not touch. DEC-065, once accepted, is built under #2305, whose change revisits this use case."
   - artefact: .pkit/capabilities/project-management/README.md
     read:
       - 20261026T013726Z-d41bac9b.yaml
@@ -214,4 +214,4 @@ answers:
     revalidated:
       at: 2026-10-31T18:44:28Z
       outcome: unchanged
-      unchanged-because: "This change adds DEC-064, a proposed record, and names it on DEC-006's top line. The README describes the forward cascade and its exit codes as built, which this change does not touch. It changes with the build that follows DEC-064's acceptance, under #2305."
+      unchanged-because: "This change adds DEC-065, a proposed record, and names it on DEC-006's top line. The README describes the forward cascade and its exit codes as built, which this change does not touch. It changes with the build that follows DEC-065's acceptance, under #2305."

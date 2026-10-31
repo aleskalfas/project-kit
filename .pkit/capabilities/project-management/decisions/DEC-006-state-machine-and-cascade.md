@@ -13,7 +13,7 @@ source:
 
 > **Partially superseded by [DEC-062](DEC-062-axes-chosen-in-the-map.md).** Where a project's substrate map puts state on its board, the board's Status is the source of an open issue's position, and a closed issue stays Done by its native close. Overturned there: the State machine's "the native primitives the canonical state is inferred from", and its sentences that a board's Status field is a projection the agent maintains and that native wins. Where a present map omits state or marks it `unsupported`, the agent maintains no projection on the board, so two sentences are overturned there too: the one that it does, and the Implications' "Where a board exists and the state is native, the card's Status follows the move back". Each stands as the default, for every other project.
 >
-> **Partially superseded by [DEC-064](DEC-064-forward-cascade-unplaced-ancestor.md).** Where the board carries the state, the forward cascade writes nothing to an ancestor the board does not place, and the move that started it stands. So the promise that a container is never behind its work gives way at that ancestor. DEC-064's "What this overturns, and what stands" lists each passage, and each stands for every ancestor the read places.
+> **Partially superseded by [DEC-065](DEC-065-forward-cascade-unplaced-ancestor.md).** Where the board carries the state, the forward cascade writes nothing to an ancestor the board does not place, and the move that started it stands. So the promise that a container is never behind its work gives way at that ancestor. DEC-065's "What this overturns, and what stands" lists each passage, and each stands for every ancestor the read places.
 
 ## Context
 
