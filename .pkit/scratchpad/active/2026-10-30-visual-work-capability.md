@@ -1184,6 +1184,14 @@ Point 12 is decided.
 
 **The duplicates are fixed in the renderer. Agreed (31 October).** Mural sometimes makes an object and then answers its create with a 502 or 503; the tool retries, and a second, invisible copy stays, which blocks `remove` until `stray_duplicates.py` deletes it. In the capability, every object the Mural renderer creates carries its own id as a hidden marker, as the tool's template parts already do. A create that fails in a way that may have made the object is never retried blindly: the renderer lists the board, takes over what it finds by marker, and creates only what is missing. `verify` still reports any duplicate it sees, as a problem. Set aside: a sweep built into every push (it deletes after the fact, and a duplicate blocks `remove` until it runs), and never retrying a create (safe, but on Mural's bad days a push would stop often).
 
+### 15. Moving in (31 October)
+
+**The question.** How today's tool moves into pkit: the user-level `mural-boards` skill, its tests, and the Friday talk made with it.
+
+**Settled along the way.** The capability starts at 0.1.0 (point 23). Its tests live in project-kit's `tests/`, as every capability's do, and the tool's offline suite, which runs against a fake Mural API, comes with it.
+
+**The Friday talk stays as it is. Agreed (31 October).** The talk was given on 30 October, so it is delivered: locked, with its exports as the real freeze (4d, 18a). Its board, its map file and the `mural-boards` skill stay untouched. For the first slice, four of its slides are made again as a new piece from the talk's content and pushed to a new board, so the delivered board is never at risk. The skill keeps working until the capability's Mural renderer covers everything the talk used; then the maintainer retires it. If the talk is given again, it is converted then, as an adapted piece (4d). Set aside: converting the whole talk now and taking over its board (some 30 slides and 38 one-off diagrams converted before the slice proves anything, with the delivered board at risk), and converting it onto a new board (safe, but most of the work, for a result nobody needs yet).
+
 ## Architect's review (31 October)
 
 The maintainer asked, after 4h, whether to consult the architect. It reviewed points 1 to 4j as a whole, read-only, with a check per layer of what to adopt, wrap or build. Sources it fetched that day are named in its report; claims from its own knowledge are marked as such there.
