@@ -101,7 +101,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
 4. **The logical model.** What the logical layer holds, and in what format: the material per discipline (a deck, a diagram, a design); the kinds of visual with their data, such as the talk's `pyramid` and `sockets`; the primitives a scene is made of; the library of graphical elements; the themes. Taken in parts:
    - ~~4a. How a kind of visual is defined.~~ Decided: as data only; computing lives in the engine's general tools (see "Discussion", point 4a).
    - ~~4b. Whether a kind of visual and a library element are one concept or two.~~ Decided: one concept, components all the way down (see "Discussion", point 4b).
-   - ~~4c. How the library will be used: its levels and scopes.~~ Decided: eight levels in three scopes, built lean (see "Discussion", point 4c, its outcome at the end). The name of level 8 is open, and goes to the naming pass (point 16).
+   - ~~4c. How the library will be used: its levels and scopes.~~ Decided: eight levels in three scopes, built lean (see "Discussion", point 4c, its outcome at the end). The name of level 8 went to the naming pass (point 16), which chose "piece".
    - ~~4d. How a change reaches a talk.~~ Decided: drafting follows the latest, delivered is locked, reused is upgraded on purpose with a preview (see "Discussion", point 4d).
    - ~~4e. Variants of a component.~~ Decided: options the component declares, with overrides through roles only, and a one-off for anything beyond (see "Discussion", point 4e).
    - ~~4f. The material's format per discipline, and how it binds to a component.~~ Decided: one shape for every discipline; the engine knows no discipline (see "Discussion", point 4f).
@@ -134,7 +134,7 @@ Taken one at a time, in this order. The order may change as the answers come. Po
 20. ~~**Format numbers** on every file from its first commit, read by the engine forever.~~ Decided: pkit's `schema_version` for breaking changes, `requires` for added features, semver for each library's content (see "Discussion", points 19 and 20).
 21. ~~**An escape for hand-drawn one-offs**, such as an area the renderer leaves alone; the architect's largest risk to the product.~~ Decided: the risk is a missing tool; four tools are added, and helper scripts run while preparing write checked data (see "Discussion", points 21 and 22).
 22. ~~**Graphs:** graph layout as an engine tool, or relation graphs left to Mermaid as software-analysis does.~~ Decided: a helper arranges graphs while preparing, views share one model file, and other capabilities connect later through a contract with fallback (see "Discussion", points 21 and 22).
-23. **Where the first slice's code lives,** outside project-kit's shipped tree.
+23. ~~**Where the first slice's code lives,** outside project-kit's shipped tree.~~ Decided (31 October): a new repository of its own, which installs pkit and incubates the capability in its own `.pkit/capabilities/` (COR-031), nothing shipping to anyone. The Mural plugin reuses the mural-boards tool's client, sign-in, pacing and sync record, and the mural-boards skill keeps working unchanged until the capability replaces it (point 15). Whether the capability later moves into project-kit or stays in its own repository is point 7. The repository is created when building starts, in a session rooted there or with the maintainer's confirmation (the cross-repository rule), and its name comes from the naming pass (point 16).
 24. **A protocol between capabilities.** How a consumer such as software-analysis declares a contract, how visual-work is connected to it, and whether pkit's slots and connection points can carry a request with input or need a core decision. Use case 13; not built now.
 
 ## Discussion
@@ -431,7 +431,7 @@ What each change does:
 - **Talk** is not a design term. It is this note's word for the Friday talk.
   - Atomic Design calls this level a *page*: a template filled with real content.
   - Presentation tools call it a *deck* or a *presentation*.
-  - Since the capability covers diagrams and designs too, level 8 needs a name that fits every discipline. Open; it goes to the naming pass (point 16).
+  - Since the capability covers diagrams and designs too, level 8 needs a name that fits every discipline. The naming pass (point 16) chose "piece".
 
 ### 4d. How a change reaches a talk (30 October)
 
@@ -485,7 +485,7 @@ The agent recommended 1, and the maintainer agreed.
 
 **The maintainer's addition.** The engine knows no discipline: "deck" and "diagram" are components in libraries, not code. Yet libraries per discipline must be possible, with an opinion on how pieces group, so that a context can share, for example, "IBM Deck" or "IBM Diagram". That opinion is point 4g.
 
-The name of level 8 is not settled here. It goes to the naming pass (point 16).
+The name of level 8 is not settled here. The naming pass (point 16) chose "piece".
 
 ### 4g. How pieces group into libraries (31 October)
 
@@ -1114,14 +1114,92 @@ The trap in adopting is a tool that lays out or styles by itself (Slidev, Marp, 
 | frame | the per-context template: slide, section slide, footer, grid | working |
 | recipe | a recurring composition, promoted after about three uses | working (Brad Frost's term) |
 | one-off | a part drawn for one message, inside the talk | working (Frost: "one-off components", "snowflakes") |
-| talk | level 8: the material plus its lock | working; needs a name that fits every discipline (naming pass, point 16) |
+| talk | level 8 in the first drafts | replaced by "piece" (naming pass) |
 | deck | the top component of a presentation | working (Slidev, Marp and Keynote users say "deck") |
 | library | a named, versioned set of pieces that is shared, and names the libraries it builds on | working |
 | values, structure, meaning | the three kinds of content a library holds (point 4g) | working |
 | core, interface, starter | the core holds only the interface (role names, top components, named layouts, slots); the starter holds the capability's opinionated components (point 18b) | working |
 | subject | what the work is about, such as pkit; its concepts mapped to roles (point 4g) | working |
 | named layout, slot, entry point | a discipline's frame, which a context supplies; a place in it; a named way into a library, such as `ibm/deck` (point 4g) | working |
-| shared core, per context, per talk | the three scopes | working |
+| shared core, per context, per piece | the three scopes | working |
 | drafting, delivered, reused | the states of point 4d | working |
+| living | the fourth state: work that is never delivered, such as a doc figure (point 4j) | working |
+| piece | level 8: one finished item made from components, such as a deck, a standalone diagram, a doc figure or a poster; its material plus its lock | decided (naming pass) |
+| lock | the library versions a piece uses (points 4j, 4i, 18a) | working |
+| engine | the code that computes the scene: tools, formulas, text measuring | working |
+| scene | what the engine computes and every renderer draws (point 4h) | working |
+| font profile | the fonts for a group of renderers, set by the context (point 18d) | working |
+| asks, gets | an element's two sizes: the size it asks for, the size it gets (point 19) | working |
+| public anchor | a part a component lets others point at (point 19) | working |
+| helper script | a script run while preparing, writing a checked one-off (point 21) | working |
+| model | the file of a system's elements and relations that several views read (point 22) | working |
+| contract, coverage, fallback | the kinds another capability needs drawn; how many a library draws; the drawing used for the rest (point 22) | working |
 
-A naming pass with the maintainer comes before any record or code fixes a name.
+A naming pass with the maintainer comes before any record or code fixes a name. It starts with the names that appear inside files (the architect's review), one decision at a time: the capability's name first, which is also the repository's.
+
+**The naming pass (31 October).**
+
+- **The capability: `visual-communication`,** with the command `pkit visual`; the repository takes the same name. Chosen by the maintainer: the established name of the discipline that covers presentations, diagrams, infographics and figures ("vizuální komunikace" in Czech). Ruled out: `visual-design` (usually the look of user interfaces), `information-design` (less known, and seems to leave out presentations), `visuals` and `visual-work` (not names of a discipline).
+- **The rule for the pass:** prefer the established terms of the domain. A clash with a pkit term is flagged, not avoided at any cost: the maintainer expects the context to show which meaning is meant, as with pkit's process composition (COR-036).
+- **Level 8: "piece",** one finished item made from components: a deck, a standalone diagram, a doc figure, a poster. Chosen by the maintainer: the countable word designers and marketing use for one finished item ("a print piece", "a portfolio piece", "a collateral piece"). It is plain for non-native speakers and clashes with no pkit term. Its everyday sound was the one cost. Ruled out:
+  - "composition": he leaned to it first, but once he saw it as folder and file names, it read as too technical. A designer's composition is the arrangement inside one frame, and pkit already uses the word for process composition (COR-036).
+  - "artwork": print production's word for the finished, print-ready file. It suggests illustration and a file going to print, which does not fit a deck being drafted or a living doc figure.
+  - "art": in publishing it means the pictures, as in "the story needs art", "line art" or "key art". Here that is a piece's content images, so the word names the wrong level. It also does not count ("two arts"), and non-designers hear fine art.
+  - "deliverable": collides with the states, which would give "a delivered deliverable" and "a living deliverable".
+  - "design": collides with design tokens and the design system.
+  - "work": too general, and pkit uses it everywhere.
+  - "asset": a DAM word, which collides with the logos, images and fonts inside a piece.
+
+**A draft of the files** (31 October, not decided; it follows the decided points). `pkit visual new piece friday-talk --top deck --context ibm/deck --subject pkit` writes two files; the rest appear when they are needed:
+
+```
+visual/                                  the capability's place in the project (a setting)
+├── libraries.yaml                       each library's link and the versions present (4i)
+├── libraries/                           read-only copies, fetched whole at their tag (4i, 18b)
+│   ├── core/1.4.0/  starter/1.2.0/  neutral/1.0.0/  ibm/2.0.0/  pkit/1.1.0/
+└── pieces/
+    └── friday-talk/
+        ├── piece.yaml                  written by `new`: what it is, what it uses, its lock, its state
+        ├── material.en.yaml             written by `new`: the content, with the top component's fields to fill
+        ├── material.cs.yaml             when a language is added: the same keys, in Czech (use case 7)
+        ├── one-offs/                    components made for this piece only (4c, level 7)
+        │   ├── pyramid.yaml
+        │   ├── cycle.py                 a helper script (21)
+        │   └── cycle.yaml               the checked data it writes, with its fingerprint
+        ├── images/                      content images, one per language where they hold text (21)
+        ├── exports/                     what was handed out, kept as delivered (18a)
+        └── renders/                     each renderer's record of what it last drew (4h)
+```
+
+`piece.yaml`:
+
+```yaml
+schema_version: 1
+top: core/deck                    # its top component (4f)
+context: ibm/deck                 # the context's entry point (4g)
+subjects: [pkit]
+languages: [en, cs]
+state: drafting                   # drafting, delivered or living (4d, 4j)
+lock: {core: 1.4.0, starter: 1.2.0, ibm: 2.0.0, pkit: 1.1.0}   # (4i, 18a)
+renderers:
+  svg: {}
+  mural: {board: ibmresearchdesign6459.1790595606038}
+```
+
+`material.en.yaml`, the content only:
+
+```yaml
+schema_version: 1
+deck:
+  title: Decision-driven AI development
+  author: Aleš Kalfas
+  parts: [{id: P1, title: Why pkit}]
+  slides:
+    - id: fits
+      part: P0
+      title: How pkit fits together
+      lead: In five layers, from your decisions down to your code.
+      visual: {use: one-offs/pyramid, levels: [{head: Decisions, text: Choices you accepted, and why.}]}
+```
+
+The scene is not among them: it is computed at every render and never committed (4h). A shared model (22) is a file of its own beside the pieces, since several pieces read it.
