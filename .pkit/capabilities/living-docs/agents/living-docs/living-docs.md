@@ -17,6 +17,10 @@ reads:
   paths:
     - .pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md
     - .pkit/capabilities/living-docs/README.md
+    - .pkit/capabilities/living-docs/pages.md
+    - .pkit/capabilities/living-docs/spaces.md
+    - .pkit/capabilities/living-docs/validation.md
+    - .pkit/capabilities/living-docs/agent.md
     - .pkit/capabilities/living-docs/rule-sets/ldoc.md
     - .pkit/capabilities/living-docs/schemas/page-kinds.yaml
     - .pkit/capabilities/living-docs/templates/signpost.md
@@ -137,7 +141,11 @@ Fixer result (living-docs): none `<page>`: <reason>: <the reason in words>
 ## Key documents to read
 
 - [living-docs:DEC-001-living-docs-discipline] — spaces, pages, and the judgment reserved for you (points 4 to 8).
-- `.pkit/capabilities/living-docs/README.md` — a page's fields, how spaces are declared, and what validation already fails on.
+- `.pkit/capabilities/living-docs/README.md` — the authoring command and the capability's connections, with the pages beside it:
+  - `pages.md` — a page's fields, a kind's format, the types of documents, sources and visual elements.
+  - `spaces.md` — how spaces are declared, their definitions and `LDOC`.
+  - `validation.md` — what validation already fails on and reports.
+  - `agent.md` — this agent's contract as the capability states it, onboarding and the review contribution.
 - `.pkit/capabilities/living-docs/rule-sets/ldoc.md` — the shared method, `LDOC`: the rules reader-review cites, `[living-docs:RS-LDOC-001]` to `[living-docs:RS-LDOC-006]`.
 - `.pkit/capabilities/living-docs/project/config.yaml` — each space's audience, entry point and definition, and the space each place outside the roots belongs to. A space's definition is a rule set that inherits `LDOC`, adds the space's own rules, and carries a scope that selects the space's pages. `LDOC` binds on a page only through such a scope (COR-051 point 7; DEC-001 points 2 and 3).
 - `.pkit/project/config.yaml` — the backbone configuration: the documentation roots (COR-049) and the friction key's places, declared surface and excluded paths (COR-050 point 14).

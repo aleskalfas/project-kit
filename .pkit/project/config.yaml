@@ -47,7 +47,8 @@ friction:
   # and are never declared here (living-docs DEC-001 point 1). The principle
   # is ADR-055 point 3's — a document is a place of the space matching its
   # audience; a README an adopter reads to use an area, capability or adapter
-  # is a page, a maintainer-facing sub-README is not. This explicit list is the
+  # is a page, and so is each page beside it that the README lists (ADR-069,
+  # Implications); a maintainer-facing sub-README is not. This explicit list is the
   # source of truth; each place's space is assigned in
   # `.pkit/capabilities/living-docs/project/config.yaml`. Each place gives
   # living-docs' page type (COR-056 point 2): the spaces' definitions, TECH and
@@ -73,6 +74,10 @@ friction:
     - {path: .pkit/capabilities/doc-examples/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/evidence/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/living-docs/README.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/pages.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/spaces.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/validation.md, type: living-docs:page}
+    - {path: .pkit/capabilities/living-docs/agent.md, type: living-docs:page}
     - {path: .pkit/capabilities/project-management/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/software-analysis/README.md, type: living-docs:page}
     - {path: .pkit/capabilities/software-engineering/README.md, type: living-docs:page}

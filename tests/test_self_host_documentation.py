@@ -10,7 +10,9 @@ realises, over the real repository:
   the status report shows them (acceptance criterion 1);
 - the `.pkit/` READMEs declared are exactly the adopter-facing ones — every
   README under `.pkit/` is either a place or named here with the reason it is
-  not, so a new one cannot land unclassified (criterion 2);
+  not, so a new one cannot land unclassified (criterion 2) — and a page under
+  `.pkit/` that is no README is a place exactly when its folder's README is a
+  place and lists it (ADR-069, Implications);
 - no declared place is a synced copy, which is what living-docs' place rule
   asks (criterion 3), and the friction pass, which enforces it, walks them all;
 - the analysis location derives under the internal root (criterion 4);
@@ -32,6 +34,7 @@ from __future__ import annotations
 import functools
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -221,8 +224,32 @@ def test_every_pkit_readme_is_a_place_or_named_as_not_one() -> None:
         ".pkit/capabilities/living-docs/project/config.yaml, or maintainer-facing and "
         "named in NOT_PLACES here with the reason."
     )
-    assert declared & NOT_PLACES.keys() == set()
-    assert (declared | NOT_PLACES.keys()) <= on_disk
+    declared_readmes = {p for p in declared if PurePosixPath(p).name == "README.md"}
+    assert declared_readmes & NOT_PLACES.keys() == set()
+    assert (declared_readmes | NOT_PLACES.keys()) <= on_disk
+
+
+def _lists(readme: str, page: str) -> bool:
+    """Whether `readme` links `page`, a file beside it, by its name."""
+    name = re.escape(PurePosixPath(page).name)
+    text = (REPO / readme).read_text(encoding="utf-8")
+    return re.search(rf"\]\(\s*(?:\./)?{name}(?:#[^)\s]*)?\s*\)", text) is not None
+
+
+def test_a_pkit_page_that_is_no_readme_is_listed_by_its_folders_readme() -> None:
+    """A page under `.pkit/` that is not a README is a place exactly when its folder's
+    README is a place and lists it (ADR-069, Implications). Such a page is a lookup page
+    of the reference its README is, and the README is its folder's stable address."""
+    places = set(_project_places())
+    for page in sorted(p for p in places if p.startswith(".pkit/")):
+        if PurePosixPath(page).name == "README.md":
+            continue
+        readme = str(PurePosixPath(page).parent / "README.md")
+        assert readme in places, (
+            f"{page}: a page under .pkit/ that is no README is a place only where its "
+            f"folder's README, {readme}, is one"
+        )
+        assert _lists(readme, page), f"{page}: {readme} lists it by a link to its name"
 
 
 # --- criterion 3: the synced-copy rule ---------------------------------------
