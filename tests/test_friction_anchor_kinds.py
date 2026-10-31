@@ -49,7 +49,7 @@ import re
 import shutil
 import sys
 import textwrap
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -333,6 +333,60 @@ def test_a_resolver_runs_once_per_anchor_value_for_a_run(repo: AdopterRepo, aske
     )
     fr.run_repository_check(repo.root)
     assert sorted(asked.read_text(encoding="utf-8").split()) == ["iso-8601", "rfc-3339"]
+
+
+def test_a_slow_reading_of_history_leaves_no_registered_anchor_without_an_answer(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A filler reads the whole-repository check inside a run of its own, so the check's
+    resolvers have only the time that run has left (ADR-057 point 3; #2405). The check
+    and the explanation ask them before reading history, so a reading that takes all of
+    that time leaves the anchor answered and its artefact judged."""
+    _sources(repo)
+    _start(repo, {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED})
+    spent = _no_time_left_once_history_is_read(monkeypatch)
+
+    whole = fr.run_repository_check(repo.root)
+    assert spent, "the check read history"
+    assert [f for f in whole.findings if f.anchor == SOURCE_ANCHOR] == []
+    assert [r.state for r in whole.artefact_reports] == [fr.ArtefactState.CURRENT]
+
+    spent.clear()
+    explained = CliRunner().invoke(main, ["friction", "explain", "docs/guide.md", "--json"])
+    assert explained.exit_code == 0, explained.output
+    assert spent, "the explanation read history"
+    explanation = json.loads(explained.output)
+    assert explanation["state"] == "current"
+    assert {a["kind"]: a["state"] for a in explanation["anchors"]} == {
+        "path": "current",
+        "source": "current",
+    }
+
+
+def _no_time_left_once_history_is_read(monkeypatch: pytest.MonkeyPatch) -> list[bool]:
+    """Make reading history take all the time a run has left, as a slow reading on a busy
+    machine does: a command the runner starts after it is not started, as `run_command`
+    answers inside a run with no time left. Returns the flag that says the time is spent,
+    for a test to clear before another run."""
+    spent: list[bool] = []
+    read_history = fr.read_history
+    start = command_runner.run_command
+
+    def reading(*args: Any, **kwargs: Any) -> Any:
+        history = read_history(*args, **kwargs)
+        spent.append(True)
+        return history
+
+    def starting(script: Path, args: Sequence[str], **options: Any) -> command_runner.CommandRun:
+        if spent:
+            return command_runner.CommandRun(
+                command_runner.Ending.NOT_STARTED, 0, detail=command_runner.NO_TIME_LEFT
+            )
+        return start(script, args, **options)
+
+    monkeypatch.setattr(fr, "read_history", reading)
+    monkeypatch.setattr(command_runner, "run_command", starting)
+    return spent
 
 
 def test_an_answer_naming_no_file_makes_the_anchor_dead_for_the_whole_repository_check(
