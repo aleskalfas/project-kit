@@ -2316,10 +2316,23 @@ def friction_prune_command(dry_run: bool, yes: bool, as_json: bool) -> None:
     "Not with --all.",
 )
 @click.option(
+    "--artefact",
+    "judged_locations",
+    metavar="LOCATION",
+    multiple=True,
+    help="With --all, judge only the artefact at LOCATION (`path`, or `path#id` for a "
+    "collection entry), as the whole check judges it; repeatable. The measures stay the "
+    "whole repository's, and which answer files a prune would remove is not read.",
+)
+@click.option(
     "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
 )
 def friction_check_command(
-    base_ref: str | None, whole_repository: bool, head_rev: str | None, as_json: bool
+    base_ref: str | None,
+    whole_repository: bool,
+    head_rev: str | None,
+    judged_locations: tuple[str, ...],
+    as_json: bool,
 ) -> None:
     """The change check (COR-050 point 6): every artefact whose anchor changed in the diff
     carries an answer — updated, unchanged with why, or deferred.
@@ -2358,18 +2371,26 @@ def friction_check_command(
     accepted with a reason listed apart, never counted — and uncovered
     surface. Reads each artefact's history back to
     where it was last added; in a shallow clone it marks what the cut hides,
-    and exits 0 in either mode.
+    and exits 0 in either mode. With --artefact, it judges only the artefacts
+    named, and the measures stay the whole repository's.
     """
     if whole_repository and head_rev is not None:
         raise click.UsageError(
             "--head and --all exclude each other: the whole-repository check reads HEAD and "
             "its history."
         )
+    if judged_locations and not whole_repository:
+        raise click.UsageError(
+            "--artefact names what the whole-repository check judges, so it needs --all; the "
+            "change check judges what the change touches."
+        )
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
     if whole_repository:
-        report = friction_repository.run_repository_check(target_root)
+        report = friction_repository.run_repository_check(
+            target_root, judging=frozenset(judged_locations) if judged_locations else None
+        )
         if as_json:
             click.echo(friction_repository.render_json(report), nl=False)
         else:

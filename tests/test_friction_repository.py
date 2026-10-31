@@ -1483,6 +1483,69 @@ def test_unparsable_front_matter_is_reported(timeline: Timeline) -> None:
     assert _summary(_run(timeline)) == [("unreadable", "docs/broken.md", None, None)]
 
 
+def test_a_run_judges_only_the_artefacts_named_each_as_the_whole_check_does(
+    timeline: Timeline,
+) -> None:
+    """Named by location, an artefact is judged exactly as the whole check judges it, and
+    no other is: its report and its findings are the whole check's. The measures and the
+    count of answer files stay the repository's; which answer files a prune would remove
+    is a reading of every artefact's answers, so it is not read. A location HEAD holds no
+    artefact at names nothing, and naming none judges none (#2365)."""
+    without_shipped_rule_sets(timeline.adopter)
+    timeline.start(
+        {
+            "docs/guide.md": guide(),
+            "docs/notes.md": notes(),
+            "docs/plain.md": "---\ntitle: Plain\n---\n\nText.\n",
+        },
+        friction_config(surface=["src"]),
+    )
+    timeline.commit(
+        "change the CLI and the engine",
+        {"src/cli/main.py": "print('j')\n", "src/core/engine.py": "ENGINE = 2\n"},
+        author=ALICE,
+    )
+    whole = _run(timeline)
+    named = _run(timeline, judging=["docs/guide.md", "docs/absent.md"])
+    assert {r.location for r in whole.artefact_reports} == {"docs/guide.md", "docs/notes.md"}
+    assert named.artefact_reports == tuple(
+        r for r in whole.artefact_reports if r.location == "docs/guide.md"
+    )
+    assert named.findings == tuple(f for f in whole.findings if f.location == "docs/guide.md")
+    assert [f.kind for f in named.findings] == [fr.RepositoryFindingKind.STALE]
+    assert (named.unanchored, named.surface, named.uncovered, named.answer_files) == (
+        whole.unanchored,
+        whole.surface,
+        whole.uncovered,
+        whole.answer_files,
+    )
+    assert whole.prunable == () and named.prunable is None
+    assert _run(timeline, judging=[]).artefact_reports == ()
+
+
+def test_the_cli_judges_only_the_artefacts_named(timeline: Timeline) -> None:
+    """`--artefact`, repeatable, with `--all` alone: the document holds the artefacts
+    named, and `prunable` is `null`, as the read view says (#2365)."""
+    without_shipped_rule_sets(timeline.adopter)
+    timeline.start({"docs/guide.md": guide(), "docs/notes.md": notes()})
+    result = _cli("--json", "--artefact", "docs/notes.md")
+    assert result.exit_code == 0, result.output
+    doc = json.loads(result.output)
+    assert [a["location"] for a in doc["artefacts"]] == ["docs/notes.md"]
+    assert doc["counts"]["checked"] == 1
+    assert doc["answers"]["prunable"] is None
+    human = _cli("--artefact", "docs/notes.md", "--artefact", "docs/guide.md")
+    assert human.exit_code == 0, human.output
+    assert "which a prune would remove is not read when only some artefacts are judged" in (
+        human.output
+    )
+    refused = CliRunner().invoke(main, ["friction", "check", "--artefact", "docs/notes.md"])
+    assert refused.exit_code == 2
+    assert "--artefact names what the whole-repository check judges, so it needs --all" in (
+        refused.output
+    )
+
+
 def test_each_answer_file_version_is_parsed_once_a_run(
     timeline: Timeline, monkeypatch: pytest.MonkeyPatch
 ) -> None:

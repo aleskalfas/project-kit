@@ -402,9 +402,10 @@ class RepositoryCheck:
     uncovered: tuple[str, ...]  # those of them no artefact anchors to (point 8)
     # The answer files HEAD holds, and those `pkit friction prune` would remove: no answer
     # is live in them, and removing them changes none that is (COR-062 point 8; ADR-068
-    # point 4).
+    # point 4). `None` where a run judged only the artefacts it was given
+    # (`run_repository_check`), which reads too few answers to say.
     answer_files: int = 0
-    prunable: tuple[str, ...] = ()
+    prunable: tuple[str, ...] | None = ()
 
     def count(self, kind: RepositoryFindingKind) -> int:
         return sum(1 for f in self.findings if f.kind is kind)
@@ -1579,9 +1580,22 @@ class _Judge:
 
 
 def run_repository_check(
-    target_root: Path, *, registry: Mapping[str, ResolverCommand] | None = None
+    target_root: Path,
+    *,
+    registry: Mapping[str, ResolverCommand] | None = None,
+    judging: Collection[str] | None = None,
 ) -> RepositoryCheck:
     """Run the whole-repository check of HEAD against its history.
+
+    `judging`, where given, names the artefacts to judge by their locations, so a
+    reader that needs a few artefacts' state does not pay for every artefact's.
+    Each is judged exactly as the whole check judges it: an artefact's judgement
+    reads history and what its anchors stand on, never another artefact's
+    judgement. The reports and findings are theirs alone; the measures and the
+    count of answer files are the whole repository's still. Which answer files a
+    prune would remove is a reading of every artefact's answers, so it is not read
+    (`prunable` is `None`). A location HEAD holds no artefact at judges nothing.
+    `None` judges every artefact.
 
     Raises `FrictionCheckError` when it cannot run — outside a git repository,
     or before the first commit — except while dormant, when no place is
@@ -1603,7 +1617,7 @@ def run_repository_check(
     # the anchors read them, and the history's blobs — none started per file read.
     blobs = BlobReader(target_root)
     try:
-        return _check_head(target_root, head_sha, blobs, registry)
+        return _check_head(target_root, head_sha, blobs, registry, judging)
     finally:
         blobs.close()
 
@@ -1613,9 +1627,12 @@ def _check_head(
     head_sha: str,
     blobs: BlobReader,
     registry: Mapping[str, ResolverCommand] | None,
+    judging: Collection[str] | None = None,
 ) -> RepositoryCheck:
     """The whole-repository check of the commit HEAD names, `head_sha`, its files and
-    its history's blobs read through `blobs` (`run_repository_check`)."""
+    its history's blobs read through `blobs`, judging the artefacts `judging` names,
+    or every one (`run_repository_check`)."""
+    named = None if judging is None else frozenset(judging)
     tree = CommitTree(target_root, head_sha, blobs)
     discovery = discover_artefacts(target_root, tree=tree)
     settings = discovery.settings
@@ -1635,6 +1652,8 @@ def _check_head(
     findings: list[RepositoryFinding] = []
     for index in truth_chain_order(discovery, head.record_path):
         artefact = discovery.artefacts[index]
+        if named is not None and artefact.location not in named:
+            continue
         if _judged(artefact, judge):
             report, found = _check_artefact(artefact, judge)
             if report is not None:
@@ -1669,7 +1688,13 @@ def _check_head(
         surface=surface,
         uncovered=uncovered,
         answer_files=len(judge.answers.files),
-        prunable=() if judge.answers.dormant else judge.answers.prune(discovery).remove,
+        prunable=(
+            None
+            if named is not None
+            else ()
+            if judge.answers.dormant
+            else judge.answers.prune(discovery).remove
+        ),
     )
 
 
@@ -2502,7 +2527,7 @@ def render_json(result: RepositoryCheck) -> str:
         "answers": {
             "folder": answer_files.FOLDER,
             "files": result.answer_files,
-            "prunable": list(result.prunable),
+            "prunable": None if result.prunable is None else list(result.prunable),
         },
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
@@ -2683,10 +2708,15 @@ def _measure_lines(result: RepositoryCheck) -> list[str]:
         surface = "no surface declared"
     lines.append(f"  Uncovered surface: {surface}")
     lines.extend(f"    {rel}" for rel in result.uncovered)
-    if result.answer_files:
+    if result.answer_files and result.prunable is None:
+        lines.append(
+            f"  Answer files: {result.answer_files} in {answer_files.FOLDER}/; which a prune "
+            f"would remove is not read when only some artefacts are judged"
+        )
+    elif result.answer_files:
         lines.append(
             f"  Answer files: {result.answer_files} in {answer_files.FOLDER}/, "
-            f"{len(result.prunable)} with no live answer, which a prune would remove "
+            f"{len(result.prunable or ())} with no live answer, which a prune would remove "
             f"(`pkit friction prune`)"
         )
     return lines

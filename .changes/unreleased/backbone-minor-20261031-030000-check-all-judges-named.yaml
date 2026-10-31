@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction check --all --artefact <location>`, repeatable, judges only the
+  artefacts named, each exactly as the whole-repository check judges it, and
+  keeps the measures and the count of answer files the whole repository's
+  (#2365). A reader that needs a few artefacts' state, such as living-docs'
+  documentation check, then pays for theirs and not for every artefact's. Which
+  answer files a prune would remove reads every artefact's answers, so with
+  `--artefact` the document's `answers.prunable` is `null` and the read view
+  says it is not read. Without `--artefact` nothing changes.
