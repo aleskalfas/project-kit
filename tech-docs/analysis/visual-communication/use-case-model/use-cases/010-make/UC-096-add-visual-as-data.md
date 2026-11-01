@@ -43,7 +43,7 @@ pkit:
 
 - The project has visual-communication installed ([COR-017](../../../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 
-**Trigger:** A slide or a figure needs a picture that no library component draws, such as a pyramid of layers whose widths step down.
+**Trigger:** A slide or a figure needs a kind of visual that no library component draws, such as a pyramid of layers whose widths step down.
 
 **Main path:**
 

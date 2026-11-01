@@ -58,7 +58,7 @@ pkit:
 
 ## Sources
 
-- **The goal:** the path the Friday talk took, project-kit's own talk of 30 October. The talk was built from data, and given in English and in Czech. It was drawn on a board the maintainer edited, and handed out as one PDF for each language. Drawn with the capability, it is to become the showcase deck on the default branch (#2423).
+- **The goal:** the path the Friday talk took, project-kit's own talk of 30 October. The talk was built from data, and given in English and in Czech. It was drawn on a board the maintainer edited, and handed out as one PDF for each language. Drawn with the capability, it is to become the showcase presentation on the default branch (#2423).
 - **The hand-overs:**
   - **Step 2:** a second language is a second content of the same shape, with the same ids ([DEC-001 point 3](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
   - **Step 3:** each text is measured in its own language, by the font profile the renderer draws in (DEC-005 points [4](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#4-the-engine-measures-text-from-committed-fonts-and-breaks-its-lines) and [10](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#10-a-renderer-names-its-font-profile-with-a-default)).

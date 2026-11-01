@@ -40,7 +40,7 @@ pkit:
 
 None.
 
-**Postconditions:** The library holds the library component, and another presentation is drawn with it. The piece the local component came from uses it too, unless that piece is final.
+**Postconditions:** The library holds the library component, and another presentation is drawn with it. The piece the local component came from uses the library component too, unless that piece is final.
 
 **Minimal guarantees:** None.
 
