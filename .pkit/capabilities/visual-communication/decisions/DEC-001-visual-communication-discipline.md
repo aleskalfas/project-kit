@@ -1,7 +1,7 @@
 ---
 id: DEC-001
 title: Visual work keeps its content and its look as data, and renderers only project it
-status: proposed
+status: accepted
 date: 2026-11-01
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
