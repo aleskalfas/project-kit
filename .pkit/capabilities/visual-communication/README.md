@@ -1,6 +1,6 @@
 # visual-communication capability
 
-Visual work made from reusable parts. A *piece*, such as a presentation or a figure in a documentation page, keeps its content as data. Libraries give it its look: components that arrange and draw the content, brands that hold the values (colours, fonts, sizes), and notations that say what a thing is. Several renderers draw the same piece: SVG, HTML, PDF and Mural. A project installs the capability when its visuals should share a look, reuse what was made before, appear under more than one brand or in more than one language, and be checked like the rest of its work.
+Visual work made from reusable parts. A *piece*, such as a presentation or a figure in a documentation page, keeps its content as data. Libraries give it its look: components that arrange and draw the content, brands that hold the values (colours, fonts, sizes), and notations that say what a thing is. Several renderers draw the same piece, such as SVG, HTML and Mural, and a piece is handed out as a file such as a PDF. A project installs the capability when its visuals should share a look, reuse what was made before, appear under more than one brand or in more than one language, and be checked like the rest of its work.
 
 ## What this capability ships
 
