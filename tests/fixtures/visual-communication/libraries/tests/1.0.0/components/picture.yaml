@@ -1,0 +1,25 @@
+pkit_schema: visual-communication:component
+schema_version: 1
+
+status: experimental
+about: >-
+  A picture a producer made for the piece, as wide as it is given and as tall as its
+  proportions make it. It exposes the picture's points, so a pattern places a label at one.
+
+fields:
+  type: object
+  required: [output]
+  properties:
+    output:
+      type: string
+      description: The name of a produced output of the piece.
+
+parts:
+  image:
+    image: {produced: output}
+    width: "=:width"
+
+exposes: [image]
+
+preferred:
+  height: "=image.height"
