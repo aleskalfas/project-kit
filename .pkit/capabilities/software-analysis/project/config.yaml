@@ -39,6 +39,10 @@ analyses:
       - analysis: core
   - component: evidence
     folder: evidence
+    # Its one area's goal (software-analysis DEC-003 point 8 and DEC-005
+    # point 1).
+    areas:
+      010-ground-claims: "Ground each claim a project's documents make about an outside fact in a recorded excerpt of its source, so a reader can follow the claim to its source."
     builds-on:
       - analysis: core
   - component: demo-recording
