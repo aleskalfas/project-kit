@@ -5,9 +5,18 @@ status: active
 actor: ACT-methodology-maintainer
 other-actors:
   - ACT-ai-agent
+  - ACT-operator
 requirements:
   - REQ-008
   - REQ-009
+  - REQ-012
+shortfalls:
+  - at: 9
+    issue: "#1765"
+    record: ADR-034#1
+  - at: "2e"
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -25,11 +34,14 @@ pkit:
         - ADR-065#11
         - PRJ-003
         - COR-005
+        - ADR-034#1
       artefact:
         - ACT-methodology-maintainer
         - ACT-ai-agent
+        - ACT-operator
         - REQ-008
         - REQ-009
+        - REQ-012
 ---
 
 # UC-014 — Develop the methodology in its source repository
@@ -39,6 +51,7 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`ACT-ai-agent`): runs `pkit` commands in the checkout for the maintainer, and gets the same code as the maintainer does, the checkout's own. Its sessions load the [skills](../../../glossary.md#term-skill--skill), [agent definitions](../../../glossary.md#term-agent-definition--agent-definition) and [operational rules](../../../glossary.md#term-operational-rule--operational-rule) that [sync](../../../glossary.md#term-sync--sync) deployed from the [methodology](../../../glossary.md#term-methodology--methodology) as edited.
+- **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:** None.
 
@@ -57,6 +70,11 @@ pkit:
 3. The [system](../../../glossary.md#term-system--system) walks up from the working directory to the checkout's root, and finds the package source beside `.pkit/` there (`router.is_source_checkout`). So it hands the command to the checkout's own dispatcher, the script `.pkit/cli/pkit`, whatever [release](../../../glossary.md#term-release--release) the installed CLI is ([ADR-039 point 1](../../../../../architecture/decisions/ADR-039-pkit-entry-point-router.md#1-source-checkout--exec-the-in-tree-dispatcher)).
 4. The dispatcher runs the command with `uv run --quiet --project <root> python -m project_kit`. So the command runs the checkout's code as edited, and reads the methodology's files from the checkout's own `.pkit/` (`install.find_source_kit`). `pkit status` shows that tree on its line `Source kit:`.
 5. After adding a [skill](../../../glossary.md#term-skill--skill), or editing an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) or the settings the methodology merges, the maintainer runs `pkit sync`. The [harness](../../../glossary.md#term-harness--harness) then reads the edit.
+9. At its entry, before it reads anything, [sync](../../../glossary.md#term-sync--sync) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)). The `pkit upgrade` of 5a checks the repository the same way.
+
+> [!WARNING]
+> **Not built yet:** `pkit sync` and `pkit upgrade` run no such check, and write in whatever repository holds their working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 6. The system recognises the [source repository](../../../glossary.md#term-source-repository--source-repository): the checkout's root holds the very tree that the running code reads (`install.is_self_host`, [ADR-059 point 2](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md#2-syncs-test)). It prints `Syncing project-kit at <root> (self-host)` and `source == target: skipping propagation; running deploy primitives only.`, and copies no file.
 7. The system runs each [adapter](../../../glossary.md#term-adapter--adapter)'s [merge delivery](../../../glossary.md#term-merge-delivery--merge-delivery) into the files its harness reads, such as `claude-code`'s into `.claude/settings.json` and `CLAUDE.md`. Each adapter deploys the skills and agent definitions as edited. The system also does these ([ADR-065 point 11](../../../../../architecture/decisions/ADR-065-upgrade-runs-the-transition.md#11-each-writer-of-a-project-owned-path-is-named-and-each-owner-of-derivable-state)):
    - it renders `.pkit/.gitignore`
@@ -70,6 +88,11 @@ pkit:
 - **2b.** The maintainer runs `pkit init` in the checkout. The [system](../../../glossary.md#term-system--system) refuses with `<root> is already a project-kit project.`, names `pkit sync` to refresh it, and writes nothing (`install.py`). The use case ends.
 - **2c.** The maintainer runs `pkit pin <version>`. The system refuses with ``refusing to pin <root>: it is the methodology's source repository``, since the checkout's own code runs before any pin is read, and writes nothing. To move the checkout to another [release](../../../glossary.md#term-release--release), the maintainer updates it with git ([ADR-059 point 3](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md#3-the-marker-test)). The use case ends.
 - **2d.** The maintainer runs `pkit capabilities install <name>` for a [capability](../../../glossary.md#term-capability--capability) the tree authors. The system records the capability as `kit-shipped` in the [manifest](../../../glossary.md#term-manifest--manifest), copies nothing, and says that `nothing was copied (ADR-059)`. Uninstalling it later only takes it out of the manifest, after asking `Unregister '<name>' and keep .pkit/capabilities/<name>/?`, and the system refuses `--purge` there ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)).
+- **2e.** On the path of 2d, `pkit capabilities install` and `uninstall` each check the repository at their entry, as step 9 does ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
+
+> [!WARNING]
+> **Not built yet:** neither command runs such a check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 - **3a.** The installed CLI started the command, and the dispatcher `.pkit/cli/pkit` is missing or not executable. The system warns on standard error that it runs the installed CLI's code instead, `which is not this checkout's code`. The warning names the repair: restore the dispatcher with `git checkout`, or make it executable ([ADR-059](../../../../../architecture/decisions/ADR-059-methodology-source-repository.md)). Once the maintainer repairs the dispatcher, the path rejoins at step 2.
 - **3b.** The installed CLI started the command with routing switched off, by `PKIT_NO_ROUTE=1` or by `PKIT_ROUTED=1` inherited from another run. The command runs with the installed CLI's code, with no warning, and a [sync](../../../glossary.md#term-sync--sync) meets 6a. Once the maintainer clears the variable, the path rejoins at step 2.
 - **5a.** The maintainer runs `pkit upgrade` instead. The system prints `Self-host: source is the installed state; no backbone upgrade needed.` and `Re-running deploy primitives via sync.`, and the path goes on at step 6.

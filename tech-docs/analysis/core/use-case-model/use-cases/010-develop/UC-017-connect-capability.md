@@ -5,11 +5,23 @@ status: active
 actor: ACT-component-author
 other-actors:
   - ACT-ai-agent
+  - ACT-operator
 after:
   - [UC-016, UC-023]
 requirements:
   - REQ-006
   - REQ-009
+  - REQ-012
+shortfalls:
+  - at: 13
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 14
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 15
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -34,11 +46,14 @@ pkit:
         - COR-052
         - COR-053
         - ADR-051
+        - ADR-034#1
       artefact:
         - ACT-component-author
         - ACT-ai-agent
+        - ACT-operator
         - REQ-006
         - REQ-009
+        - REQ-012
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
@@ -48,6 +63,7 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`ACT-ai-agent`): runs the commands of steps 3, 6 and 7 for the author through the `process` [skill](../../../glossary.md#term-skill--skill). Working by the `process-author` [agent definition](../../../glossary.md#term-agent-definition--agent-definition), it writes the scripts behind a [process](../../../glossary.md#term-process--process)'s states and conditions. It writes only in the files the [project](../../../glossary.md#term-project--project) grants it ([COR-044 point 2](../../../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#2-the-teeth-actor-is-a-new-core-agent-owner-scoped) and [ADR-051](../../../../../architecture/decisions/ADR-051-process-author-edit-authority.md)).
+- **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
@@ -62,10 +78,25 @@ pkit:
 1. Under `connections` in the [capability](../../../glossary.md#term-capability--capability)'s [package metadata](../../../glossary.md#term-package-metadata--package-metadata), the author declares each [role](../../../glossary.md#term-role--role) the capability provides, addressed `<publisher>::<role>` ([COR-053 point 1](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles)).
 2. Under `extension-points.accepts`, the author declares each [data point](../../../glossary.md#term-data-point--data-point) the capability accepts, addressed `<publisher>::<role>:<point>`. Each gives its `schema_version`, its companion `schema`, its `description` and its `combination` policy ([COR-052](../../../../../../.pkit/decisions/core/COR-052-slots.md) and [COR-053 point 2](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
 3. The author runs `pkit process new <capability>:<id> --state <id>=<meaning> … --transition <from>:<to>:<trigger>`, or has an AI agent run it through the `process` [skill](../../../glossary.md#term-skill--skill).
-4. The [system](../../../glossary.md#term-system--system) writes the [process](../../../glossary.md#term-process--process)'s definition, `schemas/<id>.yaml` in the capability. It writes one script for each state and each condition the process declares, and registers each in the package metadata's `commands`. Each script fails until someone writes it, so the process fails closed ([COR-044 point 3](../../../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#3-the-skills-operation-set-three-shipped-the-rest-named-deferred--each-backed-by-a-deterministic-command)).
+13. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
+
+> [!WARNING]
+> **Not built yet:** `pkit process new` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+4. The system writes the [process](../../../glossary.md#term-process--process)'s definition, `schemas/<id>.yaml` in the capability. It writes one script for each state and each condition the process declares, and registers each in the package metadata's `commands`. Each script fails until someone writes it, so the process fails closed ([COR-044 point 3](../../../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#3-the-skills-operation-set-three-shipped-the-rest-named-deferred--each-backed-by-a-deterministic-command)).
 5. The system prints `Stamped: <path>` and one `stub:` line for each script.
 6. Where the process waits on another, the author runs `pkit process couple <capability>:<id> --upstream <address> …` ([COR-038](../../../../../../.pkit/decisions/core/COR-038-process-connections.md)). Then the author runs `pkit capabilities refresh <capability>`, which regenerates the package metadata's `depends-on` list from the definitions ([COR-053 point 4](../../../../../../.pkit/decisions/core/COR-053-connection-points.md#4-depends-on-is-generated-never-hand-written)).
+14. At its entry, each command of step 6 checks the repository as step 13 does (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit process couple` and `pkit capabilities refresh` run no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 7. Where the wait is to be checked, the author also runs `pkit process hand-off …` ([COR-042](../../../../../../.pkit/decisions/core/COR-042-process-health.md)).
+15. At its entry, `pkit process hand-off` checks the repository as step 13 does (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit process hand-off` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 8. The author writes the script behind each state and condition. Where the [project](../../../glossary.md#term-project--project) grants the files, an AI agent working by the `process-author` [agent definition](../../../glossary.md#term-agent-definition--agent-definition) writes them (COR-044 points [1](../../../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#1-the-shapeteeth-boundary-is-the-carrier-boundary) and [2](../../../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#2-the-teeth-actor-is-a-new-core-agent-owner-scoped)).
 9. The author offers the process to other [components](../../../glossary.md#term-component--component), under `extension-points.offers` with `kind: process` and `process: <id>` (COR-053 point 2).
 10. The author runs `pkit validate`. Its members `packages`, `connections` and `process` read what the capability declares. They check that:
