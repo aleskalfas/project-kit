@@ -1,0 +1,12 @@
+component: backbone
+kind: none
+body: >
+  The scratchpad README becomes a reference for the AI agent that starts,
+  stamps, lists and retires notes (#2435). It opens with a one-line purpose
+  and a link to the scratchpad guide, then holds the layout, the states, the
+  file name, the body, each state's front matter and the commands. Why notes
+  exist and how people work with them move to a guide that does not ship.
+  Every heading address other text may name is kept. The README and the CLI
+  reference now say that the commands move a note's file and stage nothing in
+  git, which is what they did before. Nothing the backbone ships or runs
+  changes.

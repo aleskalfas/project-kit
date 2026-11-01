@@ -1246,13 +1246,13 @@ Supports `--dry-run`.
 
 ## Scratchpad commands
 
-Scratchpad notes (per COR-012) move between three state folders — `active/`, `done/`, `dropped/` — plus the optional `reported/` side-state of active (per COR-043: lazily created when the first note enters it, removed when it empties). The retire-direction commands wrap the `git mv` + frontmatter update; the convention's full spec lives in `.pkit/scratchpad/README.md`.
+Scratchpad notes (per COR-012) move between three state folders — `active/`, `done/`, `dropped/` — plus the optional `reported/` side-state of active (per COR-043: lazily created when the first note enters it, removed when it empties). The commands below that move a note write its file in the new folder, delete the old one and update its frontmatter, and stage nothing in git; the convention's full spec lives in `.pkit/scratchpad/README.md`.
 
 ### `scratchpad done <slug> [--produced <ref>...]`
 
 Moves a note from `active/` — or from `reported/`, retirement proceeds from the side-state by the same gesture — to `done/` and appends `retired` (today) and `produced` (the list of `--produced` refs) to its frontmatter. Use when the note's content has been incorporated into other artifacts (records, docs, skills, agents). A reported note's `produced` refs naturally include the upstream issue(s) it became.
 
-- **`<slug>`** matches either the slug portion of the filename or the full filename. Use the full filename to disambiguate when multiple notes share a slug (rare; the `new scratchpad` command refuses duplicates within the area).
+- **`<slug>`** is a slug or the full filename. A slug matches each note whose filename ends in `-<slug>.md`, so a short slug can match a note with a longer one (the scratchpad README, "File name"). Use the full filename to disambiguate.
 - **`--produced <ref>`** is repeatable. Each value is a record ID (`COR-013`), file path (`.pkit/agents/README.md`), or URL. May be omitted; the `produced:` field is then not added (the author can edit it later by hand).
 
 Supports `--dry-run`. Refuses if no active or reported note matches the slug, or if the destination filename already exists in `done/`. When the move empties `reported/`, the directory is removed (it is lazy — COR-043).
@@ -1269,7 +1269,7 @@ Supports `--dry-run`. Refuses if no active or reported note matches the slug, or
 
 The **manual stamp gesture** (per COR-043): mark a note as sent through the report channel when the post happened outside the tooling — the URL path (the browser filed it; the compose flow ends by printing this exact command as the required follow-up, #664) or retroactive marking of a note hand-carried upstream before the mechanism existed. The automatic equivalent runs on a successful `pkit report` API post (direct or via `report submit`).
 
-Moves the note from `active/` to the lazily-created `reported/` and appends to its frontmatter: `reported` (today), `reported_to` (the refs), and `reported_hash` (SHA-256 of the full file as it was at stamp time — the drift-detection anchor). On a note already in `reported/`, appends the refs not yet recorded and re-anchors the hash (a new send); duplicate refs are an idempotent no-op.
+Moves the note from `active/` to the lazily-created `reported/` and appends to its frontmatter: `reported` (today), `reported_to` (the refs), and `reported_hash` (SHA-256 of the full file as it was at stamp time, without the reported fields — the drift-detection anchor). On a note already in `reported/`, appends the refs not yet recorded and re-anchors the hash (a new send); duplicate refs are an idempotent no-op.
 
 - **`<ref>`** is `owner/repo#N` or a full GitHub issue URL (normalised to `owner/repo#N`). Repeatable — one note may become several issues.
 
