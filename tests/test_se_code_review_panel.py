@@ -841,14 +841,12 @@ def test_the_verdict_names_the_three_tags(agent):
 
 
 def test_the_readme_and_the_agents_say_the_same_of_person():
-    """The README's block-threshold paragraph says what each body's clause says."""
+    """The README's item on the `[person]` tag says what each body's clause says."""
     readme = (_SE_DIR / "README.md").read_text(encoding="utf-8")
-    (paragraph,) = [
-        line for line in readme.splitlines() if line.startswith("**Block-threshold discipline.**")
-    ]
-    assert "`[person]` marks a finding on a passage the change owns." in paragraph
+    (item,) = [line for line in readme.splitlines() if line.startswith("- **`[person]`**")]
+    assert "- **`[person]`** marks a finding on a passage the change owns." in item
     for words in _PERSON_CONDITIONS:
-        assert words in paragraph, words
+        assert words in item, words
 
 
 @pytest.mark.parametrize("agent", _PANEL_AGENTS)
