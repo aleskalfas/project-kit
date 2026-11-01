@@ -72,6 +72,12 @@ analyses:
     # The record that states what living-docs is for (software-analysis DEC-003
     # point 8).
     purpose: living-docs:DEC-001
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8 and DEC-005 point 1).
+    areas:
+      010-set-up: "Set up the documentation spaces a project's readers need, and bring the documents it already has into them."
+      020-write: "Write each page so it serves the reader it names, each of its statements grounded in what it anchors."
+      030-keep-current: "Keep each page true as what it rests on changes, each fix proposed with its evidence and applied only once a person accepts it."
     builds-on:
       - analysis: core
       - analysis: project-management

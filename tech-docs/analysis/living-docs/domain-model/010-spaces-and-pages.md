@@ -268,44 +268,53 @@ Each concept below lists the use cases, journeys and requirements whose text lin
 
 **Documentation space:**
 
-- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/020-write/UC-044-write-page.md)
+- [JRN-010 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-010-adopt-on-documented-project.md)
+- [JRN-011 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-011-publish-page-for-reader.md)
 
 **Space definition:**
 
-- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md)
-- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
-- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
-- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/010-set-up/UC-043-set-up-space.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/020-write/UC-044-write-page.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md)
+- [JRN-010 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-010-adopt-on-documented-project.md)
+- [JRN-011 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-011-publish-page-for-reader.md)
 
 **Page:**
 
-- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md)
-- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
-- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md)
-- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
-- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/010-set-up/UC-043-set-up-space.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/020-write/UC-044-write-page.md)
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/030-keep-current/UC-045-propose-page-fix.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md)
+- [JRN-010 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-010-adopt-on-documented-project.md)
+- [JRN-011 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-011-publish-page-for-reader.md)
 - [REQ-022 · Functional · The living-docs agent proposes each change, and applies none](../requirements/functional/REQ-022-agent-proposes-only.md)
 - [REQ-024 · Functional · Validation checks a part of an LDOC rule only where the rule binds](../requirements/functional/REQ-024-checks-where-rule-binds.md)
 
 **Page kind:**
 
-- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
-- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
-- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/020-write/UC-044-write-page.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md)
+- [JRN-011 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-011-publish-page-for-reader.md)
 
 **Reader:**
 
-- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md)
-- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
-- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md)
-- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/010-set-up/UC-043-set-up-space.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/020-write/UC-044-write-page.md)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/020-write/UC-046-review-page-as-reader.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md)
+- [JRN-011 — Write a page and have it read as its reader would read it](../use-case-model/journeys/JRN-011-publish-page-for-reader.md)
 - [REQ-024 · Functional · Validation checks a part of an LDOC rule only where the rule binds](../requirements/functional/REQ-024-checks-where-rule-binds.md)
 
 **Captured source:**
 
-- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md)
-- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/020-write/UC-044-write-page.md)
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/030-keep-current/UC-045-propose-page-fix.md)
 
 **Unclassified document:**
 
-- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/010-set-up/UC-047-onboard-documents.md)
+- [JRN-010 — Adopt living-docs on a project that has documentation](../use-case-model/journeys/JRN-010-adopt-on-documented-project.md)
