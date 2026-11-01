@@ -10,6 +10,12 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#5
+        - visual-communication:DEC-004#1
+        - visual-communication:DEC-004#2
+        - visual-communication:DEC-004#6
+        - visual-communication:DEC-004#9
+        - visual-communication:DEC-007#4
         - COR-017
         - COR-013
         - COR-001
@@ -38,7 +44,7 @@ pkit:
 2. The developer gives the brand its values: colours, fonts, sizes, spacing, and pictures such as a logo.
 3. The developer names the brand's axes, such as a colour scheme and a contrast. For each axis, the developer names its modes, such as light and dark, and its default mode.
 4. For each mode, the developer gives the values that differ in it.
-5. For each axis, the developer says whether its modes alter only colours, or also sizes and spacing, such as a device.
+5. For each axis, the developer says whether its modes alter only colours and pictures, or any value, such as sizes, spacing and fonts.
 6. The developer adds how the brand draws each layout of each kind of piece it serves.
 7. The system checks that the brand draws each layout of each kind of piece it serves, with the content slots that kind names.
 
@@ -52,15 +58,14 @@ pkit:
 
 **Minimal guarantees:** None.
 
-## Open for the design
-
-What the developer needs here that no accepted record decides yet:
-
-- **What a mode may alter.** Where the developer marks an axis whose modes alter sizes, and what such a mode may alter, such as spacing or the sizes of text.
-
 ## Sources
 
-- **The goal:** written for whoever makes a brand, from modes on several axes, one of the capability's shared choices (#2424). On 1 November the maintainer named a colour scheme, a device, an audience and a contrast as axes, for an online game platform.
+- **The goal:** written for whoever makes a brand, from modes on several axes, one of the capability's shared choices (#2424). On 1 November the maintainer named a colour scheme, a device, an audience and a contrast as axes, for an online game platform. The goal rests on a brand's modes, which lie on axes that vary apart ([DEC-004 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#2-modes-lie-on-axes-and-each-axis-changes-values-or-sizes)).
 - **Its approval:** modes on several axes were decided under the maintainer's delegation, and he approved them with the plan of #2423 the same day.
-- **The steps:** the capability's shared choices (#2424) on brands, with their modes on several axes, and on the copies of shipped libraries. Variant 2a follows the shared choice on font profiles. Variant 6a follows the one that gives the form to the starter, and the values to the brand.
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The steps:**
+  - **Steps 1, 2 and 4:** a brand keeps its values as design tokens, and its modes in one document, in the format design tools share ([DEC-004 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#1-a-brands-values-are-design-tokens-in-the-dtcg-format)).
+  - **Steps 3 and 5:** modes lie on axes, each with its default mode. An axis alters only values that move nothing, such as colours and pictures, or any value (DEC-004 points 1 and [2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#2-modes-lie-on-axes-and-each-axis-changes-values-or-sizes)).
+  - **Steps 6 and 7:** a brand holds how it draws the layouts of the kinds of piece it serves, and what it lacks is reported ([DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning)).
+  - **Variant 2a:** the fonts a brand gives a group of renderers are a mode of one axis of sizes. Each such mode says how its fonts are measured (DEC-004 points 2 and [9](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#9-fonts-come-from-committed-files-and-a-missing-font-refuses-the-render)).
+  - **Variant 3a:** a brand that others build on lists the roles they may give values ([DEC-004 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#6-a-brand-may-build-on-one-other-brand-within-the-roles-its-base-declares-open)).
+  - **Variant 6a:** a generic form is a library component of the starter library, which a brand styles. A form one brand alone uses is that brand's own ([DEC-007 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md#4-the-form-to-the-starter-the-values-to-the-brand)).

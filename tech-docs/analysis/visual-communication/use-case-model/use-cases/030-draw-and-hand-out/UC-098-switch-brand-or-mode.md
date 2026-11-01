@@ -13,6 +13,11 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-001#5
+        - visual-communication:DEC-004#2
+        - visual-communication:DEC-005#4
+        - visual-communication:DEC-005#6
         - COR-017
         - COR-013
 ---
@@ -45,8 +50,9 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer names another mode of the same brand, on one of its axes, such as dark on the colour scheme. The system draws the piece with that mode's values, and the use case ends.
+- **1a.** The developer names another mode of the same brand, on one of its axes, such as dark on the colour scheme. A warm palette beside a calm one of the same brand is a mode too. The system draws the piece with that mode's values, and the use case ends.
 - **1b.** The mode lies on an axis whose modes alter sizes, such as a device. The system lays the piece out again for that mode, and says which texts do not fit. The use case ends.
+- **1c.** The developer names several modes on one axis, such as light and dark. The system draws and checks the piece in each combination of the modes it names, and its exports hold each. An axis the piece names no mode for takes its default mode. The use case ends.
 - **3a.** The piece holds a picture made outside the system, such as a photo. It does not follow the brand, so the system names it.
 - **3b.** The new brand lacks what the piece uses. The developer chooses another layout or library component the new brand has, or keeps the earlier brand, and the use case ends.
 
@@ -56,16 +62,11 @@ pkit:
 
 - Giving a piece another brand or mode alters none of its content.
 
-## Open for the design
-
-What the developer needs here that no accepted record decides yet:
-
-- **Which modes a piece is drawn in.** Whether the system draws, shows and hands out a piece in every combination of the modes of its brand's axes, or only in some.
-- **Themes inside one brand.** Whether the looks a brand offers side by side, such as a calm theme and a warm one, are modes on one more axis.
-
 ## Sources
 
-- **The goal:** drawn on 30 October, in planning the capability (#2423), from the maintainer's choice of where a piece's layout and look live. It also takes in a piece drawn under any brand, proposed on 31 October. It takes in the piece's side of modes on several axes too, added on 1 November.
-- **The steps and the guarantee:** the capability's shared choices (#2424) on brands, libraries and notations, and on modes on several axes, each changing values or sizes.
-- **Not among the shared choices:** variant 3a, where the system names a picture made outside it, since that picture does not follow the brand. It is the maintainer's decision of 31 October, made in planning the capability (#2423).
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The goal:** drawn on 30 October, in planning the capability (#2423), from the maintainer's choice of where a piece's layout and look live. It also takes in a piece drawn under any brand, proposed on 31 October. It takes in the piece's side of modes on several axes too, added on 1 November. The goal rests on switching the brand, which changes how a piece looks and leaves its content as it is ([DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning)).
+- **The steps and the guarantee:**
+  - **Steps 1 to 3 and the guarantee:** switching the brand changes how a piece looks, and leaves its content and its library components as they are. What the new brand lacks is reported ([DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning)).
+  - **Variants 1a and 1c:** a piece names the modes it is drawn in, on each axis of its brand ([DEC-005 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#6-a-piece-names-the-modes-it-is-drawn-in)). Looks of one owner that share every layout are modes of one axis, not brands ([DEC-004 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#2-modes-lie-on-axes-and-each-axis-changes-values-or-sizes)).
+  - **Variant 1b:** an axis whose modes alter sizes needs a drawing for each mode. Each text is measured in it (DEC-004 point 2 and [DEC-005 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#4-the-engine-measures-text-from-committed-fonts-and-breaks-its-lines)).
+  - **Variant 3a:** a picture made elsewhere is content that follows no brand, and switching the brand reports it ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).

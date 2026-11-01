@@ -15,6 +15,11 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-005#4
+        - visual-communication:DEC-005#10
+        - visual-communication:DEC-005#11
+        - visual-communication:DEC-006#7
         - COR-017
         - COR-013
       artefact:
@@ -54,4 +59,9 @@ pkit:
 ## Sources
 
 - **The goal:** the path the Friday talk took, project-kit's own talk of 30 October. The talk was built from data, and given in English and in Czech. It was drawn on a board the maintainer edited, and handed out as one PDF for each language. Drawn with the capability, it is to become the showcase deck on the default branch (#2423).
-- **No accepted record decides the steps yet.** The capability's records, written under #2427, will decide them. The journey then anchors each record, and its hand-overs follow them.
+- **The hand-overs:**
+  - **Step 2:** a second language is a second content of the same shape, with the same ids ([DEC-001 point 3](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
+  - **Step 3:** each text is measured in its own language, by the font profile the renderer draws in (DEC-005 points [4](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#4-the-engine-measures-text-from-committed-fonts-and-breaks-its-lines) and [10](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#10-a-renderer-names-its-font-profile-with-a-default)).
+  - **Step 4:** the renderer commits a record of what it last drew on the board, against which the edits are found ([DEC-005 point 11](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#11-a-renderer-that-draws-into-a-lasting-medium-commits-a-record-of-what-it-last-drew)).
+  - **Step 5:** an export is drawn from the piece, never fetched from a board ([DEC-006 point 7](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#7-every-export-keeps-its-number)).
+- **Left to a later slice:** the flags on a translation in step 2's hand-over, and taking edits back in step 4's. The founding record leaves translation and taking edits back to later records ([DEC-001](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md), Implications), and a later slice of EPIC #2423 decides both.

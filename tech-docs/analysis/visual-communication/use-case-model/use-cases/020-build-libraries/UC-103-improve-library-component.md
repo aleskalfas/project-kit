@@ -12,6 +12,13 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#7
+        - visual-communication:DEC-001#11
+        - visual-communication:DEC-003#4
+        - visual-communication:DEC-003#6
+        - visual-communication:DEC-003#7
+        - visual-communication:DEC-003#8
+        - visual-communication:DEC-003#9
         - COR-017
         - COR-013
         - COR-009
@@ -45,10 +52,12 @@ pkit:
 
 **Variants:**
 
+- **1a.** The library is one another project shares, so the project's copy is never edited. Its library owner improves the library component there, and the developer takes in the newer library version ([UC-109](UC-109-take-in-shared-library.md), variants 1a and 6a). The use case ends.
 - **2a.** The improvement breaks a stable library component, such as by removing a field, and the new library version keeps the major number. The system refuses the library version and names each break.
 - **2b.** The library component is experimental, so any library version may alter it. The system says so when it draws a piece that uses the component.
 - **4a.** A piece is published, such as a figure in a page. The system proposes the move as a change of its own, with the piece before and after ([UC-094](../010-make/UC-094-put-figure-in-page.md), variant 6b).
 - **4b.** A piece is final. The system leaves it at the library versions it was handed out with, and draws no before and after.
+- **4c.** A piece is a draft whose lock is not pinned. Its lock moves to the new library version at the piece's next drawing, within the major number it names. The system draws no before and after for it.
 
 **Postconditions:** Each piece the developer moved uses the improved library component. Every other piece still uses the library versions it used before.
 
@@ -57,16 +66,12 @@ pkit:
 - A final piece never moves to a new library version.
 - A stable library component breaks only in a library version whose major number rose.
 
-## Open for the design
-
-What the developer needs here that no accepted record decides yet:
-
-- **A library another project shares.** Its library owner improves it there. This project takes in the newer library version, and moves its pieces, as [UC-109](UC-109-take-in-shared-library.md) tells in its variants 1a and 6a.
-- **A draft piece.** By the glossary's definition of draft, its lock moves to the newest library version present each time the piece is drawn. Step 4 shows it before and after. Which of the two holds for a draft piece.
-
 ## Sources
 
-- **The goal:** the maintainer asked for it on 30 October, in planning the capability (#2423).
-- **The steps and the guarantees:** the capability's shared choices (#2424) on libraries, their folder and a piece's lock. Variant 2a and the guarantee on a stable library component follow the shared choice on a component's status and its promise.
-- **Not among the shared choices:** the states of a piece, and moving a piece to a new library version only after showing it before and after. They are the maintainer's decisions of 30 and 31 October, made in planning the capability (#2423).
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The goal:** the maintainer asked for it on 30 October, in planning the capability (#2423). It rests on a library's release, which never changes a piece others rely on until a person moves its lock ([DEC-001 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#7-a-pieces-libraries-change-only-when-a-person-moves-its-lock)).
+- **The steps and the guarantees:**
+  - **Steps 1 to 3, and step 6:** a released library version never changes, so a change is a new one. Each is kept whole in a folder of its own while a lock names it (DEC-003 points [4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#4-the-library-folder-keeps-each-version-whole-as-released) and [6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#6-a-released-version-never-changes)).
+  - **Steps 4 and 5:** a person moves a piece's lock after a before-and-after of what the move changes ([DEC-001 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#7-a-pieces-libraries-change-only-when-a-person-moves-its-lock) and [DEC-003 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#8-a-pieces-state-says-who-moves-its-lock)).
+  - **Variant 1a:** a copy of a library another project shares is never rewritten, and its library owner releases each change ([DEC-001 point 11](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#11-shipped-with-the-methodology-and-a-projects-work-stays-the-projects) and DEC-003 point 4).
+  - **Variants 2a and 2b, and the second guarantee:** a library owner marks each library component's status, and a release refuses to break a stable one outside a new major number. A piece that uses an experimental one is told so as a fact (DEC-003 points [7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#7-a-components-status-says-what-its-library-promises) and [9](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#9-the-severities-of-these-checks)).
+  - **Variants 4a, 4b and 4c, and the first guarantee:** a piece's state says who moves its lock (DEC-003 point 8).

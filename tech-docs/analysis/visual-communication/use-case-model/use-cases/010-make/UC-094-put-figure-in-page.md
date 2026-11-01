@@ -10,6 +10,15 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-001#10
+        - visual-communication:DEC-003#8
+        - visual-communication:DEC-003#9
+        - visual-communication:DEC-004#2
+        - visual-communication:DEC-005#5
+        - visual-communication:DEC-005#6
+        - visual-communication:DEC-006#7
+        - visual-communication:DEC-006#8
         - COR-017
         - COR-013
         - COR-009
@@ -36,18 +45,18 @@ pkit:
 
 **Main path:**
 
-1. The developer starts a piece for the figure, and names its brand and its notation. The piece is published: it stays in use as long as the page that shows it.
+1. The developer starts a piece for the figure, and names its brand and its notation. The piece starts as a draft.
 2. The developer writes the figure's content, and chooses the library component that does its job.
-3. The system draws the figure in each mode of the brand's colour scheme, such as light and dark.
-4. The developer shows the figure in the page, from a copy that always holds the figure's current drawing.
+3. The system draws the figure in each mode the piece names on the brand's colour scheme, such as light and dark.
+4. The developer marks the piece published, since it stays in use as long as the page that shows it. The developer shows the figure in the page, from a copy that always holds the figure's current drawing.
 5. The system shows the figure in the mode the reader's site uses, and follows the reader's switch to another mode.
 6. The developer lands the page and the figure in one change.
 
 **Variants:**
 
 - **2a.** The figure was first drawn for a slide. The developer takes its content out of the presentation unaltered, as a piece of its own.
-- **6a.** The figure's content was edited, and the figure was not drawn again. The system's check fails on the figure until it is drawn again.
-- **6b.** The developer takes in a new library version of a library the figure uses. The system proposes to move the figure to it, as a change of its own, with the figure before and after. The figure moves only once that change lands.
+- **6a.** The figure's content was edited, and its copy was not made again. The copy is stale, so the system's check fails on it until the copy is made again.
+- **6b.** The developer takes in a new library version of a library the figure uses. The system states that the figure's lock is behind it, and names the command that proposes the move. That command proposes the move as a change of its own, with the figure before and after. The figure moves only once that change lands.
 
 **Postconditions:** The page shows the figure, drawn from its current content, in the mode its reader uses.
 
@@ -58,7 +67,10 @@ pkit:
 
 ## Sources
 
-- **The goal:** proposed on 31 October, in planning the capability (#2423), to test its design beyond presentations.
-- **The steps and the guarantees:** the capability's shared choices (#2424) on a piece, its content and its lock, and on a brand's modes. Step 4 and variant 6a also follow the shared choices on outputs and their versions, and on how `check` reports.
-- **Not among the shared choices:** the published state, whose lock moves only through a change that shows the piece before and after. It is the maintainer's decision of 31 October, made in planning the capability (#2423).
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The goal:** proposed on 31 October, in planning the capability (#2423), to test its design beyond presentations. It rests on how a documentation page sees the figure: an image the capability produces from its source, the piece's content ([DEC-001 point 10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#10-independent-and-connected-to-others-later)).
+- **The steps and the guarantees:**
+  - **Steps 1 and 2:** a new piece starts as a draft, and names its brand and its notations ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content) and [DEC-003 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#8-a-pieces-state-says-who-moves-its-lock)).
+  - **Steps 3 and 5:** a piece names the modes it is drawn in. The modes of an axis that moves nothing share one drawing, so a page switches them while open ([DEC-005 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#6-a-piece-names-the-modes-it-is-drawn-in) and [DEC-004 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#2-modes-lie-on-axes-and-each-axis-changes-values-or-sizes)).
+  - **Step 4 and variant 6a:** a published piece keeps a copy where the documentation's rules put the page's produced images. A copy that is stale fails the check (DEC-006 points [7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#7-every-export-keeps-its-number) and [8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#8-what-the-check-reports-and-how-seriously)).
+  - **Variant 2a:** a diagram is a page alone, and part of a page inside a slide ([DEC-005 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#5-the-scene-holds-every-elements-final-frame-values-and-source)).
+  - **Variant 6b and the guarantees:** a published piece's lock moves only through a change a person reviews, with the piece before and after. A lock behind a newer released library version is stated as a fact, with the command that proposes the move (DEC-003 points 8 and [9](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#9-the-severities-of-these-checks)).

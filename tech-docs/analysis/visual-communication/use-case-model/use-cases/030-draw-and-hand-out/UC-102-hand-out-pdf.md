@@ -12,6 +12,11 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-002#8
+        - visual-communication:DEC-003#8
+        - visual-communication:DEC-005#5
+        - visual-communication:DEC-006#7
         - COR-017
         - COR-013
 ---
@@ -34,17 +39,17 @@ pkit:
 
 **Main path:**
 
-1. The developer asks for the piece as a PDF.
+1. The developer asks for the piece's exports. The piece names a PDF among the files it is handed out as.
 2. The system writes one PDF for each language of the piece. It holds a page for each page of the piece, such as each slide, in order.
-3. The system gives this export a new number, one number for all its languages. It records the export's date, the piece's state then, and the library versions it used.
+3. The system gives the exports of this run a new number, one number for all its languages. It records when the run was made, the piece's state then, and the library versions it used.
 4. The developer hands out the PDF of each language.
 
 **Variants:**
 
 - **2a.** The piece is also drawn on a board. The system still writes the PDF from the piece itself, never from the board.
 - **2b.** A program the system writes PDFs with is not on the machine. The system names it and writes nothing, and the use case ends.
-- **2c.** The developer asks for a PDF that screen readers follow. The system writes it with headings, a reading order and a text for each picture.
-- **4a.** The piece has done its job, such as a talk that was given, and the developer marks it final. This export is kept with the piece as the one handed out. From then on, no new library version alters the piece's look.
+- **2c.** A reader of the PDF uses a screen reader. The PDF holds headings, a reading order and a text for each picture, so the screen reader follows it.
+- **4a.** The piece has done its job, such as a talk that was given. The developer marks it final, and names the exports of this run as those handed out. They are kept with the piece, and from then on no new library version alters the piece's look.
 
 **Postconditions:** The developer holds a PDF for each language, all under one export number, and knows what each export holds.
 
@@ -54,7 +59,10 @@ pkit:
 
 ## Sources
 
-- **The goal:** drawn in planning the capability (#2423), from the Friday talk. That talk needed a script of its own to cut a board's export into one PDF for each language.
-- **The steps and the guarantee:** the capability's shared choices (#2424) on outputs and their versions, and on outside programs, which the capability checks for. The maintainer asked on 31 October that every export be kept and numbered.
-- **Not among the shared choices:** the final state of variant 4a, in which the piece keeps the export that was handed out. It rests on the maintainer's decisions of 30 and 31 October, made in planning the capability (#2423).
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The goal:** drawn in planning the capability (#2423), from the Friday talk. That talk needed a script of its own to cut what a board exported into one PDF for each language. The goal rests on every export keeping its number ([DEC-006 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#7-every-export-keeps-its-number)).
+- **The steps and the guarantee:**
+  - **Steps 1 to 3 and the guarantee:** a piece declares the files it is handed out as. An export run makes each, in each language, under one number, and no export overwrites another ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content) and [DEC-006 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#7-every-export-keeps-its-number)). The maintainer asked on 31 October that every export be kept and numbered.
+  - **Step 2 and variant 2c:** a content slot of the piece's kind says that its items are pages. A PDF gets a text for each picture, a reading order and structure such as headings ([DEC-005 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#5-the-scene-holds-every-elements-final-frame-values-and-source)).
+  - **Variant 2a:** an export is drawn from the piece, never fetched from a board (DEC-006 point 7).
+  - **Variant 2b:** a command that needs an outside program checks for it, and names what is missing ([DEC-002 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-002-files-and-validation.md#8-python-run-as-the-methodologys-own-code-and-no-network-to-draw)).
+  - **Variant 4a:** a person marks a piece final, and names which of its exports were handed out. The piece's folder keeps them as its freeze ([DEC-003 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#8-a-pieces-state-says-who-moves-its-lock) and DEC-006 point 7).

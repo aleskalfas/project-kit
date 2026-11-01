@@ -12,6 +12,19 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#4
+        - visual-communication:DEC-001#5
+        - visual-communication:DEC-001#6
+        - visual-communication:DEC-001#7
+        - visual-communication:DEC-001#8
+        - visual-communication:DEC-002#6
+        - visual-communication:DEC-003#8
+        - visual-communication:DEC-005#1
+        - visual-communication:DEC-005#2
+        - visual-communication:DEC-005#3
+        - visual-communication:DEC-006#1
+        - visual-communication:DEC-006#5
+        - visual-communication:DEC-006#8
         - COR-017
         - COR-013
 ---
@@ -54,6 +67,11 @@ pkit:
 
 ## Sources
 
-- **The goal:** drawn on 30 October, in planning the capability (#2423), from the maintainer's choice that a kind of visual is data only. The Friday talk needed 19 kinds of visual for its 24 slides.
-- **The steps and the guarantee:** the capability's shared choices (#2424) on components, and on the formula language and the layout operators. Variant 1a follows the shared choice on helpers run while a piece is prepared. Variant 4b follows the one on a fingerprint of inputs. How variant 4c moves a local component into a library follows from these choices and from a piece's lock.
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The goal:** drawn on 30 October, in planning the capability (#2423), from the maintainer's choice that a kind of visual is data only. The Friday talk needed 19 kinds of visual for its 24 slides. The goal rests on components being data, with a local component made inside one piece for that piece alone ([DEC-001 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#4-components-are-data-and-the-engine-knows-none-by-name)).
+- **The steps and the guarantee:**
+  - **Steps 1 and 3:** a local component is the same kind of data as a library component. It repeats, lines up and sizes its parts with the engine's tools ([DEC-001 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#4-components-are-data-and-the-engine-knows-none-by-name) and DEC-005 points [1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#1-a-formula-is-arithmetic-and-stays-arithmetic), [2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#2-layout-operators-arrange-and-connectors-route-simply) and [3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#3-an-element-asks-for-a-size-and-gets-one-and-references-never-loop)).
+  - **Step 2 and variant 4a:** a component names roles, and only a brand holds a raw value ([DEC-001 point 5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning)).
+  - **Step 4:** the capability's check is one validator of the project's validation ([DEC-002 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-002-files-and-validation.md#6-the-check-is-one-validator-of-the-projects-validation)).
+  - **Variant 1a, variant 4a and the guarantee:** a helper script runs while the piece is prepared, never inside the engine. The local component it writes takes its text from the content ([DEC-001 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#8-what-the-engine-cannot-compute-is-computed-while-preparing) and [DEC-006 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#1-a-program-run-while-preparing-may-write-a-picture)).
+  - **Variant 4b:** a fingerprint says when such output is stale, and a stale local component asks for attention (DEC-006 points [5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#5-a-fingerprint-says-when-output-is-stale-and-the-rest-is-only-recorded) and [8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#8-what-the-check-reports-and-how-seriously)).
+  - **Variant 4c:** a library component's options are declared, and a person moves a piece's lock after a before-and-after (DEC-001 points [6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#6-a-pattern-arranges-items-and-an-item-says-what-it-is) and [7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#7-a-pieces-libraries-change-only-when-a-person-moves-its-lock), and [DEC-003 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#8-a-pieces-state-says-who-moves-its-lock)).

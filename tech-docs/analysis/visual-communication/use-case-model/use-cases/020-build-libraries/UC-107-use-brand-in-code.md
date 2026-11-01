@@ -12,6 +12,14 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#9
+        - visual-communication:DEC-002#1
+        - visual-communication:DEC-004#3
+        - visual-communication:DEC-004#4
+        - visual-communication:DEC-004#5
+        - visual-communication:DEC-005#7
+        - visual-communication:DEC-005#9
+        - visual-communication:DEC-006#4
         - COR-017
         - COR-013
 ---
@@ -34,29 +42,27 @@ pkit:
 
 **Main path:**
 
-1. The developer asks for the brand's values as code, in a form the target reads, such as CSS variables for a web page.
-2. The system writes each value of the brand, in each mode, under the name that one naming rule gives it in code.
+1. The developer declares that the brand be written out as code, in a form the target reads, such as CSS variables for a web page. The declaration names where the code goes, and locks the brand's library version.
+2. The system writes each value the brand exports, in each mode, under the name that one naming rule gives it in code. It writes the code where the declaration names, with no number, since the declaration's lock says what the code holds.
 3. The system names each value it could not write in that form.
 4. The developer uses the written code in the page, the game or the app.
 
 **Variants:**
 
-- **1a.** The target is a program that reads data, such as a game's runtime. The developer asks for the values as data, each set named by the modes it holds.
+- **1a.** The target is a program that reads data, such as a game's runtime. The developer declares the values as data, each set named by the key of the modes it holds.
+- **2a.** The project commits no written code, as it commits no other output of its own build. On a clone without it, the system states that the code is missing, and names the command that writes it.
 
-**Postconditions:** The code holds the brand's values in each mode, named by the same rule for every target.
+**Postconditions:** The code holds the values the brand exports, in each mode, named by the same rule for every target.
 
 **Minimal guarantees:** None.
 
-## Open for the design
-
-What the developer needs here that no accepted record decides yet:
-
-- **The naming rule.** The one rule that names each value in code.
-- **Where the written code goes.** Whether it is committed, and whether it is numbered as an export is.
-
 ## Sources
 
-- **The goal:** a brand written out as code, from the online game platform the maintainer described on 1 November. The platform is an example only, and nothing of a game is built.
+- **The goal:** a brand written out as code, from the online game platform the maintainer described on 1 November. The platform is an example only, and nothing of a game is built. The goal rests on code outside the capability, such as a game's, which reads a brand's values written out as code ([DEC-001 point 9](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#9-what-is-outside-the-capability)).
 - **Its approval:** a brand written out as code was decided under the maintainer's delegation, and he approved it with the plan of #2423 the same day.
-- **The steps:** the capability's shared choices (#2424) on a brand written out as code, and on how a brand's names become names in code. Step 3 follows the shared choice on plugins that report what they lost.
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The steps:**
+  - **Step 1:** a brand written out as code is declared like a piece, in a file of the capability's location. The declaration names the code writer, where the code goes and a lock ([DEC-005 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#7-the-engine-owns-one-document-of-a-brands-resolved-values) and [DEC-002 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-002-files-and-validation.md#1-the-capabilitys-files-and-the-projects-work-lie-apart)).
+  - **Step 2:** the names a brand exports are public, and one naming rule turns them into names in code. The code follows its declaration's lock, and takes no number (DEC-004 points [4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#4-one-naming-rule-turns-a-brands-names-into-names-in-code) and [5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#5-the-names-a-brand-exports-are-public), and [DEC-006 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#4-where-produced-output-and-written-code-live)).
+  - **Step 3:** a code writer declares the kinds of value it has a form for, and reports what it lost in one form ([DEC-005 point 9](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#9-three-kinds-of-plugin-share-one-pattern-and-one-loss-report)).
+  - **Variant 1a:** the code writer for JSON writes the brand's resolved values, each combination of modes named by its key (DEC-005 point 7 and [DEC-004 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#3-one-key-names-a-combination-of-modes)).
+  - **Variant 2a:** whether written code is committed is the project's choice. Where it is missing, the check states that as a fact, and names the command that writes it (DEC-006 point 4).

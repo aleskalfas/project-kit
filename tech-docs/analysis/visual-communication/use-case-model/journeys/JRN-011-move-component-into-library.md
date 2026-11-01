@@ -13,6 +13,9 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#4
+        - visual-communication:DEC-003#8
+        - visual-communication:DEC-006#1
         - COR-017
         - COR-013
       artefact:
@@ -44,4 +47,6 @@ None.
 ## Sources
 
 - **The goal:** the promotion of a local component. The maintainer asked how it works on 31 October, in planning the capability (#2423). An example from that planning is a third talk that needs the Friday talk's pyramid, and moves it into a library.
-- **No accepted record decides the steps yet.** The capability's records, written under #2427, will decide them. The journey then anchors each record, and its hand-overs follow them.
+- **The hand-overs:**
+  - **Step 2:** a local component and a library component are the same kind of data. A helper script stays the project's code, so the local component it writes stays in its piece ([DEC-001 point 4](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#4-components-are-data-and-the-engine-knows-none-by-name) and [DEC-006 point 1](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#1-a-program-run-while-preparing-may-write-a-picture)).
+  - **Step 3:** a copy of a final piece starts as a draft with its lock pinned, which moves only when a person moves it ([DEC-003 point 8](../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#8-a-pieces-state-says-who-moves-its-lock)).

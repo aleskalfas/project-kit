@@ -12,6 +12,12 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#1
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-004#10
+        - visual-communication:DEC-005#4
+        - visual-communication:DEC-005#6
+        - visual-communication:DEC-005#14
         - COR-017
         - COR-013
 ---
@@ -56,7 +62,11 @@ pkit:
 
 ## Sources
 
-- **The goal:** drawn in planning the capability (#2423), from the Friday talk, which was also translated into Czech.
-- **The steps and the guarantee:** the capability's shared choices (#2424) on a piece's source language, and on text measured from committed fonts.
-- **Not among the shared choices:** the translator agent, the layered glossary and translations anchored to their source page by page. They are the maintainer's decisions of 31 October, made in planning the capability (#2423), with what translating the Friday talk into Czech taught. Variant 6b also waits on #2416, so that content can carry what it rests on.
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The goal:** drawn in planning the capability (#2423), from the Friday talk, which was also translated into Czech. It rests on a second language being a second content of the same shape, with the same ids ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
+- **The steps:**
+  - **Steps 1 and 2:** a piece holds its content in each of its languages, and declares the language it is first written in ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
+  - **Steps 5 and 6, and variant 6a:** each language gets a drawing of its own. The engine measures each text from committed fonts, breaks its lines by its language's rules, and never shrinks it. A text that overflows is reported (DEC-005 points [4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#4-the-engine-measures-text-from-committed-fonts-and-breaks-its-lines), [6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#6-a-piece-names-the-modes-it-is-drawn-in) and [14](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#14-what-the-checks-report-and-how-severely)).
+- **Left to a later slice:** steps 3 and 4, variants 3a, 3b and 6b, and the guarantee. A later slice of EPIC #2423 decides them.
+  - **What they rest on:** the translator agent, the layered glossary and translations anchored to their source page by page. They are the maintainer's decisions of 31 October, with what translating the Friday talk into Czech taught (#2423).
+  - **What the records leave:** the founding record leaves the agents and translation to later records ([DEC-001 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#1-what-the-capability-is-for), and Implications). The words a notation gives translators wait for translation too ([DEC-004 point 10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-004-brands-and-notations.md#10-a-notation-maps-concepts-to-roles-read-with-its-name)).
+  - **Variant 6b** also waits on #2416, so that content can carry what it rests on.

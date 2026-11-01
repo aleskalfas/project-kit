@@ -10,6 +10,7 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#10
         - COR-017
         - COR-053
 ---
@@ -52,11 +53,11 @@ pkit:
 
 What the adopter needs here that no accepted record decides yet:
 
-- **How the two capabilities connect.** A connection point carries data, a process or an event, and none carries a request with input, such as "draw this from that data" ([COR-053](../../../../../../.pkit/decisions/core/COR-053-connection-points.md)). So the connection may need a new decision of the core.
+- **How the two capabilities connect.** The founding record leaves it to be decided with the other capability ([DEC-001 point 10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#10-independent-and-connected-to-others-later)). A connection point carries data, a process or an event, and none carries a request with input, such as "draw this from that data" ([COR-053](../../../../../../.pkit/decisions/core/COR-053-connection-points.md)). So the connection may need a new decision of the core.
 - **How the other capability declares its kinds.** It names each kind of diagram it needs drawn, the data it gives and its limits, and the drawing it falls back to.
 
 ## Sources
 
-- **The goal:** the maintainer asked for it on 31 October, in planning the capability (#2423), with software-analysis as the first other capability.
-- **The steps and the guarantee:** a contract that another capability declares, with the coverage reported and the other capability's own drawing for any kind not covered. It is the maintainer's decision of 31 October, made in planning the capability (#2423), and not among the capability's shared choices (#2424). The connection stays open, and the plan leaves it to a later slice.
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The goal:** the maintainer asked for it on 31 October, in planning the capability (#2423), with software-analysis as the first other capability. It rests on another capability's visuals, which this one may later draw through a contract that names what is to be drawn ([DEC-001 point 10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#10-independent-and-connected-to-others-later)).
+- **The steps and the guarantee, in part:** this capability reports what it cannot draw, and works with no other capability installed ([DEC-001 point 10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#10-independent-and-connected-to-others-later)).
+- **Left to a later slice:** the contract, the coverage reported and the other capability's own drawing for any kind not covered. They are the maintainer's decision of 31 October (#2423), and not among the capability's shared choices (#2424). How the two capabilities connect is decided with the other capability, in a later slice of EPIC #2423 ([DEC-001 point 10](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#10-independent-and-connected-to-others-later)).

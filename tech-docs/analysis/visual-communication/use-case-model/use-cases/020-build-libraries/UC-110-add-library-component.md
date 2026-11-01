@@ -10,6 +10,16 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#4
+        - visual-communication:DEC-001#5
+        - visual-communication:DEC-001#6
+        - visual-communication:DEC-001#11
+        - visual-communication:DEC-002#7
+        - visual-communication:DEC-003#6
+        - visual-communication:DEC-003#7
+        - visual-communication:DEC-003#8
+        - visual-communication:DEC-006#1
+        - visual-communication:DEC-007#3
         - COR-017
         - COR-013
 ---
@@ -57,12 +67,18 @@ pkit:
 
 What the developer needs here that no accepted record decides yet:
 
-- **The review.** Who reviews a library component: a person, or an AI agent.
+- **The review.** Who reviews a library component: a person, or an AI agent. In the starter library, its library owner judges each library component in review ([DEC-007 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md#3-each-component-enters-as-experimental)). The founding record leaves the capability's agents, which review pieces, to later records ([DEC-001 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#1-what-the-capability-is-for)). A later slice of EPIC #2423 decides them.
 - **Whether a library owner brings an actor of its own.** A library owner's needs, such as promises to other projects' pieces, may set whoever acts for it apart from the developer. Until a person decides, the developer of the project that owns the library acts for it.
 
 ## Sources
 
-- **The goal:** on 1 November, in planning the capability (#2423), the maintainer decided that a library component becomes stable when its library owner marks it so. No count of its uses decides it.
+- **The goal:** on 1 November, in planning the capability (#2423), the maintainer decided that a library component becomes stable when its library owner marks it so. No count of its uses decides it. The goal rests on a library component's status, which its library owner marks ([DEC-003 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#7-a-components-status-says-what-its-library-promises)).
 - **The actor:** the same decision says "a project's own library's owner is that project". The developer of that project acts for it here.
-- **The steps and the guarantee:** the capability's shared choices (#2424) on a component's status and its promise, and on a pattern's options. Variant 1b follows the shared choice on helpers run while a piece is prepared. How a local component becomes a library component follows from these choices and from a piece's lock. The maintainer asked on 31 October how it works.
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The steps and the guarantee:**
+  - **Steps 1 to 3:** the bar a library component of the starter library meets ([DEC-007 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md#3-each-component-enters-as-experimental)). That is its job, its form with that form's source, its fields and options, a drawing of each option's value, and a review. A project's own library may follow that bar, which binds only the starter library ([DEC-007](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-007-starter-library.md), Implications).
+  - **Steps 4 to 6 and the guarantee:** a library owner marks each library component's status, and no count of uses decides it. A stable one breaks only in a library version with a new major number ([DEC-003 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#7-a-components-status-says-what-its-library-promises)).
+  - **Variant 1a:** a library component's options are declared, and its colours are roles a brand gives values to (DEC-001 points [5](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#5-libraries-hold-values-structure-or-meaning) and [6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#6-a-pattern-arranges-items-and-an-item-says-what-it-is)).
+  - **Variant 1b:** a helper script stays the project's code, and never goes into a library. A need that recurs becomes a tool of the engine ([DEC-006 point 1](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-006-work-outside-the-engine-and-outputs.md#1-a-program-run-while-preparing-may-write-a-picture) and [DEC-001 point 4](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#4-components-are-data-and-the-engine-knows-none-by-name)).
+  - **Variant 1c:** a library copy that a lock names is never rewritten, and a released library version never changes ([DEC-001 point 11](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#11-shipped-with-the-methodology-and-a-projects-work-stays-the-projects) and [DEC-003 point 6](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#6-a-released-version-never-changes)).
+  - **Variant 2a:** a library component holds no raw value. A broken invariant in a file the project can correct fails the check (DEC-001 point 5 and [DEC-002 point 7](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-002-files-and-validation.md#7-one-severity-policy-for-every-finding)).
+  - **Variant 4a:** a person moves a piece's lock after a before-and-after, and a final piece's lock never moves ([DEC-003 point 8](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-003-change-over-time.md#8-a-pieces-state-says-who-moves-its-lock)).

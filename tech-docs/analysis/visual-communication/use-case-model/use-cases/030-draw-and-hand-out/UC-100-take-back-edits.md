@@ -12,6 +12,10 @@ pkit:
   friction:
     anchors:
       record:
+        - visual-communication:DEC-001#2
+        - visual-communication:DEC-001#3
+        - visual-communication:DEC-001#11
+        - visual-communication:DEC-005#11
         - COR-017
         - COR-013
 ---
@@ -60,7 +64,10 @@ What the developer needs here that no accepted record decides yet:
 
 ## Sources
 
-- **The goal:** the maintainer asked for it on 30 October, in planning the capability (#2423).
-- **The steps and the guarantees:** the capability's shared choice (#2424) on the scene. From the scene, the system traces each edit to where it came from. It writes only to the content and to the piece's own local components.
-- **Not among the shared choices:** how the system takes edits back. It writes each exact match, stops on a conflict and lists the rest. That is the maintainer's decision of 30 October, made in planning the capability (#2423).
-- **No accepted record decides them yet.** The capability's records, written under #2427, will decide them. The use case then anchors each record, and its steps follow them.
+- **The goal:** the maintainer asked for it on 30 October, in planning the capability (#2423). It rests on an edit made where a piece is drawn, which changes the source only once taken back and reviewed ([DEC-001 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#2-the-logical-layer-is-the-source-and-renderers-only-project-it)).
+- **The steps and the guarantees, in part:**
+  - **Steps 2 to 4:** every part the engine draws traces back to the component that drew it, and to the content field it shows. An edit that cannot be placed is reported ([DEC-001 point 3](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#3-a-piece-and-its-content)).
+  - **Step 2:** an edit is found by comparing the medium with the renderer's committed record of what it last drew ([DEC-005 point 11](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-005-engine-and-plugins.md#11-a-renderer-that-draws-into-a-lasting-medium-commits-a-record-of-what-it-last-drew)).
+  - **Step 5:** an edit is taken back as a change a person reviews ([DEC-001 point 2](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#2-the-logical-layer-is-the-source-and-renderers-only-project-it)).
+  - **The first guarantee:** the system writes no edit into a library, since a library copy that a lock names is never rewritten ([DEC-001 point 11](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md#11-shipped-with-the-methodology-and-a-projects-work-stays-the-projects)).
+- **Left to a later slice:** how the system takes edits back. It writes each exact match, stops on a conflict and lists the rest, as the maintainer decided on 30 October (#2423). The founding record leaves taking edits back to later records ([DEC-001](../../../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md), Implications), and a later slice of EPIC #2423 decides it. So the steps, the variants and the guarantees take their form from that slice.
