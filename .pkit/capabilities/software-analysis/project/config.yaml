@@ -73,8 +73,9 @@ analyses:
         optional: true
   - component: visual-communication
     folder: visual-communication
-    # No purpose yet: the record that states what visual-communication is for
-    # is still proposed (#2427), so it is named here once it is accepted.
+    # The record that states what visual-communication is for
+    # (software-analysis DEC-003 point 8).
+    purpose: visual-communication:DEC-001
     # Each area's goal, in the order the areas build on each other
     # (software-analysis DEC-003 point 8).
     areas:

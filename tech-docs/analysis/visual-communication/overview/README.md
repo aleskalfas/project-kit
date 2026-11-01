@@ -1,8 +1,8 @@
 # Overview of the analysis of visual-communication
 
-<!-- pkit:overview reads=5 fingerprint=sha256:848085767312c4d199756f233f13af27e2cba4fcd5b4229f72aa2750d0bd3086 -->
+<!-- pkit:overview reads=5 fingerprint=sha256:c597a94598d15a0fe7a1a0f2bd084af384d7d2b3fda7703115bc05a651b636db -->
 
-No record states what visual-communication is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of visual-communication under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
+[Visual work keeps its content and its look as data, and renderers only project it](../../../../.pkit/capabilities/visual-communication/decisions/DEC-001-visual-communication-discipline.md).
 
 This analysis describes what visual-communication does: who uses it, what they do with it, and what it must meet. It builds on the analysis of core.
 
