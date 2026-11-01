@@ -36,6 +36,8 @@ pkit:
         - .pkit/cli/README.md#sync
         - .pkit/cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run
         - .pkit/cli/README.md#friction-defer-artefact---anchor-anchor---reason-text---yes----dry-run
+        - .pkit/cli/README.md#friction-revisit-artefact---target-anchor---outcome-unchangeddeferred---reason-text---yes----dry-run
+        - .pkit/capabilities/project-management/README.md#opening-and-editing-a-pr--open-pr--edit-pr
 ---
 
 # software-engineering
@@ -69,7 +71,7 @@ software-engineering answers each of these problems with a claim, in the same or
 - **Each of its four agents is deployed to read your conventions from where you keep them, and deploys before you have any.**
 - **In agent review mode, the default, it declares its three reviewers required on each pull request that changes code, whatever the issue it closes says.** project-management's merge gate reads the declaration ([the reference, "When each reviewer is required"](../../../.pkit/capabilities/software-engineering/README.md#when-each-reviewer-is-required)).
 - **The software-engineer's definition leaves to you each answer your change was not asked for, and the change's own check flags each one.**
-- **The documentation reviewer's definition makes each answer the change wrote that does not hold a `[block]` finding, whatever your conventions say.**
+- **The `docs-reviewer`'s definition makes each answer the change wrote that does not hold a `[block]` finding, whatever your conventions say.**
 
 Below, a fresh project installs project-management, which the capability needs, and then software-engineering. It names where its conventions live, and redeploys the agents:
 
@@ -139,7 +141,7 @@ What the output proves, claim by claim:
 - **Deployed to read your conventions.** Before the project names any conventions, `pkit agents` lists each of the four agents as deployable, and their conventions as optional. Once the overlay names `docs/conventions.md`, `pkit sync` writes that path into each agent's definition, as a file it reads.
 - **Required on each pull request that changes code.** The capability's declaration requires `code-reviewer`, `security-reviewer` and `docs-reviewer` on the floor `touches-code`, which reads the diff alone. It also requires `docs-reviewer` for each issue `type`.
 - **Left to you, and flagged.** The software-engineer's definition gives each answer the change was not asked for to the person it works for. The change check flags the branch's answer on `docs/start.md`, since the branch never touched `app.py`. It flags the reason `docs/notes.md` gives too.
-- **A block, for an answer that does not hold.** The documentation reviewer's definition holds that line, for each answer and revisit its section on answers names.
+- **A block, for an answer that does not hold.** The `docs-reviewer`'s definition holds that line, for each answer and revisit its section on answers names.
 
 > [!WARNING]
 > Only their definitions hold the agents to these rules. Nothing at run time stops the software-engineer from writing an answer it was not asked for, or from passing over your conventions. So before you authorise a merge, read the answers the change check flags "not asked for by this change", and the `docs-reviewer`'s findings.
@@ -162,7 +164,7 @@ Without software-engineering, an agent you choose writes the code and people rev
 software-engineering is meant for projects where agents write code that reaches a pull request. You do not need it in these cases:
 
 - **Agents write none of your code, and a person reviews each pull request.** Your reviewers already read the code with your conventions in mind.
-- **Your pull requests are not on GitHub, or your harness has no agent runner.** project-management runs the panel on GitHub pull requests, through your harness's runner, so no reviewer of the panel runs.
+- **Your pull requests are not on GitHub.** project-management runs the panel on GitHub pull requests, so elsewhere no reviewer of the panel runs.
 - **You merge without pull requests.** The panel then never runs, though the software-engineer still writes to your conventions.
 - **You want your existing code reviewed.** The panel judges what a change owns. A defect already in the code blocks nothing, unless the change claims to fix it.
 - **You want a check that answers the same way each time.** The reviewers are model agents, and a verdict is a judgement that can miss. A linter, a type checker or a secret scanner in your CI catches what it covers on each run, so keep them beside the panel.
@@ -189,13 +191,13 @@ flowchart TD
 ```
 
 - **The conventions corpus.** Your project's coding standards, in files you keep where you choose. One setting names them for every agent of the capability: the `project-conventions` category of the agent overlay ([the reference, "The conventions corpus"](../../../.pkit/capabilities/software-engineering/README.md#the-conventions-corpus)).
-- **The software-engineer.** It writes and edits code. It reads the corpus before it writes, applies it to each choice, and reads its diff again against the corpus. It carries no coding opinions of its own, so where your corpus speaks, it decides.
+- **The software-engineer.** It writes and edits code. It reads the corpus before it writes, applies it to each choice, and reads its diff again against the corpus. It carries no coding opinions of its own, so where your corpus speaks, the corpus decides.
 - **The code-review panel.** Three reviewer agents, each with a remit of its own:
   - `code-reviewer`: correctness, the quality of the code and the design of its interfaces
   - `security-reviewer`: authentication, secrets on a command line, shell injection, cryptography and dependencies
   - `docs-reviewer`: whether the documentation keeps up with the code, and the answers the change wrote
-- **When each is required.** In agent review mode, project-management's gate requires all three on a pull request whose diff changes a file that is not documentation. It also requires `docs-reviewer` on each pull request whose closing issue has a `type` ([the reference, "When each reviewer is required"](../../../.pkit/capabilities/software-engineering/README.md#when-each-reviewer-is-required)). In human review mode, their verdicts only advise (project-management DEC-032).
-- **The findings.** A reviewer withholds its approval only for an objective failure of the change in its remit, a `[block]` finding. So the gate never halts on a matter of taste. A `[person]` finding goes to the person who authorises the merge, and an `[advisory]` one holds nothing ([the reference, "How a finding is tagged"](../../../.pkit/capabilities/software-engineering/README.md#how-a-finding-is-tagged)).
+- **When each is required.** In agent review mode, project-management's gate requires all three on a pull request whose diff changes code. It also requires `docs-reviewer` on each pull request whose closing issue has a `type`. The reference says which files count as code ([the reference, "When each reviewer is required"](../../../.pkit/capabilities/software-engineering/README.md#when-each-reviewer-is-required)). In human review mode, their verdicts only advise (project-management DEC-032).
+- **The findings.** A reviewer withholds its approval only for an objective failure of the change in its remit, a `[block]` finding. A `[person]` finding goes to the person who authorises the merge, and an `[advisory]` one holds nothing ([the reference, "How a finding is tagged"](../../../.pkit/capabilities/software-engineering/README.md#how-a-finding-is-tagged)).
 - **Its rule.** Wherever the capability is installed, every session also loads its rule on the tests a session runs while it builds, `software-engineering:RS-SWE-001`.
 
 ## Turning it on
@@ -218,7 +220,8 @@ $ pkit capabilities install software-engineering | grep -e Installed -e binds -e
 ```
 
 - **Name where your conventions live.** Add a `project-conventions` category to the agent overlay, listing the files that hold them ([the agents README, "Adopter overlay"](../../../.pkit/agents/README.md#adopter-overlay)). Then run `pkit sync`, as [the first fence above](#what-software-engineering-does-instead) shows.
-- **Or start with none.** Each agent then says when it finds no convention for a choice, and works by ordinary judgement. It reads each convention you add later, with no new install. A walking skeleton can write the first ones ([A walking skeleton](#a-walking-skeleton)).
+- **Or start with no conventions yet.** Name a location your project owns that holds none yet, such as `docs/conventions.md`, and run `pkit sync`. Each agent then says when it finds no convention for a choice, and works by ordinary judgement. It reads each convention you add there later, with no new install.
+- **Let a walking skeleton write the first ones** there ([A walking skeleton](#a-walking-skeleton)). It writes none while no location is named.
 - **Choose your reviewers.** Each of the three is required wherever its condition holds. To stop requiring one, opt out of it in project-management's configuration, with a reason ([project-management's README, "Opting out of a contributed reviewer"](../../../.pkit/capabilities/project-management/README.md#opting-out-of-a-contributed-reviewer-per-project-managementdec-032-conditional-reviewer-requirements)).
 - **Use the agent.** In Claude Code, ask your session for it by name, such as "Use the software-engineer agent to build issue 12".
 
@@ -231,19 +234,19 @@ Ask the `software-engineer` agent to make the change, such as the code an issue 
 3. Where a design fork arises that the corpus does not settle, it names the fork and its trade-off, and you decide.
 4. Where the change makes a document owe an answer, it writes the answers the change check asks of your change. Any other answer is yours to decide ([the next task](#decide-the-answers-your-change-was-not-asked-for)).
 5. It reads its diff again against the corpus, and corrects what does not conform.
-6. It hands the change on for review, and its hand-off says whether it wrote answers. It invokes no reviewer, and merges nothing.
+6. It hands the change back for review, and its hand-off says whether it wrote answers. It opens no pull request, invokes no reviewer, and merges nothing.
 
 ### A walking skeleton
 
 A walking skeleton is the one thin slice a foundation builds end to end, before the slices after it are planned. project-management plans one when the Tasks of new work would share a choice that nothing settles yet (project-management DEC-060). Ask the agent to build the skeleton's Task, and it also writes down the conventions the skeleton settles ([the reference, "A foundation fills the corpus"](../../../.pkit/capabilities/software-engineering/README.md#a-foundation-fills-the-corpus)):
 
 - **An entry for each convention.** It writes one for each convention that building the skeleton settles, such as the layout of the code and its tests. Each goes in the skeleton's change, where your corpus already keeps conventions, in the form the corpus gives them.
-- **You accept the entries.** You accept them once, with that change, having read them. Authorising the merge accepts none, so the change waits in review until you accept them.
+- **You accept the entries,** once, with that change, having read them. In a corpus that gives entries a status, such as a rule set, you set each proposed entry accepted. Otherwise you accept them in the pull request's description, where the agent lists them. Authorising the merge accepts none, so the change waits in review until you do.
 - **No single location, no entries.** Where your corpus offers no single location your project owns, the agent writes none. Its hand-off lists each convention with the entry it would have written, so you can name a location before the slices are planned.
 
 ## Decide the answers your change was not asked for
 
-The change check asks your change for an answer on each document whose anchors it changed. It also asks for a revisit where a changed link asks for one. Any other answer is yours to decide, not the agent's ([the reference, "The answers it writes"](../../../.pkit/capabilities/software-engineering/README.md#the-answers-it-writes)). Such an answer is one of these:
+Any answer the change check did not ask of your change is yours to decide, not the agent's ([the reference, "The answers it writes"](../../../.pkit/capabilities/software-engineering/README.md#the-answers-it-writes)). The check asks for an answer on each document whose anchors your change changed. It also asks for a revisit where a changed link asks for one. Any other answer is one of these:
 
 - an answer on a document the check did not ask about, or for a debt the whole-repository check reports
 - a revisit entry for a target your change asks no revisit of, or one whose outcome alone changed
@@ -253,14 +256,16 @@ Decide each in these steps:
 
 1. **Read the hand-off.** The agent writes none of these answers, and names each in its hand-off.
 2. **Decide each answer.** Accept its words, change them, or decline the answer. A declined answer is never written, and the document stays as it was.
-3. **Write each one you accept,** yourself or through an agent you direct. A revalidation is written with `pkit friction revalidate`, as [the second fence above](#what-software-engineering-does-instead) shows. The CLI reference gives the writers of a deferral and a revisit entry ([the CLI reference, "friction defer"](../../../.pkit/cli/README.md#friction-defer-artefact---anchor-anchor---reason-text---yes----dry-run)). A reason for having no anchors goes in the document's own front matter, as the same fence shows.
+3. **Write each one you accept,** yourself or through an agent you direct. A revalidation is written with `pkit friction revalidate`, as [the second fence above](#what-software-engineering-does-instead) shows. The CLI reference gives the writers of a deferral ([“friction defer”](../../../.pkit/cli/README.md#friction-defer-artefact---anchor-anchor---reason-text---yes----dry-run)) and of a revisit entry ([“friction revisit”](../../../.pkit/cli/README.md#friction-revisit-artefact---target-anchor---outcome-unchangeddeferred---reason-text---yes----dry-run)). A reason for having no anchors goes in the document's own front matter, as the same fence shows.
 4. **Say who decided each.** The `docs-reviewer` checks each such answer against what it answers, and blocks on one that does not hold. It cannot tell who decided one, so it names each in an `[advisory]` finding. Say in the pull request who decided it.
 
 Your default branch's configuration may name a delegate, `friction.delegate`. That agent then decides in your place each such answer another agent drafted, where a reviewer checks these answers. It may refer any of them to you, and you are told afterwards what it decided (COR-064). Never name the `docs-reviewer`, which checks these answers.
 
 ## Have the change reviewed, and land it
 
-Once the change is a pull request, have the reviewers its gate requires judge it, and land it once they approve. In agent review mode, project-management runs each required reviewer and posts each verdict on the pull request. Its landing command, `land-work`, runs the same review as one of its steps ([project-management's README, "Landing a pull request in one command"](../../../.pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)). The run needs GitHub and Claude Code, so it is shown here without its output:
+Open the pull request as your project does, such as with project-management's `open-pr` ([project-management's README, "Opening and editing a PR"](../../../.pkit/capabilities/project-management/README.md#opening-and-editing-a-pr--open-pr--edit-pr)). Then have the reviewers its gate requires judge it, and land it once they approve.
+
+In agent review mode, project-management runs each required reviewer and posts each verdict on the pull request. Its landing command, `land-work`, runs the same review as one of its steps ([project-management's README, "Landing a pull request in one command"](../../../.pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)). The run needs GitHub and Claude Code, so it is shown here without its output:
 
 ```sh
 pkit project-management review-pr 12
@@ -273,11 +278,11 @@ pkit project-management review-pr 12
   - a document updated in the change with no sentence on what changed, or with one that does not match the diff
   - a revisit of a target that does not hold against what the change modified
 - **Write the sentences.** The pull request's description holds one for each document the change updated, under `## What changed in each updated document`. Write each as an item of the form ``- `path`: sentence``, which the reviewer reads.
-- **Land it.** The landing command shows you the answers, their sentences, and what is left out of date. It shows them as information, and stops nothing ([project-management's README, "The answers a change wrote, in its pull request"](../../../.pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers)).
+- **Land it.** The landing command shows you the answers, their sentences, and what is left out of date, as information. What it shows of them stops no merge ([project-management's README, "The answers a change wrote, in its pull request"](../../../.pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers)). Without `--yes`, it stops on its `ready:` line, which names the command that merges the head you were shown ([project-management's README](../../../.pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)).
 
 In these cases, no reviewer's check of the answers holds the merge:
 
-- **A pull request that changes only documents, and closes no issue with a `type`.** The gate requires no `docs-reviewer` for it. Link an issue that has a `type` when the change wrote answers.
+- **A pull request that changes only documents, and closes no issue with a `type`.** The gate requires no `docs-reviewer` for it. Have the pull request close an issue that has a `type` when the change wrote answers.
 - **A project that opts out of the `docs-reviewer`,** and names no other reviewer of the answers.
 - **Human review mode.** The `docs-reviewer`'s verdict only advises there, and the person who approves checks the answers only by reading them.
 - **A bypass on record.** A person merges past the `docs-reviewer`, or past the whole gate, with a reason (project-management DEC-050).

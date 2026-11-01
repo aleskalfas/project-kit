@@ -21,6 +21,7 @@ pkit:
         - .pkit/agents/README.md#adopter-overlay
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/agents/README.md#the-rule-set-reviewer
+        - .pkit/agents/README.md#body-conventions
         - .pkit/rules/README.md#the-capabilities-rules-index
         - .pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers
         - .pkit/capabilities/project-management/README.md#opting-out-of-a-contributed-reviewer-per-project-managementdec-032-conditional-reviewer-requirements
@@ -60,7 +61,7 @@ software-engineering makes the code agents write follow a project's own conventi
 
 - **What it needs.** project-management, installed first, at a version in the range the capability's `package.yaml` declares under `requires_capabilities` (COR-030). Without it, the install refuses and names the capability it needs.
 - **What it deploys.** The producer, `software-engineer`, and the three reviewers of the code-review panel: `code-reviewer`, `security-reviewer` and `docs-reviewer`. The adapter deploys each as it deploys any agent, in Claude Code into `.claude/agents/` (COR-013). There the project's `software-engineer` shadows the harness's own agent of that name.
-- **Its reviewer contributions.** `review-contributions.yaml` registers the three reviewers in project-management's merge gate ([project-management:DEC-032]). Installing the capability turns them on, and no switch does ("When each reviewer is required" below).
+- **Its reviewer contributions.** `review-contributions.yaml` registers the three reviewers in project-management's merge gate ([project-management:DEC-032]). Installing the capability turns them on, with no switch of their own ("When each reviewer is required" below). Opting one out is project-management's ("Basic or complex review" below).
 - **Its rules.** `rule-sets/swe.md` and `rules.md` are its loaded rule set and the file generated from it ("Its operational rules" below).
 - **What it writes.** Nothing of the project's configuration. It ships no conventions either, since the corpus is the project's own ("The conventions corpus" below).
 
@@ -86,13 +87,13 @@ The conventions corpus is the project's own coding standards, kept where the pro
 - **Before it hands off,** it reads its diff again against the corpus, and corrects what does not conform. No reviewer of the core's stack checks the corpus, since `convention-compliance-reviewer` checks only the methodology's own conventions ([software-engineering:DEC-001-producer-agent-and-conventions-seam] point 4). At the merge, `code-reviewer` blocks on a violation of a rule the corpus declares.
 - **Judgement of the design** is the `critic`'s and the `architect`'s (COR-024). The agent invokes no reviewer, and merges nothing.
 - **Findings on its work.** It fixes each one its reviewer tags `[block]`. It records each `[advisory]` one in the pull request, with how it was answered, rather than widen the fix to take it in.
-- **What it does not do.** It gives no verdict, owns no corpus, files no issue, and starts no other agent.
+- **What it does not do.** It gives no verdict and owns no corpus. It files no issue, opens no pull request as a step of the process, and starts no other agent.
 
 ### The answers it writes
 
 The agent writes the answers the change check asks of its change, without asking first (COR-050 point 3). They are owed where the change makes an anchored artefact owe an answer.
 
-- **The writers.** `pkit friction revalidate`, `pkit friction defer` and `pkit friction revisit`, each with `--yes` off a terminal. It commits what they write with the change, a new answer file among it (COR-062 point 1).
+- **The writers.** `pkit friction revalidate`, `pkit friction defer` and `pkit friction revisit`, each with `--yes` off a terminal ([the CLI reference](../../cli/README.md#friction-revalidate-artefact---outcome-updatedunchanged---because-text---keep-anchor---yes----dry-run)). It commits what they write with the change, a new answer file among it (COR-062 point 1).
 - **Answers made apart.** Where the check flags one of its revalidations as replacing revalidations answered apart, the revalidation's reason judges their combined state (COR-062 point 7).
 - **What each needs.** Each deferral, and each `deferred` revisit entry, names an open follow-up issue. Each artefact revalidated as `updated` gets one sentence on what changed, in the pull request's description ([project-management's README](../project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers)).
 - **On a direct commit** to the default branch, it tells each sentence to the person it works for before the commit. It has the reviewer, where the project chose one, check before it commits. `docs-reviewer` cannot do that yet ("Where no reviewer's check holds the merge" below).
@@ -108,10 +109,11 @@ New work whose Tasks would share a choice that nothing settles yet is planned in
 
 When the software-engineer builds the skeleton, it writes those conventions into the corpus, so every later slice reads them as the project's rules ([software-engineering:DEC-004-skeleton-conventions-in-corpus]). Where this capability is installed, [project-management:DEC-060] asks the same of anyone else who builds one, wherever the corpus offers a location the project owns.
 
-- **Written with the skeleton.** Building the skeleton is how its conventions are found. The agent writes an entry for each convention that building it settles, such as the layout of the code and its tests. It writes them as it builds, or once the code is built.
+- **Written with the skeleton.** The agent writes an entry for each convention that building it settles, such as the layout of the code and its tests. It writes them as it builds, or once the code is built.
 - **Accepted once.** A person accepts the entries once, with the skeleton's change, before the slices that rest on them are planned.
-- **Accepted by a person.** Accepting is an act of its own on the entries' text, and authorising the merge accepts none. In a corpus that gives its entries a status, such as a rule set, the agent leaves each entry proposed. The change merges only once a person accepts the entries, so it waits in review until then.
-- **Nobody to ask.** Where the agent can reach no person, it hands back the entries and its question. The change's description carries the question too.
+- **Accepted by a person.** Accepting is an act of its own on the entries' text, and authorising the merge accepts none. The change merges only once a person accepts the entries, so it waits in review until then.
+- **Its status.** In a corpus that gives its entries a status, such as a rule set, the agent leaves each entry proposed. The person, or an agent the person answered directly, then sets it accepted. In any other corpus, the change's description lists the entries, and the person accepts them there.
+- **Nobody to ask.** Where the agent can reach no person, it hands back the entries and its question. The change's description carries the question too. Started by another agent, it cannot ask either, unless the adapter in use declares that its question reaches the person. So an acceptance its caller relays accepts nothing.
 - **Where they go.** An entry goes inside the one location the agent finds, where the corpus already keeps the project's conventions, in the form it gives them. In an empty corpus, the agent proposes a form, and a file or section inside that location, with the entries.
 - **One location, or no entries.** Of the locations `<project-conventions>` names, the agent writes only inside one that lies in the repository and passes two tests:
   - The methodology neither manages it nor copies it in (`.pkit/lifecycle/ownership.py`). A rule set a component ships fails that test.
@@ -124,7 +126,7 @@ When the software-engineer builds the skeleton, it writes those conventions into
 The panel is three reviewer agents that judge a pull request at merge time ([software-engineering:DEC-002-code-review-panel]). Each gives its verdict in project-management's verdict grammar, so the verdicts fold through the gate's existing rule that every required reviewer approves ([project-management:DEC-028]).
 
 - **The verdict.** Its first line is `Reviewer agent (local, <name>): APPROVED` or `Reviewer agent (local, <name>): CHANGES_REQUESTED`. The verdict marker follows the findings, as `<!-- pkit-verdict sha=<head> base=<base> -->` once posted, naming the head and base reviewed.
-- **Read-only.** A reviewer never changes the pull request or the repository. It keeps the working files a review needs, such as a dumped diff or a reproduction, in the agent workspace (the agents README, "Reviewers").
+- **Read-only.** A reviewer never changes the pull request or the repository. It keeps the working files a review needs, such as a dumped diff or a reproduction, in the agent workspace ([the agents README, "Reviewers"](../../agents/README.md#body-conventions)).
 - **Running it.** `pkit project-management review-pr <N>` runs each reviewer pull request `<N>` requires, and posts each verdict. `land-work` runs the same review as one of its steps ([project-management's README](../project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)).
 
 **A diff too large for `gh pr diff`.** This rule is owned here, and each reviewer's definition carries it and points here:
@@ -147,7 +149,7 @@ The panel is three reviewer agents that judge a pull request at merge time ([sof
 `review-contributions.yaml` declares when project-management's gate requires each reviewer ([project-management:DEC-032] point D1). Installing the capability turns the declaration on.
 
 - **Agent review mode only.** The gate requires them where a pull request's review mode resolves to `agent`, the default. In `human` mode their verdicts only advise ([project-management:DEC-027], [project-management:DEC-032] point D3).
-- **`code-reviewer` and `security-reviewer`** ride the floor `touches-code`. Each is required on a pull request whose diff changes a file that is not documentation, whatever the closing issue's classification.
+- **`code-reviewer` and `security-reviewer`** ride the floor `touches-code`. Each is required on a pull request whose diff changes code, whatever the closing issue's classification. The next two items say what counts as code.
 - **What is documentation.** A file ending in `.md`, `.mdx`, `.markdown` or `.rst`, in any folder. So is an image, a diagram, a font or a PDF under a `docs/` folder. Every other file counts as code, YAML and JSON included (project-management's `scripts/_lib/required_reviewers.py`).
 - **What is not code either.** The paths the project lists in project-management's `review.floors.not_code` do not count, by default the changesets under `.changes/`. Nor do the answer files, in the folder where the core keeps a change's answers, whatever the list says.
 - **`docs-reviewer`** rides the same floor, and also the `type` wildcard, `type: "*"`. So it is required on each pull request that changes code. It is also required on each one whose closing issue has a `type`, a type added later included.
