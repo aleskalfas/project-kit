@@ -58,6 +58,11 @@ analyses:
     # The record that states what software-analysis is for (software-analysis
     # DEC-003 point 8).
     purpose: software-analysis:DEC-001
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8 and DEC-005 point 1).
+    areas:
+      010-describe: "Describe a project in its analysis, each kind of artefact in the parts the project chose, and each artefact under an id that names it alone."
+      020-revalidate: "Keep the analysis true as the project changes, revised before a change is built or revalidated after it, and never rewritten to match broken code."
     builds-on:
       - analysis: core
       - analysis: project-management
