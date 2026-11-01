@@ -5,8 +5,8 @@ Held to software-analysis DEC-003 point 8:
 - **what it shows** — for a newcomer first, in two parts. The story: the opening, with
   what the component is for from its purpose record and what the analysis is, then
   the areas, each with its goal, what it builds on, its concepts read from the links to
-  the terms, its requirements and its use cases, or "Not written yet", or the use cases
-  where there are no areas. Then reference: one
+  the terms, its requirements, its use cases and the journeys with a step among them, or
+  "Not written yet", or the use cases where there are no areas. Then reference: one
   table of who takes part, an actor of another analysis as the glossary's head names
   it; the concepts, each view by its number and title; the requirements in no area; the
   journeys, each with its flow; what is not built yet; then the line that names the query
@@ -47,6 +47,7 @@ from tests.analysis_repo import (
     ANALYSIS,
     CAPABILITY,
     DOMAIN_MODEL,
+    JOURNEYS,
     OVERVIEW_FILE,
     QUALITY,
     SA,
@@ -528,9 +529,11 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
         "### 010-run\n\nRun a suite, and read its result.\n\n"
         "**Its requirements:** none.\n\n**Its use cases:**\n\n"
         f"- [UC-002 — Run suite]({uc}/010-run/UC-002-run-suite.md)\n\n"
+        "**Its journeys:** none.\n\n"
         "### 020-report\n\nNo goal is written for this area yet.\n\n"
         "**Its requirements:** none.\n\n**Its use cases:**\n\n"
         f"- [UC-001 — Read report]({uc}/020-report/UC-001-read-report.md)\n\n"
+        "**Its journeys:** none.\n\n"
         "### 030-share\n\nShare a failure's cause.\n\nNot written yet.\n\n"
         f"### Outside any area\n\n- [UC-003 — Set up]({uc}/UC-003-set-up.md)"
     )
@@ -683,7 +686,8 @@ def test_an_area_s_requirements_are_read_from_their_folder(project: AdopterRepo)
         "No goal is written for this area yet.\n\n**Its requirements:**\n\n"
         f"- [REQ-001 · Quality · Quick]({req}/quality/010-run/REQ-001-quick.md)\n\n"
         "**Its use cases:**\n\n"
-        "- [UC-001 — Run](../use-case-model/use-cases/010-run/UC-001-run.md)"
+        "- [UC-001 — Run](../use-case-model/use-cases/010-run/UC-001-run.md)\n\n"
+        "**Its journeys:** none."
     )
     assert _section(text, "### 060-audit") == (
         "No goal is written for this area yet.\n\n**Its requirements:**\n\n"
@@ -695,6 +699,62 @@ def test_an_area_s_requirements_are_read_from_their_folder(project: AdopterRepo)
     )
     (no_goal,) = _about(_check(project), "warning", f"{QUALITY}/060-audit")
     assert no_goal.startswith("the area 060-audit of the analysis has no goal")
+
+
+def _journeys_of(text: str, area: str) -> str:
+    """What an area shows from its list of journeys on: the list, or the line that says it
+    has none."""
+    shown = _section(text, f"### {area}")
+    return shown[shown.index("**Its journeys:**") :]
+
+
+def test_each_area_lists_the_journeys_with_a_step_among_its_use_cases(
+    project: AdopterRepo,
+) -> None:
+    """Below its use cases, each area lists each journey in force with a step among them,
+    in the order of the journeys' numbers, or says it has none. A journey whose steps cross
+    several areas is listed under each, a withdrawn journey under none, and the use cases
+    outside any area list none. Each flow stays in reference. The list follows from a
+    journey's `steps` and the use cases' areas, so a step moved to another area's use case
+    makes the overview stale (DEC-005 point 2, DEC-003 point 8)."""
+    stamped(project, "actor", "tester", "--path", "src/**")
+    for slug, area in (("run", "010-run"), ("read", "020-read"), ("share", "030-share")):
+        stamped(project, "use-case", slug, "--actor", "ACT-tester", "--area", area)
+    stamped(project, "use-case", "set-up", "--actor", "ACT-tester")
+    tester = ("--actor", "ACT-tester")
+    stamped(project, "journey", "first-run", *tester, "--step", "UC-001", "--step", "UC-002")
+    stamped(project, "journey", "rerun", *tester, "--step", "UC-004", "--step", "UC-002")
+    stamped(project, "journey", "old-share", *tester, "--step", "UC-001", "--step", "UC-003")
+    fill(project)
+    old = f"{JOURNEYS}/JRN-003-old-share.md"
+    project.write({old: _read(project, old).replace("status: active", "status: withdrawn", 1)})
+    assert run_in_process(project, OVERVIEW).returncode == 0
+    text = _read(project)
+    first = "- [JRN-001 — First run](../use-case-model/journeys/JRN-001-first-run.md)"
+    rerun = "- [JRN-002 — Rerun](../use-case-model/journeys/JRN-002-rerun.md)"
+    assert _journeys_of(text, "010-run") == f"**Its journeys:**\n\n{first}"
+    assert _journeys_of(text, "020-read") == f"**Its journeys:**\n\n{first}\n{rerun}"
+    assert _journeys_of(text, "030-share") == "**Its journeys:** none."
+    assert "journey" not in _section(text, "### Outside any area")
+    assert "```mermaid" not in _section(text, "## Areas")
+    assert [h for h in _headings(text) if h.startswith("#### ")] == [
+        f"#### {first[2:]}",
+        f"#### {rerun[2:]}",
+    ]
+    _links_resolve(text)
+    assert _about(_check(project), "error", OVERVIEW_FILE) == []
+
+    # A step moved to another area's use case moves the journey with it.
+    rerun_at = f"{JOURNEYS}/JRN-002-rerun.md"
+    moved = _read(project, rerun_at).replace("  - UC-002\n", "  - UC-003\n", 1)
+    project.write({rerun_at: moved})
+    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
+    assert stale.startswith("it is stale")
+    assert run_in_process(project, OVERVIEW).returncode == 0
+    text = _read(project)
+    assert _journeys_of(text, "020-read") == f"**Its journeys:**\n\n{first}"
+    assert _journeys_of(text, "030-share") == f"**Its journeys:**\n\n{rerun}"
+    assert _about(_check(project), "error", OVERVIEW_FILE) == []
 
 
 # --- who takes part ---------------------------------------------------------------------------
@@ -1016,6 +1076,12 @@ def test_the_fingerprint_reads_what_it_draws_and_nothing_else() -> None:
     headed = _fingerprint(_headed(actor, use_case))
     assert headed not in (first, _fingerprint(_headed(actor, use_case, name="Dev")))
     assert _fingerprint(_headed(actor, use_case, needs="B")) == headed
+    # A journey's steps are read, so each area's journeys are held.
+    run_through = _artefact("journey", "JRN-001", "use-case-model/journeys", steps=["UC-001"])
+    elsewhere = _artefact("journey", "JRN-001", "use-case-model/journeys", steps=["UC-002"])
+    through = _fingerprint(_analysis(actor, use_case, run_through))
+    assert through != first
+    assert _fingerprint(_analysis(actor, use_case, elsewhere)) != through
     # The views each use case leads to, through the links to the terms, are read.
     analysis = _analysis(actor, use_case)
     read_ = overview.read(analysis, analyses.Listing(), None)
