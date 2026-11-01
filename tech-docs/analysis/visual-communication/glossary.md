@@ -34,6 +34,7 @@ builds-on:
           - Build a brand on another brand, changing only what that brand lets me change, and give my brand its own library versions.
           - Use a brand's values in the code of a web page, a game or an app that must look like my project's pieces.
           - Take in a library that another project shares, by its link, and take in its newer library versions when I choose.
+          - Add a library component to a library my project owns, and mark it stable once I judge that pieces can rely on it.
       - id: ACT-adopter
         name: Adopter
         needs:
@@ -311,6 +312,7 @@ The words of the domain and what each means. A term's id is stable, and its name
     - Build a brand on another brand, changing only what that brand lets me change, and give my brand its own library versions.
     - Use a brand's values in the code of a web page, a game or an app that must look like my project's pieces.
     - Take in a library that another project shares, by its link, and take in its newer library versions when I choose.
+    - Add a library component to a library my project owns, and mark it stable once I judge that pieces can rely on it.
   - **Actor:** [Adopter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-adopter.md)
     - Have another capability's diagrams drawn in my libraries' look, the rest drawn that capability's own way, and see how much my libraries cover.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)

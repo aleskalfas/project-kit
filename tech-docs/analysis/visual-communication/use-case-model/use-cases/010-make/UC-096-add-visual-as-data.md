@@ -44,7 +44,7 @@ pkit:
 - **1a.** The visual needs what data cannot say, such as items set around a circle. The developer writes a helper script, which runs while the piece is prepared, never while it is drawn. The script writes the local component as data, with every text taken from the content. The path goes on at step 3.
 - **4a.** The local component holds a fixed colour, or a helper script wrote a text that is not in the content. The system refuses it and names each spot. The developer mends it, and the path rejoins at step 4.
 - **4b.** An input of a helper script was edited since the script wrote the local component. The system says the local component is out of date, and the developer runs the script again.
-- **4c.** The same visual is needed in other pieces. The developer moves it into a library the project owns. Its fixed texts become content fields, and its one-time choices become options. Each piece then moves to it after the developer sees the piece before and after ([UC-103](../020-build-libraries/UC-103-improve-library-component.md)).
+- **4c.** The same visual is needed in other pieces. The developer moves it into a library the project owns. Its fixed texts become content fields, and its one-time choices become options. Each piece then moves to it after the developer sees the piece before and after ([UC-110](../020-build-libraries/UC-110-add-library-component.md), variants 1a and 4a).
 
 **Postconditions:** The system draws the new visual in the piece from data, in the piece's brand and in each of its languages.
 
