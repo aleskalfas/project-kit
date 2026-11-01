@@ -21,6 +21,7 @@ pkit:
         - REQ-060
         - RS-SWE-001
         - .pkit/capabilities/software-engineering/README.md#installing-it
+        - .pkit/capabilities/software-engineering/README.md#the-producer-software-engineer
         - .pkit/capabilities/software-engineering/README.md#the-conventions-corpus
         - .pkit/capabilities/software-engineering/README.md#the-answers-it-writes
         - .pkit/capabilities/software-engineering/README.md#a-foundation-fills-the-corpus
@@ -220,14 +221,14 @@ $ pkit capabilities install software-engineering | grep -e Installed -e binds -e
 ```
 
 - **Name where your conventions live.** Add a `project-conventions` category to the agent overlay, listing the files that hold them ([the agents README, "Adopter overlay"](../../../.pkit/agents/README.md#adopter-overlay)). Then run `pkit sync`, as [the first fence above](#what-software-engineering-does-instead) shows.
-- **Or start with no conventions yet.** Name a location your project owns that holds none yet, such as `docs/conventions.md`, and run `pkit sync`. Each agent then says when it finds no convention for a choice, and works by ordinary judgement. It reads each convention you add there later, with no new install.
+- **Or start with no conventions yet.** Name a location your project owns that holds none yet, such as `docs/conventions.md`, and run `pkit sync`. Each agent then says when it finds no convention for a choice, and works by ordinary judgement. It reads each convention you add there later.
 - **Let a walking skeleton write the first ones** there ([A walking skeleton](#a-walking-skeleton)). It writes none while no location is named.
 - **Choose your reviewers.** Each of the three is required wherever its condition holds. To stop requiring one, opt out of it in project-management's configuration, with a reason ([project-management's README, "Opting out of a contributed reviewer"](../../../.pkit/capabilities/project-management/README.md#opting-out-of-a-contributed-reviewer-per-project-managementdec-032-conditional-reviewer-requirements)).
 - **Use the agent.** In Claude Code, ask your session for it by name, such as "Use the software-engineer agent to build issue 12".
 
 ## Build a change under your conventions
 
-Ask the `software-engineer` agent to make the change, such as the code an issue asks for. It works in this order:
+Ask the `software-engineer` agent to make the change, such as the code an issue asks for. It works in this order ([the reference, "The producer"](../../../.pkit/capabilities/software-engineering/README.md#the-producer-software-engineer)):
 
 1. It reads your conventions corpus, before it writes any code. Where the corpus says nothing on a choice, it says so, such as "no project conventions found for X; proceeding as a careful generalist".
 2. It writes the code, and applies the corpus to each choice the change settles, such as naming, layout and error handling.
@@ -257,7 +258,7 @@ Decide each in these steps:
 1. **Read the hand-off.** The agent writes none of these answers, and names each in its hand-off.
 2. **Decide each answer.** Accept its words, change them, or decline the answer. A declined answer is never written, and the document stays as it was.
 3. **Write each one you accept,** yourself or through an agent you direct. A revalidation is written with `pkit friction revalidate`, as [the second fence above](#what-software-engineering-does-instead) shows. The CLI reference gives the writers of a deferral ([“friction defer”](../../../.pkit/cli/README.md#friction-defer-artefact---anchor-anchor---reason-text---yes----dry-run)) and of a revisit entry ([“friction revisit”](../../../.pkit/cli/README.md#friction-revisit-artefact---target-anchor---outcome-unchangeddeferred---reason-text---yes----dry-run)). A reason for having no anchors goes in the document's own front matter, as the same fence shows.
-4. **Say who decided each.** The `docs-reviewer` checks each such answer against what it answers, and blocks on one that does not hold. It cannot tell who decided one, so it names each in an `[advisory]` finding. Say in the pull request who decided it.
+4. **Say who decided each.** The `docs-reviewer` checks each such answer against what it answers, and blocks on one that does not hold. It cannot tell who decided one, so it names each in an `[advisory]` finding ([the reference](../../../.pkit/capabilities/software-engineering/README.md#the-reviewer-of-a-changes-answers)). Say in the pull request who decided it.
 
 Your default branch's configuration may name a delegate, `friction.delegate`. That agent then decides in your place each such answer another agent drafted, where a reviewer checks these answers. It may refer any of them to you, and you are told afterwards what it decided (COR-064). Never name the `docs-reviewer`, which checks these answers.
 
@@ -265,14 +266,16 @@ Your default branch's configuration may name a delegate, `friction.delegate`. Th
 
 Open the pull request as your project does, such as with project-management's `open-pr` ([project-management's README, "Opening and editing a PR"](../../../.pkit/capabilities/project-management/README.md#opening-and-editing-a-pr--open-pr--edit-pr)). Then have the reviewers its gate requires judge it, and land it once they approve.
 
-In agent review mode, project-management runs each required reviewer and posts each verdict on the pull request. Its landing command, `land-work`, runs the same review as one of its steps ([project-management's README, "Landing a pull request in one command"](../../../.pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)). The run needs GitHub and Claude Code, so it is shown here without its output:
+In agent review mode, project-management runs each required reviewer and posts each verdict on the pull request. Its landing command, `land-work`, runs the same review as one of its steps ([project-management's README, "Landing a pull request in one command"](../../../.pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)). Each command needs GitHub, and the reviews need Claude Code, so they are shown here without their output. Each takes the issue the pull request closes:
 
 ```sh
+pkit project-management open-pr 12
 pkit project-management review-pr 12
+pkit project-management land-work 12
 ```
 
-- **Fix what blocks.** The agent fixes each `[block]` finding, and the fix is reviewed again. It records each `[advisory]` one in the pull request, with how it was answered. A `[person]` finding waits for whoever authorises the merge.
-- **What the `docs-reviewer` blocks on.** It reads the answers from the change check's own list, never from the author's account ([the reference](../../../.pkit/capabilities/software-engineering/README.md#the-reviewer-of-a-changes-answers)). Each of these is a `[block]` finding:
+- **Fix what blocks.** The agent fixes each `[block]` finding, and the fix is reviewed again. It records each `[advisory]` one in the pull request, with how it was answered ([the reference, "The producer"](../../../.pkit/capabilities/software-engineering/README.md#the-producer-software-engineer)). A `[person]` finding waits for whoever authorises the merge.
+- **What the `docs-reviewer` blocks on.** It reads the answers from the change check's own list, never from the author's account ([the reference](../../../.pkit/capabilities/software-engineering/README.md#the-reviewer-of-a-changes-answers)). Among its `[block]` findings are these:
   - a reason why a document is still accurate that does not hold against the change
   - a deferral whose reason does not hold, or that names no open follow-up issue
   - a document updated in the change with no sentence on what changed, or with one that does not match the diff
@@ -280,7 +283,7 @@ pkit project-management review-pr 12
 - **Write the sentences.** The pull request's description holds one for each document the change updated, under `## What changed in each updated document`. Write each as an item of the form ``- `path`: sentence``, which the reviewer reads.
 - **Land it.** The landing command shows you the answers, their sentences, and what is left out of date, as information. What it shows of them stops no merge ([project-management's README, "The answers a change wrote, in its pull request"](../../../.pkit/capabilities/project-management/README.md#the-answers-a-change-wrote-in-its-pull-request-project-managementdec-055-pr-lists-answers)). Without `--yes`, it stops on its `ready:` line, which names the command that merges the head you were shown ([project-management's README](../../../.pkit/capabilities/project-management/README.md#landing-a-pull-request-in-one-command--land-work-1203)).
 
-In these cases, no reviewer's check of the answers holds the merge:
+In these cases, no reviewer's check of the answers holds the merge ([the reference](../../../.pkit/capabilities/software-engineering/README.md#the-reviewer-of-a-changes-answers)):
 
 - **A pull request that changes only documents, and closes no issue with a `type`.** The gate requires no `docs-reviewer` for it. Have the pull request close an issue that has a `type` when the change wrote answers.
 - **A project that opts out of the `docs-reviewer`,** and names no other reviewer of the answers.

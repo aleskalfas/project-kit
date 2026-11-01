@@ -105,9 +105,9 @@ The agent writes the answers the change check asks of its change, without asking
 
 ### A foundation fills the corpus
 
-New work whose Tasks would share a choice that nothing settles yet is planned in two stages ([project-management:DEC-060]). Its foundation comes first: accepted records of its architectural choices, and then a walking skeleton. The skeleton is one thin slice built end to end, whose code sets the conventions the later slices share.
+When the software-engineer builds a foundation's walking skeleton, it writes the conventions the skeleton settles into the corpus ([software-engineering:DEC-004-skeleton-conventions-in-corpus]). Every later slice then reads them as the project's rules. Where this capability is installed, [project-management:DEC-060] asks the same of anyone else who builds one, wherever the corpus offers a location the project owns.
 
-When the software-engineer builds the skeleton, it writes those conventions into the corpus, so every later slice reads them as the project's rules ([software-engineering:DEC-004-skeleton-conventions-in-corpus]). Where this capability is installed, [project-management:DEC-060] asks the same of anyone else who builds one, wherever the corpus offers a location the project owns.
+The foundation comes first where the Tasks of new work would share a choice that nothing settles yet ([project-management:DEC-060]). It holds accepted records of the work's architectural choices, and then the walking skeleton. The skeleton is one thin slice built end to end, whose code sets the conventions the later slices share.
 
 - **Written with the skeleton.** The agent writes an entry for each convention that building it settles, such as the layout of the code and its tests. It writes them as it builds, or once the code is built.
 - **Accepted once.** A person accepts the entries once, with the skeleton's change, before the slices that rest on them are planned.
@@ -179,7 +179,7 @@ Each reviewer's definition tags its findings alike. A pre-existing defect blocks
 
 ### The reviewer of a change's answers
 
-A change may answer for the documents its edits affect, in answer files of its own outside the documents (COR-062 point 1). A revalidation says a document was updated or still holds, and a deferral leaves it out of date until a follow-up. A change may also carry revisits ("Revisits" below).
+A reviewer other than their writer checks the answers a change wrote, and `docs-reviewer` does so wherever it reviews a pull request. The answers lie in answer files of the change's own, outside the documents (COR-062 point 1). A revalidation says a document was updated or still holds, and a deferral leaves it out of date until a follow-up. A change may also carry revisits ("Revisits" below).
 
 - **Who checks them.** The agent making the change writes them without asking first, and a reviewer other than that agent checks them (COR-050 point 3, [project-management:DEC-055] point 3). Which reviewer is the project's choice.
 - **`docs-reviewer`** checks them wherever it reviews a pull request, as its docs-match-behaviour lens applied to the change's claims about its documents ([software-engineering:DEC-002-code-review-panel] D1).
