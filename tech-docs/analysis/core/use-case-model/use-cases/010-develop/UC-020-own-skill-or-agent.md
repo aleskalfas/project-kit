@@ -5,12 +5,25 @@ status: active
 actor: ACT-developer
 other-actors:
   - ACT-ai-agent
+  - ACT-operator
 after:
   - [UC-014, UC-049]
   - [UC-014, UC-019, UC-049]
 requirements:
   - REQ-002
   - REQ-009
+  - REQ-010
+  - REQ-012
+shortfalls:
+  - at: 11
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 12
+    issue: "#1765"
+    record: ADR-034#1
+  - at: "6b"
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -32,11 +45,15 @@ pkit:
         - COR-015
         - COR-016
         - ADR-052
+        - ADR-034#1
       artefact:
         - ACT-developer
         - ACT-ai-agent
+        - ACT-operator
         - REQ-002
         - REQ-009
+        - REQ-010
+        - REQ-012
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition
@@ -46,6 +63,7 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`ACT-ai-agent`): runs the [stamp](../../../glossary.md#term-stamp--stamp) of step 2 for the developer through the `agent-author` [skill](../../../glossary.md#term-skill--skill), and drafts the [storyboard](../../../glossary.md#term-storyboard--storyboard) through the `storyboard-author` skill. Later, its sessions load the new skill, or delegate to the new [agent definition](../../../glossary.md#term-agent-definition--agent-definition).
+- **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
 
 **Preconditions:**
 
@@ -60,7 +78,12 @@ pkit:
 
 1. The developer chooses what carries the work. A procedure for one kind of task becomes a [skill](../../../glossary.md#term-skill--skill), and a standing remit with boundaries becomes an [agent definition](../../../glossary.md#term-agent-definition--agent-definition) ([COR-006](../../../../../../.pkit/decisions/core/COR-006-artifact-roles.md)). Here it is an agent definition, whose dialogue with a person follows a script.
 2. The developer runs `pkit new agent project <name> --with-storyboard`, or has an AI agent run it through the `agent-author` skill.
-3. The [system](../../../glossary.md#term-system--system) checks the name, and that no agent definition of the [project](../../../glossary.md#term-project--project), of a [capability](../../../glossary.md#term-capability--capability) or of the core has it.
+11. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)). The [stamp](../../../glossary.md#term-stamp--stamp) of 1b checks the repository too.
+
+> [!WARNING]
+> **Not built yet:** `pkit new agent` runs no such check, and writes in whatever repository holds its working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+3. The system checks the name, and that no agent definition of the [project](../../../glossary.md#term-project--project), of a [capability](../../../glossary.md#term-capability--capability) or of the core has it.
 4. The system writes the agent definition, `.pkit/agents/project/<name>/<name>.md`, and its [storyboard](../../../glossary.md#term-storyboard--storyboard), `storyboard.md`, beside it. The agent definition lists the storyboard in `storyboards:`, and the storyboard names the agent definition in `consumers:` ([COR-016](../../../../../../.pkit/decisions/core/COR-016-scripted-scenario-storyboards.md)).
 5. The system prints `Stamped: .pkit/agents/project/<name>/<name>.md` and `Stamped: .pkit/agents/project/<name>/storyboard.md`.
 6. The developer writes the storyboard first, through the `storyboard-author` skill (COR-016). It gives the framing and the tone, and for each scenario:
@@ -73,6 +96,11 @@ pkit:
    - what it reads
    - which paths it owns
 8. The developer runs `pkit sync`.
+12. At its entry, before it reads anything, [sync](../../../glossary.md#term-sync--sync) checks the repository as step 11 does (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit sync` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 9. Each [adapter](../../../glossary.md#term-adapter--adapter)'s `deploy-agents.sh` deploys the agent definition where its [harness](../../../glossary.md#term-harness--harness) reads it, with each placeholder filled from `.pkit/agents/project/overlay.yaml` ([COR-013 point 5](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#5-adopter-overlay-for-paths-outside-pkit)). The `claude-code` adapter, for one, writes `.claude/agents/<name>.md`.
 10. The developer runs `pkit validate`. Its `refs` member checks that the agent definition's body cites what its front matter declares ([COR-013 point 3](../../../../../../.pkit/decisions/core/COR-013-agent-architecture.md#3-reference-graph-and-bidirectional-consistency)). It also checks that the agent definition and its storyboard declare each other (COR-016).
 
@@ -83,6 +111,12 @@ pkit:
 - **3a.** The name is no kebab-case word. The system refuses with ``agent name must be kebab-case …``, and writes nothing. The path rejoins at step 2.
 - **3b.** An agent definition of that name exists. The system refuses with `agent '<name>' already exists at <path>.`, and writes nothing. The path rejoins at step 2.
 - **6a.** The developer adds the storyboard later, with `pkit new storyboard agent <name>`. The system writes it beside the agent definition, but adds nothing to the agent definition's `storyboards:`. So at step 10 `pkit validate` fails until the developer lists it there, since `Mutual declaration is required (per COR-016).`
+- **6b.** On the path of 6a, `pkit new storyboard` checks the repository at its entry, as step 11 does ([REQ-012](../../../requirements/functional/REQ-012-ask-before-another-repository.md)).
+
+> [!WARNING]
+> **Not built yet:** `pkit new storyboard` runs no such check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+- **8a.** The [project](../../../glossary.md#term-project--project) is not the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository). The running CLI is at another [version](../../../glossary.md#term-version--version) than the project records, or a [version transition](../../../glossary.md#term-version-transition--version-transition) is incomplete. [Sync](../../../glossary.md#term-sync--sync) stops before it writes, names the remedy, and writes nothing ([REQ-010](../../../requirements/functional/REQ-010-stop-under-another-version.md)). The use case ends.
 - **9a.** The agent definition names a placeholder that `.pkit/agents/project/overlay.yaml` leaves unset. The adapter skips it and deploys the rest, and the system names `pkit agents adopt <agent>` to deploy it ([ADR-052](../../../../../architecture/decisions/ADR-052-optional-read-category-empty-tolerance.md)).
 
 **Postconditions:** The [project](../../../glossary.md#term-project--project)'s own [skill](../../../glossary.md#term-skill--skill) or [agent definition](../../../glossary.md#term-agent-definition--agent-definition) lies in the project's own folder, `.pkit/skills/project/` or `.pkit/agents/project/`. An agent definition whose dialogue follows a script has its [storyboard](../../../glossary.md#term-storyboard--storyboard) beside it. The skill or agent definition is deployed where the [harness](../../../glossary.md#term-harness--harness) reads it, and no [sync](../../../glossary.md#term-sync--sync) writes over it.

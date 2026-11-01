@@ -1,0 +1,9 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-009-release-breaking-component-change.md
+    read:
+      - 20261101T143018Z-edd7b739.yaml
+      - 20261101T143443Z-c4d790ed.yaml
+    revalidated:
+      at: 2026-11-01T15:02:25Z
+      outcome: unchanged
+      unchanged-because: "Judged with the change on main that made its step-2 seam cite UC-009 variant 2a: UC-015 and UC-019 gained only the repository check at their commands' entry, not built yet, so the package metadata with its version that each hands this path, and the seam where the folder's version differs, are as the journey says."
