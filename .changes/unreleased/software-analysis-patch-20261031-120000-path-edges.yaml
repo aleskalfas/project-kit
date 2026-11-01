@@ -12,5 +12,5 @@ body: >
   steps make true.
   **The skill and the rule.** The `analysis-author` skill's `journey.md` and
   `build-analysis.md` say how to judge each edge, a standing condition and a
-  result that falls short among them. `RS-SAN-014`, still proposed, states the
+  goal a run did not meet among them. `RS-SAN-014`, still proposed, states the
   same. Proposed rules bind nothing, so `SAN` stays at 1.0.0.
