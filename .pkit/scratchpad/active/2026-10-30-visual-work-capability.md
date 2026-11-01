@@ -1302,7 +1302,30 @@ Point 13 is decided.
 - **The name:** the talk's own word for these parts; Engelhardt's multipanel display; a figure's panels (a), (b), (c) in a paper, as in comics and dashboards. The terminal block is never called a "terminal panel". Set aside: `layout` (level 6's name since the naming pass, so `layout: slide` and `use: starter/layout` would sit in one file), `arrangement` (what every pattern is, by the definition of level 5), `multipanel` (jargon), `split` and `columns` (two, and no row under; `columns` also collides with the layout grid), `grid` (the layout grid), `composition` (too general, and pkit's process composition), `exhibit` (one kind of content).
 - **Set aside:** optional `beside` and `under` slots in every layout, and both together, the slots for placing and `panels` for tying across (two ways to do one thing).
 
-**Still open in point 8, in this order:** the list of jobs and its mapping table; how far a pattern's options go; the log of misses; the build order, with the engine tools each pattern needs; where the Friday talk's twelve new reusable pieces go (`terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, `tree_bar`, `tree_tag`, `tree_note`, `divider`, `talk_cover`); whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
+**The starter's patterns, by job. Agreed (1 November).** Built from the evidence above, by Duarte's forms, after two reviews by the critic. The second found citations mapped wrongly, boundaries that broke on cases chosen to break them (a 2 × 2 by quadrant is a table; Now, Next, Later is a timeline; a fan-out that never joins again is `branches`), and the task board covered by no pattern.
+
+Wave 1 has evidence and needs only decided tools (F a Friday slide, M Mockingbird, SA software-analysis, D project-kit's docs):
+
+| Pattern | The question it answers | Form | Evidence | Options |
+|---|---|---|---|---|
+| `panels` | What goes beside the picture, and under it? | multipanel (Engelhardt) | about 14 F slides | widths; line-up; a row under |
+| `steps` | In what order does it happen? | Flow: linear | F `found`, `agents`, `skills`, `pm`; M P2-04, P2-10; SA journey flow; D 5 journey flows, 2 linear lifecycles | across or down; numbered; one step marked; a stage done in parallel |
+| `branches` | Where does one thing lead to several that do not join again? | Flow: divergent | F `ideas`; M P2-04 | outcomes labelled; one set apart |
+| `equation` | What do these parts make together? | Flow: convergent | F `agentswired`, `se`; M P1-05, P1-07 | the signs; any component as a part |
+| `layers` | What rests on what? | Structure: layers; pyramid | F `fits`, `sessions` | stepped or straight; relations beside |
+| `table` | What is in each row and column? | Structure: matrix; grid | F the 3 maps, `addons`, `docs`, `opening`; M P1-04, P1-06, P2-09, P3-01 | arrows none, between heads or across rows; a colour per column or row; reasons under each column |
+| `groups` | Which items belong together? | Cluster: enclosed | F `decisions`, `schemaslook`, `connect`; SA the journey's group, the chain's areas | a container, or a heading with a bar |
+| `network` | What is connected to what? Nodes in columns | Cluster: linked; relationship | F `checked`, `connect` | two or three columns; one tie set apart; tips or none |
+| `list` | What are the items, each of equal standing? | list | F reasons on `docs`, `addons`, `connect`; cards on the 4 `wired` slides, `pm`; M P1-01, P1-03, P2-02, P2-03 | a colour bar; numbered; the last set apart |
+| `timeline` | When does each thing happen? | timeline | M P3-03, P1-09 | periods evenly spaced, each labelled; items under each |
+
+Wave 2 is built ahead of need on decided tools, each with a named use: `tree` (indented: a file tree with owners, an outline); `annotations` (what each line of an artefact means: a config file explained in a doc; M P2-05); `overlap` (what two or three things share; outlines until the scene has opacity); a cycle, as `steps` with an arrow back (plan, do, check, act).
+
+- **Boundaries:** a list has no sequence (a ranking is a numbered list), steps follow one another, a timeline says when; steps may split and join again, branches split for good, an equation makes one of several; a table holds values in named rows and columns (a 2 × 2 by quadrant is a table with its headings as axes), groups show belonging by enclosing, a tree parent and child by indentation, a network any relation by lines; layers are whole levels; `panels` shows a picture with what proves it, `annotations` an artefact with a note per line.
+- **Left out on purpose:** what waits for a tool, as points 21 and 22 decided (a ring and a hub on a circle, a top-down tree, free graphs, which are most of project-kit's doc figures, a timeline to scale, charts); software notation (states, classes, sequence, use cases, C4), the open question of a notation for software work; the task board (F `schemas`), a local component and the first entry in the log of misses.
+- Each pattern is tested before it enters in stress languages (long compounds, diacritics), not only project-kit's English and Czech.
+
+**Still open in point 8, in this order:** how an option sets one item of a list apart (the marked step, the outcome set apart, the aside); point 11's wording, which calls the terminal and the aside note patterns while they are blocks (RS-VISUAL-004); whether the first slice builds starter patterns or local components; how far a pattern's options go; the log of misses; the build order, with the engine tools each pattern needs; where the Friday talk's twelve new reusable pieces go (`terminal`, `term_image`, `highlight`, `pstage`, `step_card`, `kind`, `kind_group`, `tree_bar`, `tree_tag`, `tree_note`, `divider`, `talk_cover`); whether a notation for software work ships, and as which kind of library; a legend and icons, so colour is never the only signal (RS-VISUAL-006); the neutral brand's themes (`teal-calm`, `warm-paper`, their modes) and fonts.
 
 ## Architect's review (31 October)
 
