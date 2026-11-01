@@ -452,7 +452,9 @@ def test_the_three_kinds_of_requirement_share_their_fields_and_all_parts_but_one
     a constraint (DEC-002 point 4): *Imposed by* in the place of *Rationale*. So a
     requirement keeps its fields when it changes kind. Each kind's companion schema
     takes the same fields and requires the same, `statement`, `measure` and `applies-to`
-    among them, and its name is the type its place gives."""
+    among them, and its name is the type its place gives. Each takes `obligation`, their
+    fingerprint, which the check holds rather than the schema, so its finding names the
+    command that writes it (DEC-006 point 6)."""
     kinds = _kinds()["kinds"]
     fields = {tuple(kinds[name]["front-matter"]) for name in REQUIREMENTS}
     assert fields == {tuple(REQUIREMENT_FIELDS)}
@@ -465,7 +467,17 @@ def test_the_three_kinds_of_requirement_share_their_fields_and_all_parts_but_one
     )
     schemas = [_json(SCHEMAS / f"{name}.schema.json") for name in REQUIREMENTS]
     assert {tuple(sorted(s["properties"])) for s in schemas} == {
-        ("actors", "applies-to", "id", "measure", "refines", "statement", "status", "title")
+        (
+            "actors",
+            "applies-to",
+            "id",
+            "measure",
+            "obligation",
+            "refines",
+            "statement",
+            "status",
+            "title",
+        )
     }
     assert {tuple(s["required"]) for s in schemas} == {
         ("id", "title", "status", "statement", "measure", "applies-to")

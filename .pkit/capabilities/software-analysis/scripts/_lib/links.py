@@ -181,9 +181,11 @@ CLOSING_TARGET = (
 #: link since it resolves to nothing (DEC-001 point 13).
 MISSING, EXTRA, STALE, UNRESOLVED = "missing", "extra", "stale", "unresolved"
 
-#: The target of a link to a glossary entry: a path with no scheme to a `glossary.md`, or
-#: the anchor alone, `#term-…`.
-_ENTRY = r"(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*|#term-[^()\s]*"
+#: The target of a link to a glossary entry: a path with no scheme to a `glossary.md`
+#: (`ENTRY_BY_PATH`, the form every place but the glossary's declares), or the anchor
+#: alone, `#term-…`.
+ENTRY_BY_PATH = r"(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*"
+_ENTRY = rf"{ENTRY_BY_PATH}|#term-[^()\s]*"
 
 #: An inline Markdown link, its text holding brackets one deep: its text, and its target.
 #: Of those, the command's are: a link whose text is an id, the link of that id

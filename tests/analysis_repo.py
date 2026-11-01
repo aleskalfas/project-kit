@@ -24,6 +24,7 @@ stamped and filled (#1204).
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 import shutil
@@ -51,6 +52,8 @@ VALIDATE = SA / "scripts" / "validate.py"
 LINK = SA / "scripts" / "link.py"
 #: The command that writes each analysis's overview (DEC-003 point 8).
 OVERVIEW_SCRIPT = SA / "scripts" / "overview.py"
+#: The command that writes each requirement's fingerprint of its texts (DEC-006 point 6).
+OBLIGATION = SA / "scripts" / "obligation.py"
 NUMBERS = SA / "scripts" / "check-numbers.py"
 CONFIG = ".pkit/project/config.yaml"
 RECORDED = f"{SA.as_posix()}/project/docs-locations.yaml"
@@ -311,11 +314,12 @@ def requirement(
     heading: str | None = None,
     **fields: Any,
 ) -> str:
-    """A requirement of `kind`, filled as its structure asks, written by hand as no stamp
-    writes one yet: its front matter's `fields` added or changed, a field set to `None`
-    left out, each of `anchored` an artefact anchor beside its path anchor, and its
-    `heading`, the line its body opens with — its id, its kind and its title unless given,
-    none when empty."""
+    """A requirement of `kind`, filled as its structure asks, written by hand: its front
+    matter's `fields` added or changed, a field set to `None` left out, its `obligation`
+    the fingerprint of its texts as `pkit analysis obligation` writes it unless given,
+    each of `anchored` an artefact anchor beside its path anchor, and its `heading`, the
+    line its body opens with — its id, its kind and its title unless given, none when
+    empty."""
     _place, shown, last = REQUIREMENT_PLACES[kind]
     front: dict[str, Any] = {
         "id": req_id,
@@ -326,6 +330,8 @@ def requirement(
         "applies-to": "Every run of a suite.",
         **fields,
     }
+    if "obligation" not in fields:
+        front["obligation"] = fingerprint({k: v for k, v in front.items() if v is not None}, kind)
     anchors: dict[str, list[str]] = {"path": ["src/run.py"]}
     if anchored:
         anchors["artefact"] = anchored
@@ -337,6 +343,23 @@ def requirement(
         + "**Verified by:** A timing test runs the suite and measures when its result shows.\n\n"
         + f"**{last}:** None.\n"
     )
+
+
+def fingerprint(fields: dict[str, Any], kind: str = "quality-requirement") -> str:
+    """A requirement's `obligation` for its front matter's `fields`, as `pkit analysis
+    obligation` writes it where the texts lie in front matter, a text the fields leave out
+    read as absent (software-analysis DEC-006 points 6 and 7)."""
+    structure, obligation = _fingerprinting()
+    declared: Any = structure.read_kinds()[kind]
+    read = obligation.texts(fields, list, declared)
+    return obligation.value(read, obligation.LINK_FORMS)
+
+
+@functools.cache
+def _fingerprinting() -> tuple[Any, Any]:
+    """The capability's structure and fingerprint modules, loaded once for the session."""
+    structure, obligation = load_lib("structure", "obligation")
+    return structure, obligation
 
 
 #: A shipped example's citation of the example project's own record, such as `(PRJ-003)`.
@@ -351,7 +374,9 @@ def fill(repo: AdopterRepo) -> None:
     warn of one that resolves to nothing (software-analysis DEC-001 point 13). Then the
     links are written, as the authoring skill runs `pkit analysis link` after any artefact
     is written: a journey's step lines name their use cases by id, which link to them
-    (DEC-001 point 14). The overview is generated, and holds nothing a person fills
+    (DEC-001 point 14). Each requirement's `obligation` is then written anew, as a person
+    runs `pkit analysis obligation` once its texts are written (DEC-006 point 6). The
+    overview is generated, and holds nothing a person fills
     (DEC-003 point 8). An actor's `summary` is drawn there, so where an overview is kept,
     it is written anew after, as a person runs its command."""
     overviews = [
@@ -366,6 +391,9 @@ def fill(repo: AdopterRepo) -> None:
         path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
     linked = run_in_process(repo, LINK)
     assert linked.returncode == 0, linked.stderr
+    if any((repo.root / ANALYSIS).rglob("requirements/*/**/*.md")):
+        fingerprinted = run_in_process(repo, OBLIGATION)
+        assert fingerprinted.returncode == 0, fingerprinted.stderr
     if overviews:
         written = run_in_process(repo, OVERVIEW_SCRIPT)
         assert written.returncode == 0, written.stderr

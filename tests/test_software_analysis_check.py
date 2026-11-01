@@ -42,6 +42,7 @@ from tests.analysis_repo import (
     JOURNEYS,
     MAIN,
     NEW,
+    OBLIGATION,
     OVERVIEW_FILE,
     OVERVIEW_SCRIPT,
     QUALITY,
@@ -53,6 +54,7 @@ from tests.analysis_repo import (
     actor_at,
     field_hint,
     fill,
+    fingerprint,
     front,
     installed,
     load_lib,
@@ -255,8 +257,8 @@ def test_a_stamped_artefact_is_reported_once_and_passes_filled_as_its_hints_show
     for its body's hints, by the placeholder check, and once for each field still holding
     its hint: never again for a part its hint leaves empty or missing (#2088). Written
     over with its example, each hint holds its part's form, so every kind the stamp
-    writes passes filled as its hints show. The overview the stamp kept is then stale, and
-    the check names the one command that writes it anew."""
+    writes passes filled as its hints show. Each requirement's fingerprint and the overview
+    the stamp kept are then stale, and the check names the command that writes each anew."""
     project.write(
         {SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"}
         | accepting_san(project)
@@ -282,6 +284,12 @@ def test_a_stamped_artefact_is_reported_once_and_passes_filled_as_its_hints_show
     for path in sorted(analysis.rglob("*.md")):
         text = path.read_text(encoding="utf-8")
         path.write_text(HINT.sub(r"\g<example>", text), encoding="utf-8")
+    *fingerprints, stale = errors(check(project))
+    assert len(fingerprints) == 3  # each requirement's, its texts written over its hints
+    assert all(location.endswith(":/obligation") for location, _message in fingerprints)
+    assert all("Run `pkit analysis obligation`" in message for _at, message in fingerprints)
+    written = run_in_process(project, OBLIGATION)
+    assert written.returncode == 0, written.stderr
     (stale,) = errors(check(project))
     assert stale[0] == OVERVIEW_FILE
     assert stale[1].startswith("it is stale: what it draws changed since it was written")
@@ -916,7 +924,8 @@ EARLIER_SET_TEXT = ANALYSIS_SET_TEXT.replace(
 
 def _requirement(shown: str, last: str, **fields: str | None) -> str:
     """A requirement filled as its kind's structure asks, its front matter's `fields`
-    changed, and one set to `None` left out."""
+    changed, one set to `None` left out, and its `obligation` the fingerprint of its texts
+    (DEC-006 point 6)."""
     front: dict[str, str | None] = {
         "id": "REQ-004",
         "title": "Show a run's result quickly",
@@ -926,6 +935,7 @@ def _requirement(shown: str, last: str, **fields: str | None) -> str:
         "applies-to": "Every run of a suite.",
         **fields,
     }
+    front["obligation"] = fingerprint({k: v for k, v in front.items() if v is not None})
     written = "".join(f"{k}: {json.dumps(v)}\n" for k, v in front.items() if v is not None)
     return (
         f"---\n{written}pkit:\n  friction:\n    anchors:\n      path: [src/run.py]\n---\n\n"
