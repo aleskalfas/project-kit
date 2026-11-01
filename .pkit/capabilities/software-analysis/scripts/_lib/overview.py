@@ -14,13 +14,15 @@ read when needed. In this order:
   analyses it builds on;
 - **the areas,** in the order of their numbers: each area a use case or a requirement in
   force lies in, and each the settings give a goal. Each shows its goal, what it builds
-  on, its concepts, its requirements and its use cases, each linked and marked where an
-  open shortfall names one of its steps or variants. Its concepts are the views in force
-  that explain a term one of its use cases links, shown where the
-  analysis has a view in force. An area none of whose use cases writes `after` shows no
-  line of what it builds on, and one that holds no use case in force reads "Not written
-  yet." An analysis whose use cases lie in no area lists them under its use cases,
-  which tell its story;
+  on, its concepts, its requirements, its use cases, each linked and marked where an
+  open shortfall names one of its steps or variants, and its journeys. Its concepts are
+  the views in force that explain a term one of its use cases links, shown where the
+  analysis has a view in force. Its journeys are those in force with a step among its
+  use cases, linked, or a line that says it has none; a journey whose steps cross
+  several areas is listed under each, and its flow stays in reference (DEC-005 point 2).
+  An area none of whose use cases writes `after` shows no line of what it builds on, and
+  one that holds no use case in force reads "Not written yet." An analysis whose use
+  cases lie in no area lists them under its use cases, which tell its story;
 - **reference,** under a heading of its own, each part a section below it:
   - **who takes part:** one table, a row for each actor in force, linked, with its
     `summary` and the areas of the use cases in force it is the main actor of, its
@@ -70,7 +72,8 @@ it reads, never its text (`fingerprint`), with the version of what it reads (`VE
 That is each artefact in force of the kinds it shows, with its id, its path and the
 fields it reads, each actor of another analysis it shows with its name, the views each
 use case leads to, the goal of each area it shows, and the id, title,
-status and path of its purpose's record.
+status and path of its purpose's record. Each area's journeys follow from each journey's
+`steps` and each use case's path, which it reads, so it holds them too.
 Validation compares it with the analysis in the working tree, and fails a stale
 overview, naming the command. A release that only
 prints the overview differently changes no fingerprint, so it fails no project. One that
@@ -132,6 +135,7 @@ from _lib.model import (
     Analysis,
     Artefact,
     Unreadable,
+    identity,
     number_in,
     qualified,
     under_place,
@@ -548,8 +552,9 @@ def _what_it_is(listed: analyses.Listed | None) -> str:
 
 def _areas_part(page: _Page) -> list[str]:
     """The areas in the order of their numbers, each with its goal, what it builds on, its
-    concepts where the analysis shows a view, its requirements and its use cases, then the
-    use cases outside any area; or, where no area is shown, the use cases."""
+    concepts where the analysis shows a view, its requirements, its use cases and its
+    journeys, then the use cases outside any area; or, where no area is shown, the use
+    cases."""
     read_ = page.read
     use_cases = read_.of(USE_CASE)
     if not read_.areas:
@@ -559,6 +564,7 @@ def _areas_part(page: _Page) -> list[str]:
     out = ["", "## Areas"]
     requirements = read_.of(*REQUIREMENTS)
     views_shown = read_.of(VIEW)
+    journeys = read_.of(JOURNEY)
     for name, goal in read_.areas.items():
         out += ["", f"### {name}", ""]
         out.append(goal if goal else "No goal is written for this area yet.")
@@ -577,6 +583,9 @@ def _areas_part(page: _Page) -> list[str]:
             out += ["", *(f"- {page.link(r)}" for r in bound)] if bound else []
         if own:
             out += ["", "**Its use cases:**", "", *(_use_case_line(page, u) for u in own)]
+            passing = _journeys_through(own, journeys)
+            out += ["", "**Its journeys:**" + ("" if passing else " none.")]
+            out += ["", *(f"- {page.link(j)}" for j in passing)] if passing else []
         else:
             out += ["", "Not written yet."]
     outside = [u for u in use_cases if page.area[u.path] is None]
@@ -592,6 +601,21 @@ def _use_case_line(page: _Page, use_case: Artefact) -> str:
     if not places:
         return f"- {page.link(use_case)}"
     return f"- {page.link(use_case)} ([not built yet](#{_anchor(_NOT_BUILT)}): {', '.join(places)})"
+
+
+def _journeys_through(own: Sequence[Artefact], journeys: Sequence[Artefact]) -> list[Artefact]:
+    """Each journey of `journeys` with a step among the use cases `own`, in the journeys'
+    order. A step names its use case by its id, as `identity` spells it, as the journey's
+    flow reads it. So a journey whose steps cross several areas is each one's (DEC-005
+    point 2)."""
+    held = {identity(str(u.id)) for u in own}
+    return [j for j in journeys if any(identity(step) in held for step in _steps(j))]
+
+
+def _steps(journey: Artefact) -> list[str]:
+    """The use cases a journey's `steps` name, each as written; none where it lists none."""
+    steps = journey.fields.get(diagrams.STEPS)
+    return [s for s in steps if isinstance(s, str)] if isinstance(steps, list) else []
 
 
 def _builds_on(page: _Page, own: Sequence[Artefact], area: str) -> list[str]:
