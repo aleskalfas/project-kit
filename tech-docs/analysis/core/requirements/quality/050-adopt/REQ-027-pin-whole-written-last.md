@@ -5,6 +5,7 @@ status: active
 statement: The version pin holds the old one or the new one, never part of either, and an upgrade writes it last.
 measure: A write of `.pkit/version-pin` cut short at any point leaves the old version pin byte for byte, and no temporary file. An upgrade writes the version pin after the completion, so an upgrade that fails before the completion writes no version pin.
 applies-to: "Every write of `.pkit/version-pin`: by `pkit pin`, `pkit unpin`, and `pkit upgrade` when it pins a project by default or raises its version pin."
+obligation: v1:sha256:f3a6c248c3fb4cacd712a524bb620b73b9a0a34481a9b34f577684a15aea72bf
 actors:
   - ACT-operator
 refines: []

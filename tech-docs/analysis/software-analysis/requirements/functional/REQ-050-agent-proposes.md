@@ -5,6 +5,7 @@ status: active
 statement: An agent proposes each revalidation outcome, candidate, freed id and change to a declared structure, and a person decides each before it is committed.
 measure: The analysis-resolver's definition grants no tool that edits a file in place, and owns no path. Its proposal hands each writer's command to a person. The analysis-author skill asks a person to confirm each candidate, and to accept each entry that frees an id or changes a declared structure.
 applies-to: "The analysis-resolver agent, in a session or a run, and an agent onboarding a project, freeing ids or choosing parts with the analysis-author skill."
+obligation: v1:sha256:a53e4769359523ffbdea8478981cada5461b06497fb6cc05111d6b664405807f
 actors:
   - core:ACT-developer
   - core:ACT-adopter
