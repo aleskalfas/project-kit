@@ -1202,7 +1202,7 @@ Find a failure's cause and share it.
 
 **Its use cases:**
 
-- [UC-003 — Share a failure](../use-case-model/use-cases/020-report/UC-003-share-a-failure.md)
+- [UC-006 — Share a failure](../use-case-model/use-cases/020-report/UC-006-share-a-failure.md)
 
 **Its journeys:** none.
 
